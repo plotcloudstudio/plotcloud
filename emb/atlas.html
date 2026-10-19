@@ -61,7 +61,7 @@ footer{padding:14px 20px;color:var(--muted);font-size:12px;border-top:1px solid 
 <body>
 <div class="top"><h1>Site Analysis</h1><div class="steps" id="steps" role="group" aria-label="Steps"></div><span class="sp"></span><span id="topx"></span></div>
 <main id="main"></main>
-<footer>PlotCloud · Site Analysis · eight diagrams, one site, one style · SCHEMATIC until real map data is connected: the geometry is generated, not read from OpenStreetMap.</footer>
+<footer>PlotCloud · Site Analysis · eight diagrams, one site, one style · three diagrams read OpenStreetMap, the rest are SCHEMATIC (generated geometry).</footer>
 <div id="printbox"></div>
 <script>
 'use strict';
@@ -82,7 +82,30 @@ function setPalette(k) { Object.assign(THEME, PALETTES[k]); }
 // =====================================================================================
 // DATA ADAPTER: the one place that knows where geometry comes from. Today: demo geometry. Later: a real map-data fetch behind the same call.
 // =====================================================================================
-const DATA = { kind: 'demo', credit: 'Demo geometry, generated for this prototype · not OpenStreetMap data', async load(ctx) { return genCity(ctx.lat, ctx.lng, ctx.R); } };
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OSM_BLD_MAX = 1500;   // buildings are read up to this radius (m); a bigger request is too heavy for the public servers
+const DATA = {
+  kind: 'demo', credit: 'Demo geometry, generated for this prototype · not OpenStreetMap data',
+  async load(ctx) { return genCity(ctx.lat, ctx.lng, ctx.R); },      // the generated city: still used by the diagrams that have no real data yet
+  // real streets and buildings from OpenStreetMap through Overpass; throws when no server answers
+  async osm(ctx, wantBld) {
+    const rq = Math.ceil(ctx.R * (ctx.shape === 'square' ? 1.42 : 1.02)), q = `[out:json][timeout:25];(way["highway"](around:${rq},${ctx.lat},${ctx.lng});${wantBld ? `way["building"](around:${rq},${ctx.lat},${ctx.lng});` : ''});out geom;`;
+    let last = null; for (const url of OVERPASS) { try { const ac = new AbortController(), t = setTimeout(() => ac.abort(), 30000); const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ac.signal }); clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json(); if (!j || !Array.isArray(j.elements)) throw new Error('bad answer'); return parseOverpass(j, ctx.lat, ctx.lng, wantBld); } catch (e) { last = e; } }
+    throw last || new Error('no server');
+  }
+};
+const HWY = { motorway: 'arterial', trunk: 'arterial', primary: 'arterial', motorway_link: 'arterial', trunk_link: 'arterial', primary_link: 'arterial', secondary: 'secondary', tertiary: 'secondary', secondary_link: 'secondary', tertiary_link: 'secondary', residential: 'minor', service: 'minor', unclassified: 'minor', living_street: 'minor', footway: 'foot', pedestrian: 'foot', cycleway: 'foot', path: 'foot', steps: 'foot' };
+const CIVIC_B = new Set(['school', 'university', 'college', 'kindergarten', 'hospital', 'clinic', 'church', 'cathedral', 'chapel', 'mosque', 'temple', 'synagogue', 'shrine', 'civic', 'public', 'government', 'fire_station', 'police', 'library', 'museum', 'theatre', 'community_centre']);
+const CIVIC_A = new Set(['school', 'university', 'college', 'kindergarten', 'hospital', 'clinic', 'doctors', 'library', 'place_of_worship', 'police', 'fire_station', 'townhall', 'community_centre', 'theatre', 'museum', 'courthouse']);
+const COM_B = new Set(['commercial', 'retail', 'office', 'supermarket', 'hotel', 'warehouse', 'kiosk']);
+function functionOf(t) { const b = t.building, a = t.amenity; if (CIVIC_B.has(b) || CIVIC_A.has(a)) return 'civ'; if (b === 'industrial' || b === 'manufacture') return 'ind'; if (COM_B.has(b) || t.shop || t.office || ['restaurant', 'cafe', 'bar', 'pub', 'fast_food', 'bank', 'marketplace'].includes(a)) return 'com'; return 'res'; }
+function parseOverpass(j, lat0, lng0, wantBld) {   // -> { roads, buildings } in metres around the pin
+  const kx = Math.cos(lat0 * Math.PI / 180) * 111320, ky = 110574, P = (g) => [(g.lon - lng0) * kx, (g.lat - lat0) * ky], roads = [], buildings = [];
+  for (const e of j.elements) { if (e.type !== 'way' || !e.geometry || e.geometry.length < 2) continue; const t = e.tags || {};
+    if (t.highway && HWY[t.highway] && !t.area) roads.push({ c: HWY[t.highway], pts: e.geometry.map(P), ids: e.nodes || [] });
+    else if (wantBld && t.building && e.geometry.length >= 4) { const poly = e.geometry.slice(0, -1).map(P), area = polyArea(poly); if (area > 4) buildings.push({ poly, area, fn: functionOf(t), h: parseFloat(t.height) || (parseFloat(t['building:levels']) || 0) * 3 || null }); } }
+  return { roads, buildings, kind: 'osm', at: new Date().toISOString().slice(0, 10) };
+}
 
 const rng = (seed) => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1]], len = (a) => Math.hypot(a[0], a[1]);
@@ -189,6 +212,15 @@ function analyse(C, R, shape) {
   return out;
 }
 
+function analyseOSM(O, R, shape) {   // the same figures as analyse(), read from real streets and buildings
+  const g = regionOf(R, shape), inC = g.inside, km = { arterial: 0, secondary: 0, minor: 0, foot: 0 }, segs = [], deg = new Map(), at = new Map();
+  for (const w of O.roads) for (let k = 0; k + 1 < w.pts.length; k++) { const a = w.pts[k], b = w.pts[k + 1], s = clipSeg(a, b, g); if (!s) continue; km[w.c] += len(sub(s[1], s[0])) / 1000; segs.push({ s, c: w.c, e: null });
+    if (w.c !== 'foot' && w.ids.length === w.pts.length) for (const [id, pt] of [[w.ids[k], a], [w.ids[k + 1], b]]) { deg.set(id, (deg.get(id) || 0) + 1); at.set(id, pt); } }
+  let nodes = 0; for (const [id, d] of deg) if (d >= 3 && inC(at.get(id))) nodes++;
+  const bi = O.buildings.filter((b) => inC(centroid(b.poly))), ar = bi.map((b) => b.area).sort((a, b) => a - b), fn = { res: 0, com: 0, civ: 0, ind: 0 }; for (const b of bi) fn[b.fn]++;
+  const kmTotal = km.arterial + km.secondary + km.minor + km.foot;
+  return { R, shape, g, osm: true, km, segs, kmTotal, areaKm2: g.area / 1e6, density: kmTotal / (g.area / 1e6), intersections: nodes, buildings: bi, pct: { bld: 100 * bi.reduce((s, b) => s + b.area, 0) / g.area, water: 0, park: 0, road: 0 }, medianFoot: ar.length ? ar[Math.floor(ar.length / 2)] : 0, perHa: bi.length / (g.area / 1e4), fn, avgH: 0, blocksIn: [] };
+}
 // ---- sun path: solar altitude and azimuth by the standard declination formulas (solar time, no atmosphere, no shadows) ----
 function sunArc(lat, dec) {
   const ph = lat * Math.PI / 180, de = dec * Math.PI / 180, cosH = -Math.tan(ph) * Math.tan(de), H0 = Math.acos(Math.max(-1, Math.min(1, cosH))), hours = 2 * H0 * 12 / Math.PI, pts = [];
@@ -216,13 +248,17 @@ const LAYERS = {
   transit: [['stops', 'Stops'], ['ring', 'Walking rings'], ['bld', 'Buildings (grey)']], walk: [['edges', 'Walking minutes'], ['cont', 'Contours'], ['poi', 'Places']],
   reading: [['site', 'Site'], ['poi', 'Places'], ['ring', '5 minute circle'], ['road', 'Streets'], ['bld', 'Buildings (grey)']], sunwind: [['sun', 'Sun path']]
 };
-const ST = { step: 1, ctx: { lat: 49.2827, lng: -123.1207, R: 600, shape: 'circle', label: '' }, sel: ['fg', 'streets', 'land', 'green'], gen: [], skipped: {}, palette: 'classic', border: {}, off: {}, mode: 'flow', confirmed: false };
+const ST = { src: {}, osm: null, step: 1, ctx: { lat: 49.2827, lng: -123.1207, R: 600, shape: 'circle', label: '' }, sel: ['fg', 'streets', 'land', 'green'], gen: [], skipped: {}, palette: 'classic', border: {}, off: {}, mode: 'flow', confirmed: false };
 let CITY = null; const ANC = {};
 const layerOn = (d, id) => !ST.off[d + ':' + id];
 const borderOf = (d) => ST.border[d] || (ST.ctx.shape === 'square' ? 'square' : 'round');
 const ringPath = (pts) => 'M' + pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L') + 'Z';
 const mix = (a, b, t) => { const h = (x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16)), A = h(a), B = h(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
 const niceScale = (R) => R >= 1500 ? 1000 : R >= 700 ? 500 : R >= 450 ? 250 : 100;
+const REAL = new Set(['fg', 'streets', 'land']);   // the diagrams that can read real data today
+const srcOf = (d) => ST.src && ST.src[d] === 'osm' ? 'osm' : 'demo';
+const anFor = (d, shape) => srcOf(d) === 'osm' ? (ANC['osm-' + shape] || (ANC['osm-' + shape] = analyseOSM(ST.osm, ST.ctx.R, shape))) : getAN(shape);
+const creditOf = (d) => srcOf(d) === 'osm' ? `© OpenStreetMap contributors · read ${ST.osm.at} · streets and buildings as mapped` : DATA.credit;
 const getAN = (shape) => { const a = ANC[shape] || (ANC[shape] = analyse(CITY, ST.ctx.R, shape)); if (!a.blocksIn) a.blocksIn = CITY.blocks.filter((b) => b.lu === 'park' && b.q.some((p) => a.g.inside(p) || len(p) < a.R * 1.2)); return a; };
 
 function drawFigure(d, A) {   // -> { body, kpis, legend, any, big?, subx?, note? }
@@ -304,7 +340,7 @@ function drawFigure(d, A) {   // -> { body, kpis, legend, any, big?, subx?, note
 }
 
 function cardSvg(d, shape) {
-  const meta = D.find((x) => x.id === d), { w, m, fig } = T.card, F = T.font, A = d === 'sunwind' ? { R: ST.ctx.R, blocksIn: [] } : getAN(shape), border = shape === 'square' ? 'square' : 'round';
+  const meta = D.find((x) => x.id === d), { w, m, fig } = T.card, F = T.font, A = d === 'sunwind' ? { R: ST.ctx.R, blocksIn: [] } : anFor(d, shape), border = shape === 'square' ? 'square' : 'round';
   const r = drawFigure(d, A), figTop = 196, figCy = figTop + fig / 2, dataTop = 112, legTop = figTop + fig + 28, nl = Math.ceil(r.legend.length / 4), H = legTop + nl * 34 + 44, s = fig / 2 / A.R * .985;
   const colW = (w - 2 * m) / r.kpis.length;
   const kp = r.kpis.map((k, i) => `<g id="kpi${i}"><text x="${m + i * colW}" y="${dataTop + 28}" font-size="${F.num}" font-weight="700" fill="${T.ink}">${esc(k[0])}</text><text x="${m + i * colW}" y="${dataTop + 46}" font-size="${F.label}" fill="${T.muted}">${esc(k[1])}</text></g>`).join('');
@@ -323,11 +359,11 @@ function cardSvg(d, shape) {
   const stamp = `<text x="${w - m}" y="${figTop + fig - 8}" text-anchor="end" font-size="${F.label}" font-weight="700" letter-spacing="2" fill="${T.accent}">SCHEMATIC</text>`;
   const figure = d === 'sunwind' ? `<g id="figure"><g transform="translate(0,${figCy})">${r.body}</g>${nodata}</g>` : `<g id="figure"><clipPath id="${cid}">${clip}</clipPath><g clip-path="url(#${cid})"><g transform="translate(0,${figCy})">${r.body}</g></g>${frame}${nodata}</g>`;
   const title = r.big || meta.name, subt = `${meta.n} ${r.subx ? r.subx : meta.sub + ' · ' + place + ' · R ' + (A.R >= 1000 ? (A.R / 1000) + ' KM' : A.R + ' M')}`;
-  const foot = (r.note ? r.note + ' · ' : '') + DATA.credit;
+  const foot = (r.note ? r.note + ' · ' : '') + creditOf(d);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${H}" width="${w}" height="${H}" font-family='${F.family}' role="img" aria-label="${esc(meta.name)} drawing card">
 <rect width="${w}" height="${H}" fill="${T.paper}"/>
 <g id="header"><text x="${m}" y="${m + 28}" font-size="${F.title}" font-weight="800" letter-spacing="-.4" fill="${T.ink}">${esc(title)}</text><text x="${m}" y="${m + 48}" font-size="${F.sub}" letter-spacing="2.2" fill="${T.muted}">${esc(subt)}</text></g>
-${north}<g id="data">${kp}</g>${figure}${d === 'sunwind' ? '' : stamp}${scale}<g id="legend">${leg}</g>
+${north}<g id="data">${kp}</g>${figure}${d === 'sunwind' || srcOf(d) === 'osm' ? '' : stamp}${scale}<g id="legend">${leg}</g>
 <text x="${m}" y="${H - 14}" font-size="${F.cap}" fill="${T.muted}">${esc(foot)}</text></svg>`;
 }
 
@@ -417,7 +453,7 @@ function step1() {
   $('#rad').oninput = () => { ST.ctx.R = +$('#rad').value; syncFields(); Map1.overlay(); };
   for (const id of ['lat', 'lng']) $('#' + id).onchange = () => { const v = parseFloat($('#' + id).value); if (isFinite(v)) ST.ctx[id] = Math.max(id === 'lat' ? -85 : -180, Math.min(id === 'lat' ? 85 : 180, v)); ST.ctx.label = ''; Map1.center(ST.ctx.lat, ST.ctx.lng); Map1.render(); syncFields(); };
   $('#srch').onsubmit = (e) => { e.preventDefault(); search($('#q').value); };
-  $('#confirm').onclick = () => { ST.confirmed = true; ST.step = 2; ST.gen = []; for (const k of Object.keys(ANC)) delete ANC[k]; CITY = null; hash.set(); render(); };
+  $('#confirm').onclick = () => { ST.confirmed = true; ST.step = 2; ST.gen = []; ST.osm = null; ST.src = {}; for (const k of Object.keys(ANC)) delete ANC[k]; CITY = null; hash.set(); render(); };
 }
 function syncFields() { const c = ST.ctx; if (!$('#rad')) return; $('#rad').value = c.R; $('#rv').textContent = c.R >= 1000 ? (c.R / 1000).toFixed(1) + ' km' : c.R + ' m'; $('#lat').value = c.lat; $('#lng').value = c.lng; }
 async function search(q) {
@@ -444,8 +480,8 @@ function step2() {
 function step3() {
   $('#main').innerHTML = `<div class="panel"><h2 class="k">Step 3 · Generate, refine, export</h2>
    <div class="row" style="align-items:center"><span id="prog" class="msg" style="margin:0" role="status"></span><span class="sp"></span><label class="msg" style="margin:0;display:flex;gap:6px;align-items:center">Palette <select id="pal" style="width:auto">${Object.entries(PALETTES).map(([k, v]) => `<option value="${k}" ${k === ST.palette ? 'selected' : ''}>${v.name}</option>`).join('')}</select></label><button class="btn sm" id="toBoards">Boards →</button><button class="btn sm" id="toSite">Send to Site Planner</button><button class="btn sm" id="back2">← Change the analyses</button></div>
-   <div class="bar" aria-hidden="true"><i id="pbar"></i></div><div class="cards" id="cards"></div>
-   <p class="demo"><b>SCHEMATIC.</b> The streets, buildings and places are generated from the latitude, longitude and radius. No map data is connected yet, so the numbers describe that generated geometry. Every card says so.</p></div>`;
+   <div class="bar" aria-hidden="true"><i id="pbar"></i></div><p class="msg warn" id="osmmsg" hidden></p><div class="cards" id="cards"></div>
+   <p class="demo"><b>Real and generated.</b> Roads &amp; Streets, Urban Fabric and Functional Areas read OpenStreetMap when it answers (© OpenStreetMap contributors). The other diagrams still use generated geometry and are stamped SCHEMATIC.</p></div>`;
   $('#pal').onchange = (e) => { ST.palette = e.target.value; setPalette(ST.palette); redrawCards(); };
   $('#back2').onclick = () => { ST.step = 2; hash.set(); render(); }; $('#toBoards').onclick = () => { ST.mode = 'boards'; BOARD.sel = ST.gen.filter((x) => x !== 'sunwind'); hash.set(); render(); }; $('#toSite').onclick = sendToSite;
   if (ST.gen.length) { const cards = $('#cards'); cards.innerHTML = ST.gen.map(cardHtml).join(''); $('#prog').textContent = `${ST.gen.length} generated`; $('#pbar').style.width = '100%'; } else if (ST.autogen) { ST.autogen = false; generate(); }
@@ -454,6 +490,10 @@ const tick = () => new Promise((r) => setTimeout(r, 30));
 async function generate() {
   const ids = D.map((x) => x.id).filter((id) => ST.sel.includes(id)), cards = $('#cards'), bar = $('#pbar'), prog = $('#prog'); ST.gen = []; ST.skipped = {}; cards.innerHTML = ''; setPalette(ST.palette);
   if (!CITY) { prog.textContent = 'Reading the site…'; CITY = await DATA.load(ST.ctx); await tick(); }
+  ST.src = {}; ST.osm = null; const msg = $('#osmmsg'); if (msg) msg.hidden = true; const real = ids.filter((id) => REAL.has(id)), wantBld = real.some((id) => id !== 'streets') && ST.ctx.R <= OSM_BLD_MAX;
+  if (real.length) { prog.textContent = 'Reading OpenStreetMap…'; try { ST.osm = await DATA.osm(ST.ctx, wantBld); for (const id of real) if (id === 'streets' || wantBld) ST.src[id] = 'osm'; for (const k of Object.keys(ANC)) if (k.startsWith('osm-')) delete ANC[k]; }
+    catch (e) { if (msg) { msg.textContent = 'OpenStreetMap could not be reached, so these diagrams use generated geometry and say SCHEMATIC: ' + real.map((id) => D.find((x) => x.id === id).name).join(', ') + '.'; msg.hidden = false; } }
+    if (ST.osm && real.some((id) => id !== 'streets') && !wantBld && msg) { msg.textContent = `Buildings are read from OpenStreetMap up to a radius of ${OSM_BLD_MAX / 1000} km. At R ${ST.ctx.R / 1000} km Urban Fabric and Functional Areas use generated geometry and say SCHEMATIC.`; msg.hidden = false; } }
   let k = 0; for (const id of ids) { const meta = D.find((x) => x.id === id); k++; prog.textContent = `${k}/${ids.length} · ${meta.name}…`; bar.style.width = (100 * (k - 1) / ids.length) + '%'; await tick();
     if (meta.maxR && ST.ctx.R > meta.maxR) { ST.skipped[id] = meta.why; cards.insertAdjacentHTML('beforeend', `<div class="cardw" data-d="${id}" data-skip="1"><div style="padding:18px"><b>${meta.n} · ${esc(meta.name)}</b><p class="msg warn">Left out: ${esc(meta.why)}</p></div></div>`); continue; }
     ST.gen.push(id); cards.insertAdjacentHTML('beforeend', cardHtml(id)); bar.style.width = (100 * k / ids.length) + '%'; }
@@ -499,7 +539,7 @@ function layoutGrid(f, n, hd) {
   return R;
 }
 function tileSvg(d, r) {
-  const meta = D.find((x) => x.id === d), pt = (v) => v / MM_PT, ttl = pt(11), cap = pt(6.5), A = getAN('circle');
+  const meta = D.find((x) => x.id === d), pt = (v) => v / MM_PT, ttl = pt(11), cap = pt(6.5), A = anFor(d, 'circle');
   const showLeg = r.h > r.w * .8 && r.w >= 30 * cap && cap * MM_PT >= 6, hdr = ttl * 1.9, foot = showLeg ? cap * 3.4 : cap * 1.6, cx = r.x + r.w / 2, cy = r.y + hdr + (r.h - hdr - foot) / 2, rr = Math.min((r.h - hdr - foot) / 2, r.w / 2 - 1.5), s = rr / A.R * .985;
   const fg = drawFigure(d, A), k = s / (T.card.fig / 2 / A.R * .985), cid = 'bt' + Math.random().toString(36).slice(2, 7), nl = niceScale(A.R), nlw = nl * s, sx = r.x + 2, sy = r.y + r.h - cap * 1.3;
   const body = `<g transform="translate(${cx},${cy}) scale(${k}) translate(${-T.card.w / 2},0)">${fg.body.replace(/<text[\s\S]*?<\/text>/g, '')}</g>`;
@@ -530,6 +570,6 @@ const hadHash = hash.get(); setPalette(ST.palette);
   if (ST.mode === 'boards') { const ids = D.map((x) => x.id).filter((x) => x !== 'sunwind' && !(D.find((m) => m.id === x).maxR && ST.ctx.R > D.find((m) => m.id === x).maxR)); ST.gen = ids; if (!ST.confirmed) { ST.mode = 'flow'; ST.step = 1; ST.gen = []; } else BOARD.sel = ids.slice(0, 4); }
   render(); if (ST.step === 3 && ST.mode === 'flow' && ST.autogen) { ST.autogen = false; generate(); } ctxPost();
 })();
-window.__atlas = { ST, THEME, PALETTES, D, BOARD, FORMATS, Map1, get CITY() { return CITY; }, getAN, cardSvg, cardOf, boardSvg, layoutGrid, render, generate, sunArc, regionOf, hadHash };
+window.__atlas = { ANC, ST, THEME, PALETTES, D, BOARD, FORMATS, Map1, get CITY() { return CITY; }, getAN, cardSvg, cardOf, boardSvg, layoutGrid, render, generate, sunArc, regionOf, hadHash };
 </script>
 </body></html>
