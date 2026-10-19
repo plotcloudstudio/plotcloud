@@ -3716,14 +3716,17 @@ route();
   .simbar .simhint{font:500 11px var(--mono);color:var(--muted);white-space:nowrap}
   .simbar .simx{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--hair);border-radius:50%;background:#fff;color:var(--ink);cursor:pointer;font-size:16px;line-height:1;padding:0}.simbar .simx:hover{border-color:var(--ink)}
   .simfs iframe{flex:1;display:block;width:100%;border:0;background:#fff;min-height:0}
-  @media (max-width:700px){.simbar .simhint{display:none}.simbar{gap:10px;padding:0 10px}.simbar .simback span{display:none}}`; document.head.appendChild(st);
+  .simloop{list-style:none;margin:0 0 0 6px;padding:0;display:flex;gap:6px;font:600 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.simloop li+li::before{content:"→";margin-right:6px;font-weight:400}.simloop li[aria-current]{color:#D8402A}
+  .simto{font:600 12px var(--sans,inherit);padding:6px 12px;border:0;border-radius:999px;background:#D8402A;color:#fff;cursor:pointer;white-space:nowrap}.simto:hover{background:#b9341f}
+  @media (max-width:700px){.simloop{display:none}.simto{padding:6px 10px;font-size:11px}.simbar .simhint{display:none}.simbar{gap:10px;padding:0 10px}.simbar .simback span{display:none}}`; document.head.appendChild(st);
   const _toolF = P.tool;
-  P.tool = function (id) { if (!SIMFS.includes(id) || !EMB[id]) return _toolF.apply(this, arguments); const i = EMBI[id];
-    return `<div class="simfs" data-simfs="${id}"><div class="simbar"><a class="simback" data-go="tools" aria-label="Back to Tools">← <span>Back to Tools</span></a><span class="simname">${i.crumb}</span><span class="simsp"></span><span class="simhint">Esc to exit</span><button class="simx" data-simx aria-label="Close and go back to Tools">✕</button></div><iframe data-emb="${id}" title="${i.crumb}" allow="clipboard-write"></iframe></div>`; };
+  P.tool = function (id) { if (!SIMFS.includes(id) || !EMB[id]) return _toolF.apply(this, arguments); const i = EMBI[id]; const ho = window.__pcHO; if (ho && ho.tool === id && ho.source && ho.source.app === "plotcloud-studio") (window.__pcSrc = window.__pcSrc || {})[id] = ho.source;
+    const src = (window.__pcSrc || {})[id], loop = src ? `<ol class="simloop" aria-label="Draw, simulate, refine"><li>Draw</li><li aria-current="step">Simulate</li><li>Refine</li></ol><button class="simto" data-simto="${id}" title="Back to Plan Studio, to the model you sent">Back to Plan Studio</button>` : "";
+    return `<div class="simfs" data-simfs="${id}"><div class="simbar"><a class="simback" data-go="tools" aria-label="Back to Tools">← <span>Back to Tools</span></a><span class="simname">${i.crumb}</span>${loop}<span class="simsp"></span><span class="simhint">Esc to exit</span><button class="simx" data-simx aria-label="Close and go back to Tools">✕</button></div><iframe data-emb="${id}" title="${i.crumb}" allow="clipboard-write"></iframe></div>`; };
   SIMFS.forEach((k) => { if (typeof APPMODE !== "undefined") APPMODE.add(k); });
   const onSim = () => /^#\/?tool\/(.+)$/.test(location.hash) && SIMFS.includes(location.hash.replace(/^#\/?tool\//, "").split("?")[0]);
   const exit = () => { if (onSim()) go("tools"); };
-  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("[data-simx]")) exit(); });
+  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("[data-simx]")) exit(); const t = e.target.closest && e.target.closest("[data-simto]"); if (t) { const s = (window.__pcSrc || {})[t.dataset.simto]; if (s) { location.hash = "#/studio?back=" + encodeURIComponent([s.project, s.version, t.dataset.simto].join(":")); } } });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && onSim() && !e.defaultPrevented) exit(); });
   // Esc pressed inside the tool itself (same-origin srcdoc frame) also leaves, unless the tool used it (closing a menu, cancelling a drag)
   const hook = (fr) => { try { const w = fr.contentWindow; if (!w || !w.document || w.document.__esc) return; w.document.__esc = 1; w.document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target || {}).tagName || "")) setTimeout(exit, 0); }); } catch (x) {} };

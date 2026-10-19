@@ -585,6 +585,14 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 .kr-closed > :not(.kr-h){display:none!important}.kr-closed{padding-bottom:0!important}
 .ppg{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0}.ppg .btn{height:26px;min-width:30px;border:1px solid var(--kj-line2);border-radius:6px;background:#fff;font:600 13px var(--f-body);cursor:pointer}.ppg .btn:disabled{opacity:.4;cursor:default}.ppg span{font:12px var(--f-body);color:#5f6670}
 .vrow[hidden]{display:none!important}
+.loopst{list-style:none;margin:0 0 8px;padding:0;display:flex;align-items:center;gap:6px;font:600 11px var(--f-body,inherit);letter-spacing:.04em;text-transform:uppercase;color:#7b8190}
+.loopst li{display:flex;align-items:center;gap:6px;white-space:nowrap}.loopst li+li::before{content:"→";color:#b3b8c2;font-weight:400}
+.loopst li[aria-current]{color:#D8402A}.loopst li[aria-current]::after{content:"";width:6px;height:6px;border-radius:50%;background:#D8402A}
+.loopst button{all:unset;cursor:pointer;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;border-bottom:1px dotted currentColor}.loopst button:focus-visible{outline:2px solid #3498ff;outline-offset:2px}
+.vres{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:4px}.vres button{all:unset;cursor:pointer;font:500 11px var(--f-body,inherit);padding:2px 8px;border:1px solid #d5d8de;border-radius:999px;background:#fff;color:#1d2129}.vres button:hover{border-color:#1d2129}.vres button:focus-visible{outline:2px solid #3498ff}
+.vrow.vback{outline:2px solid #D8402A;outline-offset:1px}
+.vrdlg{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);display:grid;place-items:center}.vrdlg>div{background:#fff;border-radius:10px;max-width:min(560px,92vw);max-height:88vh;overflow:auto;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.vrdlg h3{margin:0 0 8px;font-size:15px}.vrdlg img{max-width:100%;border:1px solid #e1e3e8;border-radius:6px}.vrdlg table{border-collapse:collapse;width:100%;margin-top:8px;font-size:13px}.vrdlg td{padding:3px 6px;border-bottom:1px solid #eceef2}
 /* v131 · 4 · elevation: a bar over the 3D view; labels on their own layer */
 .elvview.e3{inset:12px 12px auto 12px;background:none;display:block;pointer-events:none}
 .elvview.e3 .elv-bar{pointer-events:auto;border:0;border-radius:10px;box-shadow:var(--kj-shadow);flex-wrap:wrap}
@@ -750,6 +758,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
       </div>
       <section class="kr-card" id="verCard" aria-labelledby="h-ver">
         <div class="kr-h"><h2 id="h-ver">Versions<span class="vcnt" id="verCount"></span></h2></div>
+        <ol class="loopst" id="loopSt" aria-label="Draw, simulate, refine"><li data-ls="draw" aria-current="step">Draw</li><li data-ls="sim"><button type="button" id="lsSim" title="Send the model to a simulation tool">Simulate</button></li><li data-ls="refine">Refine</li></ol>
         <div class="vlist2" id="verList"></div>
         <button type="button" class="btn pb" id="verCmp" disabled>Compare two versions</button><p class="note" id="verCmpNote" hidden>Save two versions or run a simulation to compare</p>
       </section>
@@ -4594,6 +4603,32 @@ function rotUI() { const on = CAM === 'plan' && VIEW2D !== 'elev'; for (const id
 $('#rotBtn').addEventListener('click', () => { ROT = (ROT + 1) % 4; resize(); rotUI(); });
 { const _c = setCam; setCam = async function (c) { const r = await _c(c); rotUI(); resize(); return r; }; const _v = setView2D; setView2D = function (v) { const r = _v(v); rotUI(); resize(); return r; }; }
 rotUI(); window.__wb.rot = { W2D: (p) => W2D(p), get k() { return rotK(); }, get ROT() { return ROT; } };
+// ---- v139 · the Draw → Simulate → Refine loop made visible ----
+let VRES = [], REFINE = false;
+const loopUI = () => { for (const li of $$('#loopSt li')) { const on = li.dataset.ls === (REFINE ? 'refine' : 'draw'); if (on) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); } };
+$('#lsSim').addEventListener('click', () => $('#sendBtn').click());
+async function vresLoad() { VRES = await simResults(); verUI(); }
+const vresShort = (r) => { const k = (r.kpis || [])[0]; return `${(r.title || r.tool).replace(/ (analysis|safety|flow)$/i, ' $1')}${k ? ' · ' + k[1] : ''}`; };
+{ const _vu2 = verUI; verUI = function () { _vu2(); if (!Array.isArray(VERS)) return;
+  for (const row of $$('#verList .vrow')) { row.querySelector('.vres')?.remove(); const v = VERS.find((x) => x.key === row.dataset.vk); if (!v) continue; const rs = [...cmpResFor(VRES, v, 'all').values()]; if (!rs.length) continue;
+    const d = document.createElement('div'); d.className = 'vres'; d.innerHTML = rs.map((r) => `<button type="button" data-vresx="${esc(String(r.id))}" aria-label="Open the ${esc(r.title || r.tool)} result for ${esc(v.name)}">${esc(vresShort(r))}</button>`).join(''); row.appendChild(d); }
+  if (window.krFit) krFit(); }; }
+$('#verList').addEventListener('click', (e) => { const b = e.target.closest('[data-vresx]'); if (!b) return; const r = VRES.find((x) => String(x.id) === b.dataset.vresx); if (!r) return;
+  const dlg = document.createElement('div'); dlg.className = 'vrdlg'; dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true');
+  dlg.innerHTML = `<div><h3>${esc(r.title || r.tool)} · saved ${esc(verTime(r.at))}</h3>${r.img ? `<img alt="${esc(r.title || '')} result" src="${r.img}">` : '<p class="note">No picture was saved with this result.</p>'}<table>${(r.kpis || []).map(([k, v]) => `<tr><td>${esc(k)}</td><td><b>${esc(v)}</b></td></tr>`).join('')}</table><p style="margin:10px 0 0;text-align:right"><button type="button" class="btn" autofocus>Close</button></p></div>`;
+  const close = () => { dlg.remove(); document.removeEventListener('keydown', kd, true); }, kd = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } };
+  dlg.addEventListener('click', (ev) => { if (ev.target === dlg || ev.target.closest('button')) close(); }); document.addEventListener('keydown', kd, true); document.body.appendChild(dlg); dlg.querySelector('button').focus(); });
+// back from a simulation: #/studio?back=<project>:<model version>:<tool>
+function backFromHash() { try { const par = window.parent; if (!par || par === window) return null; const m = /[?](.*)$/.exec(par.location.hash); if (!m) return null; const b = new URLSearchParams(m[1]).get('back'); if (!b) return null; const [p, mv, tool] = b.split(':'); return { p, mv: +mv, tool }; } catch (e) { return null; } }
+async function backRestore() { const st = backFromHash(); if (!st) return; REFINE = true; loopUI();
+  for (let i = 0; i < 40; i++) { if (VERS && VERS.length && M && M.id && (!st.p || st.p === M.id)) break; await new Promise((r) => setTimeout(r, 200)); }
+  if (!VERS || !VERS.length || (st.p && st.p !== M.id)) return;
+  const cands = VERS.filter((v) => v.modelVersion === st.mv), v = cands.filter((x) => x.tool === st.tool).pop() || cands.pop(); if (!v) return;
+  VPAGE = Math.floor(VERS.slice().reverse().findIndex((x) => x.key === v.key) / 3); verOpen(); verUI(); const row = [...$$('#verList .vrow')].find((r) => r.dataset.vk === v.key); if (row) { row.classList.add('vback'); row.scrollIntoView({ block: 'nearest' }); setTimeout(() => row.classList.remove('vback'), 4000); }
+  const same = (M.version || 0) === st.mv && !isDirty(); toast(same ? `Back from the simulation: this is ${v.name}, the model you sent. Change it, then simulate again.` : `Back from the simulation. The model you sent is ${v.name}, marked in Versions. Your current model has changed since; use Preview or Restore on ${v.name} if you want it back.`); }
+{ const _al = applyDelta; applyDelta = async function () { const r = await _al.apply(this, arguments); if (r && r.ok) { REFINE = true; loopUI(); } return r; }; }
+{ const _vl = verLoad; verLoad = async function () { await _vl.apply(this, arguments); vresLoad(); }; }
+vresLoad(); backRestore(); loopUI();
 window.__wb.cmp = { get state() { return CMP; }, refresh: cmpRefresh, types: () => CMP && cmpTypes() }; window.__wb.site = { siteOk, parcelPlan, clipToParcel, get anchor() { return M.site && M.site.anchor; }, get ancSel() { return ANCSEL; } }; window.__wb.CLR = CLR; window.__wb.clearanceOf = clearanceOf; window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
 Object.defineProperty(window.__wb, 'HOVX', { get: () => HOVX }); Object.defineProperty(window.__wb, 'DIMS', { get: () => DIMS });
 viewUI();
