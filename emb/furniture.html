@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en",base:"./furniture/"};</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<!--PCSKIN--><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"><style>:root{--pc-ink:#1C1B1A;--pc-muted:#6E6A60;--pc-paper:#FBFAF7;--pc-sand:#EFEBE0;--pc-red:#D8402A;--pc-red-dk:#B63422;--pc-hair:rgba(28,27,26,.13)}
+:focus-visible{outline:2px solid var(--pc-ink)!important;outline-offset:2px}
+.pcdesk{display:none}
+@media (max-width:900px){.pcdesk{display:grid;place-content:center;gap:10px;min-height:100vh;padding:32px;box-sizing:border-box;text-align:center;background:var(--pc-paper);font-family:"Inter Tight",system-ui,sans-serif;position:fixed;inset:0;z-index:9999}
+ .pcdesk b{font:800 30px "Inter Tight",system-ui,sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:var(--pc-ink)} .pcdesk p{margin:0 auto;max-width:420px;color:var(--pc-muted);font-size:15px;line-height:1.5}
+ .pcdesk span{font:500 11px "JetBrains Mono",monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--pc-muted)}}
+</style><!--/PCSKIN--></head>
+<body><!--PCSKIN--><div class="pcdesk" role="note"><span>PlotCloud · tools</span><b>furniture generator works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
+<title>PlotCloud Furniture Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: drafting-table tool — catalog rail | live 3D viewport | parameter sheet. Phone: rail becomes chips, panel stacks under the view. */
+:root {
+  --bg: #e9ece9;
+  --surface: #f7f8f6;
+  --view: #f1f3f0;
+  --ink: #1a1f1d;
+  --muted: #5f6964;
+  --line: #d2d8d4;
+  --line-strong: #aeb7b2;
+  --accent: #2747d0;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2e7fb;
+  --ok: #1e7a4f;
+  --warn: #9a5b00;
+  --f-display: "Archivo", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --f-body: "IBM Plex Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+.top { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.brand { font-family: var(--f-display); font-stretch: 118%; font-weight: 750; font-size: 15px; letter-spacing: 0.01em; white-space: nowrap; }
+.brand span { color: var(--muted); font-weight: 500; font-stretch: 100%; margin-left: 8px; }
+.top .spacer { flex: 1; }
+.top .hint { color: var(--muted); font-size: 12px; }
+
+.main { min-height: 0; display: grid; grid-template-columns: 210px minmax(0, 1fr) 340px; }
+
+/* catalog */
+.rail { border-right: 1px solid var(--line); background: var(--surface); overflow-y: auto; padding-block: 12px 24px; }
+.rail h3 { margin: 14px 16px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+.rail h3:first-child { margin-top: 2px; }
+.rail button { display: flex; width: 100%; align-items: baseline; gap: 8px; border: 0; background: none; padding: 6px 16px; text-align: left; border-left: 3px solid transparent; }
+.rail button:hover { background: var(--bg); }
+.rail button[aria-current="true"] { border-left-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.rail button small { color: var(--muted); font-size: 11px; font-weight: 400; }
+
+/* viewport */
+.stage { position: relative; min-width: 0; min-height: 0; background: var(--view); overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.views { position: absolute; top: 12px; left: 12px; display: flex; gap: 0; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.views button { border: 0; background: none; padding: 5px 11px; font-size: 12px; }
+.views button + button { border-left: 1px solid var(--line); }
+.views button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.tools { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
+.chipbtn { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 6px; padding: 5px 10px; font-size: 12px; }
+.chipbtn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.dims { position: absolute; left: 12px; bottom: 12px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px; padding: 8px 12px; display: grid; gap: 2px; }
+.dims .lab { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+.dims .val { font-family: var(--f-mono); font-size: 15px; font-variant-numeric: tabular-nums; font-weight: 500; }
+.dims .val i { font-style: normal; color: var(--muted); padding: 0 4px; }
+.origin { position: absolute; right: 12px; bottom: 12px; font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
+.dimlabel { position: absolute; transform: translate(-50%, -50%); font-family: var(--f-mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--accent); background: var(--view); padding: 0 4px; pointer-events: none; white-space: nowrap; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+
+/* panel */
+.panel { border-left: 1px solid var(--line); background: var(--surface); overflow-y: auto; display: flex; flex-direction: column; }
+.sec { padding: 16px; border-bottom: 1px solid var(--line); display: grid; gap: 12px; }
+.title { display: grid; gap: 2px; }
+.title .cat { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.title h1 { margin: 0; font-family: var(--f-display); font-stretch: 112%; font-weight: 750; font-size: 26px; line-height: 1.1; text-wrap: balance; }
+.title h1 span { font-weight: 500; font-size: 15px; color: var(--muted); font-stretch: 100%; margin-left: 8px; }
+.sec h2 { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
+.sec h2 button { border: 0; background: none; color: var(--accent); font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 500; padding: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 12px; }
+.presets button:hover { border-color: var(--accent); color: var(--accent); }
+
+.row { display: grid; gap: 6px; }
+.row .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.row label { font-size: 13px; }
+.num { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--view); }
+.num input { width: 62px; border: 0; background: transparent; padding: 3px 4px 3px 8px; text-align: right; font-family: var(--f-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.num span { font-size: 11px; color: var(--muted); padding-right: 7px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+.range-scale { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 10px; color: var(--muted); }
+.stepper { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 5px; overflow: hidden; }
+.stepper button { border: 0; background: var(--view); width: 28px; height: 26px; font-size: 15px; line-height: 1; }
+.stepper output { min-width: 30px; text-align: center; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line-strong); border-radius: 5px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--view); padding: 4px 8px; font-size: 12px; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.switch { position: relative; width: 38px; height: 22px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--view); padding: 0; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+.switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(16px); background: var(--accent-ink); }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatches button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-strong); padding: 0; position: relative; }
+.swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+.swname { font-size: 12px; color: var(--muted); }
+
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.checks li { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; align-items: baseline; padding: 5px 8px; border-radius: 5px; background: var(--view); }
+.checks li b { color: var(--ok); }
+.checks li.bad b, .checks li.bad span { color: #c0392b; }
+.checks li em { font-style: normal; font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.formats { display: grid; gap: 6px; }
+.fmt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.fmt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.fmt input { accent-color: var(--accent); margin: 0; }
+.fmt b { font-weight: 600; font-size: 13px; }
+.fmt small { display: block; color: var(--muted); font-size: 11px; }
+.fmt code { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.export { border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink); font-weight: 600; padding: 11px 14px; font-size: 14px; }
+.export:disabled { opacity: .55; cursor: progress; }
+.status { font-size: 12px; color: var(--muted); min-height: 1.4em; }
+.status.ok { color: var(--ok); }
+.status.warn { color: var(--warn); }
+.note { font-size: 12px; color: var(--muted); }
+.note b { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 960px) {
+  .app { height: auto; display: block; }
+  html, body { height: auto; }
+  .main { display: block; }
+  .top .hint { display: none; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); display: flex; overflow-x: auto; padding: 8px 16px; gap: 6px; }
+  .rail h3 { display: none; }
+  .rail button { width: auto; flex: none; border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 12px; }
+  .rail button small { display: none; }
+  .rail button[aria-current="true"] { border-color: var(--accent); }
+  .stage { height: 58vh; min-height: 340px; }
+  .panel { border-left: 0; }
+  .dims .val { font-size: 13px; }
+  .origin { display: none; }
+}
+.embed .top { display: none; }
+.embed .app { grid-template-rows: 1fr; }
+@media (prefers-reduced-motion: reduce) { .switch::after { transition: none; } }
+</style>
+<style>
+:root{--bg:#fff;--surface:#fff;--view:#F5F5F5;--ink:#111;--muted:#484848;--line:#DFDFDF;--line-strong:#929292;--accent:#D8402A;--accent-ink:#fff;--accent-soft:#FBE9E5;--ok:#0A8A00;--warn:#9a5b00;
+--f-display:"Noto Sans",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;--f-body:"Noto Sans",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:light}
+.title h1{font-stretch:100%;font-weight:700;font-size:24px}
+.export{border-radius:999px}
+</style>
+
+<style>/* 2026-10-16: view buttons and Dimensions/Fit view never overlap — on a narrow stage the tools drop below the views */
+.stage{container-type:inline-size}
+@container (max-width: 700px){.stage .tools{top:52px;left:12px;right:auto}}
+</style>
+<div class="app">
+  <header class="top">
+    <div class="brand">PlotCloud<span data-t>家具生成器</span></div>
+    <div class="spacer"></div>
+    <div class="hint" data-t>拖动旋转 · 右键平移 · 滚轮缩放</div>
+  </header>
+  <div class="main">
+    <nav class="rail" id="rail" aria-label="基础模型"></nav>
+    <section class="stage" id="stage" aria-label="三维预览">
+      <div class="loading" id="loading" data-t>正在载入三维视图…</div>
+      <div class="views" role="group" aria-label="视图">
+        <button type="button" data-view="persp" aria-pressed="true" data-t>透视</button>
+        <button type="button" data-view="plan" aria-pressed="false" data-t>平面</button>
+        <button type="button" data-view="front" aria-pressed="false" data-t>正立面</button>
+        <button type="button" data-view="side" aria-pressed="false" data-t>侧立面</button>
+      </div>
+      <div class="tools">
+        <button type="button" class="chipbtn" id="dimToggle" aria-pressed="true" data-t>尺寸标注</button>
+        <button type="button" class="chipbtn" id="fitBtn" data-t>适配视图</button>
+      </div>
+      <div class="dims" aria-live="polite">
+        <div class="lab" data-t>外形尺寸 W × D × H（mm）</div>
+        <div class="val" id="dimsVal">—</div>
+      </div>
+      <div class="origin" data-t>原点：底面中心 · Z 轴向上 · 网格 500 mm</div>
+    </section>
+    <aside class="panel" id="panel"></aside>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "fflate": "./furniture/fflate.js", "pc/": "./furniture/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { zipSync, strToU8 } from 'fflate';
+import { MODELS, CATS, COLORS, defaults, paramVisible, buildModel, materialColor } from 'pc/models.js';
+import { partGeometry } from 'pc/geom.js';
+import { buildFiles, FORMATS } from 'pc/exporters.js';
+import { t, M, LANG } from 'pc/i18n.js';
+if (LANG !== 'zh') {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = t(e.textContent.trim()); });
+  document.querySelectorAll('[aria-label]').forEach((e) => e.setAttribute('aria-label', t(e.getAttribute('aria-label'))));
+}
+if (window.PC_EMBED) document.documentElement.classList.add('embed');
+
+const $ = (s, r = document) => r.querySelector(s);
+const track = (event, data = {}) => { try { (window.dataLayer = window.dataLayer || []).push({ event, ...data }); } catch (e) {} };
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+
+// ---------- state ----------
+const state = { model: MODELS[0], values: {}, formats: FORMATS.map((f) => f.id), view: 'persp', showDims: true, built: null };
+const STORE_KEY = 'pc-config' + (window.PC_EMBED && window.PC_EMBED.key ? '-' + window.PC_EMBED.key : '');
+const remembered = store.get(STORE_KEY) || {};
+
+// ---------- three setup ----------
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 0.9;
+stage.prepend(renderer.domElement);
+$('#loading').remove();
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.45;
+const sun = new THREE.DirectionalLight(0xffffff, 1.25);
+sun.position.set(2500, 5000, 3500);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -4000, right: 4000, top: 4000, bottom: -4000, near: 100, far: 15000 });
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 0.2));
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(30000, 30000), new THREE.ShadowMaterial({ opacity: 0.16 }));
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+let grid = null;
+
+const root = new THREE.Group();          // converts model space (Z up) to three space (Y up)
+root.rotation.x = -Math.PI / 2;
+scene.add(root);
+const partsGroup = new THREE.Group();
+const dimGroup = new THREE.Group();
+root.add(partsGroup, dimGroup);
+
+const persp = new THREE.PerspectiveCamera(35, 1, 10, 100000);
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, -50000, 50000);
+const cPersp = new OrbitControls(persp, renderer.domElement);
+const cOrtho = new OrbitControls(ortho, renderer.domElement);
+cPersp.enableDamping = true; cPersp.maxPolarAngle = Math.PI * 0.495;
+cOrtho.enableRotate = false; cOrtho.enabled = false;
+cOrtho.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+cOrtho.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+let camera = persp;
+
+function themeColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = (k) => cs.getPropertyValue(k).trim() || '#888';
+  return { view: g('--view'), line: g('--line'), strong: g('--line-strong'), ink: g('--ink'), accent: g('--accent') };
+}
+let theme = themeColors();
+function applyTheme() {
+  theme = themeColors();
+  scene.background = new THREE.Color(theme.view);
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); }
+  grid = new THREE.GridHelper(12000, 24, new THREE.Color(theme.strong), new THREE.Color(theme.line));
+  grid.position.y = -0.5;
+  grid.material.transparent = true; grid.material.opacity = 0.7;
+  scene.add(grid);
+  const dark = new THREE.Color(theme.view).getHSL({}).l < 0.4;
+  floor.material.opacity = dark ? 0.35 : 0.16;
+  edgeMat.color.set(theme.ink); edgeMat.opacity = dark ? 0.28 : 0.32;
+  dimMat.color.set(theme.accent);
+}
+const edgeMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.32 });
+const dimMat = new THREE.LineBasicMaterial({});
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+const matCache = new Map();
+function material(mat, color) {
+  const key = mat + color;
+  if (matCache.has(key)) return matCache.get(key);
+  const o = { color: new THREE.Color(color), roughness: 0.78, metalness: 0 };
+  if (mat === 'steel') Object.assign(o, { roughness: 0.32, metalness: 0.7 });
+  if (mat === 'glass' || mat === 'mirror') Object.assign(o, { roughness: 0.12, metalness: 0.1 });
+  if (mat === 'white' || mat === 'ceramic') Object.assign(o, { roughness: 0.35 });
+  if (mat === 'fabric') o.roughness = 0.95;
+  if (mat === 'clearglass') Object.assign(o, { roughness: 0.05, metalness: 0, transparent: true, opacity: 0.28, depthWrite: false });
+  const m = new THREE.MeshStandardMaterial(o);
+  matCache.set(key, m);
+  return m;
+}
+
+// ---------- dimension lines ----------
+const dimLabels = [0, 1, 2].map(() => { const d = document.createElement('div'); d.className = 'dimlabel'; stage.appendChild(d); return d; });
+let dimAnchors = [];
+function drawDims(b, dims) {
+  dimGroup.children.forEach((c) => c.geometry.dispose());
+  dimGroup.clear();
+  const off = Math.max(120, Math.max(dims.W, dims.D) * 0.08), tick = off * 0.25;
+  const [x0, y0, , x1, y1, z1] = b;
+  const segs = [];
+  const line = (a, c) => segs.push(...a, ...c);
+  // width along the front, depth along the right side, height at the front-right corner
+  const yf = y0 - off; line([x0, yf, 0], [x1, yf, 0]); line([x0, yf - tick, 0], [x0, yf + tick, 0]); line([x1, yf - tick, 0], [x1, yf + tick, 0]);
+  const xr = x1 + off; line([xr, y0, 0], [xr, y1, 0]); line([xr - tick, y0, 0], [xr + tick, y0, 0]); line([xr - tick, y1, 0], [xr + tick, y1, 0]);
+  const hx = x1 + off * 0.7, hy = y0 - off * 0.7; line([hx, hy, 0], [hx, hy, z1]); line([hx - tick, hy, z1], [hx + tick, hy, z1]); line([hx - tick, hy, 0], [hx + tick, hy, 0]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+  dimGroup.add(new THREE.LineSegments(g, dimMat));
+  dimAnchors = [
+    [new THREE.Vector3((x0 + x1) / 2, yf, 0), dims.W],
+    [new THREE.Vector3(xr, (y0 + y1) / 2, 0), dims.D],
+    [new THREE.Vector3(hx, hy, z1 / 2), dims.H],
+  ];
+}
+const tmpV = new THREE.Vector3();
+function placeLabels() {
+  const r = stage.getBoundingClientRect();
+  dimLabels.forEach((el, i) => {
+    const a = dimAnchors[i];
+    const hideH = i === 2 && state.view === 'plan';
+    const hideW = i === 0 && state.view === 'side';
+    const hideD = i === 1 && state.view === 'front';
+    if (!a || !state.showDims || hideH || hideW || hideD) { el.hidden = true; return; }
+    tmpV.copy(a[0]).applyMatrix4(root.matrixWorld).project(camera);
+    el.hidden = tmpV.z > 1;
+    el.style.left = ((tmpV.x + 1) / 2 * r.width) + 'px';
+    el.style.top = ((1 - tmpV.y) / 2 * r.height) + 'px';
+    el.textContent = a[1];
+  });
+}
+
+// ---------- rebuild ----------
+function rebuild() {
+  const { parts, dims } = buildModel(state.model, state.values);
+  for (const c of partsGroup.children) c.geometry.dispose();
+  partsGroup.clear();
+  for (const p of parts) {
+    const g = partGeometry(p);
+    g.computeVertexNormals();
+    const mesh = new THREE.Mesh(g, material(p.mat, materialColor(p.mat, state.values)));
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    partsGroup.add(mesh);
+    const eg = new THREE.EdgesGeometry(g, 40);
+    const edges = new THREE.LineSegments(eg, edgeMat);
+    edges.geometry = eg;
+    partsGroup.add(edges);
+  }
+  const b = [Infinity, Infinity, 0, -Infinity, -Infinity, 0];
+  for (const c of partsGroup.children) {
+    c.geometry.computeBoundingBox();
+    const bb = c.geometry.boundingBox;
+    b[0] = Math.min(b[0], bb.min.x); b[1] = Math.min(b[1], bb.min.y); b[3] = Math.max(b[3], bb.max.x); b[4] = Math.max(b[4], bb.max.y); b[5] = Math.max(b[5], bb.max.z);
+  }
+  drawDims(b, dims);
+  dimGroup.visible = state.showDims;
+  state.built = { parts, dims, b };
+  const infoEl = document.getElementById('infoSec');
+  if (infoEl && state.model.info) {
+    const inf = state.model.info(state.values, dims);
+    infoEl.innerHTML = `<h2><span>${t(inf.title || 'Check')}</span></h2>`
+      + `<dl class="kv">${inf.rows.map(([k, v]) => `<dt>${t(k)}</dt><dd>${v}</dd>`).join('')}</dl>`
+      + (inf.checks && inf.checks.length ? `<ul class="checks">${inf.checks.map(([k, ok, d]) => `<li class="${ok ? 'ok' : 'bad'}"><b>${ok ? '✓' : '✗'}</b><span>${t(k)}</span><em>${d || ''}</em></li>`).join('')}</ul>` : '')
+      + (inf.note ? `<p class="note">${inf.note}</p>` : '');
+  }
+  $('#dimsVal').innerHTML = `${dims.W}<i>×</i>${dims.D}<i>×</i>${dims.H}`;
+}
+let pending = false;
+function scheduleRebuild() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; rebuild(); saveValues(); });
+}
+
+// ---------- cameras ----------
+function fit() {
+  if (!state.built) return;
+  const { b } = state.built;
+  const cx = (b[0] + b[3]) / 2, cy = (b[1] + b[4]) / 2, h = b[5];
+  const target = new THREE.Vector3(cx, h / 2, -cy);   // model → three
+  const size = Math.max(b[3] - b[0], b[4] - b[1], h) + 600;
+  const r = stage.getBoundingClientRect(), aspect = r.width / Math.max(1, r.height);
+  if (state.view === 'persp') {
+    const dist = size / (2 * Math.tan(THREE.MathUtils.degToRad(persp.fov / 2))) * (aspect < 1 ? 1.25 / aspect : 1.05);
+    persp.position.copy(target).add(new THREE.Vector3(0.62, 0.48, 1).normalize().multiplyScalar(dist));
+    cPersp.target.copy(target); cPersp.update();
+  } else {
+    const half = size / 2 * 1.05;
+    ortho.left = -half * Math.max(aspect, 1); ortho.right = half * Math.max(aspect, 1);
+    ortho.top = half / Math.min(aspect, 1); ortho.bottom = -half / Math.min(aspect, 1);
+    ortho.zoom = 1; ortho.updateProjectionMatrix();
+    const dir = { plan: [0, 1, 0], front: [0, 0, 1], side: [1, 0, 0] }[state.view];
+    ortho.up.set(...(state.view === 'plan' ? [0, 0, -1] : [0, 1, 0]));
+    ortho.position.copy(target).add(new THREE.Vector3(...dir).multiplyScalar(10000));
+    cOrtho.target.copy(target); ortho.lookAt(target); cOrtho.update();
+  }
+}
+function setView(v) {
+  state.view = v;
+  document.querySelectorAll('.views button').forEach((bt) => bt.setAttribute('aria-pressed', String(bt.dataset.view === v)));
+  camera = v === 'persp' ? persp : ortho;
+  cPersp.enabled = v === 'persp'; cOrtho.enabled = v !== 'persp';
+  floor.visible = v === 'persp';
+  fit();
+}
+document.querySelectorAll('.views button').forEach((bt) => bt.addEventListener('click', () => setView(bt.dataset.view)));
+$('#fitBtn').addEventListener('click', fit);
+$('#dimToggle').addEventListener('click', (e) => {
+  state.showDims = !state.showDims;
+  e.currentTarget.setAttribute('aria-pressed', String(state.showDims));
+  dimGroup.visible = state.showDims;
+});
+
+function resize() {
+  const r = stage.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  persp.aspect = r.width / Math.max(1, r.height); persp.updateProjectionMatrix();
+  if (state.view !== 'persp') fit();
+}
+new ResizeObserver(resize).observe(stage);
+
+renderer.setAnimationLoop(() => {
+  if (camera === persp) cPersp.update();
+  renderer.render(scene, camera);
+  placeLabels();
+});
+
+// ---------- catalog ----------
+const rail = $('#rail');
+for (const c of CATS) {
+  const h = document.createElement('h3'); h.textContent = t(c); rail.appendChild(h);
+  for (const m of MODELS.filter((x) => x.cat === c)) {
+    const bt = document.createElement('button');
+    bt.type = 'button'; bt.dataset.id = m.id;
+    bt.innerHTML = LANG === 'en' ? m.en : `${m.name}<small>${m.en}</small>`;
+    bt.addEventListener('click', () => selectModel(m.id));
+    rail.appendChild(bt);
+  }
+}
+
+function saveValues() { remembered[state.model.id] = state.values; remembered._last = state.model.id; store.set(STORE_KEY, remembered); }
+
+function selectModel(id) {
+  const m = MODELS.find((x) => x.id === id) || MODELS[0];
+  state.model = m;
+  state.values = { ...defaults(m), ...(remembered[m.id] || {}) };
+  rail.querySelectorAll('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.id === id)));
+  renderPanel();
+  rebuild();
+  fit();
+  saveValues();
+  track('configurator_model_open', { model: id });
+}
+
+// ---------- parameter panel ----------
+const panel = $('#panel');
+function renderPanel() {
+  const m = state.model, v = state.values;
+  panel.innerHTML = '';
+  const s1 = el('div', 'sec');
+  s1.innerHTML = `<div class="title"><div class="cat">${t(m.cat)}</div><h1>${LANG === 'en' ? m.en : `${m.name}<span>${m.en}</span>`}</h1></div>`;
+  if (m.presets) {
+    const pr = el('div', 'presets');
+    for (const [label, vals] of m.presets) {
+      const b = el('button'); b.type = 'button'; b.textContent = t(label);
+      b.addEventListener('click', () => { Object.assign(state.values, vals); renderPanel(); scheduleRebuild(); });
+      pr.appendChild(b);
+    }
+    s1.appendChild(pr);
+  }
+  panel.appendChild(s1);
+  if (m.info) { const si = el('div', 'sec info'); si.id = 'infoSec'; panel.appendChild(si); }
+
+  const s2 = el('div', 'sec');
+  const h = el('h2'); h.innerHTML = `<span>${t('参数')}</span>`;
+  const reset = el('button'); reset.type = 'button'; reset.textContent = t('恢复默认');
+  reset.addEventListener('click', () => { state.values = defaults(m); renderPanel(); scheduleRebuild(); });
+  h.appendChild(reset); s2.appendChild(h);
+  for (const q of m.params) if (paramVisible(q, v)) s2.appendChild(paramRow(q));
+  panel.appendChild(s2);
+
+  if (m.colors.length) {
+    const s3 = el('div', 'sec');
+    s3.innerHTML = `<h2><span>${t('材质颜色')}</span></h2>`;
+    for (const c of m.colors) {
+      const row = el('div', 'row');
+      const cur = COLORS[c].find((x) => x[0] === v['color_' + c]) || COLORS[c][0];
+      row.innerHTML = `<div class="head"><label>${t(c === 'fabric' ? '布艺' : '木作 / 柜体')}</label><span class="swname">${t(cur[1])}</span></div>`;
+      const sw = el('div', 'swatches');
+      for (const [hex, name] of COLORS[c]) {
+        const b = el('button'); b.type = 'button'; b.style.background = hex; b.title = t(name); b.setAttribute('aria-label', t(name));
+        b.setAttribute('aria-pressed', String(hex === v['color_' + c]));
+        b.addEventListener('click', () => { v['color_' + c] = hex; renderPanel(); scheduleRebuild(); });
+        sw.appendChild(b);
+      }
+      row.appendChild(sw); s3.appendChild(row);
+    }
+    panel.appendChild(s3);
+  }
+  panel.appendChild(exportSection());
+}
+function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+
+function paramRow(q) {
+  const v = state.values, row = el('div', 'row'), id = `p-${state.model.id}-${q.k}`;
+  const head = el('div', 'head');
+  const lab = el('label'); lab.textContent = t(q.label); lab.htmlFor = id; head.appendChild(lab);
+  row.appendChild(head);
+  if (q.type === 'bool') {
+    const sw = el('button', 'switch'); sw.type = 'button'; sw.id = id; sw.setAttribute('role', 'switch'); sw.setAttribute('aria-checked', String(!!v[q.k]));
+    sw.addEventListener('click', () => { v[q.k] = !v[q.k]; renderPanel(); scheduleRebuild(); });
+    head.appendChild(sw);
+  } else if (q.type === 'int') {
+    const st = el('div', 'stepper');
+    const minus = el('button'); minus.type = 'button'; minus.textContent = '−'; minus.setAttribute('aria-label', t('减少'));
+    const out = el('output'); out.id = id; out.textContent = v[q.k];
+    const plus = el('button'); plus.type = 'button'; plus.textContent = '+'; plus.setAttribute('aria-label', t('增加'));
+    const set = (d) => { v[q.k] = Math.max(q.min, Math.min(q.max, v[q.k] + d)); out.textContent = v[q.k]; scheduleRebuild(); };
+    minus.addEventListener('click', () => set(-1)); plus.addEventListener('click', () => set(1));
+    st.append(minus, out, plus); head.appendChild(st);
+  } else if (q.type === 'select') {
+    const seg = el('div', 'seg'); seg.id = id;
+    for (const [val, label] of q.options) {
+      const b = el('button'); b.type = 'button'; b.textContent = t(label); b.setAttribute('aria-pressed', String(v[q.k] === val));
+      b.addEventListener('click', () => { v[q.k] = val; renderPanel(); scheduleRebuild(); });
+      seg.appendChild(b);
+    }
+    row.appendChild(seg);
+  } else {
+    const num = el('div', 'num');
+    const inp = el('input'); inp.type = 'number'; inp.min = q.min; inp.max = q.max; inp.step = q.step; inp.value = v[q.k]; inp.id = id; inp.inputMode = 'numeric';
+    const unit = el('span'); unit.textContent = 'mm';
+    num.append(inp, unit); head.appendChild(num);
+    const rg = el('input'); rg.type = 'range'; rg.min = q.min; rg.max = q.max; rg.step = q.step; rg.value = v[q.k]; rg.id = id + '-r';
+    rg.setAttribute('aria-label', t(q.label));
+    rg.addEventListener('input', () => { v[q.k] = +rg.value; inp.value = rg.value; scheduleRebuild(); });
+    inp.addEventListener('change', () => {
+      let x = Math.round(+inp.value / q.step) * q.step;
+      if (!Number.isFinite(x)) x = q.def;
+      x = Math.max(q.min, Math.min(q.max, x));
+      v[q.k] = x; inp.value = x; rg.value = x; scheduleRebuild();
+    });
+    const scale = el('div', 'range-scale'); scale.innerHTML = `<span>${q.min}</span><span>${q.max}</span>`;
+    row.append(rg, scale);
+  }
+  return row;
+}
+
+// ---------- export ----------
+let rhinoPromise = null;
+function loadRhino() {
+  if (!rhinoPromise) {
+    const base = (window.PC_EMBED && window.PC_EMBED.base) || './';
+    rhinoPromise = import(new URL(base + 'rhino3dm.module.min.js', document.baseURI).href)
+      .then((mod) => mod.default({ locateFile: (f) => new URL(base + f, document.baseURI).href }))
+      .catch((e) => { console.warn('rhino3dm failed to load', e); return null; });
+  }
+  return rhinoPromise;
+}
+let downloadsP = null;
+function getDownloads() {
+  if (!downloadsP) downloadsP = window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+  return downloadsP;
+}
+
+function exportSection() {
+  const s = el('div', 'sec');
+  s.innerHTML = `<h2><span>${t('导出模型')}</span></h2>`;
+  const list = el('div', 'formats');
+  for (const f of FORMATS) {
+    const lab = el('label', 'fmt');
+    const cb = el('input'); cb.type = 'checkbox'; cb.id = 'fmt-' + f.id; cb.checked = state.formats.includes(f.id);
+    cb.addEventListener('change', () => {
+      state.formats = FORMATS.map((x) => x.id).filter((x) => document.getElementById('fmt-' + x).checked);
+      btn.disabled = state.formats.length === 0;
+    });
+    const txt = el('div'); txt.innerHTML = `<b>${t(f.label)}</b><small>${t(f.note)}</small>`;
+    const ext = el('code'); ext.textContent = f.ext;
+    lab.append(cb, txt, ext); list.appendChild(lab);
+  }
+  s.appendChild(list);
+  const btn = el('button', 'export'); btn.type = 'button'; btn.textContent = t('导出 .zip');
+  btn.disabled = state.formats.length === 0;
+  const status = el('div', 'status'); status.setAttribute('role', 'status');
+  btn.addEventListener('click', () => doExport(btn, status));
+  s.append(btn, status);
+  const note = el('p', 'note');
+  note.innerHTML = M.note();
+  s.appendChild(note);
+  return s;
+}
+
+async function doExport(btn, status) {
+  btn.disabled = true;
+  status.className = 'status';
+  status.textContent = t('正在生成文件…');
+  try {
+    const m = state.model, { parts, dims } = state.built;
+    const rhino = state.formats.includes('3dm') ? await loadRhino() : null;
+    const { base, files, report } = buildFiles({ model: m, parts, dims, values: state.values, formats: state.formats, rhino });
+    const z = {};
+    for (const [k, val] of Object.entries(files)) z[k] = typeof val === 'string' ? strToU8(val) : val;
+    const zip = zipSync(z, { level: 6 });
+    track('configurator_export', { model: m.id, formats: state.formats.join(','), W: dims.W, D: dims.D, H: dims.H });
+    const dl = await getDownloads();
+    const kb = Math.max(1, Math.round(zip.length / 1024));
+    if (!dl) {
+      status.className = 'status warn';
+      status.textContent = M.noDownload(kb);
+      return;
+    }
+    status.textContent = t('请在弹出的确认框里保存文件。');
+    await dl.save({ filename: base + '.zip', data: new Blob([zip], { type: 'application/zip' }) });
+    const missing3dm = state.formats.includes('3dm') && !rhino;
+    status.className = missing3dm ? 'status warn' : 'status ok';
+    status.textContent = missing3dm ? M.savedNo3dm(base + '.zip', kb) : M.saved(base + '.zip', kb, report);
+  } catch (e) {
+    status.className = 'status warn';
+    const code = e && e.code;
+    status.textContent = code === 'declined' ? t('已取消保存。')
+      : code === 'rate_limited' ? t('已有一个保存确认框没关闭，请先处理它。')
+      : M.failed((e && e.message) || e);
+  } finally {
+    btn.disabled = state.formats.length === 0;
+  }
+}
+
+// ---------- start ----------
+selectModel(remembered._last || MODELS[0].id);
+resize(); fit();
+(window.requestIdleCallback || setTimeout)(() => loadRhino());
+getDownloads();
+</script>
+
+</body>
+</html>

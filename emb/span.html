@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<!--PCSKIN--><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"><style>:root{--pc-ink:#1C1B1A;--pc-muted:#6E6A60;--pc-paper:#FBFAF7;--pc-sand:#EFEBE0;--pc-red:#D8402A;--pc-red-dk:#B63422;--pc-hair:rgba(28,27,26,.13)}
+:focus-visible{outline:2px solid var(--pc-ink)!important;outline-offset:2px}
+.pcdesk{display:none}
+@media (max-width:900px){.pcdesk{display:grid;place-content:center;gap:10px;min-height:100vh;padding:32px;box-sizing:border-box;text-align:center;background:var(--pc-paper);font-family:"Inter Tight",system-ui,sans-serif;position:fixed;inset:0;z-index:9999}
+ .pcdesk b{font:800 30px "Inter Tight",system-ui,sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:var(--pc-ink)} .pcdesk p{margin:0 auto;max-width:420px;color:var(--pc-muted);font-size:15px;line-height:1.5}
+ .pcdesk span{font:500 11px "JetBrains Mono",monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--pc-muted)}}
+</style><!--/PCSKIN--></head>
+<body><!--PCSKIN--><div class="pcdesk" role="note"><span>PlotCloud · tools</span><b>structure sizer works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
+<title>PlotCloud Structure Sizer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: drawings (elevation to scale + all-systems chart) | inputs and answer. Site skin: white, Noto Sans, plotcloud red. */
+:root {
+  --bg: #ffffff; --view: #f5f5f5; --ink: #111111; --muted: #484848; --faint: #8a8a8a; --line: #dfdfdf; --line-strong: #929292;
+  --accent: #d8402a; --accent-soft: #fbe9e5; --ok: #0a8a00; --warn: #9a5b00;
+  --timber: #b98a55; --steel: #5f7487; --concrete: #9b9a94;
+  --f-body: "Noto Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--f-body); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+.draw { min-width: 0; overflow-y: auto; padding: 20px 24px 28px; display: grid; gap: 22px; align-content: start; background: var(--view); }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; }
+.card h2 { margin: 0 0 4px; font-size: 16px; }
+.card .sub { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+svg text { font-family: var(--f-body); }
+.big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+.big b { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.big span { color: var(--muted); }
+.panel { border-left: 1px solid var(--line); overflow-y: auto; }
+.sec { padding: 16px; border-bottom: 1px solid var(--line); display: grid; gap: 12px; }
+.sec h3 { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.row { display: grid; gap: 6px; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.head label { font-size: 13px; }
+.num { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--view); }
+.num input { width: 64px; border: 0; background: transparent; padding: 3px 4px 3px 8px; text-align: right; font-family: var(--f-mono); font-size: 13px; }
+.num span { font-size: 11px; color: var(--muted); padding-right: 7px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line-strong); border-radius: 5px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--view); padding: 5px 6px; font-size: 12px; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+select { width: 100%; border: 1px solid var(--line-strong); border-radius: 5px; padding: 6px 8px; background: #fff; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+.flag { font-size: 12px; color: var(--warn); background: #fbf0dd; border-radius: 5px; padding: 8px 10px; margin: 0; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.chart-wrap { overflow-x: auto; }
+@media (max-width: 900px) {
+  html, body { height: auto; }
+  .app { display: block; height: auto; }
+  .draw { padding: 16px; }
+  .panel { border-left: 0; }
+  .big b { font-size: 32px; }
+}
+</style>
+
+<div class="app">
+  <main class="draw">
+    <section class="card" aria-live="polite">
+      <div class="big"><b id="ansDepth">—</b><span id="ansWhat">—</span></div>
+      <p class="sub" id="ansRange" style="margin:6px 0 0"></p>
+    </section>
+    <section class="card">
+      <h2>Elevation to scale</h2>
+      <p class="sub">Your member over the span, with a 1.75 m person for scale.</p>
+      <div id="elev"></div>
+    </section>
+    <section class="card">
+      <h2>Every system at this span</h2>
+      <p class="sub">Typical depth for each system. Faded bars are outside that system's usual span range. Click a bar to pick it.</p>
+      <div class="chart-wrap" id="chart"></div>
+      <div class="legend"><span><i style="background:var(--timber)"></i>Timber</span><span><i style="background:var(--steel)"></i>Steel</span><span><i style="background:var(--concrete)"></i>Concrete</span></div>
+    </section>
+  </main>
+  <aside class="panel">
+    <div class="sec">
+      <h3>Span</h3>
+      <div class="row"><div class="head"><label for="span">Clear span</label><div class="num"><input id="span" type="number" min="1" max="80" step="0.1" value="7.2"><span>m</span></div></div>
+        <input id="spanR" type="range" min="1" max="60" step="0.1" value="7.2" aria-label="Clear span"></div>
+      <div class="row"><div class="head"><label>Supports</label></div><div class="seg" id="supSeg"></div></div>
+    </div>
+    <div class="sec">
+      <h3>System</h3>
+      <select id="sys" aria-label="Structural system"></select>
+      <dl class="kv" id="detail"></dl>
+      <p class="flag" id="flag" hidden></p>
+    </div>
+    <div class="sec">
+      <h3>Column estimate</h3>
+      <div class="row"><div class="head"><label for="bayX">Bay (one way)</label><div class="num"><input id="bayX" type="number" min="2" max="20" step="0.1" value="7.2"><span>m</span></div></div></div>
+      <div class="row"><div class="head"><label for="bayY">Bay (other way)</label><div class="num"><input id="bayY" type="number" min="2" max="20" step="0.1" value="6"><span>m</span></div></div></div>
+      <div class="row"><div class="head"><label for="storeys">Floors carried</label><div class="num"><input id="storeys" type="number" min="1" max="40" step="1" value="4"><span></span></div></div></div>
+      <div class="row"><div class="head"><label>Column material</label></div><div class="seg" id="colSeg"></div></div>
+      <dl class="kv" id="colOut"></dl>
+    </div>
+    <div class="sec">
+      <p class="note">Rules of thumb for early design and crits, not engineering. Concrete slab and beam depths use the code minimum-thickness ratios that let you skip a deflection check (ACI 318 and CSA A23.3, normal-weight concrete, 400 MPa bars). Other systems use common span-to-depth ratios. Column sizes assume about 6 / 8 / 12 kPa factored load per floor for timber / steel / concrete. Ask an engineer before anything is built.</p>
+    </div>
+  </aside>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const track = (event, data = {}) => { try { (window.dataLayer = window.dataLayer || []).push({ event, ...data }); } catch (e) {} };
+
+const SUP = [['simple', 'Simple'], ['one', 'One end cont.'], ['both', 'Both cont.'], ['cant', 'Cantilever']];
+const SUPF = { simple: 1, one: 0.92, both: 0.85, cant: 2 };
+const SNAP = {
+  lumber: { list: [140, 184, 235, 286], label: (d) => ({ 140: '2×6', 184: '2×8', 235: '2×10', 286: '2×12' }[d]) },
+  ijoist: { list: [241, 302, 356, 406, 476], label: (d) => ({ 241: '9½″', 302: '11⅞″', 356: '14″', 406: '16″', 476: '18¾″' }[d] + ' I-joist') },
+  clt: { list: [105, 175, 245, 315], label: (d) => ({ 105: '3-ply', 175: '5-ply', 245: '7-ply', 315: '9-ply' }[d] + ' CLT') },
+  W: { list: [150, 200, 250, 310, 360, 410, 460, 530, 610, 690, 760, 840, 920, 1000, 1100], label: (d) => `W${d} section` },
+};
+const SYS = [
+  { id: 'joist', g: 'Timber', name: 'Wood floor joists (sawn, 400 o.c.)', r: [18, 20, 22], span: [2.4, 5.5], snap: 'lumber' },
+  { id: 'ijoist', g: 'Timber', name: 'Wood I-joists (400 o.c.)', r: [18, 20, 24], span: [3, 7.5], snap: 'ijoist' },
+  { id: 'glulam', g: 'Timber', name: 'Glulam beam', r: [15, 18, 20], span: [4, 16], snap: 'lam', width: 'glulam' },
+  { id: 'clt', g: 'Timber', name: 'CLT floor panel (one-way)', r: [28, 32, 35], span: [3, 8], snap: 'clt' },
+  { id: 'ttruss', g: 'Timber', name: 'Timber roof truss', r: [8, 9, 10], span: [8, 30], snap: 50 },
+  { id: 'owsj', g: 'Steel', name: 'Open-web steel joists', r: [18, 20, 24], span: [6, 30], snap: 50 },
+  { id: 'wbeam', g: 'Steel', name: 'Steel W-beam (floor)', r: [18, 20, 24], span: [5, 15], snap: 'W' },
+  { id: 'girder', g: 'Steel', name: 'Steel girder (carries beams)', r: [12, 15, 18], span: [6, 15], snap: 'W' },
+  { id: 'struss', g: 'Steel', name: 'Steel truss', r: [10, 11, 12], span: [15, 60], snap: 50 },
+  { id: 'space', g: 'Steel', name: 'Space frame', r: [20, 22, 25], span: [20, 100], snap: 50 },
+  { id: 'ow', g: 'Concrete', name: 'One-way slab', code: { simple: 20, one: 24, both: 28, cant: 10 }, span: [3, 6], snap: 10, min: 100 },
+  { id: 'fp', g: 'Concrete', name: 'Flat plate (two-way, no drops)', code: { simple: 30, one: 30, both: 30, cant: 30 }, span: [4, 8], snap: 10, min: 125, noSupport: true },
+  { id: 'pt', g: 'Concrete', name: 'Post-tensioned flat slab', r: [38, 42, 45], span: [6, 11], snap: 10, min: 150 },
+  { id: 'cbeam', g: 'Concrete', name: 'Concrete beam', code: { simple: 16, one: 18.5, both: 21, cant: 8 }, span: [5, 12], snap: 25, width: 'concrete' },
+];
+const COLOR = { Timber: 'var(--timber)', Steel: 'var(--steel)', Concrete: 'var(--concrete)' };
+const S = { span: 7.2, sup: 'simple', sys: 'glulam', bayX: 7.2, bayY: 6, storeys: 4, col: 'Concrete' };
+
+function size(sys, L, sup) {
+  const mm = L * 1000;
+  let typ, lo, hi, basis;
+  if (sys.code) {
+    const ratio = sys.code[sys.noSupport ? 'both' : sup];
+    typ = mm / ratio; lo = typ; hi = typ * 1.15;
+    basis = sys.noSupport ? `ℓn / ${ratio} (code minimum)` : `ℓ / ${ratio} (code minimum)`;
+  } else {
+    const f = SUPF[sup];
+    typ = mm / sys.r[1] * f; lo = mm / sys.r[2] * f; hi = mm / sys.r[0] * f;
+    basis = `span / ${sys.r[1]}${f !== 1 ? ` × ${f}` : ''}`;
+  }
+  if (sys.min) { typ = Math.max(typ, sys.min); lo = Math.max(lo, sys.min); hi = Math.max(hi, sys.min); }
+  let pick = typ, label = '', over = false;
+  if (typeof sys.snap === 'number') { pick = Math.ceil(typ / sys.snap) * sys.snap; }
+  else if (sys.snap === 'lam') { const n = Math.ceil(typ / 38); pick = n * 38; label = `${n} × 38 mm laminations`; }
+  else { const T = SNAP[sys.snap]; const d = T.list.find((x) => x >= typ - 1); if (d) { pick = d; label = T.label(d); } else { pick = Math.ceil(typ / 10) * 10; over = true; label = 'deeper than the standard sizes'; } }
+  let width = '';
+  if (sys.width === 'glulam') { const ws = [80, 130, 175, 215, 265, 315, 365]; const w = ws.find((x) => x >= pick / 4) || 365; width = `${w} mm wide`; }
+  if (sys.width === 'concrete') { width = `${Math.max(300, Math.ceil(pick / 2 / 50) * 50)} mm wide`; }
+  const inRange = L >= sys.span[0] && L <= sys.span[1];
+  return { typ, lo, hi, pick, label, width, basis, inRange, over };
+}
+
+// ---------- controls ----------
+function seg(el, items, key) {
+  el.innerHTML = '';
+  for (const [v, label] of items) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.setAttribute('aria-pressed', String(S[key] === v));
+    b.addEventListener('click', () => { S[key] = v; seg(el, items, key); render(); });
+    el.appendChild(b);
+  }
+}
+seg($('#supSeg'), SUP, 'sup');
+seg($('#colSeg'), [['Timber', 'Glulam'], ['Steel', 'Steel HSS'], ['Concrete', 'Concrete']], 'col');
+const sel = $('#sys');
+for (const g of ['Timber', 'Steel', 'Concrete']) {
+  const og = document.createElement('optgroup'); og.label = g;
+  for (const s of SYS.filter((x) => x.g === g)) { const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; og.appendChild(o); }
+  sel.appendChild(og);
+}
+sel.value = S.sys;
+sel.addEventListener('change', () => { S.sys = sel.value; render(); track('span_system', { sys: S.sys }); });
+const bindNum = (id, key, rangeId) => {
+  const inp = $('#' + id), rg = rangeId && $('#' + rangeId);
+  const set = (v) => { let n = +v; if (!Number.isFinite(n)) return; n = Math.min(+inp.max, Math.max(+inp.min, n)); S[key] = n; inp.value = n; if (rg) rg.value = Math.min(+rg.max, n); render(); };
+  inp.addEventListener('change', () => set(inp.value));
+  if (rg) rg.addEventListener('input', () => set(rg.value));
+};
+bindNum('span', 'span', 'spanR'); bindNum('bayX', 'bayX'); bindNum('bayY', 'bayY'); bindNum('storeys', 'storeys');
+
+// ---------- drawings ----------
+const fmt = (mm) => (mm >= 1000 ? `${(mm / 1000).toFixed(2)} m` : `${Math.round(mm)} mm`);
+function person(x, yFloor, s) {
+  // simple standing figure, 1750 mm tall, drawn in mm units scaled by s
+  const h = 1750 * s, head = 110 * s;
+  return `<g fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-linecap="round">
+    <circle cx="${x}" cy="${yFloor - h + head}" r="${head}" fill="#fff"/>
+    <path d="M${x} ${yFloor - h + 2 * head} V${yFloor - h * 0.48} M${x} ${yFloor - h * 0.48} L${x - 160 * s} ${yFloor} M${x} ${yFloor - h * 0.48} L${x + 160 * s} ${yFloor} M${x - 230 * s} ${yFloor - h * 0.72} L${x} ${yFloor - h * 0.78} L${x + 230 * s} ${yFloor - h * 0.72}"/></g>`;
+}
+function drawElevation(sys, res) {
+  const L = S.span * 1000, d = res.pick, H = 3000;
+  const VW = 900, pad = 40, cant = S.sup === 'cant';
+  const s = (VW - 2 * pad) / (L + 1200);
+  const VH = Math.max(220, (H + d + 900) * s + 70);
+  const y0 = VH - 34;                                   // floor line
+  const yTop = y0 - H * s;                              // top of member
+  const xs = pad + 600 * s, xe = xs + L * s;
+  const col = COLOR[sys.g];
+  let member;
+  if (/truss/.test(sys.id) || sys.id === 'owsj' || sys.id === 'space') {
+    const n = Math.max(4, Math.round(L / Math.max(d, 600)));
+    let p = `M${xs} ${yTop} H${xe} M${xs} ${yTop + d * s} H${xe}`;
+    for (let i = 0; i < n; i++) { const a = xs + (xe - xs) * i / n, b = xs + (xe - xs) * (i + 1) / n; p += i % 2 ? ` M${a} ${yTop} L${b} ${yTop + d * s}` : ` M${a} ${yTop + d * s} L${b} ${yTop}`; }
+    member = `<path d="${p}" stroke="${col}" stroke-width="2" fill="none"/>`;
+  } else member = `<rect x="${xs}" y="${yTop}" width="${xe - xs}" height="${Math.max(1.5, d * s)}" fill="${col}" fill-opacity="0.85" stroke="${col}"/>`;
+  const supports = cant
+    ? `<rect x="${xs - 300 * s}" y="${yTop - 6}" width="${300 * s}" height="${H * s + 6}" fill="#e7e5e0" stroke="var(--line-strong)"/>`
+    : [xs, xe].map((x) => `<rect x="${x - 150 * s}" y="${yTop + d * s}" width="${300 * s}" height="${(H - d) * s}" fill="#e7e5e0" stroke="var(--line-strong)"/>`).join('');
+  const dimY = yTop - 16;
+  const svg = `<svg viewBox="0 0 ${VW} ${VH}" width="100%" role="img" aria-label="Elevation: ${sys.name}, ${fmt(L)} span, ${d} mm deep">
+    <line x1="0" y1="${y0}" x2="${VW}" y2="${y0}" stroke="var(--ink)" stroke-width="1.2"/>
+    ${supports}${member}
+    <g stroke="var(--accent)" stroke-width="1"><line x1="${xs}" y1="${dimY}" x2="${xe}" y2="${dimY}"/><line x1="${xs}" y1="${dimY - 5}" x2="${xs}" y2="${dimY + 5}"/><line x1="${xe}" y1="${dimY - 5}" x2="${xe}" y2="${dimY + 5}"/></g>
+    <text x="${(xs + xe) / 2}" y="${dimY - 6}" text-anchor="middle" font-size="12" fill="var(--accent)">${fmt(L)} ${cant ? 'cantilever' : 'span'}</text>
+    <g stroke="var(--accent)" stroke-width="1"><line x1="${xe + 14}" y1="${yTop}" x2="${xe + 14}" y2="${yTop + d * s}"/></g>
+    <text x="${xe + 20}" y="${yTop + d * s / 2 + 4}" font-size="12" fill="var(--accent)">${d} mm</text>
+    ${person(xs + (xe - xs) * 0.5, y0, s)}
+    <text x="${pad}" y="${y0 + 22}" font-size="11" fill="var(--faint)">Floor · 3.0 m floor-to-floor shown for reference</text>
+  </svg>`;
+  $('#elev').innerHTML = svg;
+}
+function drawChart() {
+  const rows = SYS.map((sys) => ({ sys, r: size(sys, S.span, S.sup) }));
+  const maxD = Math.max(...rows.map((x) => x.r.hi));
+  const VW = 860, lab = 250, right = 90, rowH = 26, top = 8;
+  const VH = top + rows.length * rowH + 26;
+  const sx = (v) => lab + (VW - lab - right) * v / maxD;
+  const ticks = niceTicks(maxD);
+  let g = ticks.map((t) => `<line x1="${sx(t)}" y1="${top}" x2="${sx(t)}" y2="${VH - 22}" stroke="var(--line)"/><text x="${sx(t)}" y="${VH - 6}" font-size="11" text-anchor="middle" fill="var(--faint)">${t >= 1000 ? (t / 1000) + ' m' : t}</text>`).join('');
+  rows.forEach(({ sys, r }, i) => {
+    const y = top + i * rowH, on = sys.id === S.sys, op = r.inRange ? 1 : 0.28;
+    g += `<g data-sys="${sys.id}" style="cursor:pointer">
+      <rect x="0" y="${y}" width="${VW}" height="${rowH}" fill="${on ? 'var(--accent-soft)' : 'transparent'}"/>
+      <text x="8" y="${y + 17}" font-size="12" fill="var(--ink)" ${on ? 'font-weight="700"' : ''}>${sys.name}</text>
+      <rect x="${sx(r.lo)}" y="${y + 10}" width="${Math.max(1, sx(r.hi) - sx(r.lo))}" height="6" rx="3" fill="${COLOR[sys.g]}" opacity="${0.35 * op}"/>
+      <rect x="${lab}" y="${y + 7}" width="${Math.max(2, sx(r.pick) - lab)}" height="12" rx="2" fill="${COLOR[sys.g]}" opacity="${op}"/>
+      <text x="${sx(r.pick) + 6}" y="${y + 17}" font-size="12" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r.pick}</text></g>`;
+  });
+  $('#chart').innerHTML = `<svg viewBox="0 0 ${VW} ${VH}" width="100%" style="min-width:560px" role="img" aria-label="Depth of each structural system at ${S.span} m">${g}</svg>`;
+  $('#chart').querySelectorAll('[data-sys]').forEach((el) => el.addEventListener('click', () => { S.sys = el.dataset.sys; sel.value = S.sys; render(); }));
+}
+function niceTicks(max) {
+  const step = [50, 100, 200, 250, 500, 1000, 2000, 5000].find((s) => max / s <= 6) || 10000;
+  const out = []; for (let v = 0; v <= max + 1; v += step) out.push(v); return out;
+}
+
+// ---------- columns ----------
+function columns() {
+  const A = S.bayX * S.bayY, q = { Timber: 6, Steel: 8, Concrete: 12 }[S.col], P = A * S.storeys * q;   // kN factored
+  let size, area;
+  if (S.col === 'Concrete') {
+    const Ag = P * 1000 / (0.35 * 30); const b = Math.max(300, Math.ceil(Math.sqrt(Ag) / 50) * 50); size = `${b} × ${b} mm (30 MPa)`; area = b * b;
+  } else if (S.col === 'Steel') {
+    const Areq = P * 1000 / (0.5 * 350);
+    const opts = [[102, 6.4], [127, 6.4], [127, 8], [152, 8], [152, 9.5], [178, 9.5], [203, 9.5], [203, 12.7], [254, 12.7], [305, 12.7], [305, 15.9], [356, 15.9], [406, 15.9]];
+    const pick = opts.find(([b, t]) => 4 * t * (b - t) >= Areq) || opts[opts.length - 1];
+    size = `HSS ${pick[0]} × ${pick[0]} × ${pick[1]}`; area = 4 * pick[1] * (pick[0] - pick[1]);
+  } else {
+    const Areq = P * 1000 / 8; const ws = [130, 175, 215, 265, 315, 365];
+    const w = ws.find((x) => x * Math.ceil(x / 38) * 38 >= Areq) || 365; const dd = Math.max(w, Math.ceil(Areq / w / 38) * 38);
+    size = `${w} × ${dd} mm glulam`; area = w * dd;
+  }
+  $('#colOut').innerHTML = [['Tributary area', `${A.toFixed(1)} m²`], ['Load at base (factored)', `≈ ${Math.round(P)} kN`], ['Column', size]].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+}
+
+// ---------- render ----------
+function render() {
+  const sys = SYS.find((x) => x.id === S.sys), r = size(sys, S.span, S.sup);
+  $('#ansDepth').textContent = `${r.pick} mm`;
+  $('#ansWhat').textContent = `${sys.name}${r.label ? ' · ' + r.label : ''}${r.width ? ' · ' + r.width : ''}`;
+  $('#ansRange').textContent = `Typical range ${Math.round(r.lo)}–${Math.round(r.hi)} mm for a ${S.span} m ${S.sup === 'cant' ? 'cantilever' : 'span'} · ${r.basis}`;
+  $('#detail').innerHTML = [['Rule used', r.basis], ['Usual span range', `${sys.span[0]}–${sys.span[1]} m`], ['Span / depth', (S.span * 1000 / r.pick).toFixed(1)]].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const flags = [];
+  if (!r.inRange) flags.push(`${S.span} m is outside the usual ${sys.span[0]}–${sys.span[1]} m range for this system. Look at the chart for a better fit.`);
+  if (r.over) flags.push('Deeper than the standard sizes. Move up to a glulam beam, a truss or a steel system.');
+  if (sys.noSupport && S.sup === 'cant') flags.push('Flat plates are sized from the panel span; cantilever edges need their own check.');
+  $('#flag').hidden = !flags.length; $('#flag').textContent = flags.join(' ');
+  drawElevation(sys, r); drawChart(); columns();
+}
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<!--PCSKIN--><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"><style>:root{--pc-ink:#1C1B1A;--pc-muted:#6E6A60;--pc-paper:#FBFAF7;--pc-sand:#EFEBE0;--pc-red:#D8402A;--pc-red-dk:#B63422;--pc-hair:rgba(28,27,26,.13)}
+:focus-visible{outline:2px solid var(--pc-ink)!important;outline-offset:2px}
+.pcdesk{display:none}
+@media (max-width:900px){.pcdesk{display:grid;place-content:center;gap:10px;min-height:100vh;padding:32px;box-sizing:border-box;text-align:center;background:var(--pc-paper);font-family:"Inter Tight",system-ui,sans-serif;position:fixed;inset:0;z-index:9999}
+ .pcdesk b{font:800 30px "Inter Tight",system-ui,sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:var(--pc-ink)} .pcdesk p{margin:0 auto;max-width:420px;color:var(--pc-muted);font-size:15px;line-height:1.5}
+ .pcdesk span{font:500 11px "JetBrains Mono",monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--pc-muted)}}
+</style><!--/PCSKIN--></head>
+<body><!--PCSKIN--><div class="pcdesk" role="note"><span>PlotCloud · tools</span><b>contour model maker works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
+<title>PlotCloud Contour Model Maker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: viewport (3D stack / cut sheets) | settings sheet. Site skin: white, Noto Sans, plotcloud red. */
+:root {
+  --bg: #ffffff; --view: #f5f5f5; --ink: #111111; --muted: #484848; --line: #dfdfdf; --line-strong: #929292;
+  --accent: #d8402a; --accent-soft: #fbe9e5; --ok: #0a8a00; --warn: #9a5b00; --board: #d9c3a0; --board2: #c9ad84;
+  --f-body: "Noto Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--f-body); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+.stage { position: relative; min-width: 0; min-height: 0; background: var(--view); overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.tabs { position: absolute; top: 12px; left: 12px; display: flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; background: #fff; z-index: 2; }
+.tabs button { border: 0; background: none; padding: 6px 12px; font-size: 13px; }
+.tabs button + button { border-left: 1px solid var(--line); }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.sheets { position: absolute; inset: 0; overflow: auto; padding: 56px 16px 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; align-content: start; }
+.sheet { background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 8px; }
+.sheet svg { display: block; width: 100%; height: auto; background: #fbf7ef; }
+.sheet figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; display: flex; justify-content: space-between; }
+.badge { position: absolute; left: 12px; bottom: 12px; background: #fff; border: 1px solid var(--line-strong); border-radius: 6px; padding: 8px 12px; z-index: 2; }
+.badge .lab { font-size: 11px; color: var(--muted); }
+.badge .val { font-family: var(--f-mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+.legend { position: absolute; right: 12px; bottom: 12px; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--muted); display: flex; gap: 12px; z-index: 2; }
+.legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+.panel { border-left: 1px solid var(--line); overflow-y: auto; }
+.sec { padding: 16px; border-bottom: 1px solid var(--line); display: grid; gap: 12px; }
+.sec h2 { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.row { display: grid; gap: 6px; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.head label { font-size: 13px; }
+.num { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--view); }
+.num input { width: 64px; border: 0; background: transparent; padding: 3px 4px 3px 8px; text-align: right; font-family: var(--f-mono); font-size: 13px; }
+.num span { font-size: 11px; color: var(--muted); padding-right: 7px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line-strong); border-radius: 5px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--view); padding: 5px 8px; font-size: 12px; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+select { width: 100%; border: 1px solid var(--line-strong); border-radius: 5px; padding: 6px 8px; background: #fff; }
+.switch { position: relative; width: 38px; height: 22px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--view); padding: 0; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+.switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(16px); background: #fff; }
+.ghost { border: 1px solid var(--line-strong); background: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+.file { border: 1.5px dashed var(--line-strong); border-radius: 6px; padding: 14px; text-align: center; font-size: 13px; color: var(--muted); cursor: pointer; display: block; }
+.file:hover { border-color: var(--ink); color: var(--ink); }
+.file input { display: none; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.warn { font-size: 12px; color: var(--warn); background: #fbf0dd; border-radius: 5px; padding: 8px 10px; margin: 0; }
+.export { border: 0; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; padding: 12px 14px; font-size: 14px; }
+.export:disabled { opacity: .55; cursor: progress; }
+.status { font-size: 12px; color: var(--muted); min-height: 1.4em; }
+.status.ok { color: var(--ok); } .status.bad { color: var(--warn); }
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  .app { display: block; height: auto; }
+  .stage { height: 60vh; min-height: 340px; }
+  .panel { border-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .switch::after { transition: none; } }
+</style>
+
+<div class="app">
+  <section class="stage" id="stage" aria-label="Preview">
+    <div class="tabs" role="group" aria-label="View">
+      <button type="button" data-tab="3d" aria-pressed="true">3D model</button>
+      <button type="button" data-tab="sheets" aria-pressed="false">Cut sheets</button>
+    </div>
+    <div class="sheets" id="sheets" hidden></div>
+    <div class="badge"><div class="lab">Model size W × D × H (mm)</div><div class="val" id="sizeVal">—</div></div>
+    <div class="legend" id="legend" hidden><span><i style="background:#ff0000"></i>Cut</span><span><i style="background:#0000ff"></i>Engrave</span></div>
+  </section>
+  <aside class="panel">
+    <div class="sec">
+      <h2>Terrain</h2>
+      <div class="seg" id="srcSeg"><button type="button" data-src="sample" aria-pressed="true">Sample terrain</button><button type="button" data-src="image" aria-pressed="false">Heightmap image</button></div>
+      <div id="sampleBox" class="sec" style="padding:0;border:0">
+        <div class="seg" id="typeSeg"></div>
+        <div class="row"><div class="head"><label for="relief">Relief (highest − lowest)</label><div class="num"><input id="relief" type="number" min="2" max="80" step="1" value="14"><span>m</span></div></div><input id="reliefR" type="range" min="2" max="80" step="1" value="14" aria-label="Relief"></div>
+        <div class="head"><span class="hint">A made-up site to try the tool.</span><button type="button" class="ghost" id="shuffle">Shuffle</button></div>
+      </div>
+      <div id="imageBox" class="sec" style="padding:0;border:0" hidden>
+        <label class="file" id="fileLabel">Choose a grayscale heightmap (PNG or JPG)<input type="file" id="file" accept="image/png,image/jpeg,image/webp"></label>
+        <p class="hint">Lighter pixels are higher ground. Export one from GIS (QGIS: DEM → render as single-band grey) or a terrain heightmap site, cropped to your site.</p>
+        <div class="row"><div class="head"><label for="zmin">Lowest elevation</label><div class="num"><input id="zmin" type="number" step="0.5" value="0"><span>m</span></div></div></div>
+        <div class="row"><div class="head"><label for="zmax">Highest elevation</label><div class="num"><input id="zmax" type="number" step="0.5" value="20"><span>m</span></div></div></div>
+      </div>
+      <div class="row"><div class="head"><label for="siteW">Site width (east–west)</label><div class="num"><input id="siteW" type="number" min="20" max="2000" step="5" value="120"><span>m</span></div></div></div>
+      <div class="row" id="siteDRow"><div class="head"><label for="siteD">Site depth (north–south)</label><div class="num"><input id="siteD" type="number" min="20" max="2000" step="5" value="80"><span>m</span></div></div></div>
+    </div>
+    <div class="sec">
+      <h2>Model</h2>
+      <div class="row"><div class="head"><label for="scale">Scale</label></div>
+        <select id="scale"><option value="200">1:200</option><option value="250">1:250</option><option value="500" selected>1:500</option><option value="1000">1:1000</option><option value="1250">1:1250</option><option value="2000">1:2000</option></select></div>
+      <div class="row"><div class="head"><label>Board thickness</label></div><div class="seg" id="thSeg"></div></div>
+      <div class="row"><div class="head"><label>Vertical exaggeration</label></div><div class="seg" id="exSeg"></div></div>
+    </div>
+    <div class="sec">
+      <h2>Laser cutter</h2>
+      <div class="row"><div class="head"><label for="bed">Bed size</label></div>
+        <select id="bed"><option value="600x400" selected>600 × 400 mm</option><option value="495x279">495 × 279 mm (Glowforge)</option><option value="610x457">610 × 457 mm (24 × 18″)</option><option value="812x508">812 × 508 mm (32 × 20″)</option><option value="1000x600">1000 × 600 mm</option></select></div>
+      <div class="head"><label for="engNext">Engrave next layer outline</label><button type="button" class="switch" id="engNext" role="switch" aria-checked="true"></button></div>
+      <div class="head"><label for="engNum">Engrave layer numbers</label><button type="button" class="switch" id="engNum" role="switch" aria-checked="true"></button></div>
+    </div>
+    <div class="sec">
+      <h2>Result</h2>
+      <dl class="kv" id="stats"></dl>
+      <p class="warn" id="warn" hidden></p>
+    </div>
+    <div class="sec">
+      <button type="button" class="export" id="exportBtn">Export cut files (.zip)</button>
+      <div class="status" id="status" role="status"></div>
+      <p class="hint">One SVG per sheet (red = cut, blue = engrave, in millimetres) plus a DXF with CUT and ENGRAVE layers. Numbers sit where the next layer covers them; the engraved outline shows where that layer goes.</p>
+    </div>
+  </aside>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "fflate": "./furniture/fflate.js", "topo/": "./topo/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { zipSync, strToU8 } from 'fflate';
+import { TERRAINS, sampleTerrain, fieldFromLuminance, computeLayers, packSheets, sheetSVG, sheetsDXF, cutLength, area, inside } from 'topo/topo-core.js';
+
+const $ = (s) => document.querySelector(s);
+const S = { src: 'sample', type: 'hill', seed: 7, relief: 14, W: 120, D: 80, zmin: 0, zmax: 20, scale: 500, th: 3, ex: 1, bed: '600x400', engNext: true, engNum: true, tab: '3d', lum: null };
+let result = null, packed = null;
+const track = (event, data = {}) => { try { (window.dataLayer = window.dataLayer || []).push({ event, ...data }); } catch (e) {} };
+
+// ---------- controls ----------
+function seg(el, items, key, after) {
+  el.innerHTML = '';
+  for (const [v, label] of items) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+    b.setAttribute('aria-pressed', String(String(S[key]) === String(v)));
+    b.addEventListener('click', () => { S[key] = typeof S[key] === 'number' ? +v : v; seg(el, items, key, after); after && after(); update(); });
+    el.appendChild(b);
+  }
+}
+seg($('#typeSeg'), TERRAINS, 'type');
+seg($('#thSeg'), [[1.5, '1.5 mm'], [2, '2 mm'], [3, '3 mm'], [5, '5 mm'], [6, '6 mm']], 'th');
+seg($('#exSeg'), [[1, '1×'], [1.5, '1.5×'], [2, '2×'], [3, '3×']], 'ex');
+document.querySelectorAll('#srcSeg button').forEach((b) => b.addEventListener('click', () => {
+  S.src = b.dataset.src;
+  document.querySelectorAll('#srcSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  $('#sampleBox').hidden = S.src !== 'sample'; $('#imageBox').hidden = S.src !== 'image'; $('#siteDRow').hidden = S.src === 'image';
+  update();
+}));
+const bindNum = (id, key, rangeId) => {
+  const inp = $('#' + id), rg = rangeId && $('#' + rangeId);
+  const set = (v) => { const n = +v; if (!Number.isFinite(n)) return; S[key] = n; inp.value = n; if (rg) rg.value = n; update(); };
+  inp.addEventListener('change', () => set(Math.min(+inp.max || Infinity, Math.max(+inp.min || -Infinity, +inp.value))));
+  if (rg) rg.addEventListener('input', () => set(rg.value));
+};
+bindNum('relief', 'relief', 'reliefR'); bindNum('siteW', 'W'); bindNum('siteD', 'D'); bindNum('zmin', 'zmin'); bindNum('zmax', 'zmax');
+$('#scale').addEventListener('change', (e) => { S.scale = +e.target.value; update(); });
+$('#bed').addEventListener('change', (e) => { S.bed = e.target.value; update(); });
+for (const id of ['engNext', 'engNum']) $('#' + id).addEventListener('click', (e) => { S[id] = !S[id]; e.currentTarget.setAttribute('aria-checked', String(S[id])); update(); });
+$('#shuffle').addEventListener('click', () => { S.seed = Math.floor(Math.random() * 1e6); update(); });
+$('#file').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const bmp = await createImageBitmap(f);
+    const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height)), w = Math.max(2, Math.round(bmp.width * k)), h = Math.max(2, Math.round(bmp.height * k));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const cx = cv.getContext('2d'); cx.drawImage(bmp, 0, 0, w, h);
+    const d = cx.getImageData(0, 0, w, h).data, lum = new Float32Array(w * h);
+    for (let i = 0; i < lum.length; i++) lum[i] = (0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]) / 255;
+    S.lum = { lum, w, h }; $('#fileLabel').firstChild.textContent = `${f.name} · ${bmp.width} × ${bmp.height} px `;
+    update();
+  } catch (err) { setStatus("Couldn't read that image. Try a PNG or JPG.", 'bad'); }
+});
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
+  S.tab = b.dataset.tab;
+  document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  $('#sheets').hidden = S.tab !== 'sheets'; $('#legend').hidden = S.tab !== 'sheets'; renderer.domElement.hidden = S.tab !== '3d';
+  if (S.tab === 'sheets') drawSheets();
+}));
+
+// ---------- three ----------
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.NeutralToneMapping;
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#f5f5f5');
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a8a, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-300, 600, 400); scene.add(sun);
+const cam = new THREE.PerspectiveCamera(35, 1, 1, 50000);
+const ctl = new OrbitControls(cam, renderer.domElement); ctl.enableDamping = true; ctl.maxPolarAngle = Math.PI * 0.49;
+const root = new THREE.Group(); root.rotation.x = -Math.PI / 2; scene.add(root);
+const mats = [new THREE.MeshStandardMaterial({ color: '#dcc6a2', roughness: 0.9 }), new THREE.MeshStandardMaterial({ color: '#cdb088', roughness: 0.9 })];
+const edgeMat = new THREE.LineBasicMaterial({ color: '#5a4a35', transparent: true, opacity: 0.45 });
+let lastFitKey = '';
+
+function shapesFor(L) {
+  return L.pieces.map((P) => {
+    const ccw = (l) => (area(l) < 0 ? l.slice().reverse() : l);
+    const sh = new THREE.Shape(ccw(P.outer).map(([x, y]) => new THREE.Vector2(x, y)));
+    for (const h of P.holes) sh.holes.push(new THREE.Path(ccw(h).reverse().map(([x, y]) => new THREE.Vector2(x, y))));
+    return sh;
+  });
+}
+function draw3D() {
+  for (const c of root.children) { c.geometry.dispose(); }
+  root.clear();
+  if (!result) return;
+  const { w, d } = result.size;
+  for (const L of result.layers) {
+    const g = new THREE.ExtrudeGeometry(shapesFor(L), { depth: S.th, bevelEnabled: false, curveSegments: 1 });
+    g.translate(-w / 2, -d / 2, L.k * S.th);
+    root.add(new THREE.Mesh(g, mats[L.k % 2]));
+    root.add(new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), edgeMat));
+  }
+  const key = `${w.toFixed(0)}x${d.toFixed(0)}`;
+  if (key !== lastFitKey) {
+    lastFitKey = key;
+    const size = Math.max(w, d), h = result.layers.length * S.th;
+    ctl.target.set(0, h / 3, 0);
+    cam.position.set(size * 0.9, size * 1.0, size * 1.4);
+    ctl.update();
+  }
+}
+function resize() { const r = stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / Math.max(1, r.height); cam.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage);
+renderer.setAnimationLoop(() => { ctl.update(); renderer.render(scene, cam); });
+
+// ---------- compute ----------
+let pending = false;
+function update() { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; compute(); }); }
+function bedSize() { const [a, b] = S.bed.split('x').map(Number); return { bedW: a, bedH: b }; }
+function compute() {
+  let field;
+  if (S.src === 'image') {
+    if (!S.lum) { result = null; draw3D(); renderStats(); return; }
+    if (S.zmax <= S.zmin) { setStatus('Highest elevation must be above the lowest.', 'bad'); return; }
+    field = fieldFromLuminance(S.lum.lum, S.lum.w, S.lum.h, { W: S.W, minZ: S.zmin, maxZ: S.zmax });
+  } else field = sampleTerrain({ type: S.type, seed: S.seed, W: S.W, D: S.D, relief: S.relief });
+  result = computeLayers(field, { scale: S.scale, thickness: S.th, exag: S.ex });
+  packed = packSheets(result.layers, bedSize());
+  draw3D(); renderStats();
+  if (S.tab === 'sheets') drawSheets();
+}
+function renderStats() {
+  const el = $('#stats'), warn = $('#warn');
+  if (!result) { el.innerHTML = '<dt>Choose a heightmap image to start.</dt><dd></dd>'; $('#sizeVal').textContent = '—'; warn.hidden = true; return; }
+  const { w, d } = result.size, H = result.layers.length * S.th;
+  const nPieces = result.layers.reduce((s, L) => s + L.pieces.length, 0), cut = cutLength(result.layers) / 1000;
+  const bed = bedSize(), boardArea = packed.sheets.length * bed.bedW * bed.bedH / 1e6;
+  $('#sizeVal').textContent = `${w.toFixed(0)} × ${d.toFixed(0)} × ${H.toFixed(1)}`;
+  el.innerHTML = [
+    ['Each layer represents', `${result.interval.toFixed(2)} m`],
+    ['Layers (incl. base)', result.layers.length], ['Pieces to cut', nPieces], ['Sheets', `${packed.sheets.length} × ${bed.bedW}×${bed.bedH}`],
+    ['Board needed', `${boardArea.toFixed(2)} m²`], ['Cut length', `${cut.toFixed(1)} m`], ['Cut time at 15 mm/s', `~${Math.ceil(cut * 1000 / 15 / 60)} min`],
+    ['Real relief', `${(result.zmax - result.zmin).toFixed(1)} m`],
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const msgs = [];
+  if (packed.oversize) msgs.push('At this scale some layers are bigger than the laser bed. Pick a smaller scale or a bigger bed, or cut the site into tiles.');
+  if (result.layers.length > 60) msgs.push('That is a lot of layers. A thicker board or a smaller scale gives a model you can finish in an evening.');
+  if (result.layers.length < 3) msgs.push('Only a few layers: the site reads almost flat. Try a thinner board, a larger scale or vertical exaggeration.');
+  warn.hidden = !msgs.length; warn.textContent = msgs.join(' ');
+}
+function drawSheets() {
+  const box = $('#sheets'); box.innerHTML = '';
+  if (!result) return;
+  const bed = bedSize();
+  packed.sheets.forEach((sh, i) => {
+    const fig = document.createElement('figure'); fig.className = 'sheet'; fig.style.margin = '0';
+    const svg = sheetSVG(sh, result.layers, bed, { engraveNext: S.engNext, numbers: S.engNum }).replace(/<\?xml[^>]*>/, '').replace(/stroke-width="0.1"/g, 'stroke-width="0.6"');
+    const layersHere = [...new Set(sh.items.map((it) => it.L.k))].sort((a, b) => a - b);
+    fig.innerHTML = svg + `<figcaption><span>Sheet ${i + 1}</span><span>Layers ${layersHere.join(', ')}</span></figcaption>`;
+    box.appendChild(fig);
+  });
+}
+
+// ---------- export ----------
+function setStatus(t, cls = '') { const s = $('#status'); s.textContent = t; s.className = 'status ' + cls; }
+$('#exportBtn').addEventListener('click', async () => {
+  if (!result) { setStatus('Add a heightmap image first.', 'bad'); return; }
+  const btn = $('#exportBtn'); btn.disabled = true; setStatus('Building files…');
+  try {
+    const bed = bedSize(), opts = { engraveNext: S.engNext, numbers: S.engNum };
+    const base = `PlotCloud_contours_1-${S.scale}_${S.th}mm`;
+    const files = {};
+    packed.sheets.forEach((sh, i) => { files[`${base}_sheet${String(i + 1).padStart(2, '0')}.svg`] = strToU8(sheetSVG(sh, result.layers, bed, opts)); });
+    files[`${base}_all-sheets.dxf`] = strToU8(sheetsDXF(packed.sheets, result.layers, bed, opts));
+    files['README.txt'] = strToU8([
+      'PlotCloud contour model maker',
+      `Scale 1:${S.scale} · board ${S.th} mm · vertical exaggeration ${S.ex}× · each layer = ${result.interval.toFixed(2)} m`,
+      `Model ${result.size.w.toFixed(0)} × ${result.size.d.toFixed(0)} mm · ${result.layers.length} layers on ${packed.sheets.length} sheet(s) of ${bed.bedW} × ${bed.bedH} mm`,
+      '', 'Colours: red = cut, blue = engrave (score). Units are millimetres; import at 1:1.',
+      'Layer 0 is the base. Glue each layer onto the engraved outline on the layer below; the number sits under the piece that covers it.',
+      'Do a test cut first to set power and speed for your board.',
+    ].join('\r\n'));
+    const zip = zipSync(files, { level: 6 });
+    track('topo_export', { scale: S.scale, th: S.th, layers: result.layers.length, sheets: packed.sheets.length });
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+    if (!dl) { setStatus(`Files built (${Math.round(zip.length / 1024)} KB), but this view can't download. Open the page on claude.ai and try again.`, 'bad'); return; }
+    setStatus('Confirm the save in the dialog.');
+    await dl.save({ filename: base + '.zip', data: new Blob([zip], { type: 'application/zip' }) });
+    setStatus(`Saved ${base}.zip (${packed.sheets.length} sheet${packed.sheets.length > 1 ? 's' : ''}).`, 'ok');
+  } catch (e) {
+    setStatus(e && e.code === 'declined' ? 'Save cancelled.' : `Export failed: ${(e && e.message) || e}`, 'bad');
+  } finally { btn.disabled = false; }
+});
+
+resize(); compute();
+</script>
+
+</body>
+</html>
