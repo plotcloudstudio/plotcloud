@@ -686,6 +686,8 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
       </div>
       <span class="kb-sep"></span>
       <div class="seg2" id="camBar" role="group" aria-label="View"><div class="dd" id="dd2d"><button type="button" data-cam="plan" aria-pressed="true">2D</button><button type="button" class="v2c dd-car" id="v2dBtn" aria-haspopup="menu" aria-expanded="false" aria-label="2D view: plan, ceiling or elevation" title="Plan, ceiling or elevation"><i class="car"></i></button><div class="vpop dd-pop" id="v2dPop" role="menu" aria-label="2D views" hidden><button type="button" role="menuitemradio" data-v2="plan">Plan<kbd>1</kbd></button><button type="button" role="menuitemradio" data-v2="ceiling">Ceiling<kbd>2</kbd></button><button type="button" role="menuitemradio" data-v2="elev">Elevation<kbd>…</kbd></button></div></div><div class="dd" id="dd3d"><button type="button" data-cam="3d" aria-pressed="false">3D</button><button type="button" class="v2c dd-car" id="viewBtn" aria-haspopup="menu" aria-expanded="false" aria-label="3D view: bird view or walkthrough" title="Bird view or walkthrough"><i class="car"></i></button><div class="vpop dd-pop" id="viewPop" role="menu" aria-label="3D views" hidden><button type="button" role="menuitemradio" data-vm="bird">Bird View<kbd>3</kbd></button><button type="button" role="menuitemradio" data-vm="walk">Walkthrough<kbd>4</kbd></button></div></div></div>
+      <span class="kb-sep" id="rotSep" hidden></span>
+      <button type="button" class="kb" id="rotBtn" hidden title="Rotate view 90°: turns the drawing, not the model" aria-label="Rotate view 90°"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><ellipse cx="8" cy="8" rx="6.2" ry="3.1" transform="rotate(-24 8 8)"/><path d="M12.6 3.6l1.6.2-.3 1.6"/></svg><svg id="rotN" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 2l3 9-3-2-3 2z" fill="#D8402A"/><circle cx="8" cy="12.6" r="1" fill="currentColor" opacity=".5"/></svg><span id="rotRd">0°</span></button>
       <span class="kb-sep"></span>
       <button type="button" class="kb" id="clrBtn" aria-pressed="false" title="Show the free space each piece wants around it (front, back and sides). A hint only: nothing is blocked or snapped."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="3" stroke-dasharray="3 2.4"/><rect x="9" y="10" width="6" height="4" rx="1"/></svg><span class="clr-t">Clearance</span></button>
       <div class="kj-menu up">
@@ -2149,6 +2151,16 @@ function roomCol(gi) {   // the fill of a room in the current "Show"
 // ---------- view ----------
 const P3 = { p: null, hit: null };   // the pointer in the 3D view: the plan point under it, and the object it is over
 const W2S = (p) => (CAM === '3d' && window.S3 && S3.on) ? S3.toScreen(p[0], p[1], (lvObj() || { z: 0 }).z) : [V.ox + p[0] * V.s, V.oy - p[1] * V.s];
+const W2D = (p) => fwdD(W2S(p));   // a plan point as a position in the stage, for the HTML bars and boxes over the plan
+// v139: the 2D view can be turned in quarter turns (display only). The plan canvas and its annotation layer are turned with CSS; the model, the undo stack and the drawing code do not know.
+let ROT = 0;
+const rotK = () => { try { return CAM === 'plan' && VIEW2D !== 'elev' ? ROT : 0; } catch (e) { return 0; } };
+const rotXY = (x, y, k) => { const t = k * Math.PI / 2, c = Math.round(Math.cos(t)), n = Math.round(Math.sin(t)); return [x * c - y * n, x * n + y * c]; };
+const cvXY = (e) => {   // pointer position in canvas pixels
+  const k = rotK(), d = VP.d; if (!k) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * d, (e.clientY - r.top) * d]; }
+  const r = stage.getBoundingClientRect(), cw = VP.w / d, ch = VP.h / d, q = rotXY(e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2, 4 - k); return [(q[0] + cw / 2) * d, (q[1] + ch / 2) * d]; };
+const fwdD = (q) => { const k = rotK(); if (!k) return q; const d = VP.d, cw = VP.w / d, ch = VP.h / d, o = rotXY(q[0] / d - cw / 2, q[1] / d - ch / 2, k); return [(o[0] + stage.clientWidth / 2) * d, (o[1] + stage.clientHeight / 2) * d]; };
+const W2S_ = null; void W2S_;
 const S2W = (x, y) => (CAM === '3d' && P3.p) ? P3.p : [(x - V.ox) / V.s, (V.oy - y) / V.s];
 const P3_HIT = new Set(['win', 'door', 'hole']);
 function P3upd(e) { if (!window.S3 || !S3.on) return false; const lv = lvObj(); P3.hit = S3.hit(e.clientX, e.clientY); P3.p = (!drag && P3_HIT.has(TOOL) && P3.hit) ? P3.hit.p : S3.plane(e.clientX, e.clientY, lv.z); return !!P3.p; }
@@ -2165,6 +2177,9 @@ function resize() {
   const cp = $('#chartp'); if (CAM === 'split' && cp && getComputedStyle(cp).display !== 'none') { const q = cp.getBoundingClientRect(); if (q.top > r.top + 20) h = q.top - r.top; else if (q.left > r.left + 20) w = q.left - r.left; }
   w = Math.max(50, w); h = Math.max(50, h);
   const old = VP.w ? S2W(VP.w / 2, VP.h / 2) : null, oldS = V.s / VP.d;
+  const rk = rotK(); if (rk % 2) { const t = w; w = h; h = t; }
+  const an = $('#annot'); for (const el of [cv, an]) { el.style.inset = rk ? 'auto' : ''; el.style.left = rk ? ((r.width - w) / 2) + 'px' : ''; el.style.top = rk ? ((r.height - h) / 2) + 'px' : ''; el.style.transform = rk ? `rotate(${rk * 90}deg)` : ''; }
+  if (an) { an.style.width = rk ? w + 'px' : ''; an.style.height = rk ? h + 'px' : ''; }
   cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = Math.round(w * d); cv.height = Math.round(h * d); VP = { w: cv.width, h: cv.height, d };
   $('#toolBar').classList.toggle('compact', h < 520);
   if (!V.user || !old) fitView(); else { V.s = oldS * d; V.ox = VP.w / 2 - old[0] * V.s; V.oy = VP.h / 2 + old[1] * V.s; }
@@ -2576,7 +2591,7 @@ function selDim(w) {   // length and thickness of the selected wall, drawn besid
 function selBar() {   // a small bar over the selection: copy, turn, delete
   const bar = $('#selBar'); if (!bar) return; const o = SEL && SEL.k !== 'room' && !drag && !drawing ? selObj() : null; if (!o) { bar.hidden = true; return; }
   let pt; if (SEL.k === 'wall' || SEL.k === 'end') pt = [(o.a[0] + o.b[0]) / 2, (o.a[1] + o.b[1]) / 2]; else if (SEL.k === 'op') { const w = wallById(o.wall); pt = w ? wallLine(w, o.pos) : [0, 0]; } else if (SEL.k === 'furn') pt = [o.x, o.y + Math.max(o.w, o.d) / 2]; else pt = [o.x + o.w / 2, o.y + o.d];
-  const q = W2S(pt), x = q[0] / VP.d, y = q[1] / VP.d, sw = stage.clientWidth;
+  const q = W2D(pt), x = q[0] / VP.d, y = q[1] / VP.d, sw = stage.clientWidth;
   bar.querySelector('[data-sb="rot"]').hidden = SEL.k !== 'furn'; bar.querySelector('[data-sb="dup"]').hidden = SEL.k === 'op';
   bar.hidden = false; bar.style.left = Math.max(60, Math.min(x, sw - 60)) + 'px'; bar.style.top = Math.max(58, y - 58) + 'px';
 }
@@ -2592,7 +2607,7 @@ $('#selBar').addEventListener('click', (e) => { const b = e.target.closest('[dat
 
 // ---------- pointer ----------
 let SPACE = false;
-const evP = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * VP.d, (e.clientY - r.top) * VP.d]; };
+const evP = (e) => cvXY(e);
 cv.addEventListener('pointerdown', (e) => {
   if (CAM === '3d' && (e.button !== 0 || SPACE || TOOL === 'orbit' || !P3upd(e))) return; cv.focus({ preventScroll: true }); const [sx, sy] = evP(e), p = S2W(sx, sy);
   if (CAM === 'section') { if (INSET && sx >= INSET.x && sx <= INSET.x + INSET.w && sy >= INSET.y && sy <= INSET.y + INSET.h) { drag = { k: 'cut' }; cutAt(sy); cv.setPointerCapture(e.pointerId); } return; }
@@ -2747,7 +2762,7 @@ function addFurniture(type, p, snapWall = true) {
     const mv = (ev) => { if (!fdrag) return; if (!gh && Math.hypot(ev.clientX - fdrag.sx, ev.clientY - fdrag.sy) > 5) { gh = document.createElement('div'); gh.className = 'ghost'; gh.textContent = gT(genModel(e0[0]).name); document.body.appendChild(gh); }
       if (gh) { gh.style.left = ev.clientX + 'px'; gh.style.top = ev.clientY + 'px'; }
       const r = cv.getBoundingClientRect(), inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
-      const p = inside ? (CAM === '3d' ? S3.plane(ev.clientX, ev.clientY, lvObj().z) : S2W((ev.clientX - r.left) * VP.d, (ev.clientY - r.top) * VP.d)) : null;
+      const p = inside ? (CAM === '3d' ? S3.plane(ev.clientX, ev.clientY, lvObj().z) : S2W(...cvXY(ev))) : null;
       if (inside && p) { if (!fdrag.f) fdrag.f = mkFurn(LV, fdrag.type, p[0], p[1], 0); fdrag.p = p; fdrag.snap = !ev.altKey; placeFurn(fdrag.f, p, !ev.altKey); if (gh) gh.hidden = true; } else { fdrag.f = null; if (gh) gh.hidden = false; }
       draw(); };
     const up = (ev) => { b.removeEventListener('pointermove', mv); b.removeEventListener('pointerup', up); b.removeEventListener('pointercancel', up); if (gh) { gh.remove(); gh = null; } const F = fdrag; fdrag = null; if (!F) return;
@@ -3448,7 +3463,7 @@ annot.addEventListener('click', (e) => { const l = e.target.closest('.an-lab'); 
 annot.addEventListener('keydown', (e) => { const l = e.target.closest('.an-lab'); if (l && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); l.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
 annot.addEventListener('pointerdown', (e) => {
   const rot = e.target.closest('.an-rot'), h = e.target.closest('.an-h'); if (!rot && !h) return; const f = selObj(); if (!f || f.locked) return; e.preventDefault(); e.stopPropagation();
-  const before = snapM(), pt = (ev) => { const r = cv.getBoundingClientRect(); return S2W((ev.clientX - r.left) * VP.d, (ev.clientY - r.top) * VP.d); };
+  const before = snapM(), pt = (ev) => S2W(...cvXY(ev));
   if (rot) HDRAG = { kind: 'rot', f, before };
   else { const su = +h.dataset.su, sv = +h.dataset.sv, c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0), au = -su * f.w / 2, av = -sv * f.d / 2; HDRAG = { kind: 'size', f, before, su, sv, anchor: [f.x + au * c - av * s, f.y + au * s + av * c], c, s, w0: f.w, d0: f.d }; }
   const mv = (ev) => { if (!HDRAG) return; const p = pt(ev), F = HDRAG.f;
@@ -3470,11 +3485,11 @@ function selScreenBox() {
   if (SEL.k === 'furn') pts = STC.furnCorners(o); else if (SEL.k === 'wall') { const dir = STC.wallDir(o), n = [-dir[1], dir[0]], t = (o.t || 0.2) / 2; pts = [o.a, o.b].flatMap((p) => [[p[0] + n[0] * t, p[1] + n[1] * t], [p[0] - n[0] * t, p[1] - n[1] * t]]); }
   else if (SEL.k === 'op') { const w = wallById(o.wall); if (!w) return null; pts = [wallLine(w, o.pos - o.w / 2), wallLine(w, o.pos + o.w / 2)]; }
   else if ((SEL.k === 'ceil' && o.kind !== 'panel') || SEL.k === 'light') pts = [[o.x - 0.2, o.y - 0.2], [o.x + 0.2, o.y + 0.2]];
-  else if (SEL.k === 'note') { const b = noteBox(o); return { x0: b.x / d, y0: b.y / d, x1: (b.x + b.w) / d, y1: (b.y + b.h) / d }; }
+  else if (SEL.k === 'note') { const b = noteBox(o), c = [[b.x, b.y], [b.x + b.w, b.y + b.h]].map(fwdD); return { x0: Math.min(c[0][0], c[1][0]) / d, y0: Math.min(c[0][1], c[1][1]) / d, x1: Math.max(c[0][0], c[1][0]) / d, y1: Math.max(c[0][1], c[1][1]) / d }; }
   else if (o.w != null) pts = [[o.x, o.y], [o.x + o.w, o.y + o.d]]; else return null;
   let scr;
   if (CAM === '3d' && window.S3 && S3.on) { const z = (lvObj(o.lv || LV) || lvObj()).z, h = SEL.k === 'furn' ? o.h : 0.1; scr = pts.flatMap((p) => [S3.toScreen(p[0], p[1], z), S3.toScreen(p[0], p[1], z + h)]); }
-  else scr = pts.map(W2S);
+  else scr = pts.map(W2D);
   const xs = scr.map((q) => q[0] / d), ys = scr.map((q) => q[1] / d); return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
 }
 function ftbUI() {
@@ -3740,10 +3755,10 @@ function polyRoom(poly) {   // walls round a polygon, a numbered name (R1, R2, �
   STC.mergeWalls(M, LV); const c = poly.reduce((s, p) => [s[0] + p[0] / poly.length, s[1] + p[1] / poly.length], [0, 0]); M.roomSeq = (M.roomSeq || 0) + 1; M.names.push({ lv: LV, x: +c[0].toFixed(3), y: +c[1].toFixed(3), name: 'R' + M.roomSeq }); }
 // the anchor: grab it (12 px round it), drag 4 px or more to move it; Esc puts it back; arrow keys step 1 m (Shift 5 m) once it is picked; the drag is one undo step
 let ANCD = null, ANCSEL = false, ANCK = 0;
-const ancHit = (e) => { if (e.button !== 0 || CAM !== 'plan' || VIEW2D !== 'plan' || !M.site || !M.site.anchor) return false; const r = cv.getBoundingClientRect(), q = W2S(sToP([M.site.anchor.x, M.site.anchor.y])); return Math.hypot((e.clientX - r.left) * VP.d - q[0], (e.clientY - r.top) * VP.d - q[1]) <= 12 * VP.d; };
+const ancHit = (e) => { if (e.button !== 0 || CAM !== 'plan' || VIEW2D !== 'plan' || !M.site || !M.site.anchor) return false; const c = cvXY(e), q = W2S(sToP([M.site.anchor.x, M.site.anchor.y])); return Math.hypot(c[0] - q[0], c[1] - q[1]) <= 12 * VP.d; };
 cv.addEventListener('pointerdown', (e) => { if (!ancHit(e)) { if (ANCSEL) { ANCSEL = false; draw(); } return; } e.stopImmediatePropagation(); e.preventDefault(); cv.setPointerCapture(e.pointerId); ANCSEL = true; cv.focus({ preventScroll: true }); ANCD = { id: e.pointerId, x0: e.clientX, y0: e.clientY, from: Object.assign({}, M.site.anchor), before: snapM(), moved: false }; draw(); }, true);
 cv.addEventListener('pointermove', (e) => { if (!ANCD || e.pointerId !== ANCD.id) return; e.stopImmediatePropagation(); if (!ANCD.moved) { if (Math.hypot(e.clientX - ANCD.x0, e.clientY - ANCD.y0) < 4) return; ANCD.moved = true; cv.style.cursor = 'grabbing'; }
-  const r = cv.getBoundingClientRect(), px = Math.max(0, Math.min(r.width, e.clientX - r.left)), py = Math.max(0, Math.min(r.height, e.clientY - r.top)), s0 = pToS(S2W(px * VP.d, py * VP.d)); M.site.anchor = { x: Math.round(s0[0] * 10) / 10, y: Math.round(s0[1] * 10) / 10 }; draw(); }, true);
+  const c = cvXY(e), px = Math.max(0, Math.min(VP.w, c[0])), py = Math.max(0, Math.min(VP.h, c[1])), s0 = pToS(S2W(px, py)); M.site.anchor = { x: Math.round(s0[0] * 10) / 10, y: Math.round(s0[1] * 10) / 10 }; draw(); }, true);
 function endAnc(e, cancel) { if (!ANCD || (e && e.pointerId !== ANCD.id)) return; if (e) e.stopImmediatePropagation(); const D = ANCD; ANCD = null; cv.style.cursor = ''; try { cv.releasePointerCapture(D.id); } catch (er) {}
   if (cancel) { M.site.anchor = D.from; draw(); return; } if (D.moved && (M.site.anchor.x !== D.from.x || M.site.anchor.y !== D.from.y)) commit(D.before); else draw(); }
 cv.addEventListener('pointerup', (e) => endAnc(e, false), true); cv.addEventListener('pointercancel', (e) => endAnc(e, true), true);
@@ -3758,7 +3773,7 @@ function enterSite() { if (!siteOk() || M.walls.length || enterSite.done === M.i
 { const _u3 = useModel; useModel = function (N, o) { _u3(N, o); enterSite(); }; }
 
 // ---------- pointer: the modes come first (walkthrough, gizmo, ceiling, text, locks) ----------
-const evPt = (e) => { const r = cv.getBoundingClientRect(); return S2W((e.clientX - r.left) * VP.d, (e.clientY - r.top) * VP.d); };
+const evPt = (e) => S2W(...cvXY(e));
 let WLK = null, NDRAG = null;
 cv.addEventListener('pointerdown', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); e.preventDefault(); WLK = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); return; }
@@ -4252,7 +4267,7 @@ annot.addEventListener('pointerdown', (e) => {
   if ((h && h.classList.contains('off')) || (rt && rt.classList.contains('off'))) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   const k = kOf(SEL); if (!h || k === 'furn' || !SELK.has(k)) return; e.preventDefault(); e.stopImmediatePropagation();
   const o = selObj(); if (!o || o.locked) return; const F = frameOf(k, o), su = +h.dataset.su, sv = +h.dataset.sv, anchor = frameAt(F, -su, -sv), ex = [Math.cos(F.th), Math.sin(F.th)], ey = [-ex[1], ex[0]], before = snapM();
-  const pt = (ev) => { const r = cv.getBoundingClientRect(); return S2W((ev.clientX - r.left) * VP.d, (ev.clientY - r.top) * VP.d); }, s0 = k === 'op' ? o.pos - su * o.w / 2 : 0;
+  const pt = (ev) => S2W(...cvXY(ev)), s0 = k === 'op' ? o.pos - su * o.w / 2 : 0;
   const mv = (ev) => { const p = pt(ev), dx = p[0] - anchor[0], dy = p[1] - anchor[1], W = su ? Math.max(0.2, sg(Math.abs(dx * ex[0] + dy * ex[1]), 0.01)) : null, D = sv ? Math.max(0.05, sg(Math.abs(dx * ey[0] + dy * ey[1]), 0.01)) : null;
     if (k === 'floor' || k === 'void') { if (W != null) { o.w = W; o.x = +(su > 0 ? anchor[0] : anchor[0] - W).toFixed(3); } if (D != null) { o.d = D; o.y = +(sv > 0 ? anchor[1] : anchor[1] - D).toFixed(3); } tipAt(ev, `${Math.round(o.w * 1000)} × ${Math.round(o.d * 1000)} mm`); }
     else if (k === 'op' && W != null) { const w = wallById(o.wall); if (isOpGen(o)) { const q = genModel(o.gen.id).params.find((pp) => pp.k === 'W'); if (q) { o.gen.vals.W = Math.max(q.min, Math.min(q.max, Math.round(o.gen.vals.W + (W - o.w) * 1000))); opFit(o, w ? (w.t || 0.2) : 0.2); } } else o.w = W; o.pos = +(s0 + su * o.w / 2).toFixed(4); tipAt(ev, `Opening ${Math.round(o.w * 1000)} mm wide`); }
@@ -4294,7 +4309,7 @@ ftbUI = function () {
 };
 // a selected light or opening has a screen box too
 { const _sb = selScreenBox; selScreenBox = function () { const k = kOf(SEL); if (k === 'light' || k === 'op' || k === 'wall') { const o = selObj(), F = frameOf(k, o); if (!F) return null; const d = VP.d; let scr;
-  if (CAM === '3d' && window.S3 && S3.on) { const z = (lvObj(F.lv) || lvObj()).z, h = k === 'light' ? lvObj(F.lv).h : k === 'op' ? (o.head || 2.1) : wallTopH(o); scr = frameCorners(F).flatMap((p) => [S3.toScreen(p[0], p[1], z), S3.toScreen(p[0], p[1], z + h)]); } else scr = frameCorners(F).map(W2S);
+  if (CAM === '3d' && window.S3 && S3.on) { const z = (lvObj(F.lv) || lvObj()).z, h = k === 'light' ? lvObj(F.lv).h : k === 'op' ? (o.head || 2.1) : wallTopH(o); scr = frameCorners(F).flatMap((p) => [S3.toScreen(p[0], p[1], z), S3.toScreen(p[0], p[1], z + h)]); } else scr = frameCorners(F).map(W2D);
   const xs = scr.map((q) => q[0] / d), ys = scr.map((q) => q[1] / d); return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) }; } return _sb(); }; }
 const NAME = (k, o) => k === 'furn' ? furnName(o) : k === 'light' ? WBF.fixture(o.type, o.p).name : k === 'op' ? (o.kind === 'door' ? 'Door' : o.hole ? 'Opening' : 'Window') : k === 'wall' ? 'Wall' : k === 'floor' ? 'Floor' : (KINDS[o.kind] || 'Floor opening');
 // the actions for categories other than furniture (furniture keeps the v129 handlers)
@@ -4574,6 +4589,11 @@ addEventListener('message', (e) => { if (e.source !== window.parent || window.pa
 { const _sel = changedSel; changedSel = function () { _sel(); if (window.S3 && S3.hover) S3.hover(null); }; }
 { const _g = gizmoSync; gizmoSync = function () { if (ELV3.on || WMARK.on) { if (window.S3 && S3.gizmo) S3.gizmo.set(null); return; } _g(); }; }
 Object.assign(window.__wb, { showElevation: (...a) => showElevation(...a), walkEnter: (...a) => walkEnter(...a), birdView: (...a) => birdView(...a), setView2D: (...a) => setView2D(...a) });   // the v129 test handles point at the current functions
+// the view rotation control
+function rotUI() { const on = CAM === 'plan' && VIEW2D !== 'elev'; for (const id of ['#rotBtn', '#rotSep']) $(id).hidden = !on; $('#rotRd').textContent = (ROT * 90) + '°'; $('#rotN').style.transform = `rotate(${ROT * 90}deg)`; $('#rotBtn').setAttribute('aria-label', `Rotate view 90° (now ${ROT * 90}°)`); }
+$('#rotBtn').addEventListener('click', () => { ROT = (ROT + 1) % 4; resize(); rotUI(); });
+{ const _c = setCam; setCam = async function (c) { const r = await _c(c); rotUI(); resize(); return r; }; const _v = setView2D; setView2D = function (v) { const r = _v(v); rotUI(); resize(); return r; }; }
+rotUI(); window.__wb.rot = { W2D: (p) => W2D(p), get k() { return rotK(); }, get ROT() { return ROT; } };
 window.__wb.cmp = { get state() { return CMP; }, refresh: cmpRefresh, types: () => CMP && cmpTypes() }; window.__wb.site = { siteOk, parcelPlan, clipToParcel, get anchor() { return M.site && M.site.anchor; }, get ancSel() { return ANCSEL; } }; window.__wb.CLR = CLR; window.__wb.clearanceOf = clearanceOf; window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
 Object.defineProperty(window.__wb, 'HOVX', { get: () => HOVX }); Object.defineProperty(window.__wb, 'DIMS', { get: () => DIMS });
 viewUI();
