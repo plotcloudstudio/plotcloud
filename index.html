@@ -3610,6 +3610,47 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
     return h.replace('<span class="qc-badge">Verified</span>', ""); };
 })();
 
+/* v134 · home: "How plotcloud fits together" — Practice (default, the design flow) or Competition (the old four, reordered) */
+(function () {
+  const st = document.createElement("style");
+  st.textContent = `.jsub{margin:-10px 0 16px;color:var(--muted);font-size:15px}
+  .jtabs{margin:0 0 6px!important}
+  .hmap.jmap{transition:opacity .15s ease} .hmap.jmap.jfade{opacity:0}
+  .hmap.jmap .no{color:#888}
+  .hmap.jmap a:hover h3{color:#D8402A}
+  .hmap.jmap .jcta{font-weight:700;font-size:14px;color:#111;text-decoration:underline;text-underline-offset:3px}
+  .hmap.jmap a:hover .jcta{color:#D8402A}
+  .hmap.jmap .jloop{justify-self:start;font:700 12px var(--sans);color:#D8402A;border:1px solid #D8402A;border-radius:999px;padding:1px 9px;margin-top:2px}
+  @media (prefers-reduced-motion:reduce){.hmap.jmap{transition:none}}`;
+  document.head.appendChild(st);
+  const counts = () => ({ sets: RES.filter((r) => r[9] !== "draft").length, scenes: typeof SHOW !== "undefined" ? SHOW.length : 0, tools: TSECTIONS.reduce((a, x) => a + x[4].length, 0) });
+  // every step goes to a real page; the status lines use the site's own "free / free in the beta" wording
+  window.JOURNEYS = {
+    practice: [
+      { no: "01 · Site", go: "site", h: "Pick your site", p: "Search an address, set the extent, mark your boundary and drop the anchor.", fact: () => "free · your boundary file", cta: "Open Site" },
+      { no: "02 · Site analysis", go: "tool/sunhours", h: "Read it before you draw", p: "Sun hours and wind flow screened on your site plan — with what each check can and can't say.", fact: () => "free · screening only", cta: "Run the checks" },
+      { no: "03 · Workbench", go: "studio", h: "Design inside the boundary", p: "Your site arrives with its surroundings. Walls, rooms, stairs — drawn in the browser.", fact: () => "free in the beta", cta: "Enter Workbench" },
+      { no: "04 · Simulation", go: "tools", h: "Improve, then loop back", p: "Interior daylight, ventilation and movement screens. Fix the weak spots, re-check.", fact: () => "free", cta: "Simulate", loop: "↺ loops back to 03" }],
+    competition: [
+      { no: "01 · Showroom", go: "showroom", h: "See them used", p: "Explore competition scenes and the resources behind them, listed under every scene.", fact: (c) => `free · ${c.scenes} scene${c.scenes === 1 ? "" : "s"}`, cta: "Browse Showroom" },
+      { no: "02 · Resources", go: "library", h: "Get the files", p: "CAD, Rhino, Revit and Grasshopper sets behind every scene — verified, ready to drop in.", fact: (c) => `free · ${c.sets} sets`, cta: "Browse Resources" },
+      { no: "03 · Workbench", go: "studio", h: "Build the model", p: "The one place to draw: walls, rooms, stairs, furniture.", fact: () => "free in the beta", cta: "Enter Workbench" },
+      { no: "04 · Tools", go: "tools", h: "Submit with confidence", p: "Board composer, sheet sizes, daylight checks — the night-before kit.", fact: (c) => `free · ${c.tools} tools`, cta: "Open Tools" }] };
+  let JKEY = "practice";   // the default on every visit
+  window.renderJourney = function (key) { const steps = JOURNEYS[key] || JOURNEYS.practice, c = counts();
+    return steps.map((x) => `<a data-go="${x.go}"><span class="no">${x.no}</span><h3>${x.h}</h3><p>${x.p}</p><span class="fact">${x.fact(c)}</span>${x.loop ? `<span class="jloop">${x.loop}</span>` : ""}<span class="jcta">${x.cta} →</span></a>`).join(""); };
+  const block = () => `<section class="wrap hsec" aria-labelledby="hmapT"><div class="hhead"><h2 id="hmapT">how plotcloud fits together.</h2></div>
+    <p class="jsub">One workflow, four moves — pick your journey.</p>
+    <div class="tabs jtabs" role="group" aria-label="Journey">${[["practice", "Practice"], ["competition", "Competition"]].map(([k, l]) => `<button type="button" data-journey="${k}" class="${k === JKEY ? "on" : ""}" aria-pressed="${k === JKEY}">${l}</button>`).join("")}</div>
+    <nav class="hmap jmap" aria-label="PlotCloud journey" aria-live="polite">${renderJourney(JKEY)}</nav></section>`;
+  const _h = P.home; P.home = function () { const h = _h.apply(this, arguments); JKEY = "practice";   // Home always opens on Practice
+    return h.replace(/<section class="wrap hsec" aria-labelledby="hmapT">[\s\S]*?<\/nav><\/section>/, block); };
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-journey]"); if (!b) return; const k = b.dataset.journey; if (!JOURNEYS[k] || k === JKEY) return; JKEY = k;
+    document.querySelectorAll("[data-journey]").forEach((x) => { const on = x.dataset.journey === k; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
+    const nav = document.querySelector(".hmap.jmap"); if (!nav) return; nav.style.minHeight = nav.offsetHeight + "px"; nav.classList.add("jfade");
+    setTimeout(() => { nav.innerHTML = renderJourney(k); nav.classList.remove("jfade"); setTimeout(() => { nav.style.minHeight = ""; }, 160); }, 150); });
+})();
+
 route();
 </script>
 </body>
