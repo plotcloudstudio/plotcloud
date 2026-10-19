@@ -3651,6 +3651,42 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
     setTimeout(() => { nav.innerHTML = renderJourney(k); nav.classList.remove("jfade"); setTimeout(() => { nav.style.minHeight = ""; }, 160); }, 150); });
 })();
 
+/* v135 · tools page: no Free / Uses AI / Canada tags or filters; Analysis in two groups */
+(function () {
+  const DROP = /^free$|uses? ai|canada/i;
+  for (const k of ["free", "ai", "canada"]) { const i = TFILTERS.findIndex((x) => x[0] === k); if (i >= 0) TFILTERS.splice(i, 1); }
+  if (["free", "ai", "canada"].includes(tF)) tF = "all";
+  const _tags = tTags; tTags = function (id) { return _tags(id).filter(([t]) => !DROP.test(t)); };
+  const _bar = tBar; tBar = function () { let h = _bar(); if (!TFILTERS.some(([k]) => k !== "all" && k !== "dev")) h = h.replace('<span class="tdiv" aria-hidden="true"></span>', ""); return h; };
+  // the two kinds of analysis, each reading its own list; anything new in Analysis lands in Interior
+  window.ENV_GROUPS = { site: ["sunhours", "wind"], interior: null };
+  const GROUP = { site: ["Site analysis", "Read the site before you draw: screened with your boundary and the surrounding building heights from the Site page."],
+    interior: ["Interior simulation", "Inside the rooms: daylight, air, structure, movement and sightlines, on the model you draw in Workbench."] };
+  let ASUB = "site";
+  const CARD = { sunhours: ["Sun hours", "Site sun: hours of direct sun and the shadows across your site, its neighbors and your massing — any city, date and time. Needs your site from the Site page (boundary and building heights) or a 3D model."],
+    wind: [null, "Site wind: how air moves around your massing and the buildings next to it, at street level and in section. Needs your site from the Site page (boundary and building heights) or a 3D model. Screening only."],
+    daylight: ["Interior daylight", "Daylight inside your rooms through the year: sDA, ASE and daylight factor on every desk, checked against LEED v4/v4.1."] };
+  const _card = tCard; tCard = function (id, no) { let h = _card(id, no).replace('<div class="tc-tags"></div>', ""); const c = CARD[id];
+    if (c) { if (c[0]) h = h.replace(/<h3>[^<]*<\/h3>/, `<h3>${c[0]}</h3>`); h = h.replace(/<p class="tc-d">[\s\S]*?<\/p>/, `<p class="tc-d">${c[1]}</p>`); }
+    return h; };
+  const _secs = tSections; tSections = function () { const an = TSECTIONS.find((x) => x[1] === "Analysis"); if (!an) return _secs();
+    const all = an[4].slice(), site = all.filter((id) => ENV_GROUPS.site.includes(id)), interior = all.filter((id) => !ENV_GROUPS.site.includes(id));
+    const searching = !!(tQ && tQ.trim());
+    if (!searching) an[4] = ASUB === "site" ? site : interior;
+    let h; try { h = _secs(); } finally { an[4] = all; }
+    if (searching) return h;
+    const n = an[0], k = h.indexOf(`<section class="tsec2" id="tsec-${n}">`); if (k < 0) return h;
+    const g = h.indexOf('<div class="tgrid2">', k); if (g < 0) return h;
+    const sw = `<div class="asub" role="group" aria-label="Kind of analysis">${["site", "interior"].map((x) => `<button type="button" class="tpill${ASUB === x ? " on" : ""}" data-asub="${x}" aria-pressed="${ASUB === x}">${GROUP[x][0]} <span>${(x === "site" ? site : interior).length}</span></button>`).join("")}</div><p class="asub-l">${GROUP[ASUB][1]}</p>`;
+    return h.slice(0, g) + sw + h.slice(g); };
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-asub]"); if (!b || b.dataset.asub === ASUB) return; ASUB = b.dataset.asub;
+    if (typeof tRefresh === "function") tRefresh(false); const s = document.querySelector('#tsec-' + (TSECTIONS.find((x) => x[1] === "Analysis") || [""])[0]); if (s && s.getBoundingClientRect().top < 0) s.scrollIntoView({ block: "start" }); });
+  const st = document.createElement("style");
+  st.textContent = `.asub{display:flex;gap:8px;flex-wrap:wrap;margin:-12px 0 10px} .asub .tpill span{opacity:.6;margin-left:4px;font-weight:500}
+  .asub-l{margin:0 0 24px;color:var(--muted);font-size:14.5px}`;
+  document.head.appendChild(st);
+})();
+
 route();
 </script>
 </body>
