@@ -248,6 +248,7 @@ html,body{height:100%;overflow:hidden;background:var(--kj-bg);color:var(--kj-ink
 .lb{display:flex;align-items:center;gap:4px;padding:8px 2px 4px;font:700 14px var(--f-body)}
 .lb button{border:0;background:none;width:26px;height:26px;border-radius:6px;cursor:pointer;color:var(--kj-sub);font-size:18px;line-height:1}.lb button:hover{background:var(--kj-fill)}
 .mg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lgrp{margin:16px 0 8px;font:700 10.5px/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--kj-mut)} #libBody>.lgrp:first-child{margin-top:2px}
 .mcard{border:0;background:none;padding:0;text-align:left;cursor:grab;display:grid;gap:5px;font:500 12.5px/1.3 var(--f-body);color:var(--kj-sub);touch-action:none}
 .mcard .mi{display:grid;place-items:center;height:88px;background:#f4f5f7;border-radius:8px;border:1.5px solid transparent;overflow:hidden}
 .mcard img{width:100%;height:100%;object-fit:contain}
@@ -281,6 +282,7 @@ html,body{height:100%;overflow:hidden;background:var(--kj-bg);color:var(--kj-ink
 .kb svg{width:20px;height:20px}.kb:hover{background:var(--kj-fill)}
 .kb .car{width:0;height:0;border:4px solid transparent;border-top-color:#86909c;border-bottom:0;margin-left:-2px}
 .kb-sep{width:1px;height:20px;background:var(--kj-line);margin:0 4px}
+#clrBtn[aria-pressed=true]{background:#fbe9e5;color:#B3321F}.clr-hint{font:500 10.5px/1.15 var(--f-body);color:var(--kj-mut);max-width:134px;margin:0 8px 0 -2px}
 .seg2{display:flex;gap:2px}.seg2 button{border:0;background:none;height:30px;padding:0 12px;border-radius:6px;font:600 13px var(--f-body);color:#3a4250;cursor:pointer}
 .seg2 button:hover{background:var(--kj-fill)}.seg2 button[aria-pressed="true"]{background:var(--kj-acc-bg);color:var(--kj-acc)}
 .zpct{display:flex;align-items:center;gap:2px;border:1px solid var(--kj-line);border-radius:6px;height:28px;padding:0 6px;font:13px var(--f-body);color:var(--kj-sub)}
@@ -530,7 +532,13 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 #verCmp{height:30px}#verCmp:not(:disabled){border-color:#1f6fd1;color:#1f6fd1}
 .lk-note{margin:0;color:#8a4b00!important;font-size:12px}
 /* comparison viewer */
-.cmpdlg{padding:16px}.cmp-in{width:min(1280px,100%);height:calc(100vh - 32px);max-height:none;grid-template-rows:auto minmax(0,1fr) auto}
+.cmpdlg{padding:16px}.cmp-in{width:min(1280px,100%);height:calc(100vh - 32px);max-height:none;grid-template-rows:auto auto minmax(0,1fr) auto}
+.cmp-sel{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px}.cmp-sel label{display:grid;gap:3px;font:600 11px var(--f-body);color:#5f6670}.cmp-sel select{height:30px;min-width:120px;border:1px solid var(--kj-line2);border-radius:6px;background:#fff;padding:0 8px;font:500 13px var(--f-body);color:#1d2129}
+.cmp-plan,.cmp-sim{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#c9cdd4}.cmp-plan[hidden],.cmp-sim[hidden]{display:none}
+.cmp-pane{position:relative;background:#f7f7f5;overflow:auto;padding:38px 10px 10px;min-width:0}.cmp-pane h4{position:absolute;top:8px;left:12px;margin:0;z-index:2;background:rgba(29,33,41,.82);color:#fff;border-radius:6px;padding:4px 10px;font:600 12px var(--f-body)}
+.cmp-pane canvas{position:static;display:block;width:100%;height:auto;margin:0 0 10px;border:1px solid #dde0e6;background:#fff;border-radius:6px}.cmp-pane .lvt{font:700 11px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:#6e6a60;margin:0 0 4px}.cmp-pane .none{color:#6e6a60;font:500 13px var(--f-body);padding:20px 4px}
+.cmp-pane img{display:block;width:100%;height:auto;border:1px solid #dde0e6;border-radius:6px;background:#fff}.cmp-delta{grid-column:1 / -1;background:#fff;padding:10px 14px;overflow:auto;max-height:40%}.cmp-delta table{border-collapse:collapse;font:500 13px var(--f-body);width:100%}.cmp-delta th,.cmp-delta td{text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid #eceae5}.cmp-delta .dd{font-family:var(--f-mono);font-weight:600}.cmp-delta .up{color:#1f7a46}.cmp-delta .dn{color:#b3321f}
+.cmp-sim{grid-template-rows:minmax(0,1fr) auto}.vnote2{font:500 11.5px var(--f-body);color:#6e6a60;margin:0 0 0 2px;align-self:center}
 .cmp-tools{display:flex;align-items:center;gap:10px}.cmp-tools .btn{height:30px;border:1px solid var(--kj-line2);border-radius:6px;background:#fff;padding:0 12px}
 .cmp-stage{position:relative;min-height:0;border-radius:8px;overflow:hidden;background:#f2f3f5}.cmp-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .cmp-split{position:absolute;top:0;bottom:0;width:16px;margin-left:-8px;cursor:ew-resize;z-index:2;touch-action:none}.cmp-split span{position:absolute;left:7px;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
@@ -598,16 +606,16 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 .walkhud small,.xpanel .note,.vpop kbd,.fxwhat,.fxnote{font-size:12px!important}
 .ftb button[data-tip]:hover::after,.ftb button[data-tip]:focus-visible::after,.ftb-h:hover::after{font-size:12px!important}
 </style>
-<div class="deskonly" role="note"><b>Workbench works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard. Open this page on a laptop or desktop computer.</p></div>
+<div class="deskonly" role="note"><b>Plan Studio works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard. Open this page on a laptop or desktop computer.</p></div>
 <div class="kj" role="main">
   <header class="kj-top">
-    <div class="kj-brand" aria-label="Workbench"><span class="kj-logo" aria-hidden="true">P</span><span class="kj-title"><b>Workbench</b><span>PlotCloud</span></span></div>
+    <div class="kj-brand" aria-label="Plan Studio"><span class="kj-logo" aria-hidden="true">P</span><span class="kj-title"><b>Plan Studio</b><span>PlotCloud</span></span></div>
     <span class="kj-sep"></span>
     <div class="kj-grp" role="group" aria-label="File">
       <div class="kj-menu">
         <button type="button" class="btn" id="openBtn" aria-haspopup="true" aria-expanded="false" title="Open a model or one of your projects on this device"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M1.8 4.2h4l1.4 1.6h7v6.9H1.8z"/></svg>Open</button>
         <div class="kj-pop" id="openPop" hidden>
-          <button type="button" class="kj-mi one" id="pick" title="Open a Workbench model or a plan from another PlotCloud tool (.json)"><span>Open a file…</span></button>
+          <button type="button" class="kj-mi one" id="pick" title="Open a Plan Studio model or a plan from another PlotCloud tool (.json)"><span>Open a file…</span></button>
           <details class="plist" id="plist" open><summary>My projects on this device</summary><div id="plistIn"></div></details>
         </div>
       </div>
@@ -644,7 +652,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
     <div class="kl-pane" data-lp="light" hidden><div class="kl-scroll fxpane">
       <div class="tls fxtiles" id="fxTiles" role="group" aria-label="Fixture types"></div>
       <div id="fxHead"></div><canvas class="fxprev" id="fxPrev" hidden></canvas><div id="fxBody" aria-live="polite"></div>
-      <p class="note fxnote">Light is shown as a sketch only: Workbench does not calculate lighting levels.</p>
+      <p class="note fxnote">Light is shown as a sketch only: Plan Studio does not calculate lighting levels.</p>
     </div></div>
   </aside>
 
@@ -679,6 +687,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
       <span class="kb-sep"></span>
       <div class="seg2" id="camBar" role="group" aria-label="View"><div class="dd" id="dd2d"><button type="button" data-cam="plan" aria-pressed="true">2D</button><button type="button" class="v2c dd-car" id="v2dBtn" aria-haspopup="menu" aria-expanded="false" aria-label="2D view: plan, ceiling or elevation" title="Plan, ceiling or elevation"><i class="car"></i></button><div class="vpop dd-pop" id="v2dPop" role="menu" aria-label="2D views" hidden><button type="button" role="menuitemradio" data-v2="plan">Plan<kbd>1</kbd></button><button type="button" role="menuitemradio" data-v2="ceiling">Ceiling<kbd>2</kbd></button><button type="button" role="menuitemradio" data-v2="elev">Elevation<kbd>…</kbd></button></div></div><div class="dd" id="dd3d"><button type="button" data-cam="3d" aria-pressed="false">3D</button><button type="button" class="v2c dd-car" id="viewBtn" aria-haspopup="menu" aria-expanded="false" aria-label="3D view: bird view or walkthrough" title="Bird view or walkthrough"><i class="car"></i></button><div class="vpop dd-pop" id="viewPop" role="menu" aria-label="3D views" hidden><button type="button" role="menuitemradio" data-vm="bird">Bird View<kbd>3</kbd></button><button type="button" role="menuitemradio" data-vm="walk">Walkthrough<kbd>4</kbd></button></div></div></div>
       <span class="kb-sep"></span>
+      <button type="button" class="kb" id="clrBtn" aria-pressed="false" title="Show the free space each piece wants around it (front, back and sides). A hint only: nothing is blocked or snapped."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="3" stroke-dasharray="3 2.4"/><rect x="9" y="10" width="6" height="4" rx="1"/></svg><span class="clr-t">Clearance</span></button><span class="clr-hint" id="clrHint">Planning hint — not a code requirement</span>
       <div class="kj-menu up">
         <button type="button" class="kb ic" id="eyeBtn" aria-haspopup="true" aria-expanded="false" title="Layers and display" aria-label="Layers and display"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M2 12c2.6-4.6 6-7 10-7s7.4 2.4 10 7c-2.6 4.6-6 7-10 7s-7.4-2.4-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
         <div class="kj-pop up lp" id="eyePop" role="dialog" aria-label="Layers and display" hidden>
@@ -740,16 +749,16 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
       <section class="kr-card" id="verCard" aria-labelledby="h-ver">
         <div class="kr-h"><h2 id="h-ver">Versions<span class="vcnt" id="verCount"></span></h2></div>
         <div class="vlist2" id="verList"></div>
-        <button type="button" class="btn pb" id="verCmp" disabled>Compare two versions</button>
+        <button type="button" class="btn pb" id="verCmp" disabled>Compare two versions</button><p class="note" id="verCmpNote" hidden>Save two versions or run a simulation to compare</p>
       </section>
       <p class="note kr-note" id="sendState" aria-live="polite">Build the model here. When it is done, send it to a simulation tool.</p>
     </div>
   </aside>
 
-  <footer class="kj-status"><span><b id="stName">Workbench</b></span><span id="stInfo"></span><span class="fine">Workbench is for building the model. To simulate airflow, daylight or views, send the finished model to a simulation tool. Lighting is shown as a sketch only; no light calculation.</span></footer>
+  <footer class="kj-status"><span><b id="stName">Plan Studio</b></span><span id="stInfo"></span><span class="fine">Plan Studio is for building the model. To simulate airflow, daylight or views, send the finished model to a simulation tool. Lighting is shown as a sketch only; no light calculation.</span></footer>
 </div>
 
-<!-- Kept off screen: the model code still reads these, but Workbench no longer simulates while you build. -->
+<!-- Kept off screen: the model code still reads these, but Plan Studio no longer simulates while you build. -->
 <div id="simstub" hidden>
   <div id="showBar"><button data-show="air"></button></div><div id="legend"></div><div class="actlay" id="actLay"></div>
   <aside id="chartp"><div id="cpSub"></div><div id="stkp"></div><canvas id="cAir"></canvas><canvas id="cDay"></canvas><canvas id="cView"></canvas></aside>
@@ -772,7 +781,8 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 <div class="sdlg cmpdlg" id="cmpDlg" role="dialog" aria-modal="true" aria-labelledby="cmpTitle" hidden>
   <div class="sdlg-in cmp-in">
     <div class="sdlg-h"><h2 id="cmpTitle">Compare</h2><div class="cmp-tools"><div class="seg2" id="cmpModes" role="group" aria-label="Layout"><button type="button" data-cm="side" aria-pressed="true">Side by side</button><button type="button" data-cm="slider" aria-pressed="false">Slider</button></div><label class="switch" id="cmpHlW">Highlight changes<input type="checkbox" id="cmpHl" checked></label><button type="button" class="btn" id="cmpPng">Export PNG</button><button type="button" class="btn" id="cmpX" aria-label="Close">×</button></div></div>
-    <div class="cmp-stage"><canvas id="cmpCv" aria-label="The versions in 3D"></canvas><div class="cmp-split" id="cmpSplit" role="separator" aria-label="Divider" hidden><span></span></div><span class="cmp-lab" id="cmpLA"></span><span class="cmp-lab" id="cmpLB"></span></div>
+    <div class="cmp-sel" id="cmpSel"><label>Version A<select id="cmpSA"></select></label><label>Version B<select id="cmpSB"></select></label><label>Level<select id="cmpLv"></select></label><label>Compare<select id="cmpTy"></select></label><div class="seg2" id="cmpView" role="group" aria-label="View"><button type="button" data-cv="3d" aria-pressed="true">3D</button><button type="button" data-cv="2d" aria-pressed="false">2D plan</button></div></div>
+    <div class="cmp-stage"><div class="cmp-plan" id="cmpPlan" hidden></div><div class="cmp-sim" id="cmpSim" hidden></div><canvas id="cmpCv" aria-label="The versions in 3D"></canvas><div class="cmp-split" id="cmpSplit" role="separator" aria-label="Divider" hidden><span></span></div><span class="cmp-lab" id="cmpLA"></span><span class="cmp-lab" id="cmpLB"></span></div>
     <p class="note" id="cmpNote" aria-live="polite"></p>
   </div>
 </div>
@@ -791,14 +801,14 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 { "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "three/addons/exporters/OBJExporter.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/OBJExporter.js", "fflate": "./furniture/fflate.js", "pc/": "./furniture/", "pc-base/": "./furniture/", "pc-doors/": "./doors/", "pc-stairs/": "./stairs/" } }
 </script>
 <script type="module">
-import { MODELS as GM, CATS as GCATS, COLORS as GCOL, defaults as gDefaults, buildModel as gBuild, materialColor as gColor, paramVisible as gVis } from 'pc/models.js';
+import { MODELS as GM, CATS as GCATS, GROUPS as GGROUPS, COLORS as GCOL, defaults as gDefaults, buildModel as gBuild, materialColor as gColor, paramVisible as gVis } from 'pc/models.js';
 import { t as gT } from 'pc/i18n.js';
 import { partGeometry as gGeom } from 'pc/geom.js';
 import { MODELS as DM, defaults as dDefaults, buildModel as dBuild, buildBlocks as dBlocks, LAYERS2D as DL2 } from 'pc-doors/models.js';
 import { MODELS as SM, defaults as sDefaults, buildModel as sBuild } from 'pc-stairs/models.js';
 // ===== site context core (shared with Site Context and Sun hours) =====
 // ===== PlotCloud site context core =====
-// Real-world site → validated, editable context model shared by Site Context, Workbench and Sun hours.
+// Real-world site → validated, editable context model shared by Site Context, Plan Studio and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
 // Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
 const SITEC = (() => {
@@ -1086,7 +1096,7 @@ const SITEC = (() => {
   }
   function resolve(site, ref, choice) { const i = site.buildings.findIndex((b) => b.src.ref === ref); if (i < 0 || !site._conflicts) return false; const c = site._conflicts.find((x) => x.ref === ref); if (!c) return false; site.buildings[i] = choice === 'theirs' ? c.theirs : Object.assign({}, c.mine); site._conflicts = site._conflicts.filter((x) => x !== c); site.version++; return true; }
 
-  // ---------- placing the site into a Workbench plan (plan +Y faces compass bearing M.north) ----------
+  // ---------- placing the site into a Plan Studio plan (plan +Y faces compass bearing M.north) ----------
   function toPlan(p, north) { const a = (north || 0) * D, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
   // masses for analysis: context only casts shadows; heights in meters above the site origin
   // site.at: where the site point sits in the plan (a project placed on a site keeps its own coordinates)
@@ -1105,7 +1115,7 @@ const SITEC = (() => {
 })();
 
 
-// Workbench core: a multi-level building model (walls, windows and doors in walls, floor openings, furniture),
+// Plan Studio core: a multi-level building model (walls, windows and doors in walls, floor openings, furniture),
 // rooms found from the walls, and three early-design analyses on it — airflow (wind + stack, across floors),
 // daylight factor (CIE overcast sky) and views out. Pure functions, no DOM; also runs under Node for tests.
 const STC = (() => {
@@ -1419,7 +1429,7 @@ const STC = (() => {
   function validate(M) {
     const E = [], W = [], err = (code, msg, ref) => E.push({ code, msg, ref }), warn = (code, msg, ref) => W.push({ code, msg, ref });
     const fin = (...v) => v.every((x) => typeof x === 'number' && isFinite(x));
-    if (M.units !== 'm') err('units', `Model units are "${M.units}"; Workbench models are in meters.`);
+    if (M.units !== 'm') err('units', `Model units are "${M.units}"; Plan Studio models are in meters.`);
     if (!M.levels || !M.levels.length) err('levels', 'The model has no levels.');
     const lvIds = new Set((M.levels || []).map((l) => l.id));
     const check = (arr, type, label) => { for (const o of arr) { const want = TYPE_LAYER[o.object_type];
@@ -1441,7 +1451,7 @@ const STC = (() => {
     return { errors: E, warnings: W, S };
   }
 
-  // ---------- adapters: Workbench model → a target tool's scene (one level; those tools are single-level plans) ----------
+  // ---------- adapters: Plan Studio model → a target tool's scene (one level; those tools are single-level plans) ----------
   // plan tools share one format: walls {a,b,h,glass}, a glazed wall is solid up to h (its sill) and glass above; furniture boxes {x,y,w,d,h,name}
   const TOOLS = {
     vent:        { name: 'Natural ventilation', needs: ['rooms', 'exterior'], note: 'Windows and doors keep their sill, head and how far they open; wind, temperatures and the level\'s floor and ceiling come along.' },
@@ -1504,7 +1514,7 @@ const STC = (() => {
   // can this level go to this tool? hard blockers and plain notes
   function compat(M, S, lvId, tool) {
     if (tool === 'sunhours') return sunCompat(M, S);
-    const T = TOOLS[tool]; if (!T) return { ok: false, why: ['Not a Workbench-compatible tool yet.'] };
+    const T = TOOLS[tool]; if (!T) return { ok: false, why: ['Not a Plan Studio-compatible tool yet.'] };
     const why = [], rooms = S.rooms.filter((r) => r.lv === lvId), ext = S.ops.filter((op) => op.lv.id === lvId && op.ext), wins = ext.filter((op) => op.o.object_type === 'window'), doors = S.ops.filter((op) => op.lv.id === lvId && op.o.object_type === 'door' && !op.ext);
     for (const n of T.needs) {
       if (n === 'walls' && !M.walls.some((w) => w.lv === lvId)) why.push('This level has no walls.');
@@ -1519,8 +1529,8 @@ const STC = (() => {
 })();
 if (typeof module !== 'undefined') module.exports = STC;
 
-// ===== Workbench light fixtures (v130) =====
-// ===== Workbench lighting fixtures: six basic types, all parametric. Pure (no DOM, no three.js), tested in Node. =====
+// ===== Plan Studio light fixtures (v130) =====
+// ===== Plan Studio lighting fixtures: six basic types, all parametric. Pure (no DOM, no three.js), tested in Node. =====
 // A fixture is { type, paramsSchema, build(params) }. build() returns parts in the fixture's own frame (metres):
 //   x = along the fixture (its turn in plan), y = out from the wall (wall types) or across, z = up from the mounting point.
 // The 3D model and the elevation outline are both made from these parts, so they always agree.
@@ -1613,8 +1623,8 @@ const WBF = (() => {
 })();
 
 
-// ===== Workbench pure helpers (v129) =====
-// ===== Workbench pure helpers: no DOM, no three.js. Runs in the browser (inlined) and in Node for tests. =====
+// ===== Plan Studio pure helpers (v129) =====
+// ===== Plan Studio pure helpers: no DOM, no three.js. Runs in the browser (inlined) and in Node for tests. =====
 // Model units are meters (plan x east, y north). Outputs that people read or export are in millimeters.
 const WBP = (() => {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -1795,7 +1805,7 @@ const WBP = (() => {
   const f3 = (v) => { const r = Math.round(v * 1000) / 1000; return (Object.is(r, -0) ? 0 : r).toFixed(3); };
   // OBJ from triangle meshes already placed in the world (three.js frame: meters, Y up). Written in millimeters.
   function obj(meshes, opts = {}) {
-    const L = [`# PlotCloud Workbench — ${opts.name || 'model'}`, '# units: millimeters; Y up; north is -Z', `# ${meshes.length} objects`], k = 1000; let base = 1, tris = 0;
+    const L = [`# PlotCloud Plan Studio — ${opts.name || 'model'}`, '# units: millimeters; Y up; north is -Z', `# ${meshes.length} objects`], k = 1000; let base = 1, tris = 0;
     for (const m of meshes) { const nm = String(m.name || 'mesh').replace(/[^\w\-.]+/g, '_'); L.push(`o ${nm}`);
       const vs = m.verts; for (let i = 0; i < vs.length; i += 3) L.push(`v ${f3(vs[i] * k)} ${f3(vs[i + 1] * k)} ${f3(vs[i + 2] * k)}`);
       const id = m.idx; for (let i = 0; i < id.length; i += 3) { L.push(`f ${id[i] + base} ${id[i + 1] + base} ${id[i + 2] + base}`); tris++; }
@@ -1816,8 +1826,8 @@ const WBP = (() => {
     const k = 1000, lines = [], counts = { IfcWall: 0, IfcSlab: 0, IfcDoor: 0, IfcWindow: 0, IfcOpeningElement: 0, IfcFurnishingElement: 0, IfcCovering: 0, IfcFlowTerminal: 0, IfcBuildingStorey: 0 }; let n = 0;
     const E = (s) => { n++; lines.push(`#${n}=${s};`); return `#${n}`; };
     const P3 = (x, y, z) => E(`IFCCARTESIANPOINT((${f3(x)},${f3(y)},${f3(z)}))`), P2 = (x, y) => E(`IFCCARTESIANPOINT((${f3(x)},${f3(y)}))`), D3 = (x, y, z) => E(`IFCDIRECTION((${f3(x)},${f3(y)},${f3(z)}))`);
-    const stamp = opts.stamp || M.savedAt || '2000-01-01T00:00:00.000Z', ts = Math.floor(Date.parse(stamp) / 1000) || 0, nm = M.name || 'Workbench model';
-    const per = E("IFCPERSON($,$,'',$,$,$,$,$)"), org = E("IFCORGANIZATION($,'PlotCloud',$,$,$)"), po = E(`IFCPERSONANDORGANIZATION(${per},${org},$)`), app = E(`IFCAPPLICATION(${org},'1.0','PlotCloud Workbench','Workbench')`);
+    const stamp = opts.stamp || M.savedAt || '2000-01-01T00:00:00.000Z', ts = Math.floor(Date.parse(stamp) / 1000) || 0, nm = M.name || 'Plan Studio model';
+    const per = E("IFCPERSON($,$,'',$,$,$,$,$)"), org = E("IFCORGANIZATION($,'PlotCloud',$,$,$)"), po = E(`IFCPERSONANDORGANIZATION(${per},${org},$)`), app = E(`IFCAPPLICATION(${org},'1.0','PlotCloud Plan Studio','Plan Studio')`);
     const oh = E(`IFCOWNERHISTORY(${po},${app},$,.ADDED.,$,$,$,${ts})`);
     const u = [E('IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.)'), E('IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.)'), E('IFCSIUNIT(*,.VOLUMEUNIT.,$,.CUBIC_METRE.)'), E('IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.)')], ua = E(`IFCUNITASSIGNMENT((${u.join(',')}))`);
     const O = P3(0, 0, 0), Z = D3(0, 0, 1), XD = D3(1, 0, 0), wcs = E(`IFCAXIS2PLACEMENT3D(${O},${Z},${XD})`);
@@ -1849,7 +1859,7 @@ const WBP = (() => {
         if (below) for (const v of (M.voids || []).filter((q) => q.lv === below.id)) { const ix0 = Math.max(v.x, f.x), iy0 = Math.max(v.y, f.y), ix1 = Math.min(v.x + v.w, f.x + f.w), iy1 = Math.min(v.y + v.d, f.y + f.d); if (ix1 - ix0 < 0.05 || iy1 - iy0 < 0.05) continue;
           const vpl = place(fpl, (ix0 - f.x) * k, (iy0 - f.y) * k, -10, 0), vo = E(`IFCOPENINGELEMENT(${G('vo/' + v.id + '/' + f.id)},${oh},'Floor opening',$,$,${vpl},${boxRep((ix1 - ix0) * k / 2, (iy1 - iy0) * k / 2, (ix1 - ix0) * k, (iy1 - iy0) * k, sl + 20)},$)`); counts.IfcOpeningElement++;
           E(`IFCRELVOIDSELEMENT(${G('rvo/' + v.id + '/' + f.id)},${oh},$,$,${slab},${vo})`); } }
-      for (const f of (M.furn || []).filter((q) => q.lv === lv.id)) { const fpl = place(spl, f.x * k, f.y * k, 0, f.rot || 0); els.push(E(`IFCFURNISHINGELEMENT(${G('f/' + f.id)},${oh},${ifcStr(name(f))},${ifcStr('Bounding box of the Workbench piece')},$,${fpl},${boxRep(0, 0, f.w * k, f.d * k, f.h * k)},$)`)); counts.IfcFurnishingElement++; }
+      for (const f of (M.furn || []).filter((q) => q.lv === lv.id)) { const fpl = place(spl, f.x * k, f.y * k, 0, f.rot || 0); els.push(E(`IFCFURNISHINGELEMENT(${G('f/' + f.id)},${oh},${ifcStr(name(f))},${ifcStr('Bounding box of the Plan Studio piece')},$,${fpl},${boxRep(0, 0, f.w * k, f.d * k, f.h * k)},$)`)); counts.IfcFurnishingElement++; }
       for (const c of (M.ceil || []).filter((q) => q.lv === lv.id)) { const h = (c.h != null ? c.h : lv.h) * k;
         if (c.kind === 'panel') { const cpl = place(spl, c.x * k, c.y * k, h - 20, 0); els.push(E(`IFCCOVERING(${G('c/' + c.id)},${oh},'Ceiling panel',$,$,${cpl},${boxRep(c.w * k / 2, c.d * k / 2, c.w * k, c.d * k, 20)},$,.CEILING.)`)); counts.IfcCovering++; }
         else { const sz = c.kind === 'light' ? 300 : 200, cpl = place(spl, c.x * k, c.y * k, h - 60, 0); els.push(E(`IFCFLOWTERMINAL(${G('c/' + c.id)},${oh},${ifcStr({ light: 'Light', vent: 'Air vent', smoke: 'Smoke detector' }[c.kind] || 'Ceiling item')},$,$,${cpl},${boxRep(0, 0, sz, sz, 60)},$)`)); counts.IfcFlowTerminal++; } }
@@ -1859,7 +1869,7 @@ const WBP = (() => {
     }
     if (storeys.length) E(`IFCRELAGGREGATES(${G('agg-b')},${oh},$,$,${bld},(${storeys.join(',')}))`);
     const file = (opts.file || 'model') + '.ifc';
-    const head = ['ISO-10303-21;', 'HEADER;', "FILE_DESCRIPTION(('ViewDefinition [CoordinationView_V2.0]'),'2;1');", `FILE_NAME(${ifcStr(file)},'${stamp.slice(0, 19)}',(''),('PlotCloud'),'PlotCloud Workbench','PlotCloud Workbench','');`, "FILE_SCHEMA(('IFC2X3'));", 'ENDSEC;', 'DATA;'];
+    const head = ['ISO-10303-21;', 'HEADER;', "FILE_DESCRIPTION(('ViewDefinition [CoordinationView_V2.0]'),'2;1');", `FILE_NAME(${ifcStr(file)},'${stamp.slice(0, 19)}',(''),('PlotCloud'),'PlotCloud Plan Studio','PlotCloud Plan Studio','');`, "FILE_SCHEMA(('IFC2X3'));", 'ENDSEC;', 'DATA;'];
     const text = head.concat(lines, ['ENDSEC;', 'END-ISO-10303-21;']).join('\n') + '\n';
     return { text, stats: { entities: n, ...counts } };
   }
@@ -1928,7 +1938,7 @@ const WBP = (() => {
   // ---------- 5 · a simulation sends back furniture moves only: [{ id, position: [x, y], rotation }] ----------
   function validateDelta(delta, M, source) {
     const errors = [], moves = [], seen = new Set();
-    if (source && source.project && M.id && source.project !== M.id) errors.push('These moves are for another project than the one open in Workbench.');
+    if (source && source.project && M.id && source.project !== M.id) errors.push('These moves are for another project than the one open in Plan Studio.');
     if (!Array.isArray(delta)) return { ok: false, errors: errors.concat(['The data is not a list of moves.']), moves };
     if (!delta.length) errors.push('No furniture was moved.');
     if (delta.length > 2000) errors.push('Too many moves in one packet.');
@@ -1943,7 +1953,7 @@ const WBP = (() => {
       const p = d.position; if (!Array.isArray(p) || p.length < 2 || !p.slice(0, 2).every((v) => typeof v === 'number' && isFinite(v))) { errors.push(`${at}: position must be two numbers (metres).`); continue; }
       if (p[0] < x0 - 50 || p[0] > x1 + 50 || p[1] < y0 - 50 || p[1] > y1 + 50) { errors.push(`${at}: position is far outside the model.`); continue; }
       const r = d.rotation == null ? (f.rot || 0) : d.rotation; if (typeof r !== 'number' || !isFinite(r)) { errors.push(`${at}: rotation must be a number (radians).`); continue; }
-      if (f.locked) { errors.push(`${at}: ${f.name || f.label || 'that piece'} is locked in Workbench.`); continue; }
+      if (f.locked) { errors.push(`${at}: ${f.name || f.label || 'that piece'} is locked in Plan Studio.`); continue; }
       moves.push({ id: d.id, x: +p[0].toFixed(4), y: +p[1].toFixed(4), rot: ((r % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) });
     }
     return { ok: !errors.length, errors, moves };
@@ -1954,7 +1964,7 @@ const WBP = (() => {
 })();
 
 
-// ===== Workbench: editor, plan / section drawing, results, export =====
+// ===== Plan Studio: editor, plan / section drawing, results, export =====
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const stage = $('#stage'), cv = $('#cv'), g = cv.getContext('2d'), cv3 = $('#cv3'), tipEl = $('#tip');
 // ---------- the 3D furniture generator's models are Studio's library ----------
@@ -2245,7 +2255,7 @@ function draw() {
   }
   g.globalAlpha = 1;
   // furniture
-  if (VIS.Furniture) { fade('Furniture'); for (const f of M.furn) if (f.lv === LV && furnOk(f)) drawFurn(f, SEL && SEL.k === 'furn' && SEL.id === f.id); g.globalAlpha = 1; }
+  if (VIS.Furniture) { fade('Furniture'); for (const f of M.furn) if (f.lv === LV && furnOk(f)) drawFurn(f, SEL && SEL.k === 'furn' && SEL.id === f.id); if (CLR.on) for (const f of M.furn) if (f.lv === LV && furnOk(f) && !isHidden(f.id)) drawClearance(f); g.globalAlpha = 1; }
   // walls, then windows and doors in their gaps
   if (VIS.Wall) { fade('Wall'); for (const w of lvWalls()) drawWall(w); g.globalAlpha = 1; }
   // dimensions on the outside of each wall
@@ -2677,12 +2687,27 @@ function placeFurn(f, p, snapWall) {
   const along = f.w / 2, ts = STC.clamp(t, along + 0.02, Math.max(along + 0.02, L - along - 0.02)), off = (w.t || 0.2) / 2 + f.d / 2 + 0.01;
   f.x = +(w.a[0] + dir[0] * ts + n[0] * off).toFixed(3); f.y = +(w.a[1] + dir[1] * ts + n[1] * off).toFixed(3);
 }
+// ---------- clearance hint: a dashed outline round each piece (footprint + the free space it wants), off by default, never blocks or snaps ----------
+const CLR = { on: false };
+function clearanceOf(f) { const m = f.gen && genModel(f.gen.id); if (!m || !m.clearance) return null; const c = m.clearance; return f.mirror ? Object.assign({}, c, { left: c.right, right: c.left }) : c; }
+function drawClearance(f) {   // local frame: x across the width, +y the front; left is -x
+  const c = clearanceOf(f); if (!c) return; const d = VP.d, hw = f.w / 2, hd = f.d / 2, cs = Math.cos(f.rot || 0), sn = Math.sin(f.rot || 0);
+  const P = [[-hw - c.left, -hd - c.back], [hw + c.right, -hd - c.back], [hw + c.right, hd + c.front], [-hw - c.left, hd + c.front]].map(([u, v]) => W2S([f.x + u * cs - v * sn, f.y + u * sn + v * cs]));
+  const r = Math.min(0.12 * V.s, Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]) / 2, Math.hypot(P[2][0] - P[1][0], P[2][1] - P[1][1]) / 2);
+  g.save(); g.beginPath(); const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; g.moveTo(...mid(P[3], P[0]));
+  for (let i = 0; i < 4; i++) g.arcTo(P[i][0], P[i][1], P[(i + 1) % 4][0], P[(i + 1) % 4][1], r); g.closePath();
+  g.globalAlpha = 0.8; g.strokeStyle = '#D8402A'; g.lineWidth = 1.5 * d; g.setLineDash([6 * d, 4 * d]); g.stroke(); g.restore();
+}
+function clrUI() { const b = $('#clrBtn'); if (b) b.setAttribute('aria-pressed', String(CLR.on)); }
+$('#clrBtn').addEventListener('click', () => { CLR.on = !CLR.on; clrUI(); draw(); });
 let LIBQ = '';
 function libUI() {   // the generator's furniture: one flat list, searchable
   const box = $('#libBody'); if (!box) return;
   const card = (m) => `<button type="button" class="mcard" data-type="${m.id}" aria-pressed="${PICK === m.id}" title="${esc(gT(m.name))}: drag onto the plan, or click it and then click on the plan"><span class="mi"><img data-th="${m.id}" alt="" src="${THUMBS[m.id] || BLANK}">${THUMBS[m.id] ? '' : '<span class="ph"></span>'}</span><span>${esc(gT(m.name))}</span></button>`;
-  const list = GM.filter((m) => !LIBQ || `${gT(m.name)} ${m.name} ${m.en}`.toLowerCase().includes(LIBQ));
-  box.innerHTML = list.length ? `<div class="mg">${list.map(card).join('')}</div>` : '<p class="nores">No furniture matches that search.</p>'; libGate();
+  const list = GM.filter((m) => !LIBQ || `${gT(m.name)} ${m.name} ${m.en} ${m.kw || ''}`.toLowerCase().includes(LIBQ));
+  // grouped under headings by each piece's `group` (the order is GROUPS in the model file); a piece without a group goes last
+  const groups = [...GGROUPS, ...new Set(list.map((m) => m.group).filter((g) => g && !GGROUPS.includes(g))), ''], sec = (g) => { const items = list.filter((m) => (m.group || '') === g); return items.length ? `${g ? `<h4 class="lgrp">${esc(g)}</h4>` : ''}<div class="mg">${items.map(card).join('')}</div>` : ''; };
+  box.innerHTML = list.length ? groups.map(sec).join('') : '<p class="nores">No furniture matches that search.</p>'; libGate();
 }
 function opTiles() {   // doors, windows and stairs from the generators, as tiles in the Draw plan tab
   const th = (id) => `<img data-th="${id}" alt="" src="${THUMBS[id] || BLANK}">`;
@@ -3023,7 +3048,7 @@ function loadJSON(o, name) {   // returns the model; nothing changes if the file
     N = STC.blank(o.name || name || 'Imported plan'); N.v = 1; const h = Math.max(2.4, ...o.walls.map((w) => w.h || 0).filter((v) => v < 6)) || 2.7; N.levels[0].h = Math.min(4, h);
     for (const w of o.walls) { if (w.furnline || !(w.h > 1.2) && !w.glass) continue; const nw = { id: STC.uid('w'), lv: 'L1', a: w.a.slice(), b: w.b.slice(), t: 0.2, sourceLayer: w.layer }; N.walls.push(nw); if (w.glass) { const L = STC.wallLen(nw); N.ops.push({ id: STC.uid('o'), wall: nw.id, pos: L / 2, w: Math.max(0.3, L - 0.02), kind: 'win', sill: w.h > 0 && w.h < 2 ? w.h : 0.9, head: 2.2, open: 0.3, flip: 1 }); } }
     for (const f of o.furn || []) N.furn.push({ id: STC.uid('f'), lv: 'L1', type: 'box', x: f.x + f.w / 2, y: f.y + f.d / 2, w: f.w, d: f.d, h: f.h || 0.9, rot: 0, label: f.name });
-  } else throw new Error('This file is not a Workbench model or a PlotCloud plan.');
+  } else throw new Error('This file is not a Plan Studio model or a PlotCloud plan.');
   N.names = N.names || []; N.voids = N.voids || []; N.furn = N.furn || []; N.targets = Object.assign({ ach: 5, df: 2, view: 0.75 }, N.targets || {}); N.climate = Object.assign({ from: 225, U10: 3.5, terrain: 'suburban', Tout: 18, Tin: 24 }, N.climate || {});
   STC.migrate(N); const V = STC.validate(N); if (V.errors.some((e) => ['units', 'levels'].includes(e.code))) throw new Error(V.errors[0].msg);
   return N;
@@ -3036,7 +3061,7 @@ function useModel(N, { saved = false, msg } = {}) {
 }
 const fileIn = $('#file');
 $('#pick').addEventListener('click', () => fileIn.click());
-async function openFile(f) { try { if (f.size > 20e6) throw new Error('That file is larger than 20 MB, too big for a Workbench model.'); const N = loadJSON(JSON.parse(await f.text()), f.name.replace(/\.json$/i, '')); const known = await DB.get('projects', N.id).catch(() => null); useModel(N, { saved: !!(known && known.version === N.version), msg: `${f.name} opened.` }); } catch (e) { msgEx(e.message || 'Could not open that file.', 'warn'); } }
+async function openFile(f) { try { if (f.size > 20e6) throw new Error('That file is larger than 20 MB, too big for a Plan Studio model.'); const N = loadJSON(JSON.parse(await f.text()), f.name.replace(/\.json$/i, '')); const known = await DB.get('projects', N.id).catch(() => null); useModel(N, { saved: !!(known && known.version === N.version), msg: `${f.name} opened.` }); } catch (e) { msgEx(e.message || 'Could not open that file.', 'warn'); } }
 fileIn.addEventListener('change', async () => { const f = fileIn.files[0]; if (f) await openFile(f); fileIn.value = ''; });
 stage.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.items].some((i) => i.kind === 'file')) { e.preventDefault(); stage.classList.add('over'); } });
 stage.addEventListener('dragleave', () => stage.classList.remove('over'));
@@ -3127,7 +3152,7 @@ function openSend() {
     if (V.warnings.length) h += `<ul class="vlist">${V.warnings.slice(0, 6).map((w) => `<li class="w">${esc(w.msg)}${show(w.ref)}</li>`).join('')}${V.warnings.length > 6 ? `<li class="w">…and ${V.warnings.length - 6} more.</li>` : ''}</ul>`;
     if (M.levels.length > 1) h += `<div class="lvpick"><label for="sendLv">These tools read one level at a time:</label><select id="sendLv">${lvSorted().map((l) => `<option value="${l.id}" ${l.id === SENDLV ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>`;
     h += `<div class="tlist">${Object.entries(STC.TOOLS).map(([k, T]) => { const c = STC.compat(M, V.S, SENDLV, k); return `<div class="trow${c.ok ? '' : ' no'}"><b>${T.name}</b>${c.ok ? `<button type="button" class="${SITE ? 'go' : 'btn'}" data-send="${k}">${SITE ? 'Open in ' + T.name : 'Download for ' + T.name}</button>` : '<span class="note">Not ready</span>'}<p>${c.ok ? esc(T.note) : `<span class="why">${esc(c.why.join(' '))}</span>`}</p></div>`; }).join('')}</div>`;
-    h += `<p class="later">Wind, Structure and Circulation do not read workbench models yet. Sun hours takes every level at once. Each send also keeps a version (Versions, right panel).${isDirty() ? ' Sending saves a new version first, so the tool’s results point to it.' : ''}${SITE ? '' : ' Open Workbench from the PlotCloud site to send a model straight into a tool; here you can download it for the tool.'}</p>`;
+    h += `<p class="later">Wind, Structure and Circulation do not read workbench models yet. Sun hours takes every level at once. Each send also keeps a version (Versions, right panel).${isDirty() ? ' Sending saves a new version first, so the tool’s results point to it.' : ''}${SITE ? '' : ' Open Plan Studio from the PlotCloud site to send a model straight into a tool; here you can download it for the tool.'}</p>`;
   }
   body.innerHTML = h; dlg.hidden = false; setTimeout(() => { const f = body.querySelector('[data-send], [data-vref]') || $('#sendX'); f.focus(); }, 0);
   try { window.parent.postMessage({ pc: 1, t: 'evt', name: 'studio_validate', props: { errors: V.errors.length, warnings: V.warnings.length } }, '*'); } catch (e) {}
@@ -3205,7 +3230,7 @@ $('#snapBtn').addEventListener('click', () => $('[data-ex="png"]').click());
 // the overview: the other view of the model (3D while you draw, the plan while you look at 3D), or the list of rooms
 let MINI = 'view', miniT = 0, MINI3 = null, miniBusy = false;
 function miniSoon() { clearTimeout(miniT); miniT = setTimeout(miniDraw, 140); }
-function miniPlan(x, w, h, d) {
+function miniPlan(x, w, h, d, hl) {
   const ws = lvWalls(), R = S.L[LV]; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const q of ws) for (const p of [q.a, q.b]) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
   if (!isFinite(x0)) { x.fillStyle = '#86909c'; x.font = `${12 * d}px ${FB}`; x.textAlign = 'center'; x.fillText('No walls on this level yet', w / 2, h / 2); return; }
@@ -3214,6 +3239,13 @@ function miniPlan(x, w, h, d) {
   x.fillStyle = '#dde0e6'; x.strokeStyle = '#aeb3bc'; x.lineWidth = d; for (const f of M.furn) { if (f.lv !== LV || isHidden(f.id)) continue; const q = STC.furnCorners(f).map(P); x.beginPath(); x.moveTo(...q[0]); for (const p of q.slice(1)) x.lineTo(...p); x.closePath(); x.fill(); x.stroke(); }
   x.strokeStyle = '#5b5f66'; x.lineCap = 'square'; for (const q of ws) { x.lineWidth = Math.max(1.5 * d, (q.t || 0.2) * k); const a1 = P(q.a), b1 = P(q.b); x.beginPath(); x.moveTo(...a1); x.lineTo(...b1); x.stroke(); }
   x.textAlign = 'center'; x.textBaseline = 'middle'; for (const r of S.rooms.filter((q) => q.lv === LV)) { const p = P([r.lx, r.ly]); x.fillStyle = '#1d2129'; x.font = `600 ${10 * d}px ${FB}`; x.fillText(r.name.replace(/^.*· /, ''), p[0], p[1] - 6 * d); x.fillStyle = '#4e5969'; x.font = `${9.5 * d}px ${FB}`; x.fillText(r.area.toFixed(2) + 'm²', p[0], p[1] + 6 * d); }
+  if (hl && hl.size) {   // the objects that differ between two versions, outlined in orange
+    x.strokeStyle = '#E67E22'; x.lineWidth = 2.4 * d; x.lineJoin = 'round'; x.lineCap = 'round';
+    for (const f of M.furn) if (f.lv === LV && hl.has(f.id)) { const q = STC.furnCorners(f).map(P); x.beginPath(); x.moveTo(...q[0]); for (const p of q.slice(1)) x.lineTo(...p); x.closePath(); x.stroke(); }
+    for (const q of ws) if (hl.has(q.id)) { const a1 = P(q.a), b1 = P(q.b); x.lineWidth = Math.max(3 * d, (q.t || 0.2) * k + 2 * d); x.beginPath(); x.moveTo(...a1); x.lineTo(...b1); x.stroke(); }
+    x.lineWidth = 2.4 * d; for (const o of M.ops) if (hl.has(o.id)) { const w = M.walls.find((q) => q.id === o.wall); if (!w || w.lv !== LV) continue; const dr = STC.wallDir(w), c = P([w.a[0] + dr[0] * o.pos, w.a[1] + dr[1] * o.pos]); x.beginPath(); x.arc(c[0], c[1], Math.max(6 * d, o.w * k / 2), 0, 7); x.stroke(); }
+    for (const l of (M.lights || [])) if (l.lv === LV && hl.has(l.id)) { const c = P([l.x, l.y]); x.beginPath(); x.arc(c[0], c[1], 7 * d, 0, 7); x.stroke(); }
+  }
 }
 async function miniDraw() {
   const cvm = $('#miniCv'), list = $('#miniRooms'); if (!cvm || !S) return; const to3 = CAM !== '3d';
@@ -3237,8 +3269,8 @@ function csv() {
   return rows.join('\n') + '\n';
 }
 
-// ===== Workbench v129: editing aids, views, layers, walkthrough, exploded view, simulation versions, export =====
-// Everything here runs in the Workbench module scope: it reads and changes M, SEL, LV, CAM and calls draw(), commit() and the rest.
+// ===== Plan Studio v129: editing aids, views, layers, walkthrough, exploded view, simulation versions, export =====
+// Everything here runs in the Plan Studio module scope: it reads and changes M, SEL, LV, CAM and calls draw(), commit() and the rest.
 // The model stays the one scene graph: ceiling items, text labels, hidden and locked pieces live in M, so undo, save and versions keep them.
 const XS = { get(k, d) { try { const v = sessionStorage.getItem('pcwb-' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { sessionStorage.setItem('pcwb-' + k, JSON.stringify(v)); } catch (e) { } } };
 const KJ = $('.kj'), annot = $('#annot');
@@ -3787,8 +3819,8 @@ function verUI() {
   if (VERS === null) { box.innerHTML = '<p class="note">Versions need this browser\'s storage, which is not available here (private window?).</p>'; $('#verCmp').disabled = true; return; }
   $('#verCount').textContent = VERS.length ? `${VERS.length}` : '';
   box.innerHTML = VERS.length ? VERS.slice().reverse().map((v) => `<div class="vrow" data-vk="${esc(v.key)}"><input type="checkbox" data-vchk="${esc(v.key)}" aria-label="Choose ${esc(v.name)} for comparison" ${VSEL.includes(v.key) ? 'checked' : ''}><span class="vth">${v.thumb ? `<img alt="" src="${v.thumb}">` : ''}</span><span class="vmeta"><span class="vnm"><b>${esc(v.name)}</b><input class="vnote" data-vnote="${esc(v.key)}" value="${esc(v.note)}" placeholder="Add a note" maxlength="60" aria-label="Note for ${esc(v.name)}"></span><small>${esc(verTime(v.at))} · ${esc(v.toolName)}${v.levelName ? ' · ' + esc(v.levelName) : ''}</small></span><span class="vbtn"><button type="button" class="btn" data-vprev="${esc(v.key)}">Preview</button><button type="button" class="btn" data-vres="${esc(v.key)}">Restore</button></span></div>`).join('')
-    : '<p class="note">No versions yet. Each time you send the model to a simulation, Workbench keeps a copy here (v1, v2…) that cannot be changed.</p>';
-  $('#verCmp').disabled = VSEL.length !== 2; $('#verCmp').textContent = VSEL.length === 2 ? `Compare ${VSEL.map((k) => VERS.find((v) => v.key === k).name).join(' · ')}` : 'Compare two versions';
+    : '<p class="note">No versions yet. Each time you send the model to a simulation, Plan Studio keeps a copy here (v1, v2…) that cannot be changed.</p>';
+  const enough = VERS.length >= 2; $('#verCmp').disabled = !enough; $('#verCmpNote').hidden = enough; $('#verCmp').title = enough ? '' : 'Save two versions or run a simulation to compare'; $('#verCmp').textContent = VSEL.length === 2 ? `Compare ${VSEL.map((k) => VERS.find((v) => v.key === k).name).join(' · ')}` : 'Compare two versions';
 }
 $('#verList').addEventListener('change', async (e) => {
   const c = e.target.closest('[data-vchk]'); if (c) { const k = c.dataset.vchk; VSEL = VSEL.filter((x) => x !== k); if (c.checked) { VSEL.push(k); if (VSEL.length > 2) VSEL.shift(); } verUI(); return; }
@@ -3800,29 +3832,78 @@ $('#verList').addEventListener('click', async (e) => {
   if (r) { const v = VERS.find((x) => x.key === r.dataset.vres); if (!v) return; if (!(await askConfirm(`Restore ${v.name}${v.note ? ' (' + v.note + ')' : ''}? Your current model becomes ${v.name}'s copy as unsaved changes; save to keep it. You can undo by reopening your saved version.`, 'Restore'))) return;
     const keepSaved = SAVEDSNAP, keepV = BASEV, N = STC.migrate(JSON.parse(v.model)); useModel(N, { msg: `Restored ${v.name} as unsaved changes.` }); SAVEDSNAP = keepSaved; BASEV = keepV; stateUI(); toast(`${v.name} restored. Save to keep it as a new version.`); }
 });
-$('#verCmp').addEventListener('click', () => { if (VSEL.length === 2) openCompare(VSEL.map((k) => VERS.find((v) => v.key === k)).sort((a, b) => a.n - b.n)); });
+$('#verCmp').addEventListener('click', () => { if (VERS.length < 2) return; const two = VSEL.length === 2 ? VSEL.map((k) => VERS.find((v) => v.key === k)) : VERS.slice(-2); openCompare(two.sort((a, b) => a.n - b.n)); });
 function askConfirm(msg, ok) { return new Promise((res) => { const d = $('#askDlg'); $('#askMsg').textContent = msg; $('#askOk').textContent = ok || 'OK'; d.hidden = false; setTimeout(() => $('#askOk').focus(), 0); const fin = (v) => { d.hidden = true; $('#askOk').onclick = $('#askNo').onclick = d.onkeydown = null; res(v); }; $('#askOk').onclick = () => fin(true); $('#askNo').onclick = () => fin(false); d.onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); fin(false); } }; }); }
 // the comparison viewer: read-only, two snapshots, one camera
 let CMP = null;
-async function openCompare(vs) {
-  if (!vs.length || vs.some((v) => !v)) return; const dlg = $('#cmpDlg'), A = vs[0], B = vs[1] || null;
+// the simulation results Compare may show are the ones that were really saved ("Add to project" in the tool) against that exact model version; nothing is estimated here
+async function simResults() { try { const db = await new Promise((res, rej) => { const r = indexedDB.open('pc-project', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); const p = await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get('cur'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); return (p && p.results) || []; } catch (e) { return []; } }
+const cmpResFor = (all, v, lvId) => { const out = new Map(); for (const r of all) { const s0 = r.source; if (!s0 || s0.project !== M.id || s0.version !== v.modelVersion) continue; if (lvId !== 'all' && s0.level && s0.level !== 'all' && s0.level !== lvId) continue; if (!out.has(r.tool) || out.get(r.tool).at < r.at) out.set(r.tool, r); } return out; };
+const cmpLevels = () => { const seen = new Map(); for (const X of [CMP.A, CMP.B]) if (X) for (const l of X.M.levels) if (!seen.has(l.id)) seen.set(l.id, l); return [...seen.values()].sort((a, b) => a.z - b.z); };
+async function openCompare(vs, st) {
+  if (!vs.length || vs.some((v) => !v)) return; const dlg = $('#cmpDlg'), A = vs[0], B = vs[1] || null; st = st || {};
   const mk = (v) => { const N = STC.migrate(JSON.parse(v.model)); return { M: N, S: STC.build(N), label: v.name + (v.note ? ' — ' + v.note : ''), v }; };
-  CMP = { A: mk(A), B: B ? mk(B) : null, mode: XS.get('cmpMode', 'side'), split: 0.5, hl: true };
-  $('#cmpTitle').textContent = B ? `Compare ${A.name} and ${B.name}` : `Preview ${A.name}`; $('#cmpModes').hidden = !B; $('#cmpHlW').hidden = !B; $('#cmpHl').checked = true;
-  dlg.hidden = false; await new Promise((r) => requestAnimationFrame(r));
-  try { const ids = B ? WBP.diffModels(CMP.A.M, CMP.B.M) : new Set(); CMP.diff = ids; await S3.cmp.open($('#cmpCv'), CMP.A, CMP.B, { mode: CMP.mode, diff: ids }); cmpUI(); $('#cmpX').focus(); }
-  catch (e) { console.warn(e); $('#cmpNote').textContent = 'The 3D viewer could not load (it needs its library).'; }
+  CMP = { A: mk(A), B: B ? mk(B) : null, mode: XS.get('cmpMode', 'side'), split: 0.5, hl: true, lv: st.lv || 'all', type: st.type || '3d', view: st.view || '3d', res: await simResults() };
+  if (CMP.lv !== 'all' && !cmpLevels().some((l) => l.id === CMP.lv)) CMP.lv = 'all';
+  dlg.hidden = false; $('#cmpHl').checked = true; await new Promise((r) => requestAnimationFrame(r)); await cmpRefresh(true);
 }
-function cmpUI() { if (!CMP) return; for (const b of $$('#cmpModes [data-cm]')) b.setAttribute('aria-pressed', String(b.dataset.cm === CMP.mode)); const two = !!CMP.B, sl = two && CMP.mode === 'slider';
-  $('#cmpSplit').hidden = !sl; $('#cmpSplit').style.left = (CMP.split * 100) + '%'; $('#cmpLA').textContent = CMP.A.label; $('#cmpLB').textContent = two ? CMP.B.label : ''; $('#cmpLB').hidden = !two;
+function cmpTypes() { const t = [['3d', '3D model']]; if (!CMP.B) return t; const a = cmpResFor(CMP.res, CMP.A.v, CMP.lv), b = cmpResFor(CMP.res, CMP.B.v, CMP.lv); for (const [tool, r] of a) if (b.has(tool)) t.push([tool, r.title || tool]); return t; }
+function cmpSelUI() {   // fill the four selectors from what exists right now
+  const two = !!CMP.B, opt = (v, t, sel) => `<option value="${esc(v)}" ${sel ? 'selected' : ''}>${esc(t)}</option>`;
+  $('#cmpSA').innerHTML = VERS.map((v) => opt(v.key, v.name + (v.note ? ' — ' + v.note : ''), v.key === CMP.A.v.key)).join(''); $('#cmpSB').innerHTML = (two ? '' : opt('', '— none —', true)) + VERS.map((v) => opt(v.key, v.name + (v.note ? ' — ' + v.note : ''), two && v.key === CMP.B.v.key)).join('');
+  $('#cmpLv').innerHTML = opt('all', 'All levels', CMP.lv === 'all') + cmpLevels().map((l) => opt(l.id, l.name, CMP.lv === l.id)).join('');
+  const ty = cmpTypes(); if (!ty.some(([k]) => k === CMP.type)) CMP.type = '3d'; $('#cmpTy').innerHTML = ty.map(([k, t]) => opt(k, t, CMP.type === k)).join(''); $('#cmpTy').disabled = !two;
+  for (const b of $$('#cmpView [data-cv]')) { b.setAttribute('aria-pressed', String(b.dataset.cv === CMP.view)); b.disabled = CMP.type !== '3d'; }
+}
+function cmpPlanPane(X, hl) {   // every chosen level of one version, drawn by the Plan Studio plan renderer, changed objects outlined
+  const pane = document.createElement('div'); pane.className = 'cmp-pane'; const h = document.createElement('h4'); h.textContent = X.label; pane.appendChild(h);
+  const lvs = CMP.lv === 'all' ? X.M.levels.slice().sort((a, b) => a.z - b.z) : X.M.levels.filter((l) => l.id === CMP.lv);
+  if (!lvs.length) { const n = document.createElement('p'); n.className = 'none'; n.textContent = `${X.v.name} has no ${(cmpLevels().find((l) => l.id === CMP.lv) || { name: 'such' }).name} level.`; pane.appendChild(n); return pane; }
+  for (const l of lvs) { const t = document.createElement('p'); t.className = 'lvt'; t.textContent = l.name; pane.appendChild(t); const cv = document.createElement('canvas'), W = 900, H = CMP.lv === 'all' ? 560 : 640, d = 1.4; cv.width = W; cv.height = H; cv.setAttribute('aria-label', `${X.v.name}, ${l.name}, plan`); pane.appendChild(cv);
+    const keep = [M, S, LV]; try { M = X.M; S = X.S; LV = l.id; miniPlan(cv.getContext('2d'), W, H, d, hl); } finally { [M, S, LV] = keep; } }
+  return pane;
+}
+const cmpNum = (t) => { const m = /^\s*([-+]?\d*\.?\d+)\s*(.*)$/.exec(String(t == null ? '' : t)); return m ? { n: parseFloat(m[1]), u: m[2].trim() } : null; };
+function cmpSimUI() {
+  const box = $('#cmpSim'), ra = cmpResFor(CMP.res, CMP.A.v, CMP.lv).get(CMP.type), rb = cmpResFor(CMP.res, CMP.B.v, CMP.lv).get(CMP.type); box.innerHTML = '';
+  for (const [X, r] of [[CMP.A, ra], [CMP.B, rb]]) { const pane = document.createElement('div'); pane.className = 'cmp-pane'; pane.innerHTML = `<h4>${esc(X.label)} · ${esc(r.title || CMP.type)}</h4>${r.img ? `<img alt="${esc(r.title || '')} result for ${esc(X.v.name)}" src="${r.img}">` : '<p class="none">No picture was saved with this result.</p>'}<p class="note" style="margin-top:8px">Saved ${esc(verTime(r.at))} for model version ${esc(String(X.v.modelVersion))}${r.source && r.source.level && r.source.level !== 'all' ? ' · level ' + esc(r.source.level) : ''}.</p>`; box.appendChild(pane); }
+  const ka = new Map((ra.kpis || []).map(([k, v]) => [k, v])), kb = new Map((rb.kpis || []).map(([k, v]) => [k, v])), keys = [...new Set([...ka.keys(), ...kb.keys()])];
+  const rows = keys.map((k) => { const a = ka.get(k), b = kb.get(k), na = cmpNum(a), nb = cmpNum(b); let dl = '—', cls = ''; if (na && nb && na.u === nb.u) { const d = nb.n - na.n, t = Math.abs(d) >= 100 ? Math.round(d) : +d.toFixed(2); dl = (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(t) + (na.u ? (/^[%°]/.test(na.u) ? '' : ' ') + na.u : ''); cls = d > 0 ? 'up' : d < 0 ? 'dn' : ''; } return `<tr><td>${esc(k)}</td><td>${esc(a == null ? '—' : a)}</td><td>${esc(b == null ? '—' : b)}</td><td class="dd ${cls}">Δ ${esc(dl)}</td></tr>`; });
+  const d = document.createElement('div'); d.className = 'cmp-delta'; d.innerHTML = `<table aria-label="Differences"><thead><tr><th>${esc(r2name(ra))}</th><th>${esc(CMP.A.v.name)}</th><th>${esc(CMP.B.v.name)}</th><th>Change (B − A)</th></tr></thead><tbody>${rows.join('') || '<tr><td colspan="4">These results carry no numbers to compare.</td></tr>'}</tbody></table>`; box.appendChild(d);
+}
+const r2name = (r) => r.title || 'Result';
+async function cmpRefresh(first) {   // one place that shows what the four selectors + the view say
+  if (!CMP) return; const two = !!CMP.B; cmpSelUI(); const is3 = CMP.type === '3d', plan = is3 && CMP.view === '2d';
+  $('#cmpPlan').hidden = !plan; $('#cmpSim').hidden = is3; $('#cmpCv').style.visibility = is3 && !plan ? 'visible' : 'hidden';
+  $('#cmpTitle').textContent = two ? `Compare ${CMP.A.v.name} and ${CMP.B.v.name}` : `Preview ${CMP.A.v.name}`; $('#cmpModes').hidden = !two || !is3 || plan; $('#cmpHlW').hidden = !two || !is3;
+  const diff = two ? WBP.diffModels(CMP.A.M, CMP.B.M) : new Set(); CMP.diff = diff;
+  if (!is3) { cmpSimUI(); S3.cmp.close(); }
+  else if (plan) { const pl = $('#cmpPlan'); pl.innerHTML = ''; const hl = CMP.hl ? diff : null; pl.appendChild(cmpPlanPane(CMP.A, hl)); if (two) pl.appendChild(cmpPlanPane(CMP.B, hl)); else pl.style.gridTemplateColumns = '1fr'; if (two) pl.style.gridTemplateColumns = '1fr 1fr'; }
+  else { try { await S3.cmp.open($('#cmpCv'), CMP.A, CMP.B, { mode: CMP.mode, diff, lv: CMP.lv }); S3.cmp.highlight(CMP.hl); } catch (e) { console.warn(e); $('#cmpNote').textContent = 'The 3D viewer could not load (it needs its library).'; return; } }
+  cmpUI(); cmpHash(); if (first) $('#cmpX').focus();
+}
+function cmpUI() { if (!CMP) return; for (const b of $$('#cmpModes [data-cm]')) b.setAttribute('aria-pressed', String(b.dataset.cm === CMP.mode)); const two = !!CMP.B, is3 = CMP.type === '3d', plan = is3 && CMP.view === '2d', sl = two && is3 && !plan && CMP.mode === 'slider', lv = CMP.lv === 'all' ? '' : ` · ${(cmpLevels().find((l) => l.id === CMP.lv) || { name: CMP.lv }).name}`;
+  $('#cmpSplit').hidden = !sl; $('#cmpSplit').style.left = (CMP.split * 100) + '%'; $('#cmpLA').hidden = !is3 || plan; $('#cmpLB').hidden = !two || !is3 || plan; $('#cmpLA').textContent = CMP.A.label + lv; $('#cmpLB').textContent = two ? CMP.B.label + lv : '';
   $('#cmpLA').style.left = '12px'; $('#cmpLB').style.left = (two && CMP.mode === 'side' ? 'calc(50% + 12px)' : 'auto'); $('#cmpLB').style.right = (two && CMP.mode === 'slider') ? '12px' : 'auto';
-  $('#cmpNote').textContent = two ? `${CMP.diff.size} object${CMP.diff.size === 1 ? '' : 's'} changed${CMP.diff.size ? ' (outlined in orange)' : ''}. Turn, pan or zoom either side: both follow.` : 'Read-only preview. Turn, pan or zoom to look around.'; }
+  const cnt = `${CMP.diff.size} object${CMP.diff.size === 1 ? '' : 's'} changed${CMP.diff.size ? ' (outlined in orange)' : ''}`;
+  $('#cmpPng').disabled = !is3 || plan; $('#cmpPng').title = is3 && !plan ? '' : 'The picture export is for the 3D view';
+  $('#cmpNote').textContent = !is3 ? `Simulation results saved for each version${lv ? ' (' + lv.slice(3) + ')' : ''}. Numbers are the tool\'s own; nothing is estimated here.` : plan ? (two ? `${cnt}. Plan${CMP.lv === 'all' ? 's of every level' : lv}, drawn the same way as the editor.` : 'Read-only plan preview.') : two ? `${cnt}. Turn, pan or zoom either side: both follow.` : 'Read-only preview. Turn, pan or zoom to look around.'; }
+// the state is kept in the page address, so a refresh (or a copied link, in this browser) comes back to the same view
+function cmpHash() { try { const par = window.parent; if (!par || par === window || !CMP) return; const q = `cmp=${CMP.A.v.name}${CMP.B ? ',' + CMP.B.v.name : ''}&lv=${encodeURIComponent(CMP.lv)}&type=${encodeURIComponent(CMP.type)}&view=${CMP.view}&p=${encodeURIComponent(M.id)}`; par.history.replaceState(null, '', '#/studio?' + q); } catch (e) { } }
+function cmpHashClear() { try { const par = window.parent; if (par && par !== window && /[?]cmp=/.test(par.location.hash)) par.history.replaceState(null, '', '#/studio'); } catch (e) { } }
+function cmpFromHash() { try { const par = window.parent; if (!par || par === window) return null; const m = /[?](.*)$/.exec(par.location.hash); if (!m) return null; const q = new URLSearchParams(m[1]); if (!q.get('cmp')) return null; return { names: q.get('cmp').split(',').filter(Boolean), lv: q.get('lv') || 'all', type: q.get('type') || '3d', view: q.get('view') === '2d' ? '2d' : '3d', p: q.get('p') }; } catch (e) { return null; } }
+async function cmpRestore() { const st = cmpFromHash(); if (!st || !st.names.length) return; for (let i = 0; i < 30; i++) { if (VERS && VERS.length && M && (!st.p || st.p === M.id)) break; await new Promise((r) => setTimeout(r, 300)); } if (!VERS || (st.p && st.p !== M.id)) return; const vs = st.names.map((n) => VERS.find((v) => v.name === n)); if (!vs.length || vs.some((v) => !v)) return; openCompare(vs, st); }
+$('#cmpSA').addEventListener('change', () => cmpPick()); $('#cmpSB').addEventListener('change', () => cmpPick());
+async function cmpPick() { const a = VERS.find((v) => v.key === $('#cmpSA').value), b = VERS.find((v) => v.key === $('#cmpSB').value); if (!a) return; const st = { lv: CMP.lv, type: CMP.type, view: CMP.view }; const vs = [a, b].filter(Boolean).sort((x, y) => x.n - y.n); await openCompare(vs, st); }
+$('#cmpLv').addEventListener('change', (e) => { if (!CMP) return; CMP.lv = e.target.value; cmpRefresh(); });
+$('#cmpTy').addEventListener('change', (e) => { if (!CMP) return; CMP.type = e.target.value; cmpRefresh(); });
+$('#cmpView').addEventListener('click', (e) => { const b = e.target.closest('[data-cv]'); if (!b || !CMP || b.disabled) return; CMP.view = b.dataset.cv; cmpRefresh(); });
 $('#cmpModes').addEventListener('click', (e) => { const b = e.target.closest('[data-cm]'); if (!b || !CMP) return; CMP.mode = b.dataset.cm; XS.set('cmpMode', CMP.mode); S3.cmp.mode(CMP.mode); cmpUI(); });
-$('#cmpHl').addEventListener('change', (e) => { if (!CMP) return; CMP.hl = e.target.checked; S3.cmp.highlight(CMP.hl); });
+$('#cmpHl').addEventListener('change', (e) => { if (!CMP) return; CMP.hl = e.target.checked; if (CMP.view === '2d') cmpRefresh(); else S3.cmp.highlight(CMP.hl); });
 { let sd = false; $('#cmpSplit').addEventListener('pointerdown', (e) => { sd = true; $('#cmpSplit').setPointerCapture(e.pointerId); e.stopPropagation(); });
   $('#cmpSplit').addEventListener('pointermove', (e) => { if (!sd || !CMP) return; const r = $('#cmpCv').getBoundingClientRect(); CMP.split = STC.clamp((e.clientX - r.left) / r.width, 0.05, 0.95); S3.cmp.split(CMP.split); cmpUI(); });
   $('#cmpSplit').addEventListener('pointerup', () => { sd = false; }); }
-const closeCompare = () => { $('#cmpDlg').hidden = true; if (window.S3 && S3.cmp) S3.cmp.close(); CMP = null; };
+const closeCompare = () => { $('#cmpDlg').hidden = true; if (window.S3 && S3.cmp) S3.cmp.close(); CMP = null; cmpHashClear(); };
 $('#cmpX').addEventListener('click', closeCompare); $('#cmpDlg').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeCompare(); } });
 $('#cmpPng').addEventListener('click', () => { if (!CMP) return; try { const url = S3.cmp.png(1920, CMP.B ? `${CMP.A.label}   ·   ${CMP.B.label}` : CMP.A.label); download(`${slug()}-${CMP.A.v.name}${CMP.B ? '-vs-' + CMP.B.v.name : ''}.png`, url, 'image/png'); toast('Comparison saved as PNG, 1920 px wide.'); } catch (e) { console.warn(e); flash('Could not make the picture.'); } });
 { const _um = useModel; useModel = function (N, o) { _um(N, o); verLoad(); }; }
@@ -3843,7 +3924,7 @@ function exUI() { if (!$('#exStats') || !EXSEL) return; EXSEL = null; $('#exStat
 async function exShow(k) {
   EXSEL = k; for (const b of $$('#exCard [data-xf],#exCard [data-xv]')) b.setAttribute('aria-pressed', String((b.dataset.xf || b.dataset.xv) === k));
   const st = $('#exStats');
-  if (VIA[k]) { st.innerHTML = `<b>${VIA[k][0]}: via IFC</b><p class="note">Workbench does not write ${k.toUpperCase()} files. ${esc(VIA[k][1])}</p><button type="button" class="btn pb" data-xgo="ifc">Export IFC instead</button>`; st.hidden = false; return; }
+  if (VIA[k]) { st.innerHTML = `<b>${VIA[k][0]}: via IFC</b><p class="note">Plan Studio does not write ${k.toUpperCase()} files. ${esc(VIA[k][1])}</p><button type="button" class="btn pb" data-xgo="ifc">Export IFC instead</button>`; st.hidden = false; return; }
   st.innerHTML = '<p class="note">Counting…</p>'; st.hidden = false;
   let r; try { r = await exPrep(k); } catch (e) { st.innerHTML = `<p class="note">${k === 'obj' ? 'The 3D export needs its library, which could not load.' : 'Could not build the file.'}</p>`; return; }
   const s = r.stats, rows = [];
@@ -3860,11 +3941,11 @@ $('#exCard').addEventListener('click', (e) => { const f = e.target.closest('[dat
 document.addEventListener('click', (e) => { const b = e.target.closest('#exPop [data-ex="obj"],#exPop [data-ex="dxf"],#exPop [data-ex="ifc"]'); if (!b) return; e.stopPropagation(); $('#exPop').hidden = true; $('#exBtn').setAttribute('aria-expanded', 'false'); exDownload(b.dataset.ex); }, true);
 
 // ---------- start ----------
-viewUI(); lpUI(); verLoad();
+viewUI(); lpUI(); verLoad().then(() => cmpRestore());
 window.__wb = { WBP, commands, layerOn, setLayerVis, LYR, setView2D, walkEnter, walkExit, birdView, explodeEnter, explodeExit, showAllHidden, openWallPicker, showElevation, setGap, gapsOf, exporters, exPrep, simArchive, verLoad, openCompare,
   get VIEW2D() { return VIEW2D; }, get WALKING() { return WALKING; }, get XPL() { return XPL; }, get VERS() { return VERS; }, get CMP() { return CMP; }, get ELV() { return ELV; }, get FTB_OFF() { return FTB_OFF; }, get CEILF() { return CEILF; }, setCTool: (t) => { CTOOL = t; viewUI(); } };
 
-// ===== Workbench v130: parametric light fixtures (six basic types) on the plan, in 3D and in elevations =====
+// ===== Plan Studio v130: parametric light fixtures (six basic types) on the plan, in 3D and in elevations =====
 // The fixture library is a registry (WBF.TYPES: { code, name, paramsSchema, build(params) }); adding a type means registering it there.
 ensureX(M);   // ensureX (v129) also gives every model its lights list
 const LIGHT_COL = { 2700: '#ffd29a', 3000: '#ffe0b0', 4000: '#fff4e2' };
@@ -3983,11 +4064,11 @@ window.__wb.WBF = WBF; Object.defineProperty(window.__wb, 'LTOOL', { get: () => 
 window.__selLight = (id) => { SEL = { k: "light", id }; changedSel(); };   // for tests
 fxPanel();
 
-// ===== Workbench v131: ten refinements =====
+// ===== Plan Studio v131: ten refinements =====
 // 1 one selection for every category · 2 Export menu, no page scroll · 3 the 3D view menu · 4 elevation as a camera preset
 // 5 moves sent back from a simulation · 6 stairs open the floor above · 7 (3D: a 90° turning arc) · 8 (3D: slabs flush with wall tops)
 // 9 (3D: the roof explodes on its own) · 10 a start marker for the walkthrough
-// Runs in the Workbench module scope, after v129 (wb_ux) and v130 (wb_light).
+// Runs in the Plan Studio module scope, after v129 (wb_ux) and v130 (wb_light).
 
 // the two new modes (declared first: the renderer and the toolbar ask about them)
 const ELV3 = { on: false, entering: false, labels: XS.get('elvLab', true), wallId: null, side: 1, clip: 0 };
@@ -4423,12 +4504,12 @@ syncStairHoles = function () {
   if (n) n.addEventListener('change', () => { const v = Math.round(+n.value); if (!(v >= 2 && v <= 60)) { flash('Steps: 2 to 60.'); return; } commands.execute(new EditCommand('Steps', () => { const f = furnById(o.id); f.gen.auto = false; f.gen.steps = v; })); });
 }; }
 
-// ---------- 5 · a simulation sends back furniture moves; Workbench applies them as one undo step and keeps a new version ----------
+// ---------- 5 · a simulation sends back furniture moves; Plan Studio applies them as one undo step and keeps a new version ----------
 async function applyDelta(delta, source) {
   const v = WBP.validateDelta(delta, M, source);
-  if (!v.ok) { toast(`Moves from the simulation not applied: ${v.errors[0]}${v.errors.length > 1 ? ` (and ${v.errors.length - 1} more)` : ''} Workbench is unchanged; no version was made.`); return { ok: false, errors: v.errors }; }
+  if (!v.ok) { toast(`Moves from the simulation not applied: ${v.errors[0]}${v.errors.length > 1 ? ` (and ${v.errors.length - 1} more)` : ''} Plan Studio is unchanged; no version was made.`); return { ok: false, errors: v.errors }; }
   const ok = commands.execute(new EditCommand('From simulation', () => { for (const m of v.moves) { const f = furnById(m.id); f.x = m.x; f.y = m.y; f.rot = m.rot; } }));
-  if (!ok) { toast('The moves could not be applied. Workbench is unchanged; no version was made.'); return { ok: false, errors: ['apply failed'] }; }
+  if (!ok) { toast('The moves could not be applied. Plan Studio is unchanged; no version was made.'); return { ok: false, errors: ['apply failed'] }; }
   const stamp = new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), note = `from simulation · ${stamp}`;
   let rec = null; try { rec = await simArchive('return', source && source.toolName ? `Back from ${source.toolName}` : 'Back from a simulation', LV, { source: source || null }); if (rec) { await SIMDB.put('notes', { key: rec.key, note }); VPAGE = 0; await verLoad(); verOpen(); krFit($('#verCard')); } } catch (e) { console.warn(e); }
   toast(rec ? `${v.moves.length} piece${v.moves.length > 1 ? 's' : ''} moved as in the simulation. Kept as ${rec.name} (“${note}”); Ctrl+Z undoes it.` : `${v.moves.length} piece${v.moves.length > 1 ? 's' : ''} moved as in the simulation (this browser could not keep a version).`);
@@ -4441,7 +4522,7 @@ addEventListener('message', (e) => { if (e.source !== window.parent || window.pa
 { const _sel = changedSel; changedSel = function () { _sel(); if (window.S3 && S3.hover) S3.hover(null); }; }
 { const _g = gizmoSync; gizmoSync = function () { if (ELV3.on || WMARK.on) { if (window.S3 && S3.gizmo) S3.gizmo.set(null); return; } _g(); }; }
 Object.assign(window.__wb, { showElevation: (...a) => showElevation(...a), walkEnter: (...a) => walkEnter(...a), birdView: (...a) => birdView(...a), setView2D: (...a) => setView2D(...a) });   // the v129 test handles point at the current functions
-window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
+window.__wb.cmp = { get state() { return CMP; }, refresh: cmpRefresh, types: () => CMP && cmpTypes() }; window.__wb.CLR = CLR; window.__wb.clearanceOf = clearanceOf; window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
 Object.defineProperty(window.__wb, 'HOVX', { get: () => HOVX }); Object.defineProperty(window.__wb, 'DIMS', { get: () => DIMS });
 viewUI();
 
@@ -4457,7 +4538,7 @@ changed(); requestAnimationFrame(() => { resize(); fitView(); draw(); });
 startProject();
 if (document.fonts) document.fonts.ready.then(() => { draw(); if (live()) charts(); });
 
-// ===== Workbench: 3D view (three.js, loaded on first use) and OBJ export =====
+// ===== Plan Studio: 3D view (three.js, loaded on first use) and OBJ export =====
 // plan (x, y) and height z map to three as (x, z, -y): north is -Z, up is +Y
 window.S3 = (() => {
   let d0 = 1, SR = null, SS = null, SC = null, T = null, OC = null, OBJX = null, R = null, scene = null, cam = null, ctl = null, grp = null, canvas = null, loading = null, fitted = false;
@@ -4589,7 +4670,7 @@ window.S3 = (() => {
     await lib(); if (!OBJX) OBJX = (await import('three/addons/exporters/OBJExporter.js')).OBJExporter;
     const G = buildGroup(M, S, { all: true, furn: true, flows: false, colOf: () => '#ffffff' }); const keep = new T.Group(); G.updateMatrixWorld(true);
     G.traverse((m) => { if (m.isMesh && m.name !== 'wallcut' && m.name !== 'floor') { const c = new T.Mesh(m.geometry.clone().applyMatrix4(m.matrixWorld), m.material); c.name = m.name; keep.add(c); } });
-    return '# Workbench — ' + (M.name || 'model') + ', metres, Y up, north is -Z\n' + new OBJX().parse(keep).replace(/-?\d+\.\d{5,}(e-?\d+)?/g, (v) => { const n = +(+v).toFixed(4); return String(Object.is(n, -0) ? 0 : n); });
+    return '# Plan Studio — ' + (M.name || 'model') + ', metres, Y up, north is -Z\n' + new OBJX().parse(keep).replace(/-?\d+\.\d{5,}(e-?\d+)?/g, (v) => { const n = +(+v).toFixed(4); return String(Object.is(n, -0) ? 0 : n); });
   };
   // ===== v129 additions to the 3D view: walkthrough camera, gizmo, exploded storeys, comparison viewer, mesh export =====
   // ---- 2 · walkthrough: its own camera; the orbit camera and its controls are only paused, then put back exactly
@@ -4719,11 +4800,11 @@ window.S3 = (() => {
 
   // ---- 7 · the comparison viewer: two read-only scenes, one camera (side by side, or a slider)
   const CV = { R: null, R2: null, canvas: null, cam: null, ctl: null, A: null, B: null, mode: 'side', split: 0.5, hl: true, ro: null };
-  function cmpScene(X, diff) {
+  function cmpScene(X, diff, lvId) {
     const sc = new T.Scene(); sc.background = new T.Color('#f2f3f5'); sc.add(new T.HemisphereLight(0xffffff, 0xcfc9bd, 1.9)); const sun = new T.DirectionalLight(0xfff6ea, 1.6); sun.position.set(-14, 26, 10); sc.add(sun);
     const ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshLambertMaterial({ color: 0xeff1f4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.16; sc.add(ground);
-    const top = X.M.levels.slice().sort((a, b) => a.z - b.z).slice(-1)[0];   // cut at the top level, roof off, so a changed layout inside is visible
-    const G = buildGroup(X.M, X.S, { lv: top.id, furn: true, flows: false, colOf: () => '#efe3cf', hidden: new Set(X.M.hiddenIds || []), ceil: { light: 1, panel: 1, vent: 1, smoke: 1 } }); sc.add(G); G.updateMatrixWorld(true);
+    const one = lvId && lvId !== 'all' ? X.M.levels.find((l) => l.id === lvId) : null, top = one || X.M.levels.slice().sort((a, b) => a.z - b.z).slice(-1)[0];   // cut at the top level (or the chosen one) with the roof off, so the inside is visible
+    const G = lvId && lvId !== 'all' && !one ? new T.Group() : buildGroup(X.M, X.S, Object.assign({ lv: top.id, furn: true, flows: false, colOf: () => '#efe3cf', hidden: new Set(X.M.hiddenIds || []), ceil: { light: 1, panel: 1, vent: 1, smoke: 1 } }, one ? { only: one.id } : {})); sc.add(G); G.updateMatrixWorld(true);
     const HL = new T.Group(); HL.name = 'hl'; const lm = new T.LineBasicMaterial({ color: 0xE67E22, depthTest: false, transparent: true }); let n = 0;
     G.traverse((m) => { if (!m.isMesh) return; const ud = tagOf(m); if (!ud || !diff.has(ud.id)) return; const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, 20), lm); e.applyMatrix4(m.matrixWorld); e.renderOrder = 10; HL.add(e); n++; });
     sc.add(HL); return { sc, G, HL, n };
@@ -4742,15 +4823,15 @@ window.S3 = (() => {
     async open(cnv, A, B, o) {
       await lib(); if (!CV.R || CV.canvas !== cnv) { CV.canvas = cnv; CV.R = new T.WebGLRenderer({ canvas: cnv, antialias: true, preserveDrawingBuffer: true }); CV.R.setPixelRatio(Math.min(2, devicePixelRatio || 1)); CV.R.outputColorSpace = T.SRGBColorSpace; }
       cmpFree(CV.A); cmpFree(CV.B); if (CV.ctl) CV.ctl.dispose();
-      const diff = o.diff || new Set(); CV.A = cmpScene(A, diff); CV.B = B ? cmpScene(B, diff) : null; CV.mode = o.mode || 'side'; CV.split = 0.5; CV.hl = true;
-      CV.cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); const bb = new T.Box3().setFromObject(CV.A.G); if (CV.B) bb.union(new T.Box3().setFromObject(CV.B.G)); const ctr = bb.getCenter(new T.Vector3()), sz = bb.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6);
+      const diff = o.diff || new Set(); CV.A = cmpScene(A, diff, o.lv); CV.B = B ? cmpScene(B, diff, o.lv) : null; CV.mode = o.mode || 'side'; CV.lv = o.lv || 'all'; CV.split = 0.5; CV.hl = true;
+      CV.cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); const bb = new T.Box3().setFromObject(CV.A.G); if (CV.B) bb.union(new T.Box3().setFromObject(CV.B.G)); if (bb.isEmpty()) bb.set(new T.Vector3(-3, 0, -3), new T.Vector3(3, 3, 3)); const ctr = bb.getCenter(new T.Vector3()), sz = bb.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6);
       CV.cam.position.set(ctr.x + r * 0.75, ctr.y + r * 0.85, ctr.z + r); CV.cam.far = r * 40; CV.ctl = new OC(CV.cam, cnv); CV.ctl.target.copy(ctr); CV.ctl.mouseButtons = { LEFT: T.MOUSE.ROTATE, MIDDLE: T.MOUSE.DOLLY, RIGHT: T.MOUSE.PAN }; CV.ctl.maxPolarAngle = Math.PI * 0.49; CV.ctl.update(); CV.ctl.addEventListener('change', cmpRender);
       if (!CV.ro) { CV.ro = new ResizeObserver(() => cmpRender()); CV.ro.observe(cnv.parentElement); }
       cmpRender(); return { changed: CV.B ? CV.A.n + CV.B.n : 0 };
     },
     mode(m) { CV.mode = m; cmpRender(); }, split(v) { CV.split = v; cmpRender(); },
     highlight(on) { CV.hl = on; for (const X of [CV.A, CV.B]) if (X) X.HL.visible = on; cmpRender(); },
-    state() { return CV.A ? { mode: CV.mode, split: CV.split, hl: CV.hl, cam: CV.cam.position.toArray(), aspect: CV.cam.aspect, two: !!CV.B, outlined: [CV.A.HL.children.length, CV.B ? CV.B.HL.children.length : 0] } : null; },
+    state() { const mc = (X) => { let n = 0; if (X) X.G.traverse((m) => { if (m.isMesh) n++; }); return n; }; return CV.A ? { lv: CV.lv, meshes: [mc(CV.A), mc(CV.B)], mode: CV.mode, split: CV.split, hl: CV.hl, cam: CV.cam.position.toArray(), aspect: CV.cam.aspect, two: !!CV.B, outlined: [CV.A.HL.children.length, CV.B ? CV.B.HL.children.length : 0] } : null; },
     pixel(x, y) { const gl = CV.R.getContext(), px = new Uint8Array(4); cmpRender(); const pr = CV.R.getPixelRatio(); gl.readPixels(Math.round(x * pr), Math.round(gl.drawingBufferHeight - y * pr), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return [...px]; },
     png(W, wm) {
       const [w, h] = cmpSize(), H = Math.round(W * h / w); if (!CV.R2) { CV.R2 = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); CV.R2.outputColorSpace = T.SRGBColorSpace; }
@@ -4758,7 +4839,7 @@ window.S3 = (() => {
       const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(CV.R2.domElement, 0, 0, W, H);
       if (CV.B && CV.mode === 'side') { x.fillStyle = '#c9cdd4'; x.fillRect(Math.floor(W / 2) - 1, 0, 2, H); } if (CV.B && CV.mode === 'slider') { x.fillStyle = '#ffffff'; x.fillRect(Math.round(W * CV.split) - 1, 0, 3, H); }
       const bh = 46; x.fillStyle = 'rgba(255,255,255,.9)'; x.fillRect(0, H - bh, W, bh); x.fillStyle = '#1d2129'; x.font = '600 20px "Inter Tight","Noto Sans",Arial,sans-serif'; x.textBaseline = 'middle'; x.fillText(wm, 20, H - bh / 2);
-      x.font = '500 16px "Inter Tight","Noto Sans",Arial,sans-serif'; x.fillStyle = '#6e6a60'; x.textAlign = 'right'; x.fillText('PlotCloud Workbench', W - 20, H - bh / 2); return c.toDataURL('image/png');
+      x.font = '500 16px "Inter Tight","Noto Sans",Arial,sans-serif'; x.fillStyle = '#6e6a60'; x.textAlign = 'right'; x.fillText('PlotCloud Plan Studio', W - 20, H - bh / 2); return c.toDataURL('image/png');
     },
     close() { cmpFree(CV.A); cmpFree(CV.B); CV.A = CV.B = null; if (CV.ctl) { CV.ctl.dispose(); CV.ctl = null; } },
   };
@@ -4888,7 +4969,7 @@ window.S3 = (() => {
   }
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Workbench: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
+    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
     if (d.t === 'upsell') note.innerHTML = 'Projects are part of Student Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
@@ -4899,7 +4980,7 @@ window.S3 = (() => {
   let calm = 0, tries = 0; const idle = () => { const pr = $('#prog'), sp = $('#runPill'), stop = $('#stopRun');
     return (!pr || pr.hidden || pr.offsetParent === null) && (!sp || sp.hidden) && (!stop || stop.hidden) && !$$('#panelL .go, aside.panel .go').some((b) => b.disabled); };
   const wait = () => { tries++; calm = idle() ? calm + 1 : 0; if (calm >= 3 || tries > 60) post({ t: 'hello', tool: name, scene: canScene }); else setTimeout(wait, 400); };
-  // a model handed over from Workbench is waiting for this tool: ask for it at once instead of after the first analysis
+  // a model handed over from Plan Studio is waiting for this tool: ask for it at once instead of after the first analysis
   const hoPending = (() => { try { const h = window.parent.__pcHO, fe = window.frameElement; return !!(h && fe && fe.dataset.emb === h.tool); } catch (e) { return false; } })();
   if (hoPending && canScene) setTimeout(() => post({ t: 'hello', tool: name, scene: canScene }), 150); else setTimeout(wait, 600);
   }
@@ -4916,7 +4997,7 @@ window.S3 = (() => {
   document.addEventListener('click', (e) => { if (!e.target.closest('.kj-pop')) closeAll(); else if (e.target.closest('[data-lv],[data-lvadd],#pick')) setTimeout(closeAll, 0); else if (e.target.closest('[data-ex]')) setTimeout(closeAll, 1800); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
   const nm = $('#mName'), inf = $('#mInfo'), sn = $('#stName'), si = $('#stInfo');
-  const sync = () => { sn.textContent = nm.textContent || 'Workbench'; si.textContent = inf.textContent; };
+  const sync = () => { sn.textContent = nm.textContent || 'Plan Studio'; si.textContent = inf.textContent; };
   for (const e of [nm, inf]) new MutationObserver(sync).observe(e, { childList: true, characterData: true, subtree: true }); sync();
 })();
 </script>

@@ -247,7 +247,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
 <script>
 // ===== PlotCloud site context core =====
-// Real-world site → validated, editable context model shared by Site Context, Workbench and Sun hours.
+// Real-world site → validated, editable context model shared by Site Context, Plan Studio and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
 // Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
 const SITE = (() => {
@@ -541,7 +541,7 @@ const SITE = (() => {
   }
   function resolve(site, ref, choice) { const i = site.buildings.findIndex((b) => b.src.ref === ref); if (i < 0 || !site._conflicts) return false; const c = site._conflicts.find((x) => x.ref === ref); if (!c) return false; site.buildings[i] = choice === 'theirs' ? c.theirs : Object.assign({}, c.mine); site._conflicts = site._conflicts.filter((x) => x !== c); site.version++; return true; }
 
-  // ---------- placing the site into a Workbench plan (plan +Y faces compass bearing M.north) ----------
+  // ---------- placing the site into a Plan Studio plan (plan +Y faces compass bearing M.north) ----------
   function toPlan(p, north) { const a = (north || 0) * D, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
   // masses for analysis: context only casts shadows; heights in meters above the site origin
   // site.at: where the site point sits in the plan (a project placed on a site keeps its own coordinates)

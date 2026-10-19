@@ -260,7 +260,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
 <script>
 // ===== PlotCloud site context core =====
-// Real-world site → validated, editable context model shared by Site Context, Workbench and Sun hours.
+// Real-world site → validated, editable context model shared by Site Context, Plan Studio and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
 // Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
 const SITE = (() => {
@@ -554,7 +554,7 @@ const SITE = (() => {
   }
   function resolve(site, ref, choice) { const i = site.buildings.findIndex((b) => b.src.ref === ref); if (i < 0 || !site._conflicts) return false; const c = site._conflicts.find((x) => x.ref === ref); if (!c) return false; site.buildings[i] = choice === 'theirs' ? c.theirs : Object.assign({}, c.mine); site._conflicts = site._conflicts.filter((x) => x !== c); site.version++; return true; }
 
-  // ---------- placing the site into a Workbench plan (plan +Y faces compass bearing M.north) ----------
+  // ---------- placing the site into a Plan Studio plan (plan +Y faces compass bearing M.north) ----------
   function toPlan(p, north) { const a = (north || 0) * D, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
   // masses for analysis: context only casts shadows; heights in meters above the site origin
   // site.at: where the site point sits in the plan (a project placed on a site keeps its own coordinates)
@@ -862,10 +862,10 @@ async function readFile(file) {
   if (ext === 'json') return readScene(JSON.parse(new TextDecoder().decode(buf)));
   throw new Error(`.${ext} files are not supported. From SketchUp, export .dae. From AutoCAD, export .obj.`);
 }
-// a PlotCloud scene from Workbench or Site Context: masses with roles, terrain, location and north (plan meters, Z up)
+// a PlotCloud scene from Plan Studio or Site Context: masses with roles, terrain, location and north (plan meters, Z up)
 //   proposed: measured · context: casts shadows only · terrain: measured inside the analysis area, shadows elsewhere
 function readScene(j) {
-  if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Workbench or Site Context, or open a 3D file.');
+  if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Plan Studio or Site Context, or open a 3D file.');
   const geoms = [], roles = [], refs = []; let skipped = 0;
   for (const m of j.masses) {
     if (!Array.isArray(m.outer) || m.outer.length < 3 || !(m.h > m.base)) { skipped++; continue; }
@@ -2117,7 +2117,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   }
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Workbench: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
+    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
     if (d.t === 'upsell') note.innerHTML = 'Projects are part of Student Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';

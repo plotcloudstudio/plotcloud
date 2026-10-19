@@ -207,7 +207,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div class="minfo"><b id="mName">—</b><span id="mInfo"></span></div>
       <div class="exrow" role="group" aria-label="Export"><button type="button" class="btn" data-ex="dxf" title="This level's walls, windows, doors, floors and furniture, for CAD (.dxf)" aria-label="Export this level's plan as DXF">DXF</button><button type="button" class="btn" data-ex="png" title="The current view with its results, as a picture" aria-label="Export the view as PNG">PNG</button><button type="button" class="btn" data-ex="json" title="The model, to open again here or in the plan tools" aria-label="Download the model as JSON">JSON</button></div>
       <p class="msg" id="exMsg" aria-live="polite"></p>
-      <div class="wbgo"><button type="button" class="go" id="wbOpen" title="Open this plan in Workbench to model it in 3D, furnish it and send it to analysis">Open in Workbench</button><p class="note">Model it in 3D there, furnish it, then send it to the analysis tools. The tracing image stays here.</p></div>
+      <div class="wbgo"><button type="button" class="go" id="wbOpen" title="Open this plan in Plan Studio to model it in 3D, furnish it and send it to analysis">Open in Plan Studio</button><p class="note">Model it in 3D there, furnish it, then send it to the analysis tools. The tracing image stays here.</p></div>
     </section>
 
     <section class="sec" aria-labelledby="h-lv"><h2 id="h-lv"><i>3</i>Levels</h2>
@@ -256,7 +256,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     <div class="toast" id="toast" role="alert" hidden></div>
     <div class="empty" id="empty" hidden><b>start with a plan picture.</b><p>Add a picture of the plan, set its scale with two points, then trace walls over it with Room or Wall.</p><div class="erow"><button type="button" class="go" id="emPic">Add plan picture…</button><button type="button" class="btn" id="emRoom">Draw a room</button></div></div>
   </section>
-  <footer class="fine">Traced plans and their pictures are saved in this browser. Open in Workbench to model in 3D.</footer>
+  <footer class="fine">Traced plans and their pictures are saved in this browser. Open in Plan Studio to model in 3D.</footer>
 </div>
 
 <div class="sdlg" id="sendDlg" role="dialog" aria-modal="true" aria-labelledby="sendTitle" hidden>
@@ -693,9 +693,9 @@ const FB = '"Inter Tight", "Noto Sans", system-ui, sans-serif', FM = '"JetBrains
 const C = { ink: '#1c1b1a', muted: '#6e6a60', line: '#e1dfda', view: '#f3f3f1', accent: '#D8402A', glass: '#2f6fa8', door: '#c2410c', ok: '#2F7A4F', warn: '#b45309', inA: '#2f6fa8', outA: '#D8402A', mid: '#6b6760' };
 const KINDS = { stair: 'Stair', atrium: 'Atrium', shaft: 'Shaft', roof: 'Roof opening' };
 
-// one code base, three pages: 'studio' (full), 'tracer' (2D tracing over a plan picture) or 'axo' (3D presentation of a Workbench model)
+// one code base, three pages: 'studio' (full), 'tracer' (2D tracing over a plan picture) or 'axo' (3D presentation of a Plan Studio model)
 const MODE = window.PC_MODE || 'studio';
-const KEY = MODE === 'studio' ? 'pc-studio' : 'pc-' + MODE;   // each tool keeps its own local state, so it never changes Workbench's
+const KEY = MODE === 'studio' ? 'pc-studio' : 'pc-' + MODE;   // each tool keeps its own local state, so it never changes Plan Studio's
 let M = STC.migrate(STC.TEMPLATES[MODE === 'tracer' ? 'empty' : 'house']()), LV = 'L1', TOOL = 'select', CAM = MODE === 'studio' ? 'split' : MODE === 'axo' ? '3d' : 'plan', SHOW = 'air', SEL = null, HOV = null;
 let LAYER = 'Wall'; const VIS = { Floor: true, Furniture: true, Wall: true };   // the three fixed layers: the active one, and which are shown
 let PICK = null, PREV = null;   // the library piece chosen for the Place tool, and its preview
@@ -1641,7 +1641,7 @@ async function saveProject() {
 $('#saveP').addEventListener('click', () => saveProject());
 async function listUI() {
   let ps = []; try { ps = (await DB.all('projects')).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); } catch (e) { $('#plistIn').innerHTML = '<p class="note">Saving is not available in this browser (private window?). Download JSON to keep your work.</p>'; return; }
-  $('#plistIn').innerHTML = ps.length ? ps.map((p) => `<div class="pi"><span title="${esc(p.name)}">${esc(p.name)} <small>v${p.version} · ${new Date(p.savedAt).toLocaleDateString()}</small></span><button type="button" class="btn" data-popen="${p.id}">Open</button>${MODE === 'axo' ? '' : `<button type="button" class="btn" data-pdel="${p.id}" aria-label="Delete ${esc(p.name)}">Delete</button>`}</div>`).join('') : `<p class="note">${MODE === 'axo' ? 'No Workbench projects saved in this browser yet. Save one in Workbench, or open a JSON file.' : 'No saved projects yet.'}</p>`;
+  $('#plistIn').innerHTML = ps.length ? ps.map((p) => `<div class="pi"><span title="${esc(p.name)}">${esc(p.name)} <small>v${p.version} · ${new Date(p.savedAt).toLocaleDateString()}</small></span><button type="button" class="btn" data-popen="${p.id}">Open</button>${MODE === 'axo' ? '' : `<button type="button" class="btn" data-pdel="${p.id}" aria-label="Delete ${esc(p.name)}">Delete</button>`}</div>`).join('') : `<p class="note">${MODE === 'axo' ? 'No Plan Studio projects saved in this browser yet. Save one in Plan Studio, or open a JSON file.' : 'No saved projects yet.'}</p>`;
 }
 $('#plistIn').addEventListener('click', async (e) => {
   const o = e.target.closest('[data-popen]'), d = e.target.closest('[data-pdel]');
@@ -1659,9 +1659,9 @@ async function checkDraft(id) {   // a draft newer than the saved version: offer
   $('#drNo').onclick = async () => { await DB.del('drafts', id).catch(() => {}); bar.hidden = true; };
 }
 addEventListener('beforeunload', (e) => { if (isDirty() && M.version) { e.preventDefault(); e.returnValue = ''; } });
-async function startProject() {   // reopen the last project on this device, else start from the house (tracer: an empty site; axo: the project last open in Workbench)
+async function startProject() {   // reopen the last project on this device, else start from the house (tracer: an empty site; axo: the project last open in Plan Studio)
   let last = null; try { last = localStorage.getItem(MODE === 'axo' ? 'pc-studio-last' : KEY + '-last'); } catch (e) {}
-  if (MODE === 'axo') { try { const rec = last && await DB.get('projects', last); if (rec) { useModel(STC.migrate(rec.model), { saved: true, msg: `Showing “${rec.name}” v${rec.version}, the project last open in Workbench.` }); listUI(); return; } } catch (e) {} useModel(M, { msg: 'Showing the example house. Open a Workbench project or a JSON file.' }); listUI(); return; }
+  if (MODE === 'axo') { try { const rec = last && await DB.get('projects', last); if (rec) { useModel(STC.migrate(rec.model), { saved: true, msg: `Showing “${rec.name}” v${rec.version}, the project last open in Plan Studio.` }); listUI(); return; } } catch (e) {} useModel(M, { msg: 'Showing the example house. Open a Plan Studio project or a JSON file.' }); listUI(); return; }
   if (last) { try { const rec = await DB.get('projects', last); if (rec) { useModel(STC.migrate(rec.model), { saved: true }); await checkDraft(last); listUI(); return; } const dr = await DB.get('drafts', last); if (dr) { useModel(STC.migrate(dr.model), { msg: 'Your unsaved project was restored.' }); listUI(); return; } } catch (e) {} }
   useModel(M); listUI();
 }
@@ -1749,27 +1749,27 @@ $$('[data-ex]').forEach((b) => b.addEventListener('click', async () => {
   else if (k === 'obj') { msgEx('Building the 3D model…'); try { const t = await S3.obj(M, S); download(slug() + '.obj', t, 'text/plain'); msgEx('3D model saved as OBJ (metres, Y up). It opens in SketchUp, Rhino and Blender.', 'ok'); } catch (e) { msgEx('The 3D export needs its library, which could not load.', 'warn'); } }
 }));
 
-// ---------- tracer: open the traced model in Workbench ----------
-// the model is written into Workbench's own project list on this device (a new version; earlier versions stay in its history), then the site opens Workbench, which reopens its last project
+// ---------- tracer: open the traced model in Plan Studio ----------
+// the model is written into Plan Studio's own project list on this device (a new version; earlier versions stay in its history), then the site opens Plan Studio, which reopens its last project
 const wbDB = () => new Promise((res, rej) => { let q; try { q = indexedDB.open('pc-studio'); } catch (e) { rej(e); return; } q.onupgradeneeded = () => { const d = q.result; for (const [n, k] of [['projects', 'id'], ['drafts', 'id'], ['versions', 'key']]) if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: k }); }; q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
 const wbTx = (d, st, mode, fn) => new Promise((res, rej) => { const t = d.transaction(st, mode), r = fn(t.objectStore(st)); t.oncomplete = () => res(r ? r.result : undefined); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); });
 async function toWorkbench() {
   if (!M.walls.length) { msgEx('Trace at least one wall first.', 'warn'); return false; }
   const V = STC.validate(M); if (V.errors.length) { msgEx(`Fix this first: ${V.errors[0].msg}`, 'warn'); if (V.errors[0].ref) focusRef(V.errors[0].ref); return false; }
-  let d; try { d = await wbDB(); } catch (e) { msgEx('This browser could not reach Workbench’s storage (private window?). Use JSON, then Open file in Workbench.', 'warn'); return false; }
+  let d; try { d = await wbDB(); } catch (e) { msgEx('This browser could not reach Plan Studio’s storage (private window?). Use JSON, then Open file in Plan Studio.', 'warn'); return false; }
   try {
     const cur = await wbTx(d, 'projects', 'readonly', (s) => s.get(M.id)), last = (() => { try { return JSON.parse(localStorage.getItem(KEY + '-wb-' + M.id) || 'null'); } catch (e) { return null; } })();
-    if (cur && (!last || cur.version > last.version) && !confirm(`Workbench already has “${cur.name}” v${cur.version}, changed there since this tracing was last sent. Replace it with this tracing? Its earlier versions stay in Workbench’s history.`)) return false;
+    if (cur && (!last || cur.version > last.version) && !confirm(`Plan Studio already has “${cur.name}” v${cur.version}, changed there since this tracing was last sent. Replace it with this tracing? Its earlier versions stay in Plan Studio’s history.`)) return false;
     const model = JSON.parse(snapM()); delete model.underlays; delete model.present;
     model.version = (cur ? cur.version : 0) + 1; model.savedAt = new Date().toISOString(); model.from = 'tracer';
     await wbTx(d, 'versions', 'readwrite', (s) => s.put({ key: `${model.id}@${model.version}`, id: model.id, version: model.version, savedAt: model.savedAt, model }));
     await wbTx(d, 'projects', 'readwrite', (s) => s.put({ id: model.id, name: model.name, version: model.version, savedAt: model.savedAt, levels: model.levels.length, rooms: S.rooms.length, model }));
     try { localStorage.setItem('pc-studio-last', model.id); localStorage.setItem(KEY + '-wb-' + M.id, JSON.stringify({ version: model.version, at: model.savedAt })); } catch (e) {}
     try { window.parent.postMessage({ pc: 1, t: 'evt', name: 'tracer_to_workbench', props: { walls: M.walls.length, rooms: S.rooms.length } }, '*'); } catch (e) {}
-    if (SITE) { msgEx(`Opening “${model.name}” v${model.version} in Workbench…`, 'ok'); window.parent.postMessage({ pc: 1, t: 'go', to: 'studio' }, '*'); }
-    else msgEx(`Saved for Workbench as “${model.name}” v${model.version}. Open Workbench in this browser to continue.`, 'ok');
+    if (SITE) { msgEx(`Opening “${model.name}” v${model.version} in Plan Studio…`, 'ok'); window.parent.postMessage({ pc: 1, t: 'go', to: 'studio' }, '*'); }
+    else msgEx(`Saved for Plan Studio as “${model.name}” v${model.version}. Open Plan Studio in this browser to continue.`, 'ok');
     return true;
-  } catch (e) { msgEx('Could not hand the model to Workbench (' + (e && e.name || 'storage error') + '). Use JSON instead.', 'warn'); return false; }
+  } catch (e) { msgEx('Could not hand the model to Plan Studio (' + (e && e.name || 'storage error') + '). Use JSON instead.', 'warn'); return false; }
   finally { try { d.close(); } catch (e) {} }
 }
 { const b = $('#emPic'); if (b) b.addEventListener('click', () => $('#ulFile').click()); }
@@ -2026,7 +2026,7 @@ window.S3 = (() => {
   }
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Workbench: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
+    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
     if (d.t === 'upsell') note.innerHTML = 'Projects are part of Student Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';

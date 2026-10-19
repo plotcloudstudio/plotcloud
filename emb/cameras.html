@@ -1914,7 +1914,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
 </script>
 <script>
-// ===== Workflow: the model is built in Workbench and sent here. This tool no longer draws walls, doors, windows or furniture. =====
+// ===== Workflow: the model is built in Plan Studio and sent here. This tool no longer draws walls, doors, windows or furniture. =====
 (function () {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const DROP = ['wall', 'win', 'door', 'furn', 'del', 'glass'];
@@ -1929,14 +1929,14 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
     const rb = $('.rbtn[data-rail="2"]'); if (rb) rb.title = rb.title.replace('Draw', only ? 'Edit' : 'Place'); }
   const dz = $('#drop');
   if (dz && !$('#wbGo')) { const row = document.createElement('div'); row.className = 'wbrow';
-    row.innerHTML = '<button type="button" class="btn" id="wbGo" data-pcgo="studio">Open Workbench</button><span class="note">Build the model there, then press Send to Simulation.</span>';
+    row.innerHTML = '<button type="button" class="btn" id="wbGo" data-pcgo="studio">Open Plan Studio</button><span class="note">Build the model there, then press Send to Simulation.</span>';
     (dz.closest('.row3, .two') || dz).after(row);
     const st = document.createElement('style'); st.textContent = '.wbrow{display:grid;gap:6px}.wbrow .btn{width:100%}.wbrow .note{font-size:11.5px;color:var(--muted,#6E6A60)}'; document.head.appendChild(st); }
 })();
 </script>
 <script>
-// ===== PlotCloud v131: a simulation tool sends furniture moves back to Workbench =====
-// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench meters.
+// ===== PlotCloud v131: a simulation tool sends furniture moves back to Plan Studio =====
+// Only for a model that came from Plan Studio (its furniture carries Plan Studio ids). Only moves go back: [{ id, position: [x, y], rotation }] in Plan Studio meters.
 (function () {
   if (window.parent === window || window.__pcReturn) return; window.__pcReturn = 1;
   const $ = (s, r = document) => r.querySelector(s);
@@ -1945,7 +1945,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   let ORIG = null, SRC = null, btn = null, toastEl = null, tT = 0;
   const scene = () => { try { return typeof window.__pcSceneJSON === 'function' ? JSON.parse(window.__pcSceneJSON()) : null; } catch (e) { return null; } };
   const centre = (f, o) => [+(f.x + f.w / 2 + o[0]).toFixed(4), +(f.y + f.d / 2 + o[1]).toFixed(4)];
-  // what changed since Workbench sent the model: the moves, and anything else (which stays here)
+  // what changed since Plan Studio sent the model: the moves, and anything else (which stays here)
   function diff() {
     const cur = scene(); if (!cur || !ORIG) return null; const o = ORIG.origin, byId = new Map(ORIG.furn.map((f) => [f.id, f])), moves = [], other = [];
     const now = (cur.furn || []).filter((f) => f && f.id && byId.has(f.id)), nowIds = new Set(now.map((f) => f.id));
@@ -1961,10 +1961,10 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
     toastEl.hidden = false; clearTimeout(tT); tT = setTimeout(() => { toastEl.hidden = true; }, actions && actions.length ? 15000 : 5000); if (actions && actions.length) setTimeout(() => { const b = toastEl.querySelector('.pri'); if (b) b.focus(); }, 0);
   }
   function send() {
-    const d = diff(); if (!d) return; if (!d.moves.length) { toast('No furniture has moved since the model came from Workbench, so there is nothing to send back.'); return; }
-    const n = d.moves.length, go = () => { post({ t: 'delta', delta: d.moves, source: SRC }); toast(`Sending ${n} move${n > 1 ? 's' : ''} to Workbench…`); };
+    const d = diff(); if (!d) return; if (!d.moves.length) { toast('No furniture has moved since the model came from Plan Studio, so there is nothing to send back.'); return; }
+    const n = d.moves.length, go = () => { post({ t: 'delta', delta: d.moves, source: SRC }); toast(`Sending ${n} move${n > 1 ? 's' : ''} to Plan Studio…`); };
     // there are changes here that are not saved anywhere yet: say what goes back before sending
-    toast(`Send ${n} moved piece${n > 1 ? 's' : ''} back to Workbench? Workbench moves ${n > 1 ? 'them' : 'it'} and keeps the result as a new version.${d.other.length ? ` Other changes here (${d.other.join(', ')}) stay in this tool.` : ''}`, [['Send back', go, true], ['Cancel', null]]);
+    toast(`Send ${n} moved piece${n > 1 ? 's' : ''} back to Plan Studio? Plan Studio moves ${n > 1 ? 'them' : 'it'} and keeps the result as a new version.${d.other.length ? ` Other changes here (${d.other.join(', ')}) stay in this tool.` : ''}`, [['Send back', go, true], ['Cancel', null]]);
   }
   function show() {
     if (!ORIG) return; const d = diff(); if (!d || !d.ours) return;   // the tool did not take the model (the person had opened their own file)
@@ -1973,8 +1973,8 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
         + '.pcret-toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9999;max-width:min(560px,calc(100vw - 32px));background:#1d2129;color:#fff;border-radius:10px;padding:12px 14px;font:13px/1.45 var(--f-body,"Inter Tight",system-ui,sans-serif);box-shadow:0 10px 30px rgba(0,0,0,.25);display:grid;gap:8px}.pcret-toast[hidden]{display:none}.pcret-row{display:flex;gap:8px}.pcret-row button{height:28px;border:1px solid rgba(255,255,255,.4);background:none;color:#fff;border-radius:6px;padding:0 12px;font:600 12px var(--f-body,"Inter Tight",system-ui,sans-serif);cursor:pointer}.pcret-row button.pri{background:#fff;color:#1d2129;border-color:#fff}';
       document.head.appendChild(st);
       btn = document.createElement('button'); btn.type = 'button'; btn.className = 'pcret-btn'; btn.id = 'pcRet';
-      btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4 2.5 7.5 6 11"/><path d="M3 7.5h7a3.5 3.5 0 0 1 0 7H8"/></svg>Send back to Workbench';
-      btn.title = 'Send the furniture you moved here back to Workbench; it keeps them as a new version'; btn.addEventListener('click', send); bar.appendChild(btn); }
+      btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4 2.5 7.5 6 11"/><path d="M3 7.5h7a3.5 3.5 0 0 1 0 7H8"/></svg>Send back to Plan Studio';
+      btn.title = 'Send the furniture you moved here back to Plan Studio; it keeps them as a new version'; btn.addEventListener('click', send); bar.appendChild(btn); }
     btn.hidden = false;
   }
   window.addEventListener('message', (e) => {
@@ -1983,7 +1983,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
       const src = d.source || (sc && sc.source); if (!sc || !src || src.app !== 'plotcloud-studio' || !Array.isArray(sc.furn) || !sc.furn.some((f) => f && f.id)) return;
       ORIG = { furn: sc.furn.filter((f) => f && f.id).map((f) => Object.assign({}, f)), origin: Array.isArray(sc.origin) ? sc.origin : [0, 0], walls: JSON.stringify(sc.walls || []) }; SRC = Object.assign({}, src, { toolName });
       let tries = 0; const wait = () => { if (diff() && diff().ours) show(); else if (++tries < 20) setTimeout(wait, 400); }; setTimeout(wait, 600); }
-    if (d.t === 'delta-done') toast(d.ok ? `Workbench applied ${d.moves} move${d.moves > 1 ? 's' : ''}.` : `Workbench did not apply the moves: ${d.error || 'the data was refused'}.`);
+    if (d.t === 'delta-done') toast(d.ok ? `Plan Studio applied ${d.moves} move${d.moves > 1 ? 's' : ''}.` : `Plan Studio did not apply the moves: ${d.error || 'the data was refused'}.`);
   });
   window.__pcReturnState = () => ({ orig: !!ORIG, button: !!btn && !btn.hidden, diff: diff() });
 })();

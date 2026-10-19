@@ -224,7 +224,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 
     <section class="sec" aria-labelledby="h-next"><h2 id="h-next"><i>5</i>Next</h2>
       <div class="rdy" id="rdy"></div>
-      <button type="button" class="go" id="toWb">Enter Workbench</button>
+      <button type="button" class="go" id="toWb">Enter Plan Studio</button>
       <div class="row2"><button type="button" class="btn" id="toSun">Send to Sun hours</button><button type="button" class="btn" id="toWind">Send to Wind Flow</button></div>
       <div class="row2"><button type="button" class="btn" id="saveS">Save site</button><button type="button" class="btn" id="dlS">Download JSON</button></div>
       <p class="msg" id="nextMsg" aria-live="polite"></p>
@@ -265,10 +265,10 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div class="attr" id="attr"></div>
     </div>
   </section>
-  <footer class="fine">Site is only for the place and its surroundings: massing boxes, no interiors or facades. Site data stays in this browser until you enter Workbench. Heights are labeled by where they came from.</footer>
+  <footer class="fine">Site is only for the place and its surroundings: massing boxes, no interiors or facades. Site data stays in this browser until you enter Plan Studio. Heights are labeled by where they came from.</footer>
 </div>
 
-<div class="sdlg" id="wbDlg" role="dialog" aria-modal="true" aria-labelledby="wbT" hidden><div class="sdlg-in"><h2 id="wbT">Enter Workbench</h2><div id="wbBody"></div><button type="button" class="btn" id="wbX">Cancel</button></div></div>
+<div class="sdlg" id="wbDlg" role="dialog" aria-modal="true" aria-labelledby="wbT" hidden><div class="sdlg-in"><h2 id="wbT">Enter Plan Studio</h2><div id="wbBody"></div><button type="button" class="btn" id="wbX">Cancel</button></div></div>
 
 <script type="importmap">
 { "imports": {
@@ -278,7 +278,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 </script>
 <script type="module">
 // ===== PlotCloud site context core =====
-// Real-world site → validated, editable context model shared by Site Context, Workbench and Sun hours.
+// Real-world site → validated, editable context model shared by Site Context, Plan Studio and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
 // Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
 const SITE = (() => {
@@ -572,7 +572,7 @@ const SITE = (() => {
   }
   function resolve(site, ref, choice) { const i = site.buildings.findIndex((b) => b.src.ref === ref); if (i < 0 || !site._conflicts) return false; const c = site._conflicts.find((x) => x.ref === ref); if (!c) return false; site.buildings[i] = choice === 'theirs' ? c.theirs : Object.assign({}, c.mine); site._conflicts = site._conflicts.filter((x) => x !== c); site.version++; return true; }
 
-  // ---------- placing the site into a Workbench plan (plan +Y faces compass bearing M.north) ----------
+  // ---------- placing the site into a Plan Studio plan (plan +Y faces compass bearing M.north) ----------
   function toPlan(p, north) { const a = (north || 0) * D, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
   // masses for analysis: context only casts shadows; heights in meters above the site origin
   // site.at: where the site point sits in the plan (a project placed on a site keeps its own coordinates)
@@ -737,7 +737,7 @@ const SITEP = (() => {
 })();
 
 
-// ===== Site Context: a real address → a validated, editable context model for Workbench and Sun hours =====
+// ===== Site Context: a real address → a validated, editable context model for Plan Studio and Sun hours =====
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const SITEW = window.parent !== window;
@@ -894,7 +894,7 @@ $('#fixBtn').addEventListener('click', () => {
   add(-60, 20, 30, 18, { height: '24', name: 'Fixture tower' }); add(-20, 30, 22, 14, { 'building:levels': '5' }); add(25, 25, 18, 18, {}); add(30, -40, 40, 16, { height: '12' }); add(-55, -45, 16, 24, { 'building:levels': '3' }); add(60, 0, 14, 30, { height: '40' }); add(-15, -70, 26, 12, {});
   ORIGIN = { lat: o.lat, lon: o.lon, label: 'Test fixture (made up)' }; F = Fx; $('#lat').value = o.lat; $('#lon').value = o.lon; $('#tz').value = '-8'; $('#dst').value = '1'; $('#sName').value = 'Test fixture site';
   newSiteFrom({ provider: 'test-fixture', name: 'Made-up test fixture', at: new Date().toISOString(), licence: 'Test fixture, not real data', parsed: SITE.parseOSMJSON({ elements: els }) }, true);
-  msg('#impMsg', 'Test fixture loaded. It is made up and labeled as such in Workbench and Sun hours.', 'warn'); statusUI();
+  msg('#impMsg', 'Test fixture loaded. It is made up and labeled as such in Plan Studio and Sun hours.', 'warn'); statusUI();
 });
 
 // ---------- review ----------
@@ -940,7 +940,7 @@ $('#saveS').addEventListener('click', async () => { if (!site) return; site.name
 $('#dlS').addEventListener('click', () => { if (!site) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ format: 'plotcloud-site', v: 1, site }, null, 1)], { type: 'application/json' })); a.download = (site.name || 'site').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-site.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); });
 $('#openSite').addEventListener('click', async () => { const box = $('#siteList'); if (!box.hidden) { box.hidden = true; return; } let L = []; try { L = (await SITEP.sites.all()).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); } catch (e) {}
   const W = await wbProjects().catch(() => []); const ws = W.filter((p) => p.model && p.model.site);
-  box.innerHTML = (L.length || ws.length) ? `<ul class="plc">${L.map((s) => `<li><button type="button" data-os="${esc(s.id)}">${esc(s.name)} <small>· ${new Date(s.savedAt).toLocaleDateString()}</small></button></li>`).join('')}${ws.map((p) => `<li><button type="button" data-ow="${esc(p.id)}">${esc(p.model.site.name || 'Site')} <small>· in Workbench “${esc(p.name)}” v${p.version}</small></button></li>`).join('')}</ul>` : '<p class="note">No saved sites in this browser yet.</p>'; box.hidden = false;
+  box.innerHTML = (L.length || ws.length) ? `<ul class="plc">${L.map((s) => `<li><button type="button" data-os="${esc(s.id)}">${esc(s.name)} <small>· ${new Date(s.savedAt).toLocaleDateString()}</small></button></li>`).join('')}${ws.map((p) => `<li><button type="button" data-ow="${esc(p.id)}">${esc(p.model.site.name || 'Site')} <small>· in Plan Studio “${esc(p.name)}” v${p.version}</small></button></li>`).join('')}</ul>` : '<p class="note">No saved sites in this browser yet.</p>'; box.hidden = false;
   box.onclick = async (e) => { const a = e.target.closest('[data-os]'), w = e.target.closest('[data-ow]'); let s = null, r = [];
     if (a) { const rec = await SITEP.sites.get(a.dataset.os); if (rec) { s = rec.site; r = rec.raws || []; } }
     if (w) { const p = W.find((x) => x.id === w.dataset.ow); s = JSON.parse(JSON.stringify(p.model.site)); const rec = await SITEP.sites.get(s.id).catch(() => null); r = rec ? rec.raws || [] : []; }
@@ -952,7 +952,7 @@ function loadSite(s, r) { site = s; raws = r || []; ORIGIN = Object.assign({}, s
   UNDO.length = 0; REDO.length = 0; undoUI(); parcelUI();
   bdUI(); tzNote(); conflictUI(); fit(); draw(); reviewUI(); selUI(); statusUI(); if (ML && mlReady) syncMap(true); msg('#locMsg', `Opened “${s.name}”.${raws.length ? '' : ' Its raw source data is not in this browser, so changing the area needs a new import; edits still work.'}`, 'ok'); }
 
-// ---------- Workbench: a new project, or the site added to an existing one (its design is never changed) ----------
+// ---------- Plan Studio: a new project, or the site added to an existing one (its design is never changed) ----------
 const wbOpen = () => new Promise((res, rej) => { let q; try { q = indexedDB.open('pc-studio'); } catch (e) { rej(e); return; } q.onupgradeneeded = () => { const d = q.result; for (const [n, k] of [['projects', 'id'], ['drafts', 'id'], ['versions', 'key']]) if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: k }); }; q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
 const wbTx = (d, st, mode, fn) => new Promise((res, rej) => { const t = d.transaction(st, mode), r = fn(t.objectStore(st)); t.oncomplete = () => res(r ? r.result : undefined); t.onerror = () => rej(t.error); });
 async function wbProjects() { const d = await wbOpen(); try { return await wbTx(d, 'projects', 'readonly', (s) => s.getAll()); } finally { d.close(); } }
@@ -960,13 +960,13 @@ const siteForModel = () => { const s = JSON.parse(JSON.stringify(site)); delete 
 $('#toWb').addEventListener('click', async () => {
   if (!site) return; let last = null, P = []; try { P = await wbProjects(); last = localStorage.getItem('pc-studio-last'); } catch (e) {}
   const cur = P.find((p) => p.id === last), body = $('#wbBody');
-  body.innerHTML = `<div class="opt"><b>New Workbench project</b><p>An empty project placed on this site: the surrounding massing (read-only), the ground area and your site go with it. North is up.</p><button type="button" class="go" data-wb="new">Create and open</button></div>` +
+  body.innerHTML = `<div class="opt"><b>New Plan Studio project</b><p>An empty project placed on this site: the surrounding massing (read-only), the ground area and your site go with it. North is up.</p><button type="button" class="go" data-wb="new">Create and open</button></div>` +
     (cur ? `<div class="opt"><b>Add to “${esc(cur.name)}” v${cur.version}</b><p>${cur.model && cur.model.site ? (cur.model.site.id === site.id ? 'Updates the site context of this project.' : `Replaces its site context (“${esc(cur.model.site.name || 'site')}”).`) : 'Places this project on the site.'} Its walls, floors and furniture are not changed; a new version is saved, so you can go back.</p><button type="button" class="btn" data-wb="add">Add and open</button></div>` : '');
   $('#wbDlg').hidden = false; body.onclick = async (e) => { const b = e.target.closest('[data-wb]'); if (!b) return; b.disabled = true; try { await toWorkbench(b.dataset.wb, cur); } finally { b.disabled = false; } };
 });
 $('#wbX').addEventListener('click', () => { $('#wbDlg').hidden = true; });
 async function toWorkbench(how, cur) {
-  let d; try { d = await wbOpen(); } catch (e) { msg('#nextMsg', 'This browser could not reach Workbench’s storage (private window?). Download JSON instead.', 'warn'); return; }
+  let d; try { d = await wbOpen(); } catch (e) { msg('#nextMsg', 'This browser could not reach Plan Studio’s storage (private window?). Download JSON instead.', 'warn'); return; }
   try {
     let model, rec = how === 'add' && cur ? await wbTx(d, 'projects', 'readonly', (s) => s.get(cur.id)) : null;
     if (rec) { model = JSON.parse(JSON.stringify(rec.model)); model.version = (rec.version || 0) + 1; }
@@ -978,9 +978,9 @@ async function toWorkbench(how, cur) {
     persist(); evt('site_to_workbench', { how, buildings: SITE.simBuildings(site).length });
     $('#wbDlg').hidden = true;
     window.__lastHandoff = { project: model.id, version: model.version, siteModel: model.site.siteModel };
-    if (SITEW) { msg('#nextMsg', `Opening “${model.name}” v${model.version} in Workbench…`, 'ok'); window.parent.postMessage({ pc: 1, t: 'go', to: 'studio' }, '*'); }
-    else msg('#nextMsg', `Saved for Workbench as “${model.name}” v${model.version}. Open Workbench in this browser.`, 'ok');
-  } catch (e) { msg('#nextMsg', 'Could not hand the site to Workbench (' + (e && e.name || 'storage error') + ').', 'warn'); }
+    if (SITEW) { msg('#nextMsg', `Opening “${model.name}” v${model.version} in Plan Studio…`, 'ok'); window.parent.postMessage({ pc: 1, t: 'go', to: 'studio' }, '*'); }
+    else msg('#nextMsg', `Saved for Plan Studio as “${model.name}” v${model.version}. Open Plan Studio in this browser.`, 'ok');
+  } catch (e) { msg('#nextMsg', 'Could not hand the site to Plan Studio (' + (e && e.name || 'storage error') + ').', 'warn'); }
   finally { try { d.close(); } catch (e) {} }
 }
 
@@ -1186,7 +1186,7 @@ $('#chkBtn').addEventListener('click', async () => {
 });
 
 // ===================== v132 · 12 · editing the surroundings: massing boxes and the ground area =====================
-// One selection language with Workbench: blue box, 8 handles, a turn handle (off: boxes keep their footprint's orientation), the same 6-button toolbar.
+// One selection language with Plan Studio: blue box, 8 handles, a turn handle (off: boxes keep their footprint's orientation), the same 6-button toolbar.
 let MOVE = null, PDRAG = null, PR = null, HOVB = null; const UNDO = [], REDO = [];
 const selB = () => site && SEL ? site.buildings.find((x) => x.id === SEL) : null;
 const snapSite = () => JSON.stringify({ buildings: site.buildings, parcel: site.parcel || null, yourSite: site.yourSite || null });
@@ -1200,7 +1200,7 @@ function refresh() { draw(); reviewUI(); selUI(); parcelUI(); persist(); if (MOD
 function setH(id, h) { const b = site.buildings.find((x) => x.id === id); if (!b || b.locked) return; if (!(h > (b.base || 0) + 0.4)) { msg('#nextMsg', 'Type a height in meters, above the building’s base.', 'warn'); selUI(); return; } pushU(); SITE.setHeight(site, id, +(+h).toFixed(2)); msg('#nextMsg', `Height ${b.h} m, labeled “entered by you”.`, 'ok'); refresh(); }
 function delSel() { const b = selB(); if (!b || b.locked || b.deleted) return; pushU(); SITE.deleteBuilding(site, b.id); msg('#nextMsg', 'Deleted. Its place is marked “your site”; Ctrl+Z brings the building back.', 'ok'); SEL = null; refresh(); }
 const bbOf = (pts) => { const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
-const ACT_WHY = { mirror: 'A massing box mirrors onto itself.', replace: 'Massing boxes have no styles to swap.', dup: 'The massing comes from the map; add new buildings in Workbench.' };
+const ACT_WHY = { mirror: 'A massing box mirrors onto itself.', replace: 'Massing boxes have no styles to swap.', dup: 'The massing comes from the map; add new buildings in Plan Studio.' };
 // the overlay on the plan: hover, the selected box with its handles and height tag, and the ground area's corners and area
 function annUI() {
   const svg = $('#sann'), tb = $('#sftb'); if (MODE !== 'plan' || !site) { svg.innerHTML = ''; tb.hidden = true; return; } const out = [], S = (p) => W2S(p).map((v) => +v.toFixed(1));
@@ -1332,7 +1332,7 @@ statusUI(); reviewUI(); bdUI(); tzNote(); resize(); initMap();
   }
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Workbench: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
+    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
     if (d.t === 'upsell') note.innerHTML = 'Projects are part of Student Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';

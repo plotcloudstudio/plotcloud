@@ -96,7 +96,7 @@ const n = (v) => Math.round(v);
 export const MODELS = [
   // ===== Bedroom =====
   {
-    id: 'bed', cat: '卧室', name: '床', en: 'Bed', colors: ['fabric', 'wood'],
+    id: 'bed', cat: '卧室', group: 'Bedroom', name: '床', en: 'Bed', colors: ['fabric', 'wood'],
     presets: [
       ['Twin 单人', { W: 990, L: 1905 }], ['Double', { W: 1370, L: 1905 }], ['Queen', { W: 1520, L: 2030 }],
       ['King', { W: 1930, L: 2030 }], ['1.5 m', { W: 1500, L: 2000 }], ['1.8 m', { W: 1800, L: 2000 }],
@@ -133,7 +133,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'nightstand', cat: '卧室', name: '床头柜', en: 'Nightstand', colors: ['wood'],
+    id: 'nightstand', cat: '卧室', group: 'Bedroom', name: '床头柜', en: 'Nightstand', colors: ['wood'],
     params: [
       { k: 'W', label: '宽', min: 350, max: 650, step: 10, def: 450 },
       { k: 'D', label: '深', min: 300, max: 500, step: 10, def: 400 },
@@ -157,7 +157,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'wardrobe', cat: '卧室', name: '衣柜', en: 'Wardrobe', colors: ['wood'],
+    id: 'wardrobe', cat: '卧室', group: 'Bedroom', name: '衣柜', en: 'Wardrobe', colors: ['wood'],
     params: [
       { k: 'W', label: '宽', min: 600, max: 2400, step: 10, def: 1200 },
       { k: 'D', label: '深', min: 500, max: 650, step: 10, def: 600 },
@@ -182,7 +182,7 @@ export const MODELS = [
   },
   // ===== Living =====
   {
-    id: 'sofa', cat: '客厅', name: '沙发', en: 'Sofa', colors: ['fabric'],
+    id: 'sofa', cat: '客厅', group: 'Living', name: '沙发', en: 'Sofa', colors: ['fabric'],
     presets: [['单人', { seats: 1 }], ['双人', { seats: 2 }], ['三人', { seats: 3 }], ['四人', { seats: 4 }]],
     params: [
       { k: 'seats', label: '座位数', type: 'int', min: 1, max: 4, def: 3 },
@@ -220,7 +220,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'coffee', cat: '客厅', name: '茶几', en: 'Coffee table', colors: ['wood'],
+    id: 'coffee', cat: '客厅', group: 'Living', name: '茶几', en: 'Coffee table', colors: ['wood'],
     params: [
       { k: 'shape', label: '形状', type: 'select', options: [['rect', '矩形'], ['round', '圆形']], def: 'rect' },
       { k: 'L', label: '长 / 直径', min: 600, max: 1400, step: 10, def: 1100 },
@@ -249,7 +249,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'tvstand', cat: '客厅', name: '电视柜', en: 'TV stand', colors: ['wood'],
+    id: 'tvstand', cat: '客厅', group: 'Living', name: '电视柜', en: 'TV stand', colors: ['wood'],
     params: [
       { k: 'W', label: '宽', min: 1000, max: 2400, step: 10, def: 1800 },
       { k: 'D', label: '深', min: 350, max: 500, step: 10, def: 400 },
@@ -276,7 +276,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'bookshelf', cat: '客厅', name: '书架', en: 'Bookshelf', colors: ['wood'],
+    id: 'bookshelf', cat: '客厅', group: 'Living', name: '书架', en: 'Bookshelf', colors: ['wood'],
     params: [
       { k: 'W', label: '宽', min: 400, max: 1800, step: 10, def: 900 },
       { k: 'D', label: '深', min: 250, max: 420, step: 10, def: 300 },
@@ -316,7 +316,7 @@ export const MODELS = [
   },
   // ===== Dining & study =====
   {
-    id: 'dining', cat: '餐厅与书房', name: '餐桌', en: 'Dining table', colors: ['wood'],
+    id: 'dining', cat: '餐厅与书房', group: 'Dining & Office', name: '餐桌', en: 'Dining table', colors: ['wood'],
     params: [
       { k: 'shape', label: '形状', type: 'select', options: [['rect', '矩形'], ['round', '圆形']], def: 'rect' },
       { k: 'L', label: '长 / 直径', min: 800, max: 2600, step: 10, def: 1600 },
@@ -352,7 +352,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'chair', cat: '餐厅与书房', name: '餐椅', en: 'Dining chair', colors: ['wood', 'fabric'],
+    id: 'chair', cat: '餐厅与书房', group: 'Dining & Office', name: '餐椅', en: 'Dining chair', colors: ['wood', 'fabric'],
     params: [
       { k: 'sw', label: '座宽', min: 400, max: 560, step: 5, def: 450 },
       { k: 'sd', label: '座深', min: 400, max: 560, step: 5, def: 460 },
@@ -379,7 +379,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'desk', cat: '餐厅与书房', name: '电脑桌', en: 'Computer desk', colors: ['wood'],
+    id: 'desk', cat: '餐厅与书房', group: 'Dining & Office', name: '电脑桌', en: 'Computer desk', colors: ['wood'],
     params: [
       { k: 'L', label: '长', min: 900, max: 1800, step: 10, def: 1400 },
       { k: 'D', label: '深', min: 500, max: 800, step: 10, def: 650 },
@@ -417,7 +417,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'office', cat: '餐厅与书房', name: '办公椅', en: 'Office chair', colors: ['fabric'],
+    id: 'office', cat: '餐厅与书房', group: 'Dining & Office', name: '办公椅', en: 'Office chair', colors: ['fabric'],
     params: [
       { k: 'sh', label: '座高', min: 400, max: 560, step: 5, def: 470 },
       { k: 'sw', label: '座宽', min: 440, max: 560, step: 5, def: 500 },
@@ -447,7 +447,7 @@ export const MODELS = [
   },
   // ===== Kitchen & appliances =====
   {
-    id: 'kitchen', cat: '厨房与家电', name: '橱柜', en: 'Kitchen cabinets', colors: ['wood'],
+    id: 'kitchen', cat: '厨房与家电', group: 'Kitchen', name: '橱柜', en: 'Kitchen cabinets', colors: ['wood'],
     params: [
       { k: 'L', label: '总长', min: 1200, max: 4200, step: 50, def: 2400 },
       { k: 'D', label: '台面深', min: 550, max: 700, step: 10, def: 620 },
@@ -499,7 +499,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'fridge', cat: '厨房与家电', name: '冰箱', en: 'Refrigerator', colors: [],
+    id: 'fridge', cat: '厨房与家电', group: 'Kitchen', name: '冰箱', en: 'Refrigerator', colors: [],
     params: [
       { k: 'type', label: '类型', type: 'select', options: [['bottom', '上冷藏下冷冻'], ['french', '法式对开门'], ['single', '单门']], def: 'french' },
       { k: 'W', label: '宽', min: 550, max: 910, step: 5, def: 760 },
@@ -534,7 +534,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'range', cat: '厨房与家电', name: '灶台烤箱', en: 'Range', colors: [],
+    id: 'range', cat: '厨房与家电', group: 'Kitchen', name: '灶台烤箱', en: 'Range', colors: [],
     params: [
       { k: 'W', label: '宽', min: 600, max: 910, step: 5, def: 760 },
       { k: 'D', label: '深', min: 600, max: 720, step: 5, def: 650 },
@@ -559,7 +559,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'washer', cat: '厨房与家电', name: '洗衣机 / 烘干机', en: 'Washer / dryer', colors: [],
+    id: 'washer', cat: '厨房与家电', group: 'Kitchen', name: '洗衣机 / 烘干机', en: 'Washer / dryer', colors: [],
     params: [
       { k: 'type', label: '类型', type: 'select', options: [['washer', '洗衣机'], ['dryer', '烘干机'], ['pair', '并排一对'], ['stack', '叠放']], def: 'washer' },
       { k: 'W', label: '宽', min: 595, max: 700, step: 5, def: 600 },
@@ -586,7 +586,7 @@ export const MODELS = [
   },
   // ===== Bathroom =====
   {
-    id: 'toilet', cat: '卫浴', name: '马桶', en: 'Toilet', colors: [],
+    id: 'toilet', cat: '卫浴', group: 'Bathroom', name: '马桶', en: 'Toilet', colors: [],
     params: [
       { k: 'D', label: '总深', min: 620, max: 780, step: 5, def: 700 },
       { k: 'sh', label: '座高', min: 380, max: 450, step: 5, def: 410 },
@@ -605,7 +605,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'vanity', cat: '卫浴', name: '浴室柜', en: 'Bathroom vanity', colors: ['wood'],
+    id: 'vanity', cat: '卫浴', group: 'Bathroom', name: '浴室柜', en: 'Bathroom vanity', colors: ['wood'],
     params: [
       { k: 'W', label: '宽', min: 600, max: 1600, step: 10, def: 900 },
       { k: 'D', label: '深', min: 420, max: 580, step: 10, def: 500 },
@@ -635,7 +635,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'bathtub', cat: '卫浴', name: '浴缸', en: 'Bathtub', colors: [],
+    id: 'bathtub', cat: '卫浴', group: 'Bathroom', name: '浴缸', en: 'Bathtub', colors: [],
     params: [
       { k: 'L', label: '长', min: 1400, max: 1830, step: 5, def: 1525 },
       { k: 'W', label: '宽', min: 700, max: 900, step: 5, def: 760 },
@@ -658,7 +658,7 @@ export const MODELS = [
   },
   // ===== added: residential essentials =====
   {
-    id: 'sectional', cat: '客厅', name: '转角沙发', en: 'Sectional sofa', colors: ['fabric'],
+    id: 'sectional', cat: '客厅', group: 'Living', name: '转角沙发', en: 'Sectional sofa', colors: ['fabric'],
     params: [
       { k: 'side', label: '转角方向', type: 'select', options: [['right', '右转'], ['left', '左转']], def: 'right' },
       { k: 'L', label: '主段长', min: 1800, max: 3600, step: 10, def: 2700 },
@@ -706,7 +706,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'armchair', cat: '客厅', name: '扶手椅', en: 'Armchair', colors: ['fabric', 'wood'],
+    id: 'armchair', cat: '客厅', group: 'Living', name: '扶手椅', en: 'Armchair', colors: ['fabric', 'wood'],
     params: [
       { k: 'W', label: '宽', min: 650, max: 1000, step: 10, def: 800 },
       { k: 'D', label: '深', min: 700, max: 950, step: 10, def: 820 },
@@ -732,7 +732,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'sidetable', cat: '客厅', name: '边几', en: 'Side table', colors: ['wood'],
+    id: 'sidetable', cat: '客厅', group: 'Living', name: '边几', en: 'Side table', colors: ['wood'],
     params: [
       { k: 'shape', label: '形状', type: 'select', options: [['round', '圆形'], ['rect', '矩形']], def: 'round' },
       { k: 'W', label: '宽 / 直径', min: 300, max: 650, step: 10, def: 450 },
@@ -761,7 +761,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'dresser', cat: '卧室', name: '斗柜', en: 'Dresser', colors: ['wood'],
+    id: 'dresser', cat: '卧室', group: 'Bedroom', name: '斗柜', en: 'Dresser', colors: ['wood'],
     presets: [['宽矮', { W: 1400, H: 800, cols: 2, rows: 3 }], ['高窄', { W: 800, H: 1250, cols: 1, rows: 5 }]],
     params: [
       { k: 'W', label: '宽', min: 500, max: 1800, step: 10, def: 1200 },
@@ -787,7 +787,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'island', cat: '厨房与家电', name: '中岛 + 吧凳', en: 'Kitchen island', colors: ['wood', 'fabric'],
+    id: 'island', cat: '厨房与家电', group: 'Kitchen', name: '中岛 + 吧凳', en: 'Kitchen island', colors: ['wood', 'fabric'],
     params: [
       { k: 'L', label: '长', min: 1200, max: 3000, step: 10, def: 1800 },
       { k: 'D', label: '台面深', min: 800, max: 1300, step: 10, def: 1000 },
@@ -828,7 +828,7 @@ export const MODELS = [
     },
   },
   {
-    id: 'shower', cat: '卫浴', name: '淋浴房', en: 'Shower', colors: [],
+    id: 'shower', cat: '卫浴', group: 'Bathroom', name: '淋浴房', en: 'Shower', colors: [],
     params: [
       { k: 'type', label: '类型', type: 'select', options: [['corner', '转角（两面玻璃）'], ['alcove', '一字（正面玻璃）']], def: 'corner' },
       { k: 'W', label: '宽', min: 800, max: 1600, step: 10, def: 900 },
@@ -862,11 +862,182 @@ export const MODELS = [
   },
 ];
 
+// ===== Accessories (2026-10-19): simple scale-reference pieces — fence, people, pets, vehicles, wall decor, plants, entry. Blocks only, not realistic models. =====
+// People are one fixed light grey-blue, plants one fixed green, so they read at a glance as "not building".
+Object.assign(FIXED_MATS, { person: '#9fb4c6', personDk: '#7f96ab', fur: '#c9b79c', furDk: '#8a7660', car: '#aeb6bd', tyre: '#2b2c2e', leaf: '#5d9448', leafDk: '#47763a', trunk: '#7b5b3c', pot: '#bdb6a8', art: '#cfd8df', gold: '#b8a679' });
+const circ = (r, n = 20) => Array.from({ length: n }, (_, i) => [r * Math.cos(i / n * 2 * Math.PI), r * Math.sin(i / n * 2 * Math.PI)]);
+// a standing figure of overall height H: legs, torso (elliptical from above, like the usual plan symbol), arms, neck, head
+function standingPerson(H, o = {}) {
+  const B = makeBuilder(), hr = (o.headR || 0.062) * H, stoop = (o.stoop || 0) * H;
+  const legH = 0.5 * H, torsoTop = 0.82 * H;
+  for (const sx of [-1, 1]) B.cyl('Leg', 'Body', 'personDk', sx * 0.05 * H, 0, 0, 0.042 * H, legH);
+  B.cyl('Torso', 'Body', 'person', 0, 0, legH, 0.13 * H, torsoTop - legH, { ry: 0.075 * H, taper: 0.86 });
+  for (const sx of [-1, 1]) B.cyl('Arm', 'Body', 'personDk', sx * 0.165 * H, 0, 0.52 * H, 0.027 * H, 0.29 * H);
+  const headH = 2 * hr, neckH = Math.max(0.02 * H, H - headH - torsoTop);
+  B.cyl('Neck', 'Body', 'personDk', 0, -stoop / 2, torsoTop, 0.028 * H, neckH);
+  B.cyl('Head', 'Body', 'person', 0, -stoop, H - headH, hr, headH, { seg: 24 });
+  return B.parts;
+}
+const personModel = (id, name, kw, def, min, max, o = {}) => ({
+  id, cat: 'People', group: 'People', kw, name, en: name, colors: [],
+  params: [{ k: 'H', label: 'Height', min, max, step: 10, def }],
+  build(p) { return standingPerson(p.H, o); },
+});
+// a car seen from the side (profile in the y-z plane, front at -y), extruded across its width; wheels are discs at the four corners
+function carProfile(L, H, body) {
+  const f = -L / 2, r = L / 2;
+  if (body === 'van') return [[f, 300], [f, 900], [f + 0.1 * L, 1050], [f + 0.2 * L, H], [r - 0.02 * L, H], [r, H - 120], [r, 300]];
+  if (body === 'suv') return [[f, 300], [f, 760], [f + 0.2 * L, 900], [f + 0.33 * L, H], [r - 0.12 * L, H], [r, H - 260], [r, 300]];
+  return [[f, 300], [f, 640], [f + 0.2 * L, 760], [f + 0.38 * L, H], [f + 0.62 * L, H], [r - 0.1 * L, 900], [r, 880], [r, 300]];
+}
+function buildCar(p) {
+  const B = makeBuilder(), L = p.L, W = p.W, H = p.H, prof = carProfile(L, H, p.body), n = prof.length, wy = 0.31 * L, wr = 330, top = H - 40;
+  B.prism('Body', 'Body', 'car', 'yz', prof, -(W / 2 - 20), W - 40);
+  B.prism('Windows', 'Body', 'glass', 'yz', [[prof[2][0] + 0.03 * L, prof[2][1] + 40], [prof[3][0] + 0.02 * L, top], [prof[n - 4][0] - 0.02 * L, top], [prof[n - 3][0] - 0.03 * L, prof[n - 3][1] - 30]], -(W / 2 - 6), W - 12);
+  for (const sy of [-1, 1]) for (const sx of [-1, 1]) B.prism('Wheel', 'Wheels', 'tyre', 'yz', circ(wr, 24).map(([a, b]) => [sy * wy + a, wr + b]), sx > 0 ? W / 2 - 240 : -W / 2, 240);
+  return B.parts;
+}
+function buildBike(p) {
+  const B = makeBuilder(), L = p.L, wr = 335, wb = L - 2 * (wr + 14), y0 = -wb / 2, y1 = wb / 2, hub = wr;
+  for (const y of [y0, y1]) B.tube('Wheel', 'Wheels', 'tyre', Array.from({ length: 25 }, (_, i) => [0, y + wr * Math.cos(i / 24 * 2 * Math.PI), hub + wr * Math.sin(i / 24 * 2 * Math.PI)]), 14);
+  const bb = [0, y0 + wb * 0.5, 300], seat = [0, y1 - wb * 0.18, p.saddle], head = [0, y0 + 90, 800], hbar = p.saddle > 880 ? 1050 : 1000;
+  B.tube('Frame', 'Frame', 'steel', [[0, y1, hub], bb, [0, y0 + wb * 0.1, 760], head, seat, bb], 16);
+  B.tube('Fork', 'Frame', 'steel', [[0, y0, hub], [0, y0 + 60, 790]], 14);
+  B.tube('Stem', 'Frame', 'steel', [[0, y0 + 90, 800], [0, y0 + 60, hbar]], 14);
+  B.tube('Handlebar', 'Frame', 'black', [[-p.W / 2 + 14, y0 + 60, hbar], [p.W / 2 - 14, y0 + 60, hbar]], 14);
+  B.box('Saddle', 'Frame', 'black', 0, y1 - wb * 0.18 + 30, p.saddle, 140, 250, 50, { r: 20 });
+  return B.parts;
+}
+function buildFence(p) {
+  const B = makeBuilder(), L = p.L, H = p.H, metal = p.mat === 'metal', post = metal ? 50 : 90, bay = Math.max(1, Math.round(L / 2400)), pitch = (L - post) / bay;
+  const mat = metal ? 'rail' : 'wood';
+  for (let i = 0; i <= bay; i++) B.box('Post', 'Posts', mat, -L / 2 + post / 2 + i * pitch, 0, 0, post, post, H);
+  if (metal) {
+    for (const z of [H - 60, 140]) B.box('Rail', 'Rails', mat, 0, 0, z, L, 30, 40);
+    const n = Math.floor((L - post) / 140); for (let i = 1; i < n; i++) B.box('Bar', 'Bars', mat, -L / 2 + post / 2 + i * (L - post) / n, 0, 160, 18, 18, H - 200);
+  } else {
+    for (const z of [180, H - 260]) B.box('Rail', 'Rails', mat, 0, post / 2 + 10, z, L, 30, 60);
+    const n = Math.floor(L / 100); for (let i = 0; i < n; i++) B.box('Board', 'Boards', mat, -L / 2 + (i + 0.5) * L / n, -post / 2 - 6, 30, L / n - 8, 18, H - 30);
+  }
+  return B.parts;
+}
+function buildRailing(p) {
+  const B = makeBuilder(), L = p.L, H = p.H, glass = p.style === 'glass', n = Math.max(1, Math.round(L / 1200)), pitch = L / n;
+  for (let i = 0; i <= n; i++) B.box('Post', 'Posts', 'steel', -L / 2 + 25 + i * (L - 50) / n, 0, 0, 50, 50, H);
+  B.box('Handrail', 'Rails', 'steel', 0, 0, H - 50, L, 60, 50, { r: 6 });
+  if (glass) B.box('Glass', 'Panels', 'clearglass', 0, 0, 120, L - 50, 16, H - 190);
+  else { B.box('Bottom rail', 'Rails', 'steel', 0, 0, 100, L, 30, 30); const k = Math.floor((L - 50) / 120); for (let i = 1; i < k; i++) B.box('Baluster', 'Bars', 'steel', -L / 2 + 25 + i * (L - 50) / k, 0, 130, 16, 16, H - 190); }
+  void pitch; return B.parts;
+}
+function buildPlant(p, tree) {
+  const B = makeBuilder(), C = p.crown, H = p.H;
+  if (!tree) {
+    const potR = Math.min(Math.max(C * 0.3, 90), 220), potH = Math.min(H * 0.3, 320);
+    B.cyl('Pot', 'Pot', 'pot', 0, 0, 0, potR, potH, { taper: 0.72 });
+    B.cyl('Stem', 'Plant', 'trunk', 0, 0, potH, 14, H * 0.4);
+    const fy = potH + H * 0.2, fh = H - fy; B.cyl('Foliage low', 'Plant', 'leafDk', 0, 0, fy, C / 2, fh * 0.55, { seg: 20, taper: 0.7 }); B.cyl('Foliage top', 'Plant', 'leaf', 0, 0, fy + fh * 0.45, C * 0.36, fh * 0.55, { seg: 20, taper: 0.55 });
+  } else {
+    const tr = Math.max(80, C * 0.03), th = H * 0.4; B.cyl('Trunk', 'Tree', 'trunk', 0, 0, 0, tr, th, { taper: 1.25 });
+    const ch = H - th * 0.8; B.cyl('Crown low', 'Tree', 'leafDk', 0, 0, th * 0.8, C / 2, ch * 0.6, { seg: 28, taper: 0.75 }); B.cyl('Crown top', 'Tree', 'leaf', 0, 0, th * 0.8 + ch * 0.4, C * 0.34, ch * 0.6, { seg: 28, taper: 0.5 });
+  }
+  return B.parts;
+}
+// wall decor hangs at `elev` above the floor; a 1 mm anchor on the floor keeps the piece's base at the floor level while the frame is up the wall
+function buildHung(p, mirror) {
+  const B = makeBuilder(), W = p.W, H = p.H, z = p.elev, t = 30, fw = Math.min(30, W / 6, H / 6), round = mirror && p.shape === 'round';
+  B.box('Anchor', 'Hang', 'clearglass', 0, 0, 0, 1, 1, 1);
+  if (round) { B.cyl('Mirror frame', 'Frame', 'wood', 0, 0, 0, 1, 1); }
+  if (round) { B.parts.pop(); B.parts.push({ kind: 'cyl', axis: 'y', name: 'Frame', layer: 'Frame', mat: 'wood', cx: 0, cy: 0, cz: z + W / 2, r: W / 2, ry: W / 2, taper: 1, h: t, seg: 40 }, { kind: 'cyl', axis: 'y', name: 'Mirror', layer: 'Glass', mat: 'mirror', cx: -0 + 0, cy: -t / 2 + 2, cz: z + W / 2, r: W / 2 - fw, ry: W / 2 - fw, taper: 1, h: 6, seg: 40 }); return B.parts; }
+  B.box('Frame', 'Frame', 'wood', 0, 0, z, W, t, H, { r: 2 });
+  B.box(mirror ? 'Mirror' : 'Picture', 'Glass', mirror ? 'mirror' : 'art', 0, -t / 2 + 3, z + fw, W - 2 * fw, 6, H - 2 * fw);
+  return B.parts;
+}
+function buildShoeCabinet(p) {
+  const B = makeBuilder(), W = p.W, D = p.D, H = p.H, t = 18, n = p.doors, dw = (W - 2 * t) / n;
+  B.box('Carcass', 'Body', 'wood', 0, 0, 80, W, D, H - 80);
+  B.box('Plinth', 'Body', 'black', 0, 20, 0, W - 40, D - 60, 80);
+  for (let i = 0; i < n; i++) B.box('Door', 'Doors', 'wood', -W / 2 + t + (i + 0.5) * dw, -D / 2 - 9, 90, dw - 6, 18, H - 100, { r: 3 });
+  for (let i = 0; i < n; i++) B.box('Handle', 'Doors', 'steel', -W / 2 + t + (i + 0.5) * dw + (i % 2 ? -1 : 1) * (dw / 2 - 40), -D / 2 - 26, H * 0.5, 14, 14, 140);
+  return B.parts;
+}
+function buildCat(p) {
+  const B = makeBuilder(), s = p.size / 100;
+  if (p.pose === 'sit') { B.cyl('Body', 'Body', 'fur', 0, 0, 0, 95 * s, 230 * s, { ry: 120 * s, taper: 0.78 }); B.cyl('Head', 'Body', 'fur', 0, -30 * s, 230 * s, 62 * s, 105 * s, { ry: 58 * s }); B.box('Tail', 'Body', 'furDk', 70 * s, 100 * s, 0, 40 * s, 190 * s, 40 * s, { r: 18 * s }); for (const sx of [-1, 1]) B.box('Ear', 'Body', 'furDk', sx * 38 * s, -30 * s, 330 * s, 26 * s, 26 * s, 38 * s); }
+  else { B.box('Body', 'Body', 'fur', 0, 40 * s, 0, 190 * s, 400 * s, 130 * s, { r: 60 * s }); B.box('Head', 'Body', 'fur', 0, -200 * s, 0, 120 * s, 120 * s, 110 * s, { r: 40 * s }); B.box('Tail', 'Body', 'furDk', 85 * s, 230 * s, 0, 40 * s, 220 * s, 45 * s, { r: 18 * s }); }
+  return B.parts;
+}
+function buildDog(p) {
+  const B = makeBuilder(), L = p.L, s = L / 800;
+  if (p.pose === 'stand') { const lg = 300 * s; for (const sx of [-1, 1]) for (const sy of [-1, 1]) B.box('Leg', 'Body', 'furDk', sx * 80 * s, sy * (L / 2 - 170 * s), 0, 56 * s, 56 * s, lg);
+    B.box('Body', 'Body', 'fur', 0, 20 * s, lg, 230 * s, L * 0.72, 260 * s, { r: 60 * s }); B.box('Head', 'Body', 'fur', 0, -L / 2 + 40 * s, lg + 150 * s, 150 * s, 220 * s, 170 * s, { r: 40 * s }); B.box('Tail', 'Body', 'furDk', 0, L / 2 - 20 * s, lg + 190 * s, 40 * s, 40 * s, 200 * s, { r: 15 * s }); }
+  else { B.box('Haunch', 'Body', 'fur', 0, 120 * s, 0, 260 * s, 300 * s, 260 * s, { r: 70 * s }); B.box('Chest', 'Body', 'fur', 0, -60 * s, 0, 200 * s, 220 * s, 420 * s, { r: 60 * s }); B.box('Head', 'Body', 'fur', 0, -90 * s, 400 * s, 150 * s, 200 * s, 170 * s, { r: 40 * s }); B.box('Tail', 'Body', 'furDk', 0, 300 * s, 0, 40 * s, 120 * s, 40 * s, { r: 15 * s }); }
+  return B.parts;
+}
+function buildWheelchair(p) {   // 800 × 1200 mm on the floor; the rider is seated, front towards -y
+  const B = makeBuilder(), W = 800, D = 1200, H = p.H, wr = 300, hr = 105, neckTop = H - 2 * hr, torsoTop = neckTop - 60;
+  B.box('Seat', 'Chair', 'steel', 0, 0, 480, 460, 440, 40, { r: 8 }); B.box('Backrest', 'Chair', 'steel', 0, 230, 500, 460, 30, 420, { r: 8 });
+  for (const sx of [-1, 1]) {
+    B.prism('Wheel', 'Wheels', 'tyre', 'yz', circ(wr, 24).map(([a, b]) => [100 + a, wr + b]), sx > 0 ? W / 2 - 50 : -W / 2, 50);
+    B.cyl('Caster', 'Wheels', 'tyre', sx * 200, -D / 2 + 110, 0, 70, 130);
+    B.tube('Push bar', 'Chair', 'steel', [[sx * 230, 230, 880], [sx * 230, D / 2 - 12, 880]], 12);
+  }
+  B.box('Footrest', 'Chair', 'steel', 0, -D / 2 + 80, 150, 300, 160, 30);
+  B.box('Thighs', 'Body', 'personDk', 0, -120, 520, 300, 520, 130, { r: 40 });
+  for (const sx of [-1, 1]) B.box('Shin', 'Body', 'personDk', sx * 90, -D / 2 + 150, 190, 110, 110, 470);
+  B.cyl('Torso', 'Body', 'person', 0, 170, 650, 221, Math.max(150, torsoTop - 650), { ry: 127, taper: 0.9 });
+  B.cyl('Neck', 'Body', 'personDk', 0, 150, torsoTop, 45, neckTop - torsoTop);
+  B.cyl('Head', 'Body', 'person', 0, 150, neckTop, hr, 2 * hr, { seg: 24 });
+  for (const sx of [-1, 1]) B.box('Arm', 'Body', 'personDk', sx * 235, 100, 600, 60, 340, 80);
+  return B.parts;
+}
+
+const ACC = [
+  { id: 'balcony_rail', cat: 'Outdoor & Fence', group: 'Outdoor & Fence', kw: 'fence railing balcony guard outdoor', name: 'Balcony railing', en: 'Balcony railing', colors: [],
+    params: [{ k: 'L', label: 'Length', min: 1000, max: 6000, step: 100, def: 2400 }, { k: 'H', label: 'Height', min: 900, max: 1200, step: 10, def: 1100 }, { k: 'style', label: 'Infill', type: 'select', options: [['bars', 'Bars'], ['glass', 'Glass']], def: 'bars' }], build: buildRailing },
+  { id: 'fence', cat: 'Outdoor & Fence', group: 'Outdoor & Fence', kw: 'fence backyard garden boundary outdoor', name: 'Backyard fence', en: 'Backyard fence', colors: ['wood'],
+    params: [{ k: 'L', label: 'Length', min: 2000, max: 20000, step: 100, def: 6000 }, { k: 'H', label: 'Height', min: 1200, max: 1800, step: 50, def: 1500 }, { k: 'mat', label: 'Material', type: 'select', options: [['wood', 'Wood'], ['metal', 'Metal']], def: 'wood' }], build: buildFence },
+  personModel('person_adult', 'Adult', 'people person human scale figure', 1700, 1500, 1900),
+  personModel('person_elderly', 'Elderly', 'people person human elderly older scale figure', 1650, 1450, 1850, { stoop: 0.03 }),
+  personModel('person_child', 'Child', 'people person human kid scale figure', 1100, 900, 1300, { headR: 0.08 }),
+  { id: 'person_wheelchair', cat: 'People', group: 'People', kw: 'people person human wheelchair accessible scale figure', name: 'Wheelchair user', en: 'Wheelchair user', colors: [],
+    params: [{ k: 'H', label: 'Seated height', min: 1050, max: 1450, step: 10, def: 1250 }], build: buildWheelchair },
+  { id: 'cat', cat: 'Pets', group: 'Pets', kw: 'pet animal cat', name: 'Cat', en: 'Cat', colors: [],
+    params: [{ k: 'pose', label: 'Pose', type: 'select', options: [['sit', 'Sitting'], ['lie', 'Lying']], def: 'sit' }, { k: 'size', label: 'Size %', min: 80, max: 130, step: 5, def: 100 }], build: buildCat },
+  { id: 'dog', cat: 'Pets', group: 'Pets', kw: 'pet animal dog', name: 'Dog', en: 'Dog', colors: [],
+    params: [{ k: 'pose', label: 'Pose', type: 'select', options: [['stand', 'Standing'], ['sit', 'Sitting']], def: 'stand' }, { k: 'L', label: 'Body length', min: 450, max: 1100, step: 10, def: 800 }], build: buildDog },
+  { id: 'car', cat: 'Vehicles', group: 'Vehicles', kw: 'car vehicle parking auto sedan suv van', name: 'Car', en: 'Car', colors: [],
+    presets: [['Sedan 4.6 × 1.8 m', { L: 4600, W: 1800, H: 1450, body: 'sedan' }], ['SUV 4.9 × 1.9 m', { L: 4900, W: 1900, H: 1700, body: 'suv' }], ['Van 5.3 × 2.0 m', { L: 5300, W: 2000, H: 1950, body: 'van' }]],
+    params: [{ k: 'body', label: 'Body', type: 'select', options: [['sedan', 'Sedan'], ['suv', 'SUV'], ['van', 'Van']], def: 'sedan' }, { k: 'L', label: 'Length', min: 3400, max: 6200, step: 50, def: 4600 }, { k: 'W', label: 'Width', min: 1500, max: 2300, step: 10, def: 1800 }, { k: 'H', label: 'Height', min: 1250, max: 2200, step: 10, def: 1450 }], build: buildCar },
+  { id: 'bicycle', cat: 'Vehicles', group: 'Vehicles', kw: 'bicycle bike cycle vehicle parking', name: 'Bicycle', en: 'Bicycle', colors: [],
+    params: [{ k: 'L', label: 'Length', min: 1500, max: 2000, step: 10, def: 1800 }, { k: 'W', label: 'Handlebar width', min: 400, max: 700, step: 10, def: 600 }, { k: 'saddle', label: 'Saddle height', min: 700, max: 1050, step: 10, def: 900 }], build: buildBike },
+  { id: 'picture', cat: 'Decor', group: 'Decor', kw: 'wall decor picture frame art hanging', name: 'Picture frame', en: 'Picture frame', colors: ['wood'],
+    params: [{ k: 'W', label: 'Width', min: 300, max: 1500, step: 10, def: 600 }, { k: 'H', label: 'Height', min: 300, max: 1000, step: 10, def: 450 }, { k: 'elev', label: 'Hung at (bottom)', min: 600, max: 1800, step: 10, def: 1200 }], build: (p) => buildHung(p, false) },
+  { id: 'mirror', cat: 'Decor', group: 'Decor', kw: 'wall decor mirror hanging', name: 'Mirror', en: 'Mirror', colors: ['wood'],
+    params: [{ k: 'shape', label: 'Shape', type: 'select', options: [['rect', 'Rectangle'], ['round', 'Round']], def: 'rect' }, { k: 'W', label: 'Width', min: 400, max: 1200, step: 10, def: 600 }, { k: 'H', label: 'Height', min: 400, max: 2000, step: 10, def: 1500, if: (p) => p.shape === 'rect' }, { k: 'elev', label: 'Hung at (bottom)', min: 0, max: 1500, step: 10, def: 300 }], build: (p) => buildHung(p, true) },
+  { id: 'plant', cat: 'Plants', group: 'Plants', kw: 'plant potted indoor greenery', name: 'Potted plant', en: 'Potted plant', colors: [],
+    params: [{ k: 'crown', label: 'Crown width', min: 300, max: 800, step: 10, def: 500 }, { k: 'H', label: 'Height', min: 400, max: 1600, step: 10, def: 900 }], build: (p) => buildPlant(p, false) },
+  { id: 'tree', cat: 'Plants', group: 'Plants', kw: 'plant tree outdoor landscape', name: 'Tree', en: 'Tree', colors: [],
+    params: [{ k: 'crown', label: 'Crown width', min: 2000, max: 6000, step: 100, def: 4000 }, { k: 'H', label: 'Height', min: 3000, max: 8000, step: 100, def: 5500 }], build: (p) => buildPlant(p, true) },
+  { id: 'shoecab', cat: 'Entry', group: 'Entry', kw: 'entry shoe cabinet hall storage', name: 'Shoe cabinet', en: 'Shoe cabinet', colors: ['wood'],
+    params: [{ k: 'W', label: 'Width', min: 800, max: 1200, step: 10, def: 1000 }, { k: 'D', label: 'Depth', min: 280, max: 400, step: 10, def: 350 }, { k: 'H', label: 'Height', min: 800, max: 1300, step: 10, def: 1000 }, { k: 'doors', label: 'Doors', type: 'int', min: 1, max: 4, def: 2 }], build: buildShoeCabinet },
+];
+MODELS.push(...ACC);
+
 const ORDER = ['bed', 'nightstand', 'wardrobe', 'dresser', 'sofa', 'sectional', 'armchair', 'coffee', 'sidetable', 'tvstand', 'bookshelf',
-  'dining', 'chair', 'desk', 'office', 'kitchen', 'island', 'fridge', 'range', 'washer', 'toilet', 'vanity', 'bathtub', 'shower'];
+  'dining', 'chair', 'desk', 'office', 'kitchen', 'island', 'fridge', 'range', 'washer', 'toilet', 'vanity', 'bathtub', 'shower',
+  'balcony_rail', 'fence', 'person_adult', 'person_elderly', 'person_child', 'person_wheelchair', 'cat', 'dog', 'car', 'bicycle', 'picture', 'mirror', 'plant', 'tree', 'shoecab'];
 MODELS.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
 
+// Clearance: the free space (metres) a piece wants beyond its footprint. A planning hint shown as a dashed outline in Workbench, never a rule (it blocks and snaps nothing).
+// Furniture only: fences, people, pets, vehicles, wall decor and plants carry none. Change a value here and every placed piece follows.
+export const CLEARANCE_DEFAULT = { front: 0.6, back: 0.3, left: 0.3, right: 0.3 };
+const CLEARANCE = { bed: { front: 0.9 }, sofa: { front: 0.8 }, chair: { back: 0.6 }, fridge: { front: 0.9 }, wardrobe: { front: 0.6 }, toilet: { front: 0.75, left: 0.4, right: 0.4 } };
+const NO_CLEARANCE = new Set(['balcony_rail', 'fence', 'person_adult', 'person_elderly', 'person_child', 'person_wheelchair', 'cat', 'dog', 'car', 'bicycle', 'picture', 'mirror', 'plant', 'tree']);
+for (const m of MODELS) if (!NO_CLEARANCE.has(m.id)) m.clearance = Object.assign({}, CLEARANCE_DEFAULT, CLEARANCE[m.id]);
+
 export const CATS = ['卧室', '客厅', '餐厅与书房', '厨房与家电', '卫浴'];
+// the Furnish tab groups pieces by `group` (English, in this order); a new kind of piece only needs a group name here and in its entry
+export const GROUPS = ['Bedroom', 'Living', 'Dining & Office', 'Kitchen', 'Bathroom', 'Outdoor & Fence', 'People', 'Pets', 'Vehicles', 'Decor', 'Plants', 'Entry'];
 
 export function defaults(model) {
   const v = {};
