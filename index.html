@@ -3606,47 +3606,6 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
     return h.replace('<span class="qc-badge">Verified</span>', ""); };
 })();
 
-/* v134 · home: "How plotcloud fits together" — Practice (default, the design flow) or Competition (the old four, reordered) */
-(function () {
-  const st = document.createElement("style");
-  st.textContent = `.jsub{margin:-10px 0 16px;color:var(--muted);font-size:15px}
-  .jtabs{margin:0 0 6px!important}
-  .jcols{display:grid;grid-template-columns:1.15fr 1fr;gap:0;margin-top:6px} .jcol{min-width:0;padding:0 28px} .jcol:first-child{padding-left:0} .jcol+.jcol{border-left:1px solid var(--hair);padding-right:0}
-  .jcol-h{margin:8px 0 0;font:700 13px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)} .jcol-practice .jcol-h{color:#111}
-  .jcols .hmap{margin-top:10px} .jcols .hmap a{padding:16px 12px 14px} .jcols .hmap h3{font-size:17px} .jcols .hmap p{font-size:13px} .jcols .hmap .jcta{font-size:13px}
-  @media (max-width:1100px){.jcols{grid-template-columns:1fr} .jcol{padding:0} .jcol+.jcol{border-left:0;border-top:1px solid var(--hair);margin-top:28px;padding-top:20px}}
-  .hmap.jmap .no{color:#888}
-  .hmap.jmap a:hover h3{color:#D8402A}
-  .hmap.jmap .jcta{font-weight:700;font-size:14px;color:#111;text-decoration:underline;text-underline-offset:3px}
-  .hmap.jmap a:hover .jcta{color:#D8402A}
-  .hmap.jmap .jloop{justify-self:start;font:700 12px var(--sans);color:#D8402A;border:1px solid #D8402A;border-radius:999px;padding:1px 9px;margin-top:2px}
-`;
-  document.head.appendChild(st);
-  const counts = () => ({ sets: RES.filter((r) => r[9] !== "draft").length, scenes: typeof SHOW !== "undefined" ? SHOW.length : 0, tools: TSECTIONS.reduce((a, x) => a + x[4].length, 0) });
-  // every step goes to a real page; the status lines use the site's own "free / free in the beta" wording
-  window.JOURNEYS = {
-    practice: [
-      { no: "01 · " + LABELS.site, go: "site", h: "Pick your site", p: "Search an address, set the extent, mark your boundary and drop the anchor.", fact: () => "free · your boundary file", cta: "Open " + LABELS.site },
-      { no: "02 · Site analysis", go: "tool/sunhours", h: "Read it before you draw", p: "Sun hours and wind flow screened on your site plan — with what each check can and can't say.", fact: () => "free · screening only", cta: "Run the checks" },
-      { no: "03 · " + LABELS.studio, go: "studio", h: "Design inside the boundary", p: "Your site arrives with its surroundings. Walls, rooms, stairs — drawn in the browser.", fact: () => "free in the beta", cta: "Enter " + LABELS.studio },
-      { no: "04 · Simulation", go: "tools", h: "Improve, then loop back", p: "Interior daylight, ventilation and movement screens. Fix the weak spots, re-check.", fact: () => "free", cta: "Simulate", loop: "↺ loops back to 03" }],
-    competition: [
-      { no: "01 · Showroom", go: "showroom", h: "See them used", p: "Explore competition scenes and the resources behind them, listed under every scene.", fact: (c) => `free · ${c.scenes} scene${c.scenes === 1 ? "" : "s"}`, cta: "Browse Showroom" },
-      { no: "02 · Resources", go: "library", h: "Get the files", p: "CAD, Rhino, Revit and Grasshopper sets behind every scene — verified, ready to drop in.", fact: (c) => `free · ${c.sets} sets`, cta: "Browse Resources" },
-      { no: "03 · " + LABELS.studio, go: "studio", h: "Build the model", p: "The one place to draw: walls, rooms, stairs, furniture.", fact: () => "free in the beta", cta: "Enter " + LABELS.studio },
-      { no: "04 · Tools", go: "tools", h: "Submit with confidence", p: "Board composer, sheet sizes, daylight checks — the night-before kit.", fact: (c) => `free · ${c.tools} tools`, cta: "Open Tools" }] };
-  window.renderJourney = function (key) { const steps = JOURNEYS[key] || JOURNEYS.practice, c = counts();
-    return steps.map((x) => `<a data-go="${x.go}"><span class="no">${x.no}</span><h3>${x.h}</h3><p>${x.p}</p><span class="fact">${x.fact(c)}</span>${x.loop ? `<span class="jloop">${x.loop}</span>` : ""}<span class="jcta">${x.cta} →</span></a>`).join(""); };
-  // both journeys at once, side by side (Practice first and a little wider); they stack on narrow screens
-  const block = () => `<section class="wrap hsec" aria-labelledby="hmapT"><div class="hhead"><h2 id="hmapT">how plotcloud fits together.</h2></div>
-    <p class="jsub">One workflow, four moves — pick your journey.</p>
-    <div class="jcols">${[["practice", "Practice"], ["competition", "Competition"]].map(([k, l]) => `<div class="jcol jcol-${k}"><h3 class="jcol-h">${l}</h3><nav class="hmap jmap" aria-label="${l} journey">${renderJourney(k)}</nav></div>`).join("")}</div></section>`;
-  const MAP = /<section class="wrap hsec" aria-labelledby="hmapT">[\s\S]*?<\/nav><\/section>/;
-  const _h = P.home; P.home = function () { let h = _h.apply(this, arguments);
-    // "How plotcloud fits together" sits directly above the deadline section
-    h = h.replace(MAP, ""); const k = h.indexOf('<section class="wrap hsec dlsec"'); return k < 0 ? h.replace(/<\/section>/, (m) => m + block()) : h.slice(0, k) + block() + h.slice(k); };
-})();
-
 /* v135 · tools page: no Free / Uses AI / Canada tags or filters; Analysis in two groups */
 (function () {
   const DROP = /^free$|uses? ai|canada/i;
@@ -3693,9 +3652,8 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
   document.head.appendChild(st);
   const guides = () => { const J = window.JOURNEYS || {}, c = { sets: RES.filter((r) => r[9] !== "draft").length, scenes: typeof SHOW !== "undefined" ? SHOW.length : 0, tools: TSECTIONS.reduce((a, x) => a + x[4].length, 0) };
     const card = (x) => `<a class="lg-card" data-go="${x.go}"><span class="no">${x.no}</span><h3>${x.h}</h3><p>${x.p}</p><span class="go">${x.cta} →</span></a>`;
-    return `<p class="lede" style="margin:0 0 6px">Two ways through plotcloud, step by step. Each step opens the real page.</p>
-    <div class="lhub-sub">Practice · draw, check, improve</div><div class="lg-grid">${(J.practice || []).map(card).join("")}</div>
-    <div class="lhub-sub">Competition · find, build, submit</div><div class="lg-grid">${(J.competition || []).map(card).join("")}</div>`; };
+    return `<p class="lede" style="margin:0 0 6px">One line through plotcloud, step by step. Each step opens the real page.</p>
+    <div class="lg-grid">${(J.main || []).map(card).join("")}</div>`; };
   const body = (tab) => tab === "support" ? `<div id="support">${oldSupport()}</div>` : tab === "news" ? oldLearn().replace('<section class="wrap head" style="padding-bottom:100px">', '<section class="wrap" style="padding:0 0 100px">').replace(/<div class="label">Learn<\/div><h1>news from the studio.<\/h1>/, '<h2 style="margin:0 0 8px">news from the studio.</h2>') : `<section class="wrap" style="padding:0 0 100px">${guides()}</section>`;
   P.learn = () => { const tab = window.__learnTab, tabs = [["guides", "Guides"], ["news", "News & events"], ["support", "1:1 Support"]];
     return `<section class="wrap head" style="padding-bottom:10px"><div class="label">Learn</div><h1>learn.</h1><div class="lhub-tabs" role="group" aria-label="Learn sections">${tabs.map(([k, l]) => `<button type="button" data-learn-tab="${k}" class="${tab === k ? "on" : ""}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div></section>${tab === "support" ? body(tab) : `<div class="wrap">${body(tab)}</div>`}`; };
@@ -3765,8 +3723,47 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   const _t = tSections; tSections = function () { const h = _t.apply(this, arguments), a = h.indexOf('<div class="agrp" id="agrp-site">'), b = h.indexOf('<div class="agrp" id="agrp-interior">'); if (a < 0 || b < 0) return h; return h.slice(0, a) + html() + h.slice(b); };
   const st = document.createElement("style"); st.textContent = `.tc-vis.atl{display:grid;place-items:center;background:#fff;aspect-ratio:5/3;overflow:hidden}.tc-vis.atl svg{width:100%;height:100%;display:block}`; document.head.appendChild(st); }
 
+/* v140 · home: one main line of six steps replaces the Practice / Competition journeys */
+(function () {
+  const STEPS = [
+    { n: 1, name: "Analysis diagrams", go: "tool/atlas", p: "Read the place: streets, land use, walking and more.", cta: "Open the atlas" },
+    { n: 2, name: LABELS.site, go: "site", p: "Pick the site, set its boundary and drop the anchor.", cta: "Open " + LABELS.site },
+    { n: 3, name: LABELS.studio, go: "studio", p: "Draw the plan inside the boundary, with its surroundings.", cta: "Open " + LABELS.studio },
+    { n: 4, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
+    { n: 5, name: LABELS.studio, go: "studio", tag: "improve", p: "Fix the weak spots and keep every version.", cta: "Back to " + LABELS.studio },
+    { n: 6, name: "Boards", go: "tool/atlas?d=boards", p: "Lay the drawings out on one board and export it.", cta: "Make a board" }];
+  window.JOURNEYS = { main: STEPS.map((x) => ({ no: String(x.n).padStart(2, "0") + " · " + x.name, go: x.go, h: x.name, p: x.p, cta: x.cta })) };
+  const st = document.createElement("style");
+  st.textContent = `.hline{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;counter-reset:s}
+  .hline li{position:relative;padding:0 14px 0 0;min-width:0}
+  .hline li+li{padding-left:0}
+  .hline a{display:grid;gap:8px;align-content:start;text-decoration:none;color:inherit;cursor:pointer;padding:0 8px 4px 0;height:100%}
+  .hline .dot{position:relative;display:flex;align-items:center;height:34px}
+  .hline .dot b{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--ink,#1C1B1A);display:grid;place-items:center;font:700 14px var(--mono);background:#fff;flex:none;position:relative;z-index:1}
+  .hline .dot::after{content:"";position:absolute;left:34px;right:-2px;top:50%;border-top:1.5px solid var(--ink,#1C1B1A);transform:translateY(-.75px)}
+  .hline .dot i{position:absolute;right:-2px;top:50%;width:8px;height:8px;border-top:1.5px solid var(--ink,#1C1B1A);border-right:1.5px solid var(--ink,#1C1B1A);transform:translateY(-50%) rotate(45deg);z-index:1;margin-right:3px}
+  .hline li:last-child .dot::after,.hline li:last-child .dot i{display:none}
+  .hline h3{margin:2px 0 0;font-size:17px;letter-spacing:-.01em}.hline p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.4}
+  .hline .tg{justify-self:start;font:600 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#D8402A;border:1px solid #D8402A;border-radius:999px;padding:1px 8px}
+  .hline .jcta{font-weight:700;font-size:13.5px;color:#111;text-decoration:underline;text-underline-offset:3px;margin-top:2px}
+  .hline a:hover h3,.hline a:hover .jcta{color:#D8402A}.hline a:hover .dot b{background:#1C1B1A;color:#fff}
+  .hline li[data-t="improve"] .dot b{border-style:dashed}
+  .hall{margin:20px 0 0;color:var(--muted);font-size:14px}.hall a{color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.hall a:hover{color:#111}
+  @media (max-width:1100px){.hline{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:26px}.hline li:nth-child(3) .dot::after,.hline li:nth-child(3) .dot i{display:none}}
+  @media (max-width:640px){.hline{grid-template-columns:1fr;row-gap:0}.hline li{padding:0}.hline a{grid-template-columns:34px 1fr;column-gap:14px;row-gap:2px;padding:0 0 22px}
+   .hline .dot{grid-row:1/5;align-items:flex-start;height:auto;align-self:stretch}.hline .dot::after{left:16.5px;right:auto;top:34px;bottom:-22px;border-top:0;border-left:1.5px solid var(--ink,#1C1B1A);transform:none}.hline .dot i{display:none}
+   .hline li:nth-child(3) .dot::after{display:block}.hline li:last-child .dot::after{display:none}.hline h3{margin-top:5px}}`;
+  document.head.appendChild(st);
+  const block = () => `<section class="wrap hsec" aria-labelledby="hmapT"><div class="hhead"><h2 id="hmapT">how plotcloud fits together.</h2></div>
+    <p class="jsub">One line, six steps: read the place, choose the site, draw, check, improve, present.</p>
+    <nav aria-label="The six steps"><ol class="hline">${STEPS.map((x) => `<li data-t="${x.tag || ""}"><a data-go="${x.go}"${x.anchor ? ` data-anchor="${x.anchor}"` : ""}><span class="dot"><b>${x.n}</b><i></i></span><h3>${x.name}</h3>${x.tag ? `<span class="tg">${x.tag}</span>` : ""}<p>${x.p}</p><span class="jcta">${x.cta} →</span></a></li>`).join("")}</ol></nav>
+    <p class="hall">Showroom, Library and Learn are available at every step: <a data-go="showroom">Showroom</a> · <a data-go="library">Library</a> · <a data-go="learn">Learn</a>.</p></section>`;
+  const MAP = /<section class="wrap hsec" aria-labelledby="hmapT">[\s\S]*?<\/section>/;
+  const _h = P.home; P.home = function () { let h = _h.apply(this, arguments); h = h.replace(MAP, ""); const k = h.indexOf('<section class="wrap hsec dlsec"'); return k < 0 ? h.replace(/<\/section>/, (m) => m + block()) : h.slice(0, k) + block() + h.slice(k); };
+})();
+
 // the page may have been drawn once before the blocks above took over: draw the tools pages again
-if (/^#\/?(tools|tool\/)/.test(location.hash) && !window.__reRouted) { window.__reRouted = 1; try { route(); } catch (e) {} }
+if ((!location.hash || /^#\/?(home|tools|tool\/)?($|\?)|^#\/?(tools|tool\/)/.test(location.hash)) && !window.__reRouted) { window.__reRouted = 1; try { route(); } catch (e) {} }
 </script>
 </body>
 </html>
