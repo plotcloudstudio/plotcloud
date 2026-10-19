@@ -681,7 +681,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <footer class="site"><div class="wrap">
   <div class="fg">
     <div><h5>Resources</h5><a data-go="library">All resources</a><a data-go="showroom">Showroom</a><a data-go="requests">Request a resource</a></div>
-    <div><h5>PlotCloud</h5><a data-go="studio">Plan Studio</a><a data-go="tools">Tools</a><a data-go="pricing">Pricing</a><a data-go="support">Support</a><a data-go="learn">Learn</a></div>
+    <div><h5>PlotCloud</h5><a data-go="studio">Plan Studio</a><a data-go="tools">Tools</a><a data-go="pricing">Pricing</a><a data-go="learn">Learn</a></div>
     <div><h5>Legal</h5><a>Terms</a><a>Privacy</a><a href="mailto:plotcloudstudio@gmail.com">Contact</a></div>
     <div><h5>Contact</h5><a href="mailto:plotcloudstudio@gmail.com">plotcloudstudio@gmail.com</a></div>
   </div>
@@ -1895,7 +1895,7 @@ function tidy(root){root.querySelectorAll("h1,h2,h3").forEach(h=>{const w=docume
  nodes.forEach(n=>{n.nodeValue=n.nodeValue.replace(/\bbc\b/g,"BC").replace(/\bleed\b/g,"LEED").replace(/\bontario\b/g,"Ontario").replace(/\bcanada\b/g,"Canada").replace(/! ([a-z])/g,(m,c)=>"! "+c.toUpperCase())});
  const last=[...nodes].reverse().find(n=>n.nodeValue.trim());if(last&&/[^.]\.\s*$/.test(last.nodeValue)&&!/\.\s+\S/.test(h.textContent.trim().slice(0,-1)))last.nodeValue=last.nodeValue.replace(/\.\s*$/,"")});
  root.querySelectorAll(".cat span").forEach(s=>s.textContent=s.textContent.replace(/^1 sets$/,"1 set"))}
-function route(){const h=(location.hash.replace(/^#\/?/,"")||"home").split("?")[0];const [pg,...rest]=h.split("/");const arg=rest.join("/");
+function route(){let h=(location.hash.replace(/^#\/?/,"")||"home").split("?")[0];if(h==="support"||h==="learn#support"){window.__learnTab="support";window.__fromSupport=true;h="learn";try{history.replaceState(null,"","#/learn")}catch(e){}route._anchor=route._anchor||"support"}else if(h.startsWith("learn#")){h="learn"}if(h==="learn"){if(route._prev!=="learn"&&!window.__fromSupport)window.__learnTab="guides";window.__fromSupport=false}route._prev=h;const [pg,...rest]=h.split("/");const arg=rest.join("/");
  const fn=pg==="res"?()=>P.res(arg):pg==="tool"?()=>P.tool(arg):pg==="post"?()=>P.post(arg):(P[pg]||P.home);
  app.innerHTML=fn(); tidy(app); chrome(h); $("#mpanel").classList.remove("open"); bind(); if(!route._anchor) window.scrollTo(0,0); else {document.getElementById(route._anchor)?.scrollIntoView();route._anchor=null}}
 function go(p,anchor){route._anchor=anchor||null; if(location.hash==="#/"+p) route(); else location.hash="#/"+p}
@@ -3469,7 +3469,7 @@ TMETHOD.modeler=["Parametric 3D furniture from the model generator; walls, windo
 
 // === 2026-10-16: one product map — Home, Resources, Showroom, Support, Plan Studio, Tools, Pricing ===
 // Donate is retired (old links land on Pricing); Requests and Learn stay, reachable from the footer and the home page.
-{ NAV.length = 0; NAV.push(["home", "Home"], ["tools", "Tools"], ["library", "Resources"], ["showroom", "Showroom"], ["support", "Support"], ["pricing", "Pricing"]);
+{ NAV.length = 0; NAV.push(["home", "Home"], ["tools", "Tools"], ["library", "Resources"], ["showroom", "Showroom"], ["learn", "Learn"], ["pricing", "Pricing"]);
   const back = (to) => { try { history.replaceState(null, "", "#/" + to); } catch (e) {} };
   P.donate = () => { back("pricing"); setTimeout(() => chrome("pricing"), 0); return P.pricing(); };
   P.resources = () => { back("library"); setTimeout(() => chrome("library"), 0); return P.library(); };
@@ -3681,6 +3681,25 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
   .agrp{margin:0 0 40px;scroll-margin-top:calc(var(--hdrH,84px) + var(--tbarH,64px) + 8px)} .agrp:last-child{margin-bottom:0} .agrp-h{position:sticky;top:calc(var(--hdrH,84px) + var(--tbarH,64px));z-index:20;margin:0;padding:12px 0 6px;background:var(--paper);font-size:20px;font-weight:700;letter-spacing:-.01em;border-bottom:1px solid var(--line,#e6e3dc)} .agrp-h span{opacity:.55;font-weight:500;margin-left:4px}
   .asub-l{margin:10px 0 20px;color:var(--muted);font-size:14.5px}`;
   document.head.appendChild(st);
+})();
+
+/* v136 · Learn hub: Guides | News & events | 1:1 Support. #/support lands on the third section (route() above), nothing of the Support page was dropped */
+(function () {
+  const oldLearn = P.learn, oldSupport = P.support; window.__learnTab = window.__learnTab || "guides";
+  const st = document.createElement("style");
+  st.textContent = `.lhub-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 28px}.lhub-tabs button{border:1px solid var(--hair);background:#fff;border-radius:999px;padding:8px 18px;font:600 14px var(--sans);cursor:pointer;color:var(--ink)}.lhub-tabs button.on{background:#1C1B1A;color:#fff;border-color:#1C1B1A}
+  .lg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}@media (max-width:760px){.lg-grid{grid-template-columns:1fr}}.lg-card{display:grid;gap:6px;padding:22px;border:1px solid var(--hair);border-radius:14px;background:#fff;text-decoration:none;color:inherit;cursor:pointer}.lg-card:hover h3{text-decoration:underline}.lg-card .no{font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.lg-card h3{margin:0;font-size:20px}.lg-card p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.45}.lg-card .go{font-weight:700;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+  .lhub-sub{margin:26px 0 12px;font:700 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}`;
+  document.head.appendChild(st);
+  const guides = () => { const J = window.JOURNEYS || {}, c = { sets: RES.filter((r) => r[9] !== "draft").length, scenes: typeof SHOW !== "undefined" ? SHOW.length : 0, tools: TSECTIONS.reduce((a, x) => a + x[4].length, 0) };
+    const card = (x) => `<a class="lg-card" data-go="${x.go}"><span class="no">${x.no}</span><h3>${x.h}</h3><p>${x.p}</p><span class="go">${x.cta} →</span></a>`;
+    return `<p class="lede" style="margin:0 0 6px">Two ways through plotcloud, step by step. Each step opens the real page.</p>
+    <div class="lhub-sub">Practice · draw, check, improve</div><div class="lg-grid">${(J.practice || []).map(card).join("")}</div>
+    <div class="lhub-sub">Competition · find, build, submit</div><div class="lg-grid">${(J.competition || []).map(card).join("")}</div>`; };
+  const body = (tab) => tab === "support" ? `<div id="support">${oldSupport()}</div>` : tab === "news" ? oldLearn().replace('<section class="wrap head" style="padding-bottom:100px">', '<section class="wrap" style="padding:0 0 100px">').replace(/<div class="label">Learn<\/div><h1>news from the studio.<\/h1>/, '<h2 style="margin:0 0 8px">news from the studio.</h2>') : `<section class="wrap" style="padding:0 0 100px">${guides()}</section>`;
+  P.learn = () => { const tab = window.__learnTab, tabs = [["guides", "Guides"], ["news", "News & events"], ["support", "1:1 Support"]];
+    return `<section class="wrap head" style="padding-bottom:10px"><div class="label">Learn</div><h1>learn.</h1><div class="lhub-tabs" role="group" aria-label="Learn sections">${tabs.map(([k, l]) => `<button type="button" data-learn-tab="${k}" class="${tab === k ? "on" : ""}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div></section>${tab === "support" ? body(tab) : `<div class="wrap">${body(tab)}</div>`}`; };
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-learn-tab]"); if (!b) return; window.__learnTab = b.dataset.learnTab; route(); });
 })();
 
 route();
