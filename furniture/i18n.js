@@ -23,7 +23,7 @@ const EN = {
   '水箱宽': 'Tank width', '台盆数': 'Basins', '镜子': 'Mirror', '龙头': 'Faucet',
   '24 寸': '24″', '27 寸': '27″', '32 寸': '32″', '55 寸': '55″', '65 寸': '65″', '75 寸': '75″',
   'Twin 单人': 'Twin', '单人': '1 seat', '双人': '2 seats', '三人': '3 seats', '四人': '4 seats',
-  // colours
+  // colors
   '燕麦': 'Oatmeal', '石墨灰': 'Graphite', '雾蓝': 'Mist blue', '橄榄绿': 'Olive', '砖红': 'Brick', '白橡': 'White oak', '胡桃': 'Walnut',
   '白色烤漆': 'White lacquer', '黑色': 'Black',
   '转角沙发': 'Sectional sofa', '扶手椅': 'Armchair', '边几': 'Side table', '斗柜': 'Dresser', '中岛 + 吧凳': 'Kitchen island', '淋浴房': 'Shower',
@@ -35,12 +35,12 @@ const EN = {
   // UI
   '家具生成器': 'Furniture generator', '拖动旋转 · 右键平移 · 滚轮缩放': 'Drag to orbit · right-drag to pan · scroll to zoom',
   '透视': 'Perspective', '平面': 'Plan', '正立面': 'Front', '侧立面': 'Side', '尺寸标注': 'Dimensions', '适配视图': 'Fit view',
-  '外形尺寸 W × D × H（mm）': 'Overall W × D × H (mm)', '原点：底面中心 · Z 轴向上 · 网格 500 mm': 'Origin: bottom centre · Z up · grid 500 mm',
-  '参数': 'Parameters', '恢复默认': 'Reset', '材质颜色': 'Colours', '布艺': 'Fabric', '木作 / 柜体': 'Wood / casework', '导出模型': 'Export',
+  '外形尺寸 W × D × H（mm）': 'Overall W × D × H (mm)', '原点：底面中心 · Z 轴向上 · 网格 500 mm': 'Origin: bottom center · Z up · grid 500 mm',
+  '参数': 'Parameters', '恢复默认': 'Reset', '材质颜色': 'Colors', '布艺': 'Fabric', '木作 / 柜体': 'Wood / casework', '导出模型': 'Export',
   '导出 .zip': 'Export .zip', '减少': 'Decrease', '增加': 'Increase', '正在载入三维视图…': 'Loading 3D view…', '基础模型': 'Base models', '三维预览': '3D preview', '视图': 'View',
-  '原生文件，按部件分图层': 'Native file, one layer per part', '文件 › 导入 › COLLADA': 'File › Import › COLLADA', '附 .mtl 材质颜色': 'With .mtl colours',
-  '3D 面，毫米': '3D faces, millimetres', '实体网格': 'Solid mesh', '3D 打印 / 激光模型': '3D printing / laser models',
-  '正在生成文件…': 'Building files…', '请在弹出的确认框里保存文件。': 'Confirm the save in the dialog.', '已取消保存。': 'Save cancelled.',
+  '原生文件，按部件分图层': 'Native file, one layer per part', '文件 › 导入 › COLLADA': 'File › Import › COLLADA', '附 .mtl 材质颜色': 'With .mtl colors',
+  '3D 面，毫米': '3D faces, millimeters', '实体网格': 'Solid mesh', '3D 打印 / 激光模型': '3D printing / laser models',
+  '正在生成文件…': 'Building files…', '请在弹出的确认框里保存文件。': 'Confirm the save in the dialog.', '已取消保存。': 'Save canceled.',
   '已有一个保存确认框没关闭，请先处理它。': 'A save dialog is already open. Close it first.',
 };
 
@@ -59,6 +59,6 @@ export const M = {
     : `已保存 ${name}（${kb} KB）。Rhino 组件没能载入，这次没有 .3dm，其余格式都在。`,
   failed: (msg) => LANG === 'en' ? `Export failed: ${msg}` : `导出失败：${msg}`,
   note: () => LANG === 'en'
-    ? 'Everything comes in one .zip, in millimetres, with the origin at the bottom centre. <b>.skp, .max and .dwg</b> are closed formats a browser can\'t write: import the .dae into SketchUp, the .obj into 3ds Max and the .dxf into AutoCAD.'
+    ? 'Everything comes in one .zip, in millimeters, with the origin at the bottom center. <b>.skp, .max and .dwg</b> are closed formats a browser can\'t write: import the .dae into SketchUp, the .obj into 3ds Max and the .dxf into AutoCAD.'
     : '所有格式打包成一个 .zip，单位毫米，原点在底面中心。<b>.skp / .max / .dwg</b> 是私有格式，浏览器写不出来：SketchUp 用 .dae 导入，3ds Max 用 .obj，AutoCAD 用 .dxf。',
 };

@@ -1,6 +1,6 @@
 // PlotCloud door & window generator — parametric doors and windows on the furniture generator engine.
 // Units mm, Z up. X runs along the wall, Y across it: the FRONT side is -Y (exterior for exterior doors and windows).
-// Origin: centre of the frame, at floor level, on the wall centreline. Elevations are seen from the front.
+// Origin: center of the frame, at floor level, on the wall centerline. Elevations are seen from the front.
 // Code values: NBC 2020 (Part 3 exits, 3.8 accessibility, Part 9 doors and windows), CSA B651-18 clause 5.2,
 // BCBC 2024 / OBC differences noted in the checks. Confirm with the code that applies to the project.
 import { makeBuilder, bounds, COLORS, FIXED_MATS, paramVisible, materialColor } from 'pc-base/models.js';
@@ -30,7 +30,7 @@ const prm = {
 };
 
 // ---------- 2D drawing primitives (plan and elevation blocks) ----------
-// Layers: name → [AutoCAD colour index, linetype, svg stroke width at 1:50 (mm on paper), svg colour]
+// Layers: name → [AutoCAD color index, linetype, svg stroke width at 1:50 (mm on paper), svg color]
 export const LAYERS2D = {
   'PC-WALL': [7, 'CONTINUOUS', 0.5, '#111'],
   'PC-FRAME': [4, 'CONTINUOUS', 0.35, '#111'],
@@ -555,7 +555,7 @@ export const MODELS = [
       if (Lo.n === 2) dimLine(P, F.door.x0 + p.lt, F.door.x1 - p.lt, yd, `CLR ${r0(Lo.clear.both)}`);
       else dimLine(P, Lo.s > 0 ? F.door.x0 + p.lt : F.door.x0 + STOP, Lo.s > 0 ? F.door.x1 - STOP : F.door.x1 - p.lt, yd, `CLR ${r0(Lo.clear.both)}`);
       floorLine(E, F, p); frameElev(E, F); swingElev(E, F, p, Lo.defs, Lo.lite);
-      if (p.fire !== 'none') E.T('PC-ANNO', 0, F.outerH + 120, 100, `FIRE-PROTECTION RATING ${p.fire === '60' ? '1 H' : p.fire === '90' ? '1.5 H' : p.fire + ' MIN'} · LABELLED`);
+      if (p.fire !== 'none') E.T('PC-ANNO', 0, F.outerH + 120, 100, `FIRE-PROTECTION RATING ${p.fire === '60' ? '1 H' : p.fire === '90' ? '1.5 H' : p.fire + ' MIN'} · LABELED`);
       return { plan: P.items, elev: E.items };
     },
     info(p) {
@@ -928,7 +928,7 @@ export function defaults(model) {
   return v;
 }
 
-// No normalising: the origin stays at the frame centre, floor level, wall centreline.
+// No normalising: the origin stays at the frame center, floor level, wall centerline.
 export function buildModel(model, values) {
   const parts = model.build(values);
   const frame = parts.filter((q) => q.layer === 'Frame');

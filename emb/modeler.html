@@ -800,7 +800,7 @@ import { MODELS as SM, defaults as sDefaults, buildModel as sBuild } from 'pc-st
 // ===== PlotCloud site context core =====
 // Real-world site → validated, editable context model shared by Site Context, Workbench and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
-// Coordinates: WGS84 lat/lon in, local metres out (x east, y north) on a transverse Mercator centred on the site origin.
+// Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
 const SITEC = (() => {
   // ---------- projection: transverse Mercator on WGS84 (Krüger series to n^6, Karney 2011) ----------
   const A = 6378137, F = 1 / 298.257223563, N = F / (2 - F), E = Math.sqrt(F * (2 - F)), D = Math.PI / 180;
@@ -864,7 +864,7 @@ const SITEC = (() => {
   function cleanRing(pts, tol = 0.01) {
     const out = []; for (const p of pts) { if (!p || !isFinite(p[0]) || !isFinite(p[1])) return { ring: [], issues: ['coordinates are not numbers'] }; const q = out[out.length - 1]; if (!q || Math.hypot(p[0] - q[0], p[1] - q[1]) > tol) out.push([p[0], p[1]]); }
     if (out.length > 1 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) <= tol) out.pop();
-    // drop points that sit on a straight line between their neighbours
+    // drop points that sit on a straight line between their neighbors
     for (let i = 0; out.length > 3 && i < out.length; ) { const a = out[(i - 1 + out.length) % out.length], b = out[i], c = out[(i + 1) % out.length]; if (Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) < 1e-6) out.splice(i, 1); else i++; }
     return { ring: out, issues: [] };
   }
@@ -882,12 +882,12 @@ const SITEC = (() => {
   }
 
   // ---------- heights ----------
-  const STOREY = 3.0;   // metres per storey, used only for floor-count heights (labelled as such)
-  // "12", "12 m", "12.5m", "40'", "40 ft", "12'6\"" → metres, or null
+  const STOREY = 3.0;   // meters per storey, used only for floor-count heights (labeled as such)
+  // "12", "12 m", "12.5m", "40'", "40 ft", "12'6\"" → meters, or null
   function parseLength(v) {
     if (v == null) return null; if (typeof v === 'number') return isFinite(v) && v >= 0 ? v : null;
     const s = String(v).trim().toLowerCase().replace(',', '.'); let m;
-    if ((m = s.match(/^(-?\d+(?:\.\d+)?)\s*(m|meters?|metres?)?$/))) return +m[1] >= 0 ? +m[1] : null;
+    if ((m = s.match(/^(-?\d+(?:\.\d+)?)\s*(m|meters?|meters?)?$/))) return +m[1] >= 0 ? +m[1] : null;
     if ((m = s.match(/^(\d+(?:\.\d+)?)\s*(?:'|ft|feet)\s*(?:(\d+(?:\.\d+)?)\s*(?:"|in))?$/))) return +m[1] * 0.3048 + (m[2] ? +m[2] * 0.0254 : 0);
     if ((m = s.match(/^(\d+(?:\.\d+)?)\s*(?:"|in)$/))) return +m[1] * 0.0254;
     return null;
@@ -990,7 +990,7 @@ const SITEC = (() => {
 
   // ---------- context model ----------
   const uid = (p) => p + Math.random().toString(36).slice(2, 9);
-  // boundary: { kind: 'radius', r } around the origin, or { kind: 'polygon', pts: [[x, y]…] } in site metres
+  // boundary: { kind: 'radius', r } around the origin, or { kind: 'polygon', pts: [[x, y]…] } in site meters
   function inBoundary(fp, bd) {
     if (!bd) return true; const c = centroid(fp);
     if (bd.kind === 'polygon' && bd.pts && bd.pts.length > 2) return inside(c, bd.pts) || fp.some((p) => inside(p, bd.pts));
@@ -1031,7 +1031,7 @@ const SITEC = (() => {
   }
   function guessDST(o) { if (o.lon < -50 && o.lon > -170 && o.lat > 15) return 1; if (o.lon > -25 && o.lon < 45 && o.lat > 34) return 2; if (o.lon > 110 && o.lat < -25) return 3; return 0; }
   function addSource(site, src) { site.sources.push(src); site.version++; return site; }
-  // an edit by the person: height, exclusion; always labelled and versioned
+  // an edit by the person: height, exclusion; always labeled and versioned
   function setHeight(site, id, h) { const b = site.buildings.find((x) => x.id === id); if (!b) return false; const v = parseLength(h); if (v == null || v <= (b.base || 0)) return false; b.h = +v.toFixed(2); b.hSource = 'user'; b.hNote = 'entered by you'; b.edited = true; site.version++; return true; }
   function setExcluded(site, id, on, why = 'left out by you') { const b = site.buildings.find((x) => x.id === id); if (!b) return false; b.excluded = !!on; b.why = on ? why : ''; b.auto = false; b.edited = true; site.version++; return true; }
   // missing heights → an explicit estimate (storeys × storey height), never silent
@@ -1055,7 +1055,7 @@ const SITEC = (() => {
       if (R.levels) warn.push(`${R.levels} height${R.levels > 1 ? 's come' : ' comes'} from floor counts (${site.storey} m a storey).`);
       if (!site.terrain) warn.push('No terrain: the ground is taken as flat.');
       if (site.tzSource !== 'user') warn.push(`Time zone UTC${site.tz >= 0 ? '+' : ''}${site.tz} is estimated from the longitude; check it.`);
-      if (site.fixture) warn.push('This site is a labelled test fixture, not imported real data.');
+      if (site.fixture) warn.push('This site is a labeled test fixture, not imported real data.');
       return { ok: !err.length, err, warn };
     }
     if (kind === 'wind') {
@@ -1088,7 +1088,7 @@ const SITEC = (() => {
 
   // ---------- placing the site into a Workbench plan (plan +Y faces compass bearing M.north) ----------
   function toPlan(p, north) { const a = (north || 0) * D, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
-  // masses for analysis: context only casts shadows; heights in metres above the site origin
+  // masses for analysis: context only casts shadows; heights in meters above the site origin
   // site.at: where the site point sits in the plan (a project placed on a site keeps its own coordinates)
   const siteToPlan = (site, p, north) => { const q = toPlan(p, north), a = (site && site.at) || [0, 0]; return [q[0] + a[0], q[1] + a[1]]; };
   // terrain height at a site point (bilinear on the terrain grid), 0 when there is no terrain
@@ -1297,7 +1297,7 @@ const STC = (() => {
   function furnCorners(f) { const c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0), hw = f.w / 2, hd = f.d / 2; return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([u, v]) => [f.x + u * c - v * s, f.y + u * s + v * c]); }
   function furnEdges(f) { const P = furnCorners(f); return P.map((p, i) => [p, P[(i + 1) % 4]]); }
 
-  // ---------- furniture library: sizes in metres (w along x, d along y, h) ----------
+  // ---------- furniture library: sizes in meters (w along x, d along y, h) ----------
   const LIB = [
     ['bed', 'Double bed', 1.6, 2.05, 0.55], ['bed1', 'Single bed', 0.95, 2.0, 0.5], ['sofa', 'Sofa', 2.1, 0.9, 0.85], ['arm', 'Armchair', 0.85, 0.85, 0.85],
     ['table', 'Dining table', 1.6, 0.9, 0.75], ['chair', 'Chair', 0.45, 0.5, 0.85], ['desk', 'Desk', 1.4, 0.7, 0.75], ['coffee', 'Coffee table', 1.1, 0.6, 0.42],
@@ -1409,7 +1409,7 @@ const STC = (() => {
     tagAll(M);
     if (!M.v || M.v < 2) {
       if (!M.floors.length) { const S = build(M); for (const lv of M.levels) { const R = S.L[lv.id]; for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of roomRects(R, r.id)) {
-        // grow each rectangle under the walls around it, so floors meet the wall centre lines
+        // grow each rectangle under the walls around it, so floors meet the wall center lines
         M.floors.push(tag({ id: uid('fl'), lv: lv.id, x: +(x - 0.1).toFixed(2), y: +(y - 0.1).toFixed(2), w: +(w + 0.2).toFixed(2), d: +(d + 0.2).toFixed(2) }, 'floor')); } } }
       M.v = 2;
     }
@@ -1419,7 +1419,7 @@ const STC = (() => {
   function validate(M) {
     const E = [], W = [], err = (code, msg, ref) => E.push({ code, msg, ref }), warn = (code, msg, ref) => W.push({ code, msg, ref });
     const fin = (...v) => v.every((x) => typeof x === 'number' && isFinite(x));
-    if (M.units !== 'm') err('units', `Model units are "${M.units}"; Workbench models are in metres.`);
+    if (M.units !== 'm') err('units', `Model units are "${M.units}"; Workbench models are in meters.`);
     if (!M.levels || !M.levels.length) err('levels', 'The model has no levels.');
     const lvIds = new Set((M.levels || []).map((l) => l.id));
     const check = (arr, type, label) => { for (const o of arr) { const want = TYPE_LAYER[o.object_type];
@@ -1482,9 +1482,9 @@ const STC = (() => {
     return { format: 'plotcloud-scene', v: 1, kind: 'masses', app: 'plotcloud-studio', name: M.name, loc: site ? { lat: site.origin.lat, lon: site.origin.lon, tz: site.tz, dst: site.dst, label: site.origin.label || site.name || '' } : null,
       north: -(M.north || 0), masses, terrain: site ? SITEC.terrainForPlan(site, M.north || 0) : null, analysis: null,
       source: { app: 'plotcloud-studio', project: M.id, version: M.version || 0, level: 'all', siteVersion: site ? site.version : null, siteHash: site ? SITEC.simHash(site) : null, fixture: !!(site && site.fixture) },
-      notes: [site && site.fixture ? 'Site context: test fixture — not real imported data.' : '', site ? '' : 'No site on this project: Sun hours uses the city you pick there, and there are no neighbours.', ...(rd ? rd.warn : [])].filter(Boolean) };
+      notes: [site && site.fixture ? 'Site context: test fixture — not real imported data.' : '', site ? '' : 'No site on this project: Sun hours uses the city you pick there, and there are no neighbors.', ...(rd ? rd.warn : [])].filter(Boolean) };
   }
-  function sunCompat(M, S) { const why = []; if (!S.rooms.length && !(M.site && SITEC.simBuildings(M.site).length)) why.push('No closed rooms and no site context to analyse.'); if (M.site) why.push(...SITEC.readiness(M.site, 'sun', true).err); return { ok: !why.length, why, multi: false }; }
+  function sunCompat(M, S) { const why = []; if (!S.rooms.length && !(M.site && SITEC.simBuildings(M.site).length)) why.push('No closed rooms and no site context to analyze.'); if (M.site) why.push(...SITEC.readiness(M.site, 'sun', true).err); return { ok: !why.length, why, multi: false }; }
   function planScene(M, S, lvId, tool) {
     if (tool === 'sunhours') return sunScene(M, S);
     const lv = M.levels.find((l) => l.id === lvId), B = bounds(M), x0 = B.x0 - 1, y0 = B.y0 - 1, sh = (p) => [+(p[0] - x0).toFixed(3), +(p[1] - y0).toFixed(3)], walls = [], open = [];
@@ -1526,7 +1526,7 @@ if (typeof module !== 'undefined') module.exports = STC;
 // The 3D model and the elevation outline are both made from these parts, so they always agree.
 // Light is shown as a sketch only: nothing here computes illuminance.
 const WBF = (() => {
-  const CCT = { k: 'cct', label: 'Colour temperature', type: 'select', options: [2700, 3000, 4000], unit: 'K', def: 3000 };
+  const CCT = { k: 'cct', label: 'Color temperature', type: 'select', options: [2700, 3000, 4000], unit: 'K', def: 3000 };
   const BEAM = { k: 'beam', label: 'Beam angle', type: 'select', options: [24, 36, 60], unit: '°', def: 36 };
   const mm = (v) => v / 1000;
   const TYPES = {
@@ -1564,7 +1564,7 @@ const WBF = (() => {
         if (p.dir !== 'up') out.push({ s: 'box', c: [0, D / 2 + 0.012, -H / 2 - 0.001], size: [W * 0.8, D * 0.8, 0.002], emit: true, name: 'down' }, { s: 'beam', c: [0, D / 2 + 0.012, -H / 2], dir: [0, 0, -1], angle: 60 });
         return out; } },
     strip: { code: 'LS', name: 'LED strip', mount: 'either', size: 'length',
-      paramsSchema: [{ k: 'length', label: 'Length', min: 200, max: 10000, step: 50, unit: 'mm', def: 2000 }, { k: 'wpm', label: 'Power per metre', min: 2, max: 30, step: 0.5, unit: 'W/m', def: 10 }, CCT, { k: 'on', label: 'Fixed to', type: 'select', options: ['ceiling', 'wall'], def: 'wall' }, { k: 'height', label: 'Height on the wall', min: 100, max: 3000, step: 10, unit: 'mm', def: 2400, when: { on: 'wall' } }],
+      paramsSchema: [{ k: 'length', label: 'Length', min: 200, max: 10000, step: 50, unit: 'mm', def: 2000 }, { k: 'wpm', label: 'Power per meter', min: 2, max: 30, step: 0.5, unit: 'W/m', def: 10 }, CCT, { k: 'on', label: 'Fixed to', type: 'select', options: ['ceiling', 'wall'], def: 'wall' }, { k: 'height', label: 'Height on the wall', min: 100, max: 3000, step: 10, unit: 'mm', def: 2400, when: { on: 'wall' } }],
       build(p) { const L = mm(p.length); return p.on === 'ceiling' ? [{ s: 'box', c: [0, 0, -0.0015], size: [L, 0.012, 0.003], emit: true, name: 'strip' }] : [{ s: 'box', c: [0, 0.0015, 0], size: [L, 0.003, 0.012], emit: true, name: 'strip' }]; } },
   };
   const KEYS = Object.keys(TYPES);
@@ -1600,7 +1600,7 @@ const WBF = (() => {
     for (const p of pts) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); } for (const p of pts.slice().reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
     return lo.slice(0, -1).concat(up.slice(0, -1)); }
   // a fixture seen in elevation: each visible part as an outline (u along the wall, z up), the symbol point and the height range
-  // proj(world [x, y]) → u (metres along the elevation, left to right)
+  // proj(world [x, y]) → u (meters along the elevation, left to right)
   function elevationOf(l, ceilH, proj) {
     const F = fixture(l.type, l.p), W = toWorld(l, ceilH), shapes = []; let z0 = Infinity, z1 = -Infinity, u0 = Infinity, u1 = -Infinity, em = null;
     for (const q of F.parts) { if (q.s === 'beam' || q.hidden) continue; const P = partCorners(q).map(W).map((w) => [proj([w[0], w[1]]), w[2]]); const h = hull(P); shapes.push({ name: q.name, emit: !!q.emit, pts: h });
@@ -1615,7 +1615,7 @@ const WBF = (() => {
 
 // ===== Workbench pure helpers (v129) =====
 // ===== Workbench pure helpers: no DOM, no three.js. Runs in the browser (inlined) and in Node for tests. =====
-// Model units are metres (plan x east, y north). Outputs that people read or export are in millimetres.
+// Model units are meters (plan x east, y north). Outputs that people read or export are in millimeters.
 const WBP = (() => {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const wlen = (w) => Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
@@ -1635,7 +1635,7 @@ const WBP = (() => {
     return segs;
   }
   // measure(bbox, faces): for each side, the clear distance from that edge of the box to the nearest face beyond it
-  // (only faces that overlap the edge's span count; a face crossing the edge gives 0). Metres. d = Infinity when nothing is there.
+  // (only faces that overlap the edge's span count; a face crossing the edge gives 0). Meters. d = Infinity when nothing is there.
   function measure(bb, segs) {
     const E = 5e-4, out = {};
     const run = (side) => {
@@ -1793,9 +1793,9 @@ const WBP = (() => {
 
   // ---------- 9 · exporters: open formats only. Same model in, same bytes out. ----------
   const f3 = (v) => { const r = Math.round(v * 1000) / 1000; return (Object.is(r, -0) ? 0 : r).toFixed(3); };
-  // OBJ from triangle meshes already placed in the world (three.js frame: metres, Y up). Written in millimetres.
+  // OBJ from triangle meshes already placed in the world (three.js frame: meters, Y up). Written in millimeters.
   function obj(meshes, opts = {}) {
-    const L = [`# PlotCloud Workbench — ${opts.name || 'model'}`, '# units: millimetres; Y up; north is -Z', `# ${meshes.length} objects`], k = 1000; let base = 1, tris = 0;
+    const L = [`# PlotCloud Workbench — ${opts.name || 'model'}`, '# units: millimeters; Y up; north is -Z', `# ${meshes.length} objects`], k = 1000; let base = 1, tris = 0;
     for (const m of meshes) { const nm = String(m.name || 'mesh').replace(/[^\w\-.]+/g, '_'); L.push(`o ${nm}`);
       const vs = m.verts; for (let i = 0; i < vs.length; i += 3) L.push(`v ${f3(vs[i] * k)} ${f3(vs[i + 1] * k)} ${f3(vs[i + 2] * k)}`);
       const id = m.idx; for (let i = 0; i < id.length; i += 3) { L.push(`f ${id[i] + base} ${id[i + 1] + base} ${id[i + 2] + base}`); tris++; }
@@ -1892,7 +1892,7 @@ const WBP = (() => {
   // ===================== v131 =====================
   // ---------- 6 · stairs: the step count follows the floor height (target riser 175 mm); a landing counts as one step ----------
   const STAIR_RISER = 175, OPENING_MARGIN = 100, RAMP_SLOPE = 12;
-  // floorHeight and every size in mm. openingRect is the footprint plus 100 mm on each side, centred across the stair, from its first riser.
+  // floorHeight and every size in mm. openingRect is the footprint plus 100 mm on each side, centered across the stair, from its first riser.
   function stair(type, floorHeight, p = {}) {
     const H = +floorHeight; if (!(H > 0) || !isFinite(H)) return null;
     const W = +p.W || 1100, T = +p.T || 280, target = +p.target || STAIR_RISER, m = OPENING_MARGIN;
@@ -2109,7 +2109,7 @@ function undo() { if (!UNDO.length) return; REDO.push(snapM()); M = JSON.parse(U
 function redo() { if (!REDO.length) return; UNDO.push(snapM()); M = JSON.parse(REDO.pop()); afterLoad(false); }
 function afterLoad(refit) { if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !selObj()) SEL = null; changed(); if (refit) { V.user = false; fitView(); } syncInputs(); }
 
-// ---------- rebuild and analyse ----------
+// ---------- rebuild and analyze ----------
 let aT = 0;
 function changed(live, keepProps) {
   S = STC.build(M); clearTimeout(aT); aT = setTimeout(analyse, live ? 140 : 30); miniSoon();
@@ -2123,7 +2123,7 @@ function changed(live, keepProps) {
 function analyse() { RES = null; if (window.S3 && S3.on) upd3D(); }
 const live = () => RES && RES.S === S;
 
-// ---------- colours ----------
+// ---------- colors ----------
 const mix = (a, b, t) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * Math.max(0, Math.min(1, t))).toString(16).padStart(2, '0')).join(''); };
 function ramp(stops, v) { if (v <= stops[0][0]) return stops[0][1]; for (let k = 1; k < stops.length; k++) if (v <= stops[k][0]) return mix(stops[k - 1][1], stops[k][1], (v - stops[k - 1][0]) / (stops[k][0] - stops[k - 1][0])); return stops[stops.length - 1][1]; }
 const achCol = (v) => { const t = v / (M.targets.ach || 5); return ramp([[0, '#f3c4b8'], [0.5, '#f8ddd2'], [0.999, '#fbeee6'], [1, '#e2f1e7'], [2, '#b9dfc8'], [4, '#8fcaa9']], t); };
@@ -2424,7 +2424,7 @@ function drawSection() {
       if (lab >= 0) { const r = S.rooms.find((q) => q.lv === lv.id && q.id === lab); if (r) segs.push({ r, lv, x0, x1 }); }
       i0 = i1 + 1; }
   }
-  // room bands, coloured by air changes
+  // room bands, colored by air changes
   for (const s of segs) { g.fillStyle = af ? achCol(af.rooms[s.r.gi].ach) : '#fff'; g.fillRect(X(s.x0), Z(s.lv.z + s.lv.h), (s.x1 - s.x0) * sx, s.lv.h * sx); }
   // walls cut (solid between rooms) and slabs
   g.fillStyle = C.ink;
@@ -2513,7 +2513,7 @@ function snapPt(p, from, free) {
   let best = null, bd = tol; for (const w of lvWalls()) for (const q of [w.a, w.b]) { const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd) { bd = dd; best = q.slice(); } }
   if (drawing && drawing.kind === 'wall') for (const q of drawing.pts) { const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd) { bd = dd; best = q.slice(); } }
   if (best) { SNAPI = { p: best, k: 'end' }; return best; }
-  // 2. the body of another wall: the point is pulled onto its centre line, so the new wall joins it
+  // 2. the body of another wall: the point is pulled onto its center line, so the new wall joins it
   let hit = null, hd = Infinity;
   for (const w of lvWalls()) { const L = STC.wallLen(w), dir = STC.wallDir(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1]; if (t < -0.05 || t > L + 0.05) continue; const q = wallLine(w, STC.clamp(t, 0, L)), dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < (w.t || 0.2) / 2 + tol * 0.7 && dd < hd) { hd = dd; hit = { w, q, dir, L }; } }
   if (hit) {
@@ -3123,7 +3123,7 @@ function openSend() {
   let h = '';
   if (V.errors.length) h += `<p style="margin:0;font-weight:600">Fix these first:</p><ul class="vlist">${V.errors.map((e) => `<li class="e">${esc(e.msg)}${show(e.ref)}</li>`).join('')}</ul>`;
   else {
-    h += `<p class="note" style="margin:0">Model check passed: ${M.walls.length} walls, ${M.ops.length} windows and doors, ${M.floors.length} floors, ${M.voids.length} floor openings, ${M.furn.length} furniture, in metres. Every object is on its own layer.</p>`;
+    h += `<p class="note" style="margin:0">Model check passed: ${M.walls.length} walls, ${M.ops.length} windows and doors, ${M.floors.length} floors, ${M.voids.length} floor openings, ${M.furn.length} furniture, in meters. Every object is on its own layer.</p>`;
     if (V.warnings.length) h += `<ul class="vlist">${V.warnings.slice(0, 6).map((w) => `<li class="w">${esc(w.msg)}${show(w.ref)}</li>`).join('')}${V.warnings.length > 6 ? `<li class="w">…and ${V.warnings.length - 6} more.</li>` : ''}</ul>`;
     if (M.levels.length > 1) h += `<div class="lvpick"><label for="sendLv">These tools read one level at a time:</label><select id="sendLv">${lvSorted().map((l) => `<option value="${l.id}" ${l.id === SENDLV ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>`;
     h += `<div class="tlist">${Object.entries(STC.TOOLS).map(([k, T]) => { const c = STC.compat(M, V.S, SENDLV, k); return `<div class="trow${c.ok ? '' : ' no'}"><b>${T.name}</b>${c.ok ? `<button type="button" class="${SITE ? 'go' : 'btn'}" data-send="${k}">${SITE ? 'Open in ' + T.name : 'Download for ' + T.name}</button>` : '<span class="note">Not ready</span>'}<p>${c.ok ? esc(T.note) : `<span class="why">${esc(c.why.join(' '))}</span>`}</p></div>`; }).join('')}</div>`;
@@ -3374,7 +3374,7 @@ function inlineEdit(xCss, yCss, value, opts) {
 function gapsOf(f) { return WBP.measure(WBP.furnBox(f), WBP.wallFaces(lvWalls(f.lv))); }
 function setGap(side, val) {
   const f = selObj(); if (!f || SEL.k !== 'furn') return; if (f.locked) { flash('This piece is locked.'); return; }
-  const res = gapsOf(f); if (!isFinite(res[side].d)) return; const c = WBP.clampGap(side, val, res); if (!c.ok) { flash('Type a distance in millimetres.'); return; }
+  const res = gapsOf(f); if (!isFinite(res[side].d)) return; const c = WBP.clampGap(side, val, res); if (!c.ok) { flash('Type a distance in millimeters.'); return; }
   if (c.clamped) toast(c.mm === 0 ? 'A distance cannot be below 0 mm, so it is set to 0 mm.' : `Limited to ${Math.round(c.mm)} mm, the most this side allows (wall to the opposite wall, minus the piece).`);
   const mv = WBP.gapMove(side, c.mm, res); commands.execute(new MoveCommand(f.id, f.x + mv[0], f.y + mv[1]));
 }
@@ -3401,7 +3401,7 @@ function annotUI() {
   annot.innerHTML = out.join('');
 }
 annot.addEventListener('click', (e) => { const l = e.target.closest('.an-lab'); if (!l || l.classList.contains('lk')) return; const side = l.dataset.side, f = selObj(); if (!f) return; const r = l.getBoundingClientRect(), s = stage.getBoundingClientRect();
-  inlineEdit(r.left - s.left + r.width / 2, r.top - s.top + r.height / 2, l.parentNode.dataset.mm, { number: true, width: 84, label: `${side} distance in millimetres`, onOk: (v) => setGap(side, v === '' ? NaN : +v) }); });
+  inlineEdit(r.left - s.left + r.width / 2, r.top - s.top + r.height / 2, l.parentNode.dataset.mm, { number: true, width: 84, label: `${side} distance in millimeters`, onOk: (v) => setGap(side, v === '' ? NaN : +v) }); });
 annot.addEventListener('keydown', (e) => { const l = e.target.closest('.an-lab'); if (l && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); l.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
 annot.addEventListener('pointerdown', (e) => {
   const rot = e.target.closest('.an-rot'), h = e.target.closest('.an-h'); if (!rot && !h) return; const f = selObj(); if (!f || f.locked) return; e.preventDefault(); e.stopPropagation();
@@ -3412,7 +3412,7 @@ annot.addEventListener('pointerdown', (e) => {
     if (HDRAG.kind === 'rot') { const a = Math.atan2(p[1] - F.y, p[0] - F.x) - Math.PI / 2; F.rot = ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(ev, `${Math.round(F.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(F.rot) * 180 / Math.PI) % 360}°`); }
     else { const { su, sv, anchor, c, s } = HDRAG, dx = p[0] - anchor[0], dy = p[1] - anchor[1], u = dx * c + dy * s, v = -dx * s + dy * c;
       setGenSize(F, su ? Math.max(0.2, Math.abs(u)) : null, sv ? Math.max(0.2, Math.abs(v)) : null, null);
-      // the opposite corner (or edge) stays put: the centre is half the new size away from it
+      // the opposite corner (or edge) stays put: the center is half the new size away from it
       const ou = su * F.w / 2, ov = sv * F.d / 2; F.x = +(anchor[0] + ou * c - ov * s).toFixed(4); F.y = +(anchor[1] + ou * s + ov * c).toFixed(4);
       tipAt(ev, `${Math.round(F.w * 1000)} × ${Math.round(F.d * 1000)} mm`); }
     changed(true, true); if (window.S3 && S3.on) upd3D(); };
@@ -3966,7 +3966,7 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && LTOOL) { LTOOL = 
   const box = $('#props'), F = WBF.fixture(o.type, o.p); $('#secProps').hidden = false;
   box.innerHTML = `<div class="ph"><b>${esc(F.name)}</b><button type="button" class="btn" id="pp_x" aria-label="Close" style="padding:2px 8px">×</button></div><p class="note" style="margin:0">Type <b>light fixture</b> · <code>${F.label}</code> · ${F.mount === 'wall' ? 'on a wall' : 'on the ceiling'}</p>
     <div class="kv"><div class="cell"><label for="pl_x">X (m)</label><input type="number" id="pl_x" step="0.05" value="${o.x.toFixed(3)}"></div><div class="cell"><label for="pl_y">Y (m)</label><input type="number" id="pl_y" step="0.05" value="${o.y.toFixed(3)}"></div></div>
-    <p class="note">Change its size, power and colour in the Lighting panel on the left.</p><div class="two"><button type="button" class="btn" id="pl_edit">Settings</button><button type="button" class="btn" id="pl_del">Delete</button></div>`;
+    <p class="note">Change its size, power and color in the Lighting panel on the left.</p><div class="two"><button type="button" class="btn" id="pl_edit">Settings</button><button type="button" class="btn" id="pl_del">Delete</button></div>`;
   $('#pp_x', box).onclick = () => { SEL = null; changedSel(); }; $('#pl_del', box).onclick = () => delSel(); $('#pl_edit', box).onclick = () => { showLightTab(); setTimeout(() => { const f = $('#fxBody [data-fxp]'); if (f) f.focus(); }, 0); };
   for (const [id, k] of [['pl_x', 'x'], ['pl_y', 'y']]) $('#' + id, box).onchange = (e) => { const v = +e.target.value; if (!isFinite(v)) return; commands.execute(new EditCommand('Move light', () => { const m = lightById(o.id); m[k] = v; if (isWallType(m.type, m.p)) { const at = lightAt(m.type, m.p, [m.x, m.y]); if (at) Object.assign(m, at); } })); };
   fxPanel(); }; }
@@ -4014,7 +4014,7 @@ const kOf = (s) => s && (s.k === 'end' ? 'wall' : s.k);
 const catOf = (s, o) => { const k = kOf(s); return !s ? null : k === 'furn' ? 'furniture' : k === 'light' ? 'lighting' : k === 'op' ? (o && o.kind === 'door' ? 'door' : 'window') : (k === 'wall' || k === 'floor' || k === 'void') ? 'structure' : null; };
 const wallTopH = (w) => w.h || (WBP.slabAnchor(M.levels, w.lv) || { wallH: lvObj(w.lv).h }).wallH;
 const FX_SIZE = { flush: 'size', pendant: 'shade', track: 'length', sconce: 'w', strip: 'length' };
-// the oriented box of a selected piece: centre, turn and half sizes (metres)
+// the oriented box of a selected piece: center, turn and half sizes (metres)
 function frameOf(k, o) {
   if (!o) return null;
   if (k === 'furn') return { c: [o.x, o.y], th: o.rot || 0, hw: o.w / 2, hd: o.d / 2, lv: o.lv };
@@ -4031,7 +4031,7 @@ const frameAt = (F, su, sv) => { const c = Math.cos(F.th), s = Math.sin(F.th), u
 const frameCorners = (F) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => frameAt(F, u, v));
 // what each category's four dimension lines mean; edit(mm) changes the model through the command stack
 function gapDims(bb, lv, move) { const res = WBP.measure(bb, WBP.wallFaces(lvWalls(lv))), out = [];
-  for (const side of ['top', 'bottom', 'left', 'right']) { const r = res[side]; if (!isFinite(r.d) || !layerOn('gaps.' + side)) continue; out.push({ side, a: r.from, b: r.to, mm: Math.round(r.d * 1000), what: `${side} distance`, edit: (mm) => { const c = WBP.clampGap(side, mm, res); if (!c.ok) return 'Type a distance in millimetres.'; move(WBP.gapMove(side, c.mm, res)); if (c.clamped) toast(`Limited to ${Math.round(c.mm)} mm, the most this side allows.`); } }); }
+  for (const side of ['top', 'bottom', 'left', 'right']) { const r = res[side]; if (!isFinite(r.d) || !layerOn('gaps.' + side)) continue; out.push({ side, a: r.from, b: r.to, mm: Math.round(r.d * 1000), what: `${side} distance`, edit: (mm) => { const c = WBP.clampGap(side, mm, res); if (!c.ok) return 'Type a distance in millimeters.'; move(WBP.gapMove(side, c.mm, res)); if (c.clamped) toast(`Limited to ${Math.round(c.mm)} mm, the most this side allows.`); } }); }
   return out; }
 const ADAPT = {
   furniture: { dims: (o) => gapDims(WBP.furnBox(o), o.lv, null), tags: () => [], acts: {}, rot: () => true, size: (o) => resizable(o) },
@@ -4112,7 +4112,7 @@ annotUI = function () {
 // edit a dimension: the same small box for every category
 annot.addEventListener('click', (e) => { const l = e.target.closest('.an-lab[data-di]'); if (!l) return; e.stopImmediatePropagation(); if (l.classList.contains('lk')) return; const m = DIMS[+l.dataset.di]; if (!m || !m.edit) return;
   const r = l.getBoundingClientRect(), st = stage.getBoundingClientRect();
-  inlineEdit(r.left - st.left + r.width / 2, r.top - st.top + r.height / 2, m.mm, { number: true, width: 84, label: `${m.what} in millimetres`, onOk: (v) => { if (SEL && kOf(SEL) === 'furn') { setGap(m.side, v === '' ? NaN : +v); return; } const err = m.edit(v === '' ? NaN : +v); if (typeof err === 'string') flash(err); } }); }, true);
+  inlineEdit(r.left - st.left + r.width / 2, r.top - st.top + r.height / 2, m.mm, { number: true, width: 84, label: `${m.what} in millimeters`, onOk: (v) => { if (SEL && kOf(SEL) === 'furn') { setGap(m.side, v === '' ? NaN : +v); return; } const err = m.edit(v === '' ? NaN : +v); if (typeof err === 'string') flash(err); } }); }, true);
 // resize handles of the other categories (furniture keeps its own, v129)
 annot.addEventListener('pointerdown', (e) => {
   const h = e.target.closest('.an-h'), rt = e.target.closest('.an-rot'); if (!h && !rt) return;
@@ -4802,7 +4802,7 @@ window.S3 = (() => {
   // ---- v131 · 4 · elevation as a camera preset: same renderer, same orbit controller; rotation off, pan and dolly on, a cut plane in front
   const EL = { on: false, saved: null };
   api.elev = {
-    enter(o) {   // o: { pos:[x,y,z], target:[x,y,z], normal:[nx,ny], face:[x,y], clip: metres from the wall face, L, H }
+    enter(o) {   // o: { pos:[x,y,z], target:[x,y,z], normal:[nx,ny], face:[x,y], clip: meters from the wall face, L, H }
       if (!R) return false; if (!EL.on) EL.saved = { pos: cam.position.clone(), quat: cam.quaternion.clone(), target: ctl.target.clone(), zoom: cam.zoom, fov: cam.fov, mb: Object.assign({}, ctl.mouseButtons), rot: ctl.enableRotate, maxP: ctl.maxPolarAngle, minP: ctl.minPolarAngle, clip: R.clippingPlanes };
       EL.on = true; EL.o = o; cam.position.set(o.pos[0], o.pos[2], -o.pos[1]); ctl.target.set(o.target[0], o.target[2], -o.target[1]); cam.up.set(0, 1, 0); cam.zoom = 1;
       const dist = Math.hypot(o.pos[0] - o.target[0], o.pos[1] - o.target[1]) || 1, th = Math.max(0.55 * o.L / dist / Math.max(0.2, cam.aspect), 0.62 * o.H / dist);
@@ -4921,5 +4921,50 @@ window.S3 = (() => {
 })();
 </script>
 
+<style>
+.wbtour{position:fixed;z-index:60;left:16px;top:120px;width:min(340px,calc(100vw - 32px));background:var(--kj-panel,#fff);color:var(--kj-ink,#1d2129);border:1px solid var(--kj-line,#e5e6eb);border-radius:var(--kj-r,8px);box-shadow:var(--kj-shadow,0 2px 12px rgba(29,33,41,.12));padding:14px 16px 12px;font:13px/1.45 var(--f-body)}
+.wbtour .wt-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 8px}
+.wbtour .wt-k{font-size:12px;color:var(--kj-sub,#4e5969)} .wbtour h2{font-size:15px;margin:2px 0 4px} .wbtour p{margin:0 0 12px;color:var(--kj-sub,#4e5969)}
+.wbtour .wt-skip{border:0;background:none;color:var(--kj-sub,#4e5969);font:600 12px var(--f-body);cursor:pointer;padding:4px 6px;border-radius:6px} .wbtour .wt-skip:hover{background:var(--kj-fill,#f2f3f5);color:var(--kj-ink,#1d2129)}
+.wbtour .wt-dots{display:flex;gap:5px;margin:0 0 10px} .wbtour .wt-dots i{width:18px;height:3px;border-radius:2px;background:var(--kj-fill2,#e8eaee)} .wbtour .wt-dots i.on{background:var(--kj-acc,#d8402a)}
+.wbtour .wt-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.wbtour .wt-f button{font:600 12.5px var(--f-body);border-radius:6px;padding:6px 10px;cursor:pointer;border:1px solid var(--kj-line2,#c9cdd4);background:#fff;color:var(--kj-ink,#1d2129)}
+.wbtour .wt-f .wt-sample{background:var(--kj-acc,#d8402a);border-color:var(--kj-acc,#d8402a);color:#fff;margin-right:auto} .wbtour .wt-f .wt-sample:hover{background:var(--kj-acc-dk,#b63422)}
+.wt-hl{outline:2px solid var(--kj-acc,#d8402a)!important;outline-offset:2px;border-radius:6px}
+</style>
+<script>
+/* v133 · first-run guide: three steps, a sample project, Skip; once per browser */
+(function () {
+  const KEY = 'pc-wb-tour', STEPS = [
+    ['Draw walls', 'Pick the Wall tool (W), then click from corner to corner.', '[data-tool="wall"]'],
+    ['Place furniture', 'Open the Furnish tab, pick a piece, click it into a room.', '[data-lt="furn"]'],
+    ['Export', 'Use Export model to save OBJ, IFC or DXF.', '#exModel']];
+  let box = null, k = 0;
+  const seen = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return true; } };
+  const mark = () => { try { localStorage.setItem(KEY, '1'); } catch (e) {} };
+  const hl = (sel) => { document.querySelectorAll('.wt-hl').forEach((e) => e.classList.remove('wt-hl')); if (!sel) return; const e = [...document.querySelectorAll(sel)].find((x) => x.offsetParent); if (e) e.classList.add('wt-hl'); };
+  function close(save) { if (save) mark(); hl(null); if (box) { box.remove(); box = null; } }
+  function draw() { const [t, d, sel] = STEPS[k];
+    box.innerHTML = `<div class="wt-h"><span class="wt-k">Getting started · ${k + 1} of 3</span><button type="button" class="wt-skip" data-wt="skip">Skip</button></div>
+      <div class="wt-dots" aria-hidden="true">${STEPS.map((x, i) => `<i class="${i <= k ? 'on' : ''}"></i>`).join('')}</div>
+      <h2 id="wtT">${t}</h2><p>${d}</p>
+      <div class="wt-f"><button type="button" class="wt-sample" data-wt="sample">Open sample project</button>${k ? '<button type="button" data-wt="back">Back</button>' : ''}<button type="button" data-wt="next">${k < 2 ? 'Next' : 'Done'}</button></div>`;
+    hl(sel); }
+  function show() { close(false); k = 0; box = document.createElement('div'); box.className = 'wbtour'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-labelledby', 'wtT');
+    box.addEventListener('click', (e) => { const b = e.target.closest('[data-wt]'); if (!b) return; const a = b.dataset.wt;
+      if (a === 'skip') close(true);
+      else if (a === 'back') { k = Math.max(0, k - 1); draw(); }
+      else if (a === 'next') { if (k < 2) { k++; draw(); } else close(true); }
+      else if (a === 'sample') { const sel = document.getElementById('preset'); if (sel && [...sel.options].some((o) => o.value === 'house')) { sel.value = 'house'; sel.dispatchEvent(new Event('change', { bubbles: true })); } close(true); } });
+    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(true); } });
+    document.body.appendChild(box); draw(); place(); }
+  // top-left of the drawing, under its toolbar, clear of the view and zoom bars
+  function place() { if (!box) return; const c = document.getElementById('cv'); if (!c) return; const r = c.getBoundingClientRect(); if (r.width < 400) { box.style.left = '16px'; box.style.top = '16px'; return; } box.style.left = Math.round(r.left + 16) + 'px'; box.style.top = Math.round(r.top + 72) + 'px'; }
+  addEventListener('resize', place);
+  window.__wbTour = { show, close: () => close(true), reset: () => { try { localStorage.removeItem(KEY); } catch (e) {} }, get open() { return !!box; }, get step() { return k; } };
+  const start = () => setTimeout(() => { if (!seen()) show(); }, 700);
+  if (document.readyState === 'complete') start(); else addEventListener('load', start);
+})();
+</script>
 </body>
 </html>

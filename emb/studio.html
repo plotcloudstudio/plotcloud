@@ -135,7 +135,7 @@ header .brand{display:none!important} .btn.primary{border-radius:999px!important
     <select class="btn" id="tpl" aria-label="Start a new board">
       <option value="">New board…</option>
       <option value="material">Material board</option>
-      <option value="colour">Colour board</option>
+      <option value="colour">Color board</option>
       <option value="collage">Collage</option>
       <option value="blank">Blank</option>
     </select>
@@ -154,7 +154,7 @@ header .brand{display:none!important} .btn.primary{border-radius:999px!important
       <h2>Add to board</h2>
       <div class="addrow">
         <button class="btn" id="addImg">Photo / cutout</button>
-        <button class="btn" id="addSwatch">Colour swatch</button>
+        <button class="btn" id="addSwatch">Color swatch</button>
         <button class="btn" id="addText">Text</button>
         <button class="btn" id="addList">Schedule</button>
       </div>
@@ -367,7 +367,7 @@ function tplMaterial(){
   its.push(textItem({x:93,y:250,w:380,text:'Studio project\nLiving + dining, ground floor',size:17,weight:400,color:'#5A6064'}));
   const pick=[['oak','White oak veneer, matte'],['marble','Carrara marble, honed'],['concrete','Board-formed concrete'],['terrazzo','Terrazzo, cream aggregate'],['linen','Linen upholstery, natural'],['steel','Brushed stainless steel']];
   pick.forEach(([k,l],i)=>{its.push(matItem(M(k),{x:540+(i%3)*275,y:110+Math.floor(i/3)*400,w:230,h:230,shape:'circle',label:l,shadow:true,role:i===0?'primary':i===5?'accent':'secondary'}))});
-  its.push(textItem({x:93,y:640,w:300,text:'Colour palette',size:14,weight:600,color:'#2B2E31'}));
+  its.push(textItem({x:93,y:640,w:300,text:'Color palette',size:14,weight:600,color:'#2B2E31'}));
   ['#E9E4DA','#C9A77C','#8C8F86','#4E5B52','#2B2E31'].forEach((c,i)=>its.push(swatchItem({x:93+i*78,y:680,w:64,h:64,color:c,shape:'rect'})));
 }
 function tplInterior(){
@@ -381,13 +381,13 @@ function tplInterior(){
   its.push(patternItem(PRESETS[3],{location:'Backsplash',finish:'Gloss'}));
   its.push(matItem(M('linen'),{label:'Linen upholstery',location:'Sofa',role:'accent'}));
   its.push(matItem(M('steel'),{label:'Brushed stainless steel',location:'Hardware',role:'accent'}));
-  its.push(textItem({text:'Colour palette',size:14,weight:600,color:'#2B2E31'}));
+  its.push(textItem({text:'Color palette',size:14,weight:600,color:'#2B2E31'}));
   [['Warm white','#EEE9DF','Walls, ceiling','Eggshell'],['Oat','#CDBDA2','Joinery','Satin'],['Sage','#8E9A86','Feature wall','Matte'],['Charcoal','#3A3D3F','Doors','Satin']].forEach(([n,c,l,f])=>its.push(swatchItem({code:nextCode('PT'),label:n,color:c,location:l,finish:f,w:64,h:64})));
   runLayout('grid',4207);fixTextOverlaps();fixTags();
 }
 function tplColour(){
   const mode=board?board.mode:'arch';board=newBoard(mode,mode==='interior'?'a3':'a1');board.bg='#FFFFFF';const its=[];items=its;
-  its.push(textItem({x:90,y:70,w:700,text:'Colour board',font:'Cormorant Garamond',size:66,weight:600}));
+  its.push(textItem({x:90,y:70,w:700,text:'Color board',font:'Cormorant Garamond',size:66,weight:600}));
   its.push(textItem({x:93,y:155,w:700,text:'Warm minimal scheme. Paint references are placeholders.',size:17,weight:400,color:'#5A6064'}));
   [['Limewash','#ECE6DA'],['Oat','#D8C8AE'],['Clay','#B7826A'],['Sage','#8E9A86'],['Charcoal','#3A3D3F'],['Brass','#B08D57']].forEach(([n,c],i)=>its.push(swatchItem({x:90+i*205,y:240,w:180,h:560,color:c,label:n,code:mode==='interior'?nextCode('PT'):''})));
 }
@@ -627,7 +627,7 @@ function paletteFrom(it){
   const img=getImg(it.assetId);if(!img){toast('Image still loading. Try again in a moment.');return}
   const s=90,c=document.createElement('canvas');c.width=s;c.height=Math.max(1,Math.round(s*img.height/img.width));const g=c.getContext('2d');g.drawImage(img,0,0,c.width,c.height);
   const d=g.getImageData(0,0,c.width,c.height).data,pts=[];for(let i=0;i<d.length;i+=4)if(d[i+3]>200)pts.push([d[i],d[i+1],d[i+2]]);
-  if(pts.length<10){toast('Not enough colour in this image.');return}
+  if(pts.length<10){toast('Not enough color in this image.');return}
   const k=5,cs=[pts[Math.floor(pts.length/2)].slice()];
   while(cs.length<k){let best=null,bd=-1;for(let i=0;i<pts.length;i+=3){const p=pts[i];let m=1e9;cs.forEach(q=>{const dd=(p[0]-q[0])**2+(p[1]-q[1])**2+(p[2]-q[2])**2;if(dd<m)m=dd});if(m>bd){bd=m;best=p}}cs.push(best.slice())}
   let cnt;for(let it2=0;it2<10;it2++){const sum=cs.map(()=>[0,0,0]);cnt=cs.map(()=>0);pts.forEach(p=>{let bi=0,bm=1e9;cs.forEach((q,j)=>{const dd=(p[0]-q[0])**2+(p[1]-q[1])**2+(p[2]-q[2])**2;if(dd<bm){bm=dd;bi=j}});cnt[bi]++;sum[bi][0]+=p[0];sum[bi][1]+=p[1];sum[bi][2]+=p[2]});cs.forEach((q,j)=>{if(cnt[j])for(let z=0;z<3;z++)q[z]=sum[j][z]/cnt[j]})}
@@ -635,7 +635,7 @@ function paletteFrom(it){
   const sz=Math.max(48,Math.min(80,it.w/5.5)),gap=sz*.22,total=k*sz+(k-1)*gap;
   let x0=clamp(it.x+(it.w-total)/2,10,board.w-total-10),y0=it.y+it.h+(it.caption?board.captionSize*4:24);if(y0+sz>board.h-10)y0=Math.max(10,it.y-sz-30);
   let last;order.forEach((h,i)=>{last=swatchItem({x:x0+i*(sz+gap),y:y0,w:sz,h:sz,color:h,shape:'circle',code:board.mode==='interior'?nextCode('PT'):''});items.push(last)});
-  sel=last.id;commit();renderProps();draw();toast('Added 5 colours from the image.');
+  sel=last.id;commit();renderProps();draw();toast('Added 5 colors from the image.');
 }
 function knockout(it){
   const img=getImg(it.assetId);if(!img)return;
@@ -673,7 +673,7 @@ const STYLES={
  hero:['Hero image','One large mood or precedent image, with samples and palette beside it.'],
  flatlay:['Flat lay','Overlapping physical samples like a real sample board, keyed by code.'],
  strips:['Proportion strips','Strip widths follow how much each finish is used. Primary finishes are widest.'],
- row:['Sample row','Centred title over evenly spaced samples. Clean and formal.'],
+ row:['Sample row','Centered title over evenly spaced samples. Clean and formal.'],
  collage:['Collage','Full-bleed texture with layered samples and cutouts for atmosphere.']
 };
 const WEIGHT={primary:3,secondary:1.7,accent:.9,photo:2.2};
@@ -927,7 +927,7 @@ function seg(prop,list,v,boardSeg){return`<div class="seg" role="group">${list.m
 const colorField=(prop,label,v,attr='data-prop')=>`<div class="field"><span class="lbl">${label}</span><div class="row"><input type="color" ${attr}="${prop}" value="${v}"><input type="text" ${attr}="${prop}" value="${v}" aria-label="${label} hex"></div></div>`;
 const txt=(prop,label,v,ph='',list='')=>`<div class="field"><label>${label}</label><input type="text" data-prop="${prop}" value="${esc(v)}" placeholder="${esc(ph)}"${list?` list="${list}"`:''}></div>`;
 const num=(prop,label,v,attrs='')=>`<div class="field"><label>${label}</label><input type="number" data-prop="${prop}" value="${v}" ${attrs}></div>`;
-function texOptions(it){const o=[['none','None (solid colour)']];MATERIALS.forEach(m=>o.push(['mat-'+m.key,m.name]));mylib.forEach(m=>o.push(['lib-'+m.id,'My: '+m.name]));
+function texOptions(it){const o=[['none','None (solid color)']];MATERIALS.forEach(m=>o.push(['mat-'+m.key,m.name]));mylib.forEach(m=>o.push(['lib-'+m.id,'My: '+m.name]));
   const v=it.assetId?(/^mat-|^lib-/.test(it.assetId)?it.assetId:it.assetId):'none';if(it.assetId&&!o.some(x=>x[0]===v))o.push([v,'Current image']);return opt(o,v)}
 function specSection(it){
   if(!specOn())return'';const sw=it.type==='swatch';
@@ -935,10 +935,10 @@ function specSection(it){
     ${sw?txt('code','Code',it.code,'PT-01'):''}
     ${txt('location','Location',it.location,sw?'e.g. Walls, ceiling':'e.g. Floor','locs')}
     ${txt('maker',sw?'Paint brand':'Manufacturer / supplier',it.maker,sw?'e.g. Benjamin Moore':'')}
-    ${txt('product',sw?'Colour name or code':'Product / model',it.product)}
+    ${txt('product',sw?'Color name or code':'Product / model',it.product)}
     <div class="row">${txt('finish',sw?'Sheen':'Finish',it.finish,sw?'e.g. Eggshell':'e.g. Honed')}${sw?'':txt('size','Size',it.size,it.type==='pattern'?patternDims(it).split(',')[0]:'e.g. 600 × 600 mm')}</div>
     ${txt('notes','Notes',it.notes,'Lead time, sample requested, fire rating…')}
-    ${sw?`<p class="hint">LRV about ${lrv(it.color)}, estimated from the screen colour. Use the manufacturer's LRV in final specs.</p>`:''}
+    ${sw?`<p class="hint">LRV about ${lrv(it.color)}, estimated from the screen color. Use the manufacturer's LRV in final specs.</p>`:''}
   </section>`;
 }
 function renderProps(){
@@ -957,7 +957,7 @@ function renderProps(){
       <p class="hint">Tile patterns and "True scale" images are drawn at this scale${phys?'':' (measured as if printed on A3)'}.</p>
       </section><section><h2>Look</h2>
       ${colorField('bg','Background',board.bg,'data-board')}
-      ${colorField('captionColor','Caption colour',board.captionColor,'data-board')}
+      ${colorField('captionColor','Caption color',board.captionColor,'data-board')}
       <div class="field"><label>Background texture</label><select data-board="bgTex">${opt([['','None'],...Object.entries(BGTEX)],board.bgTex||'')}</select></div>
       ${board.bgTex?`<div class="field"><label>Texture strength</label><input type="range" min="10" max="100" data-board="bgTexAlpha" value="${Math.round((board.bgTexAlpha??.9)*100)}"></div>`:''}
       <div class="field"><label>Shadows</label><input type="range" min="0" max="60" data-board="shadowK" value="${Math.round((board.shadowK??.25)*100)}"></div>
@@ -978,11 +978,11 @@ function renderProps(){
     h+=`<section><h2>Tile or flooring pattern</h2>
       <div class="row"><div class="field" style="flex:0 0 76px"><label>Code</label><input type="text" data-prop="code" value="${esc(it.code)}"></div>${txt('label','Description',it.label)}</div>
       <div class="field"><label>Texture</label><select data-prop="tex">${texOptions(it)}</select></div>
-      ${it.assetId?'':colorField('color','Tile colour',it.color)}
+      ${it.assetId?'':colorField('color','Tile color',it.color)}
       <div class="field"><label>Layout</label><select data-prop="layout">${opt(Object.entries(PLAYOUTS),it.layout)}</select></div>
       <div class="field"><span class="lbl">Direction</span>${seg('angle',[[0,'0°'],[45,'45°'],[90,'90°']],+it.angle)}</div>
       <div class="row">${num('unitL','Length (mm)',it.unitL,'min="5" step="5"')}${num('unitW','Width (mm)',it.unitW,'min="5" step="5"')}</div>
-      <div class="row">${num('grout','Joint (mm)',it.grout,'min="0" step="0.5"')}<div class="field"><span class="lbl">Joint colour</span><input type="color" data-prop="groutColor" value="${it.groutColor}" style="width:100%"></div></div>
+      <div class="row">${num('grout','Joint (mm)',it.grout,'min="0" step="0.5"')}<div class="field"><span class="lbl">Joint color</span><input type="color" data-prop="groutColor" value="${it.groutColor}" style="width:100%"></div></div>
       <div class="field"><label>Tone variation <span id="vv">${Math.round(it.vary*100)}%</span></label><input type="range" min="0" max="100" data-prop="vary" value="${Math.round(it.vary*100)}"></div>
       ${it.assetId?`<label class="check"><input type="checkbox" data-prop="texRot"${it.texRot?' checked':''}> Run texture grain along the length</label>${num('realMm','Texture image covers (mm wide)',it.realMm,'min="10" step="10"')}`:''}
       <div class="field"><label>Shown at scale</label><select data-prop="scale">${opt([[0,'Board scale (1:'+board.scale+')'],[1,'1:1'],[2,'1:2'],[5,'1:5'],[10,'1:10'],[20,'1:20'],[50,'1:50'],[100,'1:100']],+it.scale||0)}</select></div>
@@ -993,7 +993,7 @@ function renderProps(){
       <label class="check"><input type="checkbox" data-prop="tag"${it.tag?' checked':''}> Show code tag</label>
       </section>`+specSection(it);
   }else{
-    h+=`<section><h2>${t==='swatch'?'Colour swatch':'Image'}</h2>`;
+    h+=`<section><h2>${t==='swatch'?'Color swatch':'Image'}</h2>`;
     if(t==='swatch')h+=`${colorField('color','Colour',it.color)}${txt('label','Name',it.label,'e.g. Warm white')}
       <label class="check"><input type="checkbox" data-prop="showHex"${it.showHex?' checked':''}> Show hex code${specOn()?' and LRV':''}</label>`;
     else{h+=`<div class="row"><div class="field" style="flex:0 0 76px"><label>Code</label><input type="text" data-prop="code" value="${esc(it.code)}"></div>${txt('label','Description',it.label,'Material and finish')}</div>
@@ -1017,7 +1017,7 @@ function renderProps(){
     ${t!=='text'?`<label class="check"><input type="checkbox" data-prop="border"${it.border?' checked':''}> Outline</label>`:''}
     </section><section><h2>Arrange</h2>
     <div class="btns"><button class="btn" data-act="front">To front</button><button class="btn" data-act="up">Forward</button><button class="btn" data-act="down">Backward</button><button class="btn" data-act="back">To back</button>
-    <button class="btn" data-act="center">Centre</button>${t==='image'||t==='pattern'?'<button class="btn" data-act="fill">Fill board</button>':''}<button class="btn" data-act="dup">Duplicate</button><button class="btn danger" data-act="delete">Delete</button></div></section>`;
+    <button class="btn" data-act="center">Center</button>${t==='image'||t==='pattern'?'<button class="btn" data-act="fill">Fill board</button>':''}<button class="btn" data-act="dup">Duplicate</button><button class="btn danger" data-act="delete">Delete</button></div></section>`;
   P.innerHTML=h;
 }
 function resizeBoard(nw,nh){const sx=nw/board.w,sy=nh/board.h,f=Math.min(sx,sy);
@@ -1135,25 +1135,25 @@ function scheduleRows(){
   const list=items.filter(i=>i.type==='swatch'||i.type==='pattern'||(i.type==='image'&&i.fit!=='contain'&&i.role!=='photo'));
   const used=new Set(list.map(i=>i.code).filter(Boolean));let pc=0;
   return list.map(i=>{let code=i.code;if(!code&&i.type==='swatch'){do{pc++;code='PT-'+String(pc).padStart(2,'0')}while(used.has(code))}
-    return{Code:code||'',Type:i.type==='swatch'?'Paint / colour':i.type==='pattern'?'Tile / flooring':'Material',Description:i.label||'',Location:i.location||'',
-      'Manufacturer / brand':i.maker||'','Product / colour code':i.product||'','Finish / sheen':i.finish||'',
+    return{Code:code||'',Type:i.type==='swatch'?'Paint / color':i.type==='pattern'?'Tile / flooring':'Material',Description:i.label||'',Location:i.location||'',
+      'Manufacturer / brand':i.maker||'','Product / color code':i.product||'','Finish / sheen':i.finish||'',
       Size:i.size||(i.type==='pattern'?`${+i.unitW} × ${+i.unitL} mm`:''),Pattern:i.type==='pattern'?(PLAYOUTS[i.layout]+(+i.angle?' at '+i.angle+'°':'')+(i.grout?`, ${i.grout} mm joint`:'')):'',
-      'Colour (HEX)':i.type==='swatch'?i.color.toUpperCase():'','LRV (approx.)':i.type==='swatch'?lrv(i.color):'',Notes:i.notes||''}})
+      'Color (HEX)':i.type==='swatch'?i.color.toUpperCase():'','LRV (approx.)':i.type==='swatch'?lrv(i.color):'',Notes:i.notes||''}})
     .sort((a,b)=>(a.Code||'~').localeCompare(b.Code||'~',undefined,{numeric:true}));
 }
 async function exportXlsx(){
-  const rows=scheduleRows();if(!rows.length){toast('Add materials or colours first.');return}
+  const rows=scheduleRows();if(!rows.length){toast('Add materials or colors first.');return}
   try{await loadScript(SHEETJS)}catch(e){toast('Could not load the Excel exporter. Check your connection and try again.');return}
   const title=(items.find(i=>i.type==='text'&&!isSchedule(i))||{text:'Board'}).text.split('\n').join(' ');
   const head=Object.keys(rows[0]);
-  const aoa=[[title+' — finish schedule'],[`Exported ${new Date().toISOString().slice(0,10)}. LRV values are estimates from screen colours.`],[],head,...rows.map(r=>head.map(k=>r[k]))];
+  const aoa=[[title+' — finish schedule'],[`Exported ${new Date().toISOString().slice(0,10)}. LRV values are estimates from screen colors.`],[],head,...rows.map(r=>head.map(k=>r[k]))];
   const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map(k=>({wch:Math.min(42,Math.max(k.length+2,...rows.map(r=>String(r[k]).length+2)))}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Finish schedule');
   const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
   if(!await offer(fileBase()+'-schedule.xlsx',new Blob([out])))toast('Saving files is not available in this view.');
 }
 async function exportCsv(){
-  const rows=scheduleRows();if(!rows.length){toast('Add materials or colours first.');return}
+  const rows=scheduleRows();if(!rows.length){toast('Add materials or colors first.');return}
   const head=Object.keys(rows[0]),q=v=>{v=String(v??'');return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   const csv='\uFEFF'+[head.map(q).join(','),...rows.map(r=>head.map(k=>q(r[k])).join(','))].join('\r\n');
   if(!await offer(fileBase()+'-schedule.csv',csv))toast('Saving files is not available in this view.');
@@ -1190,7 +1190,7 @@ function openExport(){
     ${sm?`<div class="seg" style="margin:8px 0">${[[150,'Standard, 150 ppi'],[240,'High, 240 ppi']].map(([v,l])=>`<button type="button" data-ppi="${v}" aria-pressed="${v===ppiSel}">${l}</button>`).join('')}</div>
     <p class="hint">${big?'Large sheets at high quality make big files (30 MB or more). Standard is usually enough for pin-ups.':'High is best for close viewing and portfolio prints.'}</p>`:''}
     <div class="btns" style="margin-top:8px"><button class="btn primary" id="xPdf"${sm?'':' disabled'}>Download PDF</button><button class="btn" id="xPng">Download PNG</button></div>
-    <h4>Finish schedule</h4><p class="hint" style="margin-top:0">Every material, tile pattern and paint colour on the board, with its specification fields.</p>
+    <h4>Finish schedule</h4><p class="hint" style="margin-top:0">Every material, tile pattern and paint color on the board, with its specification fields.</p>
     <div class="btns"><button class="btn" id="xXlsx">Excel (.xlsx)</button><button class="btn" id="xCsv">CSV</button></div>
     <h4>Print check</h4><ul class="checks">${checks.map(([l,t])=>`<li><span class="dot ${l}" aria-hidden="true"></span><span>${esc(t)}</span></li>`).join('')}</ul>`;
   $('#exportModal').classList.add('open');

@@ -229,7 +229,7 @@ select#comboList { font-size: 12.5px; }
       <p class="msg" id="loadmsg"></p>
       <div class="two">
         <div class="row"><label for="units">File units</label>
-          <select id="units"><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="1" selected>Metres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+          <select id="units"><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="1" selected>Meters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div class="row"><span class="lab" id="upl">Up axis</span>
           <div class="seg" id="upSeg" role="group" aria-labelledby="upl"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div>
       </div>
@@ -313,7 +313,7 @@ select#comboList { font-size: 12.5px; }
       <button type="button" class="go alt" id="runSet" disabled>Export set (.zip)</button>
       <p class="msg" id="setmsg"></p>
     </section>
-    <section class="sec adv"><p class="note">Test version for early design. Linear static analysis for frames and trusses; geometrically non-linear analysis for cable nets. Members are checked for force and stress only: no buckling, connection, fatigue or code checks, and membranes are not modelled. Have a structural engineer check the design.</p></section>
+    <section class="sec adv"><p class="note">Test version for early design. Linear static analysis for frames and trusses; geometrically non-linear analysis for cable nets. Members are checked for force and stress only: no buckling, connection, fatigue or code checks, and membranes are not modeled. Have a structural engineer check the design.</p></section>
   </aside>
 
   <section class="stage" id="stage" aria-label="3D view">
@@ -432,7 +432,7 @@ const SA = (() => {
     return { s, pl };
   }
   // load cases: D dead, L live, S snow, and any lateral cases (Wx, Wy, ...) given as point loads.
-  // vertical load per metre on a member: self-weight (unless switched off), the group's line loads and the member's own
+  // vertical load per meter on a member: self-weight (unless switched off), the group's line loads and the member's own
   function lineLoad(M, m) {
     const g = M.groups[m.g], w = m.w || {}; if (!g || !g.sec || !g.mat) return { D: 0, L: 0, S: 0 };
     return { D: (M.self === false ? 0 : g.mat.rho * G_ACC / 1000 * g.sec.A) + (+g.wD || 0) + (+w.D || 0), L: (+g.wL || 0) + (+w.L || 0), S: (+g.wS || 0) + (+w.S || 0) };
@@ -884,7 +884,7 @@ const SA = (() => {
     // 2 simply supported, mid load: PL³/48EI and M = PL/4
     { const L = 6, P = 20, M = mk([{ a: [0, 0, 0], b: [L / 2, 0, 0] }, { a: [L / 2, 0, 0], b: [L, 0, 0] }], 'frame'); const ends = M.nodes.map((p, i) => [p[0], i]).sort((a, b) => a[0] - b[0]); M.supports.set(ends[0][1], 'pinned'); M.supports.set(ends[2][1], 'roller'); M.groups[0].sec = { ...sec }; const mid = ends[1][1]; M.point.push({ n: mid, c: 'D', F: [0, 0, -P] });
       M.supports.set(ends[0][1], [1, 1, 1, 1, 0, 0]); M.supports.set(ends[2][1], [0, 1, 1, 0, 0, 0]); const r0 = (() => { try { return linear(M).combos.D; } catch (e) { return null; } })();
-      if (r0) { const got = -r0.disp[3 * mid + 2], exp = P * L ** 3 / (48 * steel.E * sec.Iy); out.push({ name: 'Simply supported beam, centre load: PL³/48EI', exp, got, err: rel(got, exp), unit: 'm' }); const Mg = Math.max(...r0.members.map((m) => m.M)); out.push({ name: 'Same beam, bending moment: PL/4', exp: P * L / 4, got: Mg, err: rel(Mg, P * L / 4), unit: 'kN·m' }); } }
+      if (r0) { const got = -r0.disp[3 * mid + 2], exp = P * L ** 3 / (48 * steel.E * sec.Iy); out.push({ name: 'Simply supported beam, center load: PL³/48EI', exp, got, err: rel(got, exp), unit: 'm' }); const Mg = Math.max(...r0.members.map((m) => m.M)); out.push({ name: 'Same beam, bending moment: PL/4', exp: P * L / 4, got: Mg, err: rel(Mg, P * L / 4), unit: 'kN·m' }); } }
     // 2b same beam, uniform load as a member line load: 5wL⁴/384EI (loads lumped on 8 pieces) and wL²/8
     { const L = 6, w = 5, M = mk([{ a: [0, 0, 0], b: [L / 2, 0, 0] }, { a: [L / 2, 0, 0], b: [L, 0, 0] }], 'frame'); const ends = M.nodes.map((p, i) => [p[0], i]).sort((a, b) => a[0] - b[0]); M.supports.set(ends[0][1], [1, 1, 1, 1, 0, 0]); M.supports.set(ends[2][1], [0, 1, 1, 0, 0, 0]); M.groups[0].wD = w;
       const r = linear(M).combos.D, mid = ends[1][1], got = -r.disp[3 * mid + 2], exp = 5 * w * L ** 4 / (384 * steel.E * sec.Iy); out.push({ name: 'Uniform load on a beam: 5wL⁴/384EI', exp, got, err: rel(got, exp), unit: 'm' }); const Mg = Math.max(...r.members.map((m) => m.M)); out.push({ name: 'Same beam, bending moment: wL²/8', exp: w * L * L / 8, got: Mg, err: rel(Mg, w * L * L / 8), unit: 'kN·m' }); }
@@ -892,12 +892,12 @@ const SA = (() => {
     { const L = 5, w = 4, c = Math.cos(0.5), sn = Math.sin(0.5), M = mk([{ a: [0, 0, 0], b: [L * c, L * sn, 0] }], 'frame'); M.supports.set(0, 'fixed'); M.groups[0].wD = w; const r = linear(M).combos.D, got = -r.disp[3 * 1 + 2], exp = w * L ** 4 / (8 * steel.E * sec.Iy); out.push({ name: 'Cantilever, uniform load: wL⁴/8EI', exp, got, err: rel(got, exp), unit: 'm' }); const Mg = Math.max(...r.members.map((m) => m.M)); out.push({ name: 'Same cantilever, root moment: wL²/2', exp: w * L * L / 2, got: Mg, err: rel(Mg, w * L * L / 2), unit: 'kN·m' }); }
     // 3 two-bar truss: N = P / (2 sin θ)
     { const P = 50, h = 3, b = 4, M = mk([{ a: [-b, 0, 0], b: [0, 0, h] }, { a: [b, 0, 0], b: [0, 0, h] }, { a: [0, 0, h], b: [0, 5, h] }], 'truss'); M.nodes.forEach((p, i) => { if (Math.abs(p[2]) < 1e-9 || p[1] > 4) M.supports.set(i, 'pinned'); }); const top = M.nodes.findIndex((p) => p[1] === 0 && p[2] === h); M.point.push({ n: top, c: 'D', F: [0, 0, -P] }); const r = linear(M).combos.D, got = Math.abs(r.members[0].N), exp = P / (2 * h / Math.hypot(b, h)); out.push({ name: 'Two-bar truss, bar force: P / (2 sin θ)', exp, got, err: rel(got, exp), unit: 'kN' }); const Rz = r.Rsum[2]; out.push({ name: 'Equilibrium: sum of reactions = load', exp: P, got: Rz, err: rel(Rz, P), unit: 'kN' }); }
-    // 4 V-cable with pretension under a centre load (large displacement, solved by hand with bisection)
+    // 4 V-cable with pretension under a center load (large displacement, solved by hand with bisection)
     { const a = 5, P = 30, cab = secById('cab16'), mat = { ...MATERIALS.cable, rho: 0 }, EA = mat.E * cab.A, T0 = 10; const M = mk([{ a: [-a, 0, 0], b: [0, 0, 0] }, { a: [0, 0, 0], b: [a, 0, 0] }], 'cable', cab, mat); M.groups[0].T0 = T0; M.nodes.forEach((p, i) => { if (Math.abs(p[0]) > 1) M.supports.set(i, 'pinned'); }); const mid = M.nodes.findIndex((p) => Math.abs(p[0]) < 1e-9);
       // hold the middle node sideways (y) by symmetry is automatic; add point load
       M.point.push({ n: mid, c: 'D', F: [0, 0, -P] });
       const L0 = a / (1 + T0 / EA), f = (w) => { const L = Math.hypot(a, w), T = EA * (L - L0) / L0; return 2 * T * w / L - P; }; let lo = 0, hi = a; for (let k = 0; k < 200; k++) { const m = (lo + hi) / 2; if (f(m) > 0) hi = m; else lo = m; } const exp = (lo + hi) / 2;
-      try { const r = nonlinear(M).combos.D, got = -r.disp[3 * mid + 2]; out.push({ name: 'Pretensioned cable, centre load (large deflection)', exp, got, err: rel(got, exp), unit: 'm' }); } catch (e) { out.push({ name: 'Pretensioned cable, centre load', exp, got: NaN, err: 1, unit: 'm' }); } }
+      try { const r = nonlinear(M).combos.D, got = -r.disp[3 * mid + 2]; out.push({ name: 'Pretensioned cable, center load (large deflection)', exp, got, err: rel(got, exp), unit: 'm' }); } catch (e) { out.push({ name: 'Pretensioned cable, center load', exp, got: NaN, err: 1, unit: 'm' }); } }
     // 5 hanging chain by force density: sag = w L² / (8 H)
     { const n = 20, L = 20, w = 2, Hh = 40, segs = []; for (let i = 0; i < n; i++) segs.push({ a: [i * L / n, 0, 0], b: [(i + 1) * L / n, 0, 0] }); const M = mk(segs, 'cable', secById('cab16'), { ...MATERIALS.cable, rho: 0 }); M.nodes.forEach((p, i) => { if (p[0] < 1e-9 || p[0] > L - 1e-9) M.supports.set(i, 'pinned'); else M.point.push({ n: i, c: 'D', F: [0, 0, -w * L / n] }); });
       const q = Hh / (L / n); M.groups[0].T0 = Hh; const ff = findForm(M, { dead: true, uniform: false, iters: 1 }), mid = M.nodes.findIndex((p) => Math.abs(p[0] - L / 2) < 1e-9), got = -ff.X[mid][2], exp = w * L * L / (8 * Hh); void q; out.push({ name: 'Hanging cable by force density: wL²/8H', exp, got, err: rel(got, exp), unit: 'm' }); }
@@ -1021,7 +1021,7 @@ const SAQ = ((SA) => {
     const nxx = portal ? 1 : p.nx;
     const add = (a, b, g, tag) => { segs.push({ a, b, g }); tags.push(tag || {}); };
     if (p.material === 'masonry') {
-      // bearing walls on every X gridline drawn as outlines; not analysed as a frame
+      // bearing walls on every X gridline drawn as outlines; not analyzed as a frame
       for (let i = 0; i <= p.nx; i++) for (let k = 0; k < nz; k++) { const z0 = Z(k), z1 = Z(k + 1), y1 = Y(p.ny); add([X(i), 0, z0], [X(i), y1, z0], G.wall); add([X(i), 0, z1], [X(i), y1, z1], G.wall); add([X(i), 0, z0], [X(i), 0, z1], G.wall); add([X(i), y1, z0], [X(i), y1, z1], G.wall); }
     } else if (portal) {
       for (let j = 0; j <= p.ny; j++) {
@@ -1062,7 +1062,7 @@ const SAQ = ((SA) => {
       { name: 'Columns', kind: 'frame', matId: mat, mat: matOf(), secId: portal ? pick('beam', idx.col) : pick('col', idx.col), rel: 'none', role: 'col' },
       { name: p.material === 'timber' ? 'Braces (glulam)' : 'Braces', kind: 'truss', matId: mat === 'concrete' ? 'steel' : mat, mat: { ...SA.MATERIALS[mat === 'concrete' ? 'steel' : mat] }, secId: fam.brace ? pick('brace', idx.brace) : 'rhs150x150x8', rel: 'none', role: 'brace' },
       { name: 'Floor diaphragm (assumed rigid in plane)', kind: 'truss', matId: 'steel', mat: { ...SA.MATERIALS.steel, rho: 0, name: 'Stiff link (no weight)' }, secId: 'diaph', sec: { A: 0.02, Iy: 0, Iz: 0, J: 0, Wy: 0, Wz: 0, r: 0.01, shape: 'round' }, rel: 'none', role: 'diaph', hidden: true },
-      { name: 'Bearing walls (outline, not analysed)', kind: 'frame', matId: 'concrete', mat: matOf(), secId: 'con300x300', rel: 'none', role: 'wall' },
+      { name: 'Bearing walls (outline, not analyzed)', kind: 'frame', matId: 'concrete', mat: matOf(), secId: 'con300x300', rel: 'none', role: 'wall' },
     ];
     M.groups.forEach((g) => { if (!g.sec) g.sec = mk(g.secId); g.visible = g.role !== 'diaph'; });
     M.supports = new Map(); M.nodes.forEach((pt, i) => { if (Math.abs(pt[2]) < 1e-6) M.supports.set(i, p.base || sy.base); });
@@ -1265,7 +1265,7 @@ const thickMat = new LineMaterial({ linewidth: 4.4, vertexColors: true, worldUni
 const ghostMat = new LineMaterial({ linewidth: 1, color: 0xc9c6bf, transparent: true, opacity: 0.7 });
 const LINE_MATS = [thinMat, thickMat, ghostMat];
 
-// ---------- colour ramp in the style of SAP2000 contours: blue (low) · cyan · green · yellow · orange · red · magenta (high), in 12 bands ----------
+// ---------- color ramp in the style of SAP2000 contours: blue (low) · cyan · green · yellow · orange · red · magenta (high), in 12 bands ----------
 const RAMP = [[0, [24, 52, 255]], [0.16, [0, 170, 255]], [0.32, [0, 214, 160]], [0.46, [40, 210, 40]], [0.6, [230, 230, 0]], [0.74, [255, 150, 0]], [0.87, [250, 30, 0]], [1, [215, 0, 215]]], BANDS_N = 12;
 function rampRGB(x) { x = Math.min(1, Math.max(0, x)); x = Math.min(1, (Math.floor(x * BANDS_N - 1e-9) + 0.5) / BANDS_N); for (let i = 1; i < RAMP.length; i++) if (x <= RAMP[i][0]) { const [a, ca] = RAMP[i - 1], [b, cb] = RAMP[i], k = (x - a) / (b - a); return ca.map((v, j) => (v + (cb[j] - v) * k) / 255); } return RAMP[RAMP.length - 1][1].map((v) => v / 255); }
 const rampCSS = (dir = '0deg') => `linear-gradient(${dir}, ${Array.from({ length: BANDS_N }, (_, i) => { const c = rampRGB((i + 0.5) / BANDS_N).map((v) => Math.round(v * 255)).join(','); return `rgb(${c}) ${i / BANDS_N * 100}% ${(i + 1) / BANDS_N * 100}%`; }).join(',')})`;
@@ -1324,7 +1324,7 @@ function readOBJ(text) {
   const used = new Set(out.segs.map((s) => s.g)), keep = out.groups.map((_, i) => used.has(i)), remap = []; let c = 0; keep.forEach((k, i) => { remap[i] = k ? c++ : -1; }); out.groups = out.groups.filter((_, i) => keep[i]); for (const s of out.segs) s.g = remap[s.g];
   return { ...out, unit: null, unitKnown: false, up: 'y' };
 }
-// IFC (web-ifc): structural members become their centre lines
+// IFC (web-ifc): structural members become their center lines
 const IFC_LIB = 'https://cdn.jsdelivr.net/npm/web-ifc@0.0.78/';
 async function readIFC(buf) {
   await loadScript(IFC_LIB + 'web-ifc-api-iife.js');
@@ -1343,7 +1343,7 @@ async function readIFC(buf) {
   if (!out.segs.length) throw new Error('No beams, columns or members were found in this IFC file. Slabs and walls are not read: draw the frame as beams and columns, or bring the structure as Rhino lines.');
   return { ...out, unit: 1, unitKnown: true, up: 'y', warn: other ? `${other} other elements (slabs, walls, doors…) were left out; only beams, columns and members are read. Put floor loads on the beams as line loads (step 2).` : '' };
 }
-function axisOf(P) {   // centre line of a straight member from its mesh: principal direction through the centroid
+function axisOf(P) {   // center line of a straight member from its mesh: principal direction through the centroid
   if (P.length < 2) return null; const c = [0, 0, 0]; for (const p of P) for (let k = 0; k < 3; k++) c[k] += p[k] / P.length;
   const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]; for (const p of P) for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) C[i][j] += (p[i] - c[i]) * (p[j] - c[j]);
   let v = [1, 1, 1]; for (let it = 0; it < 60; it++) { const w = [0, 1, 2].map((i) => C[i][0] * v[0] + C[i][1] * v[1] + C[i][2] * v[2]), l = Math.hypot(...w) || 1; v = w.map((x) => x / l); }
@@ -1368,7 +1368,7 @@ function buildModel() {
   if (segs.length > LIMIT.members * 3) throw new Error(`${segs.length.toLocaleString('en-CA')} lines is too many for the browser. Simplify the model (fewer, longer members or a coarser mesh).`);
   const M = SA.build(segs, faces, 0.001);
   if (M.members.length > LIMIT.members || M.nodes.length > LIMIT.nodes) throw new Error(`${M.members.length.toLocaleString('en-CA')} members and ${M.nodes.length.toLocaleString('en-CA')} joints is more than the browser can solve. Simplify the model.`);
-  // ground at z = 0, centred in plan
+  // ground at z = 0, centered in plan
   let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]; for (const p of M.nodes) for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], p[i]); hi[i] = Math.max(hi[i], p[i]); }
   const sh = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]]; for (const p of M.nodes) for (let i = 0; i < 3; i++) p[i] -= sh[i];
   M.shift = sh; M.groups = R.groups.map((name) => ({ name, kind: null, matId: null, mat: null, secId: null, sec: null, T0: null, wD: 0, wL: 0, visible: true }));
@@ -1494,7 +1494,7 @@ function invalidate() { if (S.M) S.M.edited = true; if (S.res) { S.res = null; S
 function badge() {
   const b = $('#badge'), t = b.querySelector('span'), M = S.M; let k = '', txt = '';
   if (!M) txt = 'No model';
-  else if (M.notAnalysable) { k = 'estimate'; txt = 'Estimate only · not analysed'; }
+  else if (M.notAnalysable) { k = 'estimate'; txt = 'Estimate only · not analyzed'; }
   else if (S.res) { k = 'solved'; txt = `Solved · ${S.res.kind === 'cable' ? 'non-linear' : 'linear static'} · ${(S.res.list || []).length} combinations${M.sample ? ' · demo model' : ''}`; }
   else { k = 'stale'; txt = M.edited || S.everSolved ? 'Out of date · run the analysis' : 'Not solved yet · run the analysis'; }
   b.className = 'badge ' + k; t.textContent = txt;
@@ -1575,7 +1575,7 @@ $$('#forceSeg button').forEach((b) => b.addEventListener('click', () => setForce
 $('#dscale').addEventListener('change', (e) => { S.scale = Math.max(1, +e.target.value || 1); e.target.value = S.scale; render(); });
 
 // ---------- drawing ----------
-function scaleInfo() {   // what colours mean in the current view: {title, unit, lo, hi, div, val(member or node)}
+function scaleInfo() {   // what colors mean in the current view: {title, unit, lo, hi, div, val(member or node)}
   const M = S.M, c = C();
   if (!c || S.show === 'geometry') { const z = M.nodes.map((p) => p[2]); return { title: 'Height', unit: ' m', lo: Math.min(...z), hi: Math.max(...z), node: (i, p) => p[2], sub: S.res ? 'Model as drawn' : 'Model as drawn · run the analysis for results' }; }
   if (S.show === 'deformed' || S.show === 'disp') { let mx = 0; for (let i = 0; i < M.nodes.length; i++) mx = Math.max(mx, dispMag(c, i)); return { title: 'Displacement', unit: ' mm', lo: 0, hi: mx * 1000, nodeAll: true, sub: S.show === 'deformed' ? `Shape drawn ${S.scale}× real size · ${comboName()}` : comboName() }; }
@@ -1752,7 +1752,7 @@ function loadProject(j, file) {
   if (j.plotcloud !== 'structural-analysis') throw new Error('This .json is not a PlotCloud structural analysis project.');
   const M = { nodes: j.nodes, members: j.members.map(([a, b, g, N0, w, rel, tag]) => { const m = { a, b, g }; if (N0 != null) m.N0 = N0; if (w) m.w = w; if (rel != null) m.rel = rel; if (tag) m.tag = tag; return m; }), faces: j.faces || [], groups: j.groups.map((g) => ({ ...g, visible: g.visible !== false })), supports: new Map(j.supports), area: j.area, self: j.self, point: j.point || [], shift: j.shift, name: j.name, check: { parts: 1 }, quick: j.quick || null, edited: !!j.edited, notAnalysable: j.notAnalysable || null };
   M.check.parts = SA.components(M).count; S.raw = null;
-  $('#fileinfo').innerHTML = `<b></b><span>PlotCloud project · metres</span>`; $('#fileinfo b').textContent = file ? file.name : j.name;
+  $('#fileinfo').innerHTML = `<b></b><span>PlotCloud project · meters</span>`; $('#fileinfo b').textContent = file ? file.name : j.name;
   setModel(M); msg('#loadmsg', 'Project loaded with its members, supports and loads. Run the analysis to see results.', 'ok');
 }
 
@@ -1760,7 +1760,7 @@ function loadProject(j, file) {
 function loadSample(k) {
   const M = k === 'grid' ? SA.sampleGrid() : SA.sampleNet(); M.sample = true; M.self = true;
   M.groups.forEach((g) => (g.visible = true)); S.raw = null; S.unit = 1; setUp('z'); $('#units').value = '1';
-  $('#fileinfo').innerHTML = `<b></b><span>Demo model · metres · sample loads: dead ${M.area.D} kN/m², ${k === 'grid' ? 'live' : 'snow'} ${M.area.L} kN/m²</span>`; $('#fileinfo b').textContent = M.name.replace('Sample: ', '');
+  $('#fileinfo').innerHTML = `<b></b><span>Demo model · meters · sample loads: dead ${M.area.D} kN/m², ${k === 'grid' ? 'live' : 'snow'} ${M.area.L} kN/m²</span>`; $('#fileinfo b').textContent = M.name.replace('Sample: ', '');
   msg('#loadmsg', k === 'grid' ? 'Members, supports and loads are already set. Press Run analysis, or change any setting first.' : 'Form-found under its dead load, so the drawn shape is in balance. Members, supports and loads are set; press Run analysis.');
   setModel(M); pressSeg('#sampleSeg', 'sample', k);
 }
@@ -1812,7 +1812,7 @@ let dlP = null;
 const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use === 'function') ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null));
 async function offer(name, data, statusSel, previewCanvas) {
   const dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data }); msg(statusSel, `Saved ${name}.`, 'ok'); return true; } catch (e) { if (e && e.code === 'declined') { msg(statusSel, 'Save cancelled.'); return false; } if (e && e.code === 'rate_limited') { msg(statusSel, 'Another save prompt is still open. Close it first.', 'warn'); return false; } } }
+  if (dl) { try { await dl.save({ filename: name, data }); msg(statusSel, `Saved ${name}.`, 'ok'); return true; } catch (e) { if (e && e.code === 'declined') { msg(statusSel, 'Save canceled.'); return false; } if (e && e.code === 'rate_limited') { msg(statusSel, 'Another save prompt is still open. Close it first.', 'warn'); return false; } } }
   try { const blob = data instanceof Blob ? data : new Blob([data]); const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); msg(statusSel, `Downloaded ${name}.`, 'ok'); return true; } catch (e) {}
   if (previewCanvas) { msg(statusSel, 'This view cannot download files. Right-click or long-press the image below to save it.'); const img = new Image(); img.src = previewCanvas.toDataURL('image/png'); img.alt = 'Exported image'; $(statusSel).appendChild(img); }
   else msg(statusSel, 'This view cannot download files. Open the page on claude.ai to save.', 'warn');
@@ -1850,7 +1850,7 @@ function setMode(m) {
   S.mode = m; document.body.classList.toggle('m-quick', m === 'quick'); document.body.classList.toggle('m-adv', m === 'adv'); pressSeg('#modeSeg', 'mode', m);
   if (m === 'adv' && S.M && S.M.quick) {
     const M = S.M, used = M.groups.filter((g, i) => gCount(i)).length;
-    $('#fileinfo').innerHTML = `<b></b><span>From Quick analysis · metres, kN · ${M.nodes.length} joints, ${M.members.length} members, ${used} groups</span>`; $('#fileinfo b').textContent = M.name;
+    $('#fileinfo').innerHTML = `<b></b><span>From Quick analysis · meters, kN · ${M.nodes.length} joints, ${M.members.length} members, ${used} groups</span>`; $('#fileinfo b').textContent = M.name;
     msg('#loadmsg', `This is the Quick model, unchanged. Floor and roof loads sit on the beams as member line loads (dead, live, snow); wind acts on the joints of the two faces as load cases Wx and Wy; the floor diaphragm is a group of hidden stiff bars. Nothing was dropped. Edit anything here and run the analysis again.${M.notAnalysable ? ' ' + M.notAnalysable : ''}`);
   }
   if (m === 'quick') qNotice();
@@ -1863,7 +1863,7 @@ function qFill() {
   $('#q-use').innerHTML = Object.entries(SAQ.USES).map(([k, u]) => `<option value="${k}">${u.name} · live ${u.L} kPa</option>`).join(''); $('#q-use').value = q.use;
   pressSeg('#q-mat', 'v', q.material); pressSeg('#q-base', 'v', q.base); pressSeg('#q-terrain', 'v', q.terrain);
   $('#q-system').innerHTML = SAQ.SYSTEMS[q.material].map((x) => `<option value="${x.id}">${x.name}</option>`).join(''); $('#q-system').value = sys.id;
-  $('#q-sysNote').textContent = q.material === 'masonry' ? 'Bearing walls cannot be analysed as a frame here: Quick gives a hand estimate of the wall loads and draws the walls as outlines.' : `This tool takes ${sys.storeys[0] === sys.storeys[1] ? sys.storeys[0] : sys.storeys.join('–')} storey${sys.storeys[1] > 1 ? 's' : ''} and ${sys.span.join('–')} m spans for this system — a typical range, not a code limit.`;
+  $('#q-sysNote').textContent = q.material === 'masonry' ? 'Bearing walls cannot be analyzed as a frame here: Quick gives a hand estimate of the wall loads and draws the walls as outlines.' : `This tool takes ${sys.storeys[0] === sys.storeys[1] ? sys.storeys[0] : sys.storeys.join('–')} storey${sys.storeys[1] > 1 ? 's' : ''} and ${sys.span.join('–')} m spans for this system — a typical range, not a code limit.`;
   for (const k of QNUM) { const el = $('#q-' + k); if (document.activeElement !== el) el.value = q[k] ?? ''; }
   $('#q-loc').innerHTML = Object.entries(SAQ.LOCS).map(([k, l]) => `<option value="${k}">${l.name}</option>`).join(''); $('#q-loc').value = q.loc;
   $('#q-deadNote').textContent = SAQ.MATS[q.material].deadNote + ' — change them to suit your floor build-up.';
@@ -2139,7 +2139,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }

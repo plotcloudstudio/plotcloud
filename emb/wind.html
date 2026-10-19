@@ -141,11 +141,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
         <p>Or drop it on the view. Accepts .3dm (Rhino), .dae (SketchUp export), .obj, .stl and .glb</p>
         <input type="file" id="file" accept=".3dm,.obj,.stl,.dae,.glb,.gltf,.json" hidden>
       </div>
-      <div class="fileinfo" id="fileinfo"><b>Sample: corner courtyard block with tower</b><span>Demo model · metres</span></div>
+      <div class="fileinfo" id="fileinfo"><b>Sample: corner courtyard block with tower</b><span>Demo model · meters</span></div>
       <p class="msg" id="loadmsg"></p>
       <div class="two">
         <div class="row"><label for="units">File units</label>
-          <select id="units"><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="1" selected>Metres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+          <select id="units"><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="1" selected>Meters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div class="row"><span class="lab" id="upl">Up axis</span>
           <div class="seg" id="upSeg" role="group" aria-labelledby="upl"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div>
       </div>
@@ -164,7 +164,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       </div>
       <div class="two">
         <div class="row"><label for="speed">Speed at 10 m</label><div class="two" style="grid-template-columns:1fr auto;align-items:center"><input type="number" id="speed" min="0.5" max="40" step="0.5" value="5"><span class="note">m/s</span></div></div>
-        <div class="row"><label for="terrain">Surroundings</label><select id="terrain"><option value="0.14">Open country</option><option value="0.22" selected>Suburban</option><option value="0.33">City centre</option></select></div>
+        <div class="row"><label for="terrain">Surroundings</label><select id="terrain"><option value="0.14">Open country</option><option value="0.22" selected>Suburban</option><option value="0.33">City center</option></select></div>
       </div>
     </section>
 
@@ -228,7 +228,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       <div class="kp4" id="kp4"></div>
       <div class="cprow"><span class="note">Petals show</span><div class="seg2" id="roseM"><button type="button" data-m="up" aria-pressed="true">Windy area</button><button type="button" data-m="max" aria-pressed="false">Highest speed-up</button></div></div>
       <canvas id="rose" aria-label="Wind rose of results: click a direction"></canvas>
-      <p class="note" id="roseNote">Click a direction to see it. Grey ones are not solved yet: a click solves them at Draft.</p>
+      <p class="note" id="roseNote">Click a direction to see it. Gray ones are not solved yet: a click solves them at Draft.</p>
       <button type="button" class="btn" id="fillRose">Solve all 16 directions at Draft</button>
       <div class="cph" style="margin-top:6px"><b>Area by speed-up</b><span class="note">this direction · click a bar</span></div>
       <canvas id="hist" aria-label="Area in each speed-up band: click to highlight"></canvas>
@@ -249,7 +249,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 // ===== PlotCloud site context core =====
 // Real-world site → validated, editable context model shared by Site Context, Workbench and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
-// Coordinates: WGS84 lat/lon in, local metres out (x east, y north) on a transverse Mercator centred on the site origin.
+// Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
 const SITE = (() => {
   // ---------- projection: transverse Mercator on WGS84 (Krüger series to n^6, Karney 2011) ----------
   const A = 6378137, F = 1 / 298.257223563, N = F / (2 - F), E = Math.sqrt(F * (2 - F)), D = Math.PI / 180;
@@ -313,7 +313,7 @@ const SITE = (() => {
   function cleanRing(pts, tol = 0.01) {
     const out = []; for (const p of pts) { if (!p || !isFinite(p[0]) || !isFinite(p[1])) return { ring: [], issues: ['coordinates are not numbers'] }; const q = out[out.length - 1]; if (!q || Math.hypot(p[0] - q[0], p[1] - q[1]) > tol) out.push([p[0], p[1]]); }
     if (out.length > 1 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) <= tol) out.pop();
-    // drop points that sit on a straight line between their neighbours
+    // drop points that sit on a straight line between their neighbors
     for (let i = 0; out.length > 3 && i < out.length; ) { const a = out[(i - 1 + out.length) % out.length], b = out[i], c = out[(i + 1) % out.length]; if (Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) < 1e-6) out.splice(i, 1); else i++; }
     return { ring: out, issues: [] };
   }
@@ -331,12 +331,12 @@ const SITE = (() => {
   }
 
   // ---------- heights ----------
-  const STOREY = 3.0;   // metres per storey, used only for floor-count heights (labelled as such)
-  // "12", "12 m", "12.5m", "40'", "40 ft", "12'6\"" → metres, or null
+  const STOREY = 3.0;   // meters per storey, used only for floor-count heights (labeled as such)
+  // "12", "12 m", "12.5m", "40'", "40 ft", "12'6\"" → meters, or null
   function parseLength(v) {
     if (v == null) return null; if (typeof v === 'number') return isFinite(v) && v >= 0 ? v : null;
     const s = String(v).trim().toLowerCase().replace(',', '.'); let m;
-    if ((m = s.match(/^(-?\d+(?:\.\d+)?)\s*(m|meters?|metres?)?$/))) return +m[1] >= 0 ? +m[1] : null;
+    if ((m = s.match(/^(-?\d+(?:\.\d+)?)\s*(m|meters?|meters?)?$/))) return +m[1] >= 0 ? +m[1] : null;
     if ((m = s.match(/^(\d+(?:\.\d+)?)\s*(?:'|ft|feet)\s*(?:(\d+(?:\.\d+)?)\s*(?:"|in))?$/))) return +m[1] * 0.3048 + (m[2] ? +m[2] * 0.0254 : 0);
     if ((m = s.match(/^(\d+(?:\.\d+)?)\s*(?:"|in)$/))) return +m[1] * 0.0254;
     return null;
@@ -442,7 +442,7 @@ const SITE = (() => {
 
   // ---------- context model ----------
   const uid = (p) => p + Math.random().toString(36).slice(2, 9);
-  // boundary: { kind: 'radius', r } around the origin, or { kind: 'polygon', pts: [[x, y]…] } in site metres
+  // boundary: { kind: 'radius', r } around the origin, or { kind: 'polygon', pts: [[x, y]…] } in site meters
   function inBoundary(fp, bd) {
     if (!bd) return true; const c = centroid(fp);
     if (bd.kind === 'polygon' && bd.pts && bd.pts.length > 2) return inside(c, bd.pts) || fp.some((p) => inside(p, bd.pts));
@@ -483,7 +483,7 @@ const SITE = (() => {
   }
   function guessDST(o) { if (o.lon < -50 && o.lon > -170 && o.lat > 15) return 1; if (o.lon > -25 && o.lon < 45 && o.lat > 34) return 2; if (o.lon > 110 && o.lat < -25) return 3; return 0; }
   function addSource(site, src) { site.sources.push(src); site.version++; return site; }
-  // an edit by the person: height, exclusion; always labelled and versioned
+  // an edit by the person: height, exclusion; always labeled and versioned
   function setHeight(site, id, h) { const b = site.buildings.find((x) => x.id === id); if (!b) return false; const v = parseLength(h); if (v == null || v <= (b.base || 0)) return false; b.h = +v.toFixed(2); b.hSource = 'user'; b.hNote = 'entered by you'; b.edited = true; site.version++; return true; }
   function setExcluded(site, id, on, why = 'left out by you') { const b = site.buildings.find((x) => x.id === id); if (!b) return false; b.excluded = !!on; b.why = on ? why : ''; b.auto = false; b.edited = true; site.version++; return true; }
   // missing heights → an explicit estimate (storeys × storey height), never silent
@@ -507,7 +507,7 @@ const SITE = (() => {
       if (R.levels) warn.push(`${R.levels} height${R.levels > 1 ? 's come' : ' comes'} from floor counts (${site.storey} m a storey).`);
       if (!site.terrain) warn.push('No terrain: the ground is taken as flat.');
       if (site.tzSource !== 'user') warn.push(`Time zone UTC${site.tz >= 0 ? '+' : ''}${site.tz} is estimated from the longitude; check it.`);
-      if (site.fixture) warn.push('This site is a labelled test fixture, not imported real data.');
+      if (site.fixture) warn.push('This site is a labeled test fixture, not imported real data.');
       return { ok: !err.length, err, warn };
     }
     if (kind === 'wind') {
@@ -543,7 +543,7 @@ const SITE = (() => {
 
   // ---------- placing the site into a Workbench plan (plan +Y faces compass bearing M.north) ----------
   function toPlan(p, north) { const a = (north || 0) * D, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
-  // masses for analysis: context only casts shadows; heights in metres above the site origin
+  // masses for analysis: context only casts shadows; heights in meters above the site origin
   // site.at: where the site point sits in the plan (a project placed on a site keeps its own coordinates)
   const siteToPlan = (site, p, north) => { const q = toPlan(p, north), a = (site && site.at) || [0, 0]; return [q[0] + a[0], q[1] + a[1]]; };
   // terrain height at a site point (bilinear on the terrain grid), 0 when there is no terrain
@@ -555,7 +555,7 @@ const SITE = (() => {
   function terrainForPlan(site, north) { if (!site || !site.terrain) return null; const G = site.terrain.grid, pts = []; for (let j = 0; j < G.ny; j++) for (let i = 0; i < G.nx; i++) { const q = siteToPlan(site, [G.x0 + i * G.step, G.y0 + j * G.step], north); pts.push([+q[0].toFixed(2), +q[1].toFixed(2), G.z[j * G.nx + i]]); } return { nx: G.nx, ny: G.ny, pts, provider: site.terrain.provider }; }
 
   // ===================== v132 · the Site page =====================
-  // 11 · height rule: the height tag; else floor count × 3 m; else 6 m (2 storeys), labelled estimated
+  // 11 · height rule: the height tag; else floor count × 3 m; else 6 m (2 storeys), labeled estimated
   const DEFAULT_LEVELS = 2, DEFAULT_H = DEFAULT_LEVELS * STOREY;
   function defaultHeights(site) { let n = 0; for (const b of site.buildings) if (b.valid && b.h == null) { b.h = +((b.base || 0) + DEFAULT_H).toFixed(2); b.hSource = 'estimate'; b.hNote = `estimated: no height or floor count in OpenStreetMap (${DEFAULT_LEVELS} storeys × ${STOREY} m)`; b.autoEst = true; n++; } if (n) site.version++; return n; }
   // the context area: a square around the site point, 400 m by default, 200 to 1000 m
@@ -571,7 +571,7 @@ const SITE = (() => {
   // set one edge's length: the edge's end corner moves along the edge; the rest stays
   function setEdge(pts, i, len) { const n = pts.length, a = pts[i], b = pts[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!(len > 0.1) || L < 1e-6) return false; const k = len / L; pts[(i + 1) % n] = [+(a[0] + (b[0] - a[0]) * k).toFixed(3), +(a[1] + (b[1] - a[1]) * k).toFixed(3)]; return true; }
   const edges = (pts) => pts.map((p, i) => { const q = pts[(i + 1) % pts.length]; return +Math.hypot(q[0] - p[0], q[1] - p[1]).toFixed(3); });
-  // massing edits: move, scale (about an anchor), delete (the place becomes “your site”); always labelled and versioned
+  // massing edits: move, scale (about an anchor), delete (the place becomes “your site”); always labeled and versioned
   function moveBuilding(site, id, dx, dy) { const b = site.buildings.find((x) => x.id === id); if (!b || !b.xy.length) return false; const Fr = frame(site.origin), mv = (p) => [+(p[0] + dx).toFixed(3), +(p[1] + dy).toFixed(3)];
     b.xy = b.xy.map(mv); b.holes = b.holes.map((r) => r.map(mv)); b.ll = b.xy.map((p) => Fr.inv(p[0], p[1])); b.llHoles = b.holes.map((r) => r.map((p) => Fr.inv(p[0], p[1]))); b.edited = true; b.moved = true; site.version++; return true; }
   function scaleBuilding(site, id, sx, sy, anchor) { const b = site.buildings.find((x) => x.id === id); if (!b || !b.xy.length || !(sx > 0) || !(sy > 0)) return false; const Fr = frame(site.origin), sc = (p) => [+(anchor[0] + (p[0] - anchor[0]) * sx).toFixed(3), +(anchor[1] + (p[1] - anchor[1]) * sy).toFixed(3)];
@@ -622,7 +622,7 @@ const PCS = (() => {
     return Object.assign({}, scene, { masses: keep.concat(ctx), terrain: SITE.terrainForPlan(site, north) || null,
       source: Object.assign({}, scene.source, { site: st.id, siteVersion: site.version, siteHash: SITE.simHash(site), surroundingsFrom: 'site-page' }), notes });
   }
-  // ---- geometry for the influence notes (scene plan metres)
+  // ---- geometry for the influence notes (scene plan meters)
   const cen = (P) => { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } return [x / P.length, y / P.length]; };
   const segD = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
   const inside = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
@@ -721,7 +721,7 @@ ${L.c.map((d, i) => `  { float fi = s${Math.floor(i / 4)}.${ch[i % 4]} + ${f(L.w
 `;
   for (let i = 0; i < Q; i++) {
     const [cx, cy, cz] = L.c[i];
-    s += `  { ivec3 n = c - ivec3(${cx},${cy},${cz}); int mode = 0; int k = ${i};\n`;   // mode 0 neighbour, 1 inlet, 2 own, 3 bounce
+    s += `  { ivec3 n = c - ivec3(${cx},${cy},${cz}); int mode = 0; int k = ${i};\n`;   // mode 0 neighbor, 1 inlet, 2 own, 3 bounce
     if (cy) s += `    if (n.y < 0 || n.y >= NY) { n.y = c.y; k = ${ry[i]}; }\n`;
     if (cz && three) s += `    if (n.z < 0 || n.z >= NZ) { n.z = c.z; k = (k == ${i}) ? ${rz[i]} : ${rz[ry[i]]}; }\n`;   // free-slip ground and top
     if (cx) s += `    if (mode == 0 && n.x < 0) mode = 1; if (mode == 0 && n.x >= NX) mode = 2;\n`;
@@ -729,7 +729,7 @@ ${L.c.map((d, i) => `  { float fi = s${Math.floor(i / 4)}.${ch[i % 4]} + ${f(L.w
     s += `    if (mode == 3) g[${i}] = s${Math.floor(opp[i] / 4)}.${C(opp[i])};\n`;
     s += `    else if (mode == 1) g[${i}] = feq(${f(L.w[i])}, vec3(${cx}.0,${cy}.0,${cz}.0), 1.0, uIn) - ${f(L.w[i])};\n`;
     s += `    else if (mode == 2) g[${i}] = feq(${f(L.w[i])}, vec3(${cx}.0,${cy}.0,${cz}.0), 1.0, uS) - ${f(L.w[i])};\n`;   // outlet held at reference density
-    // k may differ from i after a free-slip reflection; fetch that population from the neighbour
+    // k may differ from i after a free-slip reflection; fetch that population from the neighbor
     s += `    else { ivec2 q = texOf(n); `;
     const cand = [...new Set([i, ...(cy ? [ry[i]] : []), ...(cz && three ? [rz[i], rz[ry[i]]] : [])])];
     s += cand.map((j) => `if (k == ${j}) g[${i}] = texelFetch(${T(j)}, q, 0).${C(j)};`).join(' else ');
@@ -1210,7 +1210,7 @@ function fieldOf(sim, live, w, h, sum, solid) {
   return null;
 }
 
-// ---------- colours ----------
+// ---------- colors ----------
 const RAMP = [[0, [43, 45, 110]], [0.25, [52, 112, 184]], [0.5, [78, 176, 160]], [0.75, [236, 201, 75]], [1, [217, 72, 44]]];
 const BANDS = [[2, [52, 112, 184], 'under 2'], [4, [78, 176, 160], '2–4'], [6, [236, 201, 75], '4–6'], [8, [240, 140, 60], '6–8'], [Infinity, [190, 40, 40], 'over 8']];
 function rampRGB(x) { x = Math.min(1, Math.max(0, x)); for (let i = 1; i < RAMP.length; i++) if (x <= RAMP[i][0]) { const [a, ca] = RAMP[i - 1], [b, cb] = RAMP[i], k = (x - a) / (b - a); return ca.map((v, j) => v + (cb[j] - v) * k); } return RAMP[RAMP.length - 1][1]; }
@@ -1358,7 +1358,7 @@ function skinFinish(sk, D) {
     cp[f] = (sk.rho[f] / n - rref) / 3 / q; vr[f] = (sk.spd[f] / n) / Math.max(1e-6, D.inlet[Math.max(0, Math.min(D.nz - 1, kk))]);
     nrm.push([a * D.d.x + b * D.yv.x, a * D.d.y + b * D.yv.y]);
   }
-  // one pass of smoothing over neighbouring patches that face the same way: the grid is coarse, the pressure is not
+  // one pass of smoothing over neighboring patches that face the same way: the grid is coarse, the pressure is not
   const key = (i, j, k, d) => ((k * D.ny + j) * D.nx + i) * 6 + d, idx = new Map(); for (let f = 0; f < sk.nF; f++) idx.set(key(sk.F[f * 4], sk.F[f * 4 + 1], sk.F[f * 4 + 2], sk.F[f * 4 + 3]), f);
   const sm = (src) => { const out = new Float32Array(sk.nF); for (let f = 0; f < sk.nF; f++) { const i = sk.F[f * 4], j = sk.F[f * 4 + 1], k = sk.F[f * 4 + 2], d = sk.F[f * 4 + 3], ax = d >> 1; let s = src[f] * 2, w = 2;
     for (const [u, v, t] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) { if ((ax === 0 && u) || (ax === 1 && v) || (ax === 2 && t)) continue; const g = idx.get(key(i + u, j + v, k + t, d)); if (g != null) { s += src[g]; w++; } }
@@ -1535,7 +1535,7 @@ $('#dirR').addEventListener('input', (e) => setDir(e.target.value));
 $('#dir').addEventListener('change', (e) => setDir(e.target.value));
 $('#speed').addEventListener('change', (e) => { S.speed = Math.max(0.5, Math.min(40, +e.target.value || 5)); e.target.value = S.speed; if (S.sim && S.sim.done) { redraw(); showStats(S.sim); } });
 $('#terrain').addEventListener('change', (e) => { S.alpha = +e.target.value; invalid(); });
-function modeNote() { $('#modeNote').textContent = S.mode === '2d' ? 'Fast. Air can only go around the footprints at the slice height, never over them, so speed-ups come out stronger than in reality and wind brought down by tall buildings is missing. Good for comparing options.' : 'Slower, on a coarser grid. Includes the wind profile and flow over and down the buildings. Cells are taller than a person, so the street-level slice sits at the centre of the lowest cell (shown in the legend).'; }
+function modeNote() { $('#modeNote').textContent = S.mode === '2d' ? 'Fast. Air can only go around the footprints at the slice height, never over them, so speed-ups come out stronger than in reality and wind brought down by tall buildings is missing. Good for comparing options.' : 'Slower, on a coarser grid. Includes the wind profile and flow over and down the buildings. Cells are taller than a person, so the street-level slice sits at the center of the lowest cell (shown in the legend).'; }
 document.querySelectorAll('#modeSeg button').forEach((b) => b.addEventListener('click', () => { S.mode = b.dataset.mode; document.querySelectorAll('#modeSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); modeNote(); gridNote(); setNote(); invalid(); }));
 $('#res').addEventListener('change', (e) => { S.res = e.target.value; gridNote(); setNote(); invalid(); });
 $('#hgt').addEventListener('change', (e) => { S.hgt = Math.max(0.5, Math.min(60, +e.target.value || 1.5)); e.target.value = S.hgt; invalid(); });
@@ -1549,7 +1549,7 @@ document.querySelectorAll('#upSeg button').forEach((b) => b.addEventListener('cl
 function setUp(u) { S.up = u; document.querySelectorAll('#upSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.up === u))); }
 
 // ---------- v132 · a PlotCloud scene: your building + the Site page's surroundings near it (read-only) ----------
-// flat ground: context blocks stand on the lowest base in the scene; terrain is not modelled here
+// flat ground: context blocks stand on the lowest base in the scene; terrain is not modeled here
 function readWindScene(j) {
   if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Sun hours or the Site page, or open a 3D file.');
   const W = PCS.windMasses(j), ok = W.masses.filter((m) => Array.isArray(m.outer) && m.outer.length > 2 && m.h > (m.base || 0)), b0 = ok.length ? Math.min(...ok.map((m) => m.base || 0)) : 0;
@@ -1614,7 +1614,7 @@ async function loadFile(file) {
     const tips = [];
     if (r.warn) tips.push(r.warn);
     if (!r.unitKnown) tips.push('Check the size below. If it is wrong, change the units. If the model is lying on its side, switch the up axis.');
-    if (r.scene) tips.push(r.wind.n ? `Surroundings from the Site page go into the grid as solid blocks (read-only)${r.wind.dropped ? `; ${r.wind.dropped} farther ones are left out` : ''}. Terrain is not modelled here: flat ground.` : '');
+    if (r.scene) tips.push(r.wind.n ? `Surroundings from the Site page go into the grid as solid blocks (read-only)${r.wind.dropped ? `; ${r.wind.dropped} farther ones are left out` : ''}. Terrain is not modeled here: flat ground.` : '');
     if (!r.scene) tips.push('Remove trees, people and furniture first: the solver treats every object as a solid wall.');
     msg('#loadmsg', tips.join(' '), r.warn ? 'warn' : '');
   } catch (e) { msg('#loadmsg', e.message || 'The file could not be read.', 'warn'); }
@@ -1692,7 +1692,7 @@ async function offer(name, data, statusSel, previewCanvas) {
   if (dl) {
     try { await dl.save({ filename: name, data }); msg(statusSel, `Saved ${name}.`, 'ok'); return true; }
     catch (e) {
-      if (e && e.code === 'declined') { msg(statusSel, 'Save cancelled.'); return false; }
+      if (e && e.code === 'declined') { msg(statusSel, 'Save canceled.'); return false; }
       if (e && e.code === 'rate_limited') { msg(statusSel, 'Another save prompt is still open. Close it first.', 'warn'); return false; }
     }
   }
@@ -1782,7 +1782,7 @@ function panelUI() {
     x.font = `${9.5 * k}px IBM Plex Mono, monospace`; x.fillStyle = '#5a5853'; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; if (vals.length) x.fillText(ROSE_M === 'up' ? `outer ring ${m2(max)} m² faster than 1.2×` : `outer ring ${max.toFixed(2)}× highest speed-up`, 4 * k, h - 4 * k); }
   const n = SIMS.size, left = 16 - [...Array(16).keys()].filter((i) => SIMS.has(Math.round(i * 22.5) % 360)).length, z = S.model ? budgetFor(S.mode, 'draft') : null;
   $('#fillRose').textContent = FILL.on ? 'Stop solving the rose' : left ? `Solve the other ${left} directions at Draft (~${fmtT(left * (z ? z.est : 15))})` : 'All 16 directions solved'; $('#fillRose').disabled = !FILL.on && (!left || S.busy);
-  $('#roseNote').textContent = n ? `${n} of 16 directions solved. Click a direction to see it; grey ones are solved at Draft when clicked.` : 'Click a direction to solve and see it at Draft.';
+  $('#roseNote').textContent = n ? `${n} of 16 directions solved. Click a direction to see it; gray ones are solved at Draft when clicked.` : 'Click a direction to solve and see it at Draft.';
   { const c = $('#hist'), { x, w, h, k } = sizeCv(c, 150); x.clearRect(0, 0, w, h); HIST_HITS = []; if (!cur) { x.fillStyle = '#5a5853'; x.font = `${11 * k}px Noto Sans, sans-serif`; x.fillText('Run the simulation to see the areas.', 4 * k, 20 * k); return; }
     const A = bandAreas(cur), tot = A.reduce((a, b) => a + b, 0) || 1, mx = Math.max(...A), bw = (w - 8 * k) / A.length;
     A.forEach((v, i) => { const bh = (h - 44 * k) * v / Math.max(1e-9, mx), bx = 4 * k + i * bw, by = h - 30 * k - bh, mid = (HBANDS[i][0] + Math.min(2, HBANDS[i][1])) / 2;
@@ -1921,7 +1921,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }

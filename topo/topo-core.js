@@ -1,5 +1,5 @@
 // PlotCloud contour model maker — terrain → stacked laser-cut layers.
-// Field heights in metres, grid spacing `cell` metres. Output geometry in model millimetres (y = north, up).
+// Field heights in meters, grid spacing `cell` meters. Output geometry in model millimeters (y = north, up).
 
 // ---------- terrain ----------
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
@@ -159,7 +159,7 @@ function distanceInside(field, L) {
 export function computeLayers(field, { scale = 500, thickness = 3, exag = 1, minArea = 12, tol = 0.15 }) {
   const { nx, ny, cell, h } = field;
   let zmin = Infinity, zmax = -Infinity; for (const v of h) { if (v < zmin) zmin = v; if (v > zmax) zmax = v; }
-  const interval = thickness * scale / 1000 / exag;            // metres of real elevation per layer
+  const interval = thickness * scale / 1000 / exag;            // meters of real elevation per layer
   const mm = cell * 1000 / scale;                               // model mm per grid cell
   const w = (nx - 1) * mm, d = (ny - 1) * mm;
   const layers = [{ k: 0, z: zmin, base: true, loops: [[[0, 0], [w, 0], [w, d], [0, d]]] }];

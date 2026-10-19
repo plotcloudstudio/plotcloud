@@ -1,5 +1,5 @@
 // 2D plan and elevation blocks: DXF (R12, real BLOCK definitions + INSERTs), SVG sheet, and Rhino layers.
-// Drawing units are millimetres at 1:1; pens and text are sized for plotting at 1:50.
+// Drawing units are millimeters at 1:1; pens and text are sized for plotting at 1:50.
 import { LAYERS2D, extent2D } from './models.js';
 
 const f = (v) => (Math.round(v * 1000) / 1000).toString();

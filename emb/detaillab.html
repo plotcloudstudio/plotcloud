@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: same bench as Sun Hours, Wind Flow and Structural Analysis. Parameter column on the left, the drawing (2D sheet or 3D
-   layers) on the right. The drawing is the visual centre; the UI stays out of its way. Phone: view on top, column below. */
+   layers) on the right. The drawing is the visual center; the UI stays out of its way. Phone: view on top, column below. */
 :root {
   --bg: #ffffff; --surface: #ffffff; --view: #f6f6f4; --ink: #111111; --muted: #5a5853; --line: #e1dfda; --line-strong: #9b978f;
   --accent: #d8402a; --accent-ink: #ffffff; --accent-soft: #fbe9e5; --ok: #0a7a2f; --warn: #9a5b00;
@@ -197,7 +197,7 @@ textarea { resize: vertical; font-size: 12.5px; line-height: 1.4; }
       <div class="two"><button type="button" class="btn" id="xJSON">Save project (.json)</button><button type="button" class="btn" id="oJSON">Open project</button></div>
       <input type="file" id="fileJSON" accept=".json" hidden>
       <p class="msg" id="xmsg"></p>
-      <p class="note">PDF, SVG and DXF keep real lines, hatches, dimensions and text you can edit. The DXF is drawn full size in millimetres with text sized for the chosen scale. Exports always use the Drawing sheet.</p>
+      <p class="note">PDF, SVG and DXF keep real lines, hatches, dimensions and text you can edit. The DXF is drawn full size in millimeters with text sized for the chosen scale. Exports always use the Drawing sheet.</p>
     </section>
     <section class="sec"><p class="note">For study and concept design only. Generated details are not checked for a specific project, code edition or site, and are not construction documents. Confirm with the code that applies and a qualified professional.</p></section>
   </aside>
@@ -217,8 +217,8 @@ textarea { resize: vertical; font-size: 12.5px; line-height: 1.4; }
 
 <script>
 // PlotCloud DetailLab core — parametric construction details. One data model drives the 2D drawing, the 3D model and the numbers.
-// Model space: millimetres, x to the right (exterior on the left, interior on the right), y up. Origin: exterior face of the
-// framing at the top of the foundation wall. Paper space: millimetres on the sheet, y down (SVG convention).
+// Model space: millimeters, x to the right (exterior on the left, interior on the right), y up. Origin: exterior face of the
+// framing at the top of the foundation wall. Paper space: millimeters on the sheet, y down (SVG convention).
 (function (G) {
 'use strict';
 
@@ -667,7 +667,7 @@ function sheet(S, opts = {}) {
       for (const xx of [sg.a, sg.b]) A({ t: 'line', a: [xx - tick / 2, yC + tick / 2], b: [xx + tick / 2, yC - tick / 2], w: PEN.mid, layer: 'A-ANNO-DIMS', drag: 'D:chain' });
     }
     A({ t: 'line', a: [segs[0].a - 1.5, yC], b: [segs[segs.length - 1].b + 1.5, yC], w: PEN.hair, layer: 'A-ANNO-DIMS', drag: 'D:chain' });
-    // text positions: centred on the segment, pushed sideways where they would collide; short leaders show which segment
+    // text positions: centered on the segment, pushed sideways where they would collide; short leaders show which segment
     const tw = (t) => t.length * dimText * 0.6 + 1;
     const pos = segs.map((sg) => (sg.a + sg.b) / 2);
     const big = segs.findIndex((sg) => sg.r.id === 'framing');
@@ -1167,7 +1167,7 @@ let dlP = null;
 const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use === 'function') ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null));
 async function offer(name, data) {
   const dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data }); msg('#xmsg', `Saved ${name}.`, 'ok'); return true; } catch (e) { if (e && e.code === 'declined') { msg('#xmsg', 'Save cancelled.'); return false; } if (e && e.code === 'rate_limited') { msg('#xmsg', 'Another save prompt is still open. Close it first.', 'warn'); return false; } } }
+  if (dl) { try { await dl.save({ filename: name, data }); msg('#xmsg', `Saved ${name}.`, 'ok'); return true; } catch (e) { if (e && e.code === 'declined') { msg('#xmsg', 'Save canceled.'); return false; } if (e && e.code === 'rate_limited') { msg('#xmsg', 'Another save prompt is still open. Close it first.', 'warn'); return false; } } }
   try { const blob = data instanceof Blob ? data : new Blob([data]); const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); msg('#xmsg', `Downloaded ${name}.`, 'ok'); return true; } catch (e) {}
   msg('#xmsg', 'This view cannot download files. Open the page on claude.ai to save.', 'warn'); return false;
 }
@@ -1324,7 +1324,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }

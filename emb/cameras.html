@@ -134,7 +134,7 @@ canvas.chart.click { cursor: pointer; }
     <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
       <div class="drop" id="drop"><button type="button" class="btn" id="pick">Choose a model file</button><p class="note">Or drop it on the view. Accepts .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), .dxf, or a saved scene (.json).</p><input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.json" hidden></div>
       <div class="minfo"><b id="mName">—</b><span id="mInfo"></span></div>
-      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Meters</option><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div><label class="note">Up axis</label><div class="seg" id="upBar" role="group" aria-label="Up axis"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div></div>
       <p class="note">Anything reaching 2 m above the floor is a wall; lower pieces are furniture that people can hide behind. Door leaves (objects named <code>door</code>) are left out, and glass (named <code>glass</code> or <code>window</code>) is see-through.</p>
       <p class="msg" id="impMsg"></p>
@@ -161,7 +161,7 @@ canvas.chart.click { cursor: pointer; }
       <p class="note">Default prices: typical retail listings, 9 Oct 2026: UniFi G5 Dome Ultra 169.99, UniFi G5 Bullet 199.99, UniFi AI 360 589.99. The view angles and pixels are typical for each kind of camera; type in the ones from the data sheet of the camera you buy.</p>
       <div><label class="note">Must be able to</label><div class="seg" id="lvlBar" role="group" aria-label="Detail needed"></div></div>
       <p class="note" id="lvlNote"></p>
-      <div class="two"><div><label class="note" for="camH">Mounting height</label><div class="eye"><input type="range" id="camH" min="2.2" max="4.0" step="0.1" value="2.7" aria-label="Mounting height in metres"><output id="camHOut" for="camH" style="font-size:14px;min-width:3.5em">2.7 m</output></div></div>
+      <div class="two"><div><label class="note" for="camH">Mounting height</label><div class="eye"><input type="range" id="camH" min="2.2" max="4.0" step="0.1" value="2.7" aria-label="Mounting height in meters"><output id="camHOut" for="camH" style="font-size:14px;min-width:3.5em">2.7 m</output></div></div>
         <div><label class="note">Watch at</label><div class="seg" id="tgtBar" role="group" aria-label="Height to watch"><button type="button" data-tgt="0" aria-pressed="false">Floor</button><button type="button" data-tgt="1" aria-pressed="true">Body</button><button type="button" data-tgt="1.6" aria-pressed="false">Face</button></div></div></div>
       <p class="note">Range is how far the camera still has enough pixels for the level chosen. Walls stop the view; furniture hides the strip behind it that the sightline from the camera cannot reach at the watched height.</p>
     </section>
@@ -194,7 +194,7 @@ canvas.chart.click { cursor: pointer; }
   <section class="stage" id="stage" aria-label="Plan">
     <div class="vbar">
       <div class="views" id="camBar" role="group" aria-label="View"><button type="button" data-cam="split" aria-pressed="true">Plan + chart</button><button type="button" data-cam="plan" aria-pressed="false">Plan</button><button type="button" data-cam="3d" aria-pressed="false">3D</button></div>
-      <div class="views" id="showBar" role="group" aria-label="Colour by"><button type="button" data-show="count" aria-pressed="true">How many see it</button><button type="button" data-show="cam" aria-pressed="false">Which camera</button></div>
+      <div class="views" id="showBar" role="group" aria-label="Color by"><button type="button" data-show="count" aria-pressed="true">How many see it</button><button type="button" data-show="cam" aria-pressed="false">Which camera</button></div>
       <div class="views" id="fpBar" role="group" aria-label="3D camera" hidden><button type="button" data-fp="orbit" aria-pressed="true">Orbit</button><button type="button" data-fp="fp" aria-pressed="false">Camera view</button></div>
     </div>
     <canvas id="cv" aria-label="Plan with camera coverage"></canvas>
@@ -214,7 +214,7 @@ canvas.chart.click { cursor: pointer; }
 
 <script>
 // PlotCloud CAD I/O (shared by the L-system planting plan and the evacuation tool).
-// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to metres,
+// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to meters,
 // and writes simple 2D DXF (R12, metres). No server needed.
 const CADIO = (() => {
   const loaded = {};
@@ -222,7 +222,7 @@ const CADIO = (() => {
     const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s);
   }));
   const DXF_LIB = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js';
-  // $INSUNITS -> metres per drawing unit
+  // $INSUNITS -> meters per drawing unit
   const UNIT = { 0: null, 1: 0.0254, 2: 0.3048, 4: 0.001, 5: 0.01, 6: 1, 14: 0.1 };
   const UNIT_NAME = { 1: 'inches', 2: 'feet', 4: 'millimetres', 5: 'centimetres', 6: 'metres', 14: 'decimetres' };
 
@@ -241,7 +241,7 @@ const CADIO = (() => {
   function bulgePts(p0, p1, b) {
     if (!b) return [p0, p1];
     const th = 4 * Math.atan(b), dx = p1[0] - p0[0], dy = p1[1] - p0[1], c = Math.hypot(dx, dy); if (c < 1e-12) return [p0, p1];
-    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the centre sits on the chord's left normal
+    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the center sits on the chord's left normal
     const r = c / (2 * Math.abs(Math.sin(th / 2))), mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2, d = (c / 2) / Math.tan(th / 2);
     const cx = mx - (dy / c) * d, cy = my + (dx / c) * d;
     const a0 = Math.atan2(p0[1] - cy, p0[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), out = [];
@@ -304,7 +304,7 @@ const CADIO = (() => {
     walk(dxf.entities, I, 0, null, null);
     return out;
   }
-  // scale a parsed drawing to metres and move it so its lower-left corner is at the origin
+  // scale a parsed drawing to meters and move it so its lower-left corner is at the origin
   function normalise(d, metresPerUnit) {
     const s = metresPerUnit;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -320,7 +320,7 @@ const CADIO = (() => {
       w: (x1 - x0) * s, h: (y1 - y0) * s, origin: [x0, y0], s,
     };
   }
-  // guess metres-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
+  // guess meters-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
   function guessScale(d) {
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const g of d.segs) for (const p of [g.a, g.b]) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
@@ -329,7 +329,7 @@ const CADIO = (() => {
     return [1, 'metres'];
   }
 
-  // ---- writer: 2D DXF R12 in metres ----
+  // ---- writer: 2D DXF R12 in meters ----
   function writer() {
     const ents = [], layers = new Map();
     const L = (name, color = 7) => { if (!layers.has(name)) layers.set(name, color); return name; };
@@ -369,8 +369,8 @@ const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelect
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ================= cameras =================
-// DORI pixel densities (IEC 62676-4): pixels per metre across the scene needed to detect, observe, recognise or identify a person.
-const LEVELS = { detect: { name: 'Detect', ppm: 25, note: 'see that someone is there' }, observe: { name: 'Observe', ppm: 62.5, note: 'see what someone is doing' }, recognise: { name: 'Recognise', ppm: 125, note: 'tell who a person you know is' }, identify: { name: 'Identify', ppm: 250, note: 'identify a stranger beyond doubt' } };
+// DORI pixel densities (IEC 62676-4): pixels per meter across the scene needed to detect, observe, recognize or identify a person.
+const LEVELS = { detect: { name: 'Detect', ppm: 25, note: 'see that someone is there' }, observe: { name: 'Observe', ppm: 62.5, note: 'see what someone is doing' }, recognise: { name: 'Recognize', ppm: 125, note: 'tell who a person you know is' }, identify: { name: 'Identify', ppm: 250, note: 'identify a stranger beyond doubt' } };
 const TYPES = [
   { k: 'dome', name: 'Dome', fov: 100, px: 2560, price: 169.99, use: true },
   { k: 'bullet', name: 'Bullet', fov: 85, px: 2560, price: 199.99, use: true },
@@ -381,7 +381,7 @@ const isFish = (T) => T.fov >= 360;
 let CAMH = 2.7, TGT = 1.0, LEVEL = 'recognise', TOOL = 'select', SEL = null, SHOW = 'count', MODE = 'budget';
 const LAY = { cov: true, fov: true, furn: true };
 const T3 = { on: false, fp: false, lib: null }; window.__v3 = () => ({ cam: T3.cam, ctl: T3.ctl, scene: T3.scene, r: T3.r, THREE: T3.lib });;
-// horizontal distance at which the camera still gives the pixels per metre of the chosen level, at the watched height
+// horizontal distance at which the camera still gives the pixels per meter of the chosen level, at the watched height
 function rangeOf(T) {
   const ppm = LEVELS[LEVEL].ppm, dz = Math.max(0, CAMH - TGT);
   const slant = isFish(T) ? T.px / (Math.PI * ppm) : T.px / (2 * Math.tan(clamp(T.fov, 10, 179) / 2 * Math.PI / 180) * ppm);   // fisheye: pixels spread over 180°
@@ -486,7 +486,7 @@ const hmH = (val) => (val === 255 ? 9 : val / 100);
 function marchHM(M, v, dx, dy, end, E, out) {
   let stop = end; cellWalk(M, v, dx, dy, end, (d, dn, val) => { const h = hmH(val); if (h >= E) { stop = d; return true; } if (h > TGT && h > 0.05) out.push([d, dn, h]); return false; }); return stop;
 }
-// raster: cell c metres; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
+// raster: cell c meters; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
 function buildGrid(S) {
   const B = SC.bounds, c = Math.max(window.__isoCmin || 0.05, Math.sqrt(B.w * B.h / (window.__isoCells || 350000))), W = Math.ceil(B.w / c), H = Math.ceil(B.h / c), solid = new Uint8Array(W * H), room = new Uint8Array(W * H);
   const line = (m, ax, ay, bx, by) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / (c / 3))); for (let i = 0; i <= n; i++) { const x = Math.floor((ax + (bx - ax) * i / n) / c), y = Math.floor((ay + (by - ay) * i / n) / c); if (x >= 0 && y >= 0 && x < W && y < H) m[y * W + x] = 1; } };
@@ -551,7 +551,7 @@ function coverage() {
   COV = { cnt, own, per, masks, cov: cov * a2, area: tot * a2, frac: tot ? cov / tot : 0, ov: ov.map((v) => v * a2), cost: SC.cams.reduce((s, q) => s + (+TY(q.type).price || 0), 0) };
 }
 
-// ================= optimisation =================
+// ================= optimization =================
 // Candidates: points 0.15–0.35 m inside the walls about every 0.8 m (dome and bullet, 16 directions each) and a 1.25 m grid on the
 // ceiling (360°). Each candidate's coverage is listed on a coarse grid of watch points; then greedy picks plus swaps find the set
 // of n cameras that covers the most, for every n up to full coverage.
@@ -659,7 +659,7 @@ new ResizeObserver(() => { const first = VP.w === 10; resize(); if (first || SPL
 
 // ================= 2D drawing =================
 let EXP = 0; const PXR = () => EXP || devicePixelRatio || 1;
-// how many cameras see each cell: pale to deep blue; floor no camera sees: grey with stripes
+// how many cameras see each cell: pale to deep blue; floor no camera sees: gray with stripes
 const BLUES = [[198, 219, 239], [107, 174, 214], [33, 113, 181], [8, 48, 107]];
 let covC = null, covKey = '';
 function covImage() {
@@ -934,7 +934,7 @@ function legend() {
   const sw = (c, b) => `<i style="background:${c};${b ? 'border:' + b : ''}"></i>`, lv = LEVELS[LEVEL];
   const head = `<b>${lv.name} · watched at ${TGT ? TGT.toFixed(1) + ' m' : 'the floor'}</b>`;
   $('#legend').innerHTML = SHOW === 'cam'
-    ? `${head}${SC.cams.slice(0, 8).map((q, i) => `<div class="it">${sw(camCol(i))}Camera ${i + 1} · ${TY(q.type).name}</div>`).join('')}${SC.cams.length > 8 ? `<div class="it"><span></span>and ${SC.cams.length - 8} more</div>` : ''}<div class="it">${sw('repeating-linear-gradient(45deg,#c4c4c4 0 2px,#e2e2e2 2px 6px)')}No camera sees it</div><p class="note" style="margin:0">Each spot takes the colour of the nearest camera that sees it; stronger where two or more overlap.</p>`
+    ? `${head}${SC.cams.slice(0, 8).map((q, i) => `<div class="it">${sw(camCol(i))}Camera ${i + 1} · ${TY(q.type).name}</div>`).join('')}${SC.cams.length > 8 ? `<div class="it"><span></span>and ${SC.cams.length - 8} more</div>` : ''}<div class="it">${sw('repeating-linear-gradient(45deg,#c4c4c4 0 2px,#e2e2e2 2px 6px)')}No camera sees it</div><p class="note" style="margin:0">Each spot takes the color of the nearest camera that sees it; stronger where two or more overlap.</p>`
     : `${head}<div style="height:10px;border-radius:2px;background:linear-gradient(90deg,${BLUES.map((c) => `rgb(${c})`).join(',')})"></div><div class="it" style="grid-template-columns:1fr auto"><span>1 camera</span><span>4 or more</span></div><div class="it">${sw('repeating-linear-gradient(45deg,#c4c4c4 0 2px,#e2e2e2 2px 6px)')}No camera sees it</div><div class="it">${sw('#2563eb')}Camera and its field of view</div><div class="it">${sw('#2b2a28')}Wall (stops the view)</div><div class="it">${sw('#ecebe7', '1px solid #8f8c85')}Furniture (hides behind it)</div>`;
 }
 const pct = (v) => (v * 100).toFixed(1) + '%';
@@ -975,7 +975,7 @@ function typesUI() {
 }
 $('#types').addEventListener('change', (e) => { const k = e.target.dataset.ty, f = e.target.dataset.f; if (!k) return; const t = TY(k); if (f === 'use') t.use = e.target.checked; else { const v = +e.target.value; if (!isFinite(v) || v < 0) return; t[f] = f === 'fov' ? clamp(v, 20, 179) : v; } MASKS.clear(); camsChanged(); typesUI(); });
 $('#lvlBar').innerHTML = Object.entries(LEVELS).map(([k, v]) => `<button type="button" data-lvl="${k}" aria-pressed="${k === LEVEL}">${v.name}</button>`).join('');
-function setLevel(k) { LEVEL = k; $$('#lvlBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lvl === k))); $('#lvlNote').textContent = `${LEVELS[k].name}: ${LEVELS[k].note} · ${LEVELS[k].ppm} pixels per metre (IEC 62676-4).`; MASKS.clear(); typesUI(); camsChanged(); }
+function setLevel(k) { LEVEL = k; $$('#lvlBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lvl === k))); $('#lvlNote').textContent = `${LEVELS[k].name}: ${LEVELS[k].note} · ${LEVELS[k].ppm} pixels per meter (IEC 62676-4).`; MASKS.clear(); typesUI(); camsChanged(); }
 $('#lvlBar').addEventListener('click', (e) => { const b = e.target.closest('[data-lvl]'); if (b) setLevel(b.dataset.lvl); });
 function setCamH(v) { CAMH = Math.round(clamp(+v, 2.2, 4) * 10) / 10; $('#camH').value = String(CAMH); $('#camHOut').textContent = CAMH.toFixed(1) + ' m'; MASKS.clear(); typesUI(); camsChanged(); }
 $('#camH').addEventListener('input', (e) => setCamH(e.target.value));
@@ -1105,7 +1105,7 @@ function setUp(u) { $$('#upBar button').forEach((b) => b.setAttribute('aria-pres
 $('#upBar').addEventListener('click', (e) => { const b = e.target.closest('[data-up]'); if (!b) return; setUp(b.dataset.up); if (MODEL) { prepModel(); placeModel(); } });
 $('#units').addEventListener('change', () => { if (MODEL) { prepModel(); placeModel(); } else if (LASTDXF) importDXF(LASTDXF); });
 function guessUnits(span) { for (const [s, n] of [[1, 'metres'], [0.001, 'millimetres'], [0.01, 'centimetres'], [0.0254, 'inches'], [0.3048, 'feet']]) if (span * s >= 3 && span * s <= 400) return [s, n]; return [1, 'metres']; }
-function prepModel() {   // file coordinates -> metres, Z up; floor levels from where the tall elements stand
+function prepModel() {   // file coordinates -> meters, Z up; floor levels from where the tall elements stand
   const M = MODEL; let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (const e of M.els) for (let i = 0; i < e.p.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], e.p[i + k]); hi[k] = Math.max(hi[k], e.p[i + k]); }
   const u = $('#units').value; let s, how;
@@ -1171,7 +1171,7 @@ async function importIFC(f) {
   });
   api.CloseModel(id);
   const els = [...byId.values()].filter((e) => e.arr.length).map((e) => ({ p: Float32Array.from(e.arr), door: e.door, glass: e.glass || GLASS_RE.test(e.name), name: e.name }));
-  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives metres, Y up
+  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives meters, Y up
 }
 async function import3DM(f) {
   await CADIO.loadScript(RH_LIB); const rh = await window.rhino3dm();
@@ -1236,7 +1236,7 @@ const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use ===
 async function save(name, data) {
   const m = (t, c = '') => { $('#exMsg').textContent = t; $('#exMsg').className = 'msg' + (c ? ' ' + c : ''); };
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data, dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save cancelled.'); return; } } }
+  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save canceled.'); return; } } }
   try { const u = URL.createObjectURL(new Blob([bytes])), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m('Downloaded ' + name + '.', 'ok'); }
   catch (e) { m('This view cannot download files. Open the page on claude.ai to save.', 'warn'); }
 }
@@ -1332,7 +1332,7 @@ function build3D() {
   const G = GC.G, gw = G.W * G.c, gh = G.H * G.c, s = Math.min(60, 2048 / Math.max(gw, gh)), fc = document.createElement('canvas'); fc.width = Math.round(gw * s); fc.height = Math.round(gh * s);
   T3.floorC = fc; T3.floorTex = new THREE.CanvasTexture(fc); T3.floorTex.colorSpace = THREE.SRGBColorSpace; T3.floorTex.anisotropy = T3.r.capabilities.getMaxAnisotropy(); paintFloor3D();
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(gw, gh), new THREE.MeshBasicMaterial({ map: T3.floorTex })); floor.rotation.x = -Math.PI / 2; floor.position.set(gw / 2, 0.006, -gh / 2); T3.grp.add(floor);
-  // cameras: a coloured body at the mounting height and the edges of its view down to the watched height
+  // cameras: a colored body at the mounting height and the edges of its view down to the watched height
   SC.cams.forEach((cam, i) => {
     const T = TY(cam.type), col = new THREE.Color(camCol(i)), a = cam.dir * Math.PI / 180, top = new THREE.Vector3(cam.x, CAMH, -cam.y), g = new THREE.Group();
     const body = new THREE.Mesh(isFish(T) ? new THREE.SphereGeometry(0.11, 18, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2) : new THREE.BoxGeometry(0.24, 0.11, 0.11), new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 })); body.position.copy(top); if (!isFish(T)) body.rotation.y = a; g.add(body);
@@ -1422,7 +1422,7 @@ function capUI() {
 }
 
 // ================= start =================
-setTool('select'); setMode('budget'); $('#lvlNote').textContent = `${LEVELS[LEVEL].name}: ${LEVELS[LEVEL].note} · ${LEVELS[LEVEL].ppm} pixels per metre (IEC 62676-4).`;
+setTool('select'); setMode('budget'); $('#lvlNote').textContent = `${LEVELS[LEVEL].name}: ${LEVELS[LEVEL].note} · ${LEVELS[LEVEL].ppm} pixels per meter (IEC 62676-4).`;
 loadScene(PRESETS.store()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;
 window.__cam = { SEARCH, startSearch, skipSearch, ANIM, play, stopPlay, get PANEL() { return PANEL; }, get PANELDOTS() { return PANELDOTS; }, SC, get COV() { return COV; }, get OPT() { return OPT; }, get CAND() { return CAND; }, optimise, applyN, setMode, setLevel, setTgt, setCamH, setShow, setCam, enterFP, exitFP, loadScene, PRESETS, TYPES, rangeOf, W2S, get GC() { return GC; }, camsChanged, board, HIST };
 window.__cam.camRun = camRun; window.__cam.QS = QS; window.__cam.qPlan = qPlan; window.__cam.DENS = DENS;
@@ -1586,7 +1586,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }
@@ -1936,7 +1936,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 </script>
 <script>
 // ===== PlotCloud v131: a simulation tool sends furniture moves back to Workbench =====
-// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench metres.
+// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench meters.
 (function () {
   if (window.parent === window || window.__pcReturn) return; window.__pcReturn = 1;
   const $ = (s, r = document) => r.querySelector(s);

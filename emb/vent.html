@@ -220,7 +220,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }
@@ -319,7 +319,7 @@ details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { m
       <div id="drop" class="row3"><button type="button" class="btn" id="pick" title="Or drop a file on the view. Accepts .dxf, .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), or a saved scene (.json).">Open…</button><select id="preset" aria-label="Or start from a case"><option value="empty">Empty canvas</option><option value="apt" selected>2-bed apartment</option><option value="school">Classroom wing</option></select><button type="button" class="btn" id="saveJ">Save</button></div>
       <input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.json" hidden>
       <div class="mrow"><div class="minfo"><b id="mName">—</b><span id="mInfo"></span></div><button type="button" class="btn" id="layOpen" hidden>Layers…</button></div>
-      <div class="two" id="unitRow" hidden><div class="lab in"><label class="note" for="units">Units</label><select id="units"><option value="auto">Automatic</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+      <div class="two" id="unitRow" hidden><div class="lab in"><label class="note" for="units">Units</label><select id="units"><option value="auto">Automatic</option><option value="1">Meters</option><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div class="lab in"><label class="note">Up</label><div class="seg" id="upBar" role="group" aria-label="Up axis"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div></div>
       <p class="msg" id="impMsg"></p>
       <div id="storeyBox" hidden><label class="note" for="storey">Storey</label><select id="storey"></select></div>
@@ -344,8 +344,8 @@ details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { m
         <div class="four"><div class="lab in"><label class="note" for="wdir">From °</label><input class="num" type="number" id="wdir" min="0" max="359" step="1" value="225"></div><div class="lab in"><label class="note" for="wspd" title="Wind speed at 10 m above ground">m/s</label><input class="num" type="number" id="wspd" min="0" max="20" step="0.5" value="3.5"></div>
           <div class="lab in"><label class="note" for="tout">Out °C</label><input class="num" type="number" id="tout" step="0.5" value="22"></div><div class="lab in"><label class="note" for="tin">In °C</label><input class="num" type="number" id="tin" step="0.5" value="25"></div></div></div>
       <details class="more" id="wxMore"><summary>Site, north and climate file</summary>
-      <div class="two"><div class="lab in"><label class="note" for="terrain">Site</label><select id="terrain"><option value="open">Open country</option><option value="suburban" selected>Suburbs</option><option value="city">City centre</option></select></div>
-        <div class="lab in"><label class="note" for="shelter">Shelter</label><select id="shelter" title="Shelter by neighbours"><option value="exposed">Exposed</option><option value="semi" selected>Half as tall nearby</option><option value="sheltered">As tall nearby</option></select></div></div>
+      <div class="two"><div class="lab in"><label class="note" for="terrain">Site</label><select id="terrain"><option value="open">Open country</option><option value="suburban" selected>Suburbs</option><option value="city">City center</option></select></div>
+        <div class="lab in"><label class="note" for="shelter">Shelter</label><select id="shelter" title="Shelter by neighbors"><option value="exposed">Exposed</option><option value="semi" selected>Half as tall nearby</option><option value="sheltered">As tall nearby</option></select></div></div>
       <div class="three"><div class="lab in"><label class="note" for="north" title="True north: plan +Y turned clockwise, degrees">North °</label><input class="num" type="number" id="north" min="-180" max="180" step="1" value="0"></div><div class="lab in"><label class="note" for="floorZ" title="Floor above ground, m">Floor m</label><input class="num" type="number" id="floorZ" min="0" max="200" step="0.5" value="0"></div>
         <div class="lab"><button type="button" class="btn" id="epwB" style="white-space:nowrap;padding:4px 6px" title="Load a climate file: a year of hourly weather (.epw). Free files: climate.onebuilding.org">EPW…</button></div></div>
       <p class="note one" id="epwInfo" title="Free files: climate.onebuilding.org">No climate file: one wind and one temperature.</p><input type="file" id="epwF" accept=".epw" hidden>
@@ -373,7 +373,7 @@ details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { m
     <div class="vbar">
       <div class="views" id="camBar" role="group" aria-label="View"><button type="button" data-cam="split" aria-pressed="true">Plan + chart</button><button type="button" data-cam="plan" aria-pressed="false">Plan</button><button type="button" data-cam="3d" aria-pressed="false">3D</button></div>
       <div class="views" id="cutBar" role="group" aria-label="Walls in 3D" hidden><button type="button" data-cut="1" aria-pressed="true">Cut at 1.8 m</button><button type="button" data-cut="0" aria-pressed="false">Full height</button><button type="button" id="fit3">Fit</button></div>
-      <div class="views" id="showBar" role="group" aria-label="Colour by"><button type="button" data-show="speed" aria-pressed="true">Air speed</button><button type="button" data-show="bands" aria-pressed="false">Comfort bands</button></div>
+      <div class="views" id="showBar" role="group" aria-label="Color by"><button type="button" data-show="speed" aria-pressed="true">Air speed</button><button type="button" data-show="bands" aria-pressed="false">Comfort bands</button></div>
     </div>
     <canvas id="cv" aria-label="Plan with indoor airflow"></canvas>
     <canvas id="cv3" aria-label="3D view of the rooms and the air" hidden></canvas>
@@ -410,7 +410,7 @@ details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { m
 
 <script>
 // PlotCloud CAD I/O (shared by the L-system planting plan and the evacuation tool).
-// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to metres,
+// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to meters,
 // and writes simple 2D DXF (R12, metres). No server needed.
 const CADIO = (() => {
   const loaded = {};
@@ -418,7 +418,7 @@ const CADIO = (() => {
     const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s);
   }));
   const DXF_LIB = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js';
-  // $INSUNITS -> metres per drawing unit
+  // $INSUNITS -> meters per drawing unit
   const UNIT = { 0: null, 1: 0.0254, 2: 0.3048, 4: 0.001, 5: 0.01, 6: 1, 14: 0.1 };
   const UNIT_NAME = { 1: 'inches', 2: 'feet', 4: 'millimetres', 5: 'centimetres', 6: 'metres', 14: 'decimetres' };
 
@@ -437,7 +437,7 @@ const CADIO = (() => {
   function bulgePts(p0, p1, b) {
     if (!b) return [p0, p1];
     const th = 4 * Math.atan(b), dx = p1[0] - p0[0], dy = p1[1] - p0[1], c = Math.hypot(dx, dy); if (c < 1e-12) return [p0, p1];
-    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the centre sits on the chord's left normal
+    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the center sits on the chord's left normal
     const r = c / (2 * Math.abs(Math.sin(th / 2))), mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2, d = (c / 2) / Math.tan(th / 2);
     const cx = mx - (dy / c) * d, cy = my + (dx / c) * d;
     const a0 = Math.atan2(p0[1] - cy, p0[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), out = [];
@@ -500,7 +500,7 @@ const CADIO = (() => {
     walk(dxf.entities, I, 0, null, null);
     return out;
   }
-  // scale a parsed drawing to metres and move it so its lower-left corner is at the origin
+  // scale a parsed drawing to meters and move it so its lower-left corner is at the origin
   function normalise(d, metresPerUnit) {
     const s = metresPerUnit;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -516,7 +516,7 @@ const CADIO = (() => {
       w: (x1 - x0) * s, h: (y1 - y0) * s, origin: [x0, y0], s,
     };
   }
-  // guess metres-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
+  // guess meters-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
   function guessScale(d) {
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const g of d.segs) for (const p of [g.a, g.b]) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
@@ -525,7 +525,7 @@ const CADIO = (() => {
     return [1, 'metres'];
   }
 
-  // ---- writer: 2D DXF R12 in metres ----
+  // ---- writer: 2D DXF R12 in meters ----
   function writer() {
     const ents = [], layers = new Map();
     const L = (name, color = 7) => { if (!layers.has(name)) layers.set(name, color); return name; };
@@ -796,7 +796,7 @@ const LAY = { field: true, arrows: true, parts: false, flows: true, labels: true
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 const cname = (d) => COMPASS[Math.round(((d % 360) + 360) % 360 / 22.5) % 16];
 const cond = (over = {}) => ({ U10: S.U10, from: S.from, north: S.north, terrain: S.terrain, shelter: S.shelter, Tout: S.Tout, Tin: S.Tin, ceil: S.ceil, floorZ: S.floorZ, frac: S.frac, ...over });
-// Wind flow's colour ramp and arrows, so the two tools read the same
+// Wind flow's color ramp and arrows, so the two tools read the same
 const RAMP = [[0, [43, 45, 110]], [0.25, [52, 112, 184]], [0.5, [78, 176, 160]], [0.75, [236, 201, 75]], [1, [217, 72, 44]]];
 const BANDS = [[0.1, [43, 45, 110], 'Still', 'under 0.1'], [0.2, [52, 112, 184], 'Faint', '0.1–0.2'], [0.5, [78, 176, 160], 'Cooling breeze', '0.2–0.5'], [1.0, [236, 201, 75], 'Strong', '0.5–1.0'], [Infinity, [217, 72, 44], 'Very strong', 'over 1.0']];
 function rampRGB(x) { x = clamp(x, 0, 1); for (let i = 1; i < RAMP.length; i++) if (x <= RAMP[i][0]) { const [a, ca] = RAMP[i - 1], [b, cb] = RAMP[i], k = (x - a) / (b - a); return ca.map((v, j) => v + (cb[j] - v) * k); } return RAMP[RAMP.length - 1][1]; }
@@ -1156,7 +1156,7 @@ function home3D() { const B = SC.bounds, D = Math.max(B.w, B.h); T3.ctl.target.s
 function render3D() { if (T3.on && T3.r) T3.r.render(T3.scene, T3.cam); }
 const P3 = (x, y, z = 0) => [x, z, -y];   // plan (x, y) and height z -> three.js (x, height, -y)
 function clear3D(g) { for (const o of [...g.children]) { g.remove(o); o.traverse((q) => { if (q.geometry) q.geometry.dispose(); if (q.material && q.material.map) q.material.map.dispose(); if (q.material && q.material.dispose && !Object.values(T3.mat).includes(q.material)) q.material.dispose(); }); } }
-function box3D(g, x, y, ang, L, T, z0, z1, mat, edges = true) {   // a box centred on plan (x, y), long side along angle ang
+function box3D(g, x, y, ang, L, T, z0, z1, mat, edges = true) {   // a box centered on plan (x, y), long side along angle ang
   if (z1 - z0 < 0.005 || L < 0.005) return; const THREE = T3.lib, m = new THREE.Mesh(new THREE.BoxGeometry(L, z1 - z0, T), mat); m.position.set(...P3(x, y, (z0 + z1) / 2)); m.rotation.y = ang; g.add(m);
   if (edges) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), T3.mat.edge); e.position.copy(m.position); e.rotation.copy(m.rotation); g.add(e); }
 }
@@ -1186,7 +1186,7 @@ function build3D() {   // walls with their openings, furniture, an imported mode
   T3.model.add(sprite3D(`Wind ${cname(S.from)} ${S.U10} m/s`, P3(o[0], o[1], 0.9), D * 0.016, '#1d4ed8'));
   const nr = S.north * Math.PI / 180; T3.model.add(sprite3D('N', P3(B.w / 2 + Math.sin(-nr) * D * 0.48, B.h / 2 + Math.cos(-nr) * D * 0.48, 0.2), D * 0.02, '#d8402a'));
 }
-function sprite3D(text, pos, h, col = '#1C1B1A', sub, subCol) {   // a label that always faces the camera; h = height of the first line in metres
+function sprite3D(text, pos, h, col = '#1C1B1A', sub, subCol) {   // a label that always faces the camera; h = height of the first line in meters
   const THREE = T3.lib, k = 4, c = document.createElement('canvas'), g = c.getContext('2d'), f1 = `600 ${28 * k}px 'Inter Tight', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`, f2 = `500 ${40 * k}px 'Inter Tight', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`;
   g.font = f1; let w = g.measureText(text).width; if (sub) { g.font = f2; w = Math.max(w, g.measureText(sub).width); }
   c.width = Math.ceil(w + 24 * k); c.height = (sub ? 92 : 44) * k; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
@@ -1553,7 +1553,7 @@ function setUp(u) { $$('#upBar button').forEach((b) => b.setAttribute('aria-pres
 $('#upBar').addEventListener('click', (e) => { const b = e.target.closest('[data-up]'); if (!b) return; setUp(b.dataset.up); if (MODEL) { prepModel(); placeModel(); } });
 $('#units').addEventListener('change', () => { if (MODEL) { prepModel(); placeModel(); } else if (LASTDXF) importDXF(LASTDXF); });
 function guessUnits(span) { for (const [s, n] of [[1, 'metres'], [0.001, 'millimetres'], [0.01, 'centimetres'], [0.0254, 'inches'], [0.3048, 'feet']]) if (span * s >= 3 && span * s <= 400) return [s, n]; return [1, 'metres']; }
-function prepModel() {   // file coordinates -> metres, Z up; floor levels from where the tall elements stand
+function prepModel() {   // file coordinates -> meters, Z up; floor levels from where the tall elements stand
   const M = MODEL; let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (const e of M.els) for (let i = 0; i < e.p.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], e.p[i + k]); hi[k] = Math.max(hi[k], e.p[i + k]); }
   const u = $('#units').value; let s, how;
@@ -1619,7 +1619,7 @@ async function importIFC(f) {
   });
   api.CloseModel(id);
   const els = [...byId.values()].filter((e) => e.arr.length).map((e) => ({ p: Float32Array.from(e.arr), door: e.door, glass: e.glass || GLASS_RE.test(e.name), name: e.name }));
-  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives metres, Y up
+  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives meters, Y up
 }
 async function import3DM(f) {
   await CADIO.loadScript(RH_LIB); const rh = await window.rhino3dm();
@@ -1684,7 +1684,7 @@ const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use ===
 async function save(name, data) {
   const m = (t, c = '') => { $('#exMsg').textContent = t; $('#exMsg').className = 'msg' + (c ? ' ' + c : ''); };
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data, dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save cancelled.'); return; } } }
+  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save canceled.'); return; } } }
   try { const u = URL.createObjectURL(new Blob([bytes])), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m('Downloaded ' + name + '.', 'ok'); }
   catch (e) { m('This view cannot download files. Open the page on claude.ai to save.', 'warn'); }
 }
@@ -1871,7 +1871,7 @@ fitCols();
 </script>
 <script>
 // ===== PlotCloud v131: a simulation tool sends furniture moves back to Workbench =====
-// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench metres.
+// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench meters.
 (function () {
   if (window.parent === window || window.__pcReturn) return; window.__pcReturn = 1;
   const $ = (s, r = document) => r.querySelector(s);

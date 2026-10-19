@@ -198,12 +198,12 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div class="row2"><button type="button" class="btn" id="retry" hidden>Retry</button><button type="button" class="btn" id="reimp" title="Import a newer file for the same site; your edits are kept and conflicts are shown">Update from a file…</button></div>
       <input type="file" id="file2" accept=".osm,.xml,.json,.geojson" hidden>
       <div class="cfl" id="cfl" hidden></div>
-      <button type="button" class="btn" id="fixBtn" title="A small made-up site for trying the tool. It is labelled as a test fixture everywhere it goes.">Try a test fixture (not real data)</button>
+      <button type="button" class="btn" id="fixBtn" title="A small made-up site for trying the tool. It is labeled as a test fixture everywhere it goes.">Try a test fixture (not real data)</button>
     </section>
 
     <section class="sec" aria-labelledby="h-rev"><h2 id="h-rev"><i>2</i>Site model review</h2>
       <table class="rev" id="rev"></table>
-      <p class="note hrule" style="margin:0">Heights: the OpenStreetMap height where there is one; otherwise floor count × 3 m; otherwise 6 m (2 storeys), labelled <b>estimated</b> on the map and the model. Replace any of them by selecting the building.</p>
+      <p class="note hrule" style="margin:0">Heights: the OpenStreetMap height where there is one; otherwise floor count × 3 m; otherwise 6 m (2 storeys), labeled <b>estimated</b> on the map and the model. Replace any of them by selecting the building.</p>
       <div><b style="font-size:12.5px">Needs attention</b><ul class="att" id="att"></ul></div>
       <p class="src" id="srcList"></p>
     </section>
@@ -265,7 +265,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div class="attr" id="attr"></div>
     </div>
   </section>
-  <footer class="fine">Site is only for the place and its surroundings: massing boxes, no interiors or facades. Site data stays in this browser until you enter Workbench. Heights are labelled by where they came from.</footer>
+  <footer class="fine">Site is only for the place and its surroundings: massing boxes, no interiors or facades. Site data stays in this browser until you enter Workbench. Heights are labeled by where they came from.</footer>
 </div>
 
 <div class="sdlg" id="wbDlg" role="dialog" aria-modal="true" aria-labelledby="wbT" hidden><div class="sdlg-in"><h2 id="wbT">Enter Workbench</h2><div id="wbBody"></div><button type="button" class="btn" id="wbX">Cancel</button></div></div>
@@ -280,7 +280,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 // ===== PlotCloud site context core =====
 // Real-world site → validated, editable context model shared by Site Context, Workbench and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
-// Coordinates: WGS84 lat/lon in, local metres out (x east, y north) on a transverse Mercator centred on the site origin.
+// Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
 const SITE = (() => {
   // ---------- projection: transverse Mercator on WGS84 (Krüger series to n^6, Karney 2011) ----------
   const A = 6378137, F = 1 / 298.257223563, N = F / (2 - F), E = Math.sqrt(F * (2 - F)), D = Math.PI / 180;
@@ -344,7 +344,7 @@ const SITE = (() => {
   function cleanRing(pts, tol = 0.01) {
     const out = []; for (const p of pts) { if (!p || !isFinite(p[0]) || !isFinite(p[1])) return { ring: [], issues: ['coordinates are not numbers'] }; const q = out[out.length - 1]; if (!q || Math.hypot(p[0] - q[0], p[1] - q[1]) > tol) out.push([p[0], p[1]]); }
     if (out.length > 1 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) <= tol) out.pop();
-    // drop points that sit on a straight line between their neighbours
+    // drop points that sit on a straight line between their neighbors
     for (let i = 0; out.length > 3 && i < out.length; ) { const a = out[(i - 1 + out.length) % out.length], b = out[i], c = out[(i + 1) % out.length]; if (Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) < 1e-6) out.splice(i, 1); else i++; }
     return { ring: out, issues: [] };
   }
@@ -362,12 +362,12 @@ const SITE = (() => {
   }
 
   // ---------- heights ----------
-  const STOREY = 3.0;   // metres per storey, used only for floor-count heights (labelled as such)
-  // "12", "12 m", "12.5m", "40'", "40 ft", "12'6\"" → metres, or null
+  const STOREY = 3.0;   // meters per storey, used only for floor-count heights (labeled as such)
+  // "12", "12 m", "12.5m", "40'", "40 ft", "12'6\"" → meters, or null
   function parseLength(v) {
     if (v == null) return null; if (typeof v === 'number') return isFinite(v) && v >= 0 ? v : null;
     const s = String(v).trim().toLowerCase().replace(',', '.'); let m;
-    if ((m = s.match(/^(-?\d+(?:\.\d+)?)\s*(m|meters?|metres?)?$/))) return +m[1] >= 0 ? +m[1] : null;
+    if ((m = s.match(/^(-?\d+(?:\.\d+)?)\s*(m|meters?|meters?)?$/))) return +m[1] >= 0 ? +m[1] : null;
     if ((m = s.match(/^(\d+(?:\.\d+)?)\s*(?:'|ft|feet)\s*(?:(\d+(?:\.\d+)?)\s*(?:"|in))?$/))) return +m[1] * 0.3048 + (m[2] ? +m[2] * 0.0254 : 0);
     if ((m = s.match(/^(\d+(?:\.\d+)?)\s*(?:"|in)$/))) return +m[1] * 0.0254;
     return null;
@@ -473,7 +473,7 @@ const SITE = (() => {
 
   // ---------- context model ----------
   const uid = (p) => p + Math.random().toString(36).slice(2, 9);
-  // boundary: { kind: 'radius', r } around the origin, or { kind: 'polygon', pts: [[x, y]…] } in site metres
+  // boundary: { kind: 'radius', r } around the origin, or { kind: 'polygon', pts: [[x, y]…] } in site meters
   function inBoundary(fp, bd) {
     if (!bd) return true; const c = centroid(fp);
     if (bd.kind === 'polygon' && bd.pts && bd.pts.length > 2) return inside(c, bd.pts) || fp.some((p) => inside(p, bd.pts));
@@ -514,7 +514,7 @@ const SITE = (() => {
   }
   function guessDST(o) { if (o.lon < -50 && o.lon > -170 && o.lat > 15) return 1; if (o.lon > -25 && o.lon < 45 && o.lat > 34) return 2; if (o.lon > 110 && o.lat < -25) return 3; return 0; }
   function addSource(site, src) { site.sources.push(src); site.version++; return site; }
-  // an edit by the person: height, exclusion; always labelled and versioned
+  // an edit by the person: height, exclusion; always labeled and versioned
   function setHeight(site, id, h) { const b = site.buildings.find((x) => x.id === id); if (!b) return false; const v = parseLength(h); if (v == null || v <= (b.base || 0)) return false; b.h = +v.toFixed(2); b.hSource = 'user'; b.hNote = 'entered by you'; b.edited = true; site.version++; return true; }
   function setExcluded(site, id, on, why = 'left out by you') { const b = site.buildings.find((x) => x.id === id); if (!b) return false; b.excluded = !!on; b.why = on ? why : ''; b.auto = false; b.edited = true; site.version++; return true; }
   // missing heights → an explicit estimate (storeys × storey height), never silent
@@ -538,7 +538,7 @@ const SITE = (() => {
       if (R.levels) warn.push(`${R.levels} height${R.levels > 1 ? 's come' : ' comes'} from floor counts (${site.storey} m a storey).`);
       if (!site.terrain) warn.push('No terrain: the ground is taken as flat.');
       if (site.tzSource !== 'user') warn.push(`Time zone UTC${site.tz >= 0 ? '+' : ''}${site.tz} is estimated from the longitude; check it.`);
-      if (site.fixture) warn.push('This site is a labelled test fixture, not imported real data.');
+      if (site.fixture) warn.push('This site is a labeled test fixture, not imported real data.');
       return { ok: !err.length, err, warn };
     }
     if (kind === 'wind') {
@@ -574,7 +574,7 @@ const SITE = (() => {
 
   // ---------- placing the site into a Workbench plan (plan +Y faces compass bearing M.north) ----------
   function toPlan(p, north) { const a = (north || 0) * D, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
-  // masses for analysis: context only casts shadows; heights in metres above the site origin
+  // masses for analysis: context only casts shadows; heights in meters above the site origin
   // site.at: where the site point sits in the plan (a project placed on a site keeps its own coordinates)
   const siteToPlan = (site, p, north) => { const q = toPlan(p, north), a = (site && site.at) || [0, 0]; return [q[0] + a[0], q[1] + a[1]]; };
   // terrain height at a site point (bilinear on the terrain grid), 0 when there is no terrain
@@ -586,7 +586,7 @@ const SITE = (() => {
   function terrainForPlan(site, north) { if (!site || !site.terrain) return null; const G = site.terrain.grid, pts = []; for (let j = 0; j < G.ny; j++) for (let i = 0; i < G.nx; i++) { const q = siteToPlan(site, [G.x0 + i * G.step, G.y0 + j * G.step], north); pts.push([+q[0].toFixed(2), +q[1].toFixed(2), G.z[j * G.nx + i]]); } return { nx: G.nx, ny: G.ny, pts, provider: site.terrain.provider }; }
 
   // ===================== v132 · the Site page =====================
-  // 11 · height rule: the height tag; else floor count × 3 m; else 6 m (2 storeys), labelled estimated
+  // 11 · height rule: the height tag; else floor count × 3 m; else 6 m (2 storeys), labeled estimated
   const DEFAULT_LEVELS = 2, DEFAULT_H = DEFAULT_LEVELS * STOREY;
   function defaultHeights(site) { let n = 0; for (const b of site.buildings) if (b.valid && b.h == null) { b.h = +((b.base || 0) + DEFAULT_H).toFixed(2); b.hSource = 'estimate'; b.hNote = `estimated: no height or floor count in OpenStreetMap (${DEFAULT_LEVELS} storeys × ${STOREY} m)`; b.autoEst = true; n++; } if (n) site.version++; return n; }
   // the context area: a square around the site point, 400 m by default, 200 to 1000 m
@@ -602,7 +602,7 @@ const SITE = (() => {
   // set one edge's length: the edge's end corner moves along the edge; the rest stays
   function setEdge(pts, i, len) { const n = pts.length, a = pts[i], b = pts[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!(len > 0.1) || L < 1e-6) return false; const k = len / L; pts[(i + 1) % n] = [+(a[0] + (b[0] - a[0]) * k).toFixed(3), +(a[1] + (b[1] - a[1]) * k).toFixed(3)]; return true; }
   const edges = (pts) => pts.map((p, i) => { const q = pts[(i + 1) % pts.length]; return +Math.hypot(q[0] - p[0], q[1] - p[1]).toFixed(3); });
-  // massing edits: move, scale (about an anchor), delete (the place becomes “your site”); always labelled and versioned
+  // massing edits: move, scale (about an anchor), delete (the place becomes “your site”); always labeled and versioned
   function moveBuilding(site, id, dx, dy) { const b = site.buildings.find((x) => x.id === id); if (!b || !b.xy.length) return false; const Fr = frame(site.origin), mv = (p) => [+(p[0] + dx).toFixed(3), +(p[1] + dy).toFixed(3)];
     b.xy = b.xy.map(mv); b.holes = b.holes.map((r) => r.map(mv)); b.ll = b.xy.map((p) => Fr.inv(p[0], p[1])); b.llHoles = b.holes.map((r) => r.map((p) => Fr.inv(p[0], p[1]))); b.edited = true; b.moved = true; site.version++; return true; }
   function scaleBuilding(site, id, sx, sy, anchor) { const b = site.buildings.find((x) => x.id === id); if (!b || !b.xy.length || !(sx > 0) || !(sy > 0)) return false; const Fr = frame(site.origin), sc = (p) => [+(anchor[0] + (p[0] - anchor[0]) * sx).toFixed(3), +(anchor[1] + (p[1] - anchor[1]) * sy).toFixed(3)];
@@ -708,7 +708,7 @@ const SITEP = (() => {
     if (j.remark && /runtime error|timed out|out of memory/i.test(j.remark)) throw new ProviderError('busy', 'The building service gave up on this area (' + j.remark.slice(0, 120) + '). Try a smaller radius.', 30);
     await cachePut(k, j); return { json: j, cached: false, query: q };
   }
-  // ---------- terrain: Terrarium PNG tiles → a height grid in site metres, relative to the ground at the origin ----------
+  // ---------- terrain: Terrarium PNG tiles → a height grid in site meters, relative to the ground at the origin ----------
   const tileXY = (lat, lon, z) => { const n = 2 ** z, x = (lon + 180) / 360 * n, r = lat * Math.PI / 180, y = (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n; return [x, y]; };
   async function tilePixels(z, x, y) {
     const url = CFG.proxy ? viaProxy('terrain', { z, x, y }) : `${CFG.terrain.url}/${z}/${x}/${y}.png`;
@@ -747,7 +747,7 @@ toRight(); addEventListener('load', toRight);
 let site = null, raws = [], F = null, SEL = null, MODE = 'map', TOOLM = null, DRAW = null, lastFail = null, ORIGIN = null;
 const evt = (name, props) => { try { window.parent.postMessage({ pc: 1, t: 'evt', name, props: props || {} }, '*'); } catch (e) {} };
 
-// ---------- colours by height status ----------
+// ---------- colors by height status ----------
 const COL = { source: '#4a4a46', levels: '#8a8a82', user: '#2f6fa8', estimate: '#d9a400', none: '#ffffff', invalid: '#ffffff', excluded: '#f1f0ec' };
 const statusOf = (b) => b.excluded ? 'excluded' : !b.valid ? 'invalid' : b.h == null ? 'none' : b.hSource;
 const LABEL = { source: 'Height from the data source', levels: 'Height from the floor count', user: 'Height entered by you', estimate: 'Height estimated', none: 'Height missing', invalid: 'Invalid geometry', excluded: 'Left out' };
@@ -886,7 +886,7 @@ function failed(er, again) { msg('#impMsg', er.message || 'The request failed.',
 $('#retry').addEventListener('click', () => { if (lastFail) lastFail(); });
 $('#fetchB').addEventListener('click', fetchBuildings); $('#fetchT').addEventListener('click', fetchTerrain);
 
-// ---------- test fixture (made up, labelled everywhere) ----------
+// ---------- test fixture (made up, labeled everywhere) ----------
 $('#fixBtn').addEventListener('click', () => {
   if (site && site.buildings.length && !confirm('Replace the current site with the test fixture?')) return;
   const o = { lat: 49.2827, lon: -123.1207 }, Fx = SITE.frame(o), ll = (x, y) => Fx.inv(x, y), els = []; let id = 1;
@@ -894,7 +894,7 @@ $('#fixBtn').addEventListener('click', () => {
   add(-60, 20, 30, 18, { height: '24', name: 'Fixture tower' }); add(-20, 30, 22, 14, { 'building:levels': '5' }); add(25, 25, 18, 18, {}); add(30, -40, 40, 16, { height: '12' }); add(-55, -45, 16, 24, { 'building:levels': '3' }); add(60, 0, 14, 30, { height: '40' }); add(-15, -70, 26, 12, {});
   ORIGIN = { lat: o.lat, lon: o.lon, label: 'Test fixture (made up)' }; F = Fx; $('#lat').value = o.lat; $('#lon').value = o.lon; $('#tz').value = '-8'; $('#dst').value = '1'; $('#sName').value = 'Test fixture site';
   newSiteFrom({ provider: 'test-fixture', name: 'Made-up test fixture', at: new Date().toISOString(), licence: 'Test fixture, not real data', parsed: SITE.parseOSMJSON({ elements: els }) }, true);
-  msg('#impMsg', 'Test fixture loaded. It is made up and labelled as such in Workbench and Sun hours.', 'warn'); statusUI();
+  msg('#impMsg', 'Test fixture loaded. It is made up and labeled as such in Workbench and Sun hours.', 'warn'); statusUI();
 });
 
 // ---------- review ----------
@@ -1133,7 +1133,7 @@ async function initMap() {
   ML.on('mousemove', (e) => { if (!mlReady || TOOLM) return; const f = ML.queryRenderedFeatures(e.point, { layers: ['blds-fill'] }); ML.getCanvas().style.cursor = f.length ? 'pointer' : ''; if (DRAW) { DRAW._cur = F ? F.fwd(e.lngLat.lat, e.lngLat.lng) : null; syncMap(); } });
   ML.on('dblclick', (e) => { if (TOOLM === 'poly') { e.preventDefault(); DRAW.pop(); finishPoly(); } });
 }
-// v132: OpenStreetMap's free vector tiles (OpenFreeMap), drawn as CAD linework: white ground, thin black building outlines, grey street lines
+// v132: OpenStreetMap's free vector tiles (OpenFreeMap), drawn as CAD linework: white ground, thin black building outlines, gray street lines
 const OFM_TILES = 'https://tiles.openfreemap.org/planet';
 const DEF_STYLE = { version: 8, name: 'PlotCloud CAD', glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
   sources: { osm: { type: 'vector', url: OFM_TILES, attribution: '© OpenStreetMap contributors · OpenFreeMap' } },
@@ -1197,7 +1197,7 @@ function undo() { if (!UNDO.length) return; REDO.push(snapSite()); restoreSnap(U
 function redo() { if (!REDO.length) return; UNDO.push(snapSite()); restoreSnap(REDO.pop()); undoUI(); }
 $('#uUndo').addEventListener('click', undo); $('#uRedo').addEventListener('click', redo);
 function refresh() { draw(); reviewUI(); selUI(); parcelUI(); persist(); if (MODE === '3d') upd3D(false); if (ML && mlReady) syncMap(); }
-function setH(id, h) { const b = site.buildings.find((x) => x.id === id); if (!b || b.locked) return; if (!(h > (b.base || 0) + 0.4)) { msg('#nextMsg', 'Type a height in metres, above the building’s base.', 'warn'); selUI(); return; } pushU(); SITE.setHeight(site, id, +(+h).toFixed(2)); msg('#nextMsg', `Height ${b.h} m, labelled “entered by you”.`, 'ok'); refresh(); }
+function setH(id, h) { const b = site.buildings.find((x) => x.id === id); if (!b || b.locked) return; if (!(h > (b.base || 0) + 0.4)) { msg('#nextMsg', 'Type a height in meters, above the building’s base.', 'warn'); selUI(); return; } pushU(); SITE.setHeight(site, id, +(+h).toFixed(2)); msg('#nextMsg', `Height ${b.h} m, labeled “entered by you”.`, 'ok'); refresh(); }
 function delSel() { const b = selB(); if (!b || b.locked || b.deleted) return; pushU(); SITE.deleteBuilding(site, b.id); msg('#nextMsg', 'Deleted. Its place is marked “your site”; Ctrl+Z brings the building back.', 'ok'); SEL = null; refresh(); }
 const bbOf = (pts) => { const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
 const ACT_WHY = { mirror: 'A massing box mirrors onto itself.', replace: 'Massing boxes have no styles to swap.', dup: 'The massing comes from the map; add new buildings in Workbench.' };
@@ -1211,7 +1211,7 @@ function annUI() {
     out.push(`<polygon class="an-box" data-cat="massing" points="${P.map((p) => p.join(',')).join(' ')}"/>`);
     for (const [q, su, sv] of [[P[0], -1, 1], [P[1], 1, 1], [P[2], 1, -1], [P[3], -1, -1], [[mx, a[1]], 0, 1], [[c[0], my], 1, 0], [[mx, c[1]], 0, -1], [[a[0], my], -1, 0]]) out.push(`<rect class="an-h${lk ? ' off' : ''}" data-su="${su}" data-sv="${sv}" x="${q[0] - 4}" y="${q[1] - 4}" width="8" height="8"><title>${lk ? 'Locked' : 'Drag to resize the footprint'}</title></rect>`);
     out.push(`<line class="an-rl off" x1="${mx}" y1="${a[1]}" x2="${mx}" y2="${a[1] - 26}"/><circle class="an-rot off" cx="${mx}" cy="${a[1] - 26}" r="6"><title>Massing boxes keep their footprint’s orientation</title></circle>`);
-    if (b.h != null && b.valid) { const t = `↕ ${(+b.h).toFixed(1)} m`, tw = t.length * 7.2 + 14; out.push(`<g class="hgrip${lk ? ' off' : ''}" role="slider" aria-label="Height ${b.h} metres; drag up or down" aria-valuenow="${b.h}"><rect x="${c[0] + 10}" y="${my - 12}" width="${tw}" height="24" rx="12"/><text x="${c[0] + 10 + tw / 2}" y="${my + 4.5}">${t}</text></g>`); } }
+    if (b.h != null && b.valid) { const t = `↕ ${(+b.h).toFixed(1)} m`, tw = t.length * 7.2 + 14; out.push(`<g class="hgrip${lk ? ' off' : ''}" role="slider" aria-label="Height ${b.h} meters; drag up or down" aria-valuenow="${b.h}"><rect x="${c[0] + 10}" y="${my - 12}" width="${tw}" height="24" rx="12"/><text x="${c[0] + 10 + tw / 2}" y="${my + 4.5}">${t}</text></g>`); } }
   if (site.parcel && site.parcel.pts.length > 2) { const P = PDRAG ? PDRAG.pts : site.parcel.pts; P.forEach((p, i) => { const q = S(p); out.push(`<rect class="pv" data-pv="${i}" x="${q[0] - 5}" y="${q[1] - 5}" width="10" height="10"><title>Drag to move this corner</title></rect>`); });
     const cc = S(SITE.centroid(P)), t = `${Math.round(SITE.shoelace(P)).toLocaleString('en-CA')} m²`, tw = t.length * 7.4 + 14; out.push(`<g class="ptag" data-area="${SITE.shoelace(P).toFixed(2)}"><rect x="${cc[0] - tw / 2}" y="${cc[1] - 11}" width="${tw}" height="22" rx="11"/><text x="${cc[0]}" y="${cc[1] + 4.5}">${t}</text></g>`); }
   svg.innerHTML = out.join('');
@@ -1229,7 +1229,7 @@ function parcelUI() { const P = site && site.parcel; $('#pArea').textContent = P
   $('#pSrc').textContent = !site ? 'Generate the massing first.' : P ? `From ${P.source === 'osm-landuse' ? P.note : 'a rectangle you drew'}. Drag its green corners on the plan, or type edge lengths.` : 'No land-use area at the site point in the data. Draw a rectangle on the plan.';
   $('#pEdges').innerHTML = P && P.pts.length <= 12 ? SITE.edges(P.pts).map((L, i) => `<label>Edge ${i + 1} (m)<input class="num" type="number" min="0.5" step="0.1" data-pe="${i}" value="${L.toFixed(2)}"></label>`).join('') : '';
   $('#pOsm').disabled = !site || !raws.length; }
-$('#pEdges').addEventListener('change', (e) => { const i = e.target.dataset.pe; if (i == null || !site.parcel) return; pushU(); if (!SITE.setEdge(site.parcel.pts, +i, +e.target.value)) { msg('#nextMsg', 'Type a length in metres.', 'warn'); } site.parcel.source = site.parcel.source === 'osm-landuse' ? 'osm-landuse (edited)' : site.parcel.source; refresh(); });
+$('#pEdges').addEventListener('change', (e) => { const i = e.target.dataset.pe; if (i == null || !site.parcel) return; pushU(); if (!SITE.setEdge(site.parcel.pts, +i, +e.target.value)) { msg('#nextMsg', 'Type a length in meters.', 'warn'); } site.parcel.source = site.parcel.source === 'osm-landuse' ? 'osm-landuse (edited)' : site.parcel.source; refresh(); });
 $('#pDraw').addEventListener('click', () => { if (!site) { msg('#nextMsg', 'Generate the massing first.', 'warn'); return; } if (TOOLM === 'prect') { TOOLM = null; PR = null; $('#pDraw').setAttribute('aria-pressed', 'false'); draw(); return; } if (MODE !== 'plan') setMode('plan'); TOOLM = 'prect'; PR = null; $('#pDraw').setAttribute('aria-pressed', 'true'); draw(); });
 $('#pOsm').addEventListener('click', () => { const pc = raws.length ? SITE.parcelFrom(raws[0].parsed, ORIGIN) : null; if (!pc) { msg('#nextMsg', 'The data has no land-use area at the site point. Draw a rectangle instead.', 'warn'); return; } pushU(); site.parcel = pc; refresh(); msg('#nextMsg', `Ground area from ${pc.note}.`, 'ok'); });
 // pointer on the plan (before the map handlers): ground-area corners and rectangle, select, move; elsewhere a drag pans
@@ -1440,7 +1440,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }

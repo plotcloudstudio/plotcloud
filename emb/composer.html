@@ -286,7 +286,7 @@ input,select,textarea{box-sizing:border-box;max-width:100%}.seg{min-width:0}.seg
     <span id="alignTools" style="display:none; gap:4px">
       <span class="sep"></span>
       <button class="btn small" data-align="l" title="Align left edges">Left</button>
-      <button class="btn small" data-align="c" title="Align centres">Centre</button>
+      <button class="btn small" data-align="c" title="Align centers">Center</button>
       <button class="btn small" data-align="r" title="Align right edges">Right</button>
       <button class="btn small" data-align="t" title="Align top edges">Top</button>
       <button class="btn small" data-align="b" title="Align bottom edges">Bottom</button>
@@ -323,7 +323,7 @@ const STAGE_ORDER = ["claim","evidence","conclusion"];
 const TS = {title:[.040,1.05], author:[.015,1.3], meta:[.011,1.35], boardno:[.011,1.3], thesis:[.0105,1.45], intro:[.0105,1.45], caption:[.0085,1.35], free:[.012,1.4], entry:[.018,1.2]};
 const BLOCK_ROLES = ["title","author","meta","boardno","thesis","intro","entry"];
 const TEMPLATES = {simple:"Title block", strip:"Full-width title strip", side:"Side column"};
-const POS = {TL:"Top left", TC:"Top centre", TR:"Top right", BL:"Bottom left", BC:"Bottom centre", BR:"Bottom right"};
+const POS = {TL:"Top left", TC:"Top center", TR:"Top right", BL:"Bottom left", BC:"Bottom center", BR:"Bottom right"};
 const SCALES = [20,50,100,200,250,500,1000,1250,2500];
 const NICE_M = [.5,1,2,5,10,20,25,50,100,200,250,500,1000];
 const PX = 4;            // PNG preview pixels per mm
@@ -1601,7 +1601,7 @@ function renderRight(){
   }
   if (hasLayout()) opts.push(h("button", {class:"btn small", onclick:() => rebuild(), title:"Re-run this layout after changing roles, captions or settings"}, "Rebuild this layout"));
   if (onN) opts.push(h("div", {style:{display:"flex", gap:"6px", flexWrap:"wrap", marginTop:"8px"}},
-    h("button", {class:"btn small", title:"Mute the supporting renders so each board's hero carries the colour", onclick:heroPop}, "Make the heroes pop"),
+    h("button", {class:"btn small", title:"Mute the supporting renders so each board's hero carries the color", onclick:heroPop}, "Make the heroes pop"),
     h("button", {class:"btn small", onclick:() => { for (const it of S.lib) delete it.adj; renderBoard(); renderLib(); commit(); toast("All tones reset."); }}, "Reset tones")));
   const notes = S.layout?.notes || [];
   for (const n of notes) opts.push(h("div", {class:"note"}, n));
@@ -1717,7 +1717,7 @@ function checks(sc){
   if (hard.length) out.push(["warn", `${hard.length} text box${hard.length>1?"es sit":" sits"} over an image with weak contrast (${hard[0][1].toFixed(1)}:1; aim for 4.5:1).`, {label:"Add backing panels", fn:() => { for (const [t] of hard) t.backing = true; renderBoard(); commit(); }}]);
   const cuts = new Set(S.boards.flatMap(b => b.els.filter(e => e.type === "cut").map(e => e.letter)));
   const secs = new Set(S.lib.filter(i => i.sec && onIds.has(i.id)).map(i => i.sec));
-  for (const L of cuts) if (!secs.has(L)) out.push(["info", `Section ${L}-${L} is marked on a plan, but no drawing is labelled ${L}. Set “Section” on the matching drawing in the image list.`]);
+  for (const L of cuts) if (!secs.has(L)) out.push(["info", `Section ${L}-${L} is marked on a plan, but no drawing is labeled ${L}. Set “Section” on the matching drawing in the image list.`]);
   for (const L of secs) if (!cuts.has(L)) out.push(["info", `Section ${L}-${L} has no cut line on a plan. Select the plan and press “Add section mark”.`]);
   if (S.boards.length > 1){
     const tops = S.boards.map((b,k) => b.els.find(e => e.type === "img" && e.imgId === S.layout?.heroes?.[k])).filter(Boolean);
@@ -1909,13 +1909,13 @@ function renderLib(){
       const upd = () => { save(); renderLib(); for (const b of S.boards) for (const f of b.els.filter(e => e.type === "img" && e.imgId === it.id)){ if (it.scaleN && realW(it)){ f.scaleN = it.scaleN; const s = scaledSize(it, it.scaleN); f.w = s.w; f.h = s.h; f.fit = "fit"; f.zoom = 1; } reattach(f, b); } renderBoard(); commit(); };
       const realIn = it.pageWmm
         ? [h("span", null, "Drawn at 1:"), h("input", {type:"number", min:"1", value:it.exportN||"", placeholder:"100", "aria-label":"Scale the PDF was drawn at", onchange:e => { it.exportN = +e.target.value || 0; upd(); }})]
-        : [h("span", null, "Real width"), h("input", {type:"number", min:"0", step:"0.5", value:it.realW||"", placeholder:"m", "aria-label":"Real-world width in metres", onchange:e => { it.realW = +e.target.value || 0; upd(); }})];
+        : [h("span", null, "Real width"), h("input", {type:"number", min:"0", step:"0.5", value:it.realW||"", placeholder:"m", "aria-label":"Real-world width in meters", onchange:e => { it.realW = +e.target.value || 0; upd(); }})];
       scaleRow = h("div", {class:"scale"}, ...realIn,
         h("span", null, "Print at"), h("select", {"aria-label":"Print scale", onchange:e => { it.scaleN = +e.target.value; upd(); }}, h("option", {value:"0"}, "Free"), SCALES.map(v => h("option", {value:String(v), selected:it.scaleN === v}, `1:${v}`))),
         h("label", {style:{display:"flex", gap:"4px", alignItems:"center"}}, h("input", {type:"checkbox", checked:!!it.north, onchange:e => { it.north = e.target.checked; upd(); }}), "North"),
         h("input", {type:"number", value:it.northDeg||0, step:"5", "aria-label":"North arrow rotation in degrees", title:"Rotation in degrees", onchange:e => { it.northDeg = +e.target.value || 0; upd(); }}),
         h("span", null, "Section"), h("input", {value:it.sec||"", maxlength:"2", placeholder:"A", "aria-label":"Section letter, if this drawing is a section", title:"If this is a section, its letter (A for section A-A)", onchange:e => { it.sec = (e.target.value||"").toUpperCase().slice(0,2); upd(); }}),
-        h("span", {style:{gridColumn:"1/-1"}}, it.pageWmm ? `PDF page is ${Math.round(it.pageWmm)} mm wide.${realW(it) ? ` That's ${realW(it).toFixed(1)} m real.` : ""}` : "Width the image covers on site, in metres."));
+        h("span", {style:{gridColumn:"1/-1"}}, it.pageWmm ? `PDF page is ${Math.round(it.pageWmm)} mm wide.${realW(it) ? ` That's ${realW(it).toFixed(1)} m real.` : ""}` : "Width the image covers on site, in meters."));
     }
     const extraRow = [h("div", {class:"two"}, stSel, boardSel)];
     if (scaleRow) extraRow.push(scaleRow);
@@ -2194,7 +2194,7 @@ try { window.claude?.use?.("downloads").then(d => { downloads = d; }).catch(() =
 async function offer(name, blob){
   if (downloads){
     try { await downloads.save({filename:name, data:blob}); toast("Saved."); }
-    catch(e){ toast(e?.code === "declined" ? "Download cancelled." : e?.code === "too_large" ? "The file is too large to save here. Untick a size and try again." : "Downloads aren't available in this view."); }
+    catch(e){ toast(e?.code === "declined" ? "Download canceled." : e?.code === "too_large" ? "The file is too large to save here. Untick a size and try again." : "Downloads aren't available in this view."); }
   } else { const a = h("a", {href:URL.createObjectURL(blob), download:name}); document.body.append(a); a.click(); a.remove(); }
 }
 const slug = () => (S.story.title || "pinup").trim().replace(/[^\w\- ]+/g,"").replace(/\s+/g,"-").toLowerCase() || "pinup";

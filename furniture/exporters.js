@@ -1,4 +1,4 @@
-// Exporters. All geometry is in millimetres, Z up, origin at the bottom centre.
+// Exporters. All geometry is in millimeters, Z up, origin at the bottom center.
 import { partGeometry, triangles, isNurbsable } from './geom.js';
 import { materialColor } from './models.js';
 import { LANG } from './i18n.js';
@@ -30,7 +30,7 @@ export function toOBJ(items, base) {
     const [r, g, b] = hexRgb(c).map((v) => (v / 255).toFixed(4));
     mtl += `newmtl ${k}\nKd ${r} ${g} ${b}\nKa 0 0 0\nKs 0.05 0.05 0.05\nd 1\nillum 2\n\n`;
   }
-  const out = [`# PlotCloud furniture configurator\n# Units: millimetres. Y up. Origin: bottom centre.\nmtllib ${base}.mtl\n`];
+  const out = [`# PlotCloud furniture configurator\n# Units: millimeters. Y up. Origin: bottom center.\nmtllib ${base}.mtl\n`];
   let off = 1;
   for (const it of items) {
     out.push(`o ${it.name}\ng ${safe(it.p.layer)}\nusemtl ${it.p.mat}\n`);
@@ -215,15 +215,15 @@ export function readme(model, dims, values, report) {
   if (LANG === 'en') return [
     `PlotCloud furniture generator — ${model.en}`,
     `Size W×D×H: ${dims.W} × ${dims.D} × ${dims.H} mm`,
-    'Units: millimetres. Origin: bottom centre.',
+    'Units: millimeters. Origin: bottom center.',
     `Parameters: ${Object.entries(values).map(([k, v]) => `${k}=${v}`).join(', ')}`,
     '',
     'How to import',
     '- Rhino 7/8: open the .3dm. Plain boxes and cylinders are NURBS solids you can edit; rounded cushions and oval shapes are meshes.',
     '- SketchUp: File › Import › COLLADA (*.dae). It comes in as one component with each part grouped.',
-    '- 3ds Max: import the .obj. Keep "Flip ZY-axis" ticked and set units to millimetres.',
-    '- Blender / D5 Render / Twinmotion / Enscape: import the .obj (Y up, millimetres).',
-    '- AutoCAD: open the .dxf (3D faces). Revit: Insert › Import CAD, units millimetres.',
+    '- 3ds Max: import the .obj. Keep "Flip ZY-axis" ticked and set units to millimeters.',
+    '- Blender / D5 Render / Twinmotion / Enscape: import the .obj (Y up, millimeters).',
+    '- AutoCAD: open the .dxf (3D faces). Revit: Insert › Import CAD, units millimeters.',
     '- 3D printing / laser-cut model prep: .stl.',
     '',
     'Why there is no native .skp / .max / .dwg',

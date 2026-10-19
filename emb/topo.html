@@ -107,7 +107,7 @@ select { width: 100%; border: 1px solid var(--line-strong); border-radius: 5px; 
       </div>
       <div id="imageBox" class="sec" style="padding:0;border:0" hidden>
         <label class="file" id="fileLabel">Choose a grayscale heightmap (PNG or JPG)<input type="file" id="file" accept="image/png,image/jpeg,image/webp"></label>
-        <p class="hint">Lighter pixels are higher ground. Export one from GIS (QGIS: DEM → render as single-band grey) or a terrain heightmap site, cropped to your site.</p>
+        <p class="hint">Lighter pixels are higher ground. Export one from GIS (QGIS: DEM → render as single-band gray) or a terrain heightmap site, cropped to your site.</p>
         <div class="row"><div class="head"><label for="zmin">Lowest elevation</label><div class="num"><input id="zmin" type="number" step="0.5" value="0"><span>m</span></div></div></div>
         <div class="row"><div class="head"><label for="zmax">Highest elevation</label><div class="num"><input id="zmax" type="number" step="0.5" value="20"><span>m</span></div></div></div>
       </div>
@@ -136,7 +136,7 @@ select { width: 100%; border: 1px solid var(--line-strong); border-radius: 5px; 
     <div class="sec">
       <button type="button" class="export" id="exportBtn">Export cut files (.zip)</button>
       <div class="status" id="status" role="status"></div>
-      <p class="hint">One SVG per sheet (red = cut, blue = engrave, in millimetres) plus a DXF with CUT and ENGRAVE layers. Numbers sit where the next layer covers them; the engraved outline shows where that layer goes.</p>
+      <p class="hint">One SVG per sheet (red = cut, blue = engrave, in millimeters) plus a DXF with CUT and ENGRAVE layers. Numbers sit where the next layer covers them; the engraved outline shows where that layer goes.</p>
     </div>
   </aside>
 </div>
@@ -316,7 +316,7 @@ $('#exportBtn').addEventListener('click', async () => {
       'PlotCloud contour model maker',
       `Scale 1:${S.scale} · board ${S.th} mm · vertical exaggeration ${S.ex}× · each layer = ${result.interval.toFixed(2)} m`,
       `Model ${result.size.w.toFixed(0)} × ${result.size.d.toFixed(0)} mm · ${result.layers.length} layers on ${packed.sheets.length} sheet(s) of ${bed.bedW} × ${bed.bedH} mm`,
-      '', 'Colours: red = cut, blue = engrave (score). Units are millimetres; import at 1:1.',
+      '', 'Colours: red = cut, blue = engrave (score). Units are millimeters; import at 1:1.',
       'Layer 0 is the base. Glue each layer onto the engraved outline on the layer below; the number sits under the piece that covers it.',
       'Do a test cut first to set power and speed for your board.',
     ].join('\r\n'));
@@ -328,7 +328,7 @@ $('#exportBtn').addEventListener('click', async () => {
     await dl.save({ filename: base + '.zip', data: new Blob([zip], { type: 'application/zip' }) });
     setStatus(`Saved ${base}.zip (${packed.sheets.length} sheet${packed.sheets.length > 1 ? 's' : ''}).`, 'ok');
   } catch (e) {
-    setStatus(e && e.code === 'declined' ? 'Save cancelled.' : `Export failed: ${(e && e.message) || e}`, 'bad');
+    setStatus(e && e.code === 'declined' ? 'Save canceled.' : `Export failed: ${(e && e.message) || e}`, 'bad');
   } finally { btn.disabled = false; }
 });
 

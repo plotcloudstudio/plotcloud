@@ -134,7 +134,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
       <div class="drop" id="drop"><button type="button" class="btn" id="pick">Choose a model file</button><p class="note">Or drop it on the view. Accepts .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), .dxf, or a saved scene (.json).</p><input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.json" hidden></div>
       <div class="minfo"><b id="mName">—</b><span id="mInfo"></span></div>
-      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Meters</option><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div><label class="note">Up axis</label><div class="seg" id="upBar" role="group" aria-label="Up axis"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div></div>
       <p class="note">Anything reaching 2 m above the floor is a wall; lower pieces are furniture the eye can see over if they are lower than the eye. Glass (named <code>glass</code> or <code>window</code>) is vision glazing. Draw the buildings across the street as walls with their real height, so they block the view and the sky.</p>
       <p class="msg" id="impMsg"></p>
@@ -170,14 +170,14 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div><span class="note">Detail</span><div class="seg" id="lvSeg" role="group" aria-label="Detail" style="margin-top:4px"><button type="button" data-l="draft" aria-pressed="true">Draft</button><button type="button" data-l="standard" aria-pressed="false">Standard</button><button type="button" data-l="fine" aria-pressed="false">Fine</button></div></div>
       <p class="note" id="lvNote"></p>
       <div class="props" id="lvLong" hidden><b id="lvLongT" style="font-size:13px"></b><p class="note" style="margin:0">You can keep using the other views while it runs, and stop it at any time; the last result stays.</p><div class="two"><button type="button" class="go" id="lvStart">Start</button><button type="button" class="btn" id="lvCancel">Cancel</button></div></div>
-      <button type="button" class="go" id="run">Analyse the views</button>
+      <button type="button" class="go" id="run">Analyze the views</button>
       <div class="prog" id="prog" hidden><i></i></div>
       <div class="two" id="runBar" hidden style="align-items:center"><span class="note" id="runLeft"></span><button type="button" class="btn" id="stop">Stop</button></div>
       <p class="msg" id="runMsg"></p>
     </section>
 
     <section class="sec" aria-labelledby="h-res"><h2 id="h-res"><i>5</i>Report</h2>
-      <div id="res"><p class="note">Analyse the views to see the report.</p></div>
+      <div id="res"><p class="note">Analyze the views to see the report.</p></div>
     </section>
 
     <section class="sec" aria-labelledby="h-lay"><h2 id="h-lay"><i>6</i>Layers &amp; export</h2>
@@ -192,7 +192,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
   <section class="stage split" id="stage" aria-label="Plan">
     <div class="vbar">
       <div class="views" id="camBar" role="group" aria-label="View"><button type="button" data-cam="split" aria-pressed="true">Plan + chart</button><button type="button" data-cam="plan" aria-pressed="false">Plan</button><button type="button" data-cam="3d" aria-pressed="false">3D</button></div>
-      <div class="views" id="showBar" role="group" aria-label="Colour by"><button type="button" data-show="quality" aria-pressed="true">Quality views</button><button type="button" data-show="vf" aria-pressed="false">View factor</button><button type="button" data-show="dist" aria-pressed="false">Distance to window</button></div>
+      <div class="views" id="showBar" role="group" aria-label="Color by"><button type="button" data-show="quality" aria-pressed="true">Quality views</button><button type="button" data-show="vf" aria-pressed="false">View factor</button><button type="button" data-show="dist" aria-pressed="false">Distance to window</button></div>
     </div>
     <canvas id="cv" aria-label="Plan with the view analysis"></canvas>
     <canvas id="cv3" aria-label="3D view" hidden></canvas>
@@ -202,7 +202,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div class="cph" style="margin-top:0"><b>Quality views</b><span class="note" id="cpSub"></span></div>
       <div class="kp4" id="kp4"></div>
       <div class="cph"><b>Each requirement</b><span class="note">share of the occupied floor · click to map it</span></div>
-      <canvas id="cCrit" aria-label="Share of the floor meeting each requirement: click one to colour the plan by it"></canvas>
+      <canvas id="cCrit" aria-label="Share of the floor meeting each requirement: click one to color the plan by it"></canvas>
       <div class="cph"><b>Rooms</b><span class="note">quality views · click to pick a room</span></div>
       <canvas id="cRooms" aria-label="Quality views in each room: click one to pick it out"></canvas>
       <div id="roomBox" hidden></div>
@@ -217,7 +217,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 
 <script>
 // PlotCloud CAD I/O (shared by the L-system planting plan and the evacuation tool).
-// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to metres,
+// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to meters,
 // and writes simple 2D DXF (R12, metres). No server needed.
 const CADIO = (() => {
   const loaded = {};
@@ -225,7 +225,7 @@ const CADIO = (() => {
     const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s);
   }));
   const DXF_LIB = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js';
-  // $INSUNITS -> metres per drawing unit
+  // $INSUNITS -> meters per drawing unit
   const UNIT = { 0: null, 1: 0.0254, 2: 0.3048, 4: 0.001, 5: 0.01, 6: 1, 14: 0.1 };
   const UNIT_NAME = { 1: 'inches', 2: 'feet', 4: 'millimetres', 5: 'centimetres', 6: 'metres', 14: 'decimetres' };
 
@@ -244,7 +244,7 @@ const CADIO = (() => {
   function bulgePts(p0, p1, b) {
     if (!b) return [p0, p1];
     const th = 4 * Math.atan(b), dx = p1[0] - p0[0], dy = p1[1] - p0[1], c = Math.hypot(dx, dy); if (c < 1e-12) return [p0, p1];
-    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the centre sits on the chord's left normal
+    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the center sits on the chord's left normal
     const r = c / (2 * Math.abs(Math.sin(th / 2))), mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2, d = (c / 2) / Math.tan(th / 2);
     const cx = mx - (dy / c) * d, cy = my + (dx / c) * d;
     const a0 = Math.atan2(p0[1] - cy, p0[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), out = [];
@@ -307,7 +307,7 @@ const CADIO = (() => {
     walk(dxf.entities, I, 0, null, null);
     return out;
   }
-  // scale a parsed drawing to metres and move it so its lower-left corner is at the origin
+  // scale a parsed drawing to meters and move it so its lower-left corner is at the origin
   function normalise(d, metresPerUnit) {
     const s = metresPerUnit;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -323,7 +323,7 @@ const CADIO = (() => {
       w: (x1 - x0) * s, h: (y1 - y0) * s, origin: [x0, y0], s,
     };
   }
-  // guess metres-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
+  // guess meters-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
   function guessScale(d) {
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const g of d.segs) for (const p of [g.a, g.b]) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
@@ -332,7 +332,7 @@ const CADIO = (() => {
     return [1, 'metres'];
   }
 
-  // ---- writer: 2D DXF R12 in metres ----
+  // ---- writer: 2D DXF R12 in meters ----
   function writer() {
     const ents = [], layers = new Map();
     const L = (name, color = 7) => { if (!layers.has(name)) layers.set(name, color); return name; };
@@ -473,7 +473,7 @@ const hmH = (val) => (val === 255 ? 9 : val / 100);
 function marchHM(M, v, dx, dy, end, E, out) {
   let stop = end; cellWalk(M, v, dx, dy, end, (d, dn, val) => { const h = hmH(val); if (h >= E) { stop = d; return true; } if (h > TGT && h > 0.05) out.push([d, dn, h]); return false; }); return stop;
 }
-// raster: cell c metres; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
+// raster: cell c meters; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
 function buildGrid(S) {
   const B = SC.bounds, c = Math.max(window.__isoCmin || 0.05, Math.sqrt(B.w * B.h / (window.__isoCells || 350000))), W = Math.ceil(B.w / c), H = Math.ceil(B.h / c), solid = new Uint8Array(W * H), room = new Uint8Array(W * H);
   const line = (m, ax, ay, bx, by) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / (c / 3))); for (let i = 0; i <= n; i++) { const x = Math.floor((ax + (bx - ax) * i / n) / c), y = Math.floor((ay + (by - ay) * i / n) / c); if (x >= 0 && y >= 0 && x < W && y < H) m[y * W + x] = 1; } };
@@ -715,10 +715,10 @@ function capUI() {
   $('#capS').textContent = `Line of sight ${pct(sm.los)} · quality views ${pct(sm.q)} of ${sm.area.toFixed(0)} m² · LEED Quality Views ${sm.met ? (sm.exemplary ? 'met (exemplary, 90%+)' : 'met') : 'not met (75% needed)'} · eye ${EYE.toFixed(2)} m`;
 }
 function results() {
-  const r = $('#res'), sm = summary(); if (!sm) { r.innerHTML = '<p class="note">Analyse the views to see the report.</p>'; return; }
+  const r = $('#res'), sm = summary(); if (!sm) { r.innerHTML = '<p class="note">Analyze the views to see the report.</p>'; return; }
   const stale = RES.key !== setKey();
   let h = `<div class="kpis"><div><small>Line of sight</small><b>${pct(sm.los)}</b></div><div><small>Quality views</small><b>${pct(sm.q)}</b></div></div>`;
-  h += `<p class="note">${sm.area.toFixed(0)} m² of occupied floor${GC.R.approx ? ' <span class="tag">Approximate</span> the walls do not close, so the whole canvas counts' : ''}${EXCL.length ? `, ${EXCL.length} room${EXCL.length > 1 ? 's' : ''} left out` : ''}. LEED Quality Views (1 point) needs 75% for both: <b>${sm.met ? 'met' : 'not met'}</b>${sm.exemplary ? ', and 90%+ for exemplary performance' : ''}.${stale ? ' <span class="tag">Out of date</span> Settings changed: analyse again.' : ''}</p>`;
+  h += `<p class="note">${sm.area.toFixed(0)} m² of occupied floor${GC.R.approx ? ' <span class="tag">Approximate</span> the walls do not close, so the whole canvas counts' : ''}${EXCL.length ? `, ${EXCL.length} room${EXCL.length > 1 ? 's' : ''} left out` : ''}. LEED Quality Views (1 point) needs 75% for both: <b>${sm.met ? 'met' : 'not met'}</b>${sm.exemplary ? ', and 90%+ for exemplary performance' : ''}.${stale ? ' <span class="tag">Out of date</span> Settings changed: analyze again.' : ''}</p>`;
   h += `<table class="res"><tr><th>Requirement</th><th class="n">Floor</th></tr>${CRITS.map((c, i) => `<tr><td>${c.name}</td><td class="n">${pct(i === 0 ? sm.los : i === 5 ? sm.q : sm.crit[i - 1])}</td></tr>`).join('')}</table>`;
   h += `<table class="res"><tr><th>Room</th><th class="n">Area</th><th class="n">View out</th><th class="n">Quality</th></tr>${sm.rooms.map((q) => `<tr${q.out ? ' style="color:#8a8780"' : ''}><td>Room ${q.k + 1}${q.out ? ' (left out)' : ''}</td><td class="n">${q.area.toFixed(1)} m²</td><td class="n">${pct(q.los / q.n)}</td><td class="n">${pct(q.q / q.n)}</td></tr>`).join('')}</table>`;
   h += `<p class="note">${RES.pts.length.toLocaleString('en-CA')} spots every ${Math.round(RES.spacing * 100)} cm, ${RES.nr} sightlines each, at ${EYE.toFixed(2)} m. A spot counts where its floor is not under furniture. ${NATURE ? 'Nature in view is assumed (switch on). ' : ''}${MOTION ? 'Movement outside is assumed (switch on). ' : ''}</p>`;
@@ -745,7 +745,7 @@ function panelUI() {
   if (CAM !== 'split') return; const sm = summary();
   $('#cpSub').textContent = RES ? `${LV[RES.level || 'draft'].name} · eye ${EYE.toFixed(2)} m` : '';
   $('#kp4').innerHTML = `<div><small>View out</small><b>${sm ? pct(sm.los) : '—'}</b></div><div><small>Quality</small><b>${sm ? pct(sm.q) : '—'}</b></div><div><small>LEED</small><b style="color:${sm ? (sm.met ? '#1f7a3d' : '#b3261e') : 'inherit'}">${sm ? (sm.met ? 'Met' : 'Not met') : '—'}</b></div><div><small>Floor</small><b>${sm ? Math.round(sm.area) + ' m²' : '—'}</b></div>`;
-  if (!sm) { msgCv($('#cCrit'), 'Analyse the views to see this chart.'); msgCv($('#cRooms'), 'Rooms appear after the analysis.'); $('#roomBox').hidden = true; spotUI(); return; }
+  if (!sm) { msgCv($('#cCrit'), 'Analyze the views to see this chart.'); msgCv($('#cRooms'), 'Rooms appear after the analysis.'); $('#roomBox').hidden = true; spotUI(); return; }
   HITS.crit = bars($('#cCrit'), CRITS.map((c, i) => ({ key: c.k, label: c.name, v: i === 0 ? sm.los : i === 5 ? sm.q : sm.crit[i - 1], col: i === 0 || i === 5 ? (((i === 0 ? sm.los : sm.q) >= 0.75) ? '#2ea05a' : '#e0a030') : '#86b6d6' })), CRIT, (r) => pct(r.v), 0.75);
   HITS.rooms = bars($('#cRooms'), sm.rooms.map((r) => ({ key: r.k, label: `Room ${r.k + 1} · ${r.area.toFixed(0)} m²${r.out ? ' · left out' : ''}`, v: r.q / r.n, col: r.out ? '#cfccc4' : r.q / r.n >= 0.75 ? '#2ea05a' : '#e0a030', dim: r.out })), ROOMSEL, (r) => pct(r.v), 0.75);
   const rb = $('#roomBox'), rs = sm.rooms.find((r) => r.k === ROOMSEL); rb.hidden = !rs;
@@ -877,7 +877,7 @@ async function importDXF(f) {
   const segs = d.segs.map((g) => ({ a: [g.a[0] * s, g.a[1] * s], b: [g.b[0] * s, g.b[1] * s], layer: g.layer || '0' })), layers = {};
   for (const g of segs) { const L = layers[g.layer] || (layers[g.layer] = { role: guessRole(g.layer), count: 0 }); L.count++; } for (const L of Object.values(layers)) L.h = ROLE_H[L.role];
   useImport(f.name, segs, layers); $('#storeyBox').hidden = true; $('#mName').textContent = f.name; $('#mInfo').textContent = `2D drawing · ${segs.length.toLocaleString()} lines · ${how}`;
-  msg(`${f.name}: ${segs.length.toLocaleString()} lines on ${Object.keys(layers).length} layers (${how}). Check each layer's role and height, then analyse the views.`, 'ok');
+  msg(`${f.name}: ${segs.length.toLocaleString()} lines on ${Object.keys(layers).length} layers (${how}). Check each layer's role and height, then analyze the views.`, 'ok');
 }
 // ---- 3D models (Rhino, IFC, OBJ, STL, glTF, SketchUp Collada): every triangle is kept per element with its name, then
 // rasterised into the height map of the chosen floor. Units and up axis work as in Sun Hours.
@@ -888,7 +888,7 @@ function setUp(u) { $$('#upBar button').forEach((b) => b.setAttribute('aria-pres
 $('#upBar').addEventListener('click', (e) => { const b = e.target.closest('[data-up]'); if (!b) return; setUp(b.dataset.up); if (MODEL) { prepModel(); placeModel(); } });
 $('#units').addEventListener('change', () => { if (MODEL) { prepModel(); placeModel(); } else if (LASTDXF) importDXF(LASTDXF); });
 function guessUnits(span) { for (const [s, n] of [[1, 'metres'], [0.001, 'millimetres'], [0.01, 'centimetres'], [0.0254, 'inches'], [0.3048, 'feet']]) if (span * s >= 3 && span * s <= 400) return [s, n]; return [1, 'metres']; }
-function prepModel() {   // file coordinates -> metres, Z up; floor levels from where the tall elements stand
+function prepModel() {   // file coordinates -> meters, Z up; floor levels from where the tall elements stand
   const M = MODEL; let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (const e of M.els) for (let i = 0; i < e.p.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], e.p[i + k]); hi[k] = Math.max(hi[k], e.p[i + k]); }
   const u = $('#units').value; let s, how;
@@ -930,7 +930,7 @@ function placeModel() {   // the height map of one floor, from the floor up to 2
   M3D = { id: SC.hm.id, solid: pack((e) => !e.door && !e.glass), glass: pack((e) => e.glass && !e.door), door: pack((e) => e.door) };
   renderLayers(); fit(); changed(true); $('#preset').value = '';
   $('#mName').textContent = M.name; $('#mInfo').textContent = `${M.size.map((v) => v.toFixed(1)).join(' × ')} m · ${M.ntri.toLocaleString()} triangles · units ${M.how}${M.levels.length > 1 ? ` · ${M.levels.length} floors` : ''}`;
-  msg(`${M.name}: ${nt.toLocaleString()} triangles stand on this floor below 2 m. Check the windows, then analyse the views in section 4.${M.els.some((e) => e.door) ? ' Door leaves left out.' : ''}`, 'ok');
+  msg(`${M.name}: ${nt.toLocaleString()} triangles stand on this floor below 2 m. Check the windows, then analyze the views in section 4.${M.els.some((e) => e.door) ? ' Door leaves left out.' : ''}`, 'ok');
 }
 $('#storey').addEventListener('change', () => { if (MODEL) placeModel(); });
 const IFC_LIB = 'https://cdn.jsdelivr.net/npm/web-ifc@0.0.78/', RH_LIB = 'https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.min.js';
@@ -954,7 +954,7 @@ async function importIFC(f) {
   });
   api.CloseModel(id);
   const els = [...byId.values()].filter((e) => e.arr.length).map((e) => ({ p: Float32Array.from(e.arr), door: e.door, glass: e.glass || GLASS_RE.test(e.name), name: e.name }));
-  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives metres, Y up
+  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives meters, Y up
 }
 async function import3DM(f) {
   await CADIO.loadScript(RH_LIB); const rh = await window.rhino3dm();
@@ -1019,7 +1019,7 @@ const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use ===
 async function save(name, data) {
   const m = (t, c = '') => { $('#exMsg').textContent = t; $('#exMsg').className = 'msg' + (c ? ' ' + c : ''); };
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data, dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save cancelled.'); return; } } }
+  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save canceled.'); return; } } }
   try { const u = URL.createObjectURL(new Blob([bytes])), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m('Downloaded ' + name + '.', 'ok'); }
   catch (e) { m('This view cannot download files. Open the page on claude.ai to save.', 'warn'); }
 }
@@ -1043,7 +1043,7 @@ function board() {
   return c;
 }
 function roomsCSV() {
-  const sm = summary(); if (!sm) return 'Analyse first\r\n'; const rows = [['Room', 'Area m2', 'Counted', 'Line of sight %', 'Quality views %', 'Directions 90 apart %', 'Nature/sky movement far %', 'Within 3x head %', 'View factor 3+ %']];
+  const sm = summary(); if (!sm) return 'Analyze first\r\n'; const rows = [['Room', 'Area m2', 'Counted', 'Line of sight %', 'Quality views %', 'Directions 90 apart %', 'Nature/sky movement far %', 'Within 3x head %', 'View factor 3+ %']];
   for (const r of sm.rooms) rows.push([r.k + 1, r.area.toFixed(1), r.out ? 'no' : 'yes', (r.los / r.n * 100).toFixed(1), (r.q / r.n * 100).toFixed(1), ...r.c.map((v) => (v / r.n * 100).toFixed(1))]);
   rows.push([]); rows.push(['Total (counted)', sm.area.toFixed(1), '', (sm.los * 100).toFixed(1), (sm.q * 100).toFixed(1), ...sm.crit.map((v) => (v * 100).toFixed(1))]); rows.push(['LEED Quality Views', sm.met ? 'met' : 'not met']);
   return rows.map((r) => r.join(',')).join('\r\n') + '\r\n';
@@ -1310,7 +1310,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }
@@ -1664,7 +1664,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 </script>
 <script>
 // ===== PlotCloud v131: a simulation tool sends furniture moves back to Workbench =====
-// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench metres.
+// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench meters.
 (function () {
   if (window.parent === window || window.__pcReturn) return; window.__pcReturn = 1;
   const $ = (s, r = document) => r.querySelector(s);

@@ -197,7 +197,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
         <div class="lab">Frame W × D × H (mm)</div>
         <div class="val" id="dimsVal">—</div>
       </div>
-      <div class="origin">Origin: frame centre at floor, wall centreline · Z up · grid 500 mm</div>
+      <div class="origin">Origin: frame center at floor, wall centerline · Z up · grid 500 mm</div>
       <div class="blocks" id="blocksPane" hidden></div>
     </section>
     <aside class="panel" id="panel"></aside>
@@ -559,7 +559,7 @@ function renderPanel() {
     for (const c of m.colors) {
       const row = el('div', 'row');
       const cur = COLORS[c].find((x) => x[0] === v['color_' + c]) || COLORS[c][0];
-      row.innerHTML = `<div class="head"><label>${c === 'fabric' ? t('布艺') : 'Wood colour (finishes set to Wood)'}</label><span class="swname">${t(cur[1])}</span></div>`;
+      row.innerHTML = `<div class="head"><label>${c === 'fabric' ? t('布艺') : 'Wood color (finishes set to Wood)'}</label><span class="swname">${t(cur[1])}</span></div>`;
       const sw = el('div', 'swatches');
       for (const [hex, name] of COLORS[c]) {
         const b = el('button'); b.type = 'button'; b.style.background = hex; b.title = t(name); b.setAttribute('aria-label', t(name));
@@ -659,7 +659,7 @@ function exportSection() {
   btn.addEventListener('click', () => doExport(btn, status));
   s.append(btn, status);
   const note = el('p', 'note');
-  note.innerHTML = 'Everything comes in one .zip in millimetres. The 2D blocks are real AutoCAD BLOCKs (plan + elevation) and also go into the Rhino file on their own layers. <b>.skp, .max and .dwg</b> are closed formats a browser can\'t write: use the .dae for SketchUp, the .obj for 3ds Max and the .dxf for AutoCAD.';
+  note.innerHTML = 'Everything comes in one .zip in millimeters. The 2D blocks are real AutoCAD BLOCKs (plan + elevation) and also go into the Rhino file on their own layers. <b>.skp, .max and .dwg</b> are closed formats a browser can\'t write: use the .dae for SketchUp, the .obj for 3ds Max and the .dxf for AutoCAD.';
   s.appendChild(note);
   return s;
 }
@@ -721,7 +721,7 @@ function readmeDoors(m, dims, values, report, n2d, names) {
   return [
     `PlotCloud door & window generator — ${m.en}`,
     `Frame W x D x H: ${dims.W} x ${dims.D} x ${dims.H} mm`,
-    'Units: millimetres. Origin: centre of the frame at floor level, on the wall centreline. Front (exterior) is -Y.',
+    'Units: millimeters. Origin: center of the frame at floor level, on the wall centerline. Front (exterior) is -Y.',
     `Parameters: ${Object.entries(values).map(([k, v]) => `${k}=${v}`).join(', ')}`,
     '',
     'Checks',

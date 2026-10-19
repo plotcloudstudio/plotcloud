@@ -118,7 +118,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
       <div class="drop" id="drop"><button type="button" class="btn" id="pick">Choose a model file</button><p class="note">Or drop it on the view. Accepts .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), .dxf, or a saved scene (.json).</p><input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.json" hidden></div>
       <div class="minfo"><b id="mName">—</b><span id="mInfo"></span></div>
-      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Meters</option><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div><label class="note">Up axis</label><div class="seg" id="upBar" role="group" aria-label="Up axis"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div></div>
       <p class="note">Everything from the floor up to 2 m blocks the eye at its own height, and anything reaching 2 m is a wall; lintels and ceilings above 2 m are ignored, so doorways stay open. Door leaves (objects named <code>door</code>) are left out, and glass (named <code>glass</code> or <code>window</code>, or a see-through material) is see-through.</p>
       <p class="msg" id="impMsg"></p>
@@ -144,7 +144,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     </section>
 
     <section class="sec" aria-labelledby="h-eye"><h2 id="h-eye"><i>3</i>Eye height</h2>
-      <div class="eye"><input type="range" id="eye" min="0.8" max="1.8" step="0.05" value="1.0" aria-label="Eye height in metres"><output id="eyeOut" for="eye">1.00 m</output></div>
+      <div class="eye"><input type="range" id="eye" min="0.8" max="1.8" step="0.05" value="1.0" aria-label="Eye height in meters"><output id="eyeOut" for="eye">1.00 m</output></div>
       <div class="seg" id="eyeBar" role="group" aria-label="Eye height presets"><button type="button" data-eye="1.0" aria-pressed="true">Child 1.0 m</button><button type="button" data-eye="1.2" aria-pressed="false">Wheelchair 1.2 m</button><button type="button" data-eye="1.6" aria-pressed="false">Adult 1.6 m</button></div>
       <div><label class="note">Look for</label><div class="seg" id="tgtBar" role="group" aria-label="What must be seen"><button type="button" data-tgt="0" aria-pressed="false">Floor 0 m</button><button type="button" data-tgt="0.6" aria-pressed="true">Seated child 0.6 m</button><button type="button" data-tgt="1.0" aria-pressed="false">Standing child 1.0 m</button></div></div>
       <p class="note">Walls and furniture taller than the eye block everything behind them. Lower ones let the eye see over them, but hide what is just behind: a strip that ends where the sightline over the top comes down to the height you look for. The lower the eye, the longer the strip.</p>
@@ -155,7 +155,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     </section>
 
     <section class="sec" aria-labelledby="h-walk"><h2 id="h-walk"><i>5</i>Walk a path</h2>
-      <p class="note">Draw a route with the Path tool, then walk it. The observer walks at the eye height above, and every patch of floor they see adds up as they go: deep orange where it was in view longest and closest, pale yellow where it was only glimpsed from afar, grey where it was never seen. Each glance counts by how large the floor looks: 3 m away counts half, 6 m a fifth.</p>
+      <p class="note">Draw a route with the Path tool, then walk it. The observer walks at the eye height above, and every patch of floor they see adds up as they go: deep orange where it was in view longest and closest, pale yellow where it was only glimpsed from afar, gray where it was never seen. Each glance counts by how large the floor looks: 3 m away counts half, 6 m a fifth.</p>
       <div><label class="note">Path</label><div class="seg" id="pmBar" role="group" aria-label="How the path is made"><button type="button" data-pm="hand" aria-pressed="true">Draw by hand</button><button type="button" data-pm="route" aria-pressed="false">Shortest route</button></div></div>
       <p class="note" id="pmNote">Click along the route with the Path tool; double-click to finish.</p>
       <div class="two"><div><label class="note" for="wSpeed">Walking speed</label><select id="wSpeed"><option value="0.8">0.8 m/s · slow</option><option value="1.2" selected>1.2 m/s · typical</option><option value="1.4">1.4 m/s · brisk</option></select></div><div><label class="note" for="wAnim">Animation speed</label><select id="wAnim"><option value="1">1× real time</option><option value="2" selected>2×</option><option value="5">5×</option><option value="10">10×</option></select></div></div>
@@ -199,7 +199,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 
 <script>
 // PlotCloud CAD I/O (shared by the L-system planting plan and the evacuation tool).
-// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to metres,
+// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to meters,
 // and writes simple 2D DXF (R12, metres). No server needed.
 const CADIO = (() => {
   const loaded = {};
@@ -207,7 +207,7 @@ const CADIO = (() => {
     const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s);
   }));
   const DXF_LIB = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js';
-  // $INSUNITS -> metres per drawing unit
+  // $INSUNITS -> meters per drawing unit
   const UNIT = { 0: null, 1: 0.0254, 2: 0.3048, 4: 0.001, 5: 0.01, 6: 1, 14: 0.1 };
   const UNIT_NAME = { 1: 'inches', 2: 'feet', 4: 'millimetres', 5: 'centimetres', 6: 'metres', 14: 'decimetres' };
 
@@ -226,7 +226,7 @@ const CADIO = (() => {
   function bulgePts(p0, p1, b) {
     if (!b) return [p0, p1];
     const th = 4 * Math.atan(b), dx = p1[0] - p0[0], dy = p1[1] - p0[1], c = Math.hypot(dx, dy); if (c < 1e-12) return [p0, p1];
-    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the centre sits on the chord's left normal
+    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the center sits on the chord's left normal
     const r = c / (2 * Math.abs(Math.sin(th / 2))), mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2, d = (c / 2) / Math.tan(th / 2);
     const cx = mx - (dy / c) * d, cy = my + (dx / c) * d;
     const a0 = Math.atan2(p0[1] - cy, p0[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), out = [];
@@ -289,7 +289,7 @@ const CADIO = (() => {
     walk(dxf.entities, I, 0, null, null);
     return out;
   }
-  // scale a parsed drawing to metres and move it so its lower-left corner is at the origin
+  // scale a parsed drawing to meters and move it so its lower-left corner is at the origin
   function normalise(d, metresPerUnit) {
     const s = metresPerUnit;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -305,7 +305,7 @@ const CADIO = (() => {
       w: (x1 - x0) * s, h: (y1 - y0) * s, origin: [x0, y0], s,
     };
   }
-  // guess metres-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
+  // guess meters-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
   function guessScale(d) {
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const g of d.segs) for (const p of [g.a, g.b]) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
@@ -314,7 +314,7 @@ const CADIO = (() => {
     return [1, 'metres'];
   }
 
-  // ---- writer: 2D DXF R12 in metres ----
+  // ---- writer: 2D DXF R12 in meters ----
   function writer() {
     const ents = [], layers = new Map();
     const L = (name, color = 7) => { if (!layers.has(name)) layers.set(name, color); return name; };
@@ -363,7 +363,7 @@ const HZ = {
   glass: { name: 'Glass', h: 1.0 },
   corner: { name: 'Sharp corner', h: 0.75 },
 };
-function iconPath(g, type, s) {   // icon in a box of side s centred on the origin, stroked
+function iconPath(g, type, s) {   // icon in a box of side s centered on the origin, stroked
   const k = s / 20; g.beginPath();
   if (type === 'stairs') { g.moveTo(-7 * k, 7 * k); g.lineTo(-7 * k, 3 * k); g.lineTo(-2.5 * k, 3 * k); g.lineTo(-2.5 * k, -1 * k); g.lineTo(2 * k, -1 * k); g.lineTo(2 * k, -5 * k); g.lineTo(7 * k, -5 * k); }
   else if (type === 'pool') { for (const y of [-3, 2.5]) { g.moveTo(-7 * k, y * k); for (let i = 1; i <= 4; i++) g.quadraticCurveTo((-7 + (i - 0.5) * 3.5) * k, (y + (i % 2 ? -2.2 : 2.2)) * k, (-7 + i * 3.5) * k, y * k); } }
@@ -482,7 +482,7 @@ const hmH = (val) => (val === 255 ? 9 : val / 100);
 function marchHM(M, v, dx, dy, end, E, out) {
   let stop = end; cellWalk(M, v, dx, dy, end, (d, dn, val) => { const h = hmH(val); if (h >= E) { stop = d; return true; } if (h > TGT && h > 0.05) out.push([d, dn, h]); return false; }); return stop;
 }
-// raster: cell c metres; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
+// raster: cell c meters; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
 function buildGrid(S) {
   const B = SC.bounds, c = Math.max(window.__isoCmin || 0.05, Math.sqrt(B.w * B.h / (window.__isoCells || 350000))), W = Math.ceil(B.w / c), H = Math.ceil(B.h / c), solid = new Uint8Array(W * H), room = new Uint8Array(W * H);
   const line = (m, ax, ay, bx, by) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / (c / 3))); for (let i = 0; i <= n; i++) { const x = Math.floor((ax + (bx - ax) * i / n) / c), y = Math.floor((ay + (by - ay) * i / n) / c); if (x >= 0 && y >= 0 && x < W && y < H) m[y * W + x] = 1; } };
@@ -607,7 +607,7 @@ function drawPlan(ctx) {
     ctx.fillStyle = tall ? '#d6d3cc' : 'rgba(236,235,231,0.92)'; ctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); ctx.strokeStyle = tall ? '#5a5853' : '#8f8c85'; ctx.lineWidth = (tall ? 1.4 : 1) * d; ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     if (Math.min(b[0] - a[0], b[1] - a[1]) > 14 * d) { ctx.fillStyle = tall ? '#111' : '#5a5853'; ctx.font = `${10 * d}px IBM Plex Mono, monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; LB.f.push([f.h.toFixed(2), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, ctx.font, ctx.fillStyle, 'middle']); ctx.textBaseline = 'alphabetic'; }
   }
-  // walls: taller than the eye in dark ink, lower ones in grey, glazing as a light double line
+  // walls: taller than the eye in dark ink, lower ones in gray, glazing as a light double line
   ctx.lineCap = 'butt';
   for (const w of SC.walls) {
     if (w.furnline && !LAY.furn) continue;
@@ -826,7 +826,7 @@ function setUp(u) { $$('#upBar button').forEach((b) => b.setAttribute('aria-pres
 $('#upBar').addEventListener('click', (e) => { const b = e.target.closest('[data-up]'); if (!b) return; setUp(b.dataset.up); if (MODEL) { prepModel(); placeModel(); } });
 $('#units').addEventListener('change', () => { if (MODEL) { prepModel(); placeModel(); } else if (LASTDXF) importDXF(LASTDXF); });
 function guessUnits(span) { for (const [s, n] of [[1, 'metres'], [0.001, 'millimetres'], [0.01, 'centimetres'], [0.0254, 'inches'], [0.3048, 'feet']]) if (span * s >= 3 && span * s <= 400) return [s, n]; return [1, 'metres']; }
-function prepModel() {   // file coordinates -> metres, Z up; floor levels from where the tall elements stand
+function prepModel() {   // file coordinates -> meters, Z up; floor levels from where the tall elements stand
   const M = MODEL; let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (const e of M.els) for (let i = 0; i < e.p.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], e.p[i + k]); hi[k] = Math.max(hi[k], e.p[i + k]); }
   const u = $('#units').value; let s, how;
@@ -892,7 +892,7 @@ async function importIFC(f) {
   });
   api.CloseModel(id);
   const els = [...byId.values()].filter((e) => e.arr.length).map((e) => ({ p: Float32Array.from(e.arr), door: e.door, glass: e.glass || GLASS_RE.test(e.name), name: e.name }));
-  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives metres, Y up
+  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives meters, Y up
 }
 async function import3DM(f) {
   await CADIO.loadScript(RH_LIB); const rh = await window.rhino3dm();
@@ -957,7 +957,7 @@ const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use ===
 async function save(name, data) {
   const m = (t, c = '') => { $('#exMsg').textContent = t; $('#exMsg').className = 'msg' + (c ? ' ' + c : ''); };
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data, dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save cancelled.'); return; } } }
+  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save canceled.'); return; } } }
   try { const u = URL.createObjectURL(new Blob([bytes])), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m('Downloaded ' + name + '.', 'ok'); }
   catch (e) { m('This view cannot download files. Open the page on claude.ai to save.', 'warn'); }
 }
@@ -974,7 +974,7 @@ function boardSide() {
   const k = W / 1400; x.fillStyle = '#e1dfda'; x.fillRect(60, ph + 20, W - 120, 2);
   x.fillStyle = '#111'; x.font = `700 ${24 * k}px Noto Sans, sans-serif`; x.textAlign = 'left'; x.fillText(`Walking a ${WALK.L.toFixed(1)} m path at a ${WALK.E.toFixed(2)} m eye`, 60, ph + 95);
   x.fillStyle = '#5a5853'; x.font = `${11.5 * k}px IBM Plex Mono, monospace`;
-  x.fillText(`${SC.name} · looking for ${WALK.T ? WALK.T.toFixed(1) + ' m' : 'the floor'} · ${pct(WALK.cover)} of ${WALK.area.toFixed(0)} m² seen · blind ${pct(WALK.mean)} per step on average · fans coloured from the start (red) to the end (violet)`, 60, ph + 140);
+  x.fillText(`${SC.name} · looking for ${WALK.T ? WALK.T.toFixed(1) + ' m' : 'the floor'} · ${pct(WALK.cover)} of ${WALK.area.toFixed(0)} m² seen · blind ${pct(WALK.mean)} per step on average · fans colored from the start (red) to the end (violet)`, 60, ph + 140);
   let yy = ph + 175; if (SC.haz.length) { let line = ''; for (const part of SC.haz.map((z, i) => `${z.name}: ${WALK.hz[i].first == null ? 'never seen' : 'first seen at ' + WALK.hz[i].first.toFixed(1) + ' m'}`)) { const t = line ? line + ' · ' + part : part; if (x.measureText(t).width > W - 120 && line) { x.fillText(line, 60, yy); yy += 30; line = part; } else line = t; } if (line) { x.fillText(line, 60, yy); yy += 30; } }
   x.fillText('Geometric line-of-sight only. Does not predict human attention or behavior. Furniture heights are user estimates. · PlotCloud', 60, yy + 10);
   return c;
@@ -986,7 +986,7 @@ function board() {
   const k = W / 1400; x.fillStyle = '#fff'; x.fillRect(0, ph, W, strip); x.fillStyle = '#e1dfda'; x.fillRect(60, ph + 20, W - 120, 2);
   x.fillStyle = '#111'; x.font = `700 ${26 * k}px Noto Sans, sans-serif`; x.textAlign = 'left'; x.fillText(isWalk() ? `Walking a ${WALK.L.toFixed(1)} m path at a ${WALK.E.toFixed(2)} m eye · ${pct(WALK.cover)} of the floor seen` : `Isovist at a ${EYE.toFixed(2)} m eye, looking for ${TGT ? TGT.toFixed(1) + ' m' : 'the floor'}${A && !A.noView ? ` · ${pct(A.blind)} blind` : ''}`, 60, ph + 100);
   x.fillStyle = '#5a5853'; x.font = `${12 * k}px IBM Plex Mono, monospace`;
-  if (isWalk()) x.fillText(`${SC.name} · exposure: deep orange = in view longest, pale yellow = glimpsed, grey = never seen · ${SC.haz.length ? SC.haz.map((z, i) => `${z.name} ${WALK.hz[i].first == null ? 'never seen' : 'first seen at ' + WALK.hz[i].first.toFixed(1) + ' m'}`).join(' · ') : ''}`, 60, ph + 150); else
+  if (isWalk()) x.fillText(`${SC.name} · exposure: deep orange = in view longest, pale yellow = glimpsed, gray = never seen · ${SC.haz.length ? SC.haz.map((z, i) => `${z.name} ${WALK.hz[i].first == null ? 'never seen' : 'first seen at ' + WALK.hz[i].first.toFixed(1) + ' m'}`).join(' · ') : ''}`, 60, ph + 150); else
   x.fillText(`${SC.name} · ${A && !A.noView ? `${A.hz.filter((h) => h.seen).length} of ${SC.haz.length} hazards seen · ` + A.cmp.map((q, i) => `${CMP[i].name} ${q.E.toFixed(1)} m: ${pct(q.blind)} blind`).join(' · ') : 'no viewpoint'}`, 60, ph + 150);
   x.fillText('Geometric line-of-sight only. Does not predict human attention or behavior. Furniture heights are user estimates. · PlotCloud', 60, ph + 190);
   return c;
@@ -1047,7 +1047,7 @@ function reroute() { const r = routeThrough(SC.wps); if (r.err) { $('#wRes').inn
 // The route is sampled every 25 cm. At each step the isovist is worked out once (same rays, eye and target height), kept as
 // a bit mask, and counted into an exposure map. Playback only replays these masks, adding each step's view to the counts
 // as the walker passes it, so the map builds up like the trails in Circulation: deep orange where the floor stayed in view
-// longest, pale yellow where it was only glimpsed, grey where it was never seen.
+// longest, pale yellow where it was only glimpsed, gray where it was never seen.
 let WSTEP = 0.25; let WALK = null, WVIEW = 'view', WEXP = true, WBUSY = false, pdraw = null;
 const PLAY = { d: 0, playing: false, raf: 0, last: 0, k: 0, cnt: null, ck: -1 };
 const isWalk = () => WVIEW === 'walk' && !!WALK;
@@ -1084,7 +1084,7 @@ async function computeWalk() {
   }
   const union = new Uint8Array(N); for (const Rg of regs) for (let i = 0; i < N; i++) if (Rg.reg[i]) union[i] = 1;
   let ua = 0, us = 0, mx = 0; for (let i = 0; i < N; i++) { if (union[i]) { ua++; if (seenAny[i]) us++; } if (tot[i] > mx) mx = tot[i]; }
-  // colour by rank in the finished walk (4096 bins), so the full yellow-to-orange run is always used and stays fixed while it plays
+  // color by rank in the finished walk (4096 bins), so the full yellow-to-orange run is always used and stays fixed while it plays
   const NB = 4096, cdf = new Float32Array(NB); { const h = new Uint32Array(NB); let n = 0; for (let i = 0; i < N; i++) if (tot[i] > 0) { h[Math.min(NB - 1, Math.floor(tot[i] / mx * NB))]++; n++; } let acc = 0; for (let b = 0; b < NB; b++) { cdf[b] = n ? (acc + h[b] / 2) / n : 0; acc += h[b]; } }
   WALK = { id: Math.random(), cdf, mx, seenAny, samples, tot, union, N, G, L, key, E: EYE, T: TGT, cover: ua ? us / ua : 0, area: ua * G.c * G.c, approx: regs.some((Rg) => Rg.approx),
     mean: samples.reduce((a, sm) => a + sm.blind, 0) / samples.length,
@@ -1123,7 +1123,7 @@ function walkImage() {
   const key = (WEXP ? 'e' : 'i') + PLAY.k + '/' + WALK.id; if (wImg && wImgKey === key) return wImg; wImgKey = key;
   const G = WALK.G, c = wImg || (wImg = document.createElement('canvas')); c.width = G.W; c.height = G.H; const g = c.getContext('2d'), im = g.createImageData(G.W, G.H), px = im.data, sm = WALK.samples[PLAY.k];
   for (let y = 0; y < G.H; y++) for (let x = 0; x < G.W; x++) { const i = y * G.W + x, o = ((G.H - 1 - y) * G.W + x) * 4;
-    if (WEXP) { const n = PLAY.cnt[i]; if (n > 0) { const t = WALK.cdf[Math.min(4095, Math.floor(n / WALK.mx * 4096))], q = Math.round(t * 255) * 3; /* rank among the floor seen on the whole walk: the scale is fixed, so colours deepen as the walk goes on */ px[o] = EXLUT[q]; px[o + 1] = EXLUT[q + 1]; px[o + 2] = EXLUT[q + 2]; px[o + 3] = 95 + 145 * t; } else if (WALK.union[i]) { px[o] = px[o + 1] = px[o + 2] = 228; px[o + 3] = 235; } }
+    if (WEXP) { const n = PLAY.cnt[i]; if (n > 0) { const t = WALK.cdf[Math.min(4095, Math.floor(n / WALK.mx * 4096))], q = Math.round(t * 255) * 3; /* rank among the floor seen on the whole walk: the scale is fixed, so colors deepen as the walk goes on */ px[o] = EXLUT[q]; px[o + 1] = EXLUT[q + 1]; px[o + 2] = EXLUT[q + 2]; px[o + 3] = 95 + 145 * t; } else if (WALK.union[i]) { px[o] = px[o + 1] = px[o + 2] = 228; px[o + 3] = 235; } }
     else if (sm.bits[i >> 3] & (1 << (i & 7))) { px[o] = 245; px[o + 1] = 166; px[o + 2] = 35; px[o + 3] = 92; } else if (WALK.union[i]) { px[o] = px[o + 1] = px[o + 2] = 228; px[o + 3] = 235; } }
   g.putImageData(im, 0, 0); return c;
 }
@@ -1265,7 +1265,7 @@ function build3D() {
   // viewpoint: a red marker at eye height on a thin pole (hidden in first person)
   const eyeAt = isWalk() ? pathAt(SC.path, PLAY.d).p : SC.view;
   if (eyeAt) { const e = new THREE.Group(); const sp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), T3.mat.eye); sp.position.set(0, EYE, 0); e.add(sp); const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, EYE, 6), T3.mat.eye); pole.position.set(0, EYE / 2, 0); e.add(pole); e.position.set(eyeAt[0], 0, -eyeAt[1]); e.name = 'eye'; T3.grp.add(e); T3.eyeObj = e; }
-  // hazards: icon boards standing where they are; red when seen, grey when hidden
+  // hazards: icon boards standing where they are; red when seen, gray when hidden
   if (LAY.haz) SC.haz.forEach((h, i) => {
     const on = isWalk() ? !!WALK.samples[PLAY.k].hz[i] : !!(A && A.hz && A.hz[i] && A.hz[i].seen), c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#fff'; rr(x, 8, 8, 112, 112, 18); x.fill(); x.lineWidth = on ? 8 : 5; x.strokeStyle = on ? '#d71920' : '#9a9a9a'; rr(x, 8, 8, 112, 112, 18); x.stroke(); x.translate(64, 64); x.lineWidth = 7; x.lineJoin = 'round'; x.lineCap = 'round'; iconPath(x, h.type, 80); x.stroke();
     const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx })); spr.scale.set(0.42, 0.42, 1); spr.position.set(h.x, Math.max(h.h, 0) + 0.32, -h.y); spr.userData.hz = i; T3.grp.add(spr);
@@ -1629,7 +1629,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }
@@ -1983,7 +1983,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 </script>
 <script>
 // ===== PlotCloud v131: a simulation tool sends furniture moves back to Workbench =====
-// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench metres.
+// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench meters.
 (function () {
   if (window.parent === window || window.__pcReturn) return; window.__pcReturn = 1;
   const $ = (s, r = document) => r.querySelector(s);

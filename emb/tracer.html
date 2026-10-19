@@ -292,7 +292,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     </aside>
   <div class="axo" id="axoBar" hidden><button type="button" id="axoMin"></button><div class="axob" id="axoBody">
         <div class="axrow"><span>View</span><div class="segs" id="axView" role="group" aria-label="View"><button type="button" data-v="orbit" aria-pressed="true" title="Turn freely">Orbit</button><button type="button" data-v="sw" aria-pressed="false" title="Axonometric from the south-west">SW</button><button type="button" data-v="se" aria-pressed="false" title="From the south-east">SE</button><button type="button" data-v="ne" aria-pressed="false" title="From the north-east">NE</button><button type="button" data-v="nw" aria-pressed="false" title="From the north-west">NW</button><button type="button" data-v="top" aria-pressed="false" title="Straight down, north up">Top</button></div></div>
-        <div class="axrow"><label for="axStyle">Style</label><select id="axStyle"><option value="model">Results colours</option><option value="white">White model</option><option value="line">Line drawing</option><option value="blue">Blueprint</option></select></div>
+        <div class="axrow"><label for="axStyle">Style</label><select id="axStyle"><option value="model">Results colors</option><option value="white">White model</option><option value="line">Line drawing</option><option value="blue">Blueprint</option></select></div>
         <div class="axrow"><label for="axCut">Walls</label><select id="axCut"><option value="0">Full height</option><option value="1.2">Cut at 1.2 m (plan axo)</option></select></div>
         <div class="axrow"><label for="axExp">Explode</label><input type="range" id="axExp" min="0" max="8" step="0.5" value="0" aria-valuetext="0 m"><output id="axExpO">off</output></div>
         <div class="axrow chk"><label><input type="checkbox" id="axAll"> Whole building</label><label><input type="checkbox" id="axLbl" checked> Room labels</label><label><input type="checkbox" id="axSh" checked> Shadows</label></div>
@@ -501,7 +501,7 @@ const STC = (() => {
   function furnCorners(f) { const c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0), hw = f.w / 2, hd = f.d / 2; return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([u, v]) => [f.x + u * c - v * s, f.y + u * s + v * c]); }
   function furnEdges(f) { const P = furnCorners(f); return P.map((p, i) => [p, P[(i + 1) % 4]]); }
 
-  // ---------- furniture library: sizes in metres (w along x, d along y, h) ----------
+  // ---------- furniture library: sizes in meters (w along x, d along y, h) ----------
   const LIB = [
     ['bed', 'Double bed', 1.6, 2.05, 0.55], ['bed1', 'Single bed', 0.95, 2.0, 0.5], ['sofa', 'Sofa', 2.1, 0.9, 0.85], ['arm', 'Armchair', 0.85, 0.85, 0.85],
     ['table', 'Dining table', 1.6, 0.9, 0.75], ['chair', 'Chair', 0.45, 0.5, 0.85], ['desk', 'Desk', 1.4, 0.7, 0.75], ['coffee', 'Coffee table', 1.1, 0.6, 0.42],
@@ -613,7 +613,7 @@ const STC = (() => {
     tagAll(M);
     if (!M.v || M.v < 2) {
       if (!M.floors.length) { const S = build(M); for (const lv of M.levels) { const R = S.L[lv.id]; for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of roomRects(R, r.id)) {
-        // grow each rectangle under the walls around it, so floors meet the wall centre lines
+        // grow each rectangle under the walls around it, so floors meet the wall center lines
         M.floors.push(tag({ id: uid('fl'), lv: lv.id, x: +(x - 0.1).toFixed(2), y: +(y - 0.1).toFixed(2), w: +(w + 0.2).toFixed(2), d: +(d + 0.2).toFixed(2) }, 'floor')); } } }
       M.v = 2;
     }
@@ -623,7 +623,7 @@ const STC = (() => {
   function validate(M) {
     const E = [], W = [], err = (code, msg, ref) => E.push({ code, msg, ref }), warn = (code, msg, ref) => W.push({ code, msg, ref });
     const fin = (...v) => v.every((x) => typeof x === 'number' && isFinite(x));
-    if (M.units !== 'm') err('units', `Model units are "${M.units}"; Studio models are in metres.`);
+    if (M.units !== 'm') err('units', `Model units are "${M.units}"; Studio models are in meters.`);
     if (!M.levels || !M.levels.length) err('levels', 'The model has no levels.');
     const lvIds = new Set((M.levels || []).map((l) => l.id));
     const check = (arr, type, label) => { for (const o of arr) { const want = TYPE_LAYER[o.object_type];
@@ -739,7 +739,7 @@ function undo() { if (!UNDO.length) return; REDO.push(snapM()); M = JSON.parse(U
 function redo() { if (!REDO.length) return; UNDO.push(snapM()); M = JSON.parse(REDO.pop()); afterLoad(false); }
 function afterLoad(refit) { presentUI(); if (window.S3 && S3.on) S3.setPresent(presentOf()); if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !selObj()) SEL = null; changed(); if (refit) { V.user = false; fitView(); } syncInputs(); }
 
-// ---------- rebuild and analyse ----------
+// ---------- rebuild and analyze ----------
 let aT = 0;
 function changed(live, keepProps) {
   S = STC.build(M); clearTimeout(aT); aT = setTimeout(analyse, live ? 140 : 30);
@@ -760,7 +760,7 @@ function analyse() {
 }
 const live = () => RES && RES.S === S;
 
-// ---------- colours ----------
+// ---------- colors ----------
 const mix = (a, b, t) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * Math.max(0, Math.min(1, t))).toString(16).padStart(2, '0')).join(''); };
 function ramp(stops, v) { if (v <= stops[0][0]) return stops[0][1]; for (let k = 1; k < stops.length; k++) if (v <= stops[k][0]) return mix(stops[k - 1][1], stops[k][1], (v - stops[k - 1][0]) / (stops[k][0] - stops[k - 1][0])); return stops[stops.length - 1][1]; }
 const achCol = (v) => { const t = v / (M.targets.ach || 5); return ramp([[0, '#f3c4b8'], [0.5, '#f8ddd2'], [0.999, '#fbeee6'], [1, '#e2f1e7'], [2, '#b9dfc8'], [4, '#8fcaa9']], t); };
@@ -1042,7 +1042,7 @@ function underlayUI() {
   on('ulAlign', 'click', () => { const ub2 = ulOf(lvBelow().id); ulSet({ x: ub2.x, y: ub2.y, w: ub2.w, scaled: ub2.scaled }); });
   on('ulDel', 'click', () => { if (!confirm('Remove the tracing image from this level? You can undo this.')) return; const b = snapM(), m = Object.assign({}, M.underlays); delete m[LV]; M.underlays = m; CAL = null; commit(b); });
   on('ulCancel', 'click', () => { CAL = null; underlayUI(); draw(); });
-  const apply = () => { const v = +$('#ulDist', box).value, [p, q] = CAL.pts, d0 = Math.hypot(q[0] - p[0], q[1] - p[1]); if (!(v > 0) || d0 < 1e-6) { flash('Type the real distance in metres.'); return; } const f = v / d0, uu = ulOf();
+  const apply = () => { const v = +$('#ulDist', box).value, [p, q] = CAL.pts, d0 = Math.hypot(q[0] - p[0], q[1] - p[1]); if (!(v > 0) || d0 < 1e-6) { flash('Type the real distance in meters.'); return; } const f = v / d0, uu = ulOf();
     CAL = null; ulSet({ x: +(p[0] + (uu.x - p[0]) * f).toFixed(4), y: +(p[1] + (uu.y - p[1]) * f).toFixed(4), w: +(uu.w * f).toFixed(4), scaled: true, locked: true }); V.user = false; fitView(); draw(); flash(`Scale set: the picture is now ${(uu.w * f).toFixed(2)} m wide, and locked.`); };
   on('ulApply', 'click', apply); on('ulDist', 'keydown', (e) => { if (e.key === 'Enter') apply(); });
   if (CAL && CAL.pts.length === 2) setTimeout(() => { const el = $('#ulDist', box); if (el) el.focus(); }, 0);
@@ -1067,7 +1067,7 @@ function drawSection() {
       if (lab >= 0) { const r = S.rooms.find((q) => q.lv === lv.id && q.id === lab); if (r) segs.push({ r, lv, x0, x1 }); }
       i0 = i1 + 1; }
   }
-  // room bands, coloured by air changes
+  // room bands, colored by air changes
   for (const s of segs) { g.fillStyle = af ? achCol(af.rooms[s.r.gi].ach) : '#fff'; g.fillRect(X(s.x0), Z(s.lv.z + s.lv.h), (s.x1 - s.x0) * sx, s.lv.h * sx); }
   // walls cut (solid between rooms) and slabs
   g.fillStyle = C.ink;
@@ -1682,7 +1682,7 @@ function openSend() {
   let h = '';
   if (V.errors.length) h += `<p style="margin:0;font-weight:600">Fix these first:</p><ul class="vlist">${V.errors.map((e) => `<li class="e">${esc(e.msg)}${show(e.ref)}</li>`).join('')}</ul>`;
   else {
-    h += `<p class="note" style="margin:0">Model check passed: ${M.walls.length} walls, ${M.ops.length} windows and doors, ${M.floors.length} floors, ${M.voids.length} floor openings, ${M.furn.length} furniture, in metres. Every object is on its own layer.</p>`;
+    h += `<p class="note" style="margin:0">Model check passed: ${M.walls.length} walls, ${M.ops.length} windows and doors, ${M.floors.length} floors, ${M.voids.length} floor openings, ${M.furn.length} furniture, in meters. Every object is on its own layer.</p>`;
     if (V.warnings.length) h += `<ul class="vlist">${V.warnings.slice(0, 6).map((w) => `<li class="w">${esc(w.msg)}${show(w.ref)}</li>`).join('')}${V.warnings.length > 6 ? `<li class="w">…and ${V.warnings.length - 6} more.</li>` : ''}</ul>`;
     if (M.levels.length > 1) h += `<div class="lvpick"><label for="sendLv">These tools read one level at a time:</label><select id="sendLv">${lvSorted().map((l) => `<option value="${l.id}" ${l.id === SENDLV ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>`;
     h += `<div class="tlist">${Object.entries(STC.TOOLS).map(([k, T]) => { const c = STC.compat(M, V.S, SENDLV, k); return `<div class="trow${c.ok ? '' : ' no'}"><b>${T.name}</b>${c.ok ? `<button type="button" class="${SITE ? 'go' : 'btn'}" data-send="${k}">${SITE ? 'Open in ' + T.name : 'Download for ' + T.name}</button>` : '<span class="note">Not ready</span>'}<p>${c.ok ? esc(T.note) : `<span class="why">${esc(c.why.join(' '))}</span>`}</p></div>`; }).join('')}</div>`;
@@ -2134,7 +2134,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }

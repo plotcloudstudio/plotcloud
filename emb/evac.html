@@ -155,7 +155,7 @@ canvas.chart { width: 100%; height: auto; border: 1px solid var(--line); border-
   <aside class="panel" aria-label="Circulation settings">
     <section class="sec" aria-labelledby="h-plan"><h2 id="h-plan"><i>1</i>Floor plan</h2>
       <div class="drop" id="drop"><button type="button" class="btn" id="pick">Choose a model file</button><p class="note">Or drop it on the view. Accepts .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), .dxf, or a PNG/JPG scan.</p><input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.png,.jpg,.jpeg,.webp" hidden></div>
-      <div class="two"><div><label class="note" for="mUnits">File units</label><select id="mUnits"><option value="auto">Automatic</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+      <div class="two"><div><label class="note" for="mUnits">File units</label><select id="mUnits"><option value="auto">Automatic</option><option value="1">Meters</option><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div><label class="note">Up axis</label><div class="seg" id="mUpBar" role="group" aria-label="Up axis"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div></div>
       <div id="mStoreyBox" hidden><label class="note" for="mStorey">Floor</label><select id="mStorey"></select></div>
       <div class="two"><button type="button" class="btn" id="sampleFlat">Sample apartment</button><button type="button" class="btn" id="sample">Sample office floor</button></div>
@@ -167,7 +167,7 @@ canvas.chart { width: 100%; height: auto; border: 1px solid var(--line); border-
         </ul></div>
       <p class="msg" id="impMsg"></p>
       <div class="minfo"><b id="hudT">—</b><span id="hudS">—</span></div>
-      <div id="unitRow" hidden class="two" style="align-items:center"><span class="note" id="unitNote">Units</span><select id="unitSel"><option value="1">metres</option><option value="0.001">millimetres</option><option value="0.01">centimetres</option><option value="0.0254">inches</option><option value="0.3048">feet</option></select></div>
+      <div id="unitRow" hidden class="two" style="align-items:center"><span class="note" id="unitNote">Units</span><select id="unitSel"><option value="1">meters</option><option value="0.001">millimeters</option><option value="0.01">centimeters</option><option value="0.0254">inches</option><option value="0.3048">feet</option></select></div>
       <div id="layerBox" hidden><p class="note" style="margin-bottom:6px">What each layer is.</p><div class="layers" id="layers"></div></div>
       <div id="imgBox" hidden style="display:grid;gap:8px">
         <div class="ctl"><label for="thr">Darkness that counts as wall</label><input type="range" id="thr" min="20" max="240" step="1" value="128"><div class="num"><input type="number" id="thrN" min="20" max="240" step="1" value="128"><span></span></div></div>
@@ -279,7 +279,7 @@ canvas.chart { width: 100%; height: auto; border: 1px solid var(--line); border-
 
 <script>
 // PlotCloud CAD I/O (shared by the L-system planting plan and the evacuation tool).
-// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to metres,
+// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to meters,
 // and writes simple 2D DXF (R12, metres). No server needed.
 const CADIO = (() => {
   const loaded = {};
@@ -287,7 +287,7 @@ const CADIO = (() => {
     const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s);
   }));
   const DXF_LIB = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js';
-  // $INSUNITS -> metres per drawing unit
+  // $INSUNITS -> meters per drawing unit
   const UNIT = { 0: null, 1: 0.0254, 2: 0.3048, 4: 0.001, 5: 0.01, 6: 1, 14: 0.1 };
   const UNIT_NAME = { 1: 'inches', 2: 'feet', 4: 'millimetres', 5: 'centimetres', 6: 'metres', 14: 'decimetres' };
 
@@ -306,7 +306,7 @@ const CADIO = (() => {
   function bulgePts(p0, p1, b) {
     if (!b) return [p0, p1];
     const th = 4 * Math.atan(b), dx = p1[0] - p0[0], dy = p1[1] - p0[1], c = Math.hypot(dx, dy); if (c < 1e-12) return [p0, p1];
-    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the centre sits on the chord's left normal
+    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the center sits on the chord's left normal
     const r = c / (2 * Math.abs(Math.sin(th / 2))), mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2, d = (c / 2) / Math.tan(th / 2);
     const cx = mx - (dy / c) * d, cy = my + (dx / c) * d;
     const a0 = Math.atan2(p0[1] - cy, p0[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), out = [];
@@ -369,7 +369,7 @@ const CADIO = (() => {
     walk(dxf.entities, I, 0, null, null);
     return out;
   }
-  // scale a parsed drawing to metres and move it so its lower-left corner is at the origin
+  // scale a parsed drawing to meters and move it so its lower-left corner is at the origin
   function normalise(d, metresPerUnit) {
     const s = metresPerUnit;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -385,7 +385,7 @@ const CADIO = (() => {
       w: (x1 - x0) * s, h: (y1 - y0) * s, origin: [x0, y0], s,
     };
   }
-  // guess metres-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
+  // guess meters-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
   function guessScale(d) {
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const g of d.segs) for (const p of [g.a, g.b]) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
@@ -394,7 +394,7 @@ const CADIO = (() => {
     return [1, 'metres'];
   }
 
-  // ---- writer: 2D DXF R12 in metres ----
+  // ---- writer: 2D DXF R12 in meters ----
   function writer() {
     const ents = [], layers = new Map();
     const L = (name, color = 7) => { if (!layers.has(name)) layers.set(name, color); return name; };
@@ -423,7 +423,7 @@ const CADIO = (() => {
 })();
 
 // PlotCloud circulation core (trimmed from the evacuation core to what the Circulation tool uses): grids, walkable
-// navigation, A* routes pulled taut, the ant colony on the grid, and clear widths. Units: metres, y up; cells 0.4 m.
+// navigation, A* routes pulled taut, the ant colony on the grid, and clear widths. Units: meters, y up; cells 0.4 m.
 const EV = (() => {
   const rng = (seed) => { let s = (Math.trunc(seed) * 2654435761 + 1013904223) >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
   const SQ2 = Math.SQRT2;
@@ -473,7 +473,7 @@ const EV = (() => {
   // ---------- binary heap ----------
   class Heap { constructor() { this.k = []; this.v = []; } push(key, val) { const k = this.k, v = this.v; let i = k.length; k.push(key); v.push(val); while (i > 0) { const p = (i - 1) >> 1; if (k[p] <= key) break; k[i] = k[p]; v[i] = v[p]; i = p; } k[i] = key; v[i] = val; } pop() { const k = this.k, v = this.v, top = v[0], lk = k.pop(), lv = v.pop(); if (k.length) { let i = 0; const n = k.length; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i, mk = lk; if (l < n && k[l] < mk) { m = l; mk = k[l]; } if (r < n && k[r] < mk) { m = r; } if (m === i) break; k[i] = k[m]; v[i] = v[m]; i = m; } k[i] = lk; v[i] = lv; } return top; } get size() { return this.k.length; } }
 
-  // distance field from one or many source cells (Dijkstra, 8 neighbours, no corner cutting). Returns Float32 in cells.
+  // distance field from one or many source cells (Dijkstra, 8 neighbors, no corner cutting). Returns Float32 in cells.
   function field(G, sources) {
     const W = G.W, D = new Float32Array(W * G.H).fill(Infinity), h = new Heap();
     for (const [x, y] of sources) { const i = y * W + x; if (G.blocked[i]) continue; D[i] = 0; h.push(0, i); }
@@ -538,7 +538,7 @@ const EV = (() => {
         const seen = new Uint8Array(n); let i = a[1] * W + a[0], len = 0; const path = [i]; seen[i] = 1;
         for (let s = 0; s < maxSteps && i !== t; s++) {
           const x = i % W, y = (i / W) | 0; let sum = 0; const cand = [];
-          // heuristic: how much closer to the food this step brings the ant (per metre walked)
+          // heuristic: how much closer to the food this step brings the ant (per meter walked)
           for (const [dx, dy, c] of N8) { if (!canStep(G, x, y, dx, dy)) continue; const j = (y + dy) * W + x + dx; if (seen[j]) continue; const w = Math.pow(tau[j], alpha) * Math.exp(beta * (hD[i] - hD[j]) / c); cand.push([j, w, c]); sum += w; }
           if (!cand.length || sum <= 0) { len = Infinity; break; }
           let r = R() * sum, pick = cand[cand.length - 1]; for (const q of cand) { r -= q[1]; if (r <= 0) { pick = q; break; } }
@@ -559,7 +559,7 @@ const EV = (() => {
   // walls and furniture and still covers that pixel (Hildebrand & Ruegsegger 1997). Exact Euclidean distance
   // transform (Felzenszwalb & Huttenlocher 2012), then discs painted from the ridge of the distance map.
   function edt1(f, n, d, v, z) { let k = 0; v[0] = 0; z[0] = -Infinity; z[1] = Infinity; for (let q = 1; q < n; q++) { let s; for (;;) { s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); if (s <= z[k]) { k--; if (k < 0) { k = 0; break; } } else break; } k++; v[k] = q; z[k] = s; z[k + 1] = Infinity; } k = 0; for (let q = 0; q < n; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; } }
-  function clearWidth(G, segs) {   // segs: the solid lines (walls, furniture) in metres; raster at half the fine pixel (0.05 m)
+  function clearWidth(G, segs) {   // segs: the solid lines (walls, furniture) in meters; raster at half the fine pixel (0.05 m)
     const sh = G.FW * G.FH <= 1.5e6 ? 1 : 0, f = G.fine / (1 << sh), FW = G.FW << sh, FH = G.FH << sh, N = FW * FH, INF = 1e12, D2 = new Float64Array(N), solid = new Uint8Array(N);   // big plans: no half-pixel raster
     for (const s of segs) { const L = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]), n = Math.max(1, Math.ceil(L / (f * 0.5))); for (let i = 0; i <= n; i++) { const x = Math.floor((s.a[0] + (s.b[0] - s.a[0]) * i / n) / f + 1e-7), y = Math.floor((s.a[1] + (s.b[1] - s.a[1]) * i / n) / f + 1e-7); if (x >= 0 && y >= 0 && x < FW && y < FH) solid[y * FW + x] = 1; } }
     if (!segs.length) for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) solid[y * FW + x] = G.wall[(y >> sh) * G.FW + (x >> sh)];   // image plans: no lines, use the scan
@@ -568,7 +568,7 @@ const EV = (() => {
     const m = Math.max(FW, FH), fa = new Float64Array(m), d = new Float64Array(m), v = new Int32Array(m), z = new Float64Array(m + 1);
     for (let x = 0; x < FW; x++) { for (let y = 0; y < FH; y++) fa[y] = D2[y * FW + x]; edt1(fa, FH, d, v, z); for (let y = 0; y < FH; y++) D2[y * FW + x] = d[y]; }
     for (let y = 0; y < FH; y++) { for (let x = 0; x < FW; x++) fa[x] = D2[y * FW + x]; edt1(fa, FW, d, v, z); for (let x = 0; x < FW; x++) D2[y * FW + x] = d[x]; }
-    const R = new Float32Array(N); for (let i = 0; i < N; i++) R[i] = Math.sqrt(D2[i]);   // pixels to the nearest solid pixel centre
+    const R = new Float32Array(N); for (let i = 0; i < N; i++) R[i] = Math.sqrt(D2[i]);   // pixels to the nearest solid pixel center
     // Discs are painted from the ridge (local maxima of the distance map). Room corners the ridge discs do not reach are then
     // filled from their own maximal discs (corner bisectors), so a corner keeps the room's width; doors and corridors keep
     // their ridge value, because discs from the rooms beside them are not allowed to overwrite it. A gap of n free pixels has its ridge at R = (n + 1) / 2 (odd n, one ridge row) or n / 2 (even n, two equal rows);
@@ -579,7 +579,7 @@ const EV = (() => {
     const T = new Float32Array(N);
     const paint = (list, only) => { for (const i of list) { const r = R[i] - 0.5, rr = r * r, cx = i % FW, cy = (i / FW) | 0, ri = Math.ceil(r), val = 2 * R[i] + EVEN[i]; for (let j = -ri; j <= ri; j++) { const yy = cy + j; if (yy < 0 || yy >= FH) continue; for (let k = -ri; k <= ri; k++) { if (j * j + k * k > rr) continue; const xx = cx + k; if (xx < 0 || xx >= FW) continue; const q = yy * FW + xx; if (only && only[q]) continue; if (val > T[q]) T[q] = val; } } } };
     ridge2.sort((a, b) => R[a] - R[b]);
-    paint(ridge, null);                                                  // the medial ridge: corridors, doors, room centres
+    paint(ridge, null);                                                  // the medial ridge: corridors, doors, room centers
     const done = new Uint8Array(N); for (let i = 0; i < N; i++) done[i] = T[i] > 0 ? 1 : 0;
     paint(ridge2, done);                                                 // corners the ridge discs miss: their own maximal discs
     for (let i = 0; i < N; i++) { if (R[i] < 1) { T[i] = 0; continue; } if (!T[i]) T[i] = 2 * R[i]; T[i] *= f; }
@@ -608,7 +608,7 @@ if (typeof module !== 'undefined') module.exports = EV;
 </script>
 <script type="module">
 const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
-const MARGIN = 1.0;   // metres of free space around the drawing
+const MARGIN = 1.0;   // meters of free space around the drawing
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 // ================= state =================
@@ -653,7 +653,7 @@ $('#layers').addEventListener('change', (e) => { const n = e.target.dataset.laye
 const isSolid = (role) => role === 'wall' || role === 'furniture';
 function solidSegs() { return PLAN.src === 'image' ? [] : PLAN.segs.filter((s) => isSolid(PLAN.roles[s.layer])).map((s) => ({ a: [s.a[0] + MARGIN, s.a[1] + MARGIN], b: [s.b[0] + MARGIN, s.b[1] + MARGIN] })); }
 function getCW() { if (!G) return null; if (!CWc || CWc.G !== G || CWc.blocked !== G.blocked) CWc = { G, blocked: G.blocked, cw: EV.clearWidth(G, solidSegs()), img: null }; return CWc.cw; }
-// routes and daily trips walk a finer 0.2 m grid whose cells are free only where a person's centre fits: at least 0.25 m from
+// routes and daily trips walk a finer 0.2 m grid whose cells are free only where a person's center fits: at least 0.25 m from
 // any wall or furniture line (half a shoulder width, plus a little). The evacuation keeps 0.4 m cells, one person each.
 let RGc = null;
 function getRG() {
@@ -873,7 +873,7 @@ async function importFile(f) {
   } catch (err) { console.error(err); msg('Could not read ' + f.name + ': ' + (err.message || err), 'warn'); }
 }
 function useSegs(segs, layers, scale, how, name, origin = null) {
-  // segs in drawing units -> metres, lower-left at the origin
+  // segs in drawing units -> meters, lower-left at the origin
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const s of segs) for (const p of [s.a, s.b]) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
   if (!isFinite(x0)) throw new Error('no lines found');
@@ -974,7 +974,7 @@ function undo() { if (!HIST.u.length || !G) return; HIST.r.push(snap()); restore
 function redo() { if (!HIST.r.length || !G) return; HIST.u.push(snap()); restoreHist(HIST.r.pop()); histUI(); }
 function resetEdits() { if (!G || !G.edit.some((v) => v)) return; pushHist(); G.edit.fill(0); EV.buildNav(G); resetResults(); draw(); histUI(); }
 function histUI() { $('#undo').disabled = !HIST.u.length; $('#redo').disabled = !HIST.r.length; $('#rstEd').disabled = !(G && G.edit.some((v) => v)); }
-function paintSq(a, b, v) {   // square eraser of side S.brush metres, swept from a to b so a fast drag leaves no gaps
+function paintSq(a, b, v) {   // square eraser of side S.brush meters, swept from a to b so a fast drag leaves no gaps
   const f = G.fine, h = S.brush / 2, n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / f));
   for (let i = 0; i <= n; i++) { const x = a[0] + (b[0] - a[0]) * i / n, y = a[1] + (b[1] - a[1]) * i / n, x0 = Math.max(0, Math.round((x - h) / f)), x1 = Math.min(G.FW, Math.round((x + h) / f)), y0 = Math.max(0, Math.round((y - h) / f)), y1 = Math.min(G.FH, Math.round((y + h) / f));
     for (let py = y0; py < y1; py++) G.edit.fill(v, py * G.FW + x0, py * G.FW + x1); }
@@ -1017,7 +1017,7 @@ cv.addEventListener('pointerup', () => {
 
 // ================= ant network: every pair of places =================
 // Three separate pieces of data: WALKS (route geometry: each ant's walk on the walkable grid, from the colony),
-// ANTS (where each ant is now, from the clock), and DEN (density: metres walked per floor cell, added as ants move).
+// ANTS (where each ant is now, from the clock), and DEN (density: meters walked per floor cell, added as ants move).
 function resetResults() { const had = !!NET; NET = null; ANIM.stop(); ANIM.t = 0; DEN = null; $('#res').innerHTML = `<p class="${had ? 'msg warn' : 'note'}">${had ? 'The places or the plan changed. Press Release the ants to walk again.' : 'Release the ants to see distances and times.'}</p>`; animUI(); }
 const fmtT = (s) => (s < 60 ? `${s.toFixed(0)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, '0')} s`);
 const frame = () => new Promise((r) => requestAnimationFrame(r));
@@ -1034,7 +1034,7 @@ function wobble(pts, RG, ex = 0) {   // each walk keeps a small sideways offset,
   }
   return out;
 }
-// ---------- density field: metres walked per cell, world-aligned so zoom and pan never misalign it ----------
+// ---------- density field: meters walked per cell, world-aligned so zoom and pan never misalign it ----------
 let DEN = null;
 const STEP = 0.05;   // deposit sample spacing along a walk (m): the same samples whatever the frame rate
 function newDensity() {
@@ -1140,7 +1140,7 @@ async function run() {
   $('#lgLast').textContent = 'round ' + iters;
   NET.T = NET.ants.reduce((m, a) => Math.max(m, a.t0 + a.w.len / ANT_V), 0) + 0.6;
   NET.walked = NET.ants.reduce((s, a) => s + a.w.len, 0);
-  // the colour scale is fixed for the whole replay: from a dry run of the same deposits, so early trails start pale
+  // the color scale is fixed for the whole replay: from a dry run of the same deposits, so early trails start pale
   const dry = newDensity(); for (const a of NET.ants) depositRange(dry, a.w, 0, a.w.len);
   const pos = []; for (const x of dry.v) if (x > 0.05) pos.push(x); pos.sort((a, b) => a - b);
   NET.ref = pos.length ? pos[Math.floor(pos.length * 0.995)] : 1; NET.final = dry;
@@ -1162,8 +1162,8 @@ async function run() {
   $('#res').innerHTML = h;
 }
 
-// ================= drawing: a white sheet on the grey view, one thin violet line per walk =================
-// colour by round: pink for the exploring first rounds, deep purple for the last, settled ones
+// ================= drawing: a white sheet on the gray view, one thin violet line per walk =================
+// color by round: pink for the exploring first rounds, deep purple for the last, settled ones
 const RAMPV = [[0, [244, 160, 201]], [0.3, [226, 104, 178]], [0.6, [177, 64, 182]], [0.85, [118, 40, 170]], [1, [70, 20, 140]]];
 function rampV(t) { let j = 1; while (j < RAMPV.length - 1 && RAMPV[j][0] < t) j++; const [a, ca] = RAMPV[j - 1], [b, cb] = RAMPV[j], f = Math.max(0, Math.min(1, (t - a) / (b - a))); return `rgb(${ca.map((c, k) => Math.round(c + (cb[k] - c) * f)).join(',')})`; }
 // ink: an offscreen canvas the walks are drawn into. Each walk is drawn only up to where its ant has got, and only the new
@@ -1203,7 +1203,7 @@ function drawBasePlan(ctx) {
   }
   // painted openings and walls
   let any = false; for (const v of G.edit) if (v) { any = true; break; }
-  if (any) {   // painted walls in grey; opened gaps as white patches with a pale violet tint, so you can see what you opened
+  if (any) {   // painted walls in gray; opened gaps as white patches with a pale violet tint, so you can see what you opened
     for (let y = 0; y < G.FH; y++) for (let x = 0; x < G.FW; x++) { const e = G.edit[y * G.FW + x]; if (!e) continue; const p = W2S([x * G.fine, (y + 1) * G.fine]), w = G.fine * V.k + 0.5;
       if (e > 0) { ctx.fillStyle = '#8f8c85'; ctx.fillRect(p[0], p[1], w, w); } else { ctx.fillStyle = '#ffffff'; ctx.fillRect(p[0], p[1], w, w); ctx.fillStyle = 'rgba(177,64,182,0.13)'; ctx.fillRect(p[0], p[1], w, w); } }
   }
@@ -1249,7 +1249,7 @@ function draw(ctx = g2) {
 }
 $('#viewBar').addEventListener('click', (e) => { const b = e.target.closest('[data-view]'); if (!b || b.disabled) return; setView(b.dataset.view); });
 // ================= 3D: walls raised from the plan, the walks drawn on the floor =================
-// World (x, y) in metres maps to three.js (x, height, -y). The floor carries the same ink as the plan, at a fixed
+// World (x, y) in meters maps to three.js (x, height, -y). The floor carries the same ink as the plan, at a fixed
 // resolution, so the lines build up there too; walls and furniture come from the same raster the ants walk on.
 const T3 = { on: false, lib: null, wallH: 1.2, key: '', texT: 0 }; window.__v3 = () => ({ cam: T3.cam, ctl: T3.ctl, scene: T3.scene, r: T3.r, THREE: T3.lib });;
 async function setCam(c) {
@@ -1485,7 +1485,7 @@ function drawTrip(ctx) {
 }
 function stepBadge(ctx, p, n) { if (!p) return; const d = PXR(), s = W2S(p), x = s[0] + 9 * d, y = s[1] - 17 * d; ctx.fillStyle = TRIPCOL[0]; ctx.beginPath(); ctx.arc(x, y, 7.5 * d, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * d; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = `700 ${9.5 * d}px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(n), x, y + 0.5 * d); ctx.textBaseline = 'alphabetic'; }
 const LG_ANTS = $('#legend').innerHTML;
-const _setView = setView; setView = function (v) { if (v !== 'trip') { tripStop(); } else ANIM.stop(); _setView(v); $('#legend').innerHTML = v === 'trip' ? `<b>Trip</b><div class="pl" style="gap:6px"><i style="background:${TRIPCOL[0]}"></i>route, in order · each leg labelled with its length and time</div><div class="pl" style="gap:6px"><i style="background:${TRIPCOL[0]};border-radius:50%"></i>stop number</div>${TRIP.kept.length ? `<div class="pl" style="gap:6px"><i style="background:${TRIPCOL[1]}"></i>kept trips, dashed</div>` : ''}<small>The shortest walkable route between each two stops, 0.25 m clear of walls and furniture.</small>` : LG_ANTS; animUI(); };
+const _setView = setView; setView = function (v) { if (v !== 'trip') { tripStop(); } else ANIM.stop(); _setView(v); $('#legend').innerHTML = v === 'trip' ? `<b>Trip</b><div class="pl" style="gap:6px"><i style="background:${TRIPCOL[0]}"></i>route, in order · each leg labeled with its length and time</div><div class="pl" style="gap:6px"><i style="background:${TRIPCOL[0]};border-radius:50%"></i>stop number</div>${TRIP.kept.length ? `<div class="pl" style="gap:6px"><i style="background:${TRIPCOL[1]}"></i>kept trips, dashed</div>` : ''}<small>The shortest walkable route between each two stops, 0.25 m clear of walls and furniture.</small>` : LG_ANTS; animUI(); };
 const _listAll = listAll; listAll = function () { _listAll(); tripList(); };
 tripList();
 
@@ -1495,7 +1495,7 @@ const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use ===
 async function save(name, data) {
   const m = (t, c = '') => { $('#exMsg').textContent = t; $('#exMsg').className = 'msg' + (c ? ' ' + c : ''); };
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data, dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save cancelled.'); return; } } }
+  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save canceled.'); return; } } }
   try { const u = URL.createObjectURL(new Blob([bytes])), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m('Downloaded ' + name + '.', 'ok'); }
   catch (e) { m('This view cannot download files. Open the page on claude.ai to save.', 'warn'); }
 }
@@ -1804,7 +1804,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }

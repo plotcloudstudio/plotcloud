@@ -43,7 +43,7 @@ function dedupe(pts) {
   return out;
 }
 
-// One straight flight. dir: '+y' | '-y' | '+x' | '-x'. (x0,y0) is the centre of the first riser line, z0 its base.
+// One straight flight. dir: '+y' | '-y' | '+x' | '-x'. (x0,y0) is the center of the first riser line, z0 its base.
 function flight(B, p, k, R, T, x0, y0, z0, dir, W, opts = {}) {
   const along = dir[1], sgn = dir[0] === '+' ? 1 : -1;
   const map = (u) => (along === 'y' ? y0 + sgn * u : x0 + sgn * u);

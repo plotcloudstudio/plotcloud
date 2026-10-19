@@ -134,7 +134,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
       <div class="drop" id="drop"><button type="button" class="btn" id="pick">Choose a model file</button><p class="note">Or drop it on the view. Accepts .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), .dxf, or a saved scene (.json).</p><input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.json" hidden></div>
       <div class="minfo"><b id="mName">—</b><span id="mInfo"></span></div>
-      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
+      <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Meters</option><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div><label class="note">Up axis</label><div class="seg" id="upBar" role="group" aria-label="Up axis"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div></div>
       <p class="note">Anything reaching 2 m above the floor is a wall; lower pieces are furniture the eye can see over if they are high enough to shade the desk. Glass (named <code>glass</code> or <code>window</code>) lets daylight in from its sill to the window head. Draw the buildings across the street as walls with their real height, so they block the sky.</p>
       <p class="msg" id="impMsg"></p>
@@ -173,14 +173,14 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div><span class="note">Detail</span><div class="seg" id="lvSeg" role="group" aria-label="Detail" style="margin-top:4px"><button type="button" data-l="draft" aria-pressed="true">Draft</button><button type="button" data-l="standard" aria-pressed="false">Standard</button><button type="button" data-l="fine" aria-pressed="false">Fine</button></div></div>
       <p class="note" id="lvNote"></p>
       <div class="props" id="lvLong" hidden><b id="lvLongT" style="font-size:13px"></b><p class="note" style="margin:0">You can keep using the other views while it runs, and stop it at any time; the last result stays.</p><div class="two"><button type="button" class="go" id="lvStart">Start</button><button type="button" class="btn" id="lvCancel">Cancel</button></div></div>
-      <button type="button" class="go" id="run">Analyse the daylight</button>
+      <button type="button" class="go" id="run">Analyze the daylight</button>
       <div class="prog" id="prog" hidden><i></i></div>
       <div class="two" id="runBar" hidden style="align-items:center"><span class="note" id="runLeft"></span><button type="button" class="btn" id="stop">Stop</button></div>
       <p class="msg" id="runMsg"></p>
     </section>
 
     <section class="sec" aria-labelledby="h-res"><h2 id="h-res"><i>5</i>Report</h2>
-      <div id="res"><p class="note">Analyse the daylight to see the report.</p></div>
+      <div id="res"><p class="note">Analyze the daylight to see the report.</p></div>
     </section>
 
     <section class="sec" aria-labelledby="h-lay"><h2 id="h-lay"><i>6</i>Layers &amp; export</h2>
@@ -195,7 +195,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
   <section class="stage split" id="stage" aria-label="Plan">
     <div class="vbar">
       <div class="views" id="camBar" role="group" aria-label="View"><button type="button" data-cam="split" aria-pressed="true">Plan + chart</button><button type="button" data-cam="plan" aria-pressed="false">Plan</button><button type="button" data-cam="3d" aria-pressed="false">3D</button></div>
-      <div class="views" id="showBar" role="group" aria-label="Colour by"><button type="button" data-show="sda" aria-pressed="true">sDA</button><button type="button" data-show="ase" aria-pressed="false">ASE</button><button type="button" data-show="df" aria-pressed="false">Daylight factor</button><button type="button" data-show="opt2" aria-pressed="false">Option 2</button><button type="button" data-show="hour" aria-pressed="false" hidden>This hour</button></div>
+      <div class="views" id="showBar" role="group" aria-label="Color by"><button type="button" data-show="sda" aria-pressed="true">sDA</button><button type="button" data-show="ase" aria-pressed="false">ASE</button><button type="button" data-show="df" aria-pressed="false">Daylight factor</button><button type="button" data-show="opt2" aria-pressed="false">Option 2</button><button type="button" data-show="hour" aria-pressed="false" hidden>This hour</button></div>
     </div>
     <canvas id="cv" aria-label="Plan with the daylight analysis"></canvas>
     <canvas id="cv3" aria-label="3D view" hidden></canvas>
@@ -205,7 +205,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div class="cph" style="margin-top:0"><b>Daylight</b><span class="note" id="cpSub"></span></div>
       <div class="kp4" id="kp4"></div>
       <div class="cph"><b>LEED daylight</b><span class="note">red lines: LEED thresholds · click to map</span></div>
-      <canvas id="cCrit" aria-label="Share of the floor meeting each daylight measure: click one to colour the plan by it"></canvas>
+      <canvas id="cCrit" aria-label="Share of the floor meeting each daylight measure: click one to color the plan by it"></canvas>
       <div class="cph"><b>Through the year</b><span class="note">share of the floor at 300 lux+ · click an hour</span></div>
       <canvas id="cYear" aria-label="Share of the floor with 300 lux or more for every hour of the year: click an hour to see it on the plan"></canvas>
       <div class="cph"><b>Rooms</b><span class="note">sDA · click to pick a room</span></div>
@@ -217,13 +217,13 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
     </aside>
     <div class="tip" id="tip"></div>
   </section>
-  <footer class="fine">Early-design daylight estimate (145-patch sky, split-flux inter-reflection); not a Radiance simulation. No blinds are modelled. LEED certification needs the documentation the reference guide asks for.</footer>
+  <footer class="fine">Early-design daylight estimate (145-patch sky, split-flux inter-reflection); not a Radiance simulation. No blinds are modeled. LEED certification needs the documentation the reference guide asks for.</footer>
 </div>
 
 
 <script>
 // PlotCloud CAD I/O (shared by the L-system planting plan and the evacuation tool).
-// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to metres,
+// Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to meters,
 // and writes simple 2D DXF (R12, metres). No server needed.
 const CADIO = (() => {
   const loaded = {};
@@ -231,7 +231,7 @@ const CADIO = (() => {
     const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s);
   }));
   const DXF_LIB = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js';
-  // $INSUNITS -> metres per drawing unit
+  // $INSUNITS -> meters per drawing unit
   const UNIT = { 0: null, 1: 0.0254, 2: 0.3048, 4: 0.001, 5: 0.01, 6: 1, 14: 0.1 };
   const UNIT_NAME = { 1: 'inches', 2: 'feet', 4: 'millimetres', 5: 'centimetres', 6: 'metres', 14: 'decimetres' };
 
@@ -250,7 +250,7 @@ const CADIO = (() => {
   function bulgePts(p0, p1, b) {
     if (!b) return [p0, p1];
     const th = 4 * Math.atan(b), dx = p1[0] - p0[0], dy = p1[1] - p0[1], c = Math.hypot(dx, dy); if (c < 1e-12) return [p0, p1];
-    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the centre sits on the chord's left normal
+    // bulge = tan(theta / 4); positive sweeps counter-clockwise; the center sits on the chord's left normal
     const r = c / (2 * Math.abs(Math.sin(th / 2))), mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2, d = (c / 2) / Math.tan(th / 2);
     const cx = mx - (dy / c) * d, cy = my + (dx / c) * d;
     const a0 = Math.atan2(p0[1] - cy, p0[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), out = [];
@@ -313,7 +313,7 @@ const CADIO = (() => {
     walk(dxf.entities, I, 0, null, null);
     return out;
   }
-  // scale a parsed drawing to metres and move it so its lower-left corner is at the origin
+  // scale a parsed drawing to meters and move it so its lower-left corner is at the origin
   function normalise(d, metresPerUnit) {
     const s = metresPerUnit;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -329,7 +329,7 @@ const CADIO = (() => {
       w: (x1 - x0) * s, h: (y1 - y0) * s, origin: [x0, y0], s,
     };
   }
-  // guess metres-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
+  // guess meters-per-unit when $INSUNITS is missing: a building plan is usually 5–300 m across
   function guessScale(d) {
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const g of d.segs) for (const p of [g.a, g.b]) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
@@ -338,7 +338,7 @@ const CADIO = (() => {
     return [1, 'metres'];
   }
 
-  // ---- writer: 2D DXF R12 in metres ----
+  // ---- writer: 2D DXF R12 in meters ----
   function writer() {
     const ents = [], layers = new Map();
     const L = (name, color = 7) => { if (!layers.has(name)) layers.set(name, color); return name; };
@@ -479,7 +479,7 @@ const hmH = (val) => (val === 255 ? 9 : val / 100);
 function marchHM(M, v, dx, dy, end, E, out) {
   let stop = end; cellWalk(M, v, dx, dy, end, (d, dn, val) => { const h = hmH(val); if (h >= E) { stop = d; return true; } if (h > TGT && h > 0.05) out.push([d, dn, h]); return false; }); return stop;
 }
-// raster: cell c metres; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
+// raster: cell c meters; solid = any obstacle line or furniture footprint (not floor), room = walls that enclose a room
 function buildGrid(S) {
   const B = SC.bounds, c = Math.max(window.__isoCmin || 0.05, Math.sqrt(B.w * B.h / (window.__isoCells || 350000))), W = Math.ceil(B.w / c), H = Math.ceil(B.h / c), solid = new Uint8Array(W * H), room = new Uint8Array(W * H);
   const line = (m, ax, ay, bx, by) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / (c / 3))); for (let i = 0; i <= n; i++) { const x = Math.floor((ax + (bx - ax) * i / n) / c), y = Math.floor((ay + (by - ay) * i / n) / c); if (x >= 0 && y >= 0 && x < W && y < H) m[y * W + x] = 1; } };
@@ -692,7 +692,7 @@ new ResizeObserver(() => { const first = VP.w === 10; resize(); if (first) { fit
 
 // ================= 2D drawing =================
 let EXP = 0; const PXR = () => EXP || devicePixelRatio || 1;
-// ================= colours =================
+// ================= colors =================
 const SRAMP = [[0, [44, 54, 92]], [0.25, [70, 104, 168]], [0.5, [246, 214, 104]], [0.75, [248, 176, 64]], [1, [255, 244, 214]]];
 const rampOf = (R, t) => { t = clamp(t, 0, 1); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], f = (t - a) / (b - a); return ca.map((c, k) => c + (cb[k] - c) * f); } return R[R.length - 1][1]; };
 const ARAMP = [[0, [236, 233, 226]], [0.2, [250, 214, 150]], [0.6, [236, 120, 60]], [1, [178, 36, 30]]];
@@ -803,12 +803,12 @@ function capUI() {
   $('#capS').textContent = `sDA300/50% ${pct(sm.sda)} · ASE1000/250 ${pct(sm.ase)} · average DF ${sm.df.toFixed(1)}% · ${sm.area.toFixed(0)} m² · ${LOC.name}${YEAR && YEAR.epw ? '' : ' (generic year)'} · LEED option 1: ${sm.pts1 ? sm.pts1 + ' points' : 'no points'}`;
 }
 function results() {
-  const r = $('#res'), sm = summary(); if (!sm) { r.innerHTML = '<p class="note">Analyse the daylight to see the report.</p>'; return; }
+  const r = $('#res'), sm = summary(); if (!sm) { r.innerHTML = '<p class="note">Analyze the daylight to see the report.</p>'; return; }
   const stale = RES.key !== setKey();
   let h = `<div class="kpis"><div><small>sDA 300/50%</small><b>${pct(sm.sda)}</b></div><div><small>ASE 1000/250</small><b>${pct(sm.ase)}</b></div></div>`;
-  h += `<p class="note">${sm.area.toFixed(0)} m² of occupied floor${EXCL.length ? `, ${EXCL.length} room${EXCL.length > 1 ? 's' : ''} left out` : ''}. LEED Daylight option 1 (simulation): <b>${sm.pts1 ? sm.pts1 + ' points' : 'below 55%, no points'}</b> (55% → 2, 75% → 3)${sm.ase > 0.1 ? '; ASE is over 10%, so the project has to show how glare is handled (blinds, shading)' : ''}. Option 2 (clear-sky 9:00 and 15:00): ${pct(sm.o2)} of the floor in 300–3,000 lux${sm.pts2 ? `, ${sm.pts2} point${sm.pts2 > 1 ? 's' : ''}` : ''}.${stale ? ' <span class="tag">Out of date</span> Settings changed: analyse again.' : ''}</p>`;
+  h += `<p class="note">${sm.area.toFixed(0)} m² of occupied floor${EXCL.length ? `, ${EXCL.length} room${EXCL.length > 1 ? 's' : ''} left out` : ''}. LEED Daylight option 1 (simulation): <b>${sm.pts1 ? sm.pts1 + ' points' : 'below 55%, no points'}</b> (55% → 2, 75% → 3)${sm.ase > 0.1 ? '; ASE is over 10%, so the project has to show how glare is handled (blinds, shading)' : ''}. Option 2 (clear-sky 9:00 and 15:00): ${pct(sm.o2)} of the floor in 300–3,000 lux${sm.pts2 ? `, ${sm.pts2} point${sm.pts2 > 1 ? 's' : ''}` : ''}.${stale ? ' <span class="tag">Out of date</span> Settings changed: analyze again.' : ''}</p>`;
   h += `<table class="res"><tr><th>Room</th><th class="n">Area</th><th class="n">sDA</th><th class="n">ASE</th><th class="n">DF</th></tr>${sm.rooms.map((q) => `<tr${q.out ? ' style="color:#8a8780"' : ''}><td>Room ${q.k + 1}${q.out ? ' (left out)' : ''}</td><td class="n">${q.area.toFixed(1)} m²</td><td class="n">${pct(q.sda / q.n)}</td><td class="n">${pct(q.ase / q.n)}</td><td class="n">${(q.df / q.n).toFixed(1)}%</td></tr>`).join('')}</table>`;
-  h += `<p class="note">${RES.pts.length.toLocaleString('en-CA')} spots every ${Math.round(RES.spacing * 100)} cm at ${WP.toFixed(2)} m, ${RES.nb} bearings each, 145 sky patches, ${YEAR.epw ? EPW.name : 'a generic year (clear and overcast days mixed, about half cloudy)'}; occupied ${OCC[0]}:00–${OCC[1]}:00 every day. Glass transmits ${Math.round(TAU * 100)}%; reflectance floor ${RF}, walls ${RW}, ceiling ${RC}. No blinds are modelled. An early-design estimate, not a Radiance simulation.</p>`;
+  h += `<p class="note">${RES.pts.length.toLocaleString('en-CA')} spots every ${Math.round(RES.spacing * 100)} cm at ${WP.toFixed(2)} m, ${RES.nb} bearings each, 145 sky patches, ${YEAR.epw ? EPW.name : 'a generic year (clear and overcast days mixed, about half cloudy)'}; occupied ${OCC[0]}:00–${OCC[1]}:00 every day. Glass transmits ${Math.round(TAU * 100)}%; reflectance floor ${RF}, walls ${RW}, ceiling ${RC}. No blinds are modeled. An early-design estimate, not a Radiance simulation.</p>`;
   r.innerHTML = h;
 }
 
@@ -842,7 +842,7 @@ function panelUI() {
   if (CAM !== 'split') return; const sm = summary();
   $('#cpSub').textContent = RES ? `${LV[RES.level || 'draft'].name} · ${LOC.name}` : '';
   $('#kp4').innerHTML = `<div><small>sDA</small><b>${sm ? pct(sm.sda) : '—'}</b></div><div><small>ASE</small><b style="color:${sm && sm.ase > 0.1 ? '#b3261e' : 'inherit'}">${sm ? pct(sm.ase) : '—'}</b></div><div><small>LEED opt. 1</small><b style="color:${sm ? (sm.pts1 ? '#1f7a3d' : '#b3261e') : 'inherit'}">${sm ? (sm.pts1 ? sm.pts1 + ' pts' : '0 pts') : '—'}</b></div><div><small>Avg DF</small><b>${sm ? sm.df.toFixed(1) + '%' : '—'}</b></div>`;
-  if (!sm) { for (const id of ['cCrit', 'cRooms', 'cYear']) msgCv($('#' + id), 'Analyse the daylight to see this chart.'); $('#roomBox').hidden = true; spotUI(); return; }
+  if (!sm) { for (const id of ['cCrit', 'cRooms', 'cYear']) msgCv($('#' + id), 'Analyze the daylight to see this chart.'); $('#roomBox').hidden = true; spotUI(); return; }
   HITS.crit = bars($('#cCrit'), [
     { key: 'sda', label: CRITS[0].name, v: sm.sda, col: sm.sda >= 0.55 ? '#2ea05a' : '#e0a030', marks: [0.55, 0.75] },
     { key: 'ase', label: CRITS[1].name, v: sm.ase, col: sm.ase > 0.1 ? '#d8402a' : '#2ea05a', marks: [0.1] },
@@ -1001,7 +1001,7 @@ async function importDXF(f) {
   const segs = d.segs.map((g) => ({ a: [g.a[0] * s, g.a[1] * s], b: [g.b[0] * s, g.b[1] * s], layer: g.layer || '0' })), layers = {};
   for (const g of segs) { const L = layers[g.layer] || (layers[g.layer] = { role: guessRole(g.layer), count: 0 }); L.count++; } for (const L of Object.values(layers)) L.h = ROLE_H[L.role];
   useImport(f.name, segs, layers); $('#storeyBox').hidden = true; $('#mName').textContent = f.name; $('#mInfo').textContent = `2D drawing · ${segs.length.toLocaleString()} lines · ${how}`;
-  msg(`${f.name}: ${segs.length.toLocaleString()} lines on ${Object.keys(layers).length} layers (${how}). Check each layer's role and height, then analyse the daylight.`, 'ok');
+  msg(`${f.name}: ${segs.length.toLocaleString()} lines on ${Object.keys(layers).length} layers (${how}). Check each layer's role and height, then analyze the daylight.`, 'ok');
 }
 // ---- 3D models (Rhino, IFC, OBJ, STL, glTF, SketchUp Collada): every triangle is kept per element with its name, then
 // rasterised into the height map of the chosen floor. Units and up axis work as in Sun Hours.
@@ -1012,7 +1012,7 @@ function setUp(u) { $$('#upBar button').forEach((b) => b.setAttribute('aria-pres
 $('#upBar').addEventListener('click', (e) => { const b = e.target.closest('[data-up]'); if (!b) return; setUp(b.dataset.up); if (MODEL) { prepModel(); placeModel(); } });
 $('#units').addEventListener('change', () => { if (MODEL) { prepModel(); placeModel(); } else if (LASTDXF) importDXF(LASTDXF); });
 function guessUnits(span) { for (const [s, n] of [[1, 'metres'], [0.001, 'millimetres'], [0.01, 'centimetres'], [0.0254, 'inches'], [0.3048, 'feet']]) if (span * s >= 3 && span * s <= 400) return [s, n]; return [1, 'metres']; }
-function prepModel() {   // file coordinates -> metres, Z up; floor levels from where the tall elements stand
+function prepModel() {   // file coordinates -> meters, Z up; floor levels from where the tall elements stand
   const M = MODEL; let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (const e of M.els) for (let i = 0; i < e.p.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], e.p[i + k]); hi[k] = Math.max(hi[k], e.p[i + k]); }
   const u = $('#units').value; let s, how;
@@ -1054,7 +1054,7 @@ function placeModel() {   // the height map of one floor, from the floor up to 2
   M3D = { id: SC.hm.id, solid: pack((e) => !e.door && !e.glass), glass: pack((e) => e.glass && !e.door), door: pack((e) => e.door) };
   renderLayers(); fit(); changed(true); $('#preset').value = '';
   $('#mName').textContent = M.name; $('#mInfo').textContent = `${M.size.map((v) => v.toFixed(1)).join(' × ')} m · ${M.ntri.toLocaleString()} triangles · units ${M.how}${M.levels.length > 1 ? ` · ${M.levels.length} floors` : ''}`;
-  msg(`${M.name}: ${nt.toLocaleString()} triangles stand on this floor below 2 m. Check the windows, then analyse the daylight.in section 4.${M.els.some((e) => e.door) ? ' Door leaves left out.' : ''}`, 'ok');
+  msg(`${M.name}: ${nt.toLocaleString()} triangles stand on this floor below 2 m. Check the windows, then analyze the daylight.in section 4.${M.els.some((e) => e.door) ? ' Door leaves left out.' : ''}`, 'ok');
 }
 $('#storey').addEventListener('change', () => { if (MODEL) placeModel(); });
 const IFC_LIB = 'https://cdn.jsdelivr.net/npm/web-ifc@0.0.78/', RH_LIB = 'https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.min.js';
@@ -1078,7 +1078,7 @@ async function importIFC(f) {
   });
   api.CloseModel(id);
   const els = [...byId.values()].filter((e) => e.arr.length).map((e) => ({ p: Float32Array.from(e.arr), door: e.door, glass: e.glass || GLASS_RE.test(e.name), name: e.name }));
-  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives metres, Y up
+  return { els, fileScale: 1, up: 'y', storeyNames: storeys.map((s) => s.name) };   // web-ifc gives meters, Y up
 }
 async function import3DM(f) {
   await CADIO.loadScript(RH_LIB); const rh = await window.rhino3dm();
@@ -1143,7 +1143,7 @@ const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use ===
 async function save(name, data) {
   const m = (t, c = '') => { $('#exMsg').textContent = t; $('#exMsg').className = 'msg' + (c ? ' ' + c : ''); };
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data, dl = await getDL();
-  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save cancelled.'); return; } } }
+  if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save canceled.'); return; } } }
   try { const u = URL.createObjectURL(new Blob([bytes])), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m('Downloaded ' + name + '.', 'ok'); }
   catch (e) { m('This view cannot download files. Open the page on claude.ai to save.', 'warn'); }
 }
@@ -1168,7 +1168,7 @@ function board() {
   return c;
 }
 function roomsCSV() {
-  const sm = summary(); if (!sm) return 'Analyse first\r\n'; const rows = [['Room', 'Area m2', 'Counted', 'sDA300/50 %', 'ASE1000/250 %', 'Option 2 in range %', 'Average DF %']];
+  const sm = summary(); if (!sm) return 'Analyze first\r\n'; const rows = [['Room', 'Area m2', 'Counted', 'sDA300/50 %', 'ASE1000/250 %', 'Option 2 in range %', 'Average DF %']];
   for (const r of sm.rooms) rows.push([r.k + 1, r.area.toFixed(1), r.out ? 'no' : 'yes', (r.sda / r.n * 100).toFixed(1), (r.ase / r.n * 100).toFixed(1), (r.o2 / r.n * 100).toFixed(1), (r.df / r.n).toFixed(2)]);
   rows.push([]); rows.push(['Total (counted)', sm.area.toFixed(1), '', (sm.sda * 100).toFixed(1), (sm.ase * 100).toFixed(1), (sm.o2 * 100).toFixed(1), sm.df.toFixed(2)]); rows.push(['LEED option 1 points', sm.pts1]); rows.push(['Location', LOC.name, YEAR && YEAR.epw ? EPW.name : 'generic year']);
   return rows.map((r) => r.join(',')).join('\r\n') + '\r\n';
@@ -1433,7 +1433,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 .col .btn:hover, .props .btn:hover { background: var(--fill); border: 0; } .col .btn:disabled { opacity: .4; }
 .go { border-radius: 980px !important; background: #c93a24; font: 600 13.5px var(--f-body) !important; letter-spacing: -.01em; box-shadow: 0 1px 2px rgba(216,64,42,.25); transition: filter .15s var(--ease), transform .1s var(--ease); }
 .go:hover { filter: brightness(1.06); } .go:active { transform: scale(.98); }
-/* segmented controls: grey track, white thumb */
+/* segmented controls: gray track, white thumb */
 .seg, .views, .dirs { border: 0 !important; background: var(--fill); border-radius: 9px; padding: 2px; gap: 2px; overflow: visible; }
 .seg button, .views button, .dirs button { border: 0 !important; border-radius: 7px; background: transparent; color: var(--ink); font: 500 12.5px var(--f-body); padding: 4px 10px; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
 .seg button + button, .views button + button, .dirs button + button { border-left: 0 !important; }
@@ -1787,7 +1787,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 </script>
 <script>
 // ===== PlotCloud v131: a simulation tool sends furniture moves back to Workbench =====
-// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench metres.
+// Only for a model that came from Workbench (its furniture carries Workbench ids). Only moves go back: [{ id, position: [x, y], rotation }] in Workbench meters.
 (function () {
   if (window.parent === window || window.__pcReturn) return; window.__pcReturn = 1;
   const $ = (s, r = document) => r.querySelector(s);
