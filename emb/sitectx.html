@@ -132,6 +132,15 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 .mhint { position: absolute; left: 12px; bottom: 12px; z-index: 4; margin: 0; font-size: 12px; background: rgba(251,250,247,.92); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; max-width: 70%; }
 .attr { position: absolute; right: 8px; bottom: 6px; z-index: 4; font-size: 11px; color: var(--muted); background: rgba(251,250,247,.85); padding: 1px 6px; border-radius: 4px; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sanc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; } .sanc[hidden] { display: none; }
+.sanc .anchor { pointer-events: all; cursor: grab; outline: none; touch-action: none; } .sanc .anchor.grabbing { cursor: grabbing; } .sanc .anchor .dot { fill: #D8402A; stroke: #fff; stroke-width: 2; } .sanc .anchor:focus-visible .dot { stroke: #1c1b1a; stroke-width: 2.5; }
+.sanc text { pointer-events: none; font: 600 11px system-ui, sans-serif; fill: #1c1b1a; paint-order: stroke; stroke: rgba(255,255,255,.92); stroke-width: 3px; stroke-linejoin: round; } .sanc .sfine { font-weight: 500; font-size: 9.5px; fill: #6e6a60; } .sanc .alab { font-size: 11px; }
+.progrow { display: flex; flex-wrap: wrap; align-items: end; gap: 6px 12px; margin: 4px 0 2px; font-size: 12px; } .progrow > b { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); align-self: center; } .progrow label { display: grid; gap: 2px; color: var(--muted); } .progrow .num { width: 78px; }
+.progrow .ent { display: flex; align-items: center; gap: 4px; color: var(--muted); } .progrow .ent > span { margin-right: 4px; } .progrow .ent button { min-width: 30px; height: 28px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; font: 600 12px system-ui, sans-serif; cursor: pointer; } .progrow .ent button[aria-pressed="true"] { background: #1c1b1a; color: #fff; border-color: #1c1b1a; }
+#panelR { overflow: hidden; } #panelR .colIn { max-height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+#panelR .sumsec { flex: none; display: grid; gap: 6px; } .sumrow { font: 600 13px var(--f-mono, ui-monospace, monospace); color: #1c1b1a; line-height: 1.35; overflow-wrap: anywhere; } .hypo { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; } .hypo li { font-size: 12.5px; line-height: 1.35; color: #3a3d42; padding-left: 12px; position: relative; } .hypo li::before { content: '•'; position: absolute; left: 0; color: #D8402A; } .dnote { margin: 0; font-size: 11.5px; color: var(--muted); }
+#panelR .sec.accr > h2 { cursor: pointer; user-select: none; display: flex; align-items: center; } #panelR .sec.accr > h2::after { content: '+'; margin-left: auto; font: 600 13px var(--f-mono, monospace); color: var(--accent); } #panelR .sec.accr:not(.shut) > h2::after { content: '–'; } #panelR .sec.accr.shut > :not(h2) { display: none !important; } #panelR .sec.accr { flex: none; } #panelR .sec.accr:not(.shut) { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.shint { color: var(--muted); font-size: 12px; } .parsel { display: flex; align-items: center; gap: 8px; } .parsel select { flex: 1; min-width: 0; } .toast { position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); z-index: 6; background: #1c1b1a; color: #fff; padding: 8px 14px; border-radius: 8px; font: 600 13px system-ui, sans-serif; } .toast[hidden] { display: none; }
 #cv { cursor: grab; } #cv.drawing { cursor: crosshair; }
 .sdlg { position: fixed; inset: 0; z-index: 50; background: rgba(20,20,20,.35); display: grid; place-items: center; } .sdlg[hidden] { display: none; }
 .sdlg-in { background: var(--surface); border-radius: 10px; width: min(480px, calc(100vw - 32px)); padding: 16px 18px; display: grid; gap: 10px; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
@@ -249,7 +258,8 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
           <p class="src" id="nomSt"></p>
         </div>
       </details>
-      <div class="shaperow"><label for="shape">Area shape</label><select id="shape"><option value="square">Square</option><option value="circle">Circle</option><option value="polygon">Your boundary</option></select><button type="button" class="btn sm" id="polyBtn" aria-pressed="false" title="Click points on the map; double-click or Enter to finish" hidden>Draw a boundary</button><span class="radl" id="radL">Size</span><input type="range" id="rad" min="200" max="1000" step="50" value="400" aria-label="Context area size"><output id="radO">400 × 400 m</output></div>
+      <div class="shaperow"><label for="shape">Area shape</label><select id="shape"><option value="square">Square</option><option value="circle" selected>Circle</option><option value="polygon">Your boundary</option></select><button type="button" class="btn sm" id="polyBtn" aria-pressed="false" title="Click points on the map; double-click or Enter to finish" hidden>Draw a boundary</button><span class="radl" id="radL">Size</span><input type="range" id="rad" min="200" max="1000" step="10" value="400" aria-label="Study area size"><output id="radO">400 m</output><span class="shint" id="shapeHint" hidden>Draw a rectangle or import a boundary first</span></div>
+      <div class="progrow" id="progRow" role="group" aria-label="Your site"><b>Your site</b><label>Area m²<input class="num" type="number" id="pgArea" min="1" step="10" value="2400"></label><label>FAR<input class="num" type="number" id="pgFar" min="0.1" step="0.1" value="2.5"></label><label>Height m<input class="num" type="number" id="pgH" min="1" step="1" value="18"></label><label>Coverage %<input class="num" type="number" id="pgCov" min="1" max="100" step="1" value="45"></label><span class="ent" id="pgEnt" role="group" aria-label="Entrance side"><span>Entrance</span><button type="button" data-ent="N" aria-pressed="false">N</button><button type="button" data-ent="E" aria-pressed="false">E</button><button type="button" data-ent="S" aria-pressed="true">S</button><button type="button" data-ent="W" aria-pressed="false">W</button></span></div>
       <p class="note bdn" id="bdNote">A circle around the site point. The right size depends on the analysis: for sun, enough to include buildings whose shadows reach the site.</p>
       <p class="msg" id="locMsg" aria-live="polite"></p>
     </div>
@@ -257,9 +267,9 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <div id="ml" aria-label="Map: click to place the site" hidden></div>
       <canvas id="cv" aria-label="Map of the site and its buildings"></canvas>
       <canvas id="cv3" aria-label="3D view of the site context" hidden></canvas>
-      <svg class="sann" id="sann" aria-label="Selected massing"></svg><div class="e3lab" id="e3lab" aria-hidden="true"></div>
+      <svg class="sann" id="sann" aria-label="Selected massing"></svg><svg class="sanc" id="sanc" aria-label="Anchor point and study area"><text class="slab" id="slab" text-anchor="middle"></text><text class="sfine" id="sfine" text-anchor="middle">Study extent for analysis only — not a legal boundary</text><g class="anchor" id="anchor" tabindex="0" role="slider" aria-label="Anchor point: drag it, or use the arrow keys (Shift for 5 m)"><circle class="hit" r="12" fill="transparent"></circle><circle class="dot" r="7"></circle><text class="alab" id="alab" x="13" y="-11"></text></g></svg><div class="toast" id="stoast" role="status" aria-live="polite" hidden></div><div class="e3lab" id="e3lab" aria-hidden="true"></div>
       <div class="sftb" id="sftb" role="toolbar" aria-label="Massing tools" hidden><button type="button" data-ft="mirror"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2.5v15" stroke-dasharray="2 2"/><path d="M7.5 5.5L3 14h4.5z"/><path d="M12.5 5.5L17 14h-4.5z"/></svg></button><button type="button" data-ft="replace"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a6 6 0 0 1 10.4-3.2M16 12a6 6 0 0 1-10.4 3.2"/><path d="M14.5 2v3h-3M5.5 18v-3h3"/></svg></button><button type="button" data-ft="dup"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="6.5" y="6.5" width="10" height="10" rx="1.5"/><path d="M13.5 6.5V4.5a1 1 0 0 0-1-1h-8a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"/></svg></button><button type="button" data-ft="hide"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 10c2-3.5 4.6-5.5 7.5-5.5s5.5 2 7.5 5.5c-2 3.5-4.6 5.5-7.5 5.5S4.5 13.5 2.5 10z"/><circle cx="10" cy="10" r="2.3"/><path d="M3.5 16.5l13-13"/></svg></button><button type="button" data-ft="lock"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></svg></button><button type="button" data-ft="del"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h13M8 5.5V3.8h4v1.7M5.5 5.5l.8 11h7.4l.8-11"/></svg></button></div>
-      <div class="maptools"><button type="button" class="btn" id="zIn" aria-label="Zoom in">+</button><button type="button" class="btn" id="zOut" aria-label="Zoom out">−</button><button type="button" class="btn" id="fitBtn">Fit</button><button type="button" class="btn" id="uUndo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled>↶</button><button type="button" class="btn" id="uRedo" aria-label="Redo" title="Redo (Ctrl+Y)" disabled>↷</button></div>
+      <div class="maptools"><button type="button" class="btn" id="zIn" aria-label="Zoom in">+</button><button type="button" class="btn" id="zOut" aria-label="Zoom out">−</button><button type="button" class="btn" id="fitBtn">Fit</button><button type="button" class="btn" id="uUndo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled>↶</button><button type="button" class="btn" id="uRedo" aria-label="Redo" title="Redo (Ctrl+Y)" disabled>↷</button><button type="button" class="btn" id="uReset" aria-label="Reset" title="Reset to the defaults (you can undo it)" disabled>Reset</button></div>
       <div class="mapview" role="group" aria-label="View"><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="plan" aria-pressed="false">Plan</button><button type="button" data-v="3d" aria-pressed="false">3D</button></div>
       <p class="mhint" id="mhint"></p>
       <div class="attr" id="attr"></div>
@@ -427,6 +437,7 @@ const SITE = (() => {
     }
     return rings;
   }
+  const ROAD_MAIN = new Set(['motorway', 'trunk', 'primary', 'secondary', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link']), ROAD_MINOR = new Set(['tertiary', 'tertiary_link', 'residential', 'unclassified', 'living_street', 'service']);
   function fromOSM(nodes, ways, rels, provider) {
     const out = [], used = new Set(), missingNodes = { n: 0 };
     const ll = (ids) => ids.map((id) => { const p = nodes.get(id); if (!p) missingNodes.n++; return p; });
@@ -444,7 +455,9 @@ const SITE = (() => {
       if (used.has(w.id) || !isBuilding(w.tags)) continue;
       out.push({ ref: `way/${w.id}`, kind: w.tags['building:part'] && !w.tags.building ? 'part' : 'building', tags: w.tags, outer: ll(w.nd), holes: [], closed: w.nd.length > 3 && w.nd[0] === w.nd[w.nd.length - 1] });
     }
-    return { provider, buildings: out, areas, warnings: missingNodes.n ? [`${missingNodes.n} corner point${missingNodes.n > 1 ? 's were' : ' was'} missing from the file (cut off at the export edge?).`] : [] };
+    // v138: roads, two classes (main / minor), with their names
+    const roads = []; for (const w of ways.values()) { const hw = w.tags && w.tags.highway; if (!hw || isBuilding(w.tags) || w.nd.length < 2) continue; const cls = ROAD_MAIN.has(hw) ? 'main' : ROAD_MINOR.has(hw) ? 'minor' : null; if (!cls) continue; const o = ll(w.nd); if (!o.every(Boolean)) continue; roads.push({ ref: `way/${w.id}`, name: w.tags.name || w.tags.ref || '', cls, pts: o }); }
+    return { provider, buildings: out, areas, roads, warnings: missingNodes.n ? [`${missingNodes.n} corner point${missingNodes.n > 1 ? 's were' : ' was'} missing from the file (cut off at the export edge?).`] : [] };
   }
   function parseGeoJSON(j) {
     const feats = j && j.type === 'FeatureCollection' ? j.features : j && j.type === 'Feature' ? [j] : null; if (!feats) throw new Error('This GeoJSON has no features.');
@@ -477,8 +490,8 @@ const SITE = (() => {
   function inBoundary(fp, bd) {
     if (!bd) return true; const c = centroid(fp);
     if (bd.kind === 'polygon' && bd.pts && bd.pts.length > 2) return inside(c, bd.pts) || fp.some((p) => inside(p, bd.pts));
-    const r = bd.r || 300; if (Math.hypot(c[0], c[1]) <= r) return true;
-    for (let i = 0; i < fp.length; i++) if (segDist([0, 0], fp[i], fp[(i + 1) % fp.length]) <= r) return true; return false;
+    const r = bd.r || 300, o = bd.c || [0, 0]; if (Math.hypot(c[0] - o[0], c[1] - o[1]) <= r) return true;
+    for (let i = 0; i < fp.length; i++) if (segDist(o, fp[i], fp[(i + 1) % fp.length]) <= r) return true; return false;
   }
   // parsed result → ContextBuilding list in the site frame
   function buildContext(parsed, origin, boundary, opts = {}) {
@@ -591,6 +604,9 @@ const SITE = (() => {
   function defaultHeights(site) { let n = 0; for (const b of site.buildings) if (b.valid && b.h == null) { b.h = +((b.base || 0) + DEFAULT_H).toFixed(2); b.hSource = 'estimate'; b.hNote = `estimated: no height or floor count in OpenStreetMap (${DEFAULT_LEVELS} storeys × ${STOREY} m)`; b.autoEst = true; n++; } if (n) site.version++; return n; }
   // the context area: a square around the site point, 400 m by default, 200 to 1000 m
   const SQUARE = { def: 400, min: 200, max: 1000 };
+  // v138: the study area. Circle by default; its radius is size × K (size 200–1000 m, so 400 m gives r = 200 m); a square of the same area has side r·√π
+  const STUDY = { K: 0.5, min: 200, max: 1000, def: 400 };   // K = STUDY_RADIUS_K: one place to tune the radius coefficient
+  function squareOfRadius(r, c) { const side = r * Math.sqrt(Math.PI), h = side / 2, cx = c ? c[0] : 0, cy = c ? c[1] : 0; return { kind: 'polygon', square: +side.toFixed(1), c: [cx, cy], pts: [[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]].map((q) => [+q[0].toFixed(2), +q[1].toFixed(2)]) }; }
   function squareBoundary(side) { const w = Math.max(SQUARE.min, Math.min(SQUARE.max, Math.round(+side || SQUARE.def))), h = w / 2; return { kind: 'polygon', square: w, pts: [[-h, -h], [h, -h], [h, h], [-h, h]] }; }
   // 12 · the parcel: area by the shoelace formula (always positive), edges, and where it comes from
   const shoelace = (pts) => { let a = 0; for (let i = 0, n = pts.length; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; };
@@ -598,6 +614,9 @@ const SITE = (() => {
   function parcelFrom(parsed, origin) { const Fr = frame(origin); let best = null;
     for (const a of (parsed && parsed.areas) || []) { const xy = a.outer.map((p) => Fr.fwd(p[0], p[1])), r = cleanRing(xy).ring; if (r.length < 3 || !inside([0, 0], r)) continue; const A = shoelace(r); if (A > 0 && (!best || A < best.A)) best = { A, pts: r, ref: a.ref, tag: a.tags.landuse }; }
     return best ? { pts: best.pts.map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]), source: 'osm-landuse', ref: best.ref, note: `OpenStreetMap land use “${best.tag}”` } : null; }
+  // v138: roads and land-use areas in site metres (the parcels the person can pick from)
+  function projectRoads(parsed, origin) { const Fr = frame(origin), out = []; for (const r of (parsed && parsed.roads) || []) { const xy = r.pts.map((p) => Fr.fwd(p[0], p[1])).map((q) => [+q[0].toFixed(2), +q[1].toFixed(2)]); if (xy.length > 1) out.push({ ref: r.ref, name: r.name, cls: r.cls, pts: xy }); } return out; }
+  function areaParcels(parsed, origin) { const Fr = frame(origin), out = []; for (const a of (parsed && parsed.areas) || []) { const ring = cleanRing(a.outer.map((p) => Fr.fwd(p[0], p[1]))).ring; if (ring.length < 3) continue; const A = shoelace(ring); if (A < 30) continue; if (Math.hypot(...centroid(ring)) > 1500) continue; out.push({ ref: a.ref, landuse: (a.tags && a.tags.landuse) || 'land use', pts: ring.map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]), area: A }); } return out; }
   function rectParcel(a, b) { const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]); return { pts: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]), source: 'drawn', note: 'drawn by you' }; }
   // set one edge's length: the edge's end corner moves along the edge; the rest stays
   function setEdge(pts, i, len) { const n = pts.length, a = pts[i], b = pts[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!(len > 0.1) || L < 1e-6) return false; const k = len / L; pts[(i + 1) % n] = [+(a[0] + (b[0] - a[0]) * k).toFixed(3), +(a[1] + (b[1] - a[1]) * k).toFixed(3)]; return true; }
@@ -612,9 +631,9 @@ const SITE = (() => {
   const SRC_OF = { source: 'osm', levels: 'osm', estimate: 'estimated', user: 'user' };
   // the hand-over shape: surrounding massing (boxes extruded from footprints), the parcel, and where your building goes
   function siteModel(site) { return { buildings: simBuildings(site).map((b) => ({ id: b.id, footprint: b.xy.map((p) => p.slice()), holes: b.holes.map((r) => r.map((p) => p.slice())), height: b.h, base: b.base || 0, source: SRC_OF[b.hSource] || 'estimated', hNote: b.hNote || '', edited: !!b.edited })),
-    siteBoundary: site.parcel ? { pts: site.parcel.pts.map((p) => p.slice()), area: +shoelace(site.parcel.pts).toFixed(2), source: site.parcel.source } : null, yourSite: site.yourSite || null, contextArea: site.boundary, origin: Object.assign({}, site.origin), version: site.version }; }
+    siteBoundary: site.parcel ? { pts: site.parcel.pts.map((p) => p.slice()), area: +shoelace(site.parcel.pts).toFixed(2), source: site.parcel.source } : null, yourSite: site.yourSite || null, contextArea: site.boundary, anchor: site.anchor ? Object.assign({}, site.anchor) : { x: 0, y: 0 }, study: site.study ? Object.assign({}, site.study) : null, program: site.program ? Object.assign({}, site.program) : null, parcels: (site.parcels || []).map((q) => ({ id: q.id, pts: q.pts.map((p) => p.slice()), area: +shoelace(q.pts).toFixed(1), kind: q.kind })), parcelId: site.parcelId || null, origin: Object.assign({}, site.origin), version: site.version }; }
 
-  return { DEFAULT_H, DEFAULT_LEVELS, SQUARE, defaultHeights, squareBoundary, shoelace, parcelFrom, rectParcel, setEdge, edges, moveBuilding, scaleBuilding, deleteBuilding, siteModel,
+  return { projectRoads, areaParcels, DEFAULT_H, DEFAULT_LEVELS, SQUARE, STUDY, squareOfRadius, defaultHeights, squareBoundary, shoelace, parcelFrom, rectParcel, setEdge, edges, moveBuilding, scaleBuilding, deleteBuilding, siteModel,
     frame, tmFwd, tmInv, vincenty, area, centroid, inside, cleanRing, checkFootprint, selfCrossing, parseLength, heightFrom, H_LABEL, STOREY,
     parseOSMXML, parseOSMJSON, parseGeoJSON, parseAny, inBoundary, buildContext, newSite, addSource, setHeight, setExcluded, estimateMissing, simBuildings,
     review, readiness, simHash, isStale, reimport, resolve, toPlan, siteToPlan, contextMasses, groundAt, groundUnder, terrainForPlan, guessDST };
@@ -691,10 +710,10 @@ const SITEP = (() => {
   function overpassQuery(origin, bd, frame) {
     const T = CFG.overpass.timeoutS || 25;
     let area; if (bd.kind === 'polygon' && bd.pts && bd.pts.length > 2) { const ll = bd.pts.map((p) => frame.inv(p[0], p[1])); area = `(poly:"${ll.map((p) => `${p[0].toFixed(6)} ${p[1].toFixed(6)}`).join(' ')}")`; }
-    else area = `(around:${Math.round((bd.r || 300) + 40)},${origin.lat.toFixed(6)},${origin.lon.toFixed(6)})`;
+    else { const cc = bd.c && frame ? frame.inv(bd.c[0], bd.c[1]) : [origin.lat, origin.lon]; area = `(around:${Math.round((bd.r || 300) + 40)},${cc[0].toFixed(6)},${cc[1].toFixed(6)})`; }
     // v132: also the land-use areas at the site point (the first guess for the parcel)
     const at = `(around:30,${origin.lat.toFixed(6)},${origin.lon.toFixed(6)})`;
-    return `[out:json][timeout:${T}];(way["building"]${area};relation["building"]${area};way["building:part"]${area};relation["building:part"]${area};way["landuse"]${at};);out body;>;out skel qt;`;
+    return `[out:json][timeout:${T}];(way["building"]${area};relation["building"]${area};way["building:part"]${area};relation["building:part"]${area};way["landuse"]${area};way["highway"]${area};);out body;>;out skel qt;`;
   }
   async function buildings(origin, bd, frame) {
     const st = SOURCES.overpass.status(); if (!st.on) throw new ProviderError('off', st.why);
@@ -802,10 +821,10 @@ function newSiteFrom(raw, fixture) {
   const old = site, bd = boundary();
   site = SITE.newSite(ORIGIN, bd, { tz: old && old.tzSource === 'user' ? old.tz : +$('#tz').value, dst: +$('#dst').value, fixture });
   if (!(old && old.tzSource === 'user')) site.tzSource = 'estimated from longitude';
-  if (old) { site.id = old.id; site.version = old.version + 1; site.terrain = old.terrain; site.name = old.name; site.parcel = old.parcel || null; site.yourSite = old.yourSite || null; }
+  if (old) { site.id = old.id; site.version = old.version + 1; site.terrain = old.terrain; site.name = old.name; site.parcel = old.parcel || null; site.parcels = old.parcels || []; site.parcelId = old.parcelId || null; site.yourSite = old.yourSite || null; }
   site.name = $('#sName').value.trim() || 'Untitled site';
   raws = [raw]; rebuild(old); SITE.addSource(site, { provider: raw.provider, name: raw.name, at: raw.at, licence: raw.licence, query: raw.query || '' });
-  if (!site.parcel) { const pc = SITE.parcelFrom(raw.parsed, ORIGIN); if (pc) site.parcel = pc; } UNDO.length = 0; REDO.length = 0; undoUI(); parcelUI();
+  if (!site.parcels) site.parcels = []; mergeParcels(); if (!site.parcel) { const d = defaultParcel(); if (d) { site.parcelId = d.id; site.parcel = d; PROG.area = Math.round(SITE.shoelace(d.pts)); const c = SITE.centroid(d.pts); AN = { x: r1(c[0]), y: r1(c[1]) }; site.program = Object.assign({}, PROG); site.boundary = boundary(); rebuild(); } } syncInputs(); syncPills(); UNDO.length = 0; REDO.length = 0; undoUI(); parcelUI();
   $('#fixBanner').hidden = !site.fixture; fit(); reviewUI(); persist(); if (ML && mlReady) syncMap(true);
 }
 // recompute the context from the raw sources (origin or boundary changed); keep edits on unchanged buildings
@@ -815,6 +834,7 @@ function rebuild(prev) {
   const out = []; for (const r of raws) { const c = SITE.buildContext(r.parsed, ORIGIN, site.boundary, { at: r.at }); out.push(...c.buildings); }
   for (const b of out) { const o = before.get(b.src.ref); if (!o) continue; if (o.moved || o.scaled) Object.assign(b, o); else if (JSON.stringify(o.ll) === JSON.stringify(b.ll)) Object.assign(b, { h: o.h, hSource: o.hSource, hNote: o.hNote, excluded: o.excluded, why: o.why, deleted: o.deleted, locked: o.locked, edited: true }); }
   site.buildings = out; SITE.defaultHeights(site); site.origin = Object.assign({}, ORIGIN); site.version++; if (SEL && !site.buildings.some((b) => b.id === SEL)) SEL = null;
+  site.roads = raws.flatMap((r) => SITE.projectRoads(r.parsed, ORIGIN)); mergeParcels(); parcelSelUI();
   draw(); reviewUI(); selUI();
 }
 // update from a newer file: SITE.reimport keeps edits and reports conflicts instead of overwriting
@@ -835,23 +855,34 @@ function conflictUI() {
 $('#cfl').addEventListener('click', (e) => { const b = e.target.closest('[data-cf]'); if (!b) return; SITE.resolve(site, b.dataset.cf, b.dataset.ch); conflictUI(); draw(); reviewUI(); persist(); });
 
 // ---------- boundary ----------
-// v132: the area is a square by default (400 × 400 m, 200 to 1000 m); a circle or your own boundary are still there
-let SHAPE = 'square';
+// v138: the study area is a circle by default, centred on the anchor. Size 200 to 1000 m; radius = size × STUDY_RADIUS_K (400 m gives r = 200 m);
+// a square has the same area (side = r·√π); "Your boundary" is a polygon you drew or a parcel, and does not follow the anchor.
+const STUDY_RADIUS_K = SITE.STUDY.K;
+const PROG0 = { area: 2400, far: 2.5, height: 18, coverage: 45, entrance: 'S' };
+let SHAPE = 'circle', AN = { x: 0, y: 0 }, PROG = Object.assign({}, PROG0), suppressParcelClick = false;
+const r1 = (v) => Math.round(v * 10) / 10, fmtM = (v) => Math.round(v).toLocaleString('en-CA');
 const ownPoly = () => site && site.boundary && site.boundary.kind === 'polygon' && !site.boundary.square ? site.boundary : null;
-const boundary = () => SHAPE === 'circle' ? { kind: 'radius', r: +$('#rad').value } : SHAPE === 'polygon' && ownPoly() ? ownPoly() : SITE.squareBoundary(+$('#rad').value);
-const radText = () => SHAPE === 'circle' ? `${$('#rad').value} m` : `${$('#rad').value} × ${$('#rad').value} m`;
-function setRange(kind, v) { const r = $('#rad'); if (kind === 'circle') { r.min = 50; r.max = 1000; r.step = 10; } else { r.min = SITE.SQUARE.min; r.max = SITE.SQUARE.max; r.step = 50; } if (v != null) r.value = v; $('#radO').textContent = radText(); $('#radL').textContent = kind === 'circle' ? 'Radius' : 'Size'; r.setAttribute('aria-label', kind === 'circle' ? 'Context radius' : 'Context area size'); }
-$('#rad').addEventListener('input', () => { $('#radO').textContent = radText(); if (site) site.boundary = boundary(); draw(); if (ML && mlReady) syncMap(); });
-$('#rad').addEventListener('change', () => { if (site) { site.boundary = boundary(); rebuild(); persist(); } bdUI(); });
+const polyBoundary = () => ownPoly() || (site && site.parcel && site.parcel.pts && site.parcel.pts.length > 2 ? { kind: 'polygon', pts: site.parcel.pts.map((q) => q.slice()) } : null);
+const studySize = () => +$('#rad').value, studyR = () => studySize() * STUDY_RADIUS_K;
+const boundary = () => SHAPE === 'circle' ? { kind: 'radius', r: studyR(), c: [AN.x, AN.y] } : SHAPE === 'polygon' && polyBoundary() ? polyBoundary() : SITE.squareOfRadius(studyR(), [AN.x, AN.y]);
+const studyArea = (bd) => { bd = bd || boundary(); return bd.kind === 'polygon' ? SITE.shoelace(bd.pts) : Math.PI * bd.r * bd.r; };
+const radText = () => SHAPE === 'circle' ? `${studySize()} m` : `${studySize()} m`;
+function setRange(kind, v) { const r = $('#rad'); r.min = SITE.STUDY.min; r.max = SITE.STUDY.max; r.step = 10; if (v != null) r.value = Math.max(SITE.STUDY.min, Math.min(SITE.STUDY.max, Math.round(v / 10) * 10)); $('#radO').textContent = radText(); $('#radL').textContent = 'Size'; r.setAttribute('aria-label', 'Study area size'); }
+let szBefore = null;
+$('#rad').addEventListener('input', () => { if (szBefore == null && site) szBefore = snapSite(); $('#radO').textContent = radText(); if (site) site.boundary = boundary(); draw(); if (ML && mlReady) syncMap(); bdUI(); });
+$('#rad').addEventListener('change', () => { if (szBefore != null && site && szBefore !== snapSite()) { UNDO.push(szBefore); if (UNDO.length > HMAX) UNDO.shift(); REDO.length = 0; undoUI(); } szBefore = null; if (site) { site.boundary = boundary(); rebuild(); persist(); } bdUI(); draw(); });
 $('#shape').addEventListener('change', (e) => { const k = e.target.value;
-  if (k === 'polygon') { SHAPE = 'polygon'; if (!ownPoly()) $('#polyBtn').click(); }
-  else { const was = SHAPE; SHAPE = k; DRAW = null; TOOLM = null; setRange(k, was === k ? null : k === 'circle' ? 300 : SITE.SQUARE.def); if (site) { site.boundary = boundary(); rebuild(); persist(); } $('#mapbox').classList.remove('drawing'); hint(''); }
+  if (k === 'polygon' && !polyBoundary()) { e.target.value = SHAPE; bdUI(); return; }
+  if (site) pushU(); SHAPE = k; DRAW = null; TOOLM = null; setRange(k, null); if (site) { site.boundary = boundary(); rebuild(); persist(); } $('#mapbox').classList.remove('drawing'); hint('');
   bdUI(); draw(); if (ML && mlReady) syncMap(true); });
-$('#polyBtn').addEventListener('click', () => { if (!ORIGIN) { msg('#locMsg', 'Set the site point first.', 'warn'); return; } if (DRAW) { finishPoly(); return; } DRAW = []; TOOLM = 'poly'; $('#polyBtn').hidden = false; $('#polyBtn').setAttribute('aria-pressed', 'true'); $('#polyBtn').textContent = 'Finish boundary'; $('#cv').classList.add('drawing'); $('#mapbox').classList.add('drawing'); if (ML) ML.doubleClickZoom.disable(); hint('Click the corners of the context area. Double-click or Enter to finish, Esc to cancel.'); });
-function finishPoly() { if (DRAW && DRAW.length >= 3) { if (!site) site = SITE.newSite(ORIGIN, null, {}); SHAPE = 'polygon'; site.boundary = { kind: 'polygon', pts: DRAW.map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]) }; rebuild(); persist(); } DRAW = null; TOOLM = null; $('#polyBtn').setAttribute('aria-pressed', 'false'); $('#polyBtn').textContent = 'Redraw'; $('#cv').classList.remove('drawing'); $('#mapbox').classList.remove('drawing'); if (ML) setTimeout(() => ML && ML.doubleClickZoom.enable(), 300); hint(''); bdUI(); draw(); }
+$('#polyBtn').addEventListener('click', () => { if (!ORIGIN) { msg('#locMsg', 'Set the site point first.', 'warn'); return; } if (DRAW) { finishPoly(); return; } DRAW = []; TOOLM = 'poly'; $('#polyBtn').hidden = false; $('#polyBtn').setAttribute('aria-pressed', 'true'); $('#polyBtn').textContent = 'Finish boundary'; $('#cv').classList.add('drawing'); $('#mapbox').classList.add('drawing'); if (ML) ML.doubleClickZoom.disable(); hint('Click the corners of the context area. Double-click or Enter to finish, Esc to cancel.'); draw(); });
+function finishPoly() { if (DRAW && DRAW.length >= 3) { if (!site) site = SITE.newSite(ORIGIN, null, {}); pushU(); SHAPE = 'polygon'; site.boundary = { kind: 'polygon', pts: DRAW.map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]) }; rebuild(); persist(); } DRAW = null; TOOLM = null; $('#polyBtn').setAttribute('aria-pressed', 'false'); $('#polyBtn').textContent = 'Redraw'; $('#cv').classList.remove('drawing'); $('#mapbox').classList.remove('drawing'); if (ML) setTimeout(() => ML && ML.doubleClickZoom.enable(), 300); hint(''); bdUI(); draw(); if (ML && mlReady) syncMap(true); }
 $('#originBtn').addEventListener('click', () => { if (!ORIGIN) { msg('#locMsg', 'Set the site point first.', 'warn'); return; } TOOLM = TOOLM === 'origin' ? null : 'origin'; $('#mapbox').classList.toggle('drawing', TOOLM === 'origin'); $('#originBtn').setAttribute('aria-pressed', String(TOOLM === 'origin')); $('#cv').classList.toggle('drawing', TOOLM === 'origin'); hint(TOOLM === 'origin' ? 'Click the map where your site is.' : ''); });
-function bdUI() { const bd = boundary(), poly = (SHAPE === 'polygon') || TOOLM === 'poly'; $('#shape').value = poly ? 'polygon' : SHAPE; $('#polyBtn').hidden = !poly; if (poly && TOOLM !== 'poly') $('#polyBtn').textContent = ownPoly() ? 'Redraw' : 'Draw a boundary'; $('#rad').hidden = poly; $('#radO').hidden = poly; $('#radL').hidden = poly;
-  $('#bdNote').textContent = bd.square ? `A ${bd.square} × ${bd.square} m square around the site point (200 to 1000 m). Buildings inside it become massing when you press Generate.` : bd.kind === 'polygon' ? `Your boundary: ${bd.pts.length} corners, ${Math.round(SITE.shoelace(bd.pts)).toLocaleString('en-CA')} m². Choose Square to go back.` : `A circle of ${bd.r} m around the site point.`; }
+function bdUI() { const bd = boundary(), poly = (SHAPE === 'polygon') || TOOLM === 'poly', can = !!polyBoundary();
+  $('#shape').value = poly ? 'polygon' : SHAPE; $('#shape').querySelector('option[value="polygon"]').disabled = !can && !poly; $('#shapeHint').hidden = can || poly; $('#shape').title = can || poly ? '' : 'Draw a rectangle or import a boundary first';
+  $('#polyBtn').hidden = !poly; if (poly && TOOLM !== 'poly') $('#polyBtn').textContent = ownPoly() ? 'Redraw' : 'Draw a boundary'; $('#rad').hidden = poly; $('#radO').hidden = poly; $('#radL').hidden = poly;
+  $('#bdNote').textContent = bd.square ? `A square with the same area as the circle (side ${bd.square} m), centred on the anchor. Buildings inside it become massing when you press Generate.` : bd.kind === 'polygon' ? `Your boundary: ${bd.pts.length} corners, ${fmtM(SITE.shoelace(bd.pts))} m². Choose Circle or Square to go back.` : `A circle of ${studySize()} m across (radius ${r1(bd.r)} m), centred on the anchor. Study extent for analysis only — not a legal boundary.`;
+  const sg = $('#sanc'); if (sg) ancUI(); }
 $('#tz').addEventListener('change', () => { if (site) { site.tz = +$('#tz').value; site.tzSource = 'user'; site.version++; persist(); } tzNote(); reviewUI(); });
 $('#dst').addEventListener('change', () => { if (site) { site.dst = +$('#dst').value; site.tzSource = 'user'; site.version++; persist(); } tzNote(); reviewUI(); });
 $('#sName').addEventListener('change', () => { if (site) { site.name = $('#sName').value.trim() || 'Untitled site'; persist(); } });
@@ -891,6 +922,10 @@ $('#fixBtn').addEventListener('click', () => {
   if (site && site.buildings.length && !confirm('Replace the current site with the test fixture?')) return;
   const o = { lat: 49.2827, lon: -123.1207 }, Fx = SITE.frame(o), ll = (x, y) => Fx.inv(x, y), els = []; let id = 1;
   const add = (x, y, w, d, tags) => { const ids = [[x, y], [x + w, y], [x + w, y + d], [x, y + d]].map(([a, b]) => { const p = ll(a, b); els.push({ type: 'node', id: id, lat: p[0], lon: p[1] }); return id++; }); els.push({ type: 'way', id: 9000 + id, nodes: ids.concat(ids[0]), tags: Object.assign({ building: 'yes' }, tags) }); };
+  const poly = (pts, tags) => { const ids = pts.map(([a, b]) => { const p = ll(a, b); els.push({ type: 'node', id: id, lat: p[0], lon: p[1] }); return id++; }); els.push({ type: 'way', id: 9000 + id, nodes: ids.concat(closed(tags) ? [ids[0]] : []), tags }); }, closed = (t) => !!t.landuse;
+  // made-up land use (the parcels) and streets, so the fixture shows everything the plan can show
+  poly([[-68, 12], [8, 12], [8, 52], [-68, 52]], { landuse: 'residential' }); poly([[-62, -52], [-30, -52], [-30, -14], [-62, -14]], { landuse: 'residential' }); poly([[-24, -30], [14, -30], [14, 8], [-24, 8]], { landuse: 'residential' }); poly([[18, 18], [52, 18], [52, 52], [18, 52]], { landuse: 'commercial' }); poly([[22, -48], [78, -48], [78, -20], [22, -20]], { landuse: 'industrial' });
+  poly([[-140, 62], [140, 62]], { highway: 'primary', name: 'Main St' }); poly([[-85, -140], [-85, 140]], { highway: 'secondary', name: '2nd Ave' }); poly([[-140, -90], [140, -90]], { highway: 'residential', name: 'Elm St' }); poly([[95, -140], [95, 140]], { highway: 'residential', name: 'Oak Ave' });
   add(-60, 20, 30, 18, { height: '24', name: 'Fixture tower' }); add(-20, 30, 22, 14, { 'building:levels': '5' }); add(25, 25, 18, 18, {}); add(30, -40, 40, 16, { height: '12' }); add(-55, -45, 16, 24, { 'building:levels': '3' }); add(60, 0, 14, 30, { height: '40' }); add(-15, -70, 26, 12, {});
   ORIGIN = { lat: o.lat, lon: o.lon, label: 'Test fixture (made up)' }; F = Fx; $('#lat').value = o.lat; $('#lon').value = o.lon; $('#tz').value = '-8'; $('#dst').value = '1'; $('#sName').value = 'Test fixture site';
   newSiteFrom({ provider: 'test-fixture', name: 'Made-up test fixture', at: new Date().toISOString(), licence: 'Test fixture, not real data', parsed: SITE.parseOSMJSON({ elements: els }) }, true);
@@ -918,8 +953,9 @@ const attrUI = () => { $('#attr').textContent = site && site.sources.some((s) =>
 
 // ---------- selection and edits ----------
 function select(id, centre) { SEL = id; selUI(); if (centre) { const b = site.buildings.find((x) => x.id === id); if (b && b.xy.length) { const c = SITE.centroid(b.xy); V.cx = c[0]; V.cy = c[1]; } } draw(); if (MODE === '3d') upd3D(); }
+let RK = null; function rightStep(k) { if (k === RK) return; RK = k; if (window.__rightOpen) window.__rightOpen({ sel: 'h-sel', next: 'h-next', data: 'h-data' }[k]); }   // the accordion opens the step that matters now, once per change
 function selUI() {
-  const b = site && SEL && site.buildings.find((x) => x.id === SEL), sec = $('#secSel'); sec.hidden = !b; if (!b) return; const st = statusOf(b);
+  const b = site && SEL && site.buildings.find((x) => x.id === SEL), sec = $('#secSel'); sec.hidden = !b; rightStep(b ? 'sel' : site ? 'next' : 'data'); if (!b) return; const st = statusOf(b);
   // in a folded left column, open the Building panel when a building is picked
   const openSel = () => { if (sec.classList.contains('shut')) { const h = sec.querySelector('.acch'); if (h) h.click(); } }; openSel(); setTimeout(openSel, 150); setTimeout(openSel, 450);
   $('#bprops').innerHTML = `<dt>Name</dt><dd>${esc(b.name || '—')}</dd><dt>Source</dt><dd>${esc(b.src.provider)} · ${esc(b.src.ref)}</dd><dt>Height</dt><dd>${b.h != null ? b.h + ' m' : '—'} · ${esc(SITE.H_LABEL[b.hSource] || '')}${b.hNote && b.hNote !== SITE.H_LABEL[b.hSource] ? ' (' + esc(b.hNote) + ')' : ''}</dd><dt>Base</dt><dd>${b.base || 0} m${b.levels != null ? ` · ${b.levels} storeys in the data` : ''}</dd><dt>Footprint</dt><dd>${b.area ? b.area.toFixed(1) + ' m²' : '—'}${b.holes.length ? ` · ${b.holes.length} courtyard${b.holes.length > 1 ? 's' : ''}` : ''}</dd><dt>Geometry</dt><dd>${b.valid ? 'valid' : '<b style="color:#8a2a17">invalid</b>'}${b.issues.length ? ' · ' + esc(b.issues.join('; ')) : ''}</dd><dt>Status</dt><dd>${esc(LABEL[st])}${b.why ? ' (' + esc(b.why) + ')' : ''}</dd>`;
@@ -934,7 +970,8 @@ $('#bEx').addEventListener('click', () => { const b = selB(); if (!b || b.locked
 $('#bDel').addEventListener('click', () => delSel());
 
 // ---------- saving in this browser ----------
-let pT = 0; function persist() { if (site) { try { localStorage.setItem('pc-site-hash:' + site.id, SITE.simHash(site)); localStorage.setItem('pc-site-cur', site.id); } catch (e) {} }
+function syncSiteFields() { if (!site) return; site.anchor = { x: AN.x, y: AN.y }; site.program = Object.assign({}, PROG); site.study = { shape: SHAPE, size: studySize(), areaM2: Math.round(studyArea()) }; }
+let pT = 0; function persist() { syncSiteFields(); if (site) { try { localStorage.setItem('pc-site-hash:' + site.id, SITE.simHash(site)); localStorage.setItem('pc-site-cur', site.id); } catch (e) {} }
   clearTimeout(pT); pT = setTimeout(async () => { if (!site) return; try { await SITEP.sites.put({ id: site.id, name: site.name, savedAt: new Date().toISOString(), site, raws }); } catch (e) {} }, 400); }
 $('#saveS').addEventListener('click', async () => { if (!site) return; site.name = $('#sName').value.trim() || site.name; try { await SITEP.sites.put({ id: site.id, name: site.name, savedAt: new Date().toISOString(), site, raws }); msg('#nextMsg', `Saved “${site.name}” in this browser.`, 'ok'); } catch (e) { msg('#nextMsg', 'Could not save in this browser (storage full or private window). Download JSON instead.', 'warn'); } });
 $('#dlS').addEventListener('click', () => { if (!site) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ format: 'plotcloud-site', v: 1, site }, null, 1)], { type: 'application/json' })); a.download = (site.name || 'site').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-site.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); });
@@ -948,15 +985,16 @@ $('#openSite').addEventListener('click', async () => { const box = $('#siteList'
 });
 function loadSite(s, r) { site = s; raws = r || []; ORIGIN = Object.assign({}, s.origin); F = SITE.frame(ORIGIN); SEL = null;
   $('#lat').value = ORIGIN.lat.toFixed(6); $('#lon').value = ORIGIN.lon.toFixed(6); $('#tz').value = String(s.tz); $('#dst').value = String(s.dst); $('#sName').value = s.name || '';
-  SHAPE = s.boundary && s.boundary.square ? 'square' : s.boundary && s.boundary.kind === 'polygon' ? 'polygon' : 'circle'; setRange(SHAPE === 'circle' ? 'circle' : 'square', s.boundary && s.boundary.square ? s.boundary.square : s.boundary && s.boundary.kind === 'radius' ? s.boundary.r : null);
-  UNDO.length = 0; REDO.length = 0; undoUI(); parcelUI();
+  AN = s.anchor ? { x: +s.anchor.x || 0, y: +s.anchor.y || 0 } : { x: 0, y: 0 }; PROG = Object.assign({}, PROG0, s.program || {});
+  SHAPE = s.study && s.study.shape ? s.study.shape : s.boundary && s.boundary.square ? 'square' : s.boundary && s.boundary.kind === 'polygon' ? 'polygon' : 'circle'; setRange(SHAPE, s.study && s.study.size ? s.study.size : s.boundary && s.boundary.square ? s.boundary.square / Math.sqrt(Math.PI) / STUDY_RADIUS_K : s.boundary && s.boundary.kind === 'radius' ? s.boundary.r / STUDY_RADIUS_K : SITE.STUDY.def);
+  UNDO.length = 0; REDO.length = 0; undoUI(); parcelUI(); syncInputs(); syncPills();
   bdUI(); tzNote(); conflictUI(); fit(); draw(); reviewUI(); selUI(); statusUI(); if (ML && mlReady) syncMap(true); msg('#locMsg', `Opened “${s.name}”.${raws.length ? '' : ' Its raw source data is not in this browser, so changing the area needs a new import; edits still work.'}`, 'ok'); }
 
 // ---------- Plan Studio: a new project, or the site added to an existing one (its design is never changed) ----------
 const wbOpen = () => new Promise((res, rej) => { let q; try { q = indexedDB.open('pc-studio'); } catch (e) { rej(e); return; } q.onupgradeneeded = () => { const d = q.result; for (const [n, k] of [['projects', 'id'], ['drafts', 'id'], ['versions', 'key']]) if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: k }); }; q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
 const wbTx = (d, st, mode, fn) => new Promise((res, rej) => { const t = d.transaction(st, mode), r = fn(t.objectStore(st)); t.oncomplete = () => res(r ? r.result : undefined); t.onerror = () => rej(t.error); });
 async function wbProjects() { const d = await wbOpen(); try { return await wbTx(d, 'projects', 'readonly', (s) => s.getAll()); } finally { d.close(); } }
-const siteForModel = () => { const s = JSON.parse(JSON.stringify(site)); delete s._conflicts; s.siteModel = SITE.siteModel(site); return s; };
+const siteForModel = () => { syncSiteFields(); const s = JSON.parse(JSON.stringify(site)); delete s._conflicts; s.siteModel = SITE.siteModel(site); return s; };
 $('#toWb').addEventListener('click', async () => {
   if (!site) return; let last = null, P = []; try { P = await wbProjects(); last = localStorage.getItem('pc-studio-last'); } catch (e) {}
   const cur = P.find((p) => p.id === last), body = $('#wbBody');
@@ -987,9 +1025,9 @@ async function toWorkbench(how, cur) {
 // ---------- Sun hours: the context only (casts shadows), ground sampled around the site point ----------
 function sunScene() {
   const masses = SITE.contextMasses(site, 0);
-  const bd = boundary(), r = bd.kind === 'polygon' ? Math.min(150, Math.max(...bd.pts.map((p) => Math.hypot(p[0], p[1])))) : Math.min(150, bd.r);
+  syncSiteFields(); const bd = boundary(), r = bd.kind === 'polygon' ? Math.min(150, Math.max(...bd.pts.map((p) => Math.hypot(p[0] - AN.x, p[1] - AN.y)))) : Math.min(150, bd.r);
   return { format: 'plotcloud-scene', v: 1, kind: 'masses', name: site.name, loc: { lat: site.origin.lat, lon: site.origin.lon, tz: site.tz, dst: site.dst, label: site.origin.label || site.name }, north: 0, masses,
-    terrain: SITE.terrainForPlan(site, 0), analysis: { cx: 0, cy: 0, r: Math.round(r) },
+    terrain: SITE.terrainForPlan(site, 0), analysis: { cx: AN.x, cy: AN.y, r: Math.round(r) }, anchor: { x: AN.x, y: AN.y },
     source: { site: site.id, siteVersion: site.version, siteHash: SITE.simHash(site), fixture: !!site.fixture, from: 'sitectx' }, notes: [site.fixture ? 'Test fixture — not real imported data.' : '', ...SITE.readiness(site, 'sun').warn].filter(Boolean) };
 }
 $('#toSun').addEventListener('click', () => { if (!site) return; const R = SITE.readiness(site, 'sun'); if (!R.ok) { rdyUI(); return; }
@@ -1007,11 +1045,27 @@ const cv = $('#cv'), g = cv.getContext('2d'), V = { cx: 0, cy: 0, s: 1.5 }; let 
 function resize() { const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1; VP = { w: Math.max(50, r.width), h: Math.max(50, r.height), d }; cv.width = Math.round(VP.w * d); cv.height = Math.round(VP.h * d); draw(); if (MODE === '3d' && R3) { R3.resize(); } }
 new ResizeObserver(resize).observe(cv);
 const W2S = (p) => [VP.w / 2 + (p[0] - V.cx) * V.s, VP.h / 2 - (p[1] - V.cy) * V.s], S2W = (x, y) => [V.cx + (x - VP.w / 2) / V.s, V.cy - (y - VP.h / 2) / V.s];
-function fit() { const bd = boundary(); let R = bd.kind === 'polygon' ? Math.max(...bd.pts.map((p) => Math.hypot(p[0], p[1]))) : bd.r; if (site && site.buildings.length && !ORIGIN) R = 300; V.cx = 0; V.cy = 0; V.s = Math.min(VP.w, VP.h) / (2.3 * Math.max(40, R)); draw(); }
+function fit() { const bd = boundary(); let R = bd.kind === 'polygon' ? Math.max(...bd.pts.map((p) => Math.hypot(p[0], p[1]))) : bd.r + Math.hypot(...(bd.c || [0, 0])); if (site && site.buildings.length && !ORIGIN) R = 300; V.cx = 0; V.cy = 0; V.s = Math.min(VP.w, VP.h) / (2.3 * Math.max(40, R)); draw(); }
 $('#fitBtn').addEventListener('click', () => { if (ML && mlReady) syncMap(true); fit(); if (MODE === '3d') upd3D(true); });
 $('#zIn').addEventListener('click', () => { if (ML && mlReady) ML.zoomIn(); else { V.s = Math.min(40, V.s * 1.4); draw(); } });
 $('#zOut').addEventListener('click', () => { if (ML && mlReady) ML.zoomOut(); else { V.s = Math.max(0.05, V.s / 1.4); draw(); } });
 function ring(r) { g.beginPath(); r.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); }
+
+function drawRoads() {   // roads from the data: main roads wider than minor ones, named along their longest stretch
+  if (!site || !site.roads || !site.roads.length) return; g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#E8E2D4';
+  for (const cls of ['minor', 'main']) for (const r of site.roads) { if (r.cls !== cls) continue; g.lineWidth = Math.max(cls === 'main' ? 3.5 : 2, (cls === 'main' ? 9 : 5) * V.s); g.beginPath(); r.pts.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); }
+  g.font = '600 9px system-ui, sans-serif'; g.fillStyle = '#8e8b84'; g.textAlign = 'center'; g.textBaseline = 'middle'; const best = new Map();
+  for (const r of site.roads) { if (!r.name) continue; for (let i = 0; i < r.pts.length - 1; i++) { const a = W2S(r.pts[i]), b = W2S(r.pts[i + 1]), len = Math.hypot(b[0] - a[0], b[1] - a[1]), o = best.get(r.name); if (!o || len > o.len) best.set(r.name, { a, b, len }); } }
+  for (const [name, o] of best) { const t = name.toUpperCase(); if (o.len < g.measureText(t).width + 16) continue; let ang = Math.atan2(o.b[1] - o.a[1], o.b[0] - o.a[0]); if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI; g.save(); g.translate((o.a[0] + o.b[0]) / 2, (o.a[1] + o.b[1]) / 2); g.rotate(ang); g.fillText(t, 0, 0); g.restore(); }
+  g.restore(); }
+function drawParcels() {   // each parcel is a polygon; the chosen one (your site) is solid red on a light red fill, the others are dashed
+  if (!site || !site.parcels) return;
+  for (const q of site.parcels) { if (q.pts.length < 3) continue; const sel = q.id === site.parcelId, P = sel && PDRAG ? PDRAG.pts : q.pts; ring(P);
+    if (sel) { g.fillStyle = '#FBEDE8'; g.fill(); g.setLineDash([]); g.strokeStyle = '#D8402A'; g.lineWidth = 2; g.stroke(); } else { g.setLineDash([5, 3]); g.strokeStyle = '#1C1B1A'; g.lineWidth = 1.2; g.stroke(); g.setLineDash([]); } } }
+function drawParcelLabels() {
+  if (!site || !site.parcels) return; g.save(); g.font = '600 10.5px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const q of site.parcels) { if (q.pts.length < 3) continue; const P = q.id === site.parcelId && PDRAG ? PDRAG.pts : q.pts, c = W2S(SITE.centroid(P)), t = `${q.id} · ${fmtM(SITE.shoelace(P))} m²`; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)'; g.strokeText(t, c[0], c[1] - 14); g.fillStyle = q.id === site.parcelId ? '#B3321F' : '#1C1B1A'; g.fillText(t, c[0], c[1] - 14); }
+  g.restore(); }
 function draw() {
   if (ML && mlReady) syncMap();
   const d = VP.d; g.setTransform(d, 0, 0, d, 0, 0); g.fillStyle = MODE === 'plan' ? '#ffffff' : '#f6f5f1'; g.fillRect(0, 0, VP.w, VP.h);
@@ -1023,18 +1077,20 @@ function draw() {
   // terrain as shaded cells
   if (site && site.terrain) { const T = site.terrain, G = T.grid, span = Math.max(1, T.zMax - T.zMin); for (let j = 0; j < G.ny - 1; j++) for (let i = 0; i < G.nx - 1; i++) { const z = G.z[j * G.nx + i], q = W2S([G.x0 + i * G.step, G.y0 + (j + 1) * G.step]); g.fillStyle = `rgba(120,140,110,${0.05 + 0.25 * (z - T.zMin) / span})`; g.fillRect(q[0], q[1], G.step * V.s + 0.5, G.step * V.s + 0.5); } }
   // boundary
-  const bd = boundary(); g.setLineDash([8, 6]); g.strokeStyle = 'rgba(216,64,42,.75)'; g.lineWidth = 1.5; g.fillStyle = 'rgba(216,64,42,.035)';
-  if (bd.kind === 'polygon') { ring(bd.pts); g.fill(); g.stroke(); } else { const o = W2S([0, 0]); g.beginPath(); g.arc(o[0], o[1], bd.r * V.s, 0, Math.PI * 2); g.fill(); g.stroke(); }
+  const bd = boundary(); g.setLineDash([6, 4]); g.strokeStyle = 'rgba(216,64,42,.55)'; g.lineWidth = 1.5;   // the study area: dashed, no fill, never a property-line look
+  if (bd.kind === 'polygon') { ring(bd.pts); g.stroke(); } else { const o = W2S(bd.c || [0, 0]); g.beginPath(); g.arc(o[0], o[1], bd.r * V.s, 0, Math.PI * 2); g.stroke(); }
   g.setLineDash([]);
+  drawRoads();
+  drawParcels();
   // buildings
   if (site) for (const bl0 of site.buildings) { if (!bl0.xy.length) continue; const bl = MOVE && MOVE.id === bl0.id ? Object.assign({}, bl0, { xy: bl0.xy.map((p) => [p[0] + MOVE.dx, p[1] + MOVE.dy]), holes: bl0.holes.map((r) => r.map((p) => [p[0] + MOVE.dx, p[1] + MOVE.dy])) }) : bl0; if (bl.deleted) continue; const st = statusOf(bl); ring(bl.xy); for (const h of bl.holes) { const hr = h.slice().reverse(); g.moveTo(...W2S(hr[0])); hr.forEach((p) => g.lineTo(...W2S(p))); g.closePath(); }
     g.fillStyle = COL[st]; g.globalAlpha = st === 'excluded' ? 0.7 : 1; g.fill('evenodd'); g.globalAlpha = 1;
     g.strokeStyle = st === 'none' || st === 'invalid' ? '#b3261e' : st === 'excluded' ? '#bdbab2' : '#2b2a28'; g.lineWidth = st === 'none' || st === 'invalid' ? 1.5 : 1; g.setLineDash(st === 'invalid' || st === 'excluded' ? [4, 3] : []); g.stroke(); g.setLineDash([]);
     if (st === 'estimate') { g.save(); g.clip(); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 1; const c = W2S(SITE.centroid(bl.xy)); g.beginPath(); for (let k = -60; k <= 60; k += 6) { g.moveTo(c[0] + k - 60, c[1] + 60); g.lineTo(c[0] + k + 60, c[1] - 60); } g.stroke(); g.restore(); }
     if (bl.id === SEL) { ring(bl.xy); g.strokeStyle = '#3498ff'; g.lineWidth = 2.5; g.stroke(); }
-    if (st === 'estimate' && MODE === 'plan' && V.s > 1.2) { const c = W2S(SITE.centroid(bl.xy)); g.font = '600 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#6b4e00'; g.fillText('est.', c[0], c[1] + 4); g.textAlign = 'left'; } }
+    if (MODE === 'plan' && bl.valid && bl.h != null && !bl.excluded) { const bb = bbOf(bl.xy), wpx = (bb[2] - bb[0]) * V.s; if (wpx >= 24) { const c = W2S(SITE.centroid(bl.xy)), dark = st === 'source' || st === 'levels' || st === 'user'; g.font = '600 9px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = dark ? '#ffffff' : '#4a3a00'; g.fillText(`${bl.h >= 10 ? Math.round(bl.h) : (+bl.h).toFixed(1)}m${st === 'estimate' ? ' est.' : ''}`, c[0], c[1]); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; } } }
   // 12 · the ground area you can change, and where your building goes
-  if (site && site.parcel && site.parcel.pts.length > 2) { const P = PDRAG ? PDRAG.pts : site.parcel.pts; ring(P); g.fillStyle = 'rgba(47,122,79,.08)'; g.fill(); g.strokeStyle = '#2f7a4f'; g.lineWidth = 2; g.setLineDash([10, 4, 2, 4]); g.stroke(); g.setLineDash([]); }
+  drawParcelLabels();
   if (PR && PR.b) { const r = SITE.rectParcel(PR.a, PR.b); ring(r.pts); g.strokeStyle = '#2f7a4f'; g.lineWidth = 2; g.setLineDash([6, 4]); g.stroke(); g.setLineDash([]); }
   if (site && site.yourSite) { const Y = site.yourSite; if (Y.footprint && Y.footprint.length > 2) { ring(Y.footprint); g.fillStyle = 'rgba(216,64,42,.10)'; g.fill(); g.strokeStyle = '#d8402a'; g.lineWidth = 2; g.setLineDash([6, 4]); g.stroke(); g.setLineDash([]); }
     const q = W2S(Y.at); g.font = '700 12px system-ui, sans-serif'; const tw = g.measureText('your site').width + 12; g.fillStyle = '#d8402a'; g.fillRect(q[0] - tw / 2, q[1] - 10, tw, 20); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('your site', q[0], q[1] + 4); g.textAlign = 'left'; }
@@ -1047,7 +1103,7 @@ function draw() {
   { let m = 10; for (const c of [10, 20, 50, 100, 200, 500]) if (c * V.s <= 140) m = c; const x = 14, y = VP.h - 42; g.strokeStyle = '#1c1b1a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + m * V.s, y); g.moveTo(x, y - 4); g.lineTo(x, y + 4); g.moveTo(x + m * V.s, y - 4); g.lineTo(x + m * V.s, y + 4); g.stroke(); g.fillStyle = '#1c1b1a'; g.font = '11px system-ui, sans-serif'; g.fillText(`${m} m`, x + m * V.s + 6, y + 4); }
   if (site && site.fixture) { g.save(); g.fillStyle = 'rgba(160,110,0,.16)'; g.font = '800 34px system-ui, sans-serif'; g.textAlign = 'center'; g.translate(VP.w / 2, VP.h / 2); g.rotate(-0.25); g.fillText('TEST FIXTURE — NOT REAL DATA', 0, 0); g.restore(); }
   if (!site || !site.buildings.length) hint(site && site.terrain ? 'Terrain only. Press Generate, or import a file.' : 'Next: press Generate 3D massing, or import a file for this area.'); else if (TOOLM === 'prect') hint('Drag a rectangle for the ground area. Esc to cancel.'); else if (!TOOLM) hint(MODE === 'plan' ? 'Click a building to select it; drag it to move, drag the dark tag to change its height. Drag the green corners to change the ground area.' : 'Click a building to review it. Switch to Plan to edit. Drag to pan, scroll to zoom.');
-  annUI();
+  annUI(); ancUI();
 }
 const hint = (t) => { $('#mhint').textContent = t; $('#mhint').hidden = !t; };
 let drag = null;
@@ -1056,7 +1112,7 @@ cv.addEventListener('pointerdown', (e) => { const r = cv.getBoundingClientRect()
   if (TOOLM === 'origin') { const ll = F.inv(p[0], p[1]); TOOLM = null; $('#originBtn').setAttribute('aria-pressed', 'false'); $('#cv').classList.remove('drawing'); setOrigin(ll[0], ll[1], ORIGIN.label, true); V.cx -= p[0]; V.cy -= p[1]; draw(); persist(); msg('#locMsg', 'Site point moved; the context was recomputed around it.', 'ok'); return; }
   drag = { x: e.clientX, y: e.clientY, cx: V.cx, cy: V.cy, moved: false }; cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', (e) => { const r = cv.getBoundingClientRect(); if (DRAW) { DRAW._cur = S2W(e.clientX - r.left, e.clientY - r.top); draw(); } if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; V.cx = drag.cx - dx / V.s; V.cy = drag.cy + dy / V.s; draw(); });
-cv.addEventListener('pointerup', (e) => { if (!drag) return; const r = cv.getBoundingClientRect(), p = S2W(e.clientX - r.left, e.clientY - r.top); if (!drag.moved) { const hit = site && site.buildings.slice().reverse().find((b) => b.xy.length && SITE.inside(p, b.xy)); if (hit) { SEL = hit.id; selUI(); draw(); } else if (ORIGIN && !(site && site.buildings.length)) { const ll = F.inv(p[0], p[1]); setOrigin(ll[0], ll[1], `${ll[0].toFixed(5)}, ${ll[1].toFixed(5)}`, true); V.cx -= p[0]; V.cy -= p[1]; draw(); msg('#locMsg', 'Site point set here.', 'ok'); } else { SEL = null; selUI(); draw(); } } drag = null; });
+cv.addEventListener('pointerup', (e) => { if (!drag) return; const r = cv.getBoundingClientRect(), p = S2W(e.clientX - r.left, e.clientY - r.top); if (!drag.moved) { const hit = site && site.buildings.slice().reverse().find((b) => b.xy.length && SITE.inside(p, b.xy)); if (hit) { SEL = hit.id; selUI(); draw(); } else if (site && !suppressParcelClick && parcelAt(p)) { const q = parcelAt(p); if (q.id !== site.parcelId) selectParcel(q.id); } else if (ORIGIN && !(site && site.buildings.length)) { const ll = F.inv(p[0], p[1]); setOrigin(ll[0], ll[1], `${ll[0].toFixed(5)}, ${ll[1].toFixed(5)}`, true); V.cx -= p[0]; V.cy -= p[1]; draw(); msg('#locMsg', 'Site point set here.', 'ok'); } else { SEL = null; selUI(); draw(); } } drag = null; });
 cv.addEventListener('dblclick', () => { if (TOOLM === 'poly') { DRAW.pop(); finishPoly(); } });
 cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(), p = S2W(e.clientX - r.left, e.clientY - r.top), k = Math.exp(-e.deltaY * 0.0015); V.s = Math.min(40, Math.max(0.05, V.s * k)); const q = S2W(e.clientX - r.left, e.clientY - r.top); V.cx += p[0] - q[0]; V.cy += p[1] - q[1]; draw(); }, { passive: false });
 addEventListener('keydown', (e) => { if (e.target.matches('input, select, textarea')) return; if (TOOLM === 'poly' && e.key === 'Enter') finishPoly(); if (e.key === 'Escape' && TOOLM) { DRAW = null; TOOLM = null; finishPoly(); $('#originBtn').setAttribute('aria-pressed', 'false'); } });
@@ -1129,7 +1185,7 @@ async function initMap() {
   ML.on('error', (e) => { if (!mlReady) { clearTimeout(t); fail('The map could not load (' + ((e && e.error && e.error.message) || 'map server unreachable').slice(0, 80) + ').'); } });
   ML.on('load', () => { clearTimeout(t); if (failed) return; mlReady = true; addLayers(); syncMap(!!ORIGIN); $('#cv').hidden = true; $('#attr').hidden = true; mapStatus('ok', ORIGIN ? 'Map: OpenStreetMap (OpenFreeMap tiles), CAD style. Set the area, then Generate.' : 'Map: OpenStreetMap (OpenFreeMap tiles), CAD style. Search, or click the map to place your site.'); evt('site_map', { ok: 1 }); });
   new ResizeObserver(() => { if (ML) ML.resize(); }).observe($('#mapbox'));   // the site sizes the tool's frame after the map starts
-  ML.on('click', onMapClick);
+  ML.on('click', onMapClick); ML.on('move', () => ancUI()); ML.on('resize', () => ancUI());
   ML.on('mousemove', (e) => { if (!mlReady || TOOLM) return; const f = ML.queryRenderedFeatures(e.point, { layers: ['blds-fill'] }); ML.getCanvas().style.cursor = f.length ? 'pointer' : ''; if (DRAW) { DRAW._cur = F ? F.fwd(e.lngLat.lat, e.lngLat.lng) : null; syncMap(); } });
   ML.on('dblclick', (e) => { if (TOOLM === 'poly') { e.preventDefault(); DRAW.pop(); finishPoly(); } });
 }
@@ -1150,22 +1206,28 @@ const DEF_STYLE = { version: 8, name: 'PlotCloud CAD', glyphs: 'https://tiles.op
   ] };
 const EMPTY = { type: 'FeatureCollection', features: [] };
 function addLayers() {
-  for (const id of ['bd', 'blds', 'pt', 'draw']) ML.addSource(id, { type: 'geojson', data: EMPTY });
-  ML.addLayer({ id: 'bd-fill', type: 'fill', source: 'bd', paint: { 'fill-color': '#d8402a', 'fill-opacity': 0.05 } });
-  ML.addLayer({ id: 'bd-line', type: 'line', source: 'bd', paint: { 'line-color': '#d8402a', 'line-width': 1.6, 'line-dasharray': [3, 2] } });
+  for (const id of ['bd', 'blds', 'pt', 'draw', 'parcels']) ML.addSource(id, { type: 'geojson', data: EMPTY });
+  try {
+  ML.addLayer({ id: 'bd-line', type: 'line', source: 'bd', paint: { 'line-color': '#D8402A', 'line-opacity': 0.55, 'line-width': 1.5, 'line-dasharray': [4, 2.7] } });
+  ML.addLayer({ id: 'parcel-fill', type: 'fill', source: 'parcels', paint: { 'fill-color': ['case', ['get', 'sel'], '#FBEDE8', '#ffffff'], 'fill-opacity': ['case', ['get', 'sel'], 0.9, 0.01] } });
+  ML.addLayer({ id: 'parcel-line', type: 'line', source: 'parcels', filter: ['!=', ['get', 'sel'], true], paint: { 'line-color': '#1C1B1A', 'line-width': 1.2, 'line-dasharray': [4, 2.5] } });
+  ML.addLayer({ id: 'parcel-sel', type: 'line', source: 'parcels', filter: ['==', ['get', 'sel'], true], paint: { 'line-color': '#D8402A', 'line-width': 2 } });
+  ML.addLayer({ id: 'parcel-lab', type: 'symbol', source: 'parcels', layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-allow-overlap': false }, paint: { 'text-color': '#1C1B1A', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
+  } catch (e) { console.warn('parcel layers', e); }
   ML.addLayer({ id: 'blds-fill', type: 'fill', source: 'blds', paint: { 'fill-color': ['match', ['get', 'st'], 'source', COL.source, 'levels', COL.levels, 'user', COL.user, 'estimate', COL.estimate, 'excluded', '#e9e7e1', '#ffffff'], 'fill-opacity': ['match', ['get', 'st'], 'excluded', 0.55, 0.88] } });
   ML.addLayer({ id: 'blds-line', type: 'line', source: 'blds', paint: { 'line-color': ['case', ['get', 'sel'], '#d8402a', ['match', ['get', 'st'], 'none', '#b3261e', 'invalid', '#b3261e', 'excluded', '#bdbab2', '#2b2a28']], 'line-width': ['case', ['get', 'sel'], 3, ['match', ['get', 'st'], 'none', 1.6, 'invalid', 1.6, 0.8]] } });
   ML.addLayer({ id: 'draw-line', type: 'line', source: 'draw', paint: { 'line-color': '#d8402a', 'line-width': 2 } });
   ML.addLayer({ id: 'pt', type: 'circle', source: 'pt', paint: { 'circle-radius': 6, 'circle-color': '#d8402a', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
 }
 const toLL = (p) => { const q = F.inv(p[0], p[1]); return [q[1], q[0]]; };
-function bdRing() { const bd = boundary(); if (bd.kind === 'polygon' && bd.pts) return bd.pts.map(toLL); const r = bd.r || 300, out = []; for (let k = 0; k <= 72; k++) { const a = k / 72 * Math.PI * 2; out.push(toLL([r * Math.cos(a), r * Math.sin(a)])); } return out; }
+function bdRing() { const bd = boundary(); if (bd.kind === 'polygon' && bd.pts) return bd.pts.map(toLL); const r = bd.r || 300, c = bd.c || [0, 0], out = []; for (let k = 0; k <= 72; k++) { const a = k / 72 * Math.PI * 2; out.push(toLL([c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)])); } return out; }
 function syncMap(fitIt) {
   if (!ML || !mlReady) return;
   const close = (r) => r.length && (r[0][0] !== r[r.length - 1][0] || r[0][1] !== r[r.length - 1][1]) ? r.concat([r[0]]) : r;
   ML.getSource('pt').setData(ORIGIN ? { type: 'Feature', geometry: { type: 'Point', coordinates: [ORIGIN.lon, ORIGIN.lat] }, properties: {} } : EMPTY);
   ML.getSource('bd').setData(ORIGIN && F ? { type: 'Feature', geometry: { type: 'Polygon', coordinates: [close(bdRing())] }, properties: {} } : EMPTY);
   ML.getSource('blds').setData({ type: 'FeatureCollection', features: site ? site.buildings.filter((b) => b.ll && b.ll.length > 2 && b.ll.every(Boolean)).map((b) => ({ type: 'Feature', properties: { id: b.id, st: statusOf(b), sel: b.id === SEL }, geometry: { type: 'Polygon', coordinates: [close(b.ll.map((p) => [p[1], p[0]]))].concat((b.llHoles || []).filter((h) => h.every(Boolean)).map((h) => close(h.map((p) => [p[1], p[0]])))) } })) : [] });
+  try { ML.getSource('parcels').setData({ type: 'FeatureCollection', features: site ? (site.parcels || []).filter((q) => q.pts.length > 2).map((q) => ({ type: 'Feature', properties: { id: q.id, sel: q.id === site.parcelId, area: SITE.shoelace(q.pts), label: `${q.id} · ${fmtM(SITE.shoelace(q.pts))} m²` }, geometry: { type: 'Polygon', coordinates: [close(q.pts.map(toLL))] } })) : [] }); } catch (e) { console.warn('parcels layer', e); }
   ML.getSource('draw').setData(DRAW && DRAW.length && F ? { type: 'Feature', geometry: { type: 'LineString', coordinates: DRAW.concat(DRAW._cur ? [DRAW._cur] : []).map(toLL) }, properties: {} } : EMPTY);
   if (fitIt && ORIGIN && F) { const r = bdRing(), lo = r.map((p) => p[0]), la = r.map((p) => p[1]); ML.fitBounds([[Math.min(...lo), Math.min(...la)], [Math.max(...lo), Math.max(...la)]], { padding: 36, duration: 0 }); }
 }
@@ -1174,6 +1236,7 @@ function onMapClick(e) {
   if (TOOLM === 'poly') { if (!F) return; DRAW.push(F.fwd(lat, lon)); syncMap(); return; }
   if (TOOLM === 'origin') { TOOLM = null; $('#originBtn').setAttribute('aria-pressed', 'false'); $('#mapbox').classList.remove('drawing'); setOrigin(lat, lon, ORIGIN && ORIGIN.label, true); syncMap(); persist(); msg('#locMsg', 'Site point moved; the context was recomputed around it.', 'ok'); return; }
   const f = ML.queryRenderedFeatures(e.point, { layers: ['blds-fill'] }); if (f.length) { select(f[0].properties.id); return; }
+  if (site && !suppressParcelClick) { const pf = ML.queryRenderedFeatures(e.point, { layers: ['parcel-fill'] }).sort((a, b) => a.properties.area - b.properties.area); if (pf.length) { if (pf[0].properties.id !== site.parcelId) selectParcel(pf[0].properties.id); return; } }
   if (!(site && site.buildings.length)) { setOrigin(lat, lon, `${lat.toFixed(5)}, ${lon.toFixed(5)}`, true); syncMap(); mapStatus('ok', 'Site point set. Next: set the area, then Fetch buildings (right).'); msg('#locMsg', 'Site point set here. Change the area shape or radius, then fetch buildings.', 'ok'); return; }
   if (SEL) { SEL = null; selUI(); draw(); }
 }
@@ -1187,16 +1250,29 @@ $('#chkBtn').addEventListener('click', async () => {
 
 // ===================== v132 · 12 · editing the surroundings: massing boxes and the ground area =====================
 // One selection language with Plan Studio: blue box, 8 handles, a turn handle (off: boxes keep their footprint's orientation), the same 6-button toolbar.
-let MOVE = null, PDRAG = null, PR = null, HOVB = null; const UNDO = [], REDO = [];
+let MOVE = null, PDRAG = null, PR = null, HOVB = null, PCLK = null; const UNDO = [], REDO = [];
 const selB = () => site && SEL ? site.buildings.find((x) => x.id === SEL) : null;
-const snapSite = () => JSON.stringify({ buildings: site.buildings, parcel: site.parcel || null, yourSite: site.yourSite || null });
-function pushU() { if (!site) return; UNDO.push(snapSite()); if (UNDO.length > 100) UNDO.shift(); REDO.length = 0; undoUI(); }
-function undoUI() { $('#uUndo').disabled = !UNDO.length; $('#uRedo').disabled = !REDO.length; }
-function restoreSnap(js) { const o = JSON.parse(js); site.buildings = o.buildings; site.parcel = o.parcel; site.yourSite = o.yourSite; site.version++; if (SEL && !site.buildings.some((b) => b.id === SEL)) SEL = null; refresh(); }
+const HMAX = 50;   // history: at most 50 snapshots, the oldest is dropped
+const snapSite = () => JSON.stringify({ buildings: site.buildings, parcel: site.parcel || null, parcels: site.parcels || [], parcelId: site.parcelId || null, yourSite: site.yourSite || null, anchor: { x: AN.x, y: AN.y }, shape: SHAPE, size: studySize(), program: PROG, boundary: site.boundary || null });
+function pushU() { if (!site) return; UNDO.push(snapSite()); if (UNDO.length > HMAX) UNDO.shift(); REDO.length = 0; undoUI(); }
+function undoUI() { $('#uUndo').disabled = !UNDO.length; $('#uRedo').disabled = !REDO.length; $('#uReset').disabled = !site; }
+// one way back: put the whole state back, then bring the drawing, the inputs and the pills in line with it
+function syncInputs() { sumUI(); $('#shape').value = SHAPE === 'polygon' && !polyBoundary() ? 'circle' : SHAPE; $('#radO').textContent = radText();
+  $('#pgArea').value = PROG.area; $('#pgFar').value = PROG.far; $('#pgH').value = PROG.height; $('#pgCov').value = PROG.coverage; if (typeof parcelSelUI === 'function') parcelSelUI(); bdUI(); }
+function syncPills() { for (const b of $$('#pgEnt [data-ent]')) b.setAttribute('aria-pressed', String(b.dataset.ent === PROG.entrance)); }
+function applyState(o) { site.buildings = o.buildings; site.parcel = o.parcel; site.parcels = o.parcels || []; site.parcelId = o.parcelId || null; site.yourSite = o.yourSite; AN = { x: o.anchor.x, y: o.anchor.y }; SHAPE = o.shape; PROG = Object.assign({}, PROG0, o.program); site.program = Object.assign({}, PROG); site.boundary = o.boundary || null; setRange(SHAPE, o.size); site.version++; if (SEL && !site.buildings.some((b) => b.id === SEL)) SEL = null; }
+function render() { syncInputs(); syncPills(); refresh(); }
+function restoreSnap(js) { applyState(JSON.parse(js)); render(); }
 function undo() { if (!UNDO.length) return; REDO.push(snapSite()); restoreSnap(UNDO.pop()); undoUI(); }
 function redo() { if (!REDO.length) return; UNDO.push(snapSite()); restoreSnap(REDO.pop()); undoUI(); }
-$('#uUndo').addEventListener('click', undo); $('#uRedo').addEventListener('click', redo);
-function refresh() { draw(); reviewUI(); selUI(); parcelUI(); persist(); if (MODE === '3d') upd3D(false); if (ML && mlReady) syncMap(); }
+function stoast(t) { const e = $('#stoast'); e.textContent = t; e.hidden = false; clearTimeout(stoast.t); stoast.t = setTimeout(() => { e.hidden = true; }, 2600); }
+// Reset: the defaults, with the current state pushed first so Reset itself can be undone
+function resetAll() { if (!site) return; pushU(); const A1 = (site.parcels || []).find((q) => q.id === 'A-1') || (site.parcels || [])[0] || null;
+  SHAPE = 'circle'; setRange('circle', SITE.STUDY.def); PROG = Object.assign({}, PROG0);
+  if (A1) { site.parcelId = A1.id; site.parcel = parcelObj(A1); PROG.area = Math.round(SITE.shoelace(A1.pts)); const c = SITE.centroid(A1.pts); AN = { x: r1(c[0]), y: r1(c[1]) }; } else { AN = { x: 0, y: 0 }; }
+  site.program = Object.assign({}, PROG); site.boundary = boundary(); rebuild(); site.version++; render(); undoUI(); stoast('Reset — undo available'); }
+$('#uUndo').addEventListener('click', undo); $('#uRedo').addEventListener('click', redo); $('#uReset').addEventListener('click', resetAll);
+function refresh() { draw(); reviewUI(); selUI(); parcelUI(); sumUI(); persist(); if (MODE === '3d') upd3D(false); if (ML && mlReady) syncMap(); }
 function setH(id, h) { const b = site.buildings.find((x) => x.id === id); if (!b || b.locked) return; if (!(h > (b.base || 0) + 0.4)) { msg('#nextMsg', 'Type a height in meters, above the building’s base.', 'warn'); selUI(); return; } pushU(); SITE.setHeight(site, id, +(+h).toFixed(2)); msg('#nextMsg', `Height ${b.h} m, labeled “entered by you”.`, 'ok'); refresh(); }
 function delSel() { const b = selB(); if (!b || b.locked || b.deleted) return; pushU(); SITE.deleteBuilding(site, b.id); msg('#nextMsg', 'Deleted. Its place is marked “your site”; Ctrl+Z brings the building back.', 'ok'); SEL = null; refresh(); }
 const bbOf = (pts) => { const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
@@ -1213,7 +1289,7 @@ function annUI() {
     out.push(`<line class="an-rl off" x1="${mx}" y1="${a[1]}" x2="${mx}" y2="${a[1] - 26}"/><circle class="an-rot off" cx="${mx}" cy="${a[1] - 26}" r="6"><title>Massing boxes keep their footprint’s orientation</title></circle>`);
     if (b.h != null && b.valid) { const t = `↕ ${(+b.h).toFixed(1)} m`, tw = t.length * 7.2 + 14; out.push(`<g class="hgrip${lk ? ' off' : ''}" role="slider" aria-label="Height ${b.h} meters; drag up or down" aria-valuenow="${b.h}"><rect x="${c[0] + 10}" y="${my - 12}" width="${tw}" height="24" rx="12"/><text x="${c[0] + 10 + tw / 2}" y="${my + 4.5}">${t}</text></g>`); } }
   if (site.parcel && site.parcel.pts.length > 2) { const P = PDRAG ? PDRAG.pts : site.parcel.pts; P.forEach((p, i) => { const q = S(p); out.push(`<rect class="pv" data-pv="${i}" x="${q[0] - 5}" y="${q[1] - 5}" width="10" height="10"><title>Drag to move this corner</title></rect>`); });
-    const cc = S(SITE.centroid(P)), t = `${Math.round(SITE.shoelace(P)).toLocaleString('en-CA')} m²`, tw = t.length * 7.4 + 14; out.push(`<g class="ptag" data-area="${SITE.shoelace(P).toFixed(2)}"><rect x="${cc[0] - tw / 2}" y="${cc[1] - 11}" width="${tw}" height="22" rx="11"/><text x="${cc[0]}" y="${cc[1] + 4.5}">${t}</text></g>`); }
+ }
   svg.innerHTML = out.join('');
   // the toolbar: same six buttons, same order; what does not apply to a massing box is greyed with the reason
   if (!b || b.deleted || !bb || MOVE) { tb.hidden = true; return; }
@@ -1225,13 +1301,13 @@ function annUI() {
 $('#sftb').addEventListener('click', (e) => { const btn = e.target.closest('[data-ft]'), b = selB(); if (!btn || btn.disabled || !b) return; const k = btn.dataset.ft;
   if (k === 'hide') { pushU(); SITE.setExcluded(site, b.id, !b.excluded); refresh(); } else if (k === 'lock') { pushU(); if (b.locked) delete b.locked; else b.locked = true; site.version++; refresh(); } else if (k === 'del') delSel(); });
 // the ground area panel: area (shoelace), where it came from, edge lengths you can type
-function parcelUI() { const P = site && site.parcel; $('#pArea').textContent = P ? `${Math.round(SITE.shoelace(P.pts)).toLocaleString('en-CA')} m²` : '—';
+function parcelUI() { parcelSelUI(); const P = site && site.parcel; $('#pArea').textContent = P ? `${Math.round(SITE.shoelace(P.pts)).toLocaleString('en-CA')} m²` : '—';
   $('#pSrc').textContent = !site ? 'Generate the massing first.' : P ? `From ${P.source === 'osm-landuse' ? P.note : 'a rectangle you drew'}. Drag its green corners on the plan, or type edge lengths.` : 'No land-use area at the site point in the data. Draw a rectangle on the plan.';
   $('#pEdges').innerHTML = P && P.pts.length <= 12 ? SITE.edges(P.pts).map((L, i) => `<label>Edge ${i + 1} (m)<input class="num" type="number" min="0.5" step="0.1" data-pe="${i}" value="${L.toFixed(2)}"></label>`).join('') : '';
-  $('#pOsm').disabled = !site || !raws.length; }
+  $('#pOsm').disabled = !site || !(site.parcels || []).some((x) => x.kind === 'osm'); }
 $('#pEdges').addEventListener('change', (e) => { const i = e.target.dataset.pe; if (i == null || !site.parcel) return; pushU(); if (!SITE.setEdge(site.parcel.pts, +i, +e.target.value)) { msg('#nextMsg', 'Type a length in meters.', 'warn'); } site.parcel.source = site.parcel.source === 'osm-landuse' ? 'osm-landuse (edited)' : site.parcel.source; refresh(); });
 $('#pDraw').addEventListener('click', () => { if (!site) { msg('#nextMsg', 'Generate the massing first.', 'warn'); return; } if (TOOLM === 'prect') { TOOLM = null; PR = null; $('#pDraw').setAttribute('aria-pressed', 'false'); draw(); return; } if (MODE !== 'plan') setMode('plan'); TOOLM = 'prect'; PR = null; $('#pDraw').setAttribute('aria-pressed', 'true'); draw(); });
-$('#pOsm').addEventListener('click', () => { const pc = raws.length ? SITE.parcelFrom(raws[0].parsed, ORIGIN) : null; if (!pc) { msg('#nextMsg', 'The data has no land-use area at the site point. Draw a rectangle instead.', 'warn'); return; } pushU(); site.parcel = pc; refresh(); msg('#nextMsg', `Ground area from ${pc.note}.`, 'ok'); });
+$('#pOsm').addEventListener('click', () => { const q = site && (site.parcels || []).filter((x) => x.kind === 'osm' && SITE.inside([0, 0], x.pts)).sort((a, b) => SITE.shoelace(a.pts) - SITE.shoelace(b.pts))[0]; if (!q) { msg('#nextMsg', 'The data has no land-use area at the site point. Draw a rectangle instead.', 'warn'); return; } selectParcel(q.id); msg('#nextMsg', `Ground area from ${q.note}.`, 'ok'); });
 // pointer on the plan (before the map handlers): ground-area corners and rectangle, select, move; elsewhere a drag pans
 const evW = (e) => { const r = cv.getBoundingClientRect(); return S2W(e.clientX - r.left, e.clientY - r.top); };
 let PAN = null;
@@ -1240,6 +1316,7 @@ cv.addEventListener('pointerdown', (e) => { if (MODE !== 'plan' || !site || e.bu
   const hit = site.buildings.slice().reverse().find((b) => b.xy.length && !b.deleted && SITE.inside(p, b.xy));
   if (hit) { if (SEL !== hit.id) { SEL = hit.id; selUI(); draw(); } if (!hit.locked && !hit.excluded && hit.valid) { MOVE = { id: hit.id, p0: p, dx: 0, dy: 0 }; cv.setPointerCapture(e.pointerId); } return; }
   if (SEL) { SEL = null; selUI(); }
+  PCLK = { x: e.clientX, y: e.clientY, p };
   PAN = { x: e.clientX, y: e.clientY, cx: V.cx, cy: V.cy }; cv.setPointerCapture(e.pointerId); draw(); }, true);
 cv.addEventListener('pointermove', (e) => { if (MODE !== 'plan' || !site) return; e.stopImmediatePropagation(); const p = evW(e);
   if (PR) { PR.b = p; draw(); return; }
@@ -1247,9 +1324,9 @@ cv.addEventListener('pointermove', (e) => { if (MODE !== 'plan' || !site) return
   if (PAN) { V.cx = PAN.cx - (e.clientX - PAN.x) / V.s; V.cy = PAN.cy + (e.clientY - PAN.y) / V.s; draw(); return; }
   const h = site.buildings.slice().reverse().find((b) => b.xy.length && !b.deleted && SITE.inside(p, b.xy)), id = h ? h.id : null; if (id !== HOVB) { HOVB = id; annUI(); cv.style.cursor = h ? (h.id === SEL && !h.locked ? 'move' : 'pointer') : ''; } }, true);
 cv.addEventListener('pointerup', (e) => { if (MODE !== 'plan' || !site) return; e.stopImmediatePropagation();
-  if (PR) { const P = PR; PR = null; if (P.b && Math.abs(P.b[0] - P.a[0]) > 1 && Math.abs(P.b[1] - P.a[1]) > 1) { pushU(); site.parcel = SITE.rectParcel(P.a, P.b); TOOLM = null; $('#pDraw').setAttribute('aria-pressed', 'false'); refresh(); } else draw(); return; }
+  if (PR) { const P = PR; PR = null; if (P.b && Math.abs(P.b[0] - P.a[0]) > 1 && Math.abs(P.b[1] - P.a[1]) > 1) { pushU(); { const q = addDrawnParcel(SITE.rectParcel(P.a, P.b)); TOOLM = null; $('#pDraw').setAttribute('aria-pressed', 'false'); selectParcel(q.id, false); } } else draw(); return; }
   if (MOVE) { const M0 = MOVE; MOVE = null; if (Math.hypot(M0.dx, M0.dy) > 0.05) { pushU(); SITE.moveBuilding(site, M0.id, M0.dx, M0.dy); msg('#nextMsg', `Moved ${Math.hypot(M0.dx, M0.dy).toFixed(1)} m.`, 'ok'); refresh(); } else draw(); return; }
-  PAN = null; }, true);
+  PAN = null; if (PCLK) { const C = PCLK; PCLK = null; if (Math.hypot(e.clientX - C.x, e.clientY - C.y) < 4 && !suppressParcelClick) { const q = parcelAt(C.p); if (q && q.id !== site.parcelId) selectParcel(q.id); } } }, true);
 cv.addEventListener('pointerleave', () => { if (HOVB) { HOVB = null; annUI(); } });
 // handles: corners and edges scale the footprint (the opposite side stays); the height tag; the ground-area corners
 $('#sann').addEventListener('pointerdown', (e) => {
@@ -1270,7 +1347,88 @@ addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('i
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); delSel(); return; }
   if (e.key.startsWith('Arrow') && !b.locked && !b.excluded) { e.preventDefault(); const st = e.shiftKey ? 5 : 1, dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dy = e.key === 'ArrowUp' ? st : e.key === 'ArrowDown' ? -st : 0; pushU(); SITE.moveBuilding(site, b.id, dx, dy); refresh(); }
   if (e.key === 'Escape') { if (TOOLM === 'prect') { TOOLM = null; PR = null; $('#pDraw').setAttribute('aria-pressed', 'false'); } SEL = null; selUI(); draw(); } });
-window.__siteEdit = { mesh3d: () => { if (!R3 || !R3.grp) return []; const out = []; R3.grp.traverse((m) => { if (m.isMesh && m.userData && m.userData.id) { const bb = new R3.T.Box3().setFromObject(m); out.push({ id: m.userData.id, top: +bb.max.y.toFixed(3), est: m.userData.est }); } }); return out; }, pushU, undo, redo, setH, delSel, get UNDO() { return UNDO; }, setMode, get MODE() { return MODE; }, siteModel: () => site && SITE.siteModel(site) };
+
+// ---------- v138 · the anchor: a red point you can drag; the study area is centred on it, and later sun / wind analysis starts from it ----------
+// Positions are metres in the site frame (x east, y north of the site point), kept to 0.1 m; the screen position is derived on every draw, so map zoom and pan never change them.
+function scr(p) { if (ML && mlReady && F && MODE === 'map') { const q = ML.project(toLL(p)); return [q.x, q.y]; } return W2S(p); }
+function scr2w(x, y) { if (ML && mlReady && F && MODE === 'map') { const ll = ML.unproject([x, y]); return F.fwd(ll.lat, ll.lng); } return S2W(x, y); }
+const anchorText = () => `anchor (${AN.x.toFixed(1)}, ${AN.y.toFixed(1)}) m`;
+function ancUI() {
+  const svg = $('#sanc'); if (!svg) return; const show = !!ORIGIN && MODE !== '3d'; svg.hidden = !show; if (!show) return;
+  const bd = boundary(), c = scr([AN.x, AN.y]), box = $('#mapbox'), W = box.clientWidth, H = box.clientHeight;
+  const g0 = $('#anchor'); g0.setAttribute('transform', `translate(${c[0].toFixed(1)},${c[1].toFixed(1)})`); $('#alab').textContent = anchorText(); g0.setAttribute('aria-valuetext', anchorText());
+  // the study area label sits on top of the shape
+  let top, cx; if (bd.kind === 'polygon') { const q = bd.pts.map(scr); top = Math.min(...q.map((p) => p[1])); cx = (Math.min(...q.map((p) => p[0])) + Math.max(...q.map((p) => p[0]))) / 2; } else { const o = scr(bd.c || [0, 0]), e = scr([(bd.c || [0, 0])[0], (bd.c || [0, 0])[1] + bd.r]); top = o[1] - Math.hypot(e[0] - o[0], e[1] - o[1]); cx = o[0]; }
+  const y = Math.max(56, Math.min(H - 40, top - 22)), x = Math.max(150, Math.min(W - 150, cx));
+  $('#slab').textContent = `Study area ≈ ${fmtM(studyArea(bd))} m²`; $('#slab').setAttribute('x', x); $('#slab').setAttribute('y', y); $('#sfine').setAttribute('x', x); $('#sfine').setAttribute('y', y + 12);
+}
+let ADRAG = null, akT = 0;
+function setAnchor(x, y, live) { AN = { x: r1(x), y: r1(y) }; if (site) site.boundary = boundary(); ancUI(); draw(); if (ML && mlReady) syncMap(); if (!live) { bdUI(); } }
+function commitAnchor() { if (site) { site.boundary = boundary(); rebuild(); } persist(); bdUI(); sumUI(); draw(); if (ML && mlReady) syncMap(); }
+$('#anchor').addEventListener('pointerdown', (e) => { if (e.button !== 0 || !ORIGIN) return; e.preventDefault(); e.stopPropagation(); const g0 = $('#anchor'); g0.setPointerCapture(e.pointerId); g0.focus({ preventScroll: true });
+  ADRAG = { id: e.pointerId, x0: e.clientX, y0: e.clientY, from: { x: AN.x, y: AN.y }, before: site ? snapSite() : null, moved: false }; });
+$('#anchor').addEventListener('pointermove', (e) => { if (!ADRAG || e.pointerId !== ADRAG.id) return; const d = Math.hypot(e.clientX - ADRAG.x0, e.clientY - ADRAG.y0);
+  if (!ADRAG.moved) { if (d < 4) return; ADRAG.moved = true; suppressParcelClick = true; $('#anchor').classList.add('grabbing'); }
+  const r = $('#mapbox').getBoundingClientRect(), px = Math.max(0, Math.min(r.width, e.clientX - r.left)), py = Math.max(0, Math.min(r.height, e.clientY - r.top)), w = scr2w(px, py); setAnchor(w[0], w[1], true); });
+function endAnchorDrag(e, cancel) { if (!ADRAG || (e && e.pointerId !== ADRAG.id)) return; const D = ADRAG; ADRAG = null; $('#anchor').classList.remove('grabbing'); try { $('#anchor').releasePointerCapture(D.id); } catch (er) {}
+  if (D.moved) { setTimeout(() => { suppressParcelClick = false; }, 150);
+    if (cancel) { setAnchor(D.from.x, D.from.y); commitAnchor(); return; }
+    if (AN.x !== D.from.x || AN.y !== D.from.y) { if (D.before) { UNDO.push(D.before); if (UNDO.length > HMAX) UNDO.shift(); REDO.length = 0; undoUI(); } commitAnchor(); } } }
+$('#anchor').addEventListener('pointerup', (e) => endAnchorDrag(e, false)); $('#anchor').addEventListener('pointercancel', (e) => endAnchorDrag(e, true));
+$('#anchor').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ADRAG && ADRAG.moved) { e.stopPropagation(); endAnchorDrag(null, true); return; }
+  if (!e.key.startsWith('Arrow')) return; e.preventDefault(); e.stopPropagation(); const st = e.shiftKey ? 5 : 1, dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dy = e.key === 'ArrowUp' ? st : e.key === 'ArrowDown' ? -st : 0;
+  if (!akT && site) { UNDO.push(snapSite()); if (UNDO.length > HMAX) UNDO.shift(); REDO.length = 0; undoUI(); }   // presses within 300 ms of each other are one history step
+  clearTimeout(akT); akT = setTimeout(() => { akT = 0; commitAnchor(); }, 300); setAnchor(AN.x + dx, AN.y + dy, true); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && ADRAG && ADRAG.moved) { e.preventDefault(); endAnchorDrag(null, true); } }, true);
+// your site: the five numbers the first read-out and the assumptions come from
+function commitProg() { if (site) site.program = Object.assign({}, PROG); syncPills(); sumUI(); persist(); }
+for (const [id, key, lo, hi] of [['pgArea', 'area', 1, 1e9], ['pgFar', 'far', 0.1, 50], ['pgH', 'height', 1, 500], ['pgCov', 'coverage', 1, 100]]) $('#' + id).addEventListener('change', (e) => { const v = +e.target.value; if (!(v >= lo && v <= hi)) { syncInputs(); msg('#nextMsg', 'Type a number in the allowed range.', 'warn'); return; } if (v === PROG[key]) return; pushU(); PROG[key] = v; commitProg(); });
+$('#pgEnt').addEventListener('click', (e) => { const b = e.target.closest('[data-ent]'); if (!b || b.dataset.ent === PROG.entrance) return; pushU(); PROG.entrance = b.dataset.ent; commitProg(); });
+// ---------- v138 · the right side at a glance: one summary line, at most three short assumptions, one line about the data ----------
+// hypo(state) → string[]: the conclusions only, worked out from the five numbers. Swap the body when real code data is wired in.
+function hypo(S) { const gfa = S.area * S.far, fp = S.area * S.coverage / 100, fl = Math.floor(S.height / 3), out = [];
+  out.push(`FAR ${S.far} on ${fmtM(S.area)} m² ≈ ${fmtM(gfa)} m² GFA — check against program`);
+  out.push(`Coverage ${S.coverage}% → ${fmtM(fp)} m² footprint; that GFA needs about ${(gfa / Math.max(1, fp)).toFixed(1)} floors`);
+  out.push(`${S.height} m ≈ ${fl} floors at 3 m: ${fl * fp >= gfa ? 'room for that GFA' : 'short by ' + fmtM(gfa - fl * fp) + ' m²'}`);
+  return out.slice(0, 3); }
+const shapeWord = () => SHAPE === 'polygon' ? 'boundary' : SHAPE;
+function sumUI() { const row = $('#sumRow'); if (!row) return; const q = site && site.parcel;
+  row.textContent = site ? `${q ? q.id : 'no parcel'} · ${fmtM(PROG.area)} m² · ${anchorText()} · ${shapeWord()}` : 'Generate a site to begin';
+  $('#hypo').innerHTML = site ? hypo(PROG).map((t) => `<li>${esc(t)}</li>`).join('') : '';
+  $('#dnote').textContent = !site ? '' : site.fixture ? 'Demo geometry — not real city data' : (site.sources || []).some((x) => /osm|overpass/.test(x.provider)) ? 'Map data © OpenStreetMap contributors; heights marked est. are estimates' : 'Geometry from the file you imported'; }
+// the right column: the summary on top, then the steps as an accordion (one open at a time, the one that matters now), numbered 1, 2, 3 … without gaps
+(function rightSide() { const R = document.querySelector('#panelR .colIn'); if (!R) return; const sec = document.createElement('section'); sec.className = 'sec sumsec'; sec.id = 'secSum'; sec.setAttribute('aria-label', 'Your site at a glance');
+  sec.innerHTML = '<div class="parsel"><label class="note" for="parSel">Your site</label><select id="parSel" aria-label="Choose your site from the parcels"></select></div><div class="sumrow" id="sumRow" aria-live="polite"></div><ul class="hypo" id="hypo"></ul><p class="dnote" id="dnote"></p>'; R.prepend(sec);
+  const steps = () => [...R.querySelectorAll(':scope > .sec:not(.sumsec)')].filter((x) => x.querySelector('h2'));
+  const renumber = () => { let n = 0; for (const x of steps()) { if (x.hidden) continue; n++; const i = x.querySelector('h2 i'); if (i) i.textContent = n; } };
+  const open = (x) => { for (const y of steps()) { const on = y === x; y.classList.toggle('shut', !on); const h = y.querySelector('h2'); if (h) h.setAttribute('aria-expanded', String(on)); } };
+  for (const x of steps()) { const h = x.querySelector('h2'); h.tabIndex = 0; h.setAttribute('role', 'button'); h.setAttribute('aria-expanded', 'false'); x.classList.add('shut', 'accr'); const go = () => open(x.classList.contains('shut') ? x : null); h.addEventListener('click', go); h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }); }
+  window.__rightOpen = (id) => { const x = R.querySelector(`#${id}`); open(x ? x.closest('.sec') : null); renumber(); }; window.__renumber = renumber;
+  new MutationObserver(renumber).observe(R, { attributes: true, subtree: true, attributeFilter: ['hidden'] }); open(R.querySelector('#h-data').closest('.sec')); renumber(); })();
+window.__siteEdit = { toPx: (p) => W2S(p), get AN() { return AN; }, get PROG() { return PROG; }, get SHAPE() { return SHAPE; }, studyArea, boundary, anchorText, resetAll, render, mesh3d: () => { if (!R3 || !R3.grp) return []; const out = []; R3.grp.traverse((m) => { if (m.isMesh && m.userData && m.userData.id) { const bb = new R3.T.Box3().setFromObject(m); out.push({ id: m.userData.id, top: +bb.max.y.toFixed(3), est: m.userData.est }); } }); return out; }, pushU, undo, redo, setH, delSel, get UNDO() { return UNDO; }, setMode, get MODE() { return MODE; }, siteModel: () => site && SITE.siteModel(site) };
+
+
+// ---------- v138 · parcels: every land-use area in the data is a parcel; one entry, selectParcel(id), is used by the plan, the map and the list ----------
+const LETTER = { residential: 'A', commercial: 'B', retail: 'B', industrial: 'C' };
+function mergeParcels() {   // recompute the land-use parcels from the raw data; keep the drawn ones and the ids already given
+  if (!site) return; const prev = site.parcels || [], byRef = new Map(prev.filter((q) => q.kind === 'osm').map((q) => [q.ref, q])), cnt = {};
+  for (const q of prev) if (q.kind === 'osm') { const [L, n] = q.id.split('-'); cnt[L] = Math.max(cnt[L] || 0, +n); }
+  const all = []; for (const r of raws) all.push(...SITE.areaParcels(r.parsed, ORIGIN)); all.sort((a, b) => String(a.ref).localeCompare(String(b.ref), undefined, { numeric: true }));
+  const fresh = all.map((a) => { const old = byRef.get(a.ref); if (old) { if (!old.edited) { old.pts = a.pts; } return old; } const L = LETTER[a.landuse] || 'D'; cnt[L] = (cnt[L] || 0) + 1; const id = `${L}-${cnt[L]}`; return { id, kind: 'osm', ref: a.ref, landuse: a.landuse, pts: a.pts, source: 'osm-landuse', note: `OpenStreetMap land use “${a.landuse}” (${id})` }; });
+  fresh.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })); site.parcels = fresh.concat(prev.filter((q) => q.kind === 'drawn'));
+  site.parcel = site.parcels.find((q) => q.id === site.parcelId) || null; if (!site.parcel) site.parcelId = null; sumUI(); }
+const parcelObj = (q) => q;   // the selected parcel is the parcel itself, so editing its corners edits the list entry
+function parcelAt(p) { return site && (site.parcels || []).slice().sort((a, b) => SITE.shoelace(a.pts) - SITE.shoelace(b.pts)).find((q) => SITE.inside(p, q.pts)) || null; }
+function defaultParcel() { const P = (site && site.parcels) || []; return P.filter((q) => SITE.inside([0, 0], q.pts)).sort((a, b) => SITE.shoelace(a.pts) - SITE.shoelace(b.pts))[0] || P[0] || null; }
+// the order is fixed: the area input is filled, the anchor jumps to the centroid, the study area follows it
+function selectParcel(id, push = true) { if (!site) return; const q = (site.parcels || []).find((x) => x.id === id); if (!q) return; if (push && id !== site.parcelId) pushU();
+  site.parcelId = id; site.parcel = parcelObj(q); PROG.area = Math.round(SITE.shoelace(q.pts)); const c = SITE.centroid(q.pts); AN = { x: r1(c[0]), y: r1(c[1]) };
+  site.program = Object.assign({}, PROG); site.boundary = boundary(); rebuild(); site.version++; render(); }
+function addDrawnParcel(rect) { const n = (site.parcels || []).filter((q) => q.kind === 'drawn').length + 1, q = { id: 'D-' + n, kind: 'drawn', ref: 'drawn', pts: rect.pts, source: 'drawn', note: 'drawn by you' }; site.parcels = (site.parcels || []).concat([q]); return q; }
+function parcelSelUI() { const sel = $('#parSel'); if (!sel) return; const P = (site && site.parcels) || [];
+  sel.innerHTML = P.length ? P.map((q) => `<option value="${esc(q.id)}" ${q.id === (site && site.parcelId) ? 'selected' : ''}>${esc(q.id)} · ${fmtM(SITE.shoelace(q.pts))} m²</option>`).join('') : '<option value="">No parcels yet</option>'; sel.disabled = !P.length; if (P.length && !site.parcelId) sel.selectedIndex = -1; }
+$('#parSel').addEventListener('change', (e) => { if (e.target.value) selectParcel(e.target.value); });
 
 // ---------- helpers, start ----------
 function msg(sel, t, k) { const m = $(sel); m.textContent = t || ''; m.className = 'msg ' + (k || ''); }
