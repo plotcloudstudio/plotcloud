@@ -690,7 +690,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "7015b769", "composer": "0459c881", "studio": "fcccf77e", "atlas": "76640f81"}; const EMBCACHE = {};
+const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "7015b769", "composer": "0459c881", "studio": "fcccf77e", "atlas": "38b8c5f1"}; const EMBCACHE = {};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
@@ -3693,7 +3693,7 @@ route();
 
 // === Site analysis atlas (2026-10-19): eight diagrams in one style replace the two cards of the Site analysis group ===
 EMB["atlas"] = "@";
-EMBI["atlas"] = { title: "site analysis atlas", crumb: "Site analysis atlas", short: "Eight diagrams, one site, one style: figure-ground, streets, land use, green and water, transit, walking, site reading, and boards to lay them out.", lede: "Eight diagrams in one drawing style. Each reads the same site and radius and states only numbers computed from the geometry." };
+EMBI["atlas"] = { title: "site analysis", crumb: "Site Analysis", short: "Pick the site once, choose the analyses, generate eight diagrams in one style.", lede: "Pick the site once, choose the analyses, generate them in one style." };
 if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
 { const ATLAS = [
     ["fg", "Figure-ground", "Buildings as solid black on white: how dense the ground is."],
@@ -3719,14 +3719,14 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
     else g = `<rect width="300" height="180" fill="#F4F2EC"/><circle cx="105" cy="70" r="26" fill="#F4C542"/><g stroke="#F4C542" stroke-width="2">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M${105 + Math.cos(a * Math.PI / 180) * 34} ${70 + Math.sin(a * Math.PI / 180) * 34}L${105 + Math.cos(a * Math.PI / 180) * 44} ${70 + Math.sin(a * Math.PI / 180) * 44}"/>`).join("")}</g><g stroke="#2F6DB5" stroke-width="2" fill="none" stroke-linecap="round"><path d="M150 120C185 105 205 135 245 118"/><path d="M140 140C180 128 205 156 262 138"/><path d="M165 100C190 90 215 110 250 98"/></g>`;
     const clip = d === "sunwind" ? "" : `<clipPath id="atc-${d}"><circle cx="150" cy="90" r="82"/></clipPath>`;
     return `<svg viewBox="0 0 300 180" aria-hidden="true" style="background:#fff">${clip}<g ${d === "sunwind" ? "" : `clip-path="url(#atc-${d})"`}>${g}</g>${d === "sunwind" ? "" : '<circle cx="150" cy="90" r="82" fill="none" stroke="#1C1B1A" stroke-width=".8"/>'}</svg>`; };
-  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site analysis <span>(8)</span></h3><p class="asub-l">Eight diagrams · one site · one style.</p><div class="tgrid2">${ATLAS.map(([d, n, t], i) => `<article class="tc"><div class="tc-vis atl go" data-go="tool/atlas?d=${d}">${thumb(d)}</div><div class="tc-body" data-go="tool/atlas?d=${d}"><div class="tc-head"><span class="tc-no">03.${i + 1}</span><h3>${n}</h3></div><p class="tc-d">${t}</p><span class="tc-open">Open →</span></div></article>`).join("")}</div></div>`;
+  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site analysis <span>(1)</span></h3><p class="asub-l">Eight diagrams · one site · one style.</p><div class="tgrid2"><article class="tc"><div class="tc-vis atl go" data-go="tool/atlas">${thumb("land")}</div><div class="tc-body" data-go="tool/atlas"><div class="tc-head"><h3>Site Analysis</h3></div><p class="tc-d">Pick a place once, then draw urban fabric, streets, uses, green and water, transit, walking, the site and the sun.</p><span class="tc-open">Open →</span></div></article></div></div>`;
   const _t = tSections; tSections = function () { const h = _t.apply(this, arguments), a = h.indexOf('<div class="agrp" id="agrp-site">'), b = h.indexOf('<div class="agrp" id="agrp-interior">'); if (a < 0 || b < 0) return h; return h.slice(0, a) + html() + h.slice(b); };
   const st = document.createElement("style"); st.textContent = `.tc-vis.atl{display:grid;place-items:center;background:#fff;aspect-ratio:5/3;overflow:hidden}.tc-vis.atl svg{width:100%;height:100%;display:block}`; document.head.appendChild(st); }
 
 /* v140 · home: one main line of six steps replaces the Practice / Competition journeys */
 (function () {
   const STEPS = [
-    { n: 1, name: "Analysis diagrams", go: "tool/atlas", p: "Read the place: streets, land use, walking and more.", cta: "Open the atlas" },
+    { n: 1, name: "Site Analysis", go: "tool/atlas", p: "Read the place: streets, land use, walking and more.", cta: "Open Site Analysis" },
     { n: 2, name: LABELS.site, go: "site", p: "Pick the site, set its boundary and drop the anchor.", cta: "Open " + LABELS.site },
     { n: 3, name: LABELS.studio, go: "studio", p: "Draw the plan inside the boundary, with its surroundings.", cta: "Open " + LABELS.studio },
     { n: 4, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
@@ -3767,7 +3767,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   const EMBEDDED = window.parent !== window && /[?&]drawer=1/.test(location.search);
   const SIM = window.__simfs || [];
   const STEPS = [
-    { n: 1, name: "Analysis diagrams", ic: '<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>' },
+    { n: 1, name: "Site Analysis", ic: '<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>' },
     { n: 2, name: LABELS.site, ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
     { n: 3, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
     { n: 4, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
@@ -3776,7 +3776,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   const saveCx = () => { try { localStorage.setItem("pc-ctx", JSON.stringify(CX)); } catch (e) {} };
   window.PCX = CX;   // the one site-context: the pin, the radius and what is done
   const pinQ = (withFrom) => CX.lat == null ? "" : `lat=${(+CX.lat).toFixed(5)}&lng=${(+CX.lng).toFixed(5)}&r=${CX.R}${withFrom ? "&from=analysis" : ""}`;
-  const urlOf = (n) => n === 1 ? "tool/atlas" + (CX.lat == null ? "" : "?d=fg&" + pinQ()) : n === 2 ? "site" + (CX.src === "atlas" && CX.lat != null ? "?" + pinQ(true) : "") : n === 3 ? "studio" : n === 4 ? (CX.sim ? "tool/" + CX.sim : "tools") : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ());
+  const urlOf = (n) => n === 1 ? "tool/atlas" + (CX.lat == null ? "" : "?step=2&" + pinQ()) : n === 2 ? "site" + (CX.src === "atlas" && CX.lat != null ? "?" + pinQ(true) : "") : n === 3 ? "studio" : n === 4 ? (CX.sim ? "tool/" + CX.sim : "tools") : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ());
   const where = () => { const h = (location.hash.replace(/^#\/?/, "") || "home"), [path, q] = h.split("?"), pg = path.split("/"), id = pg[1];
     if (pg[0] === "site" || (pg[0] === "tool" && id === "sitectx")) return 2; if (pg[0] === "studio") return 3;
     if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 5 : 1; if (pg[0] === "tool" && SIM.includes(id)) return 4; return 0; };
@@ -3822,7 +3822,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   document.body.append(rail, top, dr, ck);
   const chipText = () => CX.lat == null ? "No site yet" : `${CX.label || (+CX.lat).toFixed(2) + ", " + (+CX.lng).toFixed(2)} · R ${CX.R} m`;
   const drawRail = () => { const cur = where();
-    rail.innerHTML = `<a class="lg" data-go="home" title="plotcloud home">plotcloud</a><button class="chip" type="button" id="wfchip" title="Choose the place again in the Analysis diagrams"><small>Site</small><b>${esc(chipText())}</b></button>` +
+    rail.innerHTML = `<a class="lg" data-go="home" title="plotcloud home">plotcloud</a><button class="chip" type="button" id="wfchip" title="Choose the place again in Site Analysis"><small>Site</small><b>${esc(chipText())}</b></button>` +
       STEPS.map((s) => `<a class="st${cur === s.n ? " on" : ""}" href="#/${urlOf(s.n)}" data-n="${s.n}" data-done="${CX.done[s.n] ? 1 : 0}" ${cur === s.n ? 'aria-current="step"' : ""} title="${s.n} · ${esc(s.name)}"><svg viewBox="0 0 24 24" aria-hidden="true">${s.ic}</svg><span>${s.n} · ${esc(s.name)}</span><i class="tk" aria-label="done">✓</i></a>`).join("") +
       `<span class="sp"></span><button class="col" type="button" id="wfcol" aria-label="Collapse the rail"><span>${document.body.classList.contains("rc") ? "" : "Collapse"}</span>⇔</button>`; };
   const NAMES = { home: "Home", tools: "Tools", library: "Resources", showroom: "Showroom", learn: "Learn", pricing: "Pricing" };
@@ -3838,7 +3838,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   dr.querySelector(".dh button").addEventListener("click", closeDr);
   document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-dr]"); if (b) { dr.classList.contains("on") && dr.dataset.k === b.dataset.dr ? closeDr() : openDr(b.dataset.dr); return; }
     if (e.target.closest && e.target.closest("[data-k]")) { openK(); return; }
-    if (e.target.closest && e.target.closest("#wfchip")) { go(urlOf(1)); return; }
+    if (e.target.closest && e.target.closest("#wfchip")) { go("tool/atlas?step=1" + (CX.lat == null ? "" : "&" + pinQ())); return; }
     if (e.target.closest && e.target.closest("#wfcol")) { document.body.classList.toggle("rc"); try { localStorage.setItem("pc-rc", document.body.classList.contains("rc") ? "1" : ""); } catch (x) {} drawRail(); dispatchEvent(new Event("resize")); return; }
     const a = e.target.closest && e.target.closest("#wfrail a.st"); if (a) { e.preventDefault(); go(urlOf(+a.dataset.n)); } });
   try { if (localStorage.getItem("pc-rc")) document.body.classList.add("rc"); } catch (e) {}
