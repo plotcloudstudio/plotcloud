@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Site analysis atlas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--ink:#1C1B1A;--muted:#6E6A60;--paper:#FBFAF7;--sand:#EFEBE0;--red:#D8402A;--hair:rgba(28,27,26,.13)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%}body{margin:0;font:14px/1.4 "Inter Tight",system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);height:100%;min-height:560px}
+.side{border-right:1px solid var(--hair);padding:16px 16px 20px;overflow:auto;background:#fff}
+.side h1{margin:0 0 2px;font:800 20px "Inter Tight";letter-spacing:-.02em}.side .sub{margin:0 0 14px;color:var(--muted);font-size:12.5px}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 14px}
+.tabs button{all:unset;cursor:pointer;font:600 12px "Inter Tight";padding:5px 9px;border:1px solid var(--hair);border-radius:999px;background:#fff}
+.tabs button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}.tabs button:focus-visible{outline:2px solid var(--red)}
+.tabs .sep{flex-basis:100%;height:0}
+fieldset{border:0;padding:0;margin:0 0 14px}legend{font:500 11px "JetBrains Mono";letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:0;margin-bottom:6px}
+label.f{display:grid;gap:3px;margin:0 0 8px;font-size:12.5px;color:var(--muted)}
+input[type=text],input[type=number],select{font:inherit;color:var(--ink);padding:7px 8px;border:1px solid var(--hair);border-radius:6px;background:#fff;width:100%}
+input[type=range]{width:100%;accent-color:var(--red)}
+.rv{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}.rv b{color:var(--ink);font-family:"JetBrains Mono";font-weight:500}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0}.chk input{accent-color:var(--red)}
+.btn{all:unset;cursor:pointer;box-sizing:border-box;font:600 13px "Inter Tight";padding:8px 12px;border:1px solid var(--ink);border-radius:999px;background:#fff;text-align:center}
+.btn:hover{background:var(--sand)}.btn.pri{background:var(--ink);color:#fff}.btn.pri:hover{background:#000}.btn:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.row{display:flex;gap:6px;flex-wrap:wrap}.row .btn{flex:1;min-width:90px}
+.demo{margin:14px 0 0;padding:8px 10px;border-left:3px solid var(--red);background:#FBEDE8;font-size:12px;color:#5b2a20}
+.main{overflow:auto;padding:18px 22px 40px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-content:start}
+.stage{background:#fff;border:1px solid var(--hair);box-shadow:0 1px 0 rgba(0,0,0,.02);justify-self:center;width:100%;max-width:980px}
+.stage svg{display:block;width:100%;height:auto}
+.res{justify-self:center;width:100%;max-width:980px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.res b{color:var(--ink)}.res .btn{flex:0 0 auto}
+.coming{max-width:560px;margin:40px auto;text-align:left}.coming h2{margin:0 0 8px;font:800 24px "Inter Tight"}.coming p{color:var(--muted)}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.pick{border:1px solid var(--hair);border-radius:6px;background:#fff;padding:6px;cursor:pointer;display:grid;gap:4px;font-size:12px}
+.pick[aria-pressed=true]{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}.pick svg{width:100%;height:auto;display:block;background:#fff}
+.pick span{display:flex;justify-content:space-between;gap:6px}
+footer{padding:14px 22px;color:var(--muted);font-size:12px;border-top:1px solid var(--hair)}
+@media (max-width:900px){.app{grid-template-columns:1fr;height:auto}.side{border-right:0;border-bottom:1px solid var(--hair)}.main{padding:12px}}
+@media print{body{background:#fff}.side,.res,footer,.picks,.pbar{display:none!important}.app{display:block}.main{padding:0;overflow:visible}.stage{border:0;max-width:none;width:100%}@page{margin:0}}
+</style></head>
+<body>
+<div class="app">
+<aside class="side" aria-label="Inputs">
+  <h1>Site analysis atlas</h1><p class="sub">Eight diagrams, one site, one style.</p>
+  <div class="tabs" id="tabs" role="group" aria-label="Diagram"></div>
+  <fieldset id="fsSite"><legend>Site</legend>
+    <label class="f">Place (label for the card)<input type="text" id="place" value="Library · Demo site" maxlength="60"></label>
+    <div class="row"><label class="f" style="flex:1">Latitude<input type="number" id="lat" step="0.0001" value="49.2827"></label><label class="f" style="flex:1">Longitude<input type="number" id="lng" step="0.0001" value="-123.1207"></label></div>
+    <div class="rv"><span>Radius</span><b id="rv">R 600 m</b></div><input type="range" id="rad" min="300" max="900" step="50" value="600" aria-label="Radius in metres">
+  </fieldset>
+  <fieldset id="fsLayers"><legend>Layers</legend><div id="layers"></div></fieldset>
+  <fieldset><legend>Export</legend>
+    <div class="row"><button class="btn pri" id="exSvg">SVG</button><button class="btn pri" id="exPng">PNG</button><button class="btn" id="exPrint" hidden>PDF (print)</button></div>
+  </fieldset>
+  <p class="demo"><b>Demo geometry.</b> This prototype does not read OpenStreetMap yet. The streets, buildings and places are generated from the latitude, longitude and radius, so the numbers describe that generated geometry, not a real city.</p>
+</aside>
+<main class="main" id="main"></main>
+</div>
+<footer>PlotCloud · Site analysis atlas · Demo geometry, not real data · Eight diagrams share one theme.</footer>
+<script>
+'use strict';
+// =====================================================================================
+// THEME: the one place that sets the look of every drawing card (palette, type scale, line weights)
+// =====================================================================================
+const THEME = {
+  ink: '#1C1B1A', paper: '#FFFFFF', accent: '#D8402A', site: '#E8B93C', muted: '#6E6A60', hair: 'rgba(28,27,26,.18)',
+  road: { arterial: 3, secondary: 1.5, minor: .8, foot: .5 },
+  land: { res: '#F2C94C', com: '#E88AA8', pub: '#9B8BD4', rel: '#7FB3D5', ind: '#A0826D', unk: '#D9D9D9', park: '#BFDDB0' },
+  landName: { res: 'Residential', com: 'Commercial', pub: 'Public', rel: 'Religious', ind: 'Industrial', unk: 'Unknown', park: 'Park' },
+  green: '#9CC98B', water: '#8EC3E6', gray: '#E6E3DC',
+  poi: { school: '#2F6DB5', health: '#2E8B57', commerce: '#D8402A', culture: '#8A5A36' },
+  poiName: { school: 'School', health: 'Health', commerce: 'Commerce', culture: 'Culture' },
+  transit: { bus: '#2F6DB5', rail: '#D8402A' },
+  ramp: ['#FDE6CF', '#F9B27A', '#EC6A3A', '#B3220F'],
+  font: { family: '"Inter Tight",Arial,sans-serif', mono: '"JetBrains Mono",monospace', title: 28, num: 24, sub: 11, label: 11, cap: 9 },
+  card: { w: 960, m: 36, fig: 620, gap: 18 }
+};
+const T = THEME, esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+const fmt = (n, d = 0) => Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// =====================================================================================
+// DEMO GEOMETRY: a deterministic fake city around a point. Every number the drawings state is computed from it.
+// =====================================================================================
+const rng = (seed) => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1]], len = (a) => Math.hypot(a[0], a[1]);
+const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+const bil = (q, u, v) => lerp(lerp(q[0], q[1], u), lerp(q[3], q[2], u), v);   // q = [p00,p10,p11,p01]
+function pip(p, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
+const polyArea = (P) => { let s = 0; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; s += a[0] * b[1] - b[0] * a[1]; } return Math.abs(s) / 2; };
+const centroid = (P) => P.reduce((s, p) => [s[0] + p[0] / P.length, s[1] + p[1] / P.length], [0, 0]);
+
+function genCity(lat, lng) {
+  const r = rng(Math.round(lat * 1000) * 7919 + Math.round(lng * 1000) * 104729 + 17), N = 7, S = 150, th = (r() - .5) * .6, ct = Math.cos(th), st = Math.sin(th);
+  const V = []; for (let i = -N; i <= N + 1; i++) { const row = []; for (let j = -N; j <= N + 1; j++) { const x = (i - .5) * S + (r() - .5) * 44, y = (j - .5) * S + (r() - .5) * 44; row.push([x * ct - y * st, x * st + y * ct]); } V.push(row); }
+  const n = V.length, edges = [], cls = (k) => k % 4 === 0 ? 'arterial' : k % 2 === 0 ? 'secondary' : 'minor';
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    if (i + 1 < n) { const c = cls(j - N); if (c !== 'minor' || r() > .12) edges.push({ a: [i, j], b: [i + 1, j], c }); }
+    if (j + 1 < n) { const c = cls(i - N); if (c !== 'minor' || r() > .12) edges.push({ a: [i, j], b: [i, j + 1], c }); }
+  }
+  const blocks = [];
+  for (let i = 0; i + 1 < n; i++) for (let j = 0; j + 1 < n; j++) {
+    const q = [V[i][j], V[i + 1][j], V[i + 1][j + 1], V[i][j + 1]], c = centroid(q), d = len(c); blocks.push({ i, j, q, c, d, lu: null, b: [] });
+    if (r() < .1) edges.push({ a: [i, j], b: [i + 1, j + 1], c: 'foot' });
+  }
+  const ph = r() * 6, off = (r() - .5) * 420, ampl = 150 + r() * 80, wr = 64 + r() * 30, cl = (x) => off + ampl * Math.sin(x / 360 + ph);
+  const river = []; for (let x = -1300; x <= 1300; x += 40) river.push([x, cl(x)]);
+  const rpoly = river.map((p) => [p[0], p[1] + wr / 2]).concat(river.slice().reverse().map((p) => [p[0], p[1] - wr / 2]));
+  const inRiver = (p, pad = 0) => Math.abs(p[1] - cl(p[0])) < wr / 2 + pad;
+  // rotate river with the lattice so it crosses blocks naturally
+  const rot = (p) => [p[0] * ct - p[1] * st, p[0] * st + p[1] * ct], rotInv = (p) => [p[0] * ct + p[1] * st, -p[0] * st + p[1] * ct];
+  const riverW = rpoly.map(rot), inRiverW = (p, pad) => inRiver(rotInv(p), pad);
+  // site block = the one containing the origin; others by distance
+  let home = blocks.reduce((m, b) => b.d < m.d ? b : m, blocks[0]);
+  for (const b of blocks) {
+    const x = r(), d = b.d;
+    if (b === home) { b.lu = 'com'; continue; }
+    if (x < .1 && d > 160) { b.lu = 'park'; continue; }
+    const pick = (t) => { let a = 0; for (const [k, p] of t) { a += p; if (x < a) return k; } return 'unk'; };
+    b.lu = d < 320 ? pick([['com', .42], ['pub', .14], ['res', .3], ['unk', .14]]) : d < 700 ? pick([['res', .55], ['com', .14], ['pub', .1], ['rel', .04], ['unk', .17]]) : pick([['res', .4], ['ind', .2], ['unk', .2], ['pub', .1], ['com', .06], ['rel', .04]]);
+  }
+  const site = (() => { const w = 46, h = 34, a = r() * .6 - .3, ca = Math.cos(a), sa = Math.sin(a); return [[-w, -h], [w, -h], [w, h], [-w, h]].map((p) => [p[0] * ca - p[1] * sa, p[0] * sa + p[1] * ca]); })();
+  const H = { com: [22, 70], res: [9, 27], ind: [7, 14], pub: [12, 24], rel: [10, 30], unk: [6, 16] }, grid = { com: [2, 2], res: [3, 2], ind: [1, 2], pub: [1, 1], rel: [1, 1], unk: [2, 2] };
+  for (const b of blocks) {
+    b.water = inRiverW(b.c, 30);
+    if (b.lu === 'park') continue;
+    const [gx, gy] = grid[b.lu], hh = H[b.lu];
+    for (let a = 0; a < gx; a++) for (let c = 0; c < gy; c++) {
+      if (r() < (b.lu === 'unk' ? .4 : .08)) continue;
+      const u0 = .14 + .72 * a / gx + .02, u1 = .14 + .72 * (a + 1) / gx - .02, v0 = .14 + .72 * c / gy + .02, v1 = .14 + .72 * (c + 1) / gy - .02;
+      const poly = [bil(b.q, u0, v0), bil(b.q, u1, v0), bil(b.q, u1, v1), bil(b.q, u0, v1)], cc = centroid(poly);
+      if (inRiverW(cc, 14) || pip(cc, site) || len(sub(cc, [0, 0])) < 62) continue;
+      b.b.push({ poly, h: Math.round(hh[0] + r() * (hh[1] - hh[0])), lu: b.lu });
+    }
+  }
+  const buildings = blocks.flatMap((b) => b.b);
+  // stops, places
+  const mid = (e) => lerp(V[e.a[0]][e.a[1]], V[e.b[0]][e.b[1]], .5), art = edges.filter((e) => e.c === 'arterial');
+  const stops = []; for (let k = 0; k < 90 && art.length; k++) { const e = art[Math.floor(r() * art.length)], p = lerp(V[e.a[0]][e.a[1]], V[e.b[0]][e.b[1]], .25 + r() * .5); if (stops.every((s) => len(sub(s.p, p)) > 90)) stops.push({ p, mode: r() < .82 ? 'bus' : 'rail' }); }
+  const kinds = ['school', 'health', 'commerce', 'commerce', 'commerce', 'culture'], names = { school: 'School', health: 'Clinic', commerce: 'Shops', culture: 'Library' }, pois = [];
+  for (let k = 0; k < 34; k++) { const e = edges[Math.floor(r() * edges.length)], p = lerp(V[e.a[0]][e.a[1]], V[e.b[0]][e.b[1]], .2 + r() * .6), kd = kinds[Math.floor(r() * kinds.length)]; if (pois.every((q) => len(sub(q.p, p)) > 60) && !inRiverW(p, 0)) pois.push({ p, kind: kd, name: `${names[kd]} ${String.fromCharCode(65 + pois.length % 26)}`, e }); }
+  return { V, edges, blocks, buildings, river: riverW, riverPoly: riverW, inRiver: inRiverW, site, stops, pois, home };
+}
+
+// ---- street graph and walking times (80 m per minute) ----
+function walkGraph(C) {
+  const n = C.V.length, id = (i, j) => i * n + j, adj = new Map(), L = (e) => len(sub(C.V[e.a[0]][e.a[1]], C.V[e.b[0]][e.b[1]]));
+  for (const e of C.edges) { const a = id(...e.a), b = id(...e.b), w = L(e); (adj.get(a) || adj.set(a, []).get(a)).push([b, w]); (adj.get(b) || adj.set(b, []).get(b)).push([a, w]); }
+  let src = -1, best = 1e9; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const d = len(C.V[i][j]); if (d < best && adj.has(id(i, j))) { best = d; src = id(i, j); } }
+  const dist = new Map([[src, best]]), todo = [[best, src]];   // metres; the first leg is from the site to the nearest corner
+  while (todo.length) { todo.sort((a, b) => a[0] - b[0]); const [d, u] = todo.shift(); if (d > dist.get(u)) continue; for (const [v, w] of adj.get(u) || []) { const nd = d + w; if (nd < (dist.get(v) ?? 1e9)) { dist.set(v, nd); todo.push([nd, v]); } } }
+  return { id, dist, L, n };
+}
+
+// ---- clip a segment to the study circle ----
+function clipSeg(a, b, R) {
+  const d = sub(b, a), A = d[0] * d[0] + d[1] * d[1], B = 2 * (a[0] * d[0] + a[1] * d[1]), Cc = a[0] * a[0] + a[1] * a[1] - R * R;
+  if (A === 0) return null; const D = B * B - 4 * A * Cc; if (D <= 0) return null; const sq = Math.sqrt(D), t0 = Math.max(0, (-B - sq) / (2 * A)), t1 = Math.min(1, (-B + sq) / (2 * A)); if (t1 <= t0) return null;
+  return [lerp(a, b, t0), lerp(a, b, t1)];
+}
+
+// =====================================================================================
+// ANALYSIS: every figure is computed from the geometry
+// =====================================================================================
+function analyse(C, R) {
+  const G = walkGraph(C), inC = (p) => p[0] * p[0] + p[1] * p[1] <= R * R, out = { R };
+  // streets
+  const km = { arterial: 0, secondary: 0, minor: 0, foot: 0 }, segs = [], deg = new Map();
+  for (const e of C.edges) { const a = C.V[e.a[0]][e.a[1]], b = C.V[e.b[0]][e.b[1]], s = clipSeg(a, b, R); if (!s) continue; const l = len(sub(s[1], s[0])); km[e.c] += l / 1000; segs.push({ s, c: e.c, e }); if (e.c !== 'foot') for (const k of [e.a, e.b]) { const kk = G.id(...k); deg.set(kk, (deg.get(kk) || 0) + 1); } }
+  out.km = km; out.segs = segs; out.kmTotal = km.arterial + km.secondary + km.minor + km.foot;
+  out.areaKm2 = Math.PI * R * R / 1e6; out.density = out.kmTotal / out.areaKm2;
+  let nodes = 0; for (const [k, d] of deg) { const i = Math.floor(k / G.n), j = k % G.n; if (d >= 3 && inC(C.V[i][j])) nodes++; } out.intersections = nodes;
+  // areas by sampling a regular grid inside the circle
+  const step = Math.max(4, R / 120), cnt = { total: 0, bld: 0, water: 0, park: 0, lu: { res: 0, com: 0, pub: 0, rel: 0, ind: 0, unk: 0 }, road: 0 };
+  const bb = C.blocks.map((b) => { const xs = b.q.map((p) => p[0]), ys = b.q.map((p) => p[1]); return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]; });
+  for (let x = -R + step / 2; x < R; x += step) for (let y = -R + step / 2; y < R; y += step) {
+    const p = [x, y]; if (!inC(p)) continue; cnt.total++;
+    if (C.inRiver(p, 0)) { cnt.water++; continue; }
+    let hit = null; for (let k = 0; k < C.blocks.length; k++) { const q = bb[k]; if (x < q[0] || x > q[1] || y < q[2] || y > q[3]) continue; if (pip(p, C.blocks[k].q)) { hit = C.blocks[k]; break; } }
+    if (!hit) { cnt.road++; continue; }
+    if (hit.lu === 'park') cnt.park++; else cnt.lu[hit.lu]++;
+    if (hit.b.some((b) => pip(p, b.poly))) cnt.bld++;
+  }
+  out.cnt = cnt; const pct = (k) => 100 * k / Math.max(1, cnt.total); out.pct = { bld: pct(cnt.bld), water: pct(cnt.water), park: pct(cnt.park), road: pct(cnt.road), lu: Object.fromEntries(Object.entries(cnt.lu).map(([k, v]) => [k, pct(v)])) };
+  const bi = C.buildings.filter((b) => inC(centroid(b.poly))); out.buildings = bi; out.avgH = bi.length ? bi.reduce((s, b) => s + b.h, 0) / bi.length : 0;
+  out.parks = C.blocks.filter((b) => b.lu === 'park' && inC(b.c)).length;
+  out.stops = C.stops.filter((s) => inC(s.p)).map((s) => Object.assign({ d: len(s.p) }, s));
+  out.pois = C.pois.filter((p) => inC(p.p)).map((p) => { const e = p.e, a = C.V[e.a[0]][e.a[1]], b = C.V[e.b[0]][e.b[1]], da = (G.dist.get(G.id(...e.a)) ?? 1e9) + len(sub(p.p, a)), db = (G.dist.get(G.id(...e.b)) ?? 1e9) + len(sub(p.p, b)); return Object.assign({}, p, { walk: Math.min(da, db), straight: len(p.p) }); });
+  out.G = G; out.siteArea = polyArea(C.site);
+  // walk contours: furthest reachable point in 36 directions for each time
+  out.walkPts = []; for (const e of C.edges) { const a = C.V[e.a[0]][e.a[1]], b = C.V[e.b[0]][e.b[1]], da = G.dist.get(G.id(...e.a)) ?? 1e9, db = G.dist.get(G.id(...e.b)) ?? 1e9, l = len(sub(b, a)), nseg = Math.max(2, Math.ceil(l / 12)); for (let k = 0; k <= nseg; k++) { const t = k / nseg, d = Math.min(da + l * t, db + l * (1 - t)); out.walkPts.push({ p: lerp(a, b, t), d }); } }
+  out.reach = (min) => { let l = 0; for (const s of out.segs) { const e = s.e, da = G.dist.get(G.id(...e.a)) ?? 1e9, db = G.dist.get(G.id(...e.b)) ?? 1e9, a = C.V[e.a[0]][e.a[1]], b = C.V[e.b[0]][e.b[1]], L = len(sub(b, a)), f = Math.max(0, Math.min(1, ((min * 80) - da) / L)) + Math.max(0, Math.min(1, ((min * 80) - db) / L)); l += Math.min(L, f * L) * (len(sub(s.s[1], s.s[0])) / L) / 1000; } return l; };
+  return out;
+}
+
+// =====================================================================================
+// RENDERER: one drawing card for all diagrams. Each element class is its own <g> so the SVG can be edited layer by layer.
+// =====================================================================================
+const D = [
+  { id: 'fg', n: '①', name: 'Figure-ground', sub: 'URBAN FABRIC', blurb: 'Buildings as solid black on white: how dense and how porous the ground is.' },
+  { id: 'streets', n: '②', name: 'Streets', sub: 'STREETS', blurb: 'The street network in four weights: length, density and intersections.' },
+  { id: 'land', n: '③', name: 'Land use', sub: 'LAND USE', blurb: 'What each block is for, in pastel, with the share of each use.' },
+  { id: 'green', n: '④', name: 'Green & water', sub: 'GREEN & WATER', blurb: 'Parks and the river against the built ground, as shares of the area.' },
+  { id: 'transit', n: '⑤', name: 'Transit', sub: 'TRANSIT', blurb: 'Bus and rail stops with 5 and 10 minute walking rings.' },
+  { id: 'walk', n: '⑥', name: 'Walk pulse', sub: 'WALK PULSE', blurb: 'Streets coloured by minutes of walking from the site, with contours.' },
+  { id: 'reading', n: '⑦', name: 'Site reading', sub: 'SITE READING', blurb: 'The site in gold, places around it by kind, and its 5 minute circle.' },
+  { id: 'sunwind', n: '⑧', name: 'Sun & wind', sub: 'SUN & WIND', blurb: 'Sunlight hours and wind at street level, from the Sun hours and Wind flow tools.' }
+];
+const LAYERS = {
+  fg: [['bld', 'Buildings']], streets: [['arterial', 'Main streets'], ['secondary', 'Secondary streets'], ['minor', 'Minor streets'], ['foot', 'Footpaths']],
+  land: [['lu', 'Land use'], ['road', 'Streets'], ['water', 'River']], green: [['park', 'Parks'], ['water', 'River'], ['bld', 'Buildings (grey)']],
+  transit: [['bus', 'Bus stops'], ['rail', 'Rail stops'], ['ring', 'Walking rings'], ['road', 'Streets']], walk: [['edges', 'Walking minutes'], ['cont', 'Contours'], ['poi', 'Places']],
+  reading: [['site', 'Site'], ['poi', 'Places'], ['ring', '5 minute circle'], ['bld', 'Buildings (grey)']], sunwind: []
+};
+const STATE = { d: 'fg', lat: 49.2827, lng: -123.1207, R: 600, place: 'Library · Demo site', off: {} };
+let CITY = null, AN = null, CKEY = '';
+function ensure() { const k = STATE.lat + '|' + STATE.lng; if (k !== CKEY) { CITY = genCity(STATE.lat, STATE.lng); CKEY = k; } AN = analyse(CITY, STATE.R); }
+const on = (id) => !STATE.off[STATE.d + ':' + id];
+
+function ringPath(pts) { return 'M' + pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L') + 'Z'; }
+function drawFigure(d, W) {   // returns { layers: svg string (already in figure coordinates), kpis, legend }
+  const { m, w, fig } = T.card, cx = w / 2, cy = 0, s = fig / 2 / AN.R * .985, P = (p) => [cx + p[0] * s, cy - p[1] * s], R = AN.R, C = CITY, g = (id, body) => `<g id="${id}">${body}</g>`;
+  const polys = (arr, fill, extra = '') => arr.map((b) => `<path d="${ringPath(b.map(P))}" fill="${fill}" ${extra}/>`).join('');
+  const roadsGrey = (col) => g('streets', AN.segs.map((q) => { const a = P(q.s[0]), b = P(q.s[1]); return `<path d="M${a[0].toFixed(1)},${a[1].toFixed(1)}L${b[0].toFixed(1)},${b[1].toFixed(1)}" stroke="${col}" stroke-width="${T.road[q.c] * .8}" ${q.c === 'foot' ? 'stroke-dasharray="3 2"' : ''} fill="none"/>`; }).join(''));
+  const river = on('water') ? g('water', `<path d="${ringPath(C.river.map(P))}" fill="${T.water}"/>`) : '';
+  const bldAll = () => AN.buildings;
+  let body = '', kpis = [], legend = [], any = true;
+  if (d === 'fg') {
+    any = on('bld'); body = any ? g('buildings', polys(bldAll().map((b) => b.poly), T.ink)) : '';
+    kpis = [[fmt(AN.buildings.length), 'Buildings in the circle'], [fmt(AN.pct.bld, 1) + ' %', 'Ground covered by buildings'], [fmt(AN.avgH, 1) + ' m', 'Average building height']];
+    legend = [{ sw: 'box', col: T.ink, label: 'Building', val: fmt(AN.pct.bld, 1) + ' %' }, { sw: 'box', col: '#fff', stroke: true, label: 'Open ground', val: fmt(100 - AN.pct.bld, 1) + ' %' }];
+  } else if (d === 'streets') {
+    const ks = ['arterial', 'secondary', 'minor', 'foot'].filter((k) => on(k)); any = ks.length > 0;
+    body = g('streets', AN.segs.filter((q) => ks.includes(q.c)).map((q) => { const a = P(q.s[0]), b = P(q.s[1]); return `<path d="M${a[0].toFixed(1)},${a[1].toFixed(1)}L${b[0].toFixed(1)},${b[1].toFixed(1)}" stroke="${T.ink}" stroke-width="${T.road[q.c]}" stroke-linecap="round" ${q.c === 'foot' ? 'stroke-dasharray="3 2.5"' : ''} fill="none"/>`; }).join(''));
+    kpis = [[fmt(AN.kmTotal, 1) + ' km', 'Total street length'], [fmt(AN.density, 1), 'Network density (km / km²)'], [fmt(AN.intersections), 'Intersections']];
+    legend = [['arterial', 'Main'], ['secondary', 'Secondary'], ['minor', 'Minor'], ['foot', 'Footpath']].map(([k, l]) => ({ sw: 'line', w: T.road[k], dash: k === 'foot', label: l, val: on(k) ? fmt(AN.km[k], 1) + ' km' : 'layer off' }));
+  } else if (d === 'land') {
+    any = on('lu') || on('road') || on('water');
+    const blk = on('lu') ? g('landuse', AN.blocksIn.map((b) => `<path d="${ringPath(b.q.map(P))}" fill="${T.land[b.lu]}" stroke="#fff" stroke-width=".6"/>`).join('')) : '';
+    body = blk + river + (on('road') ? roadsGrey('#8d8a82') : '');
+    kpis = [[fmt(AN.pct.lu.res, 0) + ' %', 'Residential'], [fmt(AN.pct.lu.com, 0) + ' %', 'Commercial'], [fmt(AN.pct.park, 0) + ' %', 'Park']];
+    legend = Object.keys(T.land).map((k) => ({ sw: 'box', col: T.land[k], label: T.landName[k], val: on('lu') ? fmt(k === 'park' ? AN.pct.park : AN.pct.lu[k], 1) + ' %' : 'layer off' })).concat([{ sw: 'box', col: T.water, label: 'River', val: on('water') ? fmt(AN.pct.water, 1) + ' %' : 'layer off' }]);
+  } else if (d === 'green') {
+    any = on('park') || on('water') || on('bld');
+    body = g('ground', AN.blocksIn.map((b) => `<path d="${ringPath(b.q.map(P))}" fill="${b.lu === 'park' && on('park') ? T.green : '#F4F2EC'}" stroke="#fff" stroke-width=".6"/>`).join('')) + river + (on('bld') ? g('buildings', polys(bldAll().map((b) => b.poly), '#CFCBC1')) : '');
+    kpis = [[fmt(AN.pct.park, 1) + ' %', 'Parks and green blocks'], [fmt(AN.pct.water, 1) + ' %', 'Water (river)'], [fmt(AN.parks), 'Green blocks']];
+    legend = [{ sw: 'box', col: T.green, label: 'Green', val: on('park') ? fmt(AN.pct.park, 1) + ' %' : 'layer off' }, { sw: 'box', col: T.water, label: 'Water', val: on('water') ? fmt(AN.pct.water, 1) + ' %' : 'layer off' }, { sw: 'box', col: '#CFCBC1', label: 'Buildings', val: on('bld') ? fmt(AN.pct.bld, 1) + ' %' : 'layer off' }];
+  } else if (d === 'transit') {
+    any = on('bus') || on('rail') || on('ring') || on('road');
+    const rings = on('ring') ? g('rings', [400, 800].map((r) => `<circle cx="${cx}" cy="${cy}" r="${r * s}" fill="none" stroke="${T.accent}" stroke-opacity=".55" stroke-width="1" stroke-dasharray="6 4"/><text x="${cx}" y="${cy - r * s - 4}" text-anchor="middle" font-size="${T.font.label}" fill="${T.accent}">${r === 400 ? '5 min' : '10 min'} · ${r} m</text>`).join('')) : '';
+    const st = AN.stops.filter((q) => on(q.mode)); body = (on('road') ? roadsGrey('#BDB9B0') : '') + rings + g('stops', st.map((q) => { const p = P(q.p); return q.mode === 'rail' ? `<rect x="${p[0] - 6}" y="${p[1] - 6}" width="12" height="12" fill="${T.transit.rail}" stroke="#fff" stroke-width="1.5"/>` : `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${T.transit.bus}" stroke="#fff" stroke-width="1.5"/>`; }).join('')) + g('site', `<path d="${ringPath(C.site.map(P))}" fill="${T.site}" stroke="${T.ink}" stroke-width="1"/>`);
+    const near = AN.stops.length ? Math.min(...AN.stops.map((q) => q.d)) : null, n4 = AN.stops.filter((q) => q.d <= 400).length;
+    kpis = [[fmt(AN.stops.length), 'Stops in the circle'], [fmt(n4), 'Within 400 m (5 min)'], [near == null ? 'No data' : fmt(near) + ' m', 'Nearest stop']];
+    legend = [{ sw: 'dot', col: T.transit.bus, label: 'Bus stop', val: on('bus') ? fmt(AN.stops.filter((q) => q.mode === 'bus').length) : 'layer off' }, { sw: 'box', col: T.transit.rail, label: 'Rail stop', val: on('rail') ? fmt(AN.stops.filter((q) => q.mode === 'rail').length) : 'layer off' }, { sw: 'ringl', col: T.accent, label: 'Walking ring', val: on('ring') ? '400 m · 800 m' : 'layer off' }];
+    if (!AN.stops.length) legend.push({ sw: 'none', label: 'Stops', val: 'No data for this layer' });
+  } else if (d === 'walk') {
+    any = on('edges') || on('cont') || on('poi'); const ramp = (min) => { const t = Math.min(1, min / 10) * (T.ramp.length - 1), i = Math.min(T.ramp.length - 2, Math.floor(t)); return mix(T.ramp[i], T.ramp[i + 1], t - i); };
+    const Gd = AN.G.dist, edges = on('edges') ? g('streets', AN.segs.map((q) => { const e = q.e, da = Gd.get(AN.G.id(...e.a)) ?? 1e9, db = Gd.get(AN.G.id(...e.b)) ?? 1e9, l = AN.G.L(e), dm = Math.min(da + l / 2, db + l / 2), min = dm / 80, a = P(q.s[0]), b = P(q.s[1]); return `<path d="M${a[0].toFixed(1)},${a[1].toFixed(1)}L${b[0].toFixed(1)},${b[1].toFixed(1)}" stroke="${min > 10 ? '#DAD6CC' : ramp(min)}" stroke-width="${Math.max(1.2, T.road[q.c] * 1.1)}" stroke-linecap="round" fill="none"/>`; }).join('')) : g('streets', AN.segs.map((q) => { const a = P(q.s[0]), b = P(q.s[1]); return `<path d="M${a[0].toFixed(1)},${a[1].toFixed(1)}L${b[0].toFixed(1)},${b[1].toFixed(1)}" stroke="#DAD6CC" stroke-width="1" fill="none"/>`; }).join(''));
+    const cont = on('cont') ? g('contours', [2.5, 5, 10].map((min) => { const bins = 36, far = new Array(bins).fill(0); for (const q of AN.walkPts) if (q.d <= min * 80) { const k = Math.floor(((Math.atan2(q.p[1], q.p[0]) + Math.PI) / (2 * Math.PI)) * bins) % bins, dd = len(q.p); if (dd > far[k]) far[k] = dd; } const pts = far.map((dd, k) => { const a = (k + .5) / bins * 2 * Math.PI - Math.PI; return P([Math.cos(a) * dd, Math.sin(a) * dd]); }); const kb = min === 2.5 ? 27 : min === 5 ? 30 : 33, top = P([Math.cos((kb + .5) / bins * 2 * Math.PI - Math.PI) * (far[kb] || 0), Math.sin((kb + .5) / bins * 2 * Math.PI - Math.PI) * (far[kb] || 0)]); return `<path d="${ringPath(pts)}" fill="none" stroke="${T.ink}" stroke-width="1" stroke-dasharray="4 3" stroke-linejoin="round"/><text x="${top[0] + 4}" y="${top[1] - 3}" font-size="${T.font.label}" fill="${T.ink}" paint-order="stroke" stroke="#fff" stroke-width="3">${min} min</text>`; }).join('')) : '';
+    const poi = on('poi') ? AN.pois.filter((p) => p.walk / 80 <= 12).map((p) => { const q = P(p.p), t = p.walk / 80; return `<circle cx="${q[0]}" cy="${q[1]}" r="4" fill="${T.poi[p.kind]}" stroke="#fff" stroke-width="1.2"/><text x="${q[0] + 7}" y="${q[1] + 4}" font-size="${T.font.cap + 1}" fill="${T.ink}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(p.name)} · ${t < 10 ? fmt(t, 1) : fmt(t)} min</text>`; }).join('') : '';
+    body = edges + cont + g('places', poi) + g('site', `<path d="${ringPath(C.site.map(P))}" fill="${T.site}" stroke="${T.ink}" stroke-width="1"/>`);
+    const n10 = AN.pois.filter((p) => p.walk / 80 <= 10).length;
+    kpis = [[fmt(AN.reach(5), 1) + ' km', 'Street within 5 min'], [fmt(AN.reach(10), 1) + ' km', 'Street within 10 min'], [fmt(n10), 'Places within 10 min']];
+    legend = [{ sw: 'ramp', label: 'Walking time from the site', val: '0 → 10 min, 80 m per minute' }];
+  } else if (d === 'reading') {
+    any = on('site') || on('poi') || on('ring') || on('bld');
+    const ring = on('ring') ? g('ring', `<circle cx="${cx}" cy="${cy}" r="${400 * s}" fill="none" stroke="${T.ink}" stroke-width="1" stroke-dasharray="6 4"/><text x="${cx}" y="${cy - 400 * s - 4}" text-anchor="middle" font-size="${T.font.label}" fill="${T.ink}">5 min · 400 m</text>`) : '';
+    const dots = on('poi') ? g('places', AN.pois.map((p) => { const q = P(p.p), inside = p.straight <= 400; return `<circle cx="${q[0]}" cy="${q[1]}" r="${inside ? 5 : 3.5}" fill="${T.poi[p.kind]}" stroke="#fff" stroke-width="1.3" opacity="${inside ? 1 : .6}"/>`; }).join('')) : '';
+    body = (on('bld') ? g('buildings', polys(bldAll().map((b) => b.poly), '#D6D2C8')) : '') + ring + dots + (on('site') ? g('site', `<path d="${ringPath(C.site.map(P))}" fill="${T.site}" stroke="${T.ink}" stroke-width="1.2"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="${T.font.label}" font-weight="700" fill="${T.ink}">SITE</text>`) : '');
+    const inside = AN.pois.filter((p) => p.straight <= 400), kinds = Object.keys(T.poi).filter((k) => AN.pois.some((p) => p.kind === k));
+    kpis = [[fmt(inside.length), 'Places within 400 m'], [fmt(AN.siteArea) + ' m²', 'Site area'], [fmt(kinds.length), 'Kinds of place nearby']];
+    legend = Object.keys(T.poi).map((k) => ({ sw: 'dot', col: T.poi[k], label: T.poiName[k], val: on('poi') ? fmt(AN.pois.filter((p) => p.kind === k && p.straight <= 400).length) + ' within 400 m' : 'layer off' })).concat([{ sw: 'box', col: T.site, label: 'Site', val: fmt(AN.siteArea) + ' m²' }]);
+  }
+  return { body, kpis, legend, any };
+}
+function mix(a, b, t) { const h = (x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16)), A = h(a), B = h(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
+const niceScale = (R) => R >= 700 ? 500 : R >= 450 ? 250 : 100;
+
+function cardSvg(d, opt = {}) {   // the full drawing card
+  const meta = D.find((x) => x.id === d), { w, m, fig, gap } = T.card, F = T.font;
+  if (!AN.blocksIn) AN.blocksIn = CITY.blocks.filter((b) => b.q.some((p) => p[0] * p[0] + p[1] * p[1] <= (AN.R * 1.15) ** 2) || b.d < AN.R * 1.15);
+  const r = drawFigure(d, w), figTop = 188, figCy = figTop + fig / 2, dataTop = 112, legTop = figTop + fig + 26, H = legTop + 78;
+  const s = fig / 2 / AN.R * .985, sub = `${meta.sub}`, place = STATE.place || '';
+  const kp = r.kpis.map((k, i) => { const x = m + i * ((w - 2 * m) / 3); return `<g id="kpi${i}"><text x="${x}" y="${dataTop + 28}" font-size="${F.num}" font-weight="700" fill="${T.ink}">${esc(k[0])}</text><text x="${x}" y="${dataTop + 46}" font-size="${F.label}" fill="${T.muted}">${esc(k[1])}</text></g>`; }).join('');
+  const sl = niceScale(AN.R), seg = 5, sw = sl * s / seg, sx = m + 6, sy = figTop + fig - 8;
+  const scale = `<g id="scalebar"><text x="${sx}" y="${sy - 10}" font-size="${F.cap + 1}" fill="${T.ink}">0</text><text x="${sx + sw * seg}" y="${sy - 10}" font-size="${F.cap + 1}" fill="${T.ink}" text-anchor="end">${sl} m</text>` + Array.from({ length: seg }, (_, i) => `<rect x="${sx + i * sw}" y="${sy - 6}" width="${sw}" height="5" fill="${i % 2 ? '#fff' : T.ink}" stroke="${T.ink}" stroke-width=".8"/>`).join('') + '</g>';
+  const north = `<g id="north" transform="translate(${w - m - 14},${m + 8})"><path d="M0 -4 L9 24 L0 17 L-9 24 Z" fill="${T.ink}"/><text y="-9" text-anchor="middle" font-size="${F.label}" font-weight="700" fill="${T.ink}">N</text></g>`;
+  const legColW = (w - 2 * m) / Math.min(4, Math.max(1, r.legend.length));
+  const leg = r.legend.map((l, i) => { const col = i % 4, row = Math.floor(i / 4), x = m + col * legColW, y = legTop + row * 34; let sw2 = ''; if (l.sw === 'box') sw2 = `<rect x="${x}" y="${y - 10}" width="14" height="14" fill="${l.col}" ${l.stroke ? `stroke="${T.ink}" stroke-width=".8"` : ''}/>`; else if (l.sw === 'dot') sw2 = `<circle cx="${x + 7}" cy="${y - 3}" r="5" fill="${l.col}"/>`; else if (l.sw === 'line') sw2 = `<path d="M${x} ${y - 3}H${x + 18}" stroke="${T.ink}" stroke-width="${l.w}" ${l.dash ? 'stroke-dasharray="3 2.5"' : ''}/>`; else if (l.sw === 'ringl') sw2 = `<circle cx="${x + 7}" cy="${y - 3}" r="6" fill="none" stroke="${l.col}" stroke-dasharray="3 2"/>`; else if (l.sw === 'ramp') { sw2 = `<defs><linearGradient id="rampG"><stop offset="0" stop-color="${T.ramp[0]}"/><stop offset=".4" stop-color="${T.ramp[1]}"/><stop offset=".7" stop-color="${T.ramp[2]}"/><stop offset="1" stop-color="${T.ramp[3]}"/></linearGradient></defs><rect x="${x}" y="${y - 10}" width="150" height="12" fill="url(#rampG)"/>`; return `<g class="leg">${sw2}<text x="${x + 160}" y="${y}" font-size="${F.label}" fill="${T.ink}">${esc(l.label)}</text><text x="${x + 160}" y="${y + 14}" font-size="${F.cap + 1}" fill="${T.muted}">${esc(l.val)}</text></g>`; } return `<g class="leg">${sw2}<text x="${x + 22}" y="${y}" font-size="${F.label}" fill="${T.ink}">${esc(l.label)}</text><text x="${x + 22}" y="${y + 13}" font-size="${F.cap + 1}" fill="${T.muted}" font-family="${F.mono}">${esc(l.val)}</text></g>`; }).join('');
+  const nodata = r.any ? '' : `<text x="${w / 2}" y="${figCy}" text-anchor="middle" font-size="16" fill="${T.muted}">No data for this layer</text>`;
+  const cid = 'fc' + Math.random().toString(36).slice(2, 7);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${H}" width="${w}" height="${H}" font-family='${F.family}' role="img" aria-label="${esc(meta.name)} drawing card">
+<rect width="${w}" height="${H}" fill="${T.paper}"/>
+<g id="header"><text x="${m}" y="${m + 28}" font-size="${F.title}" font-weight="800" letter-spacing="-.4" fill="${T.ink}">${esc(meta.name)}</text><text x="${m}" y="${m + 48}" font-size="${F.sub}" letter-spacing="2.2" fill="${T.muted}">${esc(sub)} · ${esc(place.toUpperCase())} · R ${AN.R} M</text></g>
+${north}<g id="data">${kp}</g>
+<g id="figure"><clipPath id="${cid}"><circle cx="${w / 2}" cy="${figCy}" r="${fig / 2}"/></clipPath><g clip-path="url(#${cid})"><g transform="translate(0,${figCy})">${r.body}</g></g><circle cx="${w / 2}" cy="${figCy}" r="${fig / 2}" fill="none" stroke="${T.ink}" stroke-width=".8"/>${nodata}</g>
+${scale}<g id="legend">${leg}</g>
+<text x="${m}" y="${H - 14}" font-size="${F.cap}" fill="${T.muted}">Demo geometry, generated for this prototype · not OpenStreetMap data · figures are computed from it</text></svg>`;
+}
+
+// =====================================================================================
+// UI
+// =====================================================================================
+function renderTabs() {
+  $('#tabs').innerHTML = D.map((x) => `<button type="button" data-d="${x.id}" aria-pressed="${STATE.d === x.id}" title="${esc(x.blurb)}">${x.n} ${esc(x.name)}</button>`).join('') + `<span class="sep"></span><button type="button" data-d="boards" aria-pressed="${STATE.d === 'boards'}" title="Lay several drawings out on one board">Boards</button>`;
+}
+function renderLayers() {
+  const L = LAYERS[STATE.d] || []; $('#fsLayers').hidden = !L.length; $('#layers').innerHTML = L.map(([id, l]) => `<label class="chk"><input type="checkbox" data-l="${id}" ${on(id) ? 'checked' : ''}> ${esc(l)}</label>`).join('');
+}
+function renderMain() {
+  ensure(); renderTabs(); renderLayers(); $('#exPrint').hidden = STATE.d !== 'boards';
+  if (STATE.d === 'boards') return boardsUI();
+  const meta = D.find((x) => x.id === STATE.d);
+  $('#fsSite').hidden = false;
+  if (STATE.d === 'sunwind') {
+    $('#main').innerHTML = `<div class="coming"><h2>${meta.n} ${meta.name}</h2><p>${esc(meta.blurb)} The sunlight and wind calculations are the ones in the existing tools. They keep their own page and their own drawing for now, and will move onto this card style when they are ready.</p><div class="row" style="max-width:420px"><button class="btn pri" data-open="sunhours">Open Sun hours</button><button class="btn pri" data-open="wind">Open Wind flow</button></div></div>`; return;
+  }
+  const svg = cardSvg(STATE.d);
+  $('#main').innerHTML = `<div class="stage" id="stage">${svg}</div><div class="res" id="res"><span><b>${esc(meta.name)}</b> · ${esc(meta.blurb)}</span><button class="btn" id="toSite">Send to Site Planner</button></div>`;
+}
+function exportName(ext) { return `atlas-${STATE.d}-R${STATE.R}.${ext}`; }
+function currentSvg() { if (STATE.d === 'boards') return BOARD.svg || ''; return cardSvg(STATE.d); }
+async function save(name, data, type) {
+  try { if (window.claude && claude.use) { const ns = await claude.use('downloads'); if (ns && ns.save) { await ns.save({ filename: name, data, mime: type }); return; } } } catch (e) { }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function svgToPng(svg, scale = 2) {
+  return new Promise((res, rej) => { const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg), w = +vb[1], h = +vb[2], img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = w * scale; c.height = h * scale; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); c.toBlob((b) => b ? res(b) : rej(new Error('png')), 'image/png'); }; img.onerror = () => rej(new Error('svg')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+}
+$('#exSvg').addEventListener('click', () => { const s = currentSvg(); if (s) save(exportName('svg'), s, 'image/svg+xml'); });
+$('#exPng').addEventListener('click', async () => { const s = currentSvg(); if (!s) return; try { save(exportName('png'), await svgToPng(s), 'image/png'); } catch (e) { toast('Could not make the PNG here. Use SVG.'); } });
+$('#exPrint').addEventListener('click', () => window.print());
+function toast(t) { const d = document.createElement('div'); d.textContent = t; d.setAttribute('role', 'status'); d.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1C1B1A;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:9'; document.body.appendChild(d); setTimeout(() => d.remove(), 3200); }
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-d]'); if (t) { STATE.d = t.dataset.d; hashSet(); renderMain(); return; }
+  const o = e.target.closest('[data-open]'); if (o) { try { window.parent.location.hash = '#/tool/' + o.dataset.open; } catch (x) { } return; }
+  if (e.target.closest('#toSite')) { sendToSite(); }
+});
+document.addEventListener('change', (e) => { const l = e.target.closest('[data-l]'); if (l) { STATE.off[STATE.d + ':' + l.dataset.l] = !l.checked; renderMain(); } });
+$('#rad').addEventListener('input', () => { STATE.R = +$('#rad').value; $('#rv').textContent = `R ${STATE.R} m`; renderMain(); hashSet(); });
+for (const id of ['lat', 'lng']) $('#' + id).addEventListener('change', () => { const v = parseFloat($('#' + id).value); if (isFinite(v)) STATE[id] = Math.max(id === 'lat' ? -85 : -180, Math.min(id === 'lat' ? 85 : 180, v)); $('#' + id).value = STATE[id]; renderMain(); hashSet(); });
+$('#place').addEventListener('input', () => { STATE.place = $('#place').value; renderMain(); });
+// the pin goes to the Site Planner through the address bar, so it can be shared
+const fieldsQ = (o) => `from=analysis&lat=${o.lat.toFixed(5)}&lng=${o.lng.toFixed(5)}&r=${o.R}`;
+function sendToSite() { try { window.parent.location.hash = '#/site?' + fieldsQ(STATE); } catch (e) { toast('Open this tool inside PlotCloud to send the pin.'); } }
+// the diagram, pin and radius live in the address bar of the page around this tool
+function hashSet() { try { const p = window.parent; if (!p || p === window) return; const base = p.location.hash.split('?')[0]; p.history.replaceState(null, '', `${base}?d=${STATE.d}&lat=${STATE.lat}&lng=${STATE.lng}&r=${STATE.R}`); } catch (e) { } }
+function hashGet() { try { const p = window.parent; if (!p || p === window) return; const m = /\?(.*)$/.exec(p.location.hash); if (!m) return; const q = new URLSearchParams(m[1]); if (q.get('d') && (D.some((x) => x.id === q.get('d')) || q.get('d') === 'boards')) STATE.d = q.get('d'); const lat = parseFloat(q.get('lat')), lng = parseFloat(q.get('lng')), r = parseInt(q.get('r'), 10); if (isFinite(lat)) STATE.lat = lat; if (isFinite(lng)) STATE.lng = lng; if (r >= 300 && r <= 900) STATE.R = r; } catch (e) { } }
+
+// =====================================================================================
+// BOARDS: tick drawings, pick a format, one click. The grid is a function of the format and the number of drawings.
+// =====================================================================================
+const BOARD = { sel: ['fg', 'streets', 'land', 'green'], fmt: 'a3l', svg: '', title: 'Site analysis', date: new Date().toISOString().slice(0, 10) };
+const FORMATS = {
+  a3r: { name: 'A3 report (all selected)', W: 297, H: 420, u: 1, hero: false },
+  a2p: { name: 'A2 portrait (1 hero + 6)', W: 420, H: 594, u: 1, cap: 7 },
+  a3l: { name: 'A3 landscape (1 large + 4 small)', W: 420, H: 297, u: 1, cap: 5 },
+  tri: { name: '16:9 triptych (3 across)', W: 480, H: 270, u: 1, cap: 3 },
+  nine: { name: 'Square nine-grid', W: 360, H: 360, u: 1, cap: 9 }
+};
+const MM_PT = 2.8346;
+function layoutGrid(f, n, hd) {   // returns tile rectangles in mm
+  const F = FORMATS[f], g = 6, m = 12, top = m + hd, W = F.W, H = F.H, aw = W - 2 * m, ah = H - top - m, R = [];
+  if (f === 'a3r') { const cols = n <= 2 ? 1 : n <= 6 ? 2 : 3, rows = Math.ceil(n / cols), tw = (aw - g * (cols - 1)) / cols, th = Math.min(tw * 1.0, (ah - g * (rows - 1)) / rows); for (let i = 0; i < n; i++) R.push({ x: m + (i % cols) * (tw + g), y: top + Math.floor(i / cols) * (th + g), w: tw, h: th }); }
+  else if (f === 'a2p') { const hh = Math.min(aw, ah * .52); R.push({ x: m, y: top, w: aw, h: hh }); const tw = (aw - g * 2) / 3, rows = 2, th = Math.min(tw, (ah - hh - g * 2) / rows); for (let i = 1; i < n; i++) { const k = i - 1; R.push({ x: m + (k % 3) * (tw + g), y: top + hh + g + Math.floor(k / 3) * (th + g), w: tw, h: th }); } }
+  else if (f === 'a3l') { const bh = ah, bw = Math.min(bh, aw * .55); R.push({ x: m, y: top, w: bw, h: bh }); const rw = aw - bw - g, tw = (rw - g) / 2, th = (ah - g) / 2; for (let i = 1; i < n; i++) { const k = i - 1; R.push({ x: m + bw + g + (k % 2) * (tw + g), y: top + Math.floor(k / 2) * (th + g), w: tw, h: th }); } }
+  else if (f === 'tri') { const tw = (aw - g * 2) / 3, th = Math.min(ah, tw * 1.05); for (let i = 0; i < n; i++) R.push({ x: m + i * (tw + g), y: top + (ah - th) / 2, w: tw, h: th }); }
+  else { const tw = (aw - g * 2) / 3, th = (ah - g * 2) / 3; for (let i = 0; i < n; i++) R.push({ x: m + (i % 3) * (tw + g), y: top + Math.floor(i / 3) * (th + g), w: tw, h: th }); }
+  return R;
+}
+function tileSvg(d, r, F) {   // a drawing card cut down to fit r (mm). Text is sized in pt, never below 6 pt; the legend is dropped when it would not fit.
+  const meta = D.find((x) => x.id === d), pt = (v) => v / MM_PT, ttl = pt(11), cap = pt(6.5), side = Math.min(r.w, r.h), figR = (side - ttl * 2.6 - cap * 3.2) / 2, showLeg = r.h > r.w * .8 && r.w >= 30 * cap && cap * MM_PT >= 6;
+  const k = (fig(d)).k, cx = r.x + r.w / 2, hdr = ttl * 1.9, cy = r.y + hdr + (r.h - hdr - (showLeg ? cap * 3.4 : cap * 1.6)) / 2, rr = Math.min((r.h - hdr - (showLeg ? cap * 3.4 : cap * 1.6)) / 2, r.w / 2 - 1.5), s = rr / AN.R * .985, P = (p) => [cx + p[0] * s, cy - p[1] * s];
+  const cid = 'bt' + Math.random().toString(36).slice(2, 7), body = fig(d, P, s).body, nl = niceScale(AN.R), nlw = nl * s, sx = r.x + 2, sy = r.y + r.h - cap * 1.3;
+  const legend = showLeg ? fig(d).legend.slice(0, 4).map((l, i) => { const x = r.x + 2 + i * ((r.w - 4) / 4); const sw = l.sw === 'dot' ? `<circle cx="${x + cap * .5}" cy="${sy - cap * 1.9}" r="${cap * .45}" fill="${l.col}"/>` : l.sw === 'line' ? `<path d="M${x} ${sy - cap * 1.9}h${cap}" stroke="${T.ink}" stroke-width=".25"/>` : l.sw === 'ramp' || l.sw === 'ringl' ? `<circle cx="${x + cap * .5}" cy="${sy - cap * 1.9}" r="${cap * .45}" fill="${T.ramp[2]}"/>` : `<rect x="${x}" y="${sy - cap * 2.4}" width="${cap}" height="${cap}" fill="${l.col || '#fff'}" ${l.stroke ? `stroke="${T.ink}" stroke-width=".15"` : ''}/>`; return `${sw}<text x="${x + cap * 1.3}" y="${sy - cap * 1.55}" font-size="${cap}" fill="${T.ink}">${esc(l.label)}</text>`; }).join('') : '';
+  return `<g class="tile" data-d="${d}"><clipPath id="${cid}"><circle cx="${cx}" cy="${cy}" r="${rr}"/></clipPath><text x="${r.x + 2}" y="${r.y + ttl * 1.1}" font-size="${ttl}" font-weight="800" fill="${T.ink}">${esc(meta.name)}</text><g transform="translate(${r.x + r.w - 4},${r.y + ttl * 1.6}) scale(${ttl / 24})"><path d="M0 -10 L7 12 L0 7 L-7 12 Z" fill="${T.ink}"/></g><text x="${r.x + r.w - 4}" y="${r.y + ttl * .75}" text-anchor="middle" font-size="${cap}" font-weight="700" fill="${T.ink}">N</text><g clip-path="url(#${cid})">${body}</g><circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${T.ink}" stroke-width=".2"/><path d="M${sx} ${sy}h${nlw}" stroke="${T.ink}" stroke-width=".5"/><text x="${sx}" y="${sy - .8}" font-size="${cap}" fill="${T.ink}">0</text><text x="${sx + nlw + 1}" y="${sy + .4}" font-size="${cap}" fill="${T.ink}">${nl} m</text>${legend}</g>`;
+}
+// draws a figure for a tile: reuse the card's drawing code with a different projection
+function fig(d, P, s) {
+  const saveCard = T.card; if (!P) { const r = drawFigure(d, 960); return { k: 1, legend: r.legend }; }
+  const w = 2; const keep = T.card; T.card = Object.assign({}, keep);
+  // map drawFigure's own coordinate system (card px about the centre) onto the tile
+  const sc = s / (keep.fig / 2 / AN.R * .985), r = drawFigure(d, keep.w);
+  T.card = keep; void w; void saveCard;
+  const body = `<g transform="translate(${P([0, 0])[0]},${P([0, 0])[1]}) scale(${sc}) translate(${-keep.w / 2},0)">${r.body.replace(/<text[\s\S]*?<\/text>/g, '')}</g>`;
+  return { body, legend: r.legend, k: 1 };
+}
+function boardSvg() {
+  const F = FORMATS[BOARD.fmt], sel = BOARD.sel.filter((d) => d !== 'sunwind'), n = F.cap ? Math.min(sel.length, F.cap) : sel.length, hd = 14;
+  ensure(); if (!AN.blocksIn) AN.blocksIn = CITY.blocks.filter((b) => b.q.some((p) => p[0] * p[0] + p[1] * p[1] <= (AN.R * 1.15) ** 2) || b.d < AN.R * 1.15);
+  const R = layoutGrid(BOARD.fmt, n, hd), m = 12, ttl = 14 / MM_PT, cap = 7 / MM_PT;
+  const tiles = R.map((r, i) => tileSvg(sel[i], r, F)).join('');
+  const head = `<g id="boardhead"><text x="${m}" y="${m + ttl * .9}" font-size="${ttl * 1.4}" font-weight="800" fill="${T.ink}">${esc(BOARD.title)}</text><text x="${m}" y="${m + ttl * 1.9}" font-size="${cap}" letter-spacing=".6" fill="${T.muted}">${esc((STATE.place || '').toUpperCase())} · R ${AN.R} M · ${esc(BOARD.date)}</text></g>`;
+  const foot = `<text x="${m}" y="${F.H - 5}" font-size="${cap * .95}" fill="${T.muted}">Demo geometry, generated for this prototype · not OpenStreetMap data</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${F.W} ${F.H}" width="${F.W}mm" height="${F.H}mm" font-family='${T.font.family}' role="img" aria-label="Board"><rect width="${F.W}" height="${F.H}" fill="#fff"/>${head}${tiles}${foot}</svg>`;
+}
+function boardsUI() {
+  $('#fsSite').hidden = false; $('#fsLayers').hidden = true;
+  const ids = D.filter((x) => x.id !== 'sunwind');
+  const picks = ids.map((x) => { const mini = cardSvg(x.id).replace(/ width="[\d.]+" height="[\d.]+"/, ''); return `<button type="button" class="pick" data-pick="${x.id}" aria-pressed="${BOARD.sel.includes(x.id)}" aria-label="${esc(x.name)}">${mini}<span><b>${x.n} ${esc(x.name)}</b></span></button>`; }).join('');
+  const F = FORMATS[BOARD.fmt];
+  $('#main').innerHTML = `<div class="pbar"><p style="margin:0 0 6px;color:var(--muted)"><b style="color:var(--ink)">1</b> Tick the drawings &nbsp; <b style="color:var(--ink)">2</b> Choose a format &nbsp; <b style="color:var(--ink)">3</b> Lay out</p>
+<div class="picks">${picks}</div>
+<div class="row" style="max-width:760px;align-items:end"><label class="f" style="flex:2;min-width:220px;margin:0">Format<select id="bfmt">${Object.entries(FORMATS).map(([k, v]) => `<option value="${k}" ${k === BOARD.fmt ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label><label class="f" style="flex:2;min-width:180px;margin:0">Board title<input type="text" id="btitle" value="${esc(BOARD.title)}" maxlength="60"></label><button class="btn pri" id="blay" style="flex:0 0 auto">Lay out</button></div></div>
+<p class="res" id="bnote"></p><div class="stage" id="bstage"></div>`;
+  layBoard();
+}
+function layBoard() {
+  const F = FORMATS[BOARD.fmt], n = BOARD.sel.length; BOARD.svg = n ? boardSvg() : ''; const st = $('#bstage'); st.innerHTML = n ? BOARD.svg.replace(/ width="[\d.]+mm" height="[\d.]+mm"/, '') : '<p style="padding:30px;color:var(--muted)">Tick at least one drawing.</p>';
+  const used = F.cap ? Math.min(n, F.cap) : n; $('#bnote').innerHTML = n ? `<span><b>${used}</b> of ${n} drawings placed on ${esc(F.name.split(' (')[0])} · ${F.W} × ${F.H} mm${F.cap && n > F.cap ? ` · this format holds ${F.cap}; the rest are left off` : ''}. Text is never smaller than 6 pt; a drawing's legend is dropped when it would be.</span>` : '';
+}
+document.addEventListener('click', (e) => { const p = e.target.closest('[data-pick]'); if (p) { const id = p.dataset.pick, i = BOARD.sel.indexOf(id); if (i >= 0) BOARD.sel.splice(i, 1); else BOARD.sel.push(id); p.setAttribute('aria-pressed', String(i < 0)); layBoard(); return; } if (e.target.closest('#blay')) layBoard(); });
+document.addEventListener('change', (e) => { if (e.target.id === 'bfmt') { BOARD.fmt = e.target.value; layBoard(); } });
+document.addEventListener('input', (e) => { if (e.target.id === 'btitle') { BOARD.title = e.target.value; layBoard(); } });
+
+hashGet(); $('#rad').value = STATE.R; $('#rv').textContent = `R ${STATE.R} m`; $('#lat').value = STATE.lat; $('#lng').value = STATE.lng;
+try { const p = window.parent; if (p && p !== window) { const m = /\?(.*)$/.exec(p.location.hash); if (m) { const q = new URLSearchParams(m[1]); if (q.get('place')) { STATE.place = q.get('place'); $('#place').value = STATE.place; } } } } catch (e) { }
+renderMain();
+window.__atlas = { STATE, THEME, get AN() { return AN; }, get CITY() { return CITY; }, cardSvg, boardSvg, BOARD, FORMATS, renderMain, layoutGrid };
+</script>
+</body></html>

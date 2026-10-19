@@ -166,6 +166,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 .dc summary { cursor: pointer; font-size: 12.5px; color: var(--muted); } .dc[open] summary { margin-bottom: 6px; } .dcg { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--surface); max-width: 560px; }
 .shaperow { display: grid; grid-template-columns: auto auto auto auto minmax(80px, 320px) auto; gap: 10px; align-items: center; font-size: 12.5px; justify-content: start; } .shaperow label, .shaperow .radl { color: var(--muted); } .shaperow select { width: auto; padding: 5px 8px; } .shaperow input[type=range] { width: 100%; accent-color: #111; margin: 0; } .shaperow output { font: 12px var(--f-mono); min-width: 52px; }
 .bdn { margin: -2px 0 0; font-size: 11.5px; } .topc .msg:empty { display: none; }
+.fromchip{position:absolute;left:12px;top:12px;z-index:6;display:flex;align-items:center;gap:8px;max-width:calc(100% - 24px);padding:5px 6px 5px 12px;border-radius:999px;background:#1C1B1A;color:#fff;font:600 12px 'Inter Tight',system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25)}.fromchip button{all:unset;cursor:pointer;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.18);font-size:14px}.fromchip button[data-usepin]{width:auto;padding:0 10px;height:22px;border-radius:999px;background:#D8402A}.fromchip button:focus-visible{outline:2px solid #fff}
 .mapbox { position: relative; flex: 1; min-height: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #f2f1ed; }
 #ml { position: absolute; inset: 0; } #ml[hidden] { display: none; }
 .mapbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -1437,7 +1438,23 @@ function msg(sel, t, k) { const m = $(sel); m.textContent = t || ''; m.className
 window.__site = { get ML() { return ML; }, get site() { return site; }, get ORIGIN() { return ORIGIN; }, setOrigin, select, sunScene, toPx: (p) => W2S(p), SITE, SITEP };
 statusUI(); reviewUI(); bdUI(); tzNote(); resize(); initMap();
 // reopen the last site edited in this browser
-(async () => { try { const L = (await SITEP.sites.all()).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); if (L[0]) loadSite(L[0].site, L[0].raws); } catch (e) {} })();
+const REOPENED = (async () => { try { const L = (await SITEP.sites.all()).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); if (L[0]) loadSite(L[0].site, L[0].raws); } catch (e) {} })();
+// v140: the Site analysis atlas hands over a pin in the address bar: #/site?from=analysis&lat=..&lng=..&r=..
+function fromQ() { try { const p = window.parent; if (!p || p === window) return null; const m = /\?(.*)$/.exec(p.location.hash); if (!m) return null; const q = new URLSearchParams(m[1]); if (q.get('from') !== 'analysis') return null; const lat = parseFloat(q.get('lat')), lng = parseFloat(q.get('lng')), r = parseInt(q.get('r'), 10); if (!(Math.abs(lat) <= 85 && Math.abs(lng) <= 180)) return null; return { lat, lng, r: r >= 50 && r <= 5000 ? r : 600 }; } catch (e) { return null; } }
+function applyFrom(q) {
+  const size = Math.max(SITE.STUDY.min, Math.min(SITE.STUDY.max, Math.round(q.r / STUDY_RADIUS_K / 10) * 10)), clamped = q.r / STUDY_RADIUS_K > SITE.STUDY.max;
+  setOrigin(q.lat, q.lng, 'From Site analysis'); if (SHAPE === 'circle') { setRange('circle', size); if (site) { site.boundary = boundary(); rebuild(); persist(); } bdUI(); draw(); }
+  return clamped ? ` (radius limited to ${Math.round(SITE.STUDY.max * STUDY_RADIUS_K)} m here)` : '';
+}
+function fromChip(text, extra) {
+  let c = $('#fromChip'); if (!c) { c = document.createElement('div'); c.id = 'fromChip'; c.className = 'fromchip'; $('#mapbox').appendChild(c); }
+  c.innerHTML = `<span></span>${extra || ''}<button type="button" aria-label="Clear and go back to choosing a place by hand" title="Clear">×</button>`; c.firstChild.textContent = text;
+  c.querySelector('button[aria-label^="Clear"]').addEventListener('click', () => { c.remove(); try { const p = window.parent; p.history.replaceState(null, '', p.location.hash.split('?')[0]); } catch (e) {} });
+  const u = c.querySelector('[data-usepin]'); if (u) u.addEventListener('click', () => { const q = fromQ(); if (q) { const n = applyFrom(q); fromChip('Continued from Site analysis' + n); } });
+}
+REOPENED.then(() => { const q = fromQ(); if (!q) return; const near = site && site.origin && Math.abs(site.origin.lat - q.lat) < 0.0005 && Math.abs(site.origin.lon - q.lng) < 0.0005;
+  if (site && !near) { fromChip(`Site analysis pin ${q.lat.toFixed(4)}, ${q.lng.toFixed(4)} · R ${q.r} m. Your open site stays as it is.`, '<button type="button" data-usepin>Use this pin</button>'); return; }
+  fromChip('Continued from Site analysis' + applyFrom(q)); });
 </script>
 
 <script>

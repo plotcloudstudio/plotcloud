@@ -690,7 +690,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "b7b00143", "wind": "01fda8ca", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "af18fccb", "cameras": "48cdcd11", "vent": "ddc62f48", "views": "eeff565c", "daylight": "9c499522", "spacesyntax": "f0a2babc", "modeler": "8a535d1f", "tracer": "fdfcd833", "sitectx": "eeb8bd4e", "composer": "0459c881", "studio": "fcccf77e"}; const EMBCACHE = {};
+const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "d5a673d7", "composer": "0459c881", "studio": "fcccf77e", "atlas": "8a221862"}; const EMBCACHE = {};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
@@ -3732,6 +3732,41 @@ route();
   const hook = (fr) => { try { const w = fr.contentWindow; if (!w || !w.document || w.document.__esc) return; w.document.__esc = 1; w.document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target || {}).tagName || "")) setTimeout(exit, 0); }); } catch (x) {} };
   new MutationObserver(() => { document.querySelectorAll(".simfs iframe").forEach((fr) => { if (!fr.dataset.esc) { fr.dataset.esc = "1"; fr.addEventListener("load", () => hook(fr)); } hook(fr); }); }).observe(document.getElementById("app"), { childList: true, subtree: true });
 }
+
+// === Site analysis atlas (2026-10-19): eight diagrams in one style replace the two cards of the Site analysis group ===
+EMB["atlas"] = "@";
+EMBI["atlas"] = { title: "site analysis atlas", crumb: "Site analysis atlas", short: "Eight diagrams, one site, one style: figure-ground, streets, land use, green and water, transit, walking, site reading, and boards to lay them out.", lede: "Eight diagrams in one drawing style. Each reads the same site and radius and states only numbers computed from the geometry." };
+if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
+{ const ATLAS = [
+    ["fg", "Figure-ground", "Buildings as solid black on white: how dense the ground is."],
+    ["streets", "Streets", "Streets in four weights, with length, density and intersections."],
+    ["land", "Land use", "Land use in pastel blocks, with the share of each use."],
+    ["green", "Green & water", "Parks and water against the built ground, as shares."],
+    ["transit", "Transit", "Bus and rail stops with five and ten minute walking rings."],
+    ["walk", "Walk pulse", "Streets coloured by minutes of walking from the site."],
+    ["reading", "Site reading", "The site in gold, places by kind, and a 5 minute circle."],
+    ["sunwind", "Sun & wind", "Sun hours and wind flow, each in its own tool for now."]];
+  window.ATLAS_LIST = ATLAS;
+  const thumb = (d) => { const r = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })(), B = [], cell = 34, c0 = 150, cy = 90;
+    for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) B.push([c0 + i * cell - cell / 2 + 3, cy + j * cell - cell / 2 + 3, cell - 6, cell - 6, r()]);
+    const lu = ["#F2C94C", "#E88AA8", "#9B8BD4", "#7FB3D5", "#D9D9D9", "#F2C94C", "#F2C94C", "#BFDDB0"];
+    let g = "";
+    if (d === "fg") g = B.map((b) => `<rect x="${b[0] + 3}" y="${b[1] + 3}" width="${b[2] - 6}" height="${b[3] - 6}" fill="#1C1B1A"/>`).join("");
+    else if (d === "streets") g = [-3, -2, -1, 0, 1, 2, 3, 4].map((k, n) => { const w = n % 4 === 0 ? 3 : n % 2 ? .8 : 1.5, p = c0 + (k - .5) * cell, q = cy + (k - .5) * cell; return `<path d="M${p} 0V180M0 ${q}H300" stroke="#1C1B1A" stroke-width="${w}"/>`; }).join("");
+    else if (d === "land") g = B.map((b) => `<rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" fill="${lu[Math.floor(b[4] * 8)]}"/>`).join("");
+    else if (d === "green") g = B.map((b) => `<rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" fill="${b[4] < .25 ? "#9CC98B" : "#F1EFE8"}"/>`).join("") + `<path d="M0 120C80 70 200 140 300 80V105C200 165 80 95 0 145Z" fill="#8EC3E6"/>`;
+    else if (d === "transit") g = [-3, -1, 1, 3].map((k) => `<path d="M${c0 + k * cell} 0V180M0 ${cy + k * cell}H300" stroke="#BDB9B0"/>`).join("") + `<circle cx="150" cy="90" r="34" fill="none" stroke="#D8402A" stroke-dasharray="5 3"/><circle cx="150" cy="90" r="68" fill="none" stroke="#D8402A" stroke-dasharray="5 3"/>` + [[100, 56], [196, 124], [150, 160], [230, 60]].map((p, i) => i === 1 ? `<rect x="${p[0] - 5}" y="${p[1] - 5}" width="10" height="10" fill="#D8402A"/>` : `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#2F6DB5"/>`).join("") + `<rect x="140" y="82" width="20" height="16" fill="#E8B93C" stroke="#1C1B1A"/>`;
+    else if (d === "walk") g = [-3, -2, -1, 0, 1, 2, 3].map((k) => { const col = (a) => ["#FDE6CF", "#F9B27A", "#EC6A3A", "#B3220F"][Math.min(3, Math.floor(Math.abs(a) * .9))], p = c0 + k * cell, q = cy + k * cell; return `<path d="M${p} 0V180" stroke="${col(k)}" stroke-width="2"/><path d="M0 ${q}H300" stroke="${col(k)}" stroke-width="2"/>`; }).join("") + `<circle cx="150" cy="90" r="30" fill="none" stroke="#1C1B1A" stroke-dasharray="4 3"/><circle cx="150" cy="90" r="62" fill="none" stroke="#1C1B1A" stroke-dasharray="4 3"/><rect x="141" y="83" width="18" height="14" fill="#E8B93C" stroke="#1C1B1A"/>`;
+    else if (d === "reading") g = B.map((b) => `<rect x="${b[0] + 3}" y="${b[1] + 3}" width="${b[2] - 6}" height="${b[3] - 6}" fill="#D6D2C8"/>`).join("") + `<circle cx="150" cy="90" r="52" fill="none" stroke="#1C1B1A" stroke-dasharray="5 3"/><rect x="136" y="80" width="28" height="20" fill="#E8B93C" stroke="#1C1B1A"/>` + [[112, 62, "#2F6DB5"], [190, 70, "#2E8B57"], [120, 128, "#D8402A"], [186, 122, "#8A5A36"], [160, 50, "#D8402A"]].map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${p[2]}" stroke="#fff"/>`).join("");
+    else g = `<rect width="300" height="180" fill="#F4F2EC"/><circle cx="105" cy="70" r="26" fill="#F4C542"/><g stroke="#F4C542" stroke-width="2">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M${105 + Math.cos(a * Math.PI / 180) * 34} ${70 + Math.sin(a * Math.PI / 180) * 34}L${105 + Math.cos(a * Math.PI / 180) * 44} ${70 + Math.sin(a * Math.PI / 180) * 44}"/>`).join("")}</g><g stroke="#2F6DB5" stroke-width="2" fill="none" stroke-linecap="round"><path d="M150 120C185 105 205 135 245 118"/><path d="M140 140C180 128 205 156 262 138"/><path d="M165 100C190 90 215 110 250 98"/></g>`;
+    const clip = d === "sunwind" ? "" : `<clipPath id="atc-${d}"><circle cx="150" cy="90" r="82"/></clipPath>`;
+    return `<svg viewBox="0 0 300 180" aria-hidden="true" style="background:#fff">${clip}<g ${d === "sunwind" ? "" : `clip-path="url(#atc-${d})"`}>${g}</g>${d === "sunwind" ? "" : '<circle cx="150" cy="90" r="82" fill="none" stroke="#1C1B1A" stroke-width=".8"/>'}</svg>`; };
+  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site analysis <span>(8)</span></h3><p class="asub-l">Eight diagrams · one site · one style.</p><div class="tgrid2">${ATLAS.map(([d, n, t], i) => `<article class="tc"><div class="tc-vis atl go" data-go="tool/atlas?d=${d}">${thumb(d)}</div><div class="tc-body" data-go="tool/atlas?d=${d}"><div class="tc-head"><span class="tc-no">03.${i + 1}</span><h3>${n}</h3></div><p class="tc-d">${t}</p><span class="tc-open">Open →</span></div></article>`).join("")}</div></div>`;
+  const _t = tSections; tSections = function () { const h = _t.apply(this, arguments), a = h.indexOf('<div class="agrp" id="agrp-site">'), b = h.indexOf('<div class="agrp" id="agrp-interior">'); if (a < 0 || b < 0) return h; return h.slice(0, a) + html() + h.slice(b); };
+  const st = document.createElement("style"); st.textContent = `.tc-vis.atl{display:grid;place-items:center;background:#fff;aspect-ratio:5/3;overflow:hidden}.tc-vis.atl svg{width:100%;height:100%;display:block}`; document.head.appendChild(st); }
+
+// the page may have been drawn once before the blocks above took over: draw the tools pages again
+if (/^#\/?(tools|tool\/)/.test(location.hash) && !window.__reRouted) { window.__reRouted = 1; try { route(); } catch (e) {} }
 </script>
 </body>
 </html>
