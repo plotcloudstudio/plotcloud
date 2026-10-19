@@ -47,7 +47,7 @@ footer{padding:14px 22px;color:var(--muted);font-size:12px;border-top:1px solid 
   <h1>Site analysis atlas</h1><p class="sub">Eight diagrams, one site, one style.</p>
   <div class="tabs" id="tabs" role="group" aria-label="Diagram"></div>
   <fieldset id="fsSite"><legend>Site</legend>
-    <label class="f">Place (label for the card)<input type="text" id="place" value="Library · Demo site" maxlength="60"></label>
+    <label class="f">Place (label for the card)<input type="text" id="place" value="Demo site" maxlength="60"></label>
     <div class="row"><label class="f" style="flex:1">Latitude<input type="number" id="lat" step="0.0001" value="49.2827"></label><label class="f" style="flex:1">Longitude<input type="number" id="lng" step="0.0001" value="-123.1207"></label></div>
     <div class="rv"><span>Radius</span><b id="rv">R 600 m</b></div><input type="range" id="rad" min="300" max="900" step="50" value="600" aria-label="Radius in metres">
   </fieldset>
@@ -215,7 +215,7 @@ const LAYERS = {
   transit: [['bus', 'Bus stops'], ['rail', 'Rail stops'], ['ring', 'Walking rings'], ['road', 'Streets']], walk: [['edges', 'Walking minutes'], ['cont', 'Contours'], ['poi', 'Places']],
   reading: [['site', 'Site'], ['poi', 'Places'], ['ring', '5 minute circle'], ['bld', 'Buildings (grey)']], sunwind: []
 };
-const STATE = { d: 'fg', lat: 49.2827, lng: -123.1207, R: 600, place: 'Library · Demo site', off: {} };
+const STATE = { d: 'fg', lat: 49.2827, lng: -123.1207, R: 600, place: 'Demo site', off: {} };
 let CITY = null, AN = null, CKEY = '';
 function ensure() { const k = STATE.lat + '|' + STATE.lng; if (k !== CKEY) { CITY = genCity(STATE.lat, STATE.lng); CKEY = k; } AN = analyse(CITY, STATE.R); }
 const on = (id) => !STATE.off[STATE.d + ':' + id];
@@ -330,9 +330,9 @@ async function save(name, data, type) {
 function svgToPng(svg, scale = 2) {
   return new Promise((res, rej) => { const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg), w = +vb[1], h = +vb[2], img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = w * scale; c.height = h * scale; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); c.toBlob((b) => b ? res(b) : rej(new Error('png')), 'image/png'); }; img.onerror = () => rej(new Error('svg')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
 }
-$('#exSvg').addEventListener('click', () => { const s = currentSvg(); if (s) save(exportName('svg'), s, 'image/svg+xml'); });
-$('#exPng').addEventListener('click', async () => { const s = currentSvg(); if (!s) return; try { save(exportName('png'), await svgToPng(s), 'image/png'); } catch (e) { toast('Could not make the PNG here. Use SVG.'); } });
-$('#exPrint').addEventListener('click', () => window.print());
+$('#exSvg').addEventListener('click', () => { if (STATE.d === 'boards') ctxPost({ board: true }); const s = currentSvg(); if (s) save(exportName('svg'), s, 'image/svg+xml'); });
+$('#exPng').addEventListener('click', async () => { if (STATE.d === 'boards') ctxPost({ board: true }); const s = currentSvg(); if (!s) return; try { save(exportName('png'), await svgToPng(s), 'image/png'); } catch (e) { toast('Could not make the PNG here. Use SVG.'); } });
+$('#exPrint').addEventListener('click', () => { ctxPost({ board: true }); window.print(); });
 function toast(t) { const d = document.createElement('div'); d.textContent = t; d.setAttribute('role', 'status'); d.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1C1B1A;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:9'; document.body.appendChild(d); setTimeout(() => d.remove(), 3200); }
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-d]'); if (t) { STATE.d = t.dataset.d; hashSet(); renderMain(); return; }
@@ -347,7 +347,8 @@ $('#place').addEventListener('input', () => { STATE.place = $('#place').value; r
 const fieldsQ = (o) => `from=analysis&lat=${o.lat.toFixed(5)}&lng=${o.lng.toFixed(5)}&r=${o.R}`;
 function sendToSite() { try { window.parent.location.hash = '#/site?' + fieldsQ(STATE); } catch (e) { toast('Open this tool inside PlotCloud to send the pin.'); } }
 // the diagram, pin and radius live in the address bar of the page around this tool
-function hashSet() { try { const p = window.parent; if (!p || p === window) return; const base = p.location.hash.split('?')[0]; p.history.replaceState(null, '', `${base}?d=${STATE.d}&lat=${STATE.lat}&lng=${STATE.lng}&r=${STATE.R}`); } catch (e) { } }
+const ctxPost = (extra) => { try { const p = window.parent; if (p && p !== window) p.postMessage(Object.assign({ pc: 1, t: 'ctx', lat: STATE.lat, lng: STATE.lng, r: STATE.R, label: STATE.place }, extra || {}), '*'); } catch (e) { } };
+function hashSet() { ctxPost(); try { const p = window.parent; if (!p || p === window) return; const base = p.location.hash.split('?')[0]; p.history.replaceState(null, '', `${base}?d=${STATE.d}&lat=${STATE.lat}&lng=${STATE.lng}&r=${STATE.R}`); } catch (e) { } }
 function hashGet() { try { const p = window.parent; if (!p || p === window) return; const m = /\?(.*)$/.exec(p.location.hash); if (!m) return; const q = new URLSearchParams(m[1]); if (q.get('d') && (D.some((x) => x.id === q.get('d')) || q.get('d') === 'boards')) STATE.d = q.get('d'); const lat = parseFloat(q.get('lat')), lng = parseFloat(q.get('lng')), r = parseInt(q.get('r'), 10); if (isFinite(lat)) STATE.lat = lat; if (isFinite(lng)) STATE.lng = lng; if (r >= 300 && r <= 900) STATE.R = r; } catch (e) { } }
 
 // =====================================================================================
@@ -418,7 +419,7 @@ document.addEventListener('input', (e) => { if (e.target.id === 'btitle') { BOAR
 
 hashGet(); $('#rad').value = STATE.R; $('#rv').textContent = `R ${STATE.R} m`; $('#lat').value = STATE.lat; $('#lng').value = STATE.lng;
 try { const p = window.parent; if (p && p !== window) { const m = /\?(.*)$/.exec(p.location.hash); if (m) { const q = new URLSearchParams(m[1]); if (q.get('place')) { STATE.place = q.get('place'); $('#place').value = STATE.place; } } } } catch (e) { }
-renderMain();
+renderMain(); if (/[?&]lat=/.test((() => { try { return window.parent.location.hash; } catch (e) { return ''; } })())) ctxPost();
 window.__atlas = { STATE, THEME, get AN() { return AN; }, get CITY() { return CITY; }, cardSvg, boardSvg, BOARD, FORMATS, renderMain, layoutGrid };
 </script>
 </body></html>

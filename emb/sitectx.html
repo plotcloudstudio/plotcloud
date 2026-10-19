@@ -796,7 +796,9 @@ function setOrigin(lat, lon, label, keepView) {
   $('#lat').value = (+lat).toFixed(6); $('#lon').value = (+lon).toFixed(6);
   if (!site || site.tzSource !== 'user') { $('#tz').value = String(Math.round(lon / 15)); $('#dst').value = String(SITE.guessDST(ORIGIN)); if (site) { site.tz = Math.round(lon / 15); site.dst = SITE.guessDST(ORIGIN); } }
   tzNote(); if (!keepView) fit(); statusUI(); draw(); reviewUI(); if (ML && mlReady && !keepView) syncMap(true);
+  ctxPost();
 }
+function ctxPost() { try { const p = window.parent; if (p && p !== window && ORIGIN) p.postMessage({ pc: 1, t: 'ctx', lat: ORIGIN.lat, lng: ORIGIN.lon, r: Math.round(studyR()), label: ORIGIN.label || '' }, '*'); } catch (e) { } }
 const tzNote = () => { $('#tzNote').textContent = site && site.tzSource === 'user' ? 'Set by you.' : 'Estimated from the longitude. Check it: Sun hours uses it for clock times.'; };
 $('#srchF').addEventListener('submit', async (e) => { e.preventDefault(); const q = $('#q').value; $('#places').innerHTML = ''; msg('#locMsg', 'Searching…');
   try { const r = await SITEP.search(q); evt('site_search', { results: r.places.length, cached: r.cached });
@@ -871,7 +873,7 @@ const radText = () => SHAPE === 'circle' ? `${studySize()} m` : `${studySize()} 
 function setRange(kind, v) { const r = $('#rad'); r.min = SITE.STUDY.min; r.max = SITE.STUDY.max; r.step = 10; if (v != null) r.value = Math.max(SITE.STUDY.min, Math.min(SITE.STUDY.max, Math.round(v / 10) * 10)); $('#radO').textContent = radText(); $('#radL').textContent = 'Size'; r.setAttribute('aria-label', 'Study area size'); }
 let szBefore = null;
 $('#rad').addEventListener('input', () => { if (szBefore == null && site) szBefore = snapSite(); $('#radO').textContent = radText(); if (site) site.boundary = boundary(); draw(); if (ML && mlReady) syncMap(); bdUI(); });
-$('#rad').addEventListener('change', () => { if (szBefore != null && site && szBefore !== snapSite()) { UNDO.push(szBefore); if (UNDO.length > HMAX) UNDO.shift(); REDO.length = 0; undoUI(); } szBefore = null; if (site) { site.boundary = boundary(); rebuild(); persist(); } bdUI(); draw(); });
+$('#rad').addEventListener('change', () => { ctxPost(); if (szBefore != null && site && szBefore !== snapSite()) { UNDO.push(szBefore); if (UNDO.length > HMAX) UNDO.shift(); REDO.length = 0; undoUI(); } szBefore = null; if (site) { site.boundary = boundary(); rebuild(); persist(); } bdUI(); draw(); });
 $('#shape').addEventListener('change', (e) => { const k = e.target.value;
   if (k === 'polygon' && !polyBoundary()) { e.target.value = SHAPE; bdUI(); return; }
   if (site) pushU(); SHAPE = k; DRAW = null; TOOLM = null; setRange(k, null); if (site) { site.boundary = boundary(); rebuild(); persist(); } $('#mapbox').classList.remove('drawing'); hint('');

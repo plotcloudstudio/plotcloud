@@ -690,7 +690,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "d5a673d7", "composer": "0459c881", "studio": "fcccf77e", "atlas": "8a221862"}; const EMBCACHE = {};
+const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "7015b769", "composer": "0459c881", "studio": "fcccf77e", "atlas": "76640f81"}; const EMBCACHE = {};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
@@ -3760,6 +3760,108 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
     <p class="hall">Showroom, Library and Learn are available at every step: <a data-go="showroom">Showroom</a> · <a data-go="library">Library</a> · <a data-go="learn">Learn</a>.</p></section>`;
   const MAP = /<section class="wrap hsec" aria-labelledby="hmapT">[\s\S]*?<\/section>/;
   const _h = P.home; P.home = function () { let h = _h.apply(this, arguments); h = h.replace(MAP, ""); const k = h.indexOf('<section class="wrap hsec dlsec"'); return k < 0 ? h.replace(/<\/section>/, (m) => m + block()) : h.slice(0, k) + block() + h.slice(k); };
+})();
+
+/* v141 · workflow shell: a rail with the five steps, a site-context chip, Ctrl/Cmd+K and drawers. Routes do not change; marketing pages keep their header. */
+(function () {
+  const EMBEDDED = window.parent !== window && /[?&]drawer=1/.test(location.search);
+  const SIM = window.__simfs || [];
+  const STEPS = [
+    { n: 1, name: "Analysis diagrams", ic: '<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>' },
+    { n: 2, name: LABELS.site, ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
+    { n: 3, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
+    { n: 4, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
+    { n: 5, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
+  const CX = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("pc-ctx") || "{}"); } catch (e) {} return Object.assign({ lat: null, lng: null, R: 600, label: "", src: "", done: {}, sim: "" }, o); })();
+  const saveCx = () => { try { localStorage.setItem("pc-ctx", JSON.stringify(CX)); } catch (e) {} };
+  window.PCX = CX;   // the one site-context: the pin, the radius and what is done
+  const pinQ = (withFrom) => CX.lat == null ? "" : `lat=${(+CX.lat).toFixed(5)}&lng=${(+CX.lng).toFixed(5)}&r=${CX.R}${withFrom ? "&from=analysis" : ""}`;
+  const urlOf = (n) => n === 1 ? "tool/atlas" + (CX.lat == null ? "" : "?d=fg&" + pinQ()) : n === 2 ? "site" + (CX.src === "atlas" && CX.lat != null ? "?" + pinQ(true) : "") : n === 3 ? "studio" : n === 4 ? (CX.sim ? "tool/" + CX.sim : "tools") : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ());
+  const where = () => { const h = (location.hash.replace(/^#\/?/, "") || "home"), [path, q] = h.split("?"), pg = path.split("/"), id = pg[1];
+    if (pg[0] === "site" || (pg[0] === "tool" && id === "sitectx")) return 2; if (pg[0] === "studio") return 3;
+    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 5 : 1; if (pg[0] === "tool" && SIM.includes(id)) return 4; return 0; };
+  const st = document.createElement("style");
+  st.textContent = `:root{--wfrail:0px;--wftop:0px}
+  body.wf{--wfrail:220px;--wftop:40px}body.wf.rc{--wfrail:64px}
+  body.wf header.site,body.wf footer.site{display:none!important}
+  body.wf main#app{margin-left:var(--wfrail);padding-top:var(--wftop)}
+  #wfrail,#wftop{display:none}body.wf #wfrail{display:flex}body.wf #wftop{display:flex}
+  #wfrail{position:fixed;left:0;top:0;bottom:0;width:var(--wfrail);z-index:60;flex-direction:column;background:#fff;border-right:1px solid var(--hair);padding:12px 10px;gap:6px;overflow:hidden}
+  #wfrail .lg{font:800 20px var(--sans,inherit);letter-spacing:-.035em;text-transform:lowercase;text-decoration:none;color:var(--ink,#111);padding:2px 6px 8px;white-space:nowrap;cursor:pointer}
+  body.rc #wfrail .lg{font-size:0;padding:0 0 8px;text-align:center}body.rc #wfrail .lg::before{content:"p";font-size:22px}
+  #wfrail .chip{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:1px;padding:8px 10px;border:1px solid var(--hair);border-radius:8px;background:var(--paper,#fbfaf7);font-size:12.5px;line-height:1.25;margin-bottom:8px;min-width:0}
+  #wfrail .chip:hover{border-color:var(--ink,#111)}#wfrail .chip small{color:var(--muted);font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase}#wfrail .chip b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.rc #wfrail .chip{padding:8px 0;justify-items:center}body.rc #wfrail .chip b,body.rc #wfrail .chip small{display:none}body.rc #wfrail .chip::before{content:"◎";font-size:16px}
+  #wfrail a.st{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;text-decoration:none;color:var(--ink,#111);font-weight:600;font-size:14px;cursor:pointer;position:relative;white-space:nowrap}
+  #wfrail a.st:hover{background:var(--sand,#efebe0)}#wfrail a.st svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  #wfrail a.st.on{background:var(--ink,#111);color:#fff}#wfrail a.st .tk{margin-left:auto;font-size:12px;color:#2E8B57}#wfrail a.st.on .tk{color:#9fe0bb}
+  #wfrail a.st[data-done="0"] .tk{display:none}body.rc #wfrail a.st span,body.rc #wfrail a.st .tk{display:none}body.rc #wfrail a.st{justify-content:center;padding:10px 0}
+  #wfrail .sp{flex:1}#wfrail .col{all:unset;cursor:pointer;padding:8px 10px;border-radius:8px;font:500 12px var(--mono);color:var(--muted);display:flex;gap:8px;align-items:center}#wfrail .col:hover{background:var(--sand,#efebe0)}body.rc #wfrail .col span{display:none}
+  #wftop{position:fixed;left:var(--wfrail);right:0;top:0;height:var(--wftop);z-index:55;align-items:center;gap:6px;padding:0 12px;background:var(--paper,#fbfaf7);border-bottom:1px solid var(--hair)}
+  #wftop .ttl{font:600 13px var(--sans,inherit);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#wftop .sp{flex:1}
+  #wftop button,#wftop a{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--hair);border-radius:999px;background:#fff;font:600 12.5px var(--sans,inherit);color:var(--ink,#111);box-sizing:border-box}
+  #wftop button:hover,#wftop a:hover{border-color:var(--ink,#111)}#wftop kbd{font:500 11px var(--mono);color:var(--muted)}
+  #wftop button:focus-visible,#wfrail a:focus-visible,#wfrail button:focus-visible{outline:2px solid var(--accent,#D8402A);outline-offset:2px}
+  body.wf .simfs{left:var(--wfrail);top:var(--wftop);z-index:50}
+  #wfdrawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);z-index:90;background:#fff;border-left:1px solid var(--hair);box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(102%);transition:transform .22s;display:flex;flex-direction:column}
+  #wfdrawer.on{transform:none}#wfdrawer .dh{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--hair);font-weight:700}#wfdrawer .dh button{all:unset;cursor:pointer;margin-left:auto;width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--hair);border-radius:50%}
+  #wfdrawer iframe{flex:1;border:0;width:100%}
+  #cmdk{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;padding-top:14vh}#cmdk.on{display:flex}
+  #cmdk .bx{width:min(560px,92vw);background:#fff;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden}
+  #cmdk input{all:unset;box-sizing:border-box;width:100%;padding:16px 18px;font:500 16px var(--sans,inherit);border-bottom:1px solid var(--hair)}#cmdk ul{list-style:none;margin:0;padding:6px;max-height:48vh;overflow:auto}
+  #cmdk li{padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;gap:10px;align-items:baseline}#cmdk li small{margin-left:auto;color:var(--muted);font:500 11px var(--mono)}#cmdk li[aria-selected=true]{background:var(--ink,#111);color:#fff}#cmdk li[aria-selected=true] small{color:#ccc}
+  body.drawer header.site,body.drawer footer.site,body.drawer #wfrail,body.drawer #wftop{display:none!important}
+  @media (max-width:700px){body.wf{--wfrail:0px}#wfrail{top:auto;left:0;right:0;width:auto;height:56px;flex-direction:row;padding:4px 6px;border-right:0;border-top:1px solid var(--hair);gap:2px}#wfrail .lg,#wfrail .chip,#wfrail .sp,#wfrail .col{display:none}
+   #wfrail a.st{flex:1;flex-direction:column;gap:2px;justify-content:center;padding:4px 0;font-size:10px}#wfrail a.st span{display:block!important;font-size:10px}#wfrail a.st .tk{display:none!important}body.wf main#app{padding-bottom:56px}body.wf .simfs{bottom:56px}#wftop .kb{display:none}}`;
+  document.head.appendChild(st);
+  const rail = document.createElement("aside"); rail.id = "wfrail"; rail.setAttribute("aria-label", "Workflow");
+  const top = document.createElement("div"); top.id = "wftop";
+  const dr = document.createElement("aside"); dr.id = "wfdrawer"; dr.setAttribute("aria-label", "Drawer"); dr.innerHTML = '<div class="dh"><span id="dtl"></span><button type="button" aria-label="Close the drawer">✕</button></div><iframe title="Drawer"></iframe>';
+  const ck = document.createElement("div"); ck.id = "cmdk"; ck.setAttribute("role", "dialog"); ck.setAttribute("aria-label", "Quick jump"); ck.innerHTML = '<div class="bx"><input type="text" placeholder="Jump to a step, a tool, Showroom…" aria-label="Jump to" autocomplete="off"><ul role="listbox"></ul></div>';
+  if (EMBEDDED) { document.body.classList.add("drawer"); return; }
+  document.body.append(rail, top, dr, ck);
+  const chipText = () => CX.lat == null ? "No site yet" : `${CX.label || (+CX.lat).toFixed(2) + ", " + (+CX.lng).toFixed(2)} · R ${CX.R} m`;
+  const drawRail = () => { const cur = where();
+    rail.innerHTML = `<a class="lg" data-go="home" title="plotcloud home">plotcloud</a><button class="chip" type="button" id="wfchip" title="Choose the place again in the Analysis diagrams"><small>Site</small><b>${esc(chipText())}</b></button>` +
+      STEPS.map((s) => `<a class="st${cur === s.n ? " on" : ""}" href="#/${urlOf(s.n)}" data-n="${s.n}" data-done="${CX.done[s.n] ? 1 : 0}" ${cur === s.n ? 'aria-current="step"' : ""} title="${s.n} · ${esc(s.name)}"><svg viewBox="0 0 24 24" aria-hidden="true">${s.ic}</svg><span>${s.n} · ${esc(s.name)}</span><i class="tk" aria-label="done">✓</i></a>`).join("") +
+      `<span class="sp"></span><button class="col" type="button" id="wfcol" aria-label="Collapse the rail"><span>${document.body.classList.contains("rc") ? "" : "Collapse"}</span>⇔</button>`; };
+  const NAMES = { home: "Home", tools: "Tools", library: "Resources", showroom: "Showroom", learn: "Learn", pricing: "Pricing" };
+  const drawTop = () => { const cur = where(), s = STEPS.find((x) => x.n === cur);
+    top.innerHTML = `<span class="ttl">${s ? s.n + " · " + esc(s.name) : ""}</span><span class="sp"></span><button type="button" data-k class="kb" aria-label="Quick jump, Ctrl or Command K">Jump <kbd>Ctrl K</kbd></button>` +
+      [["showroom", "Showroom"], ["library", "Library"], ["learn", "Learn"]].map(([k, l]) => `<button type="button" data-dr="${k}" aria-label="Open ${l} in a drawer">${l}</button>`).join("") + `<a data-go="${signed() ? "account" : "login"}" aria-label="${signed() ? "Account" : "Log in"}">${signed() ? "Account" : "Log in"}</a>`; };
+  const update = () => { const cur = where(), on = cur > 0; document.body.classList.toggle("wf", on); if (!on) { closeDr(); return; }
+    CX.done[cur] = cur === 4 ? CX.done[4] : true; if (cur === 4) { CX.sim = location.hash.replace(/^#\/?tool\//, "").split("?")[0]; } if (cur === 2 && CX.lat == null) CX.done[2] = false; saveCx();
+    try { if (typeof pget === "function") pget().then((p) => { const d = !!(p && p.results && p.results.length); if (!!CX.done[4] !== d) { CX.done[4] = d; saveCx(); drawRail(); } }).catch(() => {}); } catch (e) {}
+    drawRail(); drawTop(); };
+  const openDr = (k) => { const f = dr.querySelector("iframe"); $("#dtl").textContent = NAMES[k] || k; const u = `index.html?drawer=1#/${k}`; if (f.dataset.k !== k) { f.dataset.k = k; f.src = u; } dr.classList.add("on"); dr.dataset.k = k; };
+  const closeDr = () => dr.classList.remove("on");
+  dr.querySelector(".dh button").addEventListener("click", closeDr);
+  document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-dr]"); if (b) { dr.classList.contains("on") && dr.dataset.k === b.dataset.dr ? closeDr() : openDr(b.dataset.dr); return; }
+    if (e.target.closest && e.target.closest("[data-k]")) { openK(); return; }
+    if (e.target.closest && e.target.closest("#wfchip")) { go(urlOf(1)); return; }
+    if (e.target.closest && e.target.closest("#wfcol")) { document.body.classList.toggle("rc"); try { localStorage.setItem("pc-rc", document.body.classList.contains("rc") ? "1" : ""); } catch (x) {} drawRail(); dispatchEvent(new Event("resize")); return; }
+    const a = e.target.closest && e.target.closest("#wfrail a.st"); if (a) { e.preventDefault(); go(urlOf(+a.dataset.n)); } });
+  try { if (localStorage.getItem("pc-rc")) document.body.classList.add("rc"); } catch (e) {}
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && dr.classList.contains("on") && !ck.classList.contains("on")) { e.stopPropagation(); closeDr(); } });
+  // ---- Ctrl/Cmd+K: a small command palette ----
+  let items = [], sel = 0;
+  const catalog = () => { const out = STEPS.map((s) => ({ t: `${s.n} · ${s.name}`, k: "step", u: urlOf(s.n) }));
+    out.push({ t: "Home", k: "page", u: "home" }, { t: "Tools", k: "page", u: "tools" }, { t: "Showroom", k: "drawer", dr: "showroom" }, { t: "Resources library", k: "drawer", dr: "library" }, { t: "Learn", k: "drawer", dr: "learn" }, { t: "Pricing", k: "page", u: "pricing" });
+    for (const id of Object.keys(EMB)) { if (id === "modeler" || id === "sitectx") continue; const i = EMBI[id]; if (i) out.push({ t: i.crumb || i.title, k: "tool", u: "tool/" + id }); } return out; };
+  const listK = (q) => { q = q.trim().toLowerCase(); items = catalog().filter((x) => !q || x.t.toLowerCase().includes(q)).slice(0, 40); sel = 0; const ul = ck.querySelector("ul"); ul.innerHTML = items.map((x, i) => `<li role="option" data-i="${i}" aria-selected="${i === 0}">${esc(x.t)}<small>${x.k}</small></li>`).join("") || '<li aria-selected="false">Nothing matches</li>'; };
+  const pick = (i) => { const x = items[i]; if (!x) return; closeK(); if (x.dr) openDr(x.dr); else go(x.u); };
+  const openK = () => { ck.classList.add("on"); const i = ck.querySelector("input"); i.value = ""; listK(""); i.focus(); }, closeK = () => ck.classList.remove("on");
+  document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); ck.classList.contains("on") ? closeK() : openK(); return; }
+    if (!ck.classList.contains("on")) return; const lis = () => [...ck.querySelectorAll("li[data-i]")], mv = (d) => { sel = Math.max(0, Math.min(items.length - 1, sel + d)); lis().forEach((l, k) => l.setAttribute("aria-selected", String(k === sel))); lis()[sel] && lis()[sel].scrollIntoView({ block: "nearest" }); };
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeK(); } else if (e.key === "ArrowDown") { e.preventDefault(); mv(1); } else if (e.key === "ArrowUp") { e.preventDefault(); mv(-1); } else if (e.key === "Enter") { e.preventDefault(); pick(sel); } }, true);
+  ck.querySelector("input").addEventListener("input", (e) => listK(e.target.value));
+  ck.addEventListener("click", (e) => { const l = e.target.closest("li[data-i]"); if (l) pick(+l.dataset.i); else if (e.target === ck) closeK(); });
+  // the pin comes from the Site Planner and the atlas
+  addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc || d.t !== "ctx") return; const fr = [...document.querySelectorAll("iframe[data-emb]")].find((f) => f.contentWindow === e.source); if (!fr) return;
+    if (typeof d.lat === "number" && typeof d.lng === "number") { CX.lat = d.lat; CX.lng = d.lng; if (typeof d.r === "number") CX.R = d.r; CX.label = typeof d.label === "string" ? d.label.slice(0, 40) : CX.label; CX.src = fr.dataset.emb === "atlas" ? "atlas" : "site"; if (fr.dataset.emb === "sitectx") CX.done[2] = true; }
+    if (d.board) CX.done[5] = true; saveCx(); drawRail(); });
+  addEventListener("hashchange", () => setTimeout(update, 0)); addEventListener("storage", () => { drawRail(); }); update();
+  window.__wf = { where, urlOf, openK, openDr, get CX() { return CX; } };
 })();
 
 // the page may have been drawn once before the blocks above took over: draw the tools pages again
