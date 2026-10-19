@@ -995,19 +995,21 @@ const wbOpen = () => new Promise((res, rej) => { let q; try { q = indexedDB.open
 const wbTx = (d, st, mode, fn) => new Promise((res, rej) => { const t = d.transaction(st, mode), r = fn(t.objectStore(st)); t.oncomplete = () => res(r ? r.result : undefined); t.onerror = () => rej(t.error); });
 async function wbProjects() { const d = await wbOpen(); try { return await wbTx(d, 'projects', 'readonly', (s) => s.getAll()); } finally { d.close(); } }
 const siteForModel = () => { syncSiteFields(); const s = JSON.parse(JSON.stringify(site)); delete s._conflicts; s.siteModel = SITE.siteModel(site); return s; };
+// v138: "Enter Plan Studio" goes straight in, with no question: the chosen parcel is already your site. A project that already holds this site is updated (its design stays);
+// anything else starts a new project. The whole site (parcels, your site, anchor, shape, study area) is copied over; Plan Studio only reads the boundary polygon.
 $('#toWb').addEventListener('click', async () => {
   if (!site) return; let last = null, P = []; try { P = await wbProjects(); last = localStorage.getItem('pc-studio-last'); } catch (e) {}
-  const cur = P.find((p) => p.id === last), body = $('#wbBody');
-  body.innerHTML = `<div class="opt"><b>New Plan Studio project</b><p>An empty project placed on this site: the surrounding massing (read-only), the ground area and your site go with it. North is up.</p><button type="button" class="go" data-wb="new">Create and open</button></div>` +
-    (cur ? `<div class="opt"><b>Add to “${esc(cur.name)}” v${cur.version}</b><p>${cur.model && cur.model.site ? (cur.model.site.id === site.id ? 'Updates the site context of this project.' : `Replaces its site context (“${esc(cur.model.site.name || 'site')}”).`) : 'Places this project on the site.'} Its walls, floors and furniture are not changed; a new version is saved, so you can go back.</p><button type="button" class="btn" data-wb="add">Add and open</button></div>` : '');
-  $('#wbDlg').hidden = false; body.onclick = async (e) => { const b = e.target.closest('[data-wb]'); if (!b) return; b.disabled = true; try { await toWorkbench(b.dataset.wb, cur); } finally { b.disabled = false; } };
+  const cur = P.find((p) => p.id === last), linked = !!(cur && cur.model && cur.model.site && cur.model.site.id === site.id);
+  await toWorkbench(linked ? 'add' : 'new', cur);
 });
 $('#wbX').addEventListener('click', () => { $('#wbDlg').hidden = true; });
 async function toWorkbench(how, cur) {
   let d; try { d = await wbOpen(); } catch (e) { msg('#nextMsg', 'This browser could not reach Plan Studio’s storage (private window?). Download JSON instead.', 'warn'); return; }
   try {
     let model, rec = how === 'add' && cur ? await wbTx(d, 'projects', 'readonly', (s) => s.get(cur.id)) : null;
-    if (rec) { model = JSON.parse(JSON.stringify(rec.model)); model.version = (rec.version || 0) + 1; }
+    if (rec) { model = JSON.parse(JSON.stringify(rec.model)); model.version = (rec.version || 0) + 1;
+      // v138: the design the person is working on counts, saved or not: the unsaved draft is the newer copy, so the site is added to that
+      try { const dr = await wbTx(d, 'drafts', 'readonly', (st) => st.get(cur.id)); if (dr && dr.model) { model = JSON.parse(JSON.stringify(dr.model)); model.version = (rec.version || 0) + 1; await wbTx(d, 'drafts', 'readwrite', (st) => st.delete(cur.id)); } } catch (e) {} }
     else { const id = 'p' + Math.random().toString(36).slice(2, 10); model = { v: 2, units: 'm', version: 1, id, name: site.name || 'Site project', north: 0, climate: { from: 225, U10: 3.5, terrain: 'city', Tout: 18, Tin: 24 }, targets: { ach: 5, df: 2, view: 0.75 }, levels: [{ id: 'L1', name: 'Ground', z: 0, h: 2.7 }], walls: [], ops: [], floors: [], voids: [], furn: [], names: [] }; }
     model.site = siteForModel(); model.savedAt = new Date().toISOString();
     await wbTx(d, 'versions', 'readwrite', (s) => s.put({ key: `${model.id}@${model.version}`, id: model.id, version: model.version, savedAt: model.savedAt, model }));

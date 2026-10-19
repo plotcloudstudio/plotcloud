@@ -2207,14 +2207,25 @@ function blitRaster(lvId, c) { const R = S.L[lvId], p = W2S([R.x0, R.y0 + R.H * 
 function drawSite() {
   const st = M.site, d = VP.d, nb = M.north || 0, P = (p) => W2S(SITEC.siteToPlan(st, p, nb)); g.save();
   const bd = st.boundary || { kind: 'radius', r: 300 }; g.setLineDash([8 * d, 6 * d]); g.strokeStyle = 'rgba(216,64,42,.45)'; g.lineWidth = 1.2 * d;
-  if (bd.kind === 'polygon' && bd.pts) { g.beginPath(); bd.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.stroke(); } else { const o = P([0, 0]); g.beginPath(); g.arc(o[0], o[1], (bd.r || 300) * V.s, 0, Math.PI * 2); g.stroke(); }
+  if (bd.kind === 'polygon' && bd.pts) { g.beginPath(); bd.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.stroke(); } else { const o = P(bd.c || [0, 0]); g.beginPath(); g.arc(o[0], o[1], (bd.r || 300) * V.s, 0, Math.PI * 2); g.stroke(); }
   g.setLineDash([]);
+  // the surroundings: roads and buildings are only looked at (nothing here is hit-tested, so nothing can be picked or edited)
+  if (st.roads && st.roads.length) { g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(215,205,185,.7)'; for (const r of st.roads) { g.lineWidth = Math.max(2 * d, (r.cls === 'main' ? 9 : 5) * V.s); g.beginPath(); r.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); } g.restore(); }
+  const pp = parcelPlan();
+  if (pp) { g.save(); g.beginPath(); pp.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = 'rgba(251,237,232,.55)'; g.fill(); g.clip();
+    const xs = pp.map((p) => p[0]), ys = pp.map((p) => p[1]), y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs); g.strokeStyle = 'rgba(216,64,42,.25)'; g.lineWidth = d; g.beginPath();   // a 5 m grid, only inside the boundary
+    for (let x = Math.ceil(x0 / 5) * 5; x <= x1; x += 5) { const a = W2S([x, y0]), b = W2S([x, y1]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } for (let y = Math.ceil(y0 / 5) * 5; y <= y1; y += 5) { const a = W2S([x0, y]), b = W2S([x1, y]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); g.restore(); }
   for (const b of st.buildings) { if (b.excluded || !b.xy || !b.xy.length) continue; const has = b.valid && b.h != null;
     g.beginPath(); b.xy.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath();
     g.fillStyle = has ? (b.hSource === 'estimate' ? 'rgba(217,164,0,.16)' : 'rgba(120,116,108,.20)') : 'rgba(179,38,30,.05)'; g.fill();
     g.strokeStyle = has ? 'rgba(80,76,70,.55)' : 'rgba(179,38,30,.6)'; g.lineWidth = 1 * d; g.setLineDash(has ? [] : [4 * d, 3 * d]); g.stroke(); g.setLineDash([]);
     if (has && V.s > 2.2 * d) { const c = P(SITEC.centroid(b.xy)); g.fillStyle = 'rgba(60,56,50,.75)'; g.font = `${10 * d}px system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(`${Math.round(b.h)} m${b.hSource === 'estimate' ? ' est.' : b.hSource === 'levels' ? ' (floors)' : ''}`, c[0], c[1] + 3 * d); g.textAlign = 'left'; } }
-  const o = P([0, 0]); g.strokeStyle = '#d8402a'; g.lineWidth = 1.5 * d; g.beginPath(); g.moveTo(o[0] - 7 * d, o[1]); g.lineTo(o[0] + 7 * d, o[1]); g.moveTo(o[0], o[1] - 7 * d); g.lineTo(o[0], o[1] + 7 * d); g.stroke();
+  if (pp) { g.save(); g.beginPath(); pp.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.setLineDash([]); g.strokeStyle = '#D8402A'; g.lineWidth = 2 * d; g.stroke();   // your site: the chosen parcel, locked
+    const qs = pp.map((p) => W2S(p)), tx = (Math.min(...qs.map((q) => q[0])) + Math.max(...qs.map((q) => q[0]))) / 2, ty = Math.min(...qs.map((q) => q[1])) - 8 * d, t = `${st.parcelId ? st.parcelId + ' · ' : ''}boundary locked — edit in Site Planner`;
+    g.font = `600 ${10.5 * d}px system-ui, sans-serif`; g.textAlign = 'center'; g.lineWidth = 3 * d; g.strokeStyle = 'rgba(255,255,255,.92)'; g.strokeText(t, tx, ty); g.fillStyle = '#B3321F'; g.fillText(t, tx, ty); g.textAlign = 'left'; g.restore(); }
+  { const o = P([0, 0]); g.strokeStyle = '#d8402a'; g.lineWidth = 1.5 * d; g.beginPath(); g.moveTo(o[0] - 5 * d, o[1]); g.lineTo(o[0] + 5 * d, o[1]); g.moveTo(o[0], o[1] - 5 * d); g.lineTo(o[0], o[1] + 5 * d); g.stroke(); }
+  if (st.anchor) { const q = W2S(sToP([st.anchor.x, st.anchor.y])); g.beginPath(); g.arc(q[0], q[1], 7 * d, 0, 7); g.fillStyle = '#D8402A'; g.fill(); g.lineWidth = 2 * d; g.strokeStyle = '#fff'; g.stroke(); if (ANCSEL) { g.beginPath(); g.arc(q[0], q[1], 10 * d, 0, 7); g.lineWidth = 1.5 * d; g.strokeStyle = '#1c1b1a'; g.stroke(); }
+    const t = `anchor (${st.anchor.x.toFixed(1)}, ${st.anchor.y.toFixed(1)}) m`; g.font = `600 ${11 * d}px system-ui, sans-serif`; g.lineWidth = 3 * d; g.strokeStyle = 'rgba(255,255,255,.92)'; g.strokeText(t, q[0] + 13 * d, q[1] - 10 * d); g.fillStyle = '#1c1b1a'; g.fillText(t, q[0] + 13 * d, q[1] - 10 * d); }
   if (st.fixture) { g.fillStyle = 'rgba(160,110,0,.85)'; g.font = `600 ${11 * d}px system-ui, sans-serif`; g.fillText('Site context: TEST FIXTURE — not real data', 14 * d, 24 * d); }
   g.restore();
 }
@@ -2655,7 +2666,7 @@ function finishRect() {
   const D = drawing; drawing = null; if (!D || !D.b) return draw(); const x = Math.min(D.a[0], D.b[0]), y = Math.min(D.a[1], D.b[1]), w = Math.abs(D.b[0] - D.a[0]), d = Math.abs(D.b[1] - D.a[1]);
   if (w < 0.5 || d < 0.5) { draw(); flash(D.kind === 'room' ? 'Drag a larger rectangle (at least 0.5 m each way).' : 'Drag the size of the opening.'); return; }
   const b = snapM();
-  if (D.kind === 'room') { STC.rectRoom(M, LV, x, y, w, d); SEL = null; }
+  if (D.kind === 'room') { if (siteOk()) { const poly = clipToParcel(x, y, w, d); if (!poly) { draw(); flash('That rectangle is outside the boundary. Draw inside the red boundary.'); return; } polyRoom(poly); } else STC.rectRoom(M, LV, x, y, w, d); SEL = null; }
   else if (D.kind === 'floor') { const f = STC.tag({ id: STC.uid('fl'), lv: LV, x: +x.toFixed(3), y: +y.toFixed(3), w: +w.toFixed(3), d: +d.toFixed(3) }, 'floor'); M.floors.push(f); SEL = { k: 'floor', id: f.id }; }
   else { const top = !lvAbove(); const v = { id: STC.uid('v'), lv: LV, x, y, w, d, kind: top ? 'roof' : (w * d > 8 ? 'atrium' : 'shaft'), glazed: top, object_type: 'floor_opening', layer: 'Floor' }; M.voids.push(v); SEL = { k: 'void', id: v.id }; }
   tidy(); commit(b);
@@ -3250,7 +3261,7 @@ function miniPlan(x, w, h, d, hl) {
 async function miniDraw() {
   const cvm = $('#miniCv'), list = $('#miniRooms'); if (!cvm || !S) return; const to3 = CAM !== '3d';
   $('[data-rt="plan"]').textContent = to3 ? '3D view' : '2D view';
-  if (MINI === 'rooms') { list.hidden = false; cvm.hidden = true; list.innerHTML = S.rooms.map((r) => `<button type="button" data-room="${r.key}"><span>${esc(rname(r))}</span><small>${r.area.toFixed(1)} m²</small></button>`).join('') || '<p class="nores">No rooms yet. Draw closed walls.</p>'; return; }
+  if (MINI === 'rooms') { list.hidden = false; cvm.hidden = true; list.innerHTML = S.rooms.map((r) => `<button type="button" data-room="${r.key}"><span>${esc(rname(r))}</span><small>${M.site ? '≈ ' + Math.round(r.area).toLocaleString('en-CA') : r.area.toFixed(1)} m²</small></button>`).join('') || '<p class="nores">No rooms yet. Draw closed walls.</p>'; return; }
   list.hidden = true; cvm.hidden = false;
   const box = cvm.parentElement.getBoundingClientRect(), d = devicePixelRatio || 1, w = Math.max(50, Math.round(box.width * d)), h = Math.max(50, Math.round(box.height * d)); cvm.width = w; cvm.height = h; const x = cvm.getContext('2d'); x.clearRect(0, 0, w, h);
   if (!to3) { miniPlan(x, w, h, d); return; }
@@ -3704,6 +3715,47 @@ upd3D = function (fit) {
   if (CAM === 'plan' && VIEW2D === 'ceiling') drawCeiling(); else { _d(); if (CAM === 'plan') drawNotes(); }
   annotUI(); ftbUI(); };
 }
+
+
+// ---------- v138 · a project made from a site: the chosen parcel is a locked boundary, rooms stay inside it, the anchor can be moved ----------
+// Plan Studio only reads the parcel polygon that came with the site; it never recomputes it and offers no way to change it (that is done in Site Planner).
+const siteOk = () => !!(M.site && M.site.parcel && M.site.parcel.pts && M.site.parcel.pts.length > 2);
+const sToP = (p) => SITEC.siteToPlan(M.site, p, M.north || 0);
+const pToS = (p) => { const a = -(M.north || 0) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; };
+const parcelPlan = () => siteOk() ? M.site.parcel.pts.map(sToP) : null;
+const polyArea = (p) => p.reduce((s, q, i) => { const r = p[(i + 1) % p.length]; return s + q[0] * r[1] - r[0] * q[1]; }, 0) / 2;
+function clipPoly(subject, clip) {   // Sutherland–Hodgman; the clip polygon must be convex
+  let out = subject.slice(); const cl = polyArea(clip) < 0 ? clip.slice().reverse() : clip;
+  for (let i = 0; i < cl.length && out.length; i++) { const a = cl[i], b = cl[(i + 1) % cl.length], side = (p) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]), inp = out; out = [];
+    const cross = (p, q) => { const d1 = side(p), d2 = side(q), t = d1 / (d1 - d2); return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]; };
+    for (let j = 0; j < inp.length; j++) { const p = inp[j], q = inp[(j + 1) % inp.length]; if (side(q) >= -1e-9) { if (side(p) < -1e-9) out.push(cross(p, q)); out.push(q); } else if (side(p) >= -1e-9) out.push(cross(p, q)); } }
+  return out; }
+const isConvex = (p) => { let sg = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length], c = p[(i + 2) % p.length], z = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); if (Math.abs(z) > 1e-9) { if (sg && Math.sign(z) !== sg) return false; sg = Math.sign(z); } } return true; };
+function clipToParcel(x, y, w, d) {   // the part of a dragged rectangle that lies inside the boundary, as a polygon (null when none of it does)
+  const pp = parcelPlan(), rect = [[x, y], [x + w, y], [x + w, y + d], [x, y + d]], poly = isConvex(pp) ? clipPoly(rect, pp) : clipPoly(pp, rect);
+  const keep = poly.filter((p, i) => Math.hypot(p[0] - poly[(i + 1) % poly.length][0], p[1] - poly[(i + 1) % poly.length][1]) > 0.02); if (keep.length < 3 || Math.abs(polyArea(keep)) < 0.25) return null;
+  return keep.map((p) => [+p[0].toFixed(3), +p[1].toFixed(3)]); }
+function polyRoom(poly) {   // walls round a polygon, a numbered name (R1, R2, … never reused), merged with the walls already there
+  for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length]; if (M.walls.some((q) => q.lv === LV && ((Math.hypot(q.a[0] - a[0], q.a[1] - a[1]) < 0.02 && Math.hypot(q.b[0] - b[0], q.b[1] - b[1]) < 0.02) || (Math.hypot(q.a[0] - b[0], q.a[1] - b[1]) < 0.02 && Math.hypot(q.b[0] - a[0], q.b[1] - a[1]) < 0.02)))) continue; M.walls.push({ id: STC.uid('w'), lv: LV, a: a.slice(), b: b.slice(), t: 0.2, object_type: 'wall', layer: 'Wall' }); }
+  STC.mergeWalls(M, LV); const c = poly.reduce((s, p) => [s[0] + p[0] / poly.length, s[1] + p[1] / poly.length], [0, 0]); M.roomSeq = (M.roomSeq || 0) + 1; M.names.push({ lv: LV, x: +c[0].toFixed(3), y: +c[1].toFixed(3), name: 'R' + M.roomSeq }); }
+// the anchor: grab it (12 px round it), drag 4 px or more to move it; Esc puts it back; arrow keys step 1 m (Shift 5 m) once it is picked; the drag is one undo step
+let ANCD = null, ANCSEL = false, ANCK = 0;
+const ancHit = (e) => { if (e.button !== 0 || CAM !== 'plan' || VIEW2D !== 'plan' || !M.site || !M.site.anchor) return false; const r = cv.getBoundingClientRect(), q = W2S(sToP([M.site.anchor.x, M.site.anchor.y])); return Math.hypot((e.clientX - r.left) * VP.d - q[0], (e.clientY - r.top) * VP.d - q[1]) <= 12 * VP.d; };
+cv.addEventListener('pointerdown', (e) => { if (!ancHit(e)) { if (ANCSEL) { ANCSEL = false; draw(); } return; } e.stopImmediatePropagation(); e.preventDefault(); cv.setPointerCapture(e.pointerId); ANCSEL = true; cv.focus({ preventScroll: true }); ANCD = { id: e.pointerId, x0: e.clientX, y0: e.clientY, from: Object.assign({}, M.site.anchor), before: snapM(), moved: false }; draw(); }, true);
+cv.addEventListener('pointermove', (e) => { if (!ANCD || e.pointerId !== ANCD.id) return; e.stopImmediatePropagation(); if (!ANCD.moved) { if (Math.hypot(e.clientX - ANCD.x0, e.clientY - ANCD.y0) < 4) return; ANCD.moved = true; cv.style.cursor = 'grabbing'; }
+  const r = cv.getBoundingClientRect(), px = Math.max(0, Math.min(r.width, e.clientX - r.left)), py = Math.max(0, Math.min(r.height, e.clientY - r.top)), s0 = pToS(S2W(px * VP.d, py * VP.d)); M.site.anchor = { x: Math.round(s0[0] * 10) / 10, y: Math.round(s0[1] * 10) / 10 }; draw(); }, true);
+function endAnc(e, cancel) { if (!ANCD || (e && e.pointerId !== ANCD.id)) return; if (e) e.stopImmediatePropagation(); const D = ANCD; ANCD = null; cv.style.cursor = ''; try { cv.releasePointerCapture(D.id); } catch (er) {}
+  if (cancel) { M.site.anchor = D.from; draw(); return; } if (D.moved && (M.site.anchor.x !== D.from.x || M.site.anchor.y !== D.from.y)) commit(D.before); else draw(); }
+cv.addEventListener('pointerup', (e) => endAnc(e, false), true); cv.addEventListener('pointercancel', (e) => endAnc(e, true), true);
+addEventListener('keydown', (e) => { if (!ANCSEL || !M.site || !M.site.anchor || (e.target.matches && e.target.matches('input, select, textarea'))) return;
+  if (e.key === 'Escape' && ANCD && ANCD.moved) { e.preventDefault(); e.stopImmediatePropagation(); endAnc(null, true); return; }
+  if (!e.key.startsWith('Arrow')) return; e.preventDefault(); e.stopImmediatePropagation(); const st = e.shiftKey ? 5 : 1, dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dy = e.key === 'ArrowUp' ? st : e.key === 'ArrowDown' ? -st : 0;
+  if (!ANCK) ANCK = { before: snapM() }; clearTimeout(ancKT); ancKT = setTimeout(() => { const K = ANCK; ANCK = 0; if (K && snapM() !== K.before) commit(K.before); }, 300);   // presses within 300 ms are one step
+  M.site.anchor = { x: Math.round((M.site.anchor.x + dx) * 10) / 10, y: Math.round((M.site.anchor.y + dy) * 10) / 10 }; draw(); }, true);
+let ancKT = 0;
+// coming in from Site Planner with a fresh project: straight to the 2D plan with the room tool in hand, nothing else to click
+function enterSite() { if (!siteOk() || M.walls.length || enterSite.done === M.id) return; enterSite.done = M.id; if (CAM !== 'plan') setCam('plan'); if (VIEW2D !== 'plan') setView2D('plan'); setTool('room'); flash('Drag a rectangle inside the red boundary to draw a room. Anything outside it is cut off.'); }
+{ const _u3 = useModel; useModel = function (N, o) { _u3(N, o); enterSite(); }; }
 
 // ---------- pointer: the modes come first (walkthrough, gizmo, ceiling, text, locks) ----------
 const evPt = (e) => { const r = cv.getBoundingClientRect(); return S2W((e.clientX - r.left) * VP.d, (e.clientY - r.top) * VP.d); };
@@ -4522,7 +4574,7 @@ addEventListener('message', (e) => { if (e.source !== window.parent || window.pa
 { const _sel = changedSel; changedSel = function () { _sel(); if (window.S3 && S3.hover) S3.hover(null); }; }
 { const _g = gizmoSync; gizmoSync = function () { if (ELV3.on || WMARK.on) { if (window.S3 && S3.gizmo) S3.gizmo.set(null); return; } _g(); }; }
 Object.assign(window.__wb, { showElevation: (...a) => showElevation(...a), walkEnter: (...a) => walkEnter(...a), birdView: (...a) => birdView(...a), setView2D: (...a) => setView2D(...a) });   // the v129 test handles point at the current functions
-window.__wb.cmp = { get state() { return CMP; }, refresh: cmpRefresh, types: () => CMP && cmpTypes() }; window.__wb.CLR = CLR; window.__wb.clearanceOf = clearanceOf; window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
+window.__wb.cmp = { get state() { return CMP; }, refresh: cmpRefresh, types: () => CMP && cmpTypes() }; window.__wb.site = { siteOk, parcelPlan, clipToParcel, get anchor() { return M.site && M.site.anchor; }, get ancSel() { return ANCSEL; } }; window.__wb.CLR = CLR; window.__wb.clearanceOf = clearanceOf; window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
 Object.defineProperty(window.__wb, 'HOVX', { get: () => HOVX }); Object.defineProperty(window.__wb, 'DIMS', { get: () => DIMS });
 viewUI();
 
