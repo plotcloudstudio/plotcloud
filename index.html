@@ -3703,6 +3703,32 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
 })();
 
 route();
+
+// === Simulation tools open full screen, like Plan Studio: no site header or footer, one thin app bar (2026-10-19) ===
+{ const SIMFS = ["sunhours", "wind", "daylight", "vent", "structure", "spacesyntax", "evac", "isovist", "views", "cameras"];
+  window.__simfs = SIMFS;
+  const st = document.createElement("style"); st.textContent = `
+  .simfs{position:fixed;inset:0;z-index:70;background:#fff;display:flex;flex-direction:column}
+  .simbar{flex:0 0 44px;display:flex;align-items:center;gap:16px;padding:0 14px;border-bottom:1px solid var(--hair);background:var(--paper);min-width:0}
+  .simbar .simback{font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap;cursor:pointer;text-decoration:none;display:flex;align-items:center;min-height:44px}.simbar .simback:hover{color:var(--ink)}
+  .simbar .simname{font:600 15px var(--sans,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-transform:capitalize}
+  .simbar .simsp{flex:1}
+  .simbar .simhint{font:500 11px var(--mono);color:var(--muted);white-space:nowrap}
+  .simbar .simx{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--hair);border-radius:50%;background:#fff;color:var(--ink);cursor:pointer;font-size:16px;line-height:1;padding:0}.simbar .simx:hover{border-color:var(--ink)}
+  .simfs iframe{flex:1;display:block;width:100%;border:0;background:#fff;min-height:0}
+  @media (max-width:700px){.simbar .simhint{display:none}.simbar{gap:10px;padding:0 10px}.simbar .simback span{display:none}}`; document.head.appendChild(st);
+  const _toolF = P.tool;
+  P.tool = function (id) { if (!SIMFS.includes(id) || !EMB[id]) return _toolF.apply(this, arguments); const i = EMBI[id];
+    return `<div class="simfs" data-simfs="${id}"><div class="simbar"><a class="simback" data-go="tools" aria-label="Back to Tools">← <span>Back to Tools</span></a><span class="simname">${i.crumb}</span><span class="simsp"></span><span class="simhint">Esc to exit</span><button class="simx" data-simx aria-label="Close and go back to Tools">✕</button></div><iframe data-emb="${id}" title="${i.crumb}" allow="clipboard-write"></iframe></div>`; };
+  SIMFS.forEach((k) => { if (typeof APPMODE !== "undefined") APPMODE.add(k); });
+  const onSim = () => /^#\/?tool\/(.+)$/.test(location.hash) && SIMFS.includes(location.hash.replace(/^#\/?tool\//, "").split("?")[0]);
+  const exit = () => { if (onSim()) go("tools"); };
+  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("[data-simx]")) exit(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && onSim() && !e.defaultPrevented) exit(); });
+  // Esc pressed inside the tool itself (same-origin srcdoc frame) also leaves, unless the tool used it (closing a menu, cancelling a drag)
+  const hook = (fr) => { try { const w = fr.contentWindow; if (!w || !w.document || w.document.__esc) return; w.document.__esc = 1; w.document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target || {}).tagName || "")) setTimeout(exit, 0); }); } catch (x) {} };
+  new MutationObserver(() => { document.querySelectorAll(".simfs iframe").forEach((fr) => { if (!fr.dataset.esc) { fr.dataset.esc = "1"; fr.addEventListener("load", () => hook(fr)); } hook(fr); }); }).observe(document.getElementById("app"), { childList: true, subtree: true });
+}
 </script>
 </body>
 </html>
