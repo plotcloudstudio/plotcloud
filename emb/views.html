@@ -568,6 +568,7 @@ function analyse() {
 const setKey = () => JSON.stringify([GC.key, EYE, HEAD, FAR, NATURE, MOTION]);
 const tick = () => new Promise((r) => setTimeout(r, 0));
 async function compute(spacing, nr, onProg) {
+  analyse(); const runInputKey = setKey();
   analyse(); const G = GC.G, reg = GC.R.reg, B = SC.bounds, PW = Math.ceil(B.w / spacing), PH = Math.ceil(B.h / spacing), pts = [];
   for (let j = 0; j < PH; j++) for (let i = 0; i < PW; i++) { const x = (i + 0.5) * spacing, y = (j + 0.5) * spacing, cx = Math.floor(x / G.c), cy = Math.floor(y / G.c); if (cx >= G.W || cy >= G.H) continue; const ci = cy * G.W + cx; if (reg[ci]) pts.push({ i, j, x, y, ci }); }
   const S = GC.S, ev = new Array(pts.length); let t0 = performance.now();
@@ -575,7 +576,7 @@ async function compute(spacing, nr, onProg) {
     ev[k] = spotEval(spotRays([pts[k].x, pts[k].y], nr, S));
     if (performance.now() - t0 > 60) { onProg((k + 1) / pts.length); await tick(); t0 = performance.now(); if (STOP) return null; }
   }
-  return { key: setKey(), spacing, nr, PW, PH, pts, ev, img: null };
+  return { key: runInputKey, spacing, nr, PW, PH, pts, ev, img: null };
 }
 // summary over the occupied floor (rooms left out are not counted)
 function summary() {
@@ -1149,6 +1150,12 @@ async function runLevel(level, confirmed, quiet) {
 setTool('select'); loadScene(PRESETS.office()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;
 resize(); fit(); draw(); runLevel('draft', true, true);
 window.__views = { SC, get RES() { return RES; }, summary, runLevel, setCam, setProbe, get PROBE() { return PROBE; }, spotRays, spotEval, lvPlan, PRESETS, loadScene, setEye, get GC() { return GC; }, toggleExcl, T3 };
+
+window.__pcAnalysisState=()=>{
+ const ready=!!RES&&!BUSY&&RES.key===setKey();
+ let parameters=null;try{parameters=RES?JSON.parse(RES.key).slice(1):null;}catch(e){}
+ return {ready,stale:!!RES&&RES.key!==setKey(),conditions:{schema:1,tool:'views',parameters,spacing:RES?.spacing,bearings:RES?.nb||RES?.nr,excluded:EXCL.map(p=>p.slice())}};
+};
 </script>
 
 <script>
@@ -1197,7 +1204,8 @@ window.__views = { SC, get RES() { return RES; }, summary, runLevel, setCam, set
       const cv = $$('#stage canvas').filter((c) => c.offsetParent && c.width > 50).sort((a, b) => b.width * b.height - a.width * a.height)[0];
       let img = null; try { if (cv) { const w = 640, k = w / cv.width, c2 = document.createElement('canvas'); c2.width = w; c2.height = Math.round(cv.height * k); const g = c2.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c2.width, c2.height); g.drawImage(cv, 0, 0, c2.width, c2.height); img = c2.toDataURL('image/jpeg', 0.82); } } catch (e) { }
       const model = (txt($('#mName')) || '').replace(/^Case:\s*/i, '').replace(/\.json$/i, '');
-      post({ t: 'save', tool: name, kpis, img, model, source: SRC, scene: canScene ? (() => { try { return window.__pcSceneJSON(); } catch (e) { return null; } })() : null });
+      const analysis=window.__pcAnalysisState?.();if(!analysis?.ready){if(note)note.textContent='Analyze the current model and settings before saving this result.';return;}
+      post({ t: 'save', tool: name, kpis, img, model, source: Object.assign({},SRC||{},{analysis:analysis.conditions}), scene: canScene ? (() => { try { return window.__pcSceneJSON(); } catch (e) { return null; } })() : null });
       if (note) note.textContent = 'Saving…';
     });
   }
