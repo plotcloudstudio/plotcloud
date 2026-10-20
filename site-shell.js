@@ -131,5 +131,6 @@
     return resourceTabs('showroom')+'<div class="wrap pc-resource-breadcrumb">'+link('library','Resources')+' / Showroom</div>'+html;
   };
   addEventListener('message',e=>{if(e.origin!==location.origin||e.data?.pc!==1||e.data.t!=='render-handoff')return;const frame=document.querySelector('iframe[data-emb="modeler"]');if(frame&&e.source===frame.contentWindow)go('tool/architectural-render');});
+  addEventListener('message',e=>{if(e.origin!==location.origin||e.data?.pc!==1||e.data.t!=='render-return')return;const frame=document.querySelector('iframe[data-emb="architectural-render"]');if(frame&&e.source===frame.contentWindow)go('studio');});
   route();
 })();

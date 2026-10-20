@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PlotCloud — Architectural Design, Analysis & Resources</title>
 <link rel="stylesheet" href="site-shell.css?v=20261020-2">
-<script src="site-shell.js?v=20261020-2" defer></script>
+<script src="site-shell.js?v=20261020-camera1" defer></script>
 <meta name="description" content="Browser-based architectural design tools and resources for architects and architecture students. Develop layouts, analyze environmental performance and present your work.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700;800&display=swap">
@@ -693,7 +693,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"architectural-render": "workflow-20261020-2","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "workflow-20261020-2", "daylight": "workflow-20261020-2", "spacesyntax": "6574adec", "modeler": "workflow-20261020-2", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBV = {"architectural-render": "camera-20261020-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "6574adec", "modeler": "camera-20261020-1", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
@@ -2626,7 +2626,7 @@ STD.push(["architectural-render","R.01","architectural ai render","Upload a sket
 TMETA["architectural-render"]=["new","ai"];
 TSECTIONS[3][4].unshift("architectural-render");
 EMB["architectural-render"]="@";
-EMBI["architectural-render"]={title:"architectural ai render",crumb:"Architectural AI Render",short:"Standalone image-to-image rendering; external render service required.",lede:"Upload a sketch, photograph or model screenshot. Choose style and architectural control settings independently from Plan Studio."};
+EMBI["architectural-render"]={title:"architectural ai render",crumb:"Architectural AI Render",short:"Render saved Studio views or uploaded images; external AI service required.",lede:"Open a saved Studio view, sketch, photograph or model screenshot. Choose materials and architectural controls, then save linked results back to your project."};
 EMBV["architectural-render"]="2";
 EMBSVG["architectural-render"]='<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="180" fill="#efebe0"/><path d="M50 135V47L153 18V130Z" fill="#fff" stroke="#333"/><path d="M153 18L252 62V160L153 130Z" fill="#d2d4d0" stroke="#333"/><rect x="75" y="57" width="50" height="55" fill="#88a1a5"/><path d="M175 66L226 87V140L175 120Z" fill="#839a9e"/></svg>';
 const BASE_SECT=TSECTIONS.map(s=>s[4].slice()),BASE_DEV=DEVIDS.slice();
