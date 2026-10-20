@@ -764,7 +764,7 @@ const NAV=[["library","Library"],["requests","Requests"],["support","Support"],[
 function chrome(page){
   $("#nav").innerHTML=NAV.map(([k,l])=>`<a data-go="${k}" class="${page.split("/")[0]===k||(k==="tools"&&page.startsWith("tool/"))||(k==="library"&&page.startsWith("res/"))||(k==="learn"&&page.startsWith("post/"))?"on":""}">${l}</a>`).join("");
   $("#mpanel").innerHTML=NAV.map(([k,l])=>`<a data-go="${k}">${l}</a>`).join("")+`<a data-go="site">${LABELS.site}</a><a data-go="studio">${LABELS.studio}</a>`+`<hr style="border:0;border-top:1px solid var(--hair)">`+(signed()?`${S.role==="admin"?'<a data-go="admin">Admin</a>':""}<a data-go="account">Account</a><a data-act="logout">Log out</a>`:`<a data-go="login">Log in or join</a>`);
-  $("#wblink").classList.toggle("on",page.split("/")[0]==="studio");$("#sitelink").classList.toggle("on",page.split("/")[0]==="site"||page==="tool/sitectx");$("#acctlabel").textContent=signed()?(S.role==="admin"?"Admin":"Emma"):"Log in or join";
+  $("#wblink").classList.toggle("on",page.split("/")[0]==="studio");$("#sitelink").classList.toggle("on",page.split("/")[0]==="site"||page==="tool/sitectx");$("#acctlabel").textContent=signed()?(S.role==="admin"?"Admin":"Account"):"Log in or join";
   $("#acctmenu").innerHTML=signed()?`<a data-go="account">My account</a><a data-go="project">My project</a>${S.role==="admin"?'<a data-go="admin">Admin</a>':""}<hr><a data-act="logout">Log out</a>`:"";
   $("#acctmenu").classList.remove("open");
   
@@ -1077,10 +1077,10 @@ P.join=()=>`<section class="wrap head" style="max-width:520px;padding-bottom:100
 P.login=()=>`<section class="wrap head" style="padding-bottom:100px"><div class="label">Account</div><h1 style="font-size:clamp(36px,5vw,56px)">log in or join.</h1>
  <div class="logjoin"><form class="panel" data-form="join"><h3 style="margin-bottom:16px">Log in</h3><div class="field"><label class="f">Email</label><input type="email" autocomplete="email" placeholder="you@example.com"></div><div class="field"><label class="f">Password</label><input type="password" autocomplete="current-password"></div><button class="btn block">Log in</button><p class="small" style="margin:12px 0 0"><a class="tlink">Forgot your password?</a></p></form>
  <div class="panel joinside"><h3>New to plotcloud?</h3><p class="muted">Join free to download every resource with your account, save sets and vote on requests. Try PlotCloud Pro free for 7 days.</p><ul class="checks" style="margin:14px 0 22px"><li>Download every resource<span>Free access</span></li><li>Save and vote<span>♡ Saved · Requests board</span></li><li>PlotCloud Pro trial<span>7 days free, no payment details</span></li></ul><a class="btn sec block" data-go="join">Join free</a></div></div></section>`;
-P.account=()=>`<section class="wrap head" style="max-width:760px;padding-bottom:100px"><div class="label">Account</div><h1 style="font-size:48px">your account.</h1><p class="muted">${S.role==="admin"?"founder@plotcloud.com":"emma.chen@mail.utoronto.ca"}</p>
+P.account=()=>`<section class="wrap head" style="max-width:760px;padding-bottom:100px"><div class="label">Account</div><h1 style="font-size:48px">your account.</h1><p class="muted">${S.role==="admin"?"Administrator":"PlotCloud member"}</p>
  <div class="blk" style="border-top:1px solid var(--hair);padding-top:24px;margin-top:24px"><div class="row" style="justify-content:space-between"><h3>Access</h3><span class="badge ok">Member access</span></div><p class="muted" style="margin:8px 0 0">With a free account, your free account can download every resource in the library.</p></div>
  <div class="blk"><h3>Your 1:1 sessions</h3>${S.quotes.length?S.quotes.map(q=>`<div style="padding:12px 0;border-top:1px solid var(--hair)"><div class="row" style="justify-content:space-between"><b>1:1 Session</b><span class="badge">Requested</span></div><p class="small muted" style="margin:4px 0 0">${esc(q)}</p></div>`).join(""):`<p class="small muted">No sessions yet. <a class="tlink" data-go="support">Book a session</a></p>`}</div>
- <div class="blk"><h3>Recent downloads</h3><p class="small muted">Terrazzo Material Pack · Sep 22 &nbsp;&nbsp; Axonometric Diagram Kit · Sep 21</p></div></section>`;
+ <div class="blk"><h3>Recent downloads</h3><p class="small muted">No download history is available.</p></div></section>`;
 let aTab="assets";
 P.admin=()=>{ if(S.role!=="admin") return `<section class="wrap head"><h1>admins only.</h1><p class="muted">This page is for the site owner.</p></section>`;
  const tabs=[["assets","Assets"],["requests","Requests"],["donate","Community support"],["support","1:1 Support"],["users","Users"]];
@@ -1908,7 +1908,7 @@ document.addEventListener("click",e=>{const sv=e.target.closest("[data-save]");i
  const an=e.target.closest("[data-anchor]"); if(an){e.preventDefault();document.getElementById(an.dataset.anchor)?.scrollIntoView({behavior:"smooth"});return}
  const a=e.target.closest("[data-act]"); if(a){const act=a.dataset.act;
   if(act==="logout"){S.role="visitor";save();toast("Logged out");route()}
-  if(act==="download"){toast("Download started — in the live site the file downloads here.")}
+  if(act==="download"){toast("No download file is attached to this resource. Contact PlotCloud support for access.")}
   if(act==="quote-again"){quoteDone=false;route()}
   if(act==="req-from-search"){const q=libQ.trim();track("search_request_click",{q});reqDraft=q?`I searched for “${q}” and couldn’t find it. I need: `:"";go("requests")} return}
  const sq=e.target.closest("[data-sq]"); if(sq){e.preventDefault();libQ=sq.dataset.sq;libCat="all";track("search_suggestion_click",{q:libQ});route();return}
@@ -2176,7 +2176,7 @@ document.addEventListener("click",e=>{
  const sp=e.target.closest("[data-spot]");if(sp){e.preventDefault();const el=document.getElementById("sr-"+sp.dataset.spot);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}return}
  const a=e.target.closest("[data-act^='sr-']");if(!a)return;const s=SHOW.find(x=>x.id===a.dataset.sr);if(!s)return;const slugs=srItems(s).map(r=>r[0]);
  if(a.dataset.act==="sr-save"){S.saved=[...new Set([...(S.saved||[]),...slugs])];save();route._anchor="srtabs";route();toast(`Saved ${slugs.length} resources`);}
- if(a.dataset.act==="sr-dl"){if(!signed()){toast("Join to download every file in this scene");go("join")}else toast(`In the live site, all ${slugs.length} files download as one zip.`)}
+ if(a.dataset.act==="sr-dl"){if(!signed()){toast("Join to download every file in this scene");go("join")}else toast(`Bulk download is unavailable for this scene. Open individual resources for access details.`)}
 });
 const _resSR=P.res; P.res=function(slug){const h=_resSR(slug),used=SHOW.filter(s=>srItems(s).some(r=>r[0]===slug));if(!used.length)return h;
  return h+`<section class="wrap hsec" style="padding-bottom:90px"><div class="hhead"><h2>seen in the showroom.</h2><a class="tlink" data-go="showroom">All scenes</a></div><div class="srseen">${used.map(s=>`<a class="srcard" data-go="showroom/${s.id}"><span class="srth">${srMedia(s)}</span><b>No. ${s.no} · ${s.title}</b><span class="muted small">${s.kind}</span></a>`).join("")}</div></section>`};
@@ -3365,7 +3365,7 @@ window.addEventListener("hashchange", () => setTimeout(appFit, 0)); window.addEv
      </tbody></table></div></section>
     <section class="sec"><div class="wrap"><div class="label">FAQ</div><h2 style="margin-bottom:30px">good questions.</h2><div class="qa" style="max-width:760px">${[
       ["How does the free trial work?", "Start it from this page. You get PlotCloud Pro for 7 days, no credit card required. On the last day you choose: keep Pro and pay, or go back to Free. Nothing is charged automatically."],
-      ["Who is PlotCloud for?", "Signed-in members can download the library free to use. Paid plans open in January 2027; the tools stay free after that."],
+      ["Who is PlotCloud for?", "PlotCloud supports architects and architecture students, from coursework and portfolio development to design studies and project presentations. Resource licensing is described separately in the Resource License."],
       ["Are the tools really free?", "Yes. Every analysis and design tool works on the Free plan. Pro is for keeping your work together: projects, versions, boards and the full library."],
       ["Can I cancel?", "Yes, anytime from your account. You keep Pro until the end of the period you paid for."],
       ["How do I pay?", `CAD ${pm()} a month or CAD ${py()} a year, plus GST/HST/PST where it applies. Payment details are provided with your invoice.`],
@@ -3944,7 +3944,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
 }
 
 // the page may have been drawn once before the blocks above took over: draw the tools pages again
-if ((!location.hash || /^#\/?(home|tools|tool\/|site)?($|\?)|^#\/?(tools|tool\/|site)/.test(location.hash)) && !window.__reRouted) { window.__reRouted = 1; try { route(); } catch (e) {} }
+if (!window.__reRouted) { window.__reRouted = 1; try { route(); } catch (e) {} }
 </script>
 </body>
 </html>
