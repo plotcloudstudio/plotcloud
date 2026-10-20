@@ -22,7 +22,7 @@
   };
   const info = id => id === '__plan' ? {title:'Plan Studio',desc:'Draw walls, furnish rooms and send your model to an analysis tool.'} : tFind(id);
   const to = id => id === '__plan' ? 'studio' : id === 'sitectx' ? 'site' : `tool/${id}`;
-  const title = id => tCap(info(id).title);
+  const title = id => id==='sitectx'?'Site Planner':tCap(info(id).title);
   function catalog() {
     const hidden = new Set((CMS.tools && CMS.tools.hidden) || []);
     const ids = [...new Set(TSECTIONS.flatMap(s => s[4]))].filter(id => !hidden.has(id) && !(TMETA[id] || []).includes('dev'));
@@ -87,6 +87,7 @@
     document.body.classList.toggle('pc-home-page',root==='home');
     document.body.classList.toggle('pc-tools-page',root==='tools');
     const active=root==='site'||root==='studio'||root==='tool'?'tools':root==='res'||root==='resources'?'library':root;
+    document.querySelector('header.site a[data-go="home"]').setAttribute('href','#/home');
     const nav=document.getElementById('nav');nav.setAttribute('aria-label','Main navigation');
     nav.innerHTML=NAV.map(([k,l])=>`<a href="#/${k}" data-go="${k}"${k===active?' class="on" aria-current="page"':''}>${l}</a>`).join('');
     document.getElementById('mpanel').innerHTML=nav.innerHTML+'<hr>'+ (signed()?link('account','My account')+link('project','My project')+(S.role==='admin'?link('admin','Admin'):'')+'<a href="#/home" data-act="logout">Log out</a>':link('login','Log in or join'));
@@ -96,6 +97,7 @@
   };
   const footer=document.querySelector('footer.site .fg');
   footer.innerHTML=`<div><h5>PlotCloud</h5>${link('tools','Tools')}${link('library','Resources')}${link('pricing','Pricing')}</div><div><h5>Help & examples</h5>${link('showroom','Showroom')}${link('learn','Guides & support')}${link('requests','Request a resource')}<a href="mailto:${esc(ST.email||EMAIL)}">Contact</a></div><div><h5>Legal</h5>${link('terms','Terms of Use')}${link('privacy','Privacy Policy')}${link('license','Resource License')}${link('refunds','Refunds & Cancellation')}</div>`;
+  FOOT0=document.querySelector('footer.site').innerHTML;
   const burger=document.getElementById('burger');burger.setAttribute('aria-controls','mpanel');
   burger.addEventListener('click',()=>burger.setAttribute('aria-expanded',String(document.getElementById('mpanel').classList.contains('open'))));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('mpanel').classList.remove('open');burger.setAttribute('aria-expanded','false');}});
