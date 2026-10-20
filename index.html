@@ -690,7 +690,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "db42768a", "composer": "0459c881", "studio": "fcccf77e", "atlas": "c4673358"}; const EMBCACHE = {};
+const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "db42768a", "composer": "0459c881", "studio": "fcccf77e", "atlas": "538b1a07", "render": "79cb81e2"}; const EMBCACHE = {};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
@@ -3695,6 +3695,9 @@ route();
 EMB["atlas"] = "@";
 EMBI["atlas"] = { title: "site analysis", crumb: "Site Analysis", short: "Pick the site once, choose the analyses, generate eight diagrams in one style.", lede: "Pick the site once, choose the analyses, generate them in one style." };
 if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
+EMB["render"] = "@";
+EMBI["render"] = { title: "render", crumb: "Render", short: "Plan Studio plan → colour mask → your own GPU → back into Boards.", lede: "Turn a Plan Studio plan into a colour mask, render it on your own computer, and bring the image back to Boards." };
+if (typeof APPMODE !== "undefined") APPMODE.add("render");
 { const ATLAS = [
     ["fg", "Figure-ground", "Buildings as solid black on white: how dense the ground is."],
     ["streets", "Streets", "Streets in four weights, with length, density and intersections."],
@@ -3777,7 +3780,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   const urlOf = (n) => n === 1 ? "site" : n === 2 ? "studio" : n === 3 ? (CX.sim ? "tool/" + CX.sim : "tools") : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
   const where = () => { const h = (location.hash.replace(/^#\/?/, "") || "home"), [path, q] = h.split("?"), pg = path.split("/"), id = pg[1];
     if (pg[0] === "site" || (pg[0] === "tool" && id === "sitectx")) return 1; if (pg[0] === "studio") return 2;
-    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 4 : 1; if (pg[0] === "tool" && SIM.includes(id)) return 3; return 0; };
+    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 4 : 1; if (pg[0] === "tool" && id === "render") return 4; if (pg[0] === "tool" && SIM.includes(id)) return 3; return 0; };
   const st = document.createElement("style");
   st.textContent = `:root{--wfrail:0px;--wftop:0px}
   body.wf{--wfrail:220px;--wftop:40px}body.wf.rc{--wfrail:64px}

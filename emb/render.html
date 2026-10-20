@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Render</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--ink:#1C1B1A;--muted:#6E6A60;--paper:#FBFAF7;--sand:#EFEBE0;--red:#D8402A;--hair:rgba(28,27,26,.13)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%}body{margin:0;font:14px/1.4 "Inter Tight",system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid var(--hair);background:#fff;flex-wrap:wrap}
+.top h1{margin:0;font:800 18px "Inter Tight";letter-spacing:-.02em}.top .sub{color:var(--muted);font-size:13px}.sp{flex:1}
+.app{display:grid;grid-template-columns:minmax(360px,440px) minmax(0,1fr);gap:18px;padding:16px 20px 40px;max-width:1600px;margin:0 auto;align-items:start}
+.panel{background:#fff;border:1px solid var(--hair);border-radius:10px;padding:14px;margin-bottom:14px}
+h2.k{margin:0 0 8px;font:500 11px "JetBrains Mono";letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+label.f{display:grid;gap:3px;margin:0 0 10px;font-size:12.5px;color:var(--muted)}
+input[type=text],input[type=number],select,textarea{font:inherit;color:var(--ink);padding:8px 9px;border:1px solid var(--hair);border-radius:6px;background:#fff;width:100%}
+textarea{min-height:64px;resize:vertical}
+.btn{all:unset;cursor:pointer;box-sizing:border-box;font:600 13px "Inter Tight";padding:8px 14px;border:1px solid var(--ink);border-radius:999px;background:#fff;text-align:center;white-space:nowrap}
+.btn:hover{background:var(--sand)}.btn.pri{background:var(--ink);color:#fff}.btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:#b9341f}.btn.sm{padding:5px 10px;font-size:12px}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.45;cursor:not-allowed}.btn:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mask{border:1px solid var(--hair);background:#fff;display:block;width:100%;height:auto;image-rendering:pixelated}
+.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;margin:10px 0 0;font-size:12.5px}.legend div{display:flex;gap:7px;align-items:center;min-width:0}.legend i{width:14px;height:14px;border:1px solid rgba(0,0,0,.35);flex:none}.legend span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.legend small{color:var(--muted);margin-left:auto;font-family:"JetBrains Mono"}
+.legend .off{opacity:.45}
+.presets{display:flex;gap:6px;flex-wrap:wrap}.presets button{all:unset;cursor:pointer;padding:6px 12px;border:1px solid var(--hair);border-radius:999px;font:600 12.5px "Inter Tight";background:#fff}.presets button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}.presets button:focus-visible{outline:2px solid var(--red)}
+.drop{border:1.5px dashed #b9b5aa;border-radius:8px;padding:14px;text-align:center;color:var(--muted);font-size:13px;background:var(--paper)}.drop.over{border-color:var(--red);background:#FBEDE8}
+.refs{display:grid;gap:6px;margin-top:8px}.ref{display:grid;grid-template-columns:44px minmax(0,1fr) 130px auto;gap:8px;align-items:center;border:1px solid var(--hair);border-radius:6px;padding:4px 6px;font-size:12px}.ref img{width:44px;height:36px;object-fit:cover;border-radius:3px;background:var(--sand)}.ref span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ref select{padding:4px 6px;font-size:12px}
+.modes{display:grid;gap:6px}.modes label{display:flex;gap:8px;align-items:center;font-size:13px;padding:7px 10px;border:1px solid var(--hair);border-radius:8px}.modes label.dis{opacity:.5}.modes small{margin-left:auto;color:var(--muted)}.modes input{accent-color:var(--red)}
+.badge{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:#FBEDE8;color:#7a2b1d;font:600 12.5px "Inter Tight";border:1px solid #f0c9bf}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;margin-top:12px}
+.res{border:1px solid var(--hair);border-radius:10px;overflow:hidden;background:#fff}.cmp{position:relative;aspect-ratio:var(--ar,1.4);background:#eee;overflow:hidden}.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}.cmp .top2{clip-path:inset(0 0 0 var(--p,50%))}.cmp .tag{position:absolute;bottom:8px;font:600 11px "JetBrains Mono";background:rgba(255,255,255,.9);padding:2px 6px;border-radius:4px}.cmp .bd{position:absolute;left:8px;top:8px;background:rgba(28,27,26,.85);color:#fff;font:600 11px "Inter Tight";padding:3px 8px;border-radius:999px}
+.cmp input[type=range]{position:absolute;left:0;right:0;bottom:0;width:100%;opacity:.0001;height:100%;cursor:ew-resize}.cmp .bar{position:absolute;top:0;bottom:0;width:2px;background:#fff;left:var(--p,50%);box-shadow:0 0 0 1px rgba(0,0,0,.4);pointer-events:none}
+.res .meta{padding:8px 10px;font-size:12px;color:var(--muted);display:grid;gap:6px}
+.proto{margin-top:8px;font:12px/1.5 "JetBrains Mono";background:#1C1B1A;color:#e8e4d9;padding:10px;border-radius:8px;white-space:pre-wrap;overflow:auto;max-height:260px}
+details summary{cursor:pointer;font-weight:600}
+.msg{font-size:12.5px;color:var(--muted);margin:6px 0}.msg.warn{color:#8a4b00}
+footer{padding:14px 20px;color:var(--muted);font-size:12px;border-top:1px solid var(--hair)}
+@media (max-width:1000px){.app{grid-template-columns:1fr}.ref{grid-template-columns:44px minmax(0,1fr) auto}.ref select{grid-column:2}}
+</style></head>
+<body>
+<div class="top"><h1>Render</h1><span class="sub">Plan Studio plan → colour mask → your own GPU → back into Boards</span><span class="sp"></span><a class="btn sm" id="toBoards" href="#">← Boards</a></div>
+<div class="app">
+<section aria-label="Input">
+  <div class="panel"><h2 class="k">1 · Plan</h2>
+    <label class="f">Plan from Plan Studio<select id="src" aria-label="Plan source"></select></label>
+    <label class="f">Level<select id="lvl" aria-label="Level"></select></label>
+    <p class="msg" id="srcMsg"></p>
+    <h2 class="k" style="margin-top:12px">Colour mask (v1 palette)</h2>
+    <canvas id="mask" class="mask" aria-label="Colour mask of the plan"></canvas>
+    <p class="msg" id="maskInfo"></p>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="panel"><h2 class="k">2 · Style and prompt</h2>
+    <div class="presets" id="presets" role="group" aria-label="Style"></div>
+    <label class="f" style="margin-top:10px">Prompt (added to the fixed sentence)<textarea id="uprompt" placeholder="e.g. warm evening light, linen curtains" aria-label="Prompt"></textarea></label>
+    <label class="f">Seed <input type="number" id="seed" aria-label="Seed"><small id="seedNote" style="color:var(--muted)"></small></label>
+  </div>
+  <div class="panel"><h2 class="k">3 · Reference images</h2>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add reference images">Drop product images here, upload, or paste a link<br><label class="btn sm" style="display:inline-block;margin-top:8px">Upload<input type="file" id="rf" accept="image/*" multiple hidden></label></div>
+    <div class="row" style="margin-top:8px"><input type="text" id="ru" placeholder="https://… image link" aria-label="Image link" style="flex:1"><button class="btn sm" id="ra">Add</button></div>
+    <div class="refs" id="refs"></div>
+    <p class="msg">Each image is bound to a furniture category. The pack records the binding; the pictures themselves are not changed.</p>
+  </div>
+  <div class="panel"><h2 class="k">4 · Where it renders</h2>
+    <div class="modes" id="modes" role="radiogroup" aria-label="GPU mode">
+      <label><input type="radio" name="gm" value="mygpu" checked> My GPU <small>ComfyUI on your computer</small></label>
+      <label class="dis"><input type="radio" name="gm" value="draft" disabled> Browser draft <small>Coming soon</small></label>
+      <label class="dis"><input type="radio" name="gm" value="cloud" disabled> Cloud Pro <small>Coming soon</small></label></div>
+    <p class="msg">PlotCloud does no rendering and runs no server. The mask, the prompt and a ComfyUI workflow go to your machine; you bring the image back here.</p>
+    <div class="row"><button class="btn red" id="pack">Download render pack</button><button class="btn" id="bridge" disabled aria-disabled="true" title="Coming soon">Send to local render · Coming soon</button></div>
+    <details style="margin-top:10px"><summary>Render Bridge protocol (draft v1, for the desktop bridge)</summary><pre class="proto" id="proto"></pre><button class="btn sm" id="protoDl" style="margin-top:6px">Download protocol</button></details>
+  </div>
+</section>
+<section aria-label="Output">
+  <div class="panel"><h2 class="k">Results</h2>
+    <div class="row"><span class="badge" id="honest">AI visualization — furniture dimensions refer to the plan</span><span class="sp"></span><label class="btn red" style="display:inline-block">Upload your render<input type="file" id="up" accept="image/*" hidden></label></div>
+    <div class="drop" id="drop2" style="margin-top:10px" tabindex="0">Drop the finished render here. It is linked to this plan and level.</div>
+    <p class="msg" id="resMsg"></p>
+    <div class="gal" id="gal"></div>
+  </div>
+</section>
+</div>
+<footer>PlotCloud · Render · AI visualization of a plan you drew · no server-side rendering · the v1 colour palette never changes.</footer>
+<script>
+'use strict';
+const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const HONEST = 'AI visualization — furniture dimensions refer to the plan';
+
+// =====================================================================================
+// PALETTE v1: fixed, never changed. A new palette would be a new version (v2) next to this one.
+// =====================================================================================
+const PALETTE_V1 = Object.freeze({
+  version: 'v1',
+  categories: Object.freeze([
+    Object.freeze({ key: 'sofa', name: 'Sofa', color: '#FF0000', word: 'red' }), Object.freeze({ key: 'bed', name: 'Bed', color: '#0000FF', word: 'blue' }),
+    Object.freeze({ key: 'dining', name: 'Dining table', color: '#00FF00', word: 'green' }), Object.freeze({ key: 'chair', name: 'Chair', color: '#FFFF00', word: 'yellow' }),
+    Object.freeze({ key: 'desk', name: 'Desk', color: '#FF00FF', word: 'magenta' }), Object.freeze({ key: 'storage', name: 'Storage', color: '#00FFFF', word: 'cyan' }),
+    Object.freeze({ key: 'coffee', name: 'Coffee table', color: '#FF8000', word: 'orange' }), Object.freeze({ key: 'bookshelf', name: 'Bookshelf', color: '#8000FF', word: 'violet' }),
+    Object.freeze({ key: 'lamp', name: 'Lamp', color: '#0080FF', word: 'azure' }), Object.freeze({ key: 'plant', name: 'Plant', color: '#80FF00', word: 'lime' }),
+    Object.freeze({ key: 'rug', name: 'Rug', color: '#FF0080', word: 'rose' }), Object.freeze({ key: 'tvstand', name: 'TV stand', color: '#808000', word: 'olive' })]),
+  structure: Object.freeze({ wall: '#1C1B1A', floor: '#FFFFFF', opening: '#808080' })
+});
+// Plan Studio models → category and a stable item id. A model not listed here is not part of the 12 categories.
+const ITEM_OF = Object.freeze({
+  sofa: ['sofa', 'PC-SOFA-001'], sectional: ['sofa', 'PC-SOFA-002'], bed: ['bed', 'PC-BED-001'], dining: ['dining', 'PC-DINING-001'],
+  chair: ['chair', 'PC-CHAIR-001'], office: ['chair', 'PC-CHAIR-002'], armchair: ['chair', 'PC-CHAIR-003'], desk: ['desk', 'PC-DESK-001'],
+  wardrobe: ['storage', 'PC-STORAGE-001'], dresser: ['storage', 'PC-STORAGE-002'], nightstand: ['storage', 'PC-STORAGE-003'], shoecab: ['storage', 'PC-STORAGE-004'], kitchen: ['storage', 'PC-STORAGE-005'], island: ['storage', 'PC-STORAGE-006'],
+  coffee: ['coffee', 'PC-COFFEE-001'], sidetable: ['coffee', 'PC-COFFEE-002'], bookshelf: ['bookshelf', 'PC-BOOKSHELF-001'],
+  plant: ['plant', 'PC-PLANT-001'], tree: ['plant', 'PC-PLANT-002'], tvstand: ['tvstand', 'PC-TVSTAND-001'] });
+const LAMP_ITEM = 'PC-LAMP-001', RUG_ITEM = 'PC-RUG-001';   // lights placed in Plan Studio; there is no rug model yet
+const CATBY = Object.fromEntries(PALETTE_V1.categories.map((c) => [c.key, c]));
+const STYLES = Object.freeze({
+  scandinavian: { name: 'Scandinavian', desc: 'light oak floors, white walls, soft wool textiles, a muted natural palette' },
+  japandi: { name: 'Japandi', desc: 'low timber furniture, warm neutrals, paper and linen, quiet and uncluttered' },
+  industrial: { name: 'Industrial', desc: 'exposed concrete, dark steel, worn leather, warm filament light' },
+  minimalist: { name: 'Minimalist', desc: 'plain white surfaces, very little decoration, clean lines, soft daylight' } });
+const NEGATIVE = 'text, labels, watermark, people, extra furniture, missing furniture, distorted proportions, blurry';
+
+// =====================================================================================
+// PLAN SOURCES: what Plan Studio keeps in this browser (drafts, saved projects, versions)
+// =====================================================================================
+const idbAll = (name, store, ver) => new Promise((res) => { try { const q = ver ? indexedDB.open(name, ver) : indexedDB.open(name); q.onerror = () => res([]); q.onsuccess = () => { const db = q.result; if (!db.objectStoreNames.contains(store)) { db.close(); res([]); return; } const r = db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => { db.close(); res(r.result || []); }; r.onerror = () => { db.close(); res([]); }; }; } catch (e) { res([]); } });
+const SAMPLE = { v: 2, units: 'm', version: 0, name: 'Sample living room (not from Plan Studio)', id: 'sample', levels: [{ id: 'L1', name: 'Ground', z: 0, h: 2.7 }],
+  walls: [[0, 0, 6, 0], [6, 0, 6, 4.5], [6, 4.5, 0, 4.5], [0, 4.5, 0, 0]].map((w, i) => ({ id: 'w' + i, lv: 'L1', a: [w[0], w[1]], b: [w[2], w[3]], t: 0.2 })),
+  ops: [{ id: 'o1', wall: 'w2', pos: 1.5, w: 0.9, kind: 'door', lv: 'L1' }, { id: 'o2', wall: 'w0', pos: 3, w: 1.8, kind: 'win', lv: 'L1' }],
+  floors: [{ id: 'f1', lv: 'L1', x: 0, y: 0, w: 6, d: 4.5 }], voids: [],
+  furn: [{ id: 'a', lv: 'L1', type: 'sofa', x: 3, y: 3.7, w: 2.2, d: 0.9, rot: 0 }, { id: 'b', lv: 'L1', type: 'coffee', x: 3, y: 2.5, w: 1.1, d: 0.6, rot: 0 }, { id: 'c', lv: 'L1', type: 'tvstand', x: 3, y: 0.5, w: 1.6, d: 0.4, rot: 0 }, { id: 'd', lv: 'L1', type: 'dining', x: 5, y: 1.6, w: 1.2, d: 0.9, rot: Math.PI / 2 }, { id: 'e', lv: 'L1', type: 'chair', x: 4.4, y: 1.6, w: 0.45, d: 0.45, rot: 0 }, { id: 'g', lv: 'L1', type: 'plant', x: 0.6, y: 3.9, w: 0.5, d: 0.5, rot: 0 }, { id: 'h', lv: 'L1', type: 'bookshelf', x: 0.4, y: 2.2, w: 0.3, d: 1.2, rot: 0 }, { id: 'i', lv: 'L1', type: 'fridge', x: 5.5, y: 4, w: 0.7, d: 0.7, rot: 0 }], lights: [{ id: 'l1', lv: 'L1', x: 3, y: 2.5, type: 'pendant' }] };
+let SOURCES = [];
+async function loadSources() {
+  const [drafts, projects, versions] = await Promise.all([idbAll('pc-studio', 'drafts'), idbAll('pc-studio', 'projects'), idbAll('pc-studio', 'versions')]);
+  const list = [];
+  for (const d of drafts) if (d.model) list.push({ key: `${d.id}@draft`, label: `Draft · ${d.name || 'Untitled'} (unsaved)`, at: d.at || '', model: d.model, pid: d.id, ver: 'draft' });
+  for (const p of projects) if (p.model) list.push({ key: `${p.id}@${p.version}`, label: `Saved · ${p.name || 'Untitled'} · v${p.version}`, at: p.savedAt || '', model: p.model, pid: p.id, ver: p.version });
+  for (const v of versions) if (v.model && !list.some((x) => x.key === v.key)) list.push({ key: v.key, label: `Version · ${v.model.name || 'Untitled'} · v${v.version}`, at: v.savedAt || '', model: v.model, pid: v.id, ver: v.version });
+  list.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  list.push({ key: 'sample@0', label: 'Sample living room (built in)', at: '', model: SAMPLE, pid: 'sample', ver: 0 });
+  SOURCES = list;
+}
+
+// =====================================================================================
+// MASK: Canvas 2D at the plan's own canvas size, then every pixel snapped to the v1 palette
+// =====================================================================================
+function planGeometry(M, lv) {
+  const walls = (M.walls || []).filter((w) => w.lv === lv), ops = (M.ops || []).filter((o) => walls.some((w) => w.id === o.wall)), floors = (M.floors || []).filter((f) => f.lv === lv), furn = (M.furn || []).filter((f) => f.lv === lv), lights = (M.lights || []).filter((l) => l.lv === lv);
+  const corners = (f) => { const c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0), hw = f.w / 2, hd = f.d / 2; return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([u, v]) => [f.x + u * c - v * s, f.y + u * s + v * c]); };
+  const pts = []; for (const w of walls) { const t = (w.t || 0.2) / 2; pts.push([w.a[0] - t, w.a[1] - t], [w.a[0] + t, w.a[1] + t], [w.b[0] - t, w.b[1] - t], [w.b[0] + t, w.b[1] + t]); }
+  for (const f of floors) pts.push([f.x, f.y], [f.x + f.w, f.y + f.d]); for (const f of furn) pts.push(...corners(f));
+  return { walls, ops, floors, furn, lights, corners, pts };
+}
+function canvasSize(G) {
+  if (!G.pts.length) return null; const xs = G.pts.map((p) => p[0]), ys = G.pts.map((p) => p[1]), m = 0.5, x0 = Math.min(...xs) - m, y0 = Math.min(...ys) - m, x1 = Math.max(...xs) + m, y1 = Math.max(...ys) + m, wm = x1 - x0, hm = y1 - y0, ppm = Math.min(100, 2048 / Math.max(wm, hm));
+  return { x0, y0, x1, y1, ppm: +ppm.toFixed(4), w: Math.max(8, Math.round(wm * ppm)), h: Math.max(8, Math.round(hm * ppm)) };
+}
+const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+function buildMask(M, lv, canvas) {
+  const G = planGeometry(M, lv), C = canvasSize(G); if (!C) return null;
+  const cv = canvas || document.createElement('canvas'); cv.width = C.w; cv.height = C.h; const g = cv.getContext('2d', { willReadFrequently: true }), P = (p) => [(p[0] - C.x0) * C.ppm, (C.y1 - p[1]) * C.ppm], S = PALETTE_V1.structure;
+  g.imageSmoothingEnabled = false; g.fillStyle = S.floor; g.fillRect(0, 0, C.w, C.h);
+  const poly = (pts, col) => { g.fillStyle = col; g.beginPath(); pts.map(P).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); };
+  for (const f of G.floors) poly([[f.x, f.y], [f.x + f.w, f.y], [f.x + f.w, f.y + f.d], [f.x, f.y + f.d]], S.floor);
+  const placed = new Map(), unmapped = new Map();
+  for (const f of G.furn) { const it = ITEM_OF[f.type]; if (!it) { unmapped.set(f.type, (unmapped.get(f.type) || 0) + 1); continue; } poly(G.corners(f), CATBY[it[0]].color); const e = placed.get(it[0]) || new Map(); e.set(f.type, (e.get(f.type) || 0) + 1); placed.set(it[0], e); }
+  for (const l of G.lights) { const q = P([l.x, l.y]), r = 0.15 * C.ppm; g.fillStyle = CATBY.lamp.color; g.beginPath(); g.arc(q[0], q[1], r, 0, 7); g.fill(); const e = placed.get('lamp') || new Map(); e.set('light', (e.get('light') || 0) + 1); placed.set('lamp', e); }
+  g.lineCap = 'butt'; g.strokeStyle = S.wall; for (const w of G.walls) { const a = P(w.a), b = P(w.b); g.lineWidth = (w.t || 0.2) * C.ppm; g.lineCap = 'square'; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  for (const o of G.ops) { const w = G.walls.find((x) => x.id === o.wall); if (!w) continue; const dx = w.b[0] - w.a[0], dy = w.b[1] - w.a[1], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, t = (w.t || 0.2) / 2 + 0.01, c = [w.a[0] + ux * o.pos, w.a[1] + uy * o.pos], h = (o.w || 0.9) / 2;
+    poly([[c[0] - ux * h - uy * t, c[1] - uy * h + ux * t], [c[0] + ux * h - uy * t, c[1] + uy * h + ux * t], [c[0] + ux * h + uy * t, c[1] + uy * h - ux * t], [c[0] - ux * h + uy * t, c[1] - uy * h - ux * t]], S.opening); }
+  // snap every pixel to the nearest palette colour: no anti-aliased blends survive
+  const pal = [S.wall, S.floor, S.opening, ...PALETTE_V1.categories.map((c) => c.color)].map(hexRGB), img = g.getImageData(0, 0, C.w, C.h), d = img.data, cache = new Map();
+  for (let i = 0; i < d.length; i += 4) { const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2]; let j = cache.get(k); if (j === undefined) { let best = 1e9; j = 0; for (let p = 0; p < pal.length; p++) { const e = (pal[p][0] - d[i]) ** 2 + (pal[p][1] - d[i + 1]) ** 2 + (pal[p][2] - d[i + 2]) ** 2; if (e < best) { best = e; j = p; } } cache.set(k, j); } const c = pal[j]; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }
+  g.putImageData(img, 0, 0);
+  return { canvas: cv, C, placed, unmapped, G };
+}
+
+// =====================================================================================
+// LEGEND, PROMPT, WORKFLOW, PROTOCOL: plain data, deterministic
+// =====================================================================================
+const REFS = [];   // { id, kind: 'file'|'url', name, url?, data?, cat }
+function legendJson(R) {
+  const colors = {}; for (const c of PALETTE_V1.categories) { const pl = R.placed.get(c.key), items = pl ? [...pl].map(([m, n]) => ({ model_id: m, item_id: m === 'light' ? LAMP_ITEM : ITEM_OF[m][1], count: n })) : [], ref = REFS.find((r) => r.cat === c.key);
+    colors[c.color] = { category: c.name, item_id: items.length ? items[0].item_id : (c.key === 'lamp' ? LAMP_ITEM : c.key === 'rug' ? RUG_ITEM : Object.values(ITEM_OF).find((v) => v[0] === c.key)[1]), items, placed: !!items.length, product_image_url: ref && ref.kind === 'url' ? ref.url : null, product_image_file: ref && ref.kind === 'file' ? 'references/' + ref.name : null }; }
+  return { version: PALETTE_V1.version, note: 'Colour palette v1. It is fixed and is never changed; a new palette would be v2.', structure: PALETTE_V1.structure, colors, unmapped_models: Object.fromEntries(R.unmapped), unmapped_note: 'Pieces outside the 12 categories are not in the mask: they stay floor colour.', canvas: { width: R.C.w, height: R.C.h, px_per_m: R.C.ppm } };
+}
+function fnv(str) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; }
+function promptText(R, style, user) {
+  const present = PALETTE_V1.categories.filter((c) => R.placed.has(c.key)), phrase = present.map((c) => `${c.word} is the ${c.name.toLowerCase()}`).join(', '), refs = REFS.filter((r) => CATBY[r.cat]).sort((a, b) => PALETTE_V1.categories.findIndex((c) => c.key === a.cat) - PALETTE_V1.categories.findIndex((c) => c.key === b.cat) || a.name.localeCompare(b.name));
+  return `Photorealistic interior architectural visualization seen from above, ${STYLES[style].desc}. Follow the colour-coded plan exactly: ${phrase || 'no furniture is placed'}; dark is wall, white is floor, grey is a door or window.${user.trim() ? ' ' + user.trim() + '.' : ''}${refs.length ? ' Match the reference pieces: ' + refs.map((r) => `the ${CATBY[r.cat].name.toLowerCase()} like ${r.name}`).join('; ') + '.' : ''}`;
+}
+const STATE = { src: 0, lv: '', style: 'scandinavian', seed: null, mask: null };
+function promptJson() {
+  const R = STATE.mask, src = SOURCES[STATE.src], user = $('#uprompt').value, auto = fnv(JSON.stringify([src.key, STATE.lv, R.C, [...R.placed].map(([k, m]) => [k, [...m]]), STATE.style]));
+  const seed = STATE.seed != null && isFinite(STATE.seed) ? Math.abs(Math.round(STATE.seed)) : auto;
+  const ref = {}; for (const r of REFS) if (CATBY[r.cat]) ref[CATBY[r.cat].name] = Object.assign({ source: r.kind, name: r.name }, r.kind === 'url' ? { url: r.url } : { file: 'references/' + r.name });
+  return { version: 'v1', style: { id: STATE.style, name: STYLES[STATE.style].name }, user_prompt: user.trim(), prompt: promptText(R, STATE.style, user), negative_prompt: NEGATIVE, seed, seed_source: STATE.seed != null && isFinite(STATE.seed) ? 'user' : 'derived from the plan, level and style', canvas: { width: R.C.w, height: R.C.h, px_per_m: R.C.ppm }, reference_by_category: ref, legend_version: PALETTE_V1.version, plan: { project: src.pid, version: src.ver, source_key: src.key, level: STATE.lv, name: src.model.name || '' }, gpu_mode: 'mygpu', honesty: HONEST };
+}
+function comfyWorkflow(pj) {
+  // A plain Stable Diffusion + ControlNet graph. The v1 colour legend is written into a Note node; the mask loads as the control image.
+  const W = Math.max(512, Math.min(1024, Math.round(pj.canvas.width / 8) * 8)), H = Math.max(512, Math.min(1024, Math.round(pj.canvas.height / 8) * 8));
+  const N = []; const L = []; let lid = 0; const node = (id, type, pos, size, inputs, outputs, widgets, title) => { N.push({ id, type, pos, size, flags: {}, order: id - 1, mode: 0, inputs, outputs, properties: { 'Node name for S&R': type }, widgets_values: widgets, title }); };
+  const link = (from, fslot, to, tslot, type) => { lid++; L.push([lid, from, fslot, to, tslot, type]); return lid; };
+  const l1 = link(1, 1, 2, 0, 'CLIP'), l2 = link(1, 1, 3, 0, 'CLIP'), l3 = link(2, 0, 6, 0, 'CONDITIONING'), l4 = link(5, 0, 6, 1, 'CONTROL_NET'), l5 = link(4, 0, 6, 2, 'IMAGE'), l6 = link(6, 0, 7, 1, 'CONDITIONING'), l7 = link(3, 0, 7, 2, 'CONDITIONING'), l8 = link(1, 0, 7, 0, 'MODEL'), l9 = link(8, 0, 7, 3, 'LATENT'), l10 = link(7, 0, 9, 0, 'LATENT'), l11 = link(1, 2, 9, 1, 'VAE'), l12 = link(9, 0, 10, 0, 'IMAGE');
+  node(1, 'CheckpointLoaderSimple', [20, 200], [315, 98], [], [{ name: 'MODEL', type: 'MODEL', links: [l8], slot_index: 0 }, { name: 'CLIP', type: 'CLIP', links: [l1, l2], slot_index: 1 }, { name: 'VAE', type: 'VAE', links: [l11], slot_index: 2 }], ['v1-5-pruned-emaonly.safetensors']);
+  node(2, 'CLIPTextEncode', [380, 40], [420, 150], [{ name: 'clip', type: 'CLIP', link: l1 }], [{ name: 'CONDITIONING', type: 'CONDITIONING', links: [l3], slot_index: 0 }], [pj.prompt], 'Positive prompt');
+  node(3, 'CLIPTextEncode', [380, 230], [420, 90], [{ name: 'clip', type: 'CLIP', link: l2 }], [{ name: 'CONDITIONING', type: 'CONDITIONING', links: [l7], slot_index: 0 }], [pj.negative_prompt], 'Negative prompt');
+  node(4, 'LoadImage', [20, 360], [315, 314], [], [{ name: 'IMAGE', type: 'IMAGE', links: [l5], slot_index: 0 }, { name: 'MASK', type: 'MASK', links: null, slot_index: 1 }], ['colour_mask.png', 'image'], 'PlotCloud colour mask v1');
+  node(5, 'ControlNetLoader', [380, 360], [345, 58], [], [{ name: 'CONTROL_NET', type: 'CONTROL_NET', links: [l4], slot_index: 0 }], ['control_v11p_sd15_seg.pth']);
+  node(6, 'ControlNetApply', [760, 360], [317, 98], [{ name: 'conditioning', type: 'CONDITIONING', link: l3 }, { name: 'control_net', type: 'CONTROL_NET', link: l4 }, { name: 'image', type: 'IMAGE', link: l5 }], [{ name: 'CONDITIONING', type: 'CONDITIONING', links: [l6], slot_index: 0 }], [1.0]);
+  node(7, 'KSampler', [1100, 120], [315, 262], [{ name: 'model', type: 'MODEL', link: l8 }, { name: 'positive', type: 'CONDITIONING', link: l6 }, { name: 'negative', type: 'CONDITIONING', link: l7 }, { name: 'latent_image', type: 'LATENT', link: l9 }], [{ name: 'LATENT', type: 'LATENT', links: [l10], slot_index: 0 }], [pj.seed, 'fixed', 28, 7, 'dpmpp_2m', 'karras', 1]);
+  node(8, 'EmptyLatentImage', [760, 520], [315, 106], [], [{ name: 'LATENT', type: 'LATENT', links: [l9], slot_index: 0 }], [W, H, 1]);
+  node(9, 'VAEDecode', [1440, 120], [210, 46], [{ name: 'samples', type: 'LATENT', link: l10 }, { name: 'vae', type: 'VAE', link: l11 }], [{ name: 'IMAGE', type: 'IMAGE', links: [l12], slot_index: 0 }], []);
+  node(10, 'SaveImage', [1440, 220], [315, 270], [{ name: 'images', type: 'IMAGE', link: l12 }], [], ['plotcloud_render']);
+  const legend = PALETTE_V1.categories.map((c) => `${c.color}  ${c.name}`).join('\n') + `\n${PALETTE_V1.structure.wall}  Wall\n${PALETTE_V1.structure.floor}  Floor\n${PALETTE_V1.structure.opening}  Door / window`;
+  node(11, 'Note', [20, 20], [340, 150], [], [], [`PlotCloud colour mask, palette ${PALETTE_V1.version} (fixed).\nLoad colour_mask.png in the "PlotCloud colour mask v1" node, then queue.\nChange the checkpoint and the ControlNet to models you have installed.\n\n${legend}\n\n${HONEST}`], 'PlotCloud palette v1');
+  return { last_node_id: 11, last_link_id: lid, nodes: N, links: L, groups: [], config: {}, extra: { plotcloud: { palette: PALETTE_V1.version, prompt_file: 'prompt.json', legend_file: 'legend.json', tested: false, note: 'A standard graph. It has not been run on a GPU by PlotCloud: check the model names in your ComfyUI.' } }, version: 0.4 };
+}
+const BRIDGE = Object.freeze({
+  protocol: 'plotcloud-render-bridge', version: 'v1', status: 'draft; the desktop bridge is not released',
+  base: 'http://127.0.0.1:7860/plotcloud/v1',
+  endpoints: {
+    'GET /health': { response: { ok: true, bridge: 'string (name and version)', engine: 'string (e.g. comfyui)', protocol: 'v1' } },
+    'POST /render': {
+      request: { version: 'v1', mask_png_base64: 'string (colour_mask.png, base64, palette v1)', prompt: 'the whole of prompt.json', legend: 'the whole of legend.json', options: { timeout_s: 'number, optional' } },
+      response_200: { image_png_base64: 'string', seed: 'number', elapsed_ms: 'number', engine: 'string' },
+      errors: { 400: 'bad request or unknown palette version', 413: 'mask too large', 422: 'the engine rejected the workflow', 503: 'engine busy or not running', 504: 'timed out' } } },
+  rules: ['The bridge listens on 127.0.0.1 only.', 'It answers CORS only for https://*.plotcloud.example origins that the user has approved.', 'PlotCloud sends the mask, the prompt and the legend. It never sends the project file.', 'The image that comes back is shown with the honest badge: ' + HONEST], palette: PALETTE_V1.version });
+
+// =====================================================================================
+// ZIP (store only) and downloads
+// =====================================================================================
+const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zip(files) {
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0; const u16 = (n) => [n & 255, n >>> 8 & 255], u32 = (n) => [n & 255, n >>> 8 & 255, n >>> 16 & 255, n >>> 24 & 255];
+  for (const f of files) { const name = enc.encode(f.name), data = f.data, crc = crc32(data), head = Uint8Array.from([0x50, 0x4b, 3, 4, 20, 0, 0, 8, 0, 0, 0, 0, 0x21, 0, ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), 0, 0]);
+    parts.push(head, name, data); cen.push(Uint8Array.from([0x50, 0x4b, 1, 2, 20, 0, 20, 0, 0, 8, 0, 0, 0, 0, 0x21, 0, ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...u32(off)]), name); off += head.length + name.length + data.length; }
+  const csize = cen.reduce((s, a) => s + a.length, 0); parts.push(...cen, Uint8Array.from([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(csize), ...u32(off), 0, 0]));
+  return new Blob(parts, { type: 'application/zip' });
+}
+async function save(name, blob) { try { if (window.claude && claude.use) { const ns = await claude.use('downloads'); if (ns && ns.save) { await ns.save({ filename: name, data: blob, mime: blob.type }); return; } } } catch (e) { } const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+const jsonBlob = (o) => new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' });
+const canvasBlob = (cv) => new Promise((r) => cv.toBlob(r, 'image/png'));
+function toast(t) { const d = document.createElement('div'); d.textContent = t; d.setAttribute('role', 'status'); d.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1C1B1A;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:9'; document.body.appendChild(d); setTimeout(() => d.remove(), 3400); }
+
+// =====================================================================================
+// UI
+// =====================================================================================
+function renderSources() {
+  const s = $('#src'); s.innerHTML = SOURCES.map((x, i) => `<option value="${i}">${esc(x.label)}</option>`).join(''); s.value = STATE.src;
+  const real = SOURCES.filter((x) => x.pid !== 'sample').length; $('#srcMsg').textContent = real ? '' : 'No plan from Plan Studio is stored in this browser yet. The built-in sample is used; open Plan Studio and draw, then come back.'; $('#srcMsg').className = real ? 'msg' : 'msg warn';
+  levels();
+}
+function levels() { const M = SOURCES[STATE.src].model, ls = M.levels || [{ id: 'L1', name: 'Ground' }]; if (!ls.some((l) => l.id === STATE.lv)) STATE.lv = ls[0].id; $('#lvl').innerHTML = ls.map((l) => `<option value="${esc(l.id)}">${esc(l.name || l.id)}</option>`).join(''); $('#lvl').value = STATE.lv; draw(); }
+function draw() {
+  const M = SOURCES[STATE.src].model, R = buildMask(M, STATE.lv, $('#mask')); STATE.mask = R;
+  if (!R) { $('#maskInfo').textContent = 'This level has no walls, floors or furniture yet.'; $('#legend').innerHTML = ''; $('#pack').disabled = true; $('#seedNote').textContent = ''; return; }
+  $('#pack').disabled = false; $('#maskInfo').textContent = `${R.C.w} × ${R.C.h} px · ${R.C.ppm} px per metre · palette ${PALETTE_V1.version}`;
+  const rows = PALETTE_V1.categories.map((c) => { const pl = R.placed.get(c.key), n = pl ? [...pl.values()].reduce((a, b) => a + b, 0) : 0; return `<div class="${n ? '' : 'off'}"><i style="background:${c.color}"></i><span>${esc(c.name)}</span><small>${n || '—'}</small></div>`; });
+  const S = PALETTE_V1.structure; rows.push(`<div><i style="background:${S.wall}"></i><span>Wall</span><small>${S.wall}</small></div>`, `<div><i style="background:${S.floor}"></i><span>Floor</span><small>${S.floor}</small></div>`, `<div><i style="background:${S.opening}"></i><span>Door · window</span><small>${S.opening}</small></div>`);
+  $('#legend').innerHTML = rows.join(''); const um = [...R.unmapped]; if (um.length) $('#maskInfo').textContent += ` · not in the 12 categories, left as floor: ${um.map(([k, n]) => k + ' ×' + n).join(', ')}`;
+  const pj = promptJson(); $('#seed').placeholder = String(pj.seed); $('#seedNote').textContent = STATE.seed != null && isFinite(STATE.seed) ? 'Your seed.' : 'Derived from the plan, level and style, so the same plan gives the same seed.';
+}
+function renderPresets() { $('#presets').innerHTML = Object.entries(STYLES).map(([k, v]) => `<button type="button" data-st="${k}" aria-pressed="${STATE.style === k}">${v.name}</button>`).join(''); }
+function renderRefs() {
+  $('#refs').innerHTML = REFS.map((r) => `<div class="ref" data-id="${r.id}"><img alt="" src="${esc(r.kind === 'file' ? r.data : r.url)}"><span title="${esc(r.name)}">${esc(r.name)}</span><select aria-label="Bind to a category"><option value="">Choose a category</option>${PALETTE_V1.categories.map((c) => `<option value="${c.key}" ${r.cat === c.key ? 'selected' : ''}>${c.name}</option>`).join('')}</select><button class="btn sm" data-rm>Remove</button></div>`).join('');
+}
+let RID = 0;
+function addFile(file) { if (!/^image\//.test(file.type)) { toast('Images only.'); return; } const rd = new FileReader(); rd.onload = () => { REFS.push({ id: ++RID, kind: 'file', name: file.name.replace(/[^\w.\-]+/g, '_'), data: rd.result, cat: guessCat(file.name) }); renderRefs(); draw(); }; rd.readAsDataURL(file); }
+function addUrl(u) { u = (u || '').trim(); if (!/^https?:\/\/\S+$/i.test(u)) { toast('Paste a link that starts with http:// or https://'); return false; } const name = decodeURIComponent((u.split('?')[0].split('/').pop() || 'image')).slice(0, 60); REFS.push({ id: ++RID, kind: 'url', name, url: u, cat: guessCat(u) }); renderRefs(); draw(); return true; }
+const guessCat = (s) => { s = s.toLowerCase(); for (const c of PALETTE_V1.categories) if (s.includes(c.key) || s.includes(c.name.toLowerCase().replace(' ', '-'))) return c.key; return ''; };
+function dropWire(el, onFiles, onUrl) { el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('over'); }); el.addEventListener('dragleave', () => el.classList.remove('over')); el.addEventListener('drop', (e) => { e.preventDefault(); el.classList.remove('over'); const fs = [...(e.dataTransfer.files || [])]; if (fs.length) { onFiles(fs); return; } const u = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain'); if (u && onUrl) onUrl(u.split('\n')[0]); }); }
+async function pack() {
+  if (!STATE.mask) return; const pj = promptJson(), lg = legendJson(STATE.mask), cm = await canvasBlob(STATE.mask.canvas), enc = new TextEncoder(), files = [
+    { name: 'colour_mask.png', data: new Uint8Array(await cm.arrayBuffer()) }, { name: 'prompt.json', data: enc.encode(JSON.stringify(pj, null, 2)) }, { name: 'legend.json', data: enc.encode(JSON.stringify(lg, null, 2)) },
+    { name: 'comfyui_workflow.json', data: enc.encode(JSON.stringify(comfyWorkflow(pj), null, 2)) }, { name: 'README.txt', data: enc.encode(`PlotCloud render pack\n\n1. Open ComfyUI on your computer and drag comfyui_workflow.json into it.\n2. In the "PlotCloud colour mask v1" node choose colour_mask.png (copy it to ComfyUI/input first).\n3. Pick models you have installed, queue the prompt, and save the image.\n4. Come back to PlotCloud > Render and upload the image. It is linked to this plan.\n\nThe colour palette is ${PALETTE_V1.version} and never changes. ${HONEST}.\nPlotCloud runs no GPU for this: the render happens on your machine.\n`) }];
+  for (const r of REFS) if (r.kind === 'file' && CATBY[r.cat]) { const b = await (await fetch(r.data)).arrayBuffer(); files.push({ name: 'references/' + r.name, data: new Uint8Array(b) }); }
+  await save(`plotcloud-render-pack-${pj.plan.project}-${pj.plan.level}.zip`, zip(files)); toast('Render pack downloaded');
+}
+
+// ---- results: kept in this browser (IndexedDB pc-render) ----
+const RDB = (() => { let p = null; const open = () => p || (p = new Promise((res, rej) => { const q = indexedDB.open('pc-render', 1); q.onupgradeneeded = () => q.result.createObjectStore('results', { keyPath: 'id' }); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }));
+  const tx = async (m, fn) => { const d = await open(); return new Promise((res, rej) => { const t = d.transaction('results', m), r = fn(t.objectStore('results')); t.oncomplete = () => res(r ? r.result : undefined); t.onerror = () => rej(t.error); }); };
+  return { all: () => tx('readonly', (s) => s.getAll()), put: (v) => tx('readwrite', (s) => s.put(v)), del: (k) => tx('readwrite', (s) => s.delete(k)) }; })();
+const shrink = (dataUrl, max) => new Promise((res) => { const im = new Image(); im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); res({ url: c.toDataURL('image/jpeg', 0.9), w: c.width, h: c.height }); }; im.onerror = () => res(null); im.src = dataUrl; });
+async function uploadRender(file) {
+  if (!file || !/^image\//.test(file.type)) { toast('Images only.'); return; } if (!STATE.mask) { toast('Choose a plan first.'); return; }
+  const raw = await new Promise((r) => { const rd = new FileReader(); rd.onload = () => r(rd.result); rd.readAsDataURL(file); }), img = await shrink(raw, 1600); if (!img) { toast('That file is not a readable image.'); return; }
+  const src = SOURCES[STATE.src], pj = promptJson(), maskUrl = (await shrink(STATE.mask.canvas.toDataURL('image/png'), 800)).url;
+  await RDB.put({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: new Date().toISOString(), planKey: src.key, project: src.pid, version: src.ver, planName: src.model.name || '', level: STATE.lv, style: STATE.style, seed: pj.seed, render: img.url, rw: img.w, rh: img.h, mask: maskUrl, mw: STATE.mask.C.w, mh: STATE.mask.C.h, board: false });
+  toast('Render added, linked to ' + (src.model.name || 'the plan') + ' · level ' + STATE.lv); gallery();
+}
+async function gallery() {
+  let all = []; try { all = await RDB.all(); } catch (e) { $('#resMsg').textContent = 'Results need this browser\'s storage, which is not available here (private window?).'; $('#resMsg').className = 'msg warn'; return; }
+  const src = SOURCES[STATE.src]; all = all.filter((r) => r.project === src.pid).sort((a, b) => b.at.localeCompare(a.at));
+  $('#resMsg').textContent = all.length ? '' : 'No render for this plan yet. Download the pack, render on your machine, then upload the image here.'; $('#resMsg').className = 'msg';
+  $('#gal').innerHTML = all.map((r) => `<div class="res" data-id="${r.id}"><div class="cmp" style="--ar:${(r.rw / r.rh).toFixed(3)};--p:50%"><img src="${r.mask}" alt="Colour mask"><img class="top2" src="${r.render}" alt="Render"><div class="bar"></div><span class="bd">${esc(HONEST)}</span><span class="tag" style="left:8px">mask</span><span class="tag" style="right:8px">render</span><input type="range" min="0" max="100" value="50" aria-label="Compare mask and render"></div>
+    <div class="meta"><span>${esc(r.planName)} · level ${esc(r.level)} · plan ${esc(String(r.version === 'draft' ? 'draft' : 'v' + r.version))} · ${esc(STYLES[r.style] ? STYLES[r.style].name : r.style)} · seed ${r.seed}</span><div class="row"><button class="btn sm red" data-board ${r.board ? 'disabled' : ''}>${r.board ? 'In Boards' : 'Send to Boards'}</button>${r.board ? '<button class="btn sm" data-goboards>Open Boards</button>' : ''}<a class="btn sm" download="plotcloud-render.jpg" href="${r.render}">Download</a><button class="btn sm" data-del>Delete</button></div></div></div>`).join('');
+}
+function goBoards() { try { window.parent.location.hash = '#/tool/atlas?d=boards'; } catch (e) { toast('Open this tool inside PlotCloud.'); } }
+
+document.addEventListener('click', async (e) => {
+  const st = e.target.closest('[data-st]'); if (st) { STATE.style = st.dataset.st; renderPresets(); draw(); return; }
+  if (e.target.closest('#pack')) { pack(); return; } if (e.target.closest('#ra')) { if (addUrl($('#ru').value)) $('#ru').value = ''; return; }
+  const rm = e.target.closest('[data-rm]'); if (rm) { const i = REFS.findIndex((r) => r.id === +rm.closest('.ref').dataset.id); if (i >= 0) REFS.splice(i, 1); renderRefs(); draw(); return; }
+  const res = e.target.closest('.res'); if (res) { const id = res.dataset.id;
+    if (e.target.closest('[data-board]')) { const all = await RDB.all(), r = all.find((x) => x.id === id); if (r) { r.board = true; await RDB.put(r); try { window.parent.postMessage({ pc: 1, t: 'ctx', board: true }, '*'); } catch (x) { } toast('Sent to Boards'); gallery(); } return; }
+    if (e.target.closest('[data-del]')) { await RDB.del(id); gallery(); return; } if (e.target.closest('[data-goboards]')) { goBoards(); return; } }
+  if (e.target.closest('#toBoards')) { e.preventDefault(); goBoards(); return; }
+  if (e.target.closest('#protoDl')) { save('plotcloud-render-bridge-protocol-v1.json', jsonBlob(BRIDGE)); }
+});
+document.addEventListener('input', (e) => { const rg = e.target.closest('.cmp input[type=range]'); if (rg) { rg.parentElement.style.setProperty('--p', rg.value + '%'); return; } if (e.target.id === 'uprompt') draw(); if (e.target.id === 'seed') { const v = e.target.value.trim(); STATE.seed = v === '' ? null : +v; draw(); } });
+document.addEventListener('change', (e) => { if (e.target.id === 'src') { STATE.src = +e.target.value; STATE.lv = ''; levels(); gallery(); } else if (e.target.id === 'lvl') { STATE.lv = e.target.value; draw(); } else if (e.target.id === 'rf') { [...e.target.files].forEach(addFile); e.target.value = ''; } else if (e.target.id === 'up') { uploadRender(e.target.files[0]); e.target.value = ''; } else if (e.target.closest('.ref select')) { const r = REFS.find((x) => x.id === +e.target.closest('.ref').dataset.id); if (r) r.cat = e.target.value; draw(); } });
+$('#ru').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#ra').click(); } });
+dropWire($('#drop'), (fs) => fs.forEach(addFile), (u) => addUrl(u)); dropWire($('#drop2'), (fs) => uploadRender(fs[0]), null);
+$('#proto').textContent = JSON.stringify(BRIDGE, null, 2);
+(async () => { await loadSources(); renderPresets(); renderRefs(); renderSources(); gallery(); })();
+window.__render = { PALETTE_V1, ITEM_OF, STATE, REFS, buildMask, legendJson, promptJson, comfyWorkflow, BRIDGE, zip, crc32, get SOURCES() { return SOURCES; }, SAMPLE, HONEST, draw, gallery };
+</script>
+</body></html>
