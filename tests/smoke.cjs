@@ -10,7 +10,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
    assert((await page.locator('#app').innerText()).trim().length>50,'Home is empty');
    assert.equal(errors.length,0,'Main app startup errors: '+errors.join(' | '));
    await visit('tools');
-   const tools=await page.locator('#app').innerText();
+   const tools=await page.locator('#app').innerText(); console.log('TOOLS BODY START:',JSON.stringify(tools.slice(0,2500))); console.log('PAGE ERRORS:',JSON.stringify(errors));
    assert(/color & render/i.test(tools),'Original Color & Render category missing');
    assert(/architectural ai render/i.test(tools),'New render listing missing');
    assert(/cutout|depth map|sun & shadow/i.test(tools),'Original tools missing');
