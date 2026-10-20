@@ -167,6 +167,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 .shaperow { display: grid; grid-template-columns: auto auto auto auto minmax(80px, 320px) auto; gap: 10px; align-items: center; font-size: 12.5px; justify-content: start; } .shaperow label, .shaperow .radl { color: var(--muted); } .shaperow select { width: auto; padding: 5px 8px; } .shaperow input[type=range] { width: 100%; accent-color: #111; margin: 0; } .shaperow output { font: 12px var(--f-mono); min-width: 52px; }
 .bdn { margin: -2px 0 0; font-size: 11.5px; } .topc .msg:empty { display: none; }
 .fromchip{position:absolute;left:12px;top:12px;z-index:6;display:flex;align-items:center;gap:8px;max-width:calc(100% - 24px);padding:5px 6px 5px 12px;border-radius:999px;background:#1C1B1A;color:#fff;font:600 12px 'Inter Tight',system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25)}.fromchip button{all:unset;cursor:pointer;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.18);font-size:14px}.fromchip button[data-usepin]{width:auto;padding:0 10px;height:22px;border-radius:999px;background:#D8402A}.fromchip button:focus-visible{outline:2px solid #fff}
+.l3 { position: absolute; left: 10px; top: 52px; z-index: 6; background: rgba(255,255,255,.94); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 3px; font-size: 12px; max-width: 210px } .l3 b { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6e6a60 } .l3 label { display: flex; gap: 6px; align-items: center } .l3 label.off { color: #9a968c } .l3 small { color: #9a968c } .l3 .ex { display: grid; gap: 2px; margin-top: 4px } .l3 .ex input { width: 100% }
 .mapbox { position: relative; flex: 1; min-height: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #f2f1ed; }
 #ml { position: absolute; inset: 0; } #ml[hidden] { display: none; }
 .mapbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -259,7 +260,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
           <p class="src" id="nomSt"></p>
         </div>
       </details>
-      <div class="shaperow"><label for="shape">Area shape</label><select id="shape"><option value="square">Square</option><option value="circle" selected>Circle</option><option value="polygon">Your boundary</option></select><button type="button" class="btn sm" id="polyBtn" aria-pressed="false" title="Click points on the map; double-click or Enter to finish" hidden>Draw a boundary</button><span class="radl" id="radL">Size</span><input type="range" id="rad" min="200" max="1000" step="10" value="400" aria-label="Study area size"><output id="radO">400 m</output><span class="shint" id="shapeHint" hidden>Draw a rectangle or import a boundary first</span></div>
+      <div class="shaperow"><label for="shape">Area shape</label><select id="shape"><option value="square">Square</option><option value="circle" selected>Circle</option><option value="polygon">Your boundary</option></select><button type="button" class="btn sm" id="polyBtn" aria-pressed="false" title="Click points on the map; double-click or Enter to finish" hidden>Draw a boundary</button><span class="radl" id="radL">Size</span><input type="range" id="rad" min="200" max="3000" step="10" value="400" aria-label="Study area size"><output id="radO">400 m</output><span class="shint" id="shapeHint" hidden>Draw a rectangle or import a boundary first</span></div>
       <div class="progrow" id="progRow" role="group" aria-label="Your site"><b>Your site</b><label>Area m²<input class="num" type="number" id="pgArea" min="1" step="10" value="2400"></label><label>FAR<input class="num" type="number" id="pgFar" min="0.1" step="0.1" value="2.5"></label><label>Height m<input class="num" type="number" id="pgH" min="1" step="1" value="18"></label><label>Coverage %<input class="num" type="number" id="pgCov" min="1" max="100" step="1" value="45"></label><span class="ent" id="pgEnt" role="group" aria-label="Entrance side"><span>Entrance</span><button type="button" data-ent="N" aria-pressed="false">N</button><button type="button" data-ent="E" aria-pressed="false">E</button><button type="button" data-ent="S" aria-pressed="true">S</button><button type="button" data-ent="W" aria-pressed="false">W</button></span></div>
       <p class="note bdn" id="bdNote">A circle around the site point. The right size depends on the analysis: for sun, enough to include buildings whose shadows reach the site.</p>
       <p class="msg" id="locMsg" aria-live="polite"></p>
@@ -271,6 +272,10 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <svg class="sann" id="sann" aria-label="Selected massing"></svg><svg class="sanc" id="sanc" aria-label="Anchor point and study area"><text class="slab" id="slab" text-anchor="middle"></text><text class="sfine" id="sfine" text-anchor="middle">Study extent for analysis only — not a legal boundary</text><g class="anchor" id="anchor" tabindex="0" role="slider" aria-label="Anchor point: drag it, or use the arrow keys (Shift for 5 m)"><circle class="hit" r="12" fill="transparent"></circle><circle class="dot" r="7"></circle><text class="alab" id="alab" x="13" y="-11"></text></g></svg><div class="toast" id="stoast" role="status" aria-live="polite" hidden></div><div class="e3lab" id="e3lab" aria-hidden="true"></div>
       <div class="sftb" id="sftb" role="toolbar" aria-label="Massing tools" hidden><button type="button" data-ft="mirror"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2.5v15" stroke-dasharray="2 2"/><path d="M7.5 5.5L3 14h4.5z"/><path d="M12.5 5.5L17 14h-4.5z"/></svg></button><button type="button" data-ft="replace"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a6 6 0 0 1 10.4-3.2M16 12a6 6 0 0 1-10.4 3.2"/><path d="M14.5 2v3h-3M5.5 18v-3h3"/></svg></button><button type="button" data-ft="dup"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="6.5" y="6.5" width="10" height="10" rx="1.5"/><path d="M13.5 6.5V4.5a1 1 0 0 0-1-1h-8a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"/></svg></button><button type="button" data-ft="hide"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 10c2-3.5 4.6-5.5 7.5-5.5s5.5 2 7.5 5.5c-2 3.5-4.6 5.5-7.5 5.5S4.5 13.5 2.5 10z"/><circle cx="10" cy="10" r="2.3"/><path d="M3.5 16.5l13-13"/></svg></button><button type="button" data-ft="lock"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></svg></button><button type="button" data-ft="del"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h13M8 5.5V3.8h4v1.7M5.5 5.5l.8 11h7.4l.8-11"/></svg></button></div>
       <div class="maptools"><button type="button" class="btn" id="zIn" aria-label="Zoom in">+</button><button type="button" class="btn" id="zOut" aria-label="Zoom out">−</button><button type="button" class="btn" id="fitBtn">Fit</button><button type="button" class="btn" id="uUndo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled>↶</button><button type="button" class="btn" id="uRedo" aria-label="Redo" title="Redo (Ctrl+Y)" disabled>↷</button><button type="button" class="btn" id="uReset" aria-label="Reset" title="Reset to the defaults (you can undo it)" disabled>Reset</button></div>
+      <div class="l3" id="l3" hidden role="group" aria-label="3D layers"><b>3D layers</b>
+        <label><input type="checkbox" data-l3="bld" checked> Buildings</label><label><input type="checkbox" data-l3="ter" checked> Terrain</label><label><input type="checkbox" data-l3="road" checked> Roads</label><label><input type="checkbox" data-l3="par" checked> Parcels</label>
+        <label class="off" title="Water is not in the data this tool reads"><input type="checkbox" disabled> Water <small>no data</small></label><label class="off" title="Green areas are not in the data this tool reads"><input type="checkbox" disabled> Green <small>no data</small></label><label class="off" title="Trees are not in the data this tool reads"><input type="checkbox" disabled> Trees <small>no data</small></label>
+        <label class="ex">Terrain exaggeration <b id="exV">1×</b><input type="range" id="exa" min="1" max="5" step="0.5" value="1" aria-label="Terrain exaggeration"></label></div>
       <div class="mapview" role="group" aria-label="View"><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="plan" aria-pressed="false">Plan</button><button type="button" data-v="3d" aria-pressed="false">3D</button></div>
       <p class="mhint" id="mhint"></p>
       <div class="attr" id="attr"></div>
@@ -606,7 +611,7 @@ const SITE = (() => {
   // the context area: a square around the site point, 400 m by default, 200 to 1000 m
   const SQUARE = { def: 400, min: 200, max: 1000 };
   // v138: the study area. Circle by default; its radius is size × K (size 200–1000 m, so 400 m gives r = 200 m); a square of the same area has side r·√π
-  const STUDY = { K: 0.5, min: 200, max: 1000, def: 400 };   // K = STUDY_RADIUS_K: one place to tune the radius coefficient
+  const STUDY = { K: 0.5, min: 200, max: 3000, def: 400 };   // K = STUDY_RADIUS_K: one place to tune the radius coefficient
   function squareOfRadius(r, c) { const side = r * Math.sqrt(Math.PI), h = side / 2, cx = c ? c[0] : 0, cy = c ? c[1] : 0; return { kind: 'polygon', square: +side.toFixed(1), c: [cx, cy], pts: [[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]].map((q) => [+q[0].toFixed(2), +q[1].toFixed(2)]) }; }
   function squareBoundary(side) { const w = Math.max(SQUARE.min, Math.min(SQUARE.max, Math.round(+side || SQUARE.def))), h = w / 2; return { kind: 'polygon', square: w, pts: [[-h, -h], [h, -h], [h, h], [-h, h]] }; }
   // 12 · the parcel: area by the shoelace formula (always positive), edges, and where it comes from
@@ -777,7 +782,12 @@ const LABEL = { source: 'Height from the data source', levels: 'Height from the 
   $('#tz').innerHTML = offs.map((h) => `<option value="${h}">UTC${h >= 0 ? '+' : '−'}${Math.floor(Math.abs(h))}${Math.abs(h) % 1 ? ':' + String(Math.round(Math.abs(h) % 1 * 60)).padStart(2, '0') : ''}</option>`).join(''); }
 
 // ---------- provider config from the site (shared db or config file) ----------
-window.addEventListener('message', (e) => { const d = e.data; if (d && d.pc && d.t === 'siteConfig') { SITEP.setConfig(d.cfg, d.from); statusUI(); } });
+window.addEventListener('message', (e) => { const d = e.data; if (d && d.pc && d.t === 'siteConfig') { SITEP.setConfig(d.cfg, d.from); statusUI(); }
+  if (!d || !d.pc || e.source !== window.parent) return;
+  if (d.t === 'mode' && ['map', 'plan', '3d'].includes(d.v)) setMode(d.v);                        // the page around this tool switches the view
+  if (d.t === 'generate') { if (d.ifEmpty && site && site.buildings && site.buildings.length) return; const b = $('#fetchB'); if (b && !b.disabled && ORIGIN) b.click(); }   // read the buildings of the area just confirmed
+  if (d.t === 'enter') { const b = $('#toWb'); if (b && !b.disabled) b.click(); }                  // Enter Plan Studio
+  if (d.t === 'ctx?') ctxPost(); });
 if (SITEW) try { window.parent.postMessage({ pc: 1, t: 'siteConfigReq' }, '*'); } catch (e) {}
 
 function statusUI() {
@@ -798,7 +808,10 @@ function setOrigin(lat, lon, label, keepView) {
   tzNote(); if (!keepView) fit(); statusUI(); draw(); reviewUI(); if (ML && mlReady && !keepView) syncMap(true);
   ctxPost();
 }
-function ctxPost() { try { const p = window.parent; if (p && p !== window && ORIGIN) p.postMessage({ pc: 1, t: 'ctx', lat: ORIGIN.lat, lng: ORIGIN.lon, r: Math.round(studyR()), label: ORIGIN.label || '' }, '*'); } catch (e) { } }
+function ctxPayload() { if (!ORIGIN) return null; const bd = boundary(); let R, shape = 'circle'; if (bd.kind === 'radius') R = bd.r; else if (bd.square) { R = bd.square / 2; shape = 'square'; } else R = Math.sqrt(SITE.shoelace(bd.pts) / Math.PI);
+  const c = F && AN ? F.inv(AN.x, AN.y) : [ORIGIN.lat, ORIGIN.lon];   // the study area is centred on the anchor
+  return { pc: 1, t: 'ctx', lat: +c[0].toFixed(6), lng: +c[1].toFixed(6), r: Math.round(R), shape, label: ORIGIN.label || '' }; }
+function ctxPost() { try { const p = window.parent, m = ctxPayload(); if (p && p !== window && m) p.postMessage(m, '*'); } catch (e) { } }
 const tzNote = () => { $('#tzNote').textContent = site && site.tzSource === 'user' ? 'Set by you.' : 'Estimated from the longitude. Check it: Sun hours uses it for clock times.'; };
 $('#srchF').addEventListener('submit', async (e) => { e.preventDefault(); const q = $('#q').value; $('#places').innerHTML = ''; msg('#locMsg', 'Searching…');
   try { const r = await SITEP.search(q); evt('site_search', { results: r.places.length, cached: r.cached });
@@ -876,7 +889,7 @@ $('#rad').addEventListener('input', () => { if (szBefore == null && site) szBefo
 $('#rad').addEventListener('change', () => { ctxPost(); if (szBefore != null && site && szBefore !== snapSite()) { UNDO.push(szBefore); if (UNDO.length > HMAX) UNDO.shift(); REDO.length = 0; undoUI(); } szBefore = null; if (site) { site.boundary = boundary(); rebuild(); persist(); } bdUI(); draw(); });
 $('#shape').addEventListener('change', (e) => { const k = e.target.value;
   if (k === 'polygon' && !polyBoundary()) { e.target.value = SHAPE; bdUI(); return; }
-  if (site) pushU(); SHAPE = k; DRAW = null; TOOLM = null; setRange(k, null); if (site) { site.boundary = boundary(); rebuild(); persist(); } $('#mapbox').classList.remove('drawing'); hint('');
+  if (site) pushU(); SHAPE = k; DRAW = null; TOOLM = null; setRange(k, null); if (site) { site.boundary = boundary(); rebuild(); persist(); } $('#mapbox').classList.remove('drawing'); hint(''); ctxPost();
   bdUI(); draw(); if (ML && mlReady) syncMap(true); });
 $('#polyBtn').addEventListener('click', () => { if (!ORIGIN) { msg('#locMsg', 'Set the site point first.', 'warn'); return; } if (DRAW) { finishPoly(); return; } DRAW = []; TOOLM = 'poly'; $('#polyBtn').hidden = false; $('#polyBtn').setAttribute('aria-pressed', 'true'); $('#polyBtn').textContent = 'Finish boundary'; $('#cv').classList.add('drawing'); $('#mapbox').classList.add('drawing'); if (ML) ML.doubleClickZoom.disable(); hint('Click the corners of the context area. Double-click or Enter to finish, Esc to cancel.'); draw(); });
 function finishPoly() { if (DRAW && DRAW.length >= 3) { if (!site) site = SITE.newSite(ORIGIN, null, {}); pushU(); SHAPE = 'polygon'; site.boundary = { kind: 'polygon', pts: DRAW.map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]) }; rebuild(); persist(); } DRAW = null; TOOLM = null; $('#polyBtn').setAttribute('aria-pressed', 'false'); $('#polyBtn').textContent = 'Redraw'; $('#cv').classList.remove('drawing'); $('#mapbox').classList.remove('drawing'); if (ML) setTimeout(() => ML && ML.doubleClickZoom.enable(), 300); hint(''); bdUI(); draw(); if (ML && mlReady) syncMap(true); }
@@ -932,7 +945,7 @@ $('#fixBtn').addEventListener('click', () => {
   add(-60, 20, 30, 18, { height: '24', name: 'Fixture tower' }); add(-20, 30, 22, 14, { 'building:levels': '5' }); add(25, 25, 18, 18, {}); add(30, -40, 40, 16, { height: '12' }); add(-55, -45, 16, 24, { 'building:levels': '3' }); add(60, 0, 14, 30, { height: '40' }); add(-15, -70, 26, 12, {});
   ORIGIN = { lat: o.lat, lon: o.lon, label: 'Test fixture (made up)' }; F = Fx; $('#lat').value = o.lat; $('#lon').value = o.lon; $('#tz').value = '-8'; $('#dst').value = '1'; $('#sName').value = 'Test fixture site';
   newSiteFrom({ provider: 'test-fixture', name: 'Made-up test fixture', at: new Date().toISOString(), licence: 'Test fixture, not real data', parsed: SITE.parseOSMJSON({ elements: els }) }, true);
-  msg('#impMsg', 'Test fixture loaded. It is made up and labeled as such in Plan Studio and Sun hours.', 'warn'); statusUI();
+  msg('#impMsg', 'Test fixture loaded. It is made up and labeled as such in Plan Studio and Sun hours.', 'warn'); statusUI(); ctxPost();
 });
 
 // ---------- review ----------
@@ -1130,21 +1143,23 @@ async function init3D() { if (R3) return R3; const T = await import('three'), { 
   const cam = new T.PerspectiveCamera(40, 1, 1, 20000), ctl = new OrbitControls(cam, c); ctl.maxPolarAngle = Math.PI * 0.49; const render = () => R.render(scene, cam); ctl.addEventListener('change', render);
   const resize3 = () => { const r = c.parentElement.getBoundingClientRect(); R.setSize(r.width, r.height, false); c.style.width = r.width + 'px'; c.style.height = r.height + 'px'; cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); render(); };
   R3 = { T, R, scene, cam, ctl, render, resize: resize3, grp: null }; resize3(); return R3; }
-async function upd3D(refit) { const r = await init3D().catch((e) => { msg('#nextMsg', 'The 3D view could not load (it needs its library from the internet).', 'warn'); return null; }); if (!r) return; const T = r.T;
+let L3 = { bld: true, ter: true, road: true, par: true }, EXA = 1;
+async function upd3D(refit) { l3UI(); const r = await init3D().catch((e) => { msg('#nextMsg', 'The 3D view could not load (it needs its library from the internet).', 'warn'); return null; }); if (!r) return; const T = r.T;
   if (r.grp) { r.scene.remove(r.grp); r.grp.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); } const grp = new T.Group(); r.grp = grp; r.scene.add(grp);
   const bd = boundary(), Rm = bd.kind === 'polygon' ? Math.max(...bd.pts.map((p) => Math.hypot(p[0], p[1]))) : bd.r;
   // ground or terrain (plan (x, y) → three (x, z = −y))
-  if (site && site.terrain) { const G = site.terrain.grid, geo = new T.PlaneGeometry((G.nx - 1) * G.step, (G.ny - 1) * G.step, G.nx - 1, G.ny - 1); const pos = geo.attributes.position; for (let k = 0; k < pos.count; k++) { const i = k % G.nx, j = G.ny - 1 - Math.floor(k / G.nx); pos.setZ(k, G.z[j * G.nx + i]); } geo.computeVertexNormals(); const m = new T.Mesh(geo, new T.MeshLambertMaterial({ color: 0xdfe3d6 })); m.rotation.x = -Math.PI / 2; m.position.set(G.x0 + (G.nx - 1) * G.step / 2, 0, -(G.y0 + (G.ny - 1) * G.step / 2)); grp.add(m); }
+  if (site && site.terrain && L3.ter) { const G = site.terrain.grid, geo = new T.PlaneGeometry((G.nx - 1) * G.step, (G.ny - 1) * G.step, G.nx - 1, G.ny - 1); const pos = geo.attributes.position; for (let k = 0; k < pos.count; k++) { const i = k % G.nx, j = G.ny - 1 - Math.floor(k / G.nx); pos.setZ(k, G.z[j * G.nx + i] * EXA); } geo.computeVertexNormals(); const m = new T.Mesh(geo, new T.MeshLambertMaterial({ color: 0xdfe3d6 })); m.rotation.x = -Math.PI / 2; m.position.set(G.x0 + (G.nx - 1) * G.step / 2, 0, -(G.y0 + (G.ny - 1) * G.step / 2)); grp.add(m); }
   else { const m = new T.Mesh(new T.CircleGeometry(Rm * 1.15, 64), new T.MeshLambertMaterial({ color: 0xece9e2 })); m.rotation.x = -Math.PI / 2; m.position.y = -0.05; grp.add(m); }
-  if (site) for (const b of site.buildings) { if (!b.valid || b.excluded || !b.xy.length) continue; const st = statusOf(b), h = b.h != null ? b.h - (b.base || 0) : 0.4;
+  if (site && L3.bld) for (const b of site.buildings) { if (!b.valid || b.excluded || !b.xy.length) continue; const st = statusOf(b), h = b.h != null ? b.h - (b.base || 0) : 0.4;
     const sh = new T.Shape(b.xy.map((p) => new T.Vector2(p[0], p[1]))); for (const hr of b.holes) sh.holes.push(new T.Path(hr.map((p) => new T.Vector2(p[0], p[1]))));
     const geo = new T.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false }); geo.rotateX(-Math.PI / 2);
-    const g0 = site.terrain ? Math.min(...b.xy.map((p) => SITE.groundAt(site.terrain, p[0], p[1]))) : 0;
+    const g0 = site.terrain && L3.ter ? Math.min(...b.xy.map((p) => SITE.groundAt(site.terrain, p[0], p[1]))) * EXA : 0;
     const col = b.id === SEL ? 0x3498ff : st === 'none' ? 0xe8b4aa : st === 'estimate' ? 0xe9cf7a : st === 'user' ? 0x9cc0e0 : st === 'levels' ? 0xc8c6bf : 0xb3b1aa;
     const mesh = new T.Mesh(geo, new T.MeshLambertMaterial({ color: col })); mesh.position.y = g0 + (b.base || 0); mesh.userData = { id: b.id, est: st === 'estimate' }; grp.add(mesh); mesh.add(new T.LineSegments(new T.EdgesGeometry(geo, 25), new T.LineBasicMaterial({ color: 0x2b2a28, transparent: true, opacity: 0.35 }))); }
   // 12 · the ground area (green) and your site (red) on the ground
   const lineOn = (pts, col, dashed) => { const v = pts.concat([pts[0]]).map((p) => new T.Vector3(p[0], 0.15, -p[1])), geo = new T.BufferGeometry().setFromPoints(v), m = dashed ? new T.LineDashedMaterial({ color: col, dashSize: 2, gapSize: 1.2 }) : new T.LineBasicMaterial({ color: col }), ln = new T.Line(geo, m); if (dashed) ln.computeLineDistances(); grp.add(ln); };
-  if (site && site.parcel && site.parcel.pts.length > 2) lineOn(site.parcel.pts, 0x2f7a4f, false);
+  if (site && L3.road && site.roads) for (const rd of site.roads) { if (!rd.pts || rd.pts.length < 2) continue; const gz = (p) => site.terrain && L3.ter ? SITE.groundAt(site.terrain, p[0], p[1]) * EXA : 0, v = rd.pts.map((p) => new T.Vector3(p[0], gz(p) + 0.25, -p[1])); grp.add(new T.Line(new T.BufferGeometry().setFromPoints(v), new T.LineBasicMaterial({ color: rd.cls === 'main' ? 0xb9ad8f : 0xd3cbb6 }))); }
+  if (site && L3.par && site.parcel && site.parcel.pts.length > 2) lineOn(site.parcel.pts, 0x2f7a4f, false);
   if (site && site.yourSite && site.yourSite.footprint && site.yourSite.footprint.length > 2) lineOn(site.yourSite.footprint, 0xd8402a, true);
   if (refit !== false && (refit || !r.fitted)) { const Rq = Math.min(Rm, 260); r.cam.position.set(Rq * 0.9, Rq * 0.8, Rq * 1.1); r.ctl.target.set(0, 0, 0); r.ctl.update(); r.fitted = true; }
   if (!r.lab) { r.lab = true; r.ctl.addEventListener('change', e3Labels); }
@@ -1155,10 +1170,13 @@ function e3Labels() { const box = $('#e3lab'); if (!R3 || MODE !== '3d' || !site
   for (const b of SITE.simBuildings(site)) { if (b.hSource !== 'estimate') continue; const cc = SITE.centroid(b.xy), q = at(cc[0], cc[1], b.h + 1.5); if (q) out.push(`<span data-b="${esc(b.id)}" style="left:${q[0].toFixed(1)}px;top:${q[1].toFixed(1)}px">estimated</span>`); }
   if (site.yourSite) { const q = at(site.yourSite.at[0], site.yourSite.at[1], 2); if (q) out.push(`<span class="ys" style="left:${q[0].toFixed(1)}px;top:${q[1].toFixed(1)}px">your site</span>`); }
   box.innerHTML = out.join(''); }
-function setMode(m) { MODE = m; $$('.mapview button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.v === m))); $('#cv').hidden = m === '3d' || (m === 'map' && mlReady); $('#ml').hidden = m !== 'map' || !mlReady; $('#cv3').hidden = m !== '3d'; $('#e3lab').hidden = m !== '3d';
+function setMode(m) { MODE = m; $('#l3').hidden = m !== '3d'; l3UI(); $$('.mapview button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.v === m))); $('#cv').hidden = m === '3d' || (m === 'map' && mlReady); $('#ml').hidden = m !== 'map' || !mlReady; $('#cv3').hidden = m !== '3d'; $('#e3lab').hidden = m !== '3d';
   for (const id of ['zIn', 'zOut']) $('#' + id).hidden = m === '3d'; $('#cv').classList.toggle('editing', m === 'plan'); if (m !== 'plan' && TOOLM === 'prect') { TOOLM = null; PR = null; $('#pDraw').setAttribute('aria-pressed', 'false'); }
   if (m === '3d') upd3D(true); else resize(); annUI(); }
 $$('.mapview button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.v)));
+function l3UI() { const has = !!(site && site.terrain); for (const id of ['ter']) { const c = $(`[data-l3="${id}"]`); c.disabled = !has; c.parentElement.title = has ? '' : 'Press Fetch terrain first'; } $('#exa').disabled = !has; }
+$('#l3').addEventListener('change', (e) => { const c = e.target.closest('[data-l3]'); if (c) { L3[c.dataset.l3] = c.checked; upd3D(false); } });
+$('#exa').addEventListener('input', (e) => { EXA = +e.target.value; $('#exV').textContent = EXA + '×'; upd3D(false); });
 
 
 // ---------- basemap: MapLibre + OpenFreeMap, with the drawn map as the fallback ----------
@@ -1369,7 +1387,7 @@ function ancUI() {
 }
 let ADRAG = null, akT = 0;
 function setAnchor(x, y, live) { AN = { x: r1(x), y: r1(y) }; if (site) site.boundary = boundary(); ancUI(); draw(); if (ML && mlReady) syncMap(); if (!live) { bdUI(); } }
-function commitAnchor() { if (site) { site.boundary = boundary(); rebuild(); } persist(); bdUI(); sumUI(); draw(); if (ML && mlReady) syncMap(); }
+function commitAnchor() { if (site) { site.boundary = boundary(); rebuild(); } persist(); bdUI(); sumUI(); draw(); if (ML && mlReady) syncMap(); ctxPost(); }
 $('#anchor').addEventListener('pointerdown', (e) => { if (e.button !== 0 || !ORIGIN) return; e.preventDefault(); e.stopPropagation(); const g0 = $('#anchor'); g0.setPointerCapture(e.pointerId); g0.focus({ preventScroll: true });
   ADRAG = { id: e.pointerId, x0: e.clientX, y0: e.clientY, from: { x: AN.x, y: AN.y }, before: site ? snapSite() : null, moved: false }; });
 $('#anchor').addEventListener('pointermove', (e) => { if (!ADRAG || e.pointerId !== ADRAG.id) return; const d = Math.hypot(e.clientX - ADRAG.x0, e.clientY - ADRAG.y0);
@@ -1454,7 +1472,7 @@ function fromChip(text, extra) {
   c.querySelector('button[aria-label^="Clear"]').addEventListener('click', () => { c.remove(); try { const p = window.parent; p.history.replaceState(null, '', p.location.hash.split('?')[0]); } catch (e) {} });
   const u = c.querySelector('[data-usepin]'); if (u) u.addEventListener('click', () => { const q = fromQ(); if (q) { const n = applyFrom(q); fromChip('Continued from Site analysis' + n); } });
 }
-REOPENED.then(() => { const q = fromQ(); if (!q) return; const near = site && site.origin && Math.abs(site.origin.lat - q.lat) < 0.0005 && Math.abs(site.origin.lon - q.lng) < 0.0005;
+REOPENED.then(() => { ctxPost(); const q = fromQ(); if (!q) return; const near = site && site.origin && Math.abs(site.origin.lat - q.lat) < 0.0005 && Math.abs(site.origin.lon - q.lng) < 0.0005;
   if (site && !near) { fromChip(`Site analysis pin ${q.lat.toFixed(4)}, ${q.lng.toFixed(4)} · R ${q.r} m. Your open site stays as it is.`, '<button type="button" data-usepin>Use this pin</button>'); return; }
   fromChip('Continued from Site analysis' + applyFrom(q)); });
 </script>

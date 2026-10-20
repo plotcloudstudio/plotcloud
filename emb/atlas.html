@@ -412,8 +412,8 @@ const thumb = (d) => { const r = (() => { let s = 7; return () => (s = (s * 1680
   else return `<svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#fff"/><circle cx="105" cy="92" r="70" fill="none" stroke="#1C1B1A" stroke-width=".8"/><path d="M45 110C70 40 140 40 165 110" fill="none" stroke="${P0.accent}" stroke-width="3"/><path d="M52 112C80 66 130 66 158 112" fill="none" stroke="#1C1B1A"/><path d="M62 114C85 90 125 90 148 114" fill="none" stroke="${P0.muted}"/><rect x="200" y="30" width="80" height="120" fill="none" stroke="${P0.muted}" stroke-dasharray="4 3"/></svg>`;
   return `<svg viewBox="0 0 300 180" aria-hidden="true"><defs><clipPath id="atc-${d}"><circle cx="150" cy="90" r="82"/></clipPath></defs><rect width="300" height="180" fill="#fff"/><g clip-path="url(#atc-${d})">${g}</g><circle cx="150" cy="90" r="82" fill="none" stroke="#1C1B1A" stroke-width=".8"/></svg>`; };
 
-const ctxPost = (extra) => { try { const p = window.parent; if (p && p !== window && ST.confirmed) p.postMessage(Object.assign({ pc: 1, t: 'ctx', lat: ST.ctx.lat, lng: ST.ctx.lng, r: ST.ctx.R, label: ST.ctx.label }, extra || {}), '*'); } catch (e) { } };
-const hash = { set() { ctxPost(); try { const p = window.parent; if (!p || p === window) return; const base = p.location.hash.split('?')[0], c = ST.ctx, q = new URLSearchParams({ step: String(ST.mode === 'boards' ? 3 : ST.step), lat: String(c.lat), lng: String(c.lng), r: String(c.R), shape: c.shape }); if (ST.mode === 'boards') q.set('d', 'boards'); else if (ST.sel.length) q.set('sel', ST.sel.join(',')); p.history.replaceState(null, '', `${base}?${q}`); } catch (e) { } },
+const ctxPost = (extra) => { if (typeof MERGED !== 'undefined' && MERGED) return; try { const p = window.parent; if (p && p !== window && ST.confirmed) p.postMessage(Object.assign({ pc: 1, t: 'ctx', lat: ST.ctx.lat, lng: ST.ctx.lng, r: ST.ctx.R, label: ST.ctx.label }, extra || {}), '*'); } catch (e) { } };
+const hash = { set() { if (MERGED) return; ctxPost(); try { const p = window.parent; if (!p || p === window) return; const base = p.location.hash.split('?')[0], c = ST.ctx, q = new URLSearchParams({ step: String(ST.mode === 'boards' ? 3 : ST.step), lat: String(c.lat), lng: String(c.lng), r: String(c.R), shape: c.shape }); if (ST.mode === 'boards') q.set('d', 'boards'); else if (ST.sel.length) q.set('sel', ST.sel.join(',')); p.history.replaceState(null, '', `${base}?${q}`); } catch (e) { } },
   get() { try { const p = window.parent; if (!p || p === window) return false; const m = /\?(.*)$/.exec(p.location.hash); if (!m) return false; const q = new URLSearchParams(m[1]), c = ST.ctx; const lat = parseFloat(q.get('lat')), lng = parseFloat(q.get('lng')), r = parseInt(q.get('r'), 10); let pin = false;
     if (isFinite(lat) && Math.abs(lat) <= 85) { c.lat = lat; pin = true; } if (isFinite(lng) && Math.abs(lng) <= 180) c.lng = lng; if (r >= 200 && r <= 3000) c.R = r; if (q.get('shape') === 'square') c.shape = 'square';
     const ids = D.map((x) => x.id), sel = (q.get('sel') || '').split(',').filter((x) => ids.includes(x)), d = q.get('d'), step = parseInt(q.get('step'), 10);
@@ -423,10 +423,10 @@ function toast(t) { const d = document.createElement('div'); d.textContent = t; 
 
 function stepsBar() {
   const names = ['Pick the site', 'Choose analyses', 'Generate'];
-  $('#steps').innerHTML = names.map((n, i) => `<button type="button" data-step="${i + 1}" ${ST.step === i + 1 && ST.mode === 'flow' ? 'aria-current="step"' : ''} ${i + 1 > 1 && !ST.confirmed ? 'disabled' : ''}><b>${i + 1}</b>${n}</button>${i < 2 ? '<i>→</i>' : ''}`).join('');
+  $('#steps').innerHTML = names.map((n, i) => MERGED && i === 0 ? '' : `<button type="button" data-step="${i + 1}" ${ST.step === i + 1 && ST.mode === 'flow' ? 'aria-current="step"' : ''} ${i + 1 > 1 && !ST.confirmed ? 'disabled' : ''}><b>${MERGED ? i : i + 1}</b>${n}</button>${i < 2 && !(MERGED && i === 0) ? '<i>→</i>' : ''}`).join('');
   $('#topx').innerHTML = ST.mode === 'boards' ? '<button class="btn sm" id="backRes">← Back to the diagrams</button>' : '';
 }
-function render() { stepsBar(); if (ST.mode === 'boards') return boardsUI(); if (ST.step === 1) return step1(); if (ST.step === 2) return step2(); return step3(); }
+function render() { stepsBar(); if (ST.mode === 'boards') return boardsUI(); if (MERGED && !ST.confirmed) { $('#main').innerHTML = '<div class="panel"><h2 class="k">Diagrams</h2><p>Confirm the site in the first segment, then the diagrams are made for that area.</p></div>'; return; } if (ST.step === 1) return step1(); if (ST.step === 2) return step2(); return step3(); }
 // ---- Step 1 ----
 function step1() {
   const c = ST.ctx;
@@ -470,30 +470,37 @@ function step2() {
   $('#main').innerHTML = `<div class="panel"><h2 class="k">Step 2 · Choose analysis types</h2><div class="row" style="align-items:center"><b id="cnt"></b><button class="btn sm" id="all">Select all</button><button class="btn sm" id="none">Clear</button><span class="sp"></span><span class="msg" style="margin:0">Site: ${esc(c.label || (+c.lat).toFixed(4) + ', ' + (+c.lng).toFixed(4))} · ${c.shape === 'square' ? 'square' : 'circle'} · R ${c.R >= 1000 ? c.R / 1000 + ' km' : c.R + ' m'}</span></div>
    <h2 class="k" style="margin-top:14px">Free</h2><div class="pickgrid">${D.filter((x) => x.core).map(pickHtml).join('')}</div>
    <h2 class="k">More diagrams</h2><div class="pickgrid">${D.filter((x) => !x.core).map(pickHtml).join('')}</div>
-   <div class="row"><button class="btn" id="back1">← Change the site</button><button class="btn red" id="gen">Generate</button></div></div>`;
+   <div class="row">${MERGED ? '' : '<button class="btn" id="back1">← Change the site</button>'}<button class="btn red" id="gen">Generate</button></div></div>`;
   const upd = () => { $('#cnt').textContent = `${ST.sel.length} of 8 selected`; $('#gen').disabled = !ST.sel.length; for (const p of $$('.pick')) { const on = ST.sel.includes(p.dataset.d); p.setAttribute('aria-checked', String(on)); p.querySelector('input').checked = on; } };
   $('.panel').onclick = (e) => { const p = e.target.closest('.pick'); if (!p) return; e.preventDefault(); const i = ST.sel.indexOf(p.dataset.d); if (i >= 0) ST.sel.splice(i, 1); else ST.sel.push(p.dataset.d); upd(); };
-  $('#all').onclick = () => { ST.sel = D.map((x) => x.id); upd(); }; $('#none').onclick = () => { ST.sel = []; upd(); }; $('#back1').onclick = () => { ST.step = 1; render(); };
+  $('#all').onclick = () => { ST.sel = D.map((x) => x.id); upd(); }; $('#none').onclick = () => { ST.sel = []; upd(); }; if ($('#back1')) $('#back1').onclick = () => { ST.step = 1; render(); };
   $('#gen').onclick = () => { ST.step = 3; hash.set(); render(); generate(); }; upd();
 }
 // ---- Step 3 ----
 function step3() {
   $('#main').innerHTML = `<div class="panel"><h2 class="k">Step 3 · Generate, refine, export</h2>
-   <div class="row" style="align-items:center"><span id="prog" class="msg" style="margin:0" role="status"></span><span class="sp"></span><label class="msg" style="margin:0;display:flex;gap:6px;align-items:center">Palette <select id="pal" style="width:auto">${Object.entries(PALETTES).map(([k, v]) => `<option value="${k}" ${k === ST.palette ? 'selected' : ''}>${v.name}</option>`).join('')}</select></label><button class="btn sm" id="toBoards">Boards →</button><button class="btn sm" id="toSite">Send to Site Planner</button><button class="btn sm" id="back2">← Change the analyses</button></div>
+   <div class="row" style="align-items:center"><span id="prog" class="msg" style="margin:0" role="status"></span><span class="sp"></span><label class="msg" style="margin:0;display:flex;gap:6px;align-items:center">Palette <select id="pal" style="width:auto">${Object.entries(PALETTES).map(([k, v]) => `<option value="${k}" ${k === ST.palette ? 'selected' : ''}>${v.name}</option>`).join('')}</select></label><button class="btn sm" id="toBoards">Boards →</button>${MERGED ? '' : '<button class="btn sm" id="toSite">Send to Site Planner</button>'}<button class="btn sm" id="back2">← Change the analyses</button></div>
    <div class="bar" aria-hidden="true"><i id="pbar"></i></div><p class="msg warn" id="osmmsg" hidden></p><div class="cards" id="cards"></div>
    <p class="demo"><b>Real and generated.</b> Roads &amp; Streets, Urban Fabric and Functional Areas read OpenStreetMap when it answers (© OpenStreetMap contributors). The other diagrams still use generated geometry and are stamped SCHEMATIC.</p></div>`;
   $('#pal').onchange = (e) => { ST.palette = e.target.value; setPalette(ST.palette); redrawCards(); };
-  $('#back2').onclick = () => { ST.step = 2; hash.set(); render(); }; $('#toBoards').onclick = () => { ST.mode = 'boards'; BOARD.sel = ST.gen.filter((x) => x !== 'sunwind'); hash.set(); render(); }; $('#toSite').onclick = sendToSite;
+  $('#back2').onclick = () => { ST.step = 2; hash.set(); render(); }; $('#toBoards').onclick = () => { if (MERGED) { try { sessionStorage.setItem('pc-boards', JSON.stringify({ sel: ST.gen.filter((x) => x !== 'sunwind'), palette: ST.palette })); window.parent.location.hash = '#/tool/atlas?d=boards&' + new URLSearchParams({ lat: ST.ctx.lat, lng: ST.ctx.lng, r: ST.ctx.R, shape: ST.ctx.shape }); } catch (e) { toast('Open this tool inside PlotCloud.'); } return; } ST.mode = 'boards'; BOARD.sel = ST.gen.filter((x) => x !== 'sunwind'); hash.set(); render(); }; if ($('#toSite')) $('#toSite').onclick = sendToSite;
   if (ST.gen.length) { const cards = $('#cards'); cards.innerHTML = ST.gen.map(cardHtml).join(''); $('#prog').textContent = `${ST.gen.length} generated`; $('#pbar').style.width = '100%'; } else if (ST.autogen) { ST.autogen = false; generate(); }
 }
 const tick = () => new Promise((r) => setTimeout(r, 30));
+// real streets and buildings for the diagrams that can use them; returns a note when something fell back to generated geometry
+async function loadReal(ids, say) {
+  ST.src = {}; ST.osm = null; let note = ''; const real = ids.filter((id) => REAL.has(id)), wantBld = real.some((id) => id !== 'streets') && ST.ctx.R <= OSM_BLD_MAX;
+  if (!real.length) return note;
+  if (say) say('Reading OpenStreetMap…');
+  try { ST.osm = await DATA.osm(ST.ctx, wantBld); for (const id of real) if (id === 'streets' || wantBld) ST.src[id] = 'osm'; for (const k of Object.keys(ANC)) if (k.startsWith('osm-')) delete ANC[k]; }
+  catch (e) { note = 'OpenStreetMap could not be reached, so these diagrams use generated geometry and say SCHEMATIC: ' + real.map((id) => D.find((x) => x.id === id).name).join(', ') + '.'; }
+  if (ST.osm && real.some((id) => id !== 'streets') && !wantBld) note = `Buildings are read from OpenStreetMap up to a radius of ${OSM_BLD_MAX / 1000} km. At R ${ST.ctx.R >= 1000 ? ST.ctx.R / 1000 + ' km' : ST.ctx.R + ' m'} Urban Fabric and Functional Areas use generated geometry and say SCHEMATIC.`;
+  return note;
+}
 async function generate() {
   const ids = D.map((x) => x.id).filter((id) => ST.sel.includes(id)), cards = $('#cards'), bar = $('#pbar'), prog = $('#prog'); ST.gen = []; ST.skipped = {}; cards.innerHTML = ''; setPalette(ST.palette);
   if (!CITY) { prog.textContent = 'Reading the site…'; CITY = await DATA.load(ST.ctx); await tick(); }
-  ST.src = {}; ST.osm = null; const msg = $('#osmmsg'); if (msg) msg.hidden = true; const real = ids.filter((id) => REAL.has(id)), wantBld = real.some((id) => id !== 'streets') && ST.ctx.R <= OSM_BLD_MAX;
-  if (real.length) { prog.textContent = 'Reading OpenStreetMap…'; try { ST.osm = await DATA.osm(ST.ctx, wantBld); for (const id of real) if (id === 'streets' || wantBld) ST.src[id] = 'osm'; for (const k of Object.keys(ANC)) if (k.startsWith('osm-')) delete ANC[k]; }
-    catch (e) { if (msg) { msg.textContent = 'OpenStreetMap could not be reached, so these diagrams use generated geometry and say SCHEMATIC: ' + real.map((id) => D.find((x) => x.id === id).name).join(', ') + '.'; msg.hidden = false; } }
-    if (ST.osm && real.some((id) => id !== 'streets') && !wantBld && msg) { msg.textContent = `Buildings are read from OpenStreetMap up to a radius of ${OSM_BLD_MAX / 1000} km. At R ${ST.ctx.R / 1000} km Urban Fabric and Functional Areas use generated geometry and say SCHEMATIC.`; msg.hidden = false; } }
+  const note = await loadReal(ids, (t) => { prog.textContent = t; }); const msg = $('#osmmsg'); if (msg) { msg.textContent = note || ''; msg.hidden = !note; }
   let k = 0; for (const id of ids) { const meta = D.find((x) => x.id === id); k++; prog.textContent = `${k}/${ids.length} · ${meta.name}…`; bar.style.width = (100 * (k - 1) / ids.length) + '%'; await tick();
     if (meta.maxR && ST.ctx.R > meta.maxR) { ST.skipped[id] = meta.why; cards.insertAdjacentHTML('beforeend', `<div class="cardw" data-d="${id}" data-skip="1"><div style="padding:18px"><b>${meta.n} · ${esc(meta.name)}</b><p class="msg warn">Left out: ${esc(meta.why)}</p></div></div>`); continue; }
     ST.gen.push(id); cards.insertAdjacentHTML('beforeend', cardHtml(id)); bar.style.width = (100 * k / ids.length) + '%'; }
@@ -564,12 +571,18 @@ function boardsUI() {
 }
 function layBoard() { const F = FORMATS[BOARD.fmt], n = BOARD.sel.length; BOARD.svg = n ? boardSvg() : ''; const st = $('#bstage'); if (!st) return; st.innerHTML = n ? BOARD.svg.replace(/ width="[\d.]+mm" height="[\d.]+mm"/, '') : '<p style="padding:30px;color:var(--muted)">Tick at least one drawing.</p>'; const used = F.cap ? Math.min(n, F.cap) : n; $('#bnote').innerHTML = n ? `<b>${used}</b> of ${n} drawings placed on ${esc(F.name.split(' (')[0])} · ${F.W} × ${F.H} mm${F.cap && n > F.cap ? ` · this format holds ${F.cap}; the rest are left off` : ''}. Text is never smaller than 6 pt; a drawing's legend is dropped when it would be.` : ''; }
 
-const hadHash = hash.get(); setPalette(ST.palette);
+const MERGED = (() => { try { return !!(window.frameElement && window.frameElement.dataset.merged); } catch (e) { return false; } })();
+const hadHash = MERGED ? false : hash.get(); setPalette(ST.palette);
 (async () => {
   if (ST.confirmed && (ST.step >= 2 || ST.mode === 'boards')) CITY = await DATA.load(ST.ctx);
-  if (ST.mode === 'boards') { const ids = D.map((x) => x.id).filter((x) => x !== 'sunwind' && !(D.find((m) => m.id === x).maxR && ST.ctx.R > D.find((m) => m.id === x).maxR)); ST.gen = ids; if (!ST.confirmed) { ST.mode = 'flow'; ST.step = 1; ST.gen = []; } else BOARD.sel = ids.slice(0, 4); }
+  if (ST.mode === 'boards') { const ok = (x) => !(D.find((m) => m.id === x).maxR && ST.ctx.R > D.find((m) => m.id === x).maxR); let saved = null; try { saved = JSON.parse(sessionStorage.getItem('pc-boards') || 'null'); } catch (e) { }
+    const ids = (saved && saved.sel && saved.sel.length ? saved.sel : D.map((x) => x.id).filter((x) => x !== 'sunwind')).filter((x) => x !== 'sunwind' && ok(x)); if (saved && saved.palette && PALETTES[saved.palette]) ST.palette = saved.palette; setPalette(ST.palette); ST.gen = ids; if (!ST.confirmed) { ST.mode = 'flow'; ST.step = 1; ST.gen = []; } else { await loadReal(ids); BOARD.sel = ids.slice(0, 5); } }
   render(); if (ST.step === 3 && ST.mode === 'flow' && ST.autogen) { ST.autogen = false; generate(); } ctxPost();
 })();
+addEventListener('message', (e) => { const d = e.data; if (!MERGED || !d || !d.pc || d.t !== 'atlas-ctx' || e.source !== window.parent) return; const c = ST.ctx, n = d.ctx, same = c.lat === n.lat && c.lng === n.lng && c.R === n.r && c.shape === n.shape;
+  Object.assign(c, { lat: n.lat, lng: n.lng, R: n.r, shape: n.shape === 'square' ? 'square' : 'circle', label: n.label || '' }); ST.confirmed = true; if (!same) { ST.gen = []; ST.osm = null; ST.src = {}; ST.border = {}; for (const k of Object.keys(ANC)) delete ANC[k]; CITY = null; ST.step = 2; }
+  if (ST.step === 1) ST.step = 2; if (!CITY) DATA.load(c).then((x) => { CITY = x; render(); }); else render(); });
+try { if (MERGED) window.parent.postMessage({ pc: 1, t: 'atlas-ready' }, '*'); } catch (e) { }
 window.__atlas = { ANC, ST, THEME, PALETTES, D, BOARD, FORMATS, Map1, get CITY() { return CITY; }, getAN, cardSvg, cardOf, boardSvg, layoutGrid, render, generate, sunArc, regionOf, hadHash };
 </script>
 </body></html>

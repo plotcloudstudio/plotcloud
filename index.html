@@ -690,7 +690,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "7015b769", "composer": "0459c881", "studio": "fcccf77e", "atlas": "8fad09a7"}; const EMBCACHE = {};
+const EMBV = {"furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "ffdf0a9f", "sunhours": "ddead8af", "wind": "99bca959", "evac": "3cc2db48", "structure": "74e3c682", "detaillab": "d445b08f", "isovist": "eb0747f5", "cameras": "ffbe70b3", "vent": "d4a9acf1", "views": "5ccabc31", "daylight": "29eb10b5", "spacesyntax": "da45a8bf", "modeler": "f8f70e6a", "tracer": "5f41b97b", "sitectx": "db42768a", "composer": "0459c881", "studio": "fcccf77e", "atlas": "c4673358"}; const EMBCACHE = {};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
@@ -3719,22 +3719,21 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
     else g = `<rect width="300" height="180" fill="#F4F2EC"/><circle cx="105" cy="70" r="26" fill="#F4C542"/><g stroke="#F4C542" stroke-width="2">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M${105 + Math.cos(a * Math.PI / 180) * 34} ${70 + Math.sin(a * Math.PI / 180) * 34}L${105 + Math.cos(a * Math.PI / 180) * 44} ${70 + Math.sin(a * Math.PI / 180) * 44}"/>`).join("")}</g><g stroke="#2F6DB5" stroke-width="2" fill="none" stroke-linecap="round"><path d="M150 120C185 105 205 135 245 118"/><path d="M140 140C180 128 205 156 262 138"/><path d="M165 100C190 90 215 110 250 98"/></g>`;
     const clip = d === "sunwind" ? "" : `<clipPath id="atc-${d}"><circle cx="150" cy="90" r="82"/></clipPath>`;
     return `<svg viewBox="0 0 300 180" aria-hidden="true" style="background:#fff">${clip}<g ${d === "sunwind" ? "" : `clip-path="url(#atc-${d})"`}>${g}</g>${d === "sunwind" ? "" : '<circle cx="150" cy="90" r="82" fill="none" stroke="#1C1B1A" stroke-width=".8"/>'}</svg>`; };
-  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site analysis <span>(1)</span></h3><p class="asub-l">Eight diagrams · one site · one style.</p><div class="tgrid2"><article class="tc"><div class="tc-vis atl go" data-go="tool/atlas">${thumb("land")}</div><div class="tc-body" data-go="tool/atlas"><div class="tc-head"><h3>Site Analysis</h3></div><p class="tc-d">Pick a place once, then draw urban fabric, streets, uses, green and water, transit, walking, the site and the sun.</p><span class="tc-open">Open →</span></div></article></div></div>`;
+  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site analysis <span>(1)</span></h3><p class="asub-l">Eight diagrams · one site · one style.</p><div class="tgrid2"><article class="tc"><div class="tc-vis atl go" data-go="site">${thumb("land")}</div><div class="tc-body" data-go="site"><div class="tc-head"><h3>Site Analysis</h3></div><p class="tc-d">Pick a place once, then draw urban fabric, streets, uses, green and water, transit, walking, the site and the sun.</p><span class="tc-open">Open →</span></div></article></div></div>`;
   const _t = tSections; tSections = function () { const h = _t.apply(this, arguments), a = h.indexOf('<div class="agrp" id="agrp-site">'), b = h.indexOf('<div class="agrp" id="agrp-interior">'); if (a < 0 || b < 0) return h; return h.slice(0, a) + html() + h.slice(b); };
   const st = document.createElement("style"); st.textContent = `.tc-vis.atl{display:grid;place-items:center;background:#fff;aspect-ratio:5/3;overflow:hidden}.tc-vis.atl svg{width:100%;height:100%;display:block}`; document.head.appendChild(st); }
 
 /* v140 · home: one main line of six steps replaces the Practice / Competition journeys */
 (function () {
   const STEPS = [
-    { n: 1, name: "Site Analysis", go: "tool/atlas", p: "Read the place: streets, land use, walking and more.", cta: "Open Site Analysis" },
-    { n: 2, name: LABELS.site, go: "site", p: "Pick the site, set its boundary and drop the anchor.", cta: "Open " + LABELS.site },
-    { n: 3, name: LABELS.studio, go: "studio", p: "Draw the plan inside the boundary, with its surroundings.", cta: "Open " + LABELS.studio },
-    { n: 4, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
-    { n: 5, name: LABELS.studio, go: "studio", tag: "improve", p: "Fix the weak spots and keep every version.", cta: "Back to " + LABELS.studio },
-    { n: 6, name: "Boards", go: "tool/atlas?d=boards", p: "Lay the drawings out on one board and export it.", cta: "Make a board" }];
+    { n: 1, name: "Site analysis", go: "site", p: "Pick the site, read it in eight diagrams, see it in 3D.", cta: "Open Site analysis" },
+    { n: 2, name: LABELS.studio, go: "studio", p: "Draw the plan inside the boundary, with its surroundings.", cta: "Open " + LABELS.studio },
+    { n: 3, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
+    { n: 4, name: LABELS.studio, go: "studio", tag: "improve", p: "Fix the weak spots and keep every version.", cta: "Back to " + LABELS.studio },
+    { n: 5, name: "Boards", go: "tool/atlas?d=boards", p: "Lay the drawings out on one board and export it.", cta: "Make a board" }];
   window.JOURNEYS = { main: STEPS.map((x) => ({ no: String(x.n).padStart(2, "0") + " · " + x.name, go: x.go, h: x.name, p: x.p, cta: x.cta })) };
   const st = document.createElement("style");
-  st.textContent = `.hline{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;counter-reset:s}
+  st.textContent = `.hline{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;counter-reset:s}
   .hline li{position:relative;padding:0 14px 0 0;min-width:0}
   .hline li+li{padding-left:0}
   .hline a{display:grid;gap:8px;align-content:start;text-decoration:none;color:inherit;cursor:pointer;padding:0 8px 4px 0;height:100%}
@@ -3749,14 +3748,14 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   .hline a:hover h3,.hline a:hover .jcta{color:#D8402A}.hline a:hover .dot b{background:#1C1B1A;color:#fff}
   .hline li[data-t="improve"] .dot b{border-style:dashed}
   .hall{margin:20px 0 0;color:var(--muted);font-size:14px}.hall a{color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.hall a:hover{color:#111}
-  @media (max-width:1100px){.hline{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:26px}.hline li:nth-child(3) .dot::after,.hline li:nth-child(3) .dot i{display:none}}
+  @media (max-width:1100px){.hline{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:26px}.hline li:nth-child(3) .dot::after,.hline li:nth-child(3) .dot i{display:none}.hline li:last-child .dot::after,.hline li:last-child .dot i{display:none}}
   @media (max-width:640px){.hline{grid-template-columns:1fr;row-gap:0}.hline li{padding:0}.hline a{grid-template-columns:34px 1fr;column-gap:14px;row-gap:2px;padding:0 0 22px}
    .hline .dot{grid-row:1/5;align-items:flex-start;height:auto;align-self:stretch}.hline .dot::after{left:16.5px;right:auto;top:34px;bottom:-22px;border-top:0;border-left:1.5px solid var(--ink,#1C1B1A);transform:none}.hline .dot i{display:none}
    .hline li:nth-child(3) .dot::after{display:block}.hline li:last-child .dot::after{display:none}.hline h3{margin-top:5px}}`;
   document.head.appendChild(st);
   const block = () => `<section class="wrap hsec" aria-labelledby="hmapT"><div class="hhead"><h2 id="hmapT">how plotcloud fits together.</h2></div>
-    <p class="jsub">One line, six steps: read the place, choose the site, draw, check, improve, present.</p>
-    <nav aria-label="The six steps"><ol class="hline">${STEPS.map((x) => `<li data-t="${x.tag || ""}"><a data-go="${x.go}"${x.anchor ? ` data-anchor="${x.anchor}"` : ""}><span class="dot"><b>${x.n}</b><i></i></span><h3>${x.name}</h3>${x.tag ? `<span class="tg">${x.tag}</span>` : ""}<p>${x.p}</p><span class="jcta">${x.cta} →</span></a></li>`).join("")}</ol></nav>
+    <p class="jsub">One line, five steps: read the place, draw, check, improve, present.</p>
+    <nav aria-label="The five steps"><ol class="hline">${STEPS.map((x) => `<li data-t="${x.tag || ""}"><a data-go="${x.go}"${x.anchor ? ` data-anchor="${x.anchor}"` : ""}><span class="dot"><b>${x.n}</b><i></i></span><h3>${x.name}</h3>${x.tag ? `<span class="tg">${x.tag}</span>` : ""}<p>${x.p}</p><span class="jcta">${x.cta} →</span></a></li>`).join("")}</ol></nav>
     <p class="hall">Showroom, Library and Learn are available at every step: <a data-go="showroom">Showroom</a> · <a data-go="library">Library</a> · <a data-go="learn">Learn</a>.</p></section>`;
   const MAP = /<section class="wrap hsec" aria-labelledby="hmapT">[\s\S]*?<\/section>/;
   const _h = P.home; P.home = function () { let h = _h.apply(this, arguments); h = h.replace(MAP, ""); const k = h.indexOf('<section class="wrap hsec dlsec"'); return k < 0 ? h.replace(/<\/section>/, (m) => m + block()) : h.slice(0, k) + block() + h.slice(k); };
@@ -3767,19 +3766,18 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   const EMBEDDED = window.parent !== window && /[?&]drawer=1/.test(location.search);
   const SIM = window.__simfs || [];
   const STEPS = [
-    { n: 1, name: "Site Analysis", ic: '<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>' },
-    { n: 2, name: LABELS.site, ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
-    { n: 3, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
-    { n: 4, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
-    { n: 5, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
+    { n: 1, name: "Site analysis", ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
+    { n: 2, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
+    { n: 3, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
+    { n: 4, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
   const CX = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("pc-ctx") || "{}"); } catch (e) {} return Object.assign({ lat: null, lng: null, R: 600, label: "", src: "", done: {}, sim: "" }, o); })();
   const saveCx = () => { try { localStorage.setItem("pc-ctx", JSON.stringify(CX)); } catch (e) {} };
   window.PCX = CX;   // the one site-context: the pin, the radius and what is done
   const pinQ = (withFrom) => CX.lat == null ? "" : `lat=${(+CX.lat).toFixed(5)}&lng=${(+CX.lng).toFixed(5)}&r=${CX.R}${withFrom ? "&from=analysis" : ""}`;
-  const urlOf = (n) => n === 1 ? "tool/atlas" + (CX.lat == null ? "" : "?step=2&" + pinQ()) : n === 2 ? "site" + (CX.src === "atlas" && CX.lat != null ? "?" + pinQ(true) : "") : n === 3 ? "studio" : n === 4 ? (CX.sim ? "tool/" + CX.sim : "tools") : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ());
+  const urlOf = (n) => n === 1 ? "site" : n === 2 ? "studio" : n === 3 ? (CX.sim ? "tool/" + CX.sim : "tools") : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
   const where = () => { const h = (location.hash.replace(/^#\/?/, "") || "home"), [path, q] = h.split("?"), pg = path.split("/"), id = pg[1];
-    if (pg[0] === "site" || (pg[0] === "tool" && id === "sitectx")) return 2; if (pg[0] === "studio") return 3;
-    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 5 : 1; if (pg[0] === "tool" && SIM.includes(id)) return 4; return 0; };
+    if (pg[0] === "site" || (pg[0] === "tool" && id === "sitectx")) return 1; if (pg[0] === "studio") return 2;
+    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 4 : 1; if (pg[0] === "tool" && SIM.includes(id)) return 3; return 0; };
   const st = document.createElement("style");
   st.textContent = `:root{--wfrail:0px;--wftop:0px}
   body.wf{--wfrail:220px;--wftop:40px}body.wf.rc{--wfrail:64px}
@@ -3830,8 +3828,8 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
     top.innerHTML = `<span class="ttl">${s ? s.n + " · " + esc(s.name) : ""}</span><span class="sp"></span><button type="button" data-k class="kb" aria-label="Quick jump, Ctrl or Command K">Jump <kbd>Ctrl K</kbd></button>` +
       [["showroom", "Showroom"], ["library", "Library"], ["learn", "Learn"]].map(([k, l]) => `<button type="button" data-dr="${k}" aria-label="Open ${l} in a drawer">${l}</button>`).join("") + `<a data-go="${signed() ? "account" : "login"}" aria-label="${signed() ? "Account" : "Log in"}">${signed() ? "Account" : "Log in"}</a>`; };
   const update = () => { const cur = where(), on = cur > 0; document.body.classList.toggle("wf", on); if (!on) { closeDr(); return; }
-    CX.done[cur] = cur === 4 ? CX.done[4] : true; if (cur === 4) { CX.sim = location.hash.replace(/^#\/?tool\//, "").split("?")[0]; } if (cur === 2 && CX.lat == null) CX.done[2] = false; saveCx();
-    try { if (typeof pget === "function") pget().then((p) => { const d = !!(p && p.results && p.results.length); if (!!CX.done[4] !== d) { CX.done[4] = d; saveCx(); drawRail(); } }).catch(() => {}); } catch (e) {}
+    if (cur === 2) CX.done[2] = true; if (cur === 3) CX.sim = location.hash.replace(/^#\/?tool\//, "").split("?")[0]; CX.done[1] = CX.lat != null; saveCx();
+    try { if (typeof pget === "function") pget().then((p) => { const d = !!(p && p.results && p.results.length); if (!!CX.done[3] !== d) { CX.done[3] = d; saveCx(); drawRail(); } }).catch(() => {}); } catch (e) {}
     drawRail(); drawTop(); };
   const openDr = (k) => { const f = dr.querySelector("iframe"); $("#dtl").textContent = NAMES[k] || k; const u = `index.html?drawer=1#/${k}`; if (f.dataset.k !== k) { f.dataset.k = k; f.src = u; } dr.classList.add("on"); dr.dataset.k = k; };
   const closeDr = () => dr.classList.remove("on");
@@ -3858,14 +3856,66 @@ if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
   ck.addEventListener("click", (e) => { const l = e.target.closest("li[data-i]"); if (l) pick(+l.dataset.i); else if (e.target === ck) closeK(); });
   // the pin comes from the Site Planner and the atlas
   addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc || d.t !== "ctx") return; const fr = [...document.querySelectorAll("iframe[data-emb]")].find((f) => f.contentWindow === e.source); if (!fr) return;
-    if (typeof d.lat === "number" && typeof d.lng === "number") { CX.lat = d.lat; CX.lng = d.lng; if (typeof d.r === "number") CX.R = d.r; CX.label = typeof d.label === "string" ? d.label.slice(0, 40) : CX.label; CX.src = fr.dataset.emb === "atlas" ? "atlas" : "site"; if (fr.dataset.emb === "sitectx") CX.done[2] = true; }
-    if (d.board) CX.done[5] = true; saveCx(); drawRail(); });
+    if (typeof d.lat === "number" && typeof d.lng === "number") { CX.lat = d.lat; CX.lng = d.lng; if (typeof d.r === "number") CX.R = d.r; CX.label = typeof d.label === "string" ? d.label.slice(0, 40) : CX.label; CX.src = "site"; CX.shape = d.shape === "square" ? "square" : "circle"; CX.done[1] = true; }
+    if (d.board) CX.done[4] = true; saveCx(); drawRail(); });
   addEventListener("hashchange", () => setTimeout(update, 0)); addEventListener("storage", () => { drawRail(); }); update();
-  window.__wf = { where, urlOf, openK, openDr, get CX() { return CX; } };
+  window.__wf = { where, urlOf, openK, openDr, update, drawRail, get CX() { return CX; } };
+})();
+
+/* v142 · one page, three segments: Select site → Diagrams → 3D model. #/site stays the route; the segments are a state inside the page. */
+(function () {
+  const NAMES = ["Select site", "Diagrams", "3D model"];
+  let SEG = 1;
+  const segOf = () => { const m = /[?&]seg=(\d)/.exec(location.hash); return m ? Math.min(3, Math.max(1, +m[1])) : 1; };
+  const PRI = { 1: "Confirm site → Diagrams", 2: "View 3D model →", 3: "Enter Plan Studio →" };
+  const st = document.createElement("style");
+  st.textContent = `.sitepage{padding:0 20px}.segbar{display:flex;align-items:center;gap:8px;height:48px;flex-wrap:nowrap;overflow:hidden}
+  .segbar ol{list-style:none;margin:0;padding:0;display:flex;align-items:center;gap:6px}.segbar li{display:flex;align-items:center;gap:6px}.segbar li+li::before{content:"→";color:var(--muted)}
+  .segbar button.sg{all:unset;cursor:pointer;display:flex;gap:8px;align-items:center;padding:5px 14px 5px 6px;border:1px solid var(--hair);border-radius:999px;font:600 13.5px var(--sans,inherit);background:#fff;white-space:nowrap}
+  .segbar button.sg b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E4E1D8;font:600 12px var(--mono)}
+  .segbar button.sg[aria-current=step]{background:var(--ink,#111);color:#fff;border-color:var(--ink,#111)}.segbar button.sg[aria-current=step] b{background:#D8402A;color:#fff}.segbar button.sg[disabled]{opacity:.45;cursor:default}
+  .segbar .sp{flex:1}.segbar .segpri{all:unset;cursor:pointer;font:700 14px var(--sans,inherit);padding:8px 18px;border-radius:999px;background:#D8402A;color:#fff;white-space:nowrap}.segbar .segpri:hover{background:#b9341f}.segbar .segpri[disabled]{opacity:.4;cursor:not-allowed}
+  .segbar button:focus-visible{outline:2px solid #D8402A;outline-offset:2px}
+  .segfr{position:relative;height:var(--segh,640px)}.segfr iframe{position:absolute;inset:0;width:100%;height:100%;border:1px solid var(--hair);border-radius:4px;background:#fff}.segfr iframe.off{visibility:hidden;pointer-events:none}
+  @media (max-width:900px){.sitepage{padding:0 10px}.segbar{height:auto;flex-wrap:wrap;padding:6px 0}}`;
+  document.head.appendChild(st);
+  const frames = () => ({ s: document.querySelector('.segfr iframe[data-emb="sitectx"]'), a: document.querySelector('.segfr iframe[data-emb="atlas"]') });
+  const post = (fr, m) => { try { fr && fr.contentWindow.postMessage(Object.assign({ pc: 1 }, m), "*"); } catch (e) {} };
+  const ctxMsg = () => { const c = window.PCX; return c && c.lat != null ? { t: "atlas-ctx", ctx: { lat: c.lat, lng: c.lng, r: c.R, shape: c.shape || "circle", label: c.label || "" } } : null; };
+  const hasPin = () => !!(window.PCX && window.PCX.lat != null);
+  function bar() {
+    const b = document.getElementById("segbar"); if (!b) return;
+    b.innerHTML = `<ol>${NAMES.map((n, i) => `<li><button type="button" class="sg" data-seg="${i + 1}" ${SEG === i + 1 ? 'aria-current="step"' : ""} ${i > 0 && !hasPin() ? "disabled" : ""}><b>${i + 1}</b>${n}</button></li>`).join("")}</ol><span class="sp"></span><button type="button" class="segpri" id="segpri" ${!hasPin() ? "disabled" : ""} ${!hasPin() ? 'title="Search an address or click the map first"' : ""}>${PRI[SEG]}</button>`;
+  }
+  function apply(go) {
+    const f = frames(); if (!f.s) return; SEG = go || SEG;
+    f.s.classList.toggle("off", SEG === 2); f.a && f.a.classList.toggle("off", SEG !== 2);
+    if (SEG === 2) { const m = ctxMsg(); if (m) post(f.a, m); }
+    else post(f.s, { t: "mode", v: SEG === 3 ? "3d" : "map" });
+    try { history.replaceState(null, "", "#/site?seg=" + SEG); } catch (e) {}
+    bar(); fit(); if (window.__wf) window.__wf.update();
+  }
+  function fit() { const w = document.querySelector(".segfr"); if (!w) return; window.scrollTo(0, 0); w.style.setProperty("--segh", Math.max(520, Math.floor(innerHeight - w.getBoundingClientRect().top - 12)) + "px"); }
+  P.site = () => { SEG = segOf(); setTimeout(() => { chrome("site"); fit(); bar(); apply(SEG); }, 0);
+    return `<div class="sitepage"><div class="segbar" id="segbar" role="navigation" aria-label="Site analysis steps"></div><div class="segfr"><iframe data-emb="sitectx" title="Site Planner" allow="clipboard-write"></iframe><iframe data-emb="atlas" data-merged="1" class="off" title="Site diagrams" allow="clipboard-write"></iframe></div></div>`; };
+  // old links: the Site Planner tool and the diagrams land on the same page; Boards keeps its own page
+  const _t = P.tool; P.tool = function (id) {
+    if (id === "sitectx") { try { history.replaceState(null, "", "#/site"); } catch (e) {} setTimeout(() => chrome("site"), 0); return P.site(); }
+    if (id === "atlas" && !/[?&]d=boards/.test(location.hash)) { const m = /[?&](lat|lng|r)=/.test(location.hash); try { history.replaceState(null, "", "#/site?seg=" + (m ? 2 : 1)); } catch (e) {} setTimeout(() => chrome("site"), 0); return P.site(); }
+    return _t.apply(this, arguments); };
+  document.addEventListener("click", (e) => {
+    const sg = e.target.closest && e.target.closest("[data-seg]"); if (sg && !sg.disabled) { apply(+sg.dataset.seg); return; }
+    if (e.target.closest && e.target.closest("#segpri")) { const f = frames();
+      if (SEG === 1) { post(f.s, { t: "generate", ifEmpty: true }); apply(2); } else if (SEG === 2) { post(f.s, { t: "generate", ifEmpty: true }); apply(3); } else post(f.s, { t: "enter" }); } });
+  addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc || !document.getElementById("segbar")) return; const f = frames();
+    if (d.t === "ctx" && f.s && e.source === f.s.contentWindow) setTimeout(bar, 0);
+    if (d.t === "atlas-ready" && f.a && e.source === f.a.contentWindow) { const m = ctxMsg(); if (m) post(f.a, m); } });
+  addEventListener("resize", () => setTimeout(fit, 0));
+  window.__site = { get seg() { return SEG; }, apply, bar };
 })();
 
 // the page may have been drawn once before the blocks above took over: draw the tools pages again
-if ((!location.hash || /^#\/?(home|tools|tool\/)?($|\?)|^#\/?(tools|tool\/)/.test(location.hash)) && !window.__reRouted) { window.__reRouted = 1; try { route(); } catch (e) {} }
+if ((!location.hash || /^#\/?(home|tools|tool\/|site)?($|\?)|^#\/?(tools|tool\/|site)/.test(location.hash)) && !window.__reRouted) { window.__reRouted = 1; try { route(); } catch (e) {} }
 </script>
 </body>
 </html>
