@@ -21,6 +21,7 @@ jobs:
       - name: Serve site and run browser smoke
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/plotcloud-http.log 2>&1 &
+          node tests/views.cjs
           node tests/workflow.cjs
           node tests/shell.cjs
           node tests/smoke.cjs

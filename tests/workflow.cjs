@@ -53,7 +53,7 @@ try{
  await work.evaluate(()=>window.__wbTour?.close());
  await page.screenshot({path:dir+'/project-workflow.png',fullPage:true});
  // Capture an actual Studio preview; no fake renderer is used for this handoff.
- await work.locator('#wfRender').click();
+ await work.locator('#wfRender').click();await work.locator('#rvSend').click();
  await page.waitForURL('**/#/tool/architectural-render');
  work=await (await page.locator('iframe[data-emb="architectural-render"]').elementHandle()).contentFrame();
  await work.waitForFunction(()=>!!window.__pcRender);
