@@ -104,7 +104,7 @@
     document.querySelectorAll('[data-shell-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.shellGroup===group)));
   }
   document.addEventListener('input',e=>{if(e.target.matches('[data-shell-search]'))update(state().group,e.target.value);});
-  document.addEventListener('click',e=>{const group=e.target.closest('[data-shell-group]');if(group){update(group.dataset.shellGroup,state().query);return;}if(e.target.closest('[data-shell-reset]')){document.querySelector('[data-shell-search]').value='';update('all','');document.querySelector('[data-shell-search]').focus();}});
+  document.addEventListener('click',e=>{if(e.target.closest('#mpanel a')){document.getElementById('mpanel').classList.remove('open');burger.setAttribute('aria-expanded','false');}const group=e.target.closest('[data-shell-group]');if(group){update(group.dataset.shellGroup,state().query);return;}if(e.target.closest('[data-shell-reset]')){document.querySelector('[data-shell-search]').value='';update('all','');document.querySelector('[data-shell-search]').focus();}});
   // Catalog diagnostics used by regression tests; it contains identifiers, never model or account data.
   window.PlotCloudCatalog={groups:groups.map(g=>g.id),ids:()=>catalog().map(x=>x.id)};
   route();
