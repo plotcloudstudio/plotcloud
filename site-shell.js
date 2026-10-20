@@ -86,7 +86,7 @@
     document.body.classList.add('pc-shell');
     document.body.classList.toggle('pc-home-page',root==='home');
     document.body.classList.toggle('pc-tools-page',root==='tools');
-    const active=root==='site'||root==='studio'||root==='tool'?'tools':root==='res'||root==='resources'?'library':root;
+    const active=root==='site'||root==='studio'||root==='tool'?'tools':root==='res'||root==='resources'||root==='showroom'?'library':root;
     document.querySelector('header.site a[data-go="home"]').setAttribute('href','#/home');
     const nav=document.getElementById('nav');nav.setAttribute('aria-label','Main navigation');
     nav.innerHTML=NAV.map(([k,l])=>`<a href="#/${k}" data-go="${k}"${k===active?' class="on" aria-current="page"':''}>${l}</a>`).join('');
@@ -96,7 +96,7 @@
     document.querySelector('.hflow').hidden=true;
   };
   const footer=document.querySelector('footer.site .fg');
-  footer.innerHTML=`<div><h5>PlotCloud</h5>${link('tools','Tools')}${link('library','Resources')}${link('pricing','Pricing')}</div><div><h5>Help & examples</h5>${link('showroom','Showroom')}${link('learn','Guides & support')}${link('requests','Request a resource')}<a href="mailto:${esc(ST.email||EMAIL)}">Contact</a></div><div><h5>Legal</h5>${link('terms','Terms of Use')}${link('privacy','Privacy Policy')}${link('license','Resource License')}${link('refunds','Refunds & Cancellation')}</div>`;
+  footer.innerHTML=`<div><h5>PlotCloud</h5>${link('tools','Tools')}${link('library','Resources')}${link('showroom','Showroom')}${link('pricing','Pricing')}</div><div><h5>Help & examples</h5>${link('learn','Guides & support')}${link('requests','Request a resource')}<a href="mailto:${esc(ST.email||EMAIL)}">Contact</a></div><div><h5>Legal</h5>${link('terms','Terms of Use')}${link('privacy','Privacy Policy')}${link('license','Resource License')}${link('refunds','Refunds & Cancellation')}</div>`;
   FOOT0=document.querySelector('footer.site').innerHTML;
   const burger=document.getElementById('burger');burger.setAttribute('aria-controls','mpanel');
   burger.addEventListener('click',()=>burger.setAttribute('aria-expanded',String(document.getElementById('mpanel').classList.contains('open'))));
@@ -109,5 +109,27 @@
   document.addEventListener('click',e=>{if(e.target.closest('#mpanel a')){document.getElementById('mpanel').classList.remove('open');burger.setAttribute('aria-expanded','false');}const group=e.target.closest('[data-shell-group]');if(group){update(group.dataset.shellGroup,state().query);return;}if(e.target.closest('[data-shell-reset]')){document.querySelector('[data-shell-search]').value='';update('all','');document.querySelector('[data-shell-search]').focus();}});
   // Catalog diagnostics used by regression tests; it contains identifiers, never model or account data.
   window.PlotCloudCatalog={groups:groups.map(g=>g.id),ids:()=>catalog().map(x=>x.id)};
+
+  const resourceTabs=active=>'<nav class="wrap pc-resource-tabs" aria-label="Resources">'+link('library','All resources',active==='all'?'on':'')+link('showroom','Showroom',active==='showroom'?'on':'')+'</nav>';
+  const oldLibrary=P.library,oldShowroom=P.showroom;
+  P.library=()=>resourceTabs('all')+oldLibrary();
+  P.showroom=()=>{
+    let html=oldShowroom();
+    html=html.replace('see it, then build it.','Explore the resources behind the scene.');
+    html=html.replace(/Every scene here is made with resources from the PlotCloud library\. Hover or tap a dot to see what it is; everything the scene uses is listed below\./,'Explore a scene, select a marker, then inspect its linked models, materials and drawing files. Example scenes illustrate resource relationships; verify each resource’s details before use.');
+    html=html.replace('Example scene. Your renders go here.','Illustrative scene · linked resources below');
+    const scene=SHOW.find(x=>x.id===(location.hash.split('/')[2]||''))||SHOW[0];
+    if(scene)for(const resource of srItems(scene)){
+      const i=scene.spots.findIndex(x=>x[0]===resource[0]);
+      const formats=(resource[3]||[]).map(x=>'.'+x).join(' · ');
+      const apps=Array.isArray(resource[4])?resource[4].join(' · '):String(resource[4]||'See resource details');
+      const info='<div class="pc-resource-spec"><b>'+esc(i>=0?'Scene marker '+(i+1):'Related drawing resource')+'</b><p>Files: '+esc(formats)+'</p><p>Software: '+esc(apps)+'</p>'+link('res/'+resource[0],'View files and usage details ↗')+'</div>';
+      const needle='id="sr-'+resource[0]+'">';
+      html=html.replace(needle,needle+info);
+    }
+    html=html.replace(/(<button class="spot[^>]*data-spot="[^"]+"[^>]*>)/g, '$1<span class="pc-spot-label" aria-hidden="true">+</span>');
+    return resourceTabs('showroom')+'<div class="wrap pc-resource-breadcrumb">'+link('library','Resources')+' / Showroom</div>'+html;
+  };
+  addEventListener('message',e=>{if(e.origin!==location.origin||e.data?.pc!==1||e.data.t!=='render-handoff')return;const frame=document.querySelector('iframe[data-emb="modeler"]');if(frame&&e.source===frame.contentWindow)go('tool/architectural-render');});
   route();
 })();
