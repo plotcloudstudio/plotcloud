@@ -93,7 +93,7 @@
   $('exportComparison').onclick = () => exportingTask(async (a, b) => {
     const contexts = [a, b].map(v => v.sourceContext || v.request?.source_context || {});
     const sources = root.PlotCloudRenders ? await Promise.all(contexts.map(c => c.sourceRecordId ? root.PlotCloudRenders.get(c.sourceRecordId) : null)) : [];
-    const record = {schema: 1, kind: 'interior-option-comparison', createdAt: new Date().toISOString(), baseline: baseline(a, b), options: [a, b].map((v, i) => ({label: i ? 'B' : 'A', createdAt: v.createdAt, savedRecordId: v.savedRecordId || null, sourceContext: contexts[i], request: v.request, image: v.img, sourceRecord: sources[i] || null})), notice: 'AI visualization. A matching image alone does not verify dimensions or product identity.'};
+    const record = {schema: 1, kind: 'interior-option-comparison', createdAt: new Date().toISOString(), baseline: baseline(a, b), options: [a, b].map((v, i) => ({label: i ? 'B' : 'A', createdAt: v.createdAt, savedRecordId: v.savedRecordId || null, sourceContext: contexts[i], request: v.request, serviceMetadata: v.serviceMetadata || null, image: v.img, sourceRecord: sources[i] || null})), notice: 'AI visualization. A matching image alone does not verify dimensions or product identity.'};
     download('plotcloud-interior-comparison.json', new Blob([JSON.stringify(record, null, 2)], {type: 'application/json'}));
   });
   root.addEventListener('pc-render-versions-changed', refresh); refresh();

@@ -28,7 +28,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.route('https://render.example.test/interior',async route=>{
    const req=route.request();requests.push({body:req.postDataJSON(),authorization:req.headers().authorization});
    if(requests.length===1)await new Promise(resolve=>{releaseResponse=resolve;});
-   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({image_data_url:requests.length===2?webpOutput:reference})});
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({image_data_url:requests.length===2?webpOutput:reference,provider:'mock-test',model:'fixture-image-model',created_at:'2026-10-20T12:00:00.000Z',limitations:['semantic_mask_only'],internal_debug:'must-not-export'})});
   });
   await page.locator('#referencePurpose').selectOption('replace');
   await page.locator('#run').click();assert.equal(requests.length,0,'Replacement sent with no furniture reference');
@@ -53,6 +53,8 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.locator('#targetDescription').fill('Changed target after generation');await page.locator('#prompt').fill('Changed instructions');
   const exported=page.waitForEvent('download');await page.locator('#exportVersion').click();const record=JSON.parse(fs.readFileSync(await(await exported).path(),'utf8'));
   assert.deepEqual(record.request,original,'Saved result inputs changed with the form');
+  assert.equal(record.serviceMetadata.provider,'mock-test');assert.equal(record.serviceMetadata.model,'fixture-image-model');assert.deepEqual(record.serviceMetadata.limitations,['semantic_mask_only']);
+  assert(!JSON.stringify(record).includes('must-not-export'),'Export retained an unapproved server response field');
   assert(!JSON.stringify(record).includes('operator-access-secret'),'Export contains service access token');
   await page.locator('#history button').first().click();
   assert.equal(await page.locator('#targetDescription').inputValue(),'Sofa against the rear wall','History failed to restore furniture target');
@@ -67,6 +69,8 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   assert(png.length>100,'Comparison image is empty');assert.equal(png.subarray(1,4).toString(),'PNG','Comparison export is not PNG');
   const comparisonJson=page.waitForEvent('download');await page.locator('#exportComparison').click();const comparisonText=fs.readFileSync(await(await comparisonJson).path(),'utf8');
   const comparisonRecord=JSON.parse(comparisonText);assert.equal(comparisonRecord.kind,'interior-option-comparison');assert.equal(comparisonRecord.options.length,2);assert.equal(comparisonRecord.baseline.kind,'same-image');assert(!comparisonText.includes('operator-access-secret'),'Comparison export leaks service token');
+  for(const option of comparisonRecord.options){assert.equal(option.serviceMetadata.provider,'mock-test');assert.equal(option.serviceMetadata.model,'fixture-image-model');assert.deepEqual(option.serviceMetadata.limitations,['semantic_mask_only']);}
+  assert(!comparisonText.includes('must-not-export'),'Comparison retained an unapproved server response field');
   assert(comparisonText.includes(original.request_id),'Comparison export lost original render provenance');
   assert(comparisonText.includes(requests[1].body.request_id),'Comparison export lost second render provenance');
   await page.locator('#compareBasis').scrollIntoViewIfNeeded();await page.screenshot({path:dir+'/interior-comparison-desktop.png',fullPage:true});
