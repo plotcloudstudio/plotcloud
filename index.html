@@ -2618,6 +2618,14 @@ let HC=cmClone(HC_DEF),ST=cmClone(ST_DEF);
 const CMS=(S.cms&&typeof S.cms==="object")?S.cms:{home:null,settings:null,tools:null,res:{}};CMS.res=CMS.res||{};
 // ----- base snapshots of the built-in content, so edits are stored as overrides
 const BASE_RES=RES.map(r=>r.slice()),BASE_ADDED=Object.assign({},ADDED);
+// Standalone Architectural AI Render: register before CMS tool defaults are captured.
+STD.push(["architectural-render","R.01","architectural ai render","Upload a sketch or model screenshot, direct materials and image edits, and connect a secure render service.",""]);
+TMETA["architectural-render"]=["new","ai"];
+TSECTIONS[3][4].unshift("architectural-render");
+EMB["architectural-render"]="@";
+EMBI["architectural-render"]={title:"architectural ai render",crumb:"Architectural AI Render",short:"Standalone image-to-image rendering; external render service required.",lede:"Upload a sketch, photograph or model screenshot. Choose style and architectural control settings independently from Plan Studio."};
+EMBV["architectural-render"]="2";
+EMBSVG["architectural-render"]='<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="180" fill="#efebe0"/><path d="M50 135V47L153 18V130Z" fill="#fff" stroke="#333"/><path d="M153 18L252 62V160L153 130Z" fill="#d2d4d0" stroke="#333"/><rect x="75" y="57" width="50" height="55" fill="#88a1a5"/><path d="M175 66L226 87V140L175 120Z" fill="#839a9e"/></svg>';
 const BASE_SECT=TSECTIONS.map(s=>s[4].slice()),BASE_DEV=DEVIDS.slice();
 const BASE_NEW=Object.keys(TMETA).filter(k=>(TMETA[k]||[]).includes("new"));
 const TOOL_IDS=[...new Set([...BASE_SECT.flat(),...BASE_DEV])];
@@ -3120,7 +3128,7 @@ TCOVER.vent="covers/vent.webp?v=cf7d8490";
  ["01","Brief & codes","brief & codes.","Before you draw: building code and accessibility rules by topic, LEED v5 points, room clearances and first structure sizes.",["code-bc","access-bc","leed","ergo","span"]],
  ["02","Design","design.","Make the pieces of your project: furniture, stairs, doors and windows in 3D, facades, construction details, planting and color.",["furniture","facade","detaillab","lsystem","palette"]],
  ["03","Analysis","analysis.","Analyze the design on your own model: sunlight, wind outside, natural ventilation inside, structure, circulation, sightlines and camera coverage — every tool with the same plan, chart and 3D views.",["sunhours","wind","vent","structure","evac","isovist","cameras"]],
- ["04","Present","present.","Get ready for the crit: images, boards and axons, physical models, scales and sheet sizes.",["cutout","composer","axon","studio","topo","scale"]]];
+ ["04","Present","present.","Get ready for the crit: images, boards and axons, physical models, scales and sheet sizes.",["architectural-render","cutout","composer","axon","studio","topo","scale"]]];
  const all=new Set(TSECTIONS.flatMap(s=>s[4]));for(const sct of NEWSECT)for(const id of sct[4])all.delete(id);
  if(all.size)NEWSECT[1][4].push(...all);   // anything not placed above still shows, under Design
  TSECTIONS.splice(0,TSECTIONS.length,...NEWSECT.map(x=>x.map(v=>Array.isArray(v)?v.slice():v)));
@@ -3222,6 +3230,7 @@ TMETHOD.wfc=["Wave Function Collapse (Gumin 2016): simple tiled and overlapping 
 
 // === app mode: a tool that opens like software — one screen, no page scroll, no long introduction ===
 const APPMODE = new Set(["vent"]);
+APPMODE.add("architectural-render");
 EMBI.vent.short = "Airflow through your plan: air changes per room, by wind direction and by window opening.";
 { const _toolA = P.tool; P.tool = function (id) { if (!APPMODE.has(id) || !EMB[id]) return _toolA(id); const i = EMBI[id];
   return `<section class="appbar"><div class="appbar-in"><a class="appback" data-go="tools" aria-label="Back to all tools">← Tools</a><h1>${i.title}.</h1><p class="appsub">${i.short || ""}</p></div></section><div class="appwrap"><iframe data-emb="${id}" title="${i.crumb}" allow="clipboard-write"></iframe></div>`; }; }

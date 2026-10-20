@@ -1,0 +1,24 @@
+name: PlotCloud browser smoke
+on:
+  push:
+    branches: [fix/safe-architectural-render-registration]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependency
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Serve site and run browser smoke
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/plotcloud-http.log 2>&1 &
+          node tests/smoke.cjs
