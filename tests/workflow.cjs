@@ -61,6 +61,7 @@ try{
  assert.equal(context.project,option);assert(context.version>0);
  assert((await work.evaluate(()=>window.__pcRender.payload())).source_image.startsWith('data:image/'));
  assert(/model v/.test(await work.locator('#sourceContext').innerText()));
+ const sourceDownload=page.waitForEvent('download');await work.locator('#downloadSource').click();assert.equal((await sourceDownload).suggestedFilename(),'plotcloud-source-view.png');
  await work.locator('#run').click();assert(/valid HTTPS/.test(await work.locator('#status').innerText()));
  assert.equal(await work.evaluate(()=>window.__pcRender.hasOutput()),false);
  // Test HTTP adapter with a mocked endpoint. This validates client behavior, not AI model quality.
