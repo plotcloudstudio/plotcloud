@@ -85,7 +85,7 @@ function setPalette(k) { Object.assign(THEME, PALETTES[k]); }
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 const OSM_BLD_MAX = 1500;   // buildings are read up to this radius (m); a bigger request is too heavy for the public servers
 const DATA = {
-  kind: 'demo', credit: 'Demo geometry, generated for this prototype · not OpenStreetMap data',
+  kind: 'demo', credit: 'Example geometry · not OpenStreetMap data',
   async load(ctx) { return genCity(ctx.lat, ctx.lng, ctx.R); },      // the generated city: still used by the diagrams that have no real data yet
   // real streets and buildings from OpenStreetMap through Overpass; throws when no server answers
   async osm(ctx, wantBld) {

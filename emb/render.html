@@ -66,12 +66,10 @@ footer{padding:14px 20px;color:var(--muted);font-size:12px;border-top:1px solid 
   </div>
   <div class="panel"><h2 class="k">4 · Where it renders</h2>
     <div class="modes" id="modes" role="radiogroup" aria-label="GPU mode">
-      <label><input type="radio" name="gm" value="mygpu" checked> My GPU <small>ComfyUI on your computer</small></label>
-      <label class="dis"><input type="radio" name="gm" value="draft" disabled> Browser draft <small>Coming soon</small></label>
-      <label class="dis"><input type="radio" name="gm" value="cloud" disabled> Cloud Pro <small>Coming soon</small></label></div>
+      <label><input type="radio" name="gm" value="mygpu" checked> My GPU <small>ComfyUI on your computer</small></label></div>
     <p class="msg">PlotCloud does no rendering and runs no server. The mask, the prompt and a ComfyUI workflow go to your machine; you bring the image back here.</p>
-    <div class="row"><button class="btn red" id="pack">Download render pack</button><button class="btn" id="bridge" disabled aria-disabled="true" title="Coming soon">Send to local render · Coming soon</button></div>
-    <details style="margin-top:10px"><summary>Render Bridge protocol (draft v1, for the desktop bridge)</summary><pre class="proto" id="proto"></pre><button class="btn sm" id="protoDl" style="margin-top:6px">Download protocol</button></details>
+    <div class="row"><button class="btn red" id="pack">Download render pack</button></div>
+    <details style="margin-top:10px"><summary>Render Bridge integration specification</summary><pre class="proto" id="proto"></pre><button class="btn sm" id="protoDl" style="margin-top:6px">Download protocol</button></details>
   </div>
 </section>
 <section aria-label="Output">

@@ -1,7 +1,7 @@
 name: PlotCloud browser smoke
 on:
   push:
-    branches: [fix/safe-architectural-render-registration]
+    branches: [main, fix/professional-release-copy]
   pull_request:
     branches: [main]
   workflow_dispatch:
