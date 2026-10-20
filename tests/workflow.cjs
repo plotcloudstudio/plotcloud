@@ -4,7 +4,7 @@ let pixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAA
 (async()=>{
 const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
 const page=await browser.newPage({viewport:{width:1440,height:1000},acceptDownloads:true}),errors=[];
-page.on('pageerror',e=>errors.push(e.message));const dir='/tmp/plotcloud-screenshots';fs.mkdirSync(dir,{recursive:true});
+page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE ERROR',e.stack||e.message)});page.on('requestfailed',r=>console.log('REQUEST FAILED',r.url(),r.failure()?.errorText));const dir='/tmp/plotcloud-screenshots';fs.mkdirSync(dir,{recursive:true});
 try{
  await page.goto(base+'/#/library');await page.locator('.pc-resource-tabs').waitFor();
  await page.locator('.pc-resource-tabs a[href="#/showroom"]').click();
@@ -81,5 +81,5 @@ try{
  }
  assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
  console.log('PASS showroom relationships; project brief isolation and reopen; layout issues; option comparison; analysis provenance; Studio render handoff; mocked render contract and invalid image rejection');
-}finally{await browser.close();}
+}finally{await page.screenshot({path:dir+'/workflow-final.png',fullPage:true}).catch(()=>{});await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
