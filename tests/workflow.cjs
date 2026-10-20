@@ -19,7 +19,7 @@ try{
  await work.evaluate(()=>window.__wbTour?.close());
  const fixture={v:2,id:'workflow-office',name:'Office original',version:0,units:'m',north:0,targets:{ach:5,df:2,view:.75},climate:{from:225,U10:3.5,terrain:'suburban',Tout:18,Tin:24},levels:[{id:'L1',name:'Ground',z:0,h:3}],walls:[{id:'w1',lv:'L1',a:[0,0],b:[10,0],t:.2},{id:'w2',lv:'L1',a:[10,0],b:[10,8],t:.2},{id:'w3',lv:'L1',a:[10,8],b:[0,8],t:.2},{id:'w4',lv:'L1',a:[0,8],b:[0,0],t:.2}],ops:[],floors:[],voids:[],names:[{lv:'L1',x:5,y:4,name:'Office'}],furn:[{id:'f1',lv:'L1',type:'desk',x:3,y:3,w:1.4,d:.7,h:.75,rot:0},{id:'f2',lv:'L1',type:'desk',x:3.2,y:3.1,w:1.4,d:.7,h:.75,rot:.4}]};
  await work.evaluate(N=>window.__pcWorkflow.load(N),fixture);
- await work.locator('#projectWorkflow summary').click();
+ await work.locator('[data-lt="project"]').click();await work.locator('#projectWorkflow summary').click();
  await work.locator('#wfBrief [name="people"]').fill('20');
  await work.locator('#wfBrief [name="area"]').fill('100');
  await work.locator('#wfBrief [name="perPerson"]').fill('8');
