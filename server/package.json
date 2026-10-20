@@ -1,0 +1,7 @@
+{
+  "name": "plotcloud-interior-render-service",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node render-api.mjs", "test": "node --test render-api.test.mjs" }
+}

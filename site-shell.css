@@ -98,3 +98,6 @@ body.pc-shell #pc-example{scroll-margin-top:95px}
 .pc-resource-tabs{display:flex;gap:24px;padding-top:28px;padding-bottom:18px;border-bottom:1px solid var(--hair);flex-wrap:wrap}.pc-resource-tabs a{color:var(--muted);text-decoration:none;padding:8px 0}.pc-resource-tabs a.on{color:var(--ink);border-bottom:2px solid var(--accent)}.pc-resource-breadcrumb{font-size:13px;color:var(--muted);padding-top:22px}.pc-resource-breadcrumb a{color:inherit}.pc-resource-spec{padding:16px;border:1px solid var(--hair);background:#faf9f6;align-self:start}.pc-resource-spec p{font-size:13px;margin:6px 0;color:var(--muted)}.pc-resource-spec a{font-size:13px}.sritem{position:relative}
 
 .pc-spot-label{font-size:18px;line-height:1;color:inherit}.pc-resource-spec+*{margin-top:12px}
+
+/* Five project stages share the same routes as the desktop workflow rail. */
+body.pc-shell .pc-workflow-steps{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 28px}body.pc-shell .pc-workflow-steps a{display:block;padding:10px 14px;border:1px solid #dedfd9;border-radius:6px;background:#fff;color:inherit;text-decoration:none;font-size:13px;font-weight:600}body.pc-shell .pc-workflow-steps a:hover{border-color:#292b27}body.pc-shell .pc-workflow-steps a:focus-visible{outline:2px solid #314c3b;outline-offset:3px}
