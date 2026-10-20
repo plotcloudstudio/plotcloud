@@ -26,6 +26,24 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
    await visit('tool/cutout');
    assert((await page.locator('#app').innerText()).length>30,'Existing tool route empty');
    assert.equal(errors.length,0,'Regression errors: '+errors.join(' | '));
-   console.log('PASS home / tools / new renderer / existing tool');
+   // Public release copy must stay consistent across product, account and legal pages.
+   for (const route of ['home','tools','pricing','join','login','library','learn','donate','terms','privacy','license','refunds','project','tool/render','tool/plan']) {
+     await visit(route);
+     const body = await page.locator('body').innerText();
+     assert(!/\bbeta\b|coming soon|in development|Student Pro/i.test(body), 'Unreleased or student-only plan copy on '+route);
+     assert((await page.locator('#app').innerText()).trim().length>30, 'Empty page: '+route);
+   }
+   await visit('join');
+   assert(await page.locator('[name="organization"]').count(), 'Practice/school field missing');
+   assert(await page.locator('[name="profession"] option').filter({hasText:'Architect'}).count(), 'Architect role missing');
+   await visit('pricing');
+   assert(/PlotCloud Pro/.test(await page.locator('#app').innerText()), 'Unified Pro name missing');
+   assert.equal(errors.length,0,'Release route errors: '+errors.join(' | '));
+   // Existing CMS text is upgraded without resetting the user's other stored settings.
+   await page.evaluate(()=>localStorage.setItem('pc-proto',JSON.stringify({role:'visitor',saved:[],reqs:[],quotes:[],cms:{home:{heroBadge:'Free during the beta'},settings:{tagline:'Drawing resources for architecture students'}}})));
+   await visit('home');
+   assert(!/\bbeta\b/i.test(await page.locator('body').innerText()), 'Saved CMS release copy not upgraded');
+   assert(/architects and architecture students/.test(await page.locator('footer').innerText()), 'Saved tagline not upgraded');
+   console.log('PASS original tools, public release pages and saved CMS migration');
  }finally{await browser.close();}
 })().catch(e=>{console.error('FAIL',e.stack||e);process.exit(1)});
