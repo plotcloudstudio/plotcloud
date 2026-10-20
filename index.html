@@ -2618,15 +2618,6 @@ let HC=cmClone(HC_DEF),ST=cmClone(ST_DEF);
 const CMS=(S.cms&&typeof S.cms==="object")?S.cms:{home:null,settings:null,tools:null,res:{}};CMS.res=CMS.res||{};
 // ----- base snapshots of the built-in content, so edits are stored as overrides
 const BASE_RES=RES.map(r=>r.slice()),BASE_ADDED=Object.assign({},ADDED);
-// Standalone architectural rendering tool: independent of Plan Studio and Boards.
-STD.push(["architectural-render","R.01","architectural ai render","Upload a sketch, photo or model screenshot and create AI render requests with optional image references. Connect a secure rendering endpoint for generated results.",""]);
-EMB["architectural-render"]="@";
-EMBI["architectural-render"]={title:"architectural ai render",crumb:"Architectural AI Render",short:"Independent architectural image-to-image rendering.",lede:"Upload a sketch, model screenshot or photograph, set design direction, and render using your own secure image-generation endpoint. Independent of Plan Studio."};
-TMETA["architectural-render"]=["new","ai"];
-EMBV["architectural-render"]="1";
-EMBSVG["architectural-render"]='<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="300" height="180" fill="#f1ede4"/><path d="M0 142L93 101L205 130L300 85V180H0Z" fill="#c5b79f"/><path d="M64 128V43L162 18V121Z" fill="#faf9f5" stroke="#686258"/><path d="M162 18L245 54V152L162 121Z" fill="#d7d5ca" stroke="#686258"/><path d="M84 57L144 41V101L84 113Z" fill="#91a4a4"/><path d="M180 52L227 72V130L180 112Z" fill="#8ca3a8"/><path d="M0 153L300 103" stroke="#d8402a" stroke-width="2" stroke-dasharray="6 5"/></svg>';
-TSECTIONS[3][4].unshift("architectural-render");
-if(typeof APPMODE!=="undefined") APPMODE.add("architectural-render");
 const BASE_SECT=TSECTIONS.map(s=>s[4].slice()),BASE_DEV=DEVIDS.slice();
 const BASE_NEW=Object.keys(TMETA).filter(k=>(TMETA[k]||[]).includes("new"));
 const TOOL_IDS=[...new Set([...BASE_SECT.flat(),...BASE_DEV])];
