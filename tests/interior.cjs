@@ -17,6 +17,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.waitForFunction(()=>!!window.__pcRender);
   const source=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=640;c.height=400;const x=c.getContext('2d');x.fillStyle='#c8c5b8';x.fillRect(0,0,640,400);x.fillStyle='#73877b';x.fillRect(180,170,280,140);return c.toDataURL('image/png');});
   const reference=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=320;c.height=200;const x=c.getContext('2d');x.fillStyle='#603e2e';x.fillRect(0,0,320,200);return c.toDataURL('image/png');});
+  const webpOutput=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=320;c.height=200;const x=c.getContext('2d');x.fillStyle='#78543b';x.fillRect(0,0,320,200);return c.toDataURL('image/webp');});
   const upload=(selector,data,name)=>page.locator(selector).setInputFiles({name,mimeType:'image/png',buffer:Buffer.from(data.split(',')[1],'base64')});
   const paint=async()=>{const canvas=page.locator('#maskEditor');await canvas.scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.getElementById('maskEditor').width===640);const r=await canvas.boundingBox();await page.mouse.move(r.x+r.width*.45,r.y+r.height*.6);await page.mouse.down();await page.mouse.move(r.x+r.width*.55,r.y+r.height*.6,{steps:8});await page.mouse.up();};
   const workflow=()=>page.evaluate(()=>window.__pcRender.payload().interior_workflow);
@@ -27,7 +28,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.route('https://render.example.test/interior',async route=>{
    const req=route.request();requests.push({body:req.postDataJSON(),authorization:req.headers().authorization});
    if(requests.length===1)await new Promise(resolve=>{releaseResponse=resolve;});
-   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({image_data_url:reference})});
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({image_data_url:requests.length===2?webpOutput:reference})});
   });
   await page.locator('#referencePurpose').selectOption('replace');
   await page.locator('#run').click();assert.equal(requests.length,0,'Replacement sent with no furniture reference');
@@ -69,13 +70,25 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   assert(comparisonText.includes(original.request_id),'Comparison export lost original render provenance');
   assert(comparisonText.includes(requests[1].body.request_id),'Comparison export lost second render provenance');
   await page.locator('#compareBasis').scrollIntoViewIfNeeded();await page.screenshot({path:dir+'/interior-comparison-desktop.png',fullPage:true});
+  // Pause a real reuse action, change source, then let the stale fetch finish.
+  await page.evaluate(()=>{
+   const originalFetch=window.fetch,button=document.getElementById('reuse'),originalReuse=button.onclick;
+   const output=window.__pcRender.getVersionSnapshots()[0].img;
+   window.__reuseSettled=false;window.__reusePaused=false;
+   window.fetch=function(input,...args){if(String(input)===output&&!window.__reusePaused){window.__reusePaused=true;return new Promise(resolve=>{window.__releaseReuse=async()=>resolve(await originalFetch.call(window,input,...args));});}return originalFetch.call(window,input,...args);};
+   button.onclick=async function(event){try{return await originalReuse.call(this,event);}finally{window.__reuseSettled=true;window.fetch=originalFetch;button.onclick=originalReuse;}};
+  });
+  await page.locator('#reuse').click();await page.waitForFunction(()=>window.__reusePaused);
   await upload('#source',reference,'different-room.png');await page.waitForFunction(()=>window.__pcRender.payload().source_context?.fileName==='different-room.png');
+  await page.evaluate(()=>window.__releaseReuse());await page.waitForFunction(()=>window.__reuseSettled);
+  assert.equal(await page.evaluate(()=>window.__pcRender.context().fileName),'different-room.png','Late reuse overwrote the newly uploaded source context');
+  assert.equal(await page.evaluate(()=>window.__pcRender.payload().source_image),reference,'Late reuse overwrote the newly uploaded source pixels');
   assert.equal((await page.evaluate(()=>window.__pcRender.payload())).reference_images.length,0,'New source kept stale furniture references');
   assert.equal(await page.locator('#targetDescription').inputValue(),'','New source kept stale target');
   assert.equal(await page.locator('#referencePurpose').inputValue(),'atmosphere');
   await page.locator('#editMode').selectOption('inpaint');await page.locator('#run').click();assert.equal(requests.length,2,'New source reused old painted region');
   await page.locator('#clear').click();assert.equal(await page.evaluate(()=>window.__pcRender.hasOutput()),false);
   assert.deepEqual(errors,[],'Browser errors');
-  console.log('PASS interior-only choices; target/reference/region validation; authenticated mocked render; locked in-flight inputs; immutable export; history restore; desktop A/B PNG and JSON export; stale input reset. AI quality was not tested.');
+  console.log('PASS interior-only choices; target/reference/region validation; authenticated PNG/WebP mocked render; locked in-flight inputs; immutable export; history restore; desktop A/B PNG and JSON export; stale input reset and delayed reuse. AI quality was not tested.');
  }finally{releaseResponse?.();await page.screenshot({path:dir+'/interior-final.png',fullPage:true}).catch(()=>{});await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});

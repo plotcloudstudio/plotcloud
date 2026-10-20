@@ -55,7 +55,10 @@
       select.value = items.some((v, i) => identity(v, i) === previous) ? previous : items.length ? identity(items[Math.min(fallback, items.length - 1)], Math.min(fallback, items.length - 1)) : '';
     }
     // A second result should automatically populate the second slot.
-    if (items.length > 1 && $('compareA').value === $('compareB').value) $('compareB').value = identity(items[0].request?.request_id === selected('compareA')?.request?.request_id ? items[1] : items[0], items[0].request?.request_id === selected('compareA')?.request?.request_id ? 1 : 0);
+    if (items.length > 1 && $('compareA').value === $('compareB').value) {
+      const alternate = items.findIndex((v, i) => identity(v, i) !== $('compareA').value);
+      $('compareB').value = identity(items[alternate], alternate);
+    }
     update();
   }
   function download(name, blob) {
