@@ -4,7 +4,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const dir='/tmp/plotcloud-screenshots';fs.mkdirSync(dir,{recursive:true});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
- page.on('pageerror',e=>errors.push(e.message));
+ page.on('pageerror',e=>errors.push(e.stack||e.message));
  const visit=async(path)=>{await page.goto(base+'/#/'+path);await page.waitForFunction(()=>document.body.classList.contains('pc-shell'));};
  const noOverflow=async()=>assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Horizontal overflow at '+page.url());
  try{

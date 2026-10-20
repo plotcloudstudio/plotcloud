@@ -36,6 +36,7 @@
     if(id==='__plan')return '<img src="img/proto/studio.jpg" alt="Plan Studio floor plan and 3D room view" loading="lazy">';
     const preview=document.createElement('div');preview.innerHTML=tVis(id);
     preview.querySelectorAll('input,button,select,textarea,form,a').forEach(el=>el.remove());
+    preview.querySelectorAll('*').forEach(el=>[...el.attributes].forEach(a=>{if(a.name.startsWith('data-')||a.name==='tabindex')el.removeAttribute(a.name)}));
     return '<div aria-hidden="true">'+preview.innerHTML+'</div>';
   };
   function card(id) {
