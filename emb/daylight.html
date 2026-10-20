@@ -633,7 +633,9 @@ function analyse() {
   const S = obstacles(), gkey = JSON.stringify([SC.hm ? SC.hm.id : 0, SC.bounds, SC.walls.map((w) => [w.a, w.b, w.h, w.glass, w.furnline]), SC.furn.map((f) => [f.x, f.y, f.w, f.d, f.h])]);
   if (GC.key !== gkey) { const G = buildGrid(S); GC = { key: gkey, G, S, R: floorRegion(G) }; }
 }
-const setKey = () => JSON.stringify([GC.key, LOC, EPW.name, NORTH, TAU, RF, RW, RC, WP, HEAD, CEIL, OCC]);
+let wfWeatherRows=null,wfWeatherHash='';
+function weatherIdentity(){if(wfWeatherRows!==EPW.rows){wfWeatherRows=EPW.rows;const text=JSON.stringify(EPW.rows);let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}wfWeatherHash=(h>>>0).toString(16);}return wfWeatherHash;}
+const setKey = () => JSON.stringify([GC.key, LOC, EPW.name, weatherIdentity(), NORTH, TAU, RF, RW, RC, WP, HEAD, CEIL, OCC]);
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const occ = (h) => h >= OCC[0] && h < OCC[1];
 function hourLux(sk, irc, L, i) {   // illuminance on the work plane at hour i (lux): sky + sun + outside reflections + inside reflections
@@ -644,6 +646,7 @@ function hourLux(sk, irc, L, i) {   // illuminance on the work plane at hour i (
   return [e + sun + sk.erc * 0.15 * Eo / Math.PI + irc * Eo, sun];
 }
 async function compute(spacing, nb, onProg) {
+  analyse(); const runInputKey = setKey();
   analyse(); if (!YEAR) buildYear(); const G = GC.G, reg = GC.R.reg, B = SC.bounds, PW = Math.ceil(B.w / spacing), PH = Math.ceil(B.h / spacing), pts = [];
   for (let j = 0; j < PH; j++) for (let i = 0; i < PW; i++) { const x = (i + 0.5) * spacing, y = (j + 0.5) * spacing, cx = Math.floor(x / G.c), cy = Math.floor(y / G.c); if (cx >= G.W || cy >= G.H) continue; const ci = cy * G.W + cx; if (reg[ci]) pts.push({ i, j, x, y, ci }); }
   const irc = roomIRC(), Lh = new Array(8760), hours = []; for (let i = 0; i < 8760; i++) if (YEAR.alt[i] > 0.5 && YEAR.Ed[i] + YEAR.Eb[i] >= 1) { Lh[i] = Lof(i); hours.push(i); }
@@ -660,7 +663,7 @@ async function compute(spacing, nb, onProg) {
     ev[k] = { da: lit / nOcc, ase: sunH, sda: lit / nOcc >= 0.5, aseOver: sunH > 250, df, mean: sum / nOcc, o2: [am, pm], o2ok: inR(am) && inR(pm), sk, ir };
     if (performance.now() - t0 > 60) { onProg((k + 1) / pts.length); await tick(); t0 = performance.now(); if (STOP) return null; }
   }
-  return { key: setKey(), spacing, nb, PW, PH, pts, ev, over, irc, img: null };
+  return { key: runInputKey, spacing, nb, PW, PH, pts, ev, over, irc, img: null };
 }
 function summary() {
   if (!RES) return null; const R = GC.R, nR = R.nRooms, rooms = Array.from({ length: nR }, (_, k) => ({ k, n: 0, sda: 0, ase: 0, o2: 0, df: 0, x: 0, y: 0, out: false }));
@@ -1272,6 +1275,12 @@ async function runLevel(level, confirmed, quiet) {
 setTool('select'); loadScene(PRESETS.office()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;
 resize(); fit(); draw(); runLevel('draft', true, true);
 window.__day = { SC, get RES() { return RES; }, summary, runLevel, setCam, setProbe, get PROBE() { return PROBE; }, spotSky, lvPlan, PRESETS, loadScene, get GC() { return GC; }, toggleExcl, T3, get YEAR() { return YEAR; }, LOC, setHour, roomIRC };
+
+window.__pcAnalysisState=()=>{
+ const ready=!!RES&&!BUSY&&RES.key===setKey();
+ let parameters=null;try{parameters=RES?JSON.parse(RES.key).slice(1):null;}catch(e){}
+ return {ready,stale:!!RES&&RES.key!==setKey(),conditions:{schema:1,tool:'daylight',parameters,spacing:RES?.spacing,bearings:RES?.nb||RES?.nr,excluded:EXCL.map(p=>p.slice())}};
+};
 </script>
 
 <script>
@@ -1320,7 +1329,8 @@ window.__day = { SC, get RES() { return RES; }, summary, runLevel, setCam, setPr
       const cv = $$('#stage canvas').filter((c) => c.offsetParent && c.width > 50).sort((a, b) => b.width * b.height - a.width * a.height)[0];
       let img = null; try { if (cv) { const w = 640, k = w / cv.width, c2 = document.createElement('canvas'); c2.width = w; c2.height = Math.round(cv.height * k); const g = c2.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c2.width, c2.height); g.drawImage(cv, 0, 0, c2.width, c2.height); img = c2.toDataURL('image/jpeg', 0.82); } } catch (e) { }
       const model = (txt($('#mName')) || '').replace(/^Case:\s*/i, '').replace(/\.json$/i, '');
-      post({ t: 'save', tool: name, kpis, img, model, source: SRC, scene: canScene ? (() => { try { return window.__pcSceneJSON(); } catch (e) { return null; } })() : null });
+      const analysis=window.__pcAnalysisState?.();if(!analysis?.ready){if(note)note.textContent='Analyze the current model and settings before saving this result.';return;}
+      post({ t: 'save', tool: name, kpis, img, model, source: Object.assign({},SRC||{},{analysis:analysis.conditions}), scene: canScene ? (() => { try { return window.__pcSceneJSON(); } catch (e) { return null; } })() : null });
       if (note) note.textContent = 'Saving…';
     });
   }

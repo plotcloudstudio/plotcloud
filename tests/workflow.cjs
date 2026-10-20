@@ -1,6 +1,6 @@
 const assert=require('assert'),fs=require('fs'),{chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
-const pixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5X8AAAAASUVORK5CYII=';
+let pixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5X8AAAAASUVORK5CYII=';
 (async()=>{
 const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
 const page=await browser.newPage({viewport:{width:1440,height:1000},acceptDownloads:true}),errors=[];
@@ -59,6 +59,7 @@ try{
  await page.locator('#run').click();assert(/valid HTTPS/.test(await page.locator('#status').innerText()));
  assert.equal(await page.evaluate(()=>window.__pcRender.hasOutput()),false);
  // Test HTTP adapter with a mocked endpoint. This validates client behavior, not AI model quality.
+ pixel=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=2;c.height=2;return c.toDataURL('image/png');});
  let request;
  await page.route('https://render.example.test/api',async route=>{request=route.request().postDataJSON();await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({image_data_url:pixel})});});
  await page.locator('#endpoint').fill('https://render.example.test/api');
@@ -71,6 +72,13 @@ try{
  await page.route('https://render.example.test/api',route=>route.fulfill({status:200,contentType:'application/json',body:'{"image_data_url":"data:image/png;base64,invalid"}'}));
  await page.locator('#run').click();await page.waitForFunction(()=>document.getElementById('status').textContent.includes('Render failed'));
  assert.equal(await page.evaluate(()=>window.__pcRender.hasOutput()),false,'Unreadable image accepted');
+
+ for(const tool of ['views','daylight']){
+  await page.goto(base+'/emb/'+tool+'.html');
+  await page.waitForFunction(()=>window.__pcAnalysisState?.().ready,{},{timeout:90000});
+  const state=await page.evaluate(()=>window.__pcAnalysisState());assert.equal(state.conditions.tool,tool);assert(state.conditions.parameters);
+  if(tool==='views'){await page.evaluate(()=>window.__views.setEye(1.15));await page.waitForFunction(()=>window.__pcAnalysisState().stale);assert.equal(await page.evaluate(()=>window.__pcAnalysisState().ready),false);}
+ }
  assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
  console.log('PASS showroom relationships; project brief isolation and reopen; layout issues; option comparison; analysis provenance; Studio render handoff; mocked render contract and invalid image rejection');
 }finally{await browser.close();}
