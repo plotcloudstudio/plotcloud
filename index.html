@@ -3128,7 +3128,7 @@ TCOVER.vent="covers/vent.webp?v=cf7d8490";
  ["01","Brief & codes","brief & codes.","Before you draw: building code and accessibility rules by topic, LEED v5 points, room clearances and first structure sizes.",["code-bc","access-bc","leed","ergo","span"]],
  ["02","Design","design.","Make the pieces of your project: furniture, stairs, doors and windows in 3D, facades, construction details, planting and color.",["furniture","facade","detaillab","lsystem","palette"]],
  ["03","Analysis","analysis.","Analyze the design on your own model: sunlight, wind outside, natural ventilation inside, structure, circulation, sightlines and camera coverage — every tool with the same plan, chart and 3D views.",["sunhours","wind","vent","structure","evac","isovist","cameras"]],
- ["04","Present","present.","Get ready for the crit: images, boards and axons, physical models, scales and sheet sizes.",["cutout","composer","axon","studio","topo","scale"]]];
+ ["04","Present","present.","Get ready for the crit: images, boards and axons, physical models, scales and sheet sizes.",["architectural-render","cutout","composer","axon","studio","topo","scale"]]];
  const all=new Set(TSECTIONS.flatMap(s=>s[4]));for(const sct of NEWSECT)for(const id of sct[4])all.delete(id);
  if(all.size)NEWSECT[1][4].push(...all);   // anything not placed above still shows, under Design
  TSECTIONS.splice(0,TSECTIONS.length,...NEWSECT.map(x=>x.map(v=>Array.isArray(v)?v.slice():v)));
