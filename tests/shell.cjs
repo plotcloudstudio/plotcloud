@@ -5,7 +5,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
  const dir='/tmp/plotcloud-screenshots';fs.mkdirSync(dir,{recursive:true});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
  page.on('pageerror',e=>errors.push(e.stack||e.message));
- const visit=async(path)=>{await page.goto(base+'/#/'+path);await page.waitForFunction(()=>document.body.classList.contains('pc-shell'));};
+ const visit=async(path)=>{await page.goto(base+'/#/'+path);await page.waitForFunction(()=>document.body.classList.contains('pc-shell'));await page.locator(path.startsWith('home')?'.pc-home':'.pc-catalog').waitFor();};
  const noOverflow=async()=>assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Horizontal overflow at '+page.url());
  try{
   await visit('home');
@@ -42,6 +42,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.screenshot({path:dir+'/home-mobile.png',fullPage:true});
   await page.locator('#burger').click();assert.equal(await page.locator('#burger').getAttribute('aria-expanded'),'true');
   await page.locator('#mpanel a[data-go="tools"]').click();
+  await page.locator('[data-shell-search]').waitFor({state:'visible'});
   assert.equal(await page.locator('#burger').getAttribute('aria-expanded'),'false');
   assert(await page.locator('[data-shell-search]').isVisible());await noOverflow();
   await page.screenshot({path:dir+'/tools-mobile.png',fullPage:true});
