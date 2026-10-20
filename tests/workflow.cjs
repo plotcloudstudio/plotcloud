@@ -39,6 +39,9 @@ try{
  assert.equal(await work.locator('#wfBrief [name="people"]').inputValue(),'20','Option brief leaked into original');
  assert(await work.evaluate(id=>window.__pcWorkflow.open(id),option));
  assert.equal(await work.locator('#wfBrief [name="people"]').inputValue(),'10');
+ await work.locator('#wfOffice').click();await work.waitForFunction(()=>window.__pcWorkflow.getModel().name==='Small office');
+ assert.equal((await work.evaluate(()=>window.__pcWorkflow.report())).rooms.length,3,'Office example should have three enclosed rooms');
+ assert(await work.evaluate(id=>window.__pcWorkflow.open(id),option));
  await work.locator('#wfParent').click();await work.locator('#cmpDlg').waitFor({state:'visible'});
  await page.screenshot({path:dir+'/option-comparison.png',fullPage:true});
  await work.evaluate(()=>document.getElementById('cmpDlg').hidden=true);
