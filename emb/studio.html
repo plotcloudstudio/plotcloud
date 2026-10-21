@@ -1100,6 +1100,7 @@ const dlP=(window.claude&&typeof window.claude.use==='function')?window.claude.u
 async function offer(filename,data){
   const dl=await dlP;
   if(dl){try{await dl.save({filename,data});return true}catch(err){if(err&&err.code==='declined')return true;if(err&&err.code==='rate_limited'){toast('A save prompt is already open.');return true}if(err&&err.code==='too_large'){toast('That file is too large to save here. Try Standard quality.');return true}}}
+  try{const blob=data instanceof Blob?data:new Blob([data]);const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);return true}catch(e){}
   return false;
 }
 async function allLoaded(){items.forEach(i=>{if(i.assetId)getImg(i.assetId)});await Promise.all(Object.values(imgCache).map(c=>c.p));if(document.fonts)await document.fonts.ready}

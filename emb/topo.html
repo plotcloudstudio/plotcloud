@@ -323,9 +323,14 @@ $('#exportBtn').addEventListener('click', async () => {
     const zip = zipSync(files, { level: 6 });
     track('topo_export', { scale: S.scale, th: S.th, layers: result.layers.length, sheets: packed.sheets.length });
     const dl = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
-    if (!dl) { setStatus(`Files built (${Math.round(zip.length / 1024)} KB), but this view can't download. Open the page on claude.ai and try again.`, 'bad'); return; }
-    setStatus('Confirm the save in the dialog.');
-    await dl.save({ filename: base + '.zip', data: new Blob([zip], { type: 'application/zip' }) });
+    if (dl) {
+      setStatus('Confirm the save in the dialog.');
+      await dl.save({ filename: base + '.zip', data: new Blob([zip], { type: 'application/zip' }) });
+    } else {
+      const u = URL.createObjectURL(new Blob([zip], { type: 'application/zip' })), a = document.createElement('a');
+      a.href = u; a.download = base + '.zip'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 4000);
+    }
     setStatus(`Saved ${base}.zip (${packed.sheets.length} sheet${packed.sheets.length > 1 ? 's' : ''}).`, 'ok');
   } catch (e) {
     setStatus(e && e.code === 'declined' ? 'Save canceled.' : `Export failed: ${(e && e.message) || e}`, 'bad');
