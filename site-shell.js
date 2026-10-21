@@ -4,12 +4,12 @@
   const link = (to, label, cls = '') => `<a href="#/${to}" data-go="${to}"${cls ? ` class="${cls}"` : ''}>${label}</a>`;
   const groups = [
     {id:'site', title:'Site & Model', text:'Understand the place and develop your design.', ids:new Set(['sitectx','atlas','tracer','furniture','facade','detaillab','lsystem','doors3d','stairs3d'])},
-    {id:'analysis', title:'Analyze', text:'Study sunlight, daylight, airflow, movement and structure.', ids:new Set(['sunhours','wind','vent','structure','evac','isovist','cameras','views','daylight','spacesyntax'])},
+    {id:'analysis', title:'Analyze', text:'Study sunlight, daylight, airflow, acoustics, movement and structure.', ids:new Set(['sunhours','wind','vent','structure','evac','isovist','cameras','views','daylight','spacesyntax','movementdepth','acoustics'])},
     {id:'present', title:'Render & Present', text:'Prepare images, materials and presentation boards.', ids:new Set(['architectural-render','render','cutout','depth','lines','upscale','sky','composer','axon','studio','palette','topo'])},
     {id:'utility', title:'Utilities & References', text:'Scales, dimensions, codes and other supporting tools.', ids:new Set()}
   ];
   const describe = {
-    'architectural-render':'Develop interior images, bind furniture references and compare options. AI generation requires a connected service.',
+    'architectural-render':'Turn the Studio model into a repeatable material drawing or single-colour architectural illustration. Processing runs locally.',
     sitectx:'Find an address, build the surrounding context and take the site into your design.',
     tracer:'Trace a scaled plan image, then export it or open it in Plan Studio.',
     daylight:'Explore daylight distribution, sDA, ASE and daylight factor in your rooms.',
