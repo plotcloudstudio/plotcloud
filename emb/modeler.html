@@ -2092,6 +2092,23 @@ const C = { ink: '#1c1b1a', muted: '#6e6a60', line: '#e1dfda', view: '#f5f6f8', 
 const KINDS = { stair: 'Stair', atrium: 'Atrium', shaft: 'Shaft', roof: 'Roof opening' };
 
 let M = STC.migrate(STC.TEMPLATES.house()), LV = 'L1', TOOL = 'select', CAM = 'plan', SHOW = 'air', SEL = null, HOV = null;
+const cycleSelection = { candidates: [], index: -1, anchorScreen: null, hoverId: null, active: false };
+const cycleKey = (c) => `${c.k}:${c.id}${c.version ? ':' + c.version : ''}`;
+const cycleClear = () => { cycleSelection.candidates = []; cycleSelection.index = -1; cycleSelection.anchorScreen = null; cycleSelection.hoverId = null; cycleSelection.active = false; if (HOV) { HOV = null; draw(); } tipOff(); };
+const cycleCurrent = () => cycleSelection.active && cycleSelection.candidates[cycleSelection.index] || null;
+function cycleLabel(c) { const n = c.k === 'furn' ? ((libOf((selObj(c) || {}).type) || [,'Furniture'])[1]) : c.k === 'op' ? ((selObj(c) || {}).kind === 'door' ? 'Door' : 'Window') : c.k === 'wall' || c.k === 'end' ? 'Wall' : c.k === 'room' ? 'Room' : c.k === 'floor' ? 'Floor' : c.k === 'void' ? 'Opening' : c.k; return `${n}${c.version ? ' · ' + c.version : ''}`; }
+function cycleSet(cands, anchor) { cycleSelection.candidates = cands.slice(0, 20); cycleSelection.index = cycleSelection.candidates.length ? 0 : -1; cycleSelection.anchorScreen = anchor ? [anchor[0], anchor[1]] : null; cycleSelection.active = cycleSelection.index >= 0; const c = cycleCurrent(); cycleSelection.hoverId = c ? cycleKey(c) : null; HOV = c && c.k !== 'room' ? c : null; }
+function cycleStep(dir) { if (!cycleSelection.active || !cycleSelection.candidates.length) return; cycleSelection.index = (cycleSelection.index + dir + cycleSelection.candidates.length) % cycleSelection.candidates.length; const c = cycleCurrent(); cycleSelection.hoverId = cycleKey(c); HOV = c.k !== 'room' ? c : null; draw(); if (window.__cycleEvent) window.__cycleEvent(); }
+function cycleCandidates2D(p, anchor) { const out = [], seen = new Set(), tol = 16 / Math.max(1, V.s); const add = (c, dist, pri) => { if (!c || seen.has(cycleKey(c)) || dist > tol) return; seen.add(cycleKey(c)); out.push(Object.assign(c, { score: dist * V.s, priority: pri })); };
+  const distSeg = (q, a, b) => { const dx=b[0]-a[0],dy=b[1]-a[1], t=Math.max(0,Math.min(1,((q[0]-a[0])*dx+(q[1]-a[1])*dy)/(dx*dx+dy*dy||1))), x=a[0]+t*dx,y=a[1]+t*dy; return Math.hypot(q[0]-x,q[1]-y); };
+  if (VIS.Wall) for (const o of M.ops) { const w=wallById(o.wall); if (!w || w.lv!==LV) continue; const d=distSeg(p,w.a,w.b); const dir=STC.wallDir(w), t=(p[0]-w.a[0])*dir[0]+(p[1]-w.a[1])*dir[1]; if (d <= (w.t||.2)/2+tol && Math.abs(t-o.pos)<=o.w/2+tol) { add({k:'op',id:o.id},d,1); add({k:'wall',id:w.id},d+.01,3); } }
+  if (VIS.Wall) for (const w of lvWalls()) { const d=distSeg(p,w.a,w.b); if (d <= (w.t||.2)/2+tol) add({k:'wall',id:w.id},d,3); }
+  if (VIS.Furniture) for (const f of M.furn) if (f.lv===LV && furnOk(f,'plan') && !isHidden(f.id)) { const q=STC.furnCorners(f), d=Math.min(...q.map((a,i)=>distSeg(p,a,q[(i+1)%q.length]))); if (d<=tol || (p[0]>=f.x-f.w/2-tol&&p[0]<=f.x+f.w/2+tol&&p[1]>=f.y-f.d/2-tol&&p[1]<=f.y+f.d/2+tol)) add({k:'furn',id:f.id},d,2); }
+  if (VIS.Floor) for (const f of M.floors||[]) if (f.lv===LV && p[0]>=f.x-tol&&p[0]<=f.x+f.w+tol&&p[1]>=f.y-tol&&p[1]<=f.y+f.d+tol) add({k:'floor',id:f.id},0,5);
+  const rk=STC.roomAtR(S.L[LV],p[0],p[1]); if(rk>=0){const r=S.rooms.find(q=>q.lv===LV&&q.id===rk);if(r)add({k:'room',id:r.key},0,6);}
+  return out.sort((a,b)=>a.score-b.score||a.priority-b.priority||cycleKey(a).localeCompare(cycleKey(b)));
+}
+function cycleRefresh2D(p, anchor) { const a=cycleSelection.anchorScreen; if (!cycleSelection.active || !a || Math.hypot(anchor[0]-a[0],anchor[1]-a[1])>10) cycleSet(cycleCandidates2D(p,anchor),anchor); }
 let LAYER = 'Wall'; const VIS = { Floor: true, Furniture: true, Wall: true };   // the three fixed layers: the active one, and which are shown
 let PICK = null, PREV = null;   // the library piece chosen for the Place tool, and its preview
 let S = null, RES = null;   // RES = { S, af, dl, vw } — results belong to the build they were run on
@@ -2635,7 +2652,8 @@ cv.addEventListener('pointerdown', (e) => {
     if (o) { if (o.gen) opFit(o, h.w.t || 0.2); o.pos = sg(o.pos); STC.fixOp(M, o); SEL = { k: 'op', id: o.id }; } commit(b); return; }
   if (TOOL === 'del') { const h = hitTest(p, { noEnds: true, only: true }); if (h) { SEL = h; delSel(); } else { const o = hitTest(p, { noEnds: true }); if (o && LAYER_OF[o.k]) flash(`That is on the ${LAYER_OF[o.k]} layer. Switch to it to delete it.`); } return; }
   // select
-  const h = hitTest(p); const b = snapM();
+  const cyc = cycleCurrent(); if (cyc) { SEL = cyc.k === 'end' ? { k: 'wall', id: cyc.id } : { k: cyc.k, id: cyc.id }; cycleClear(); changedSel(); }
+  const h = cyc || hitTest(p); const b = snapM();
   if (!h || h.k === 'room') { SEL = h; if (CAM !== '3d') { drag = { k: 'pan', sx, sy, ox: V.ox, oy: V.oy, click: true }; cv.setPointerCapture(e.pointerId); } changedSel(); return; }
   SEL = h.k === 'end' ? { k: 'wall', id: h.id } : h; if (LAYER_OF[h.k] && LAYER_OF[h.k] !== LAYER) { setLayer(LAYER_OF[h.k], true); flash(`Switched to the ${LAYER} layer.`); } changedSel(); cv.setPointerCapture(e.pointerId);
   if (h.k === 'wall') { const w = wallById(h.id), dir = STC.wallDir(w), n = [-dir[1], dir[0]], L = STC.wallLen(w), fol = [];
@@ -2669,10 +2687,11 @@ cv.addEventListener('pointermove', (e) => {
   if (TOOL === 'win' || TOOL === 'door' || TOOL === 'hole') { const h = STC.wallAt(M, LV, p); drawing = h ? { kind: 'op', op: TOOL, hit: h, ow: opW(TOOL) } : null; draw(); return; }
   if (RECT.has(TOOL) || TOOL === 'wall' || TOOL === 'arc') { snapPt(p); draw(); }
   // hover
-  const h = TOOL === 'select' || TOOL === 'del' ? hitTest(p, { noEnds: TOOL === 'del' }) : null, key = h ? h.k + h.id : '';
+  if (TOOL === 'select' && CAM === 'plan' && !e.buttons) cycleRefresh2D(p, [sx, sy]);
+  const cyc = cycleCurrent(), h = cyc || (TOOL === 'select' || TOOL === 'del' ? hitTest(p, { noEnds: TOOL === 'del' }) : null), key = h ? h.k + h.id : '';
   if (key !== (HOV ? HOV.k + HOV.id : '')) { HOV = h && h.k !== 'room' ? h : null; draw(); }
   cv.classList.toggle('sel', TOOL === 'select');
-  if (h && TOOL === 'select') { const o = selObj(h); let t = ''; if (h.k === 'wall' || h.k === 'end') t = `Wall ${Math.round(STC.wallLen(o) * 1000)} mm · drag to move`; else if (h.k === 'op') t = `${o.kind === 'door' ? 'Door' : 'Window'} ${o.w.toFixed(2)} m · drag along the wall`; else if (h.k === 'furn') t = `${(libOf(o.type) || [, 'Furniture'])[1]} · drag; R turns it`; else if (h.k === 'void') t = `${KINDS[o.kind] || 'Opening'} ${o.w.toFixed(1)} × ${o.d.toFixed(1)} m`; else if (h.k === 'floor') t = `Floor ${o.w.toFixed(2)} × ${o.d.toFixed(2)} m · drag to move`; else if (h.k === 'room') t = roomTip(o); tipAt(e, t); } else tipOff();
+  if (h && TOOL === 'select') { const o = selObj(h); let t = ''; if (cycleSelection.active) t = `${cycleLabel(h)} · ${cycleSelection.index + 1} of ${cycleSelection.candidates.length} — Tab to cycle`; else if (h.k === 'wall' || h.k === 'end') t = `Wall ${Math.round(STC.wallLen(o) * 1000)} mm · drag to move`; else if (h.k === 'op') t = `${o.kind === 'door' ? 'Door' : 'Window'} ${o.w.toFixed(2)} m · drag along the wall`; else if (h.k === 'furn') t = `${(libOf(o.type) || [, 'Furniture'])[1]} · drag; R turns it`; else if (h.k === 'void') t = `${KINDS[o.kind] || 'Opening'} ${o.w.toFixed(1)} × ${o.d.toFixed(1)} m`; else if (h.k === 'floor') t = `Floor ${o.w.toFixed(2)} × ${o.d.toFixed(2)} m · drag to move`; else if (h.k === 'room') t = roomTip(o); tipAt(e, t); } else tipOff();
 });
 cv.addEventListener('pointerup', (e) => {
   cv.classList.remove('grab'); SNAPI = null;
@@ -2819,6 +2838,7 @@ function setLayer(L, keepSel) {
 // ---------- keys ----------
 addEventListener('keydown', (e) => {
   const tg = e.target; if (tg && (tg.matches('input, select, textarea') || tg.isContentEditable)) return;
+  if (e.key === 'Tab' && cycleSelection.active) { e.preventDefault(); cycleStep(e.shiftKey ? -1 : 1); return; }
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
@@ -2826,8 +2846,8 @@ addEventListener('keydown', (e) => {
   if (e.key === ' ' && document.activeElement === cv) { SPACE = true; if (window.S3) S3.orbitLeft(true); e.preventDefault(); return; }
   if (drawing && /^[0-9.,x×]$/.test(e.key)) { typed += e.key; draw(); e.preventDefault(); return; }
   if (drawing && e.key === 'Backspace' && typed) { typed = typed.slice(0, -1); draw(); e.preventDefault(); return; }
-  if (e.key === 'Enter') { if (applyTyped()) { e.preventDefault(); return; } if (drawing && drawing.kind === 'wall') { finishWall(); e.preventDefault(); } return; }
-  if (e.key === 'Escape') { if (drawing && drawing.kind === 'wall' && drawing.pts.length >= 2) finishWall(); else { drawing = null; typed = ''; } if (TOOL === 'place') { PICK = null; setTool('select'); libUI(); } SEL = null; changedSel(); return; }
+  if (e.key === 'Enter') { if (cycleSelection.active) { const c = cycleCurrent(); SEL = c.k === 'end' ? { k: 'wall', id: c.id } : { k: c.k, id: c.id }; cycleClear(); changedSel(); e.preventDefault(); return; } if (applyTyped()) { e.preventDefault(); return; } if (drawing && drawing.kind === 'wall') { finishWall(); e.preventDefault(); } return; }
+  if (e.key === 'Escape') { if (cycleSelection.active) { cycleClear(); return; } if (drawing && drawing.kind === 'wall' && drawing.pts.length >= 2) finishWall(); else { drawing = null; typed = ''; } if (TOOL === 'place') { PICK = null; setTool('select'); libUI(); } SEL = null; changedSel(); return; }
   if (CAM === 'section' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { SECY = (SECY ?? secDefault()) + (e.key === 'ArrowUp' ? 0.25 : -0.25); draw(); e.preventDefault(); return; }
   if ((e.key === 'Delete' || e.key === 'Backspace') && SEL) { e.preventDefault(); delSel(); return; }
   const k = e.key.toLowerCase();
@@ -4070,7 +4090,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('#exPop [
 
 // ---------- start ----------
 viewUI(); lpUI(); verLoad().then(() => cmpRestore());
-window.__wb = { WBP, commands, layerOn, setLayerVis, LYR, setView2D, walkEnter, walkExit, birdView, explodeEnter, explodeExit, showAllHidden, openWallPicker, showElevation, setGap, gapsOf, exporters, exPrep, simArchive, verLoad, openCompare,
+window.__wb = { WBP, commands, layerOn, setLayerVis, LYR, setView2D, walkEnter, walkExit, birdView, explodeEnter, explodeExit, showAllHidden, openWallPicker, showElevation, setGap, gapsOf, exporters, exPrep, simArchive, verLoad, openCompare, cycleSelection, cycleStep, cycleClear,
   get VIEW2D() { return VIEW2D; }, get WALKING() { return WALKING; }, get XPL() { return XPL; }, get VERS() { return VERS; }, get CMP() { return CMP; }, get ELV() { return ELV; }, get FTB_OFF() { return FTB_OFF; }, get CEILF() { return CEILF; }, setCTool: (t) => { CTOOL = t; viewUI(); } };
 
 // ===== Plan Studio v130: parametric light fixtures (six basic types) on the plan, in 3D and in elevations =====
@@ -4817,7 +4837,8 @@ window.S3 = (() => {
   let RC = null;
   const ray = (cx, cy) => { if (!RC) RC = new T.Raycaster(); const r = canvas.getBoundingClientRect(); RC.setFromCamera(new T.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), cam); return RC; };
   const tagOf = (o) => { while (o && !(o.userData && o.userData.k)) o = o.parent; return o ? o.userData : null; };
-  api.hit = (cx, cy) => { if (!R || !grp) return null; const hits = ray(cx, cy).intersectObjects(grp.children, true); for (const h of hits) { const ud = tagOf(h.object); if (ud) return { ud, p: [h.point.x, -h.point.z], z: h.point.y }; } return null; };
+  api.hits = (cx, cy) => { if (!R || !grp) return []; const out = [], seen = new Set(); for (const h of ray(cx, cy).intersectObjects(grp.children, true)) { const ud = tagOf(h.object); if (!ud) continue; const key = `${ud.k}:${ud.id}`; if (seen.has(key)) continue; seen.add(key); out.push({ ud, p: [h.point.x, -h.point.z], z: h.point.y, distance: h.distance }); } return out; };
+  api.hit = (cx, cy) => api.hits(cx, cy)[0] || null;
   api.plane = (cx, cy, z) => { if (!R) return null; const rc = ray(cx, cy), o = rc.ray.origin, d = rc.ray.direction; if (Math.abs(d.y) < 1e-6) return null; const t = (z - o.y) / d.y; if (t < 0) return null; return [o.x + d.x * t, -(o.z + d.z * t)]; };
   api.toScreen = (x, y, z) => { const v = new T.Vector3(x, z, -y).project(cam), r = canvas.getBoundingClientRect(), k = devicePixelRatio || 1; return [(v.x + 1) / 2 * r.width * k, (1 - v.y) / 2 * r.height * k]; };
   api.target = () => ctl ? [ctl.target.x, -ctl.target.z] : [0, 0];
