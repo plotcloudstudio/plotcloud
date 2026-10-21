@@ -693,7 +693,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"architectural-render": "drawing-20261020-2","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261020-2", "movementdepth": "movement-depth-20261020-2", "modeler": "drawing-20261020-2", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBV = {"architectural-render": "drawing-20261020-2","acoustics":"acoustic-20261021-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261020-2", "movementdepth": "movement-depth-20261020-2", "modeler": "acoustic-20261021-1", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
 const EMBFILE = {movementdepth:"spacesyntax"};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${EMBFILE[id] || id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
@@ -3240,6 +3240,18 @@ TMETHOD.movementdepth=["Visibility graph integration plus Depthmap-style visual 
  const bi=TSECTIONS.indexOf(an);if(bi>=0&&BASE_SECT[bi]&&!BASE_SECT[bi].includes("movementdepth")){const i=BASE_SECT[bi].indexOf("spacesyntax");BASE_SECT[bi].splice(i>=0?i+1:BASE_SECT[bi].length,0,"movementdepth")}
  if(!TOOL_IDS.includes("movementdepth"))TOOL_IDS.push("movementdepth");if(!BASE_NEW.includes("movementdepth"))BASE_NEW.push("movementdepth");
  const _aMD=applyTools;applyTools=function(){_aMD();const t=CMS.tools;if(t&&t.sections){const bi2=TSECTIONS.findIndex(x=>x[1]==="Analysis"),known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);if(bi2>=0&&!known.has("movementdepth")&&t.sections[bi2]){const a=t.sections[bi2].slice(),i=a.indexOf("spacesyntax");a.splice(i>=0?i+1:a.length,0,"movementdepth");CMS.tools=Object.assign({},t,{sections:t.sections.map((x,k)=>k===bi2?a:x),newIds:[...(t.newIds||[]),"movementdepth"]})}}};
+
+// Indoor acoustic screening: one evidence-bearing plan / section / 3D workspace.
+EMB["acoustics"]="@";
+EMBI["acoustics"]={title:"indoor acoustics",crumb:"Indoor acoustics",lede:"Screen room reverberation, clarity and sound level from a Plan Studio model. Compare finishes and source positions in coordinated plan, section and outline 3D views."};
+XT.push(["acoustics","indoor acoustics","Screen RT60, C50, D50 and sound level with visible direct, early and late ray energy.",""]);
+TMETA["acoustics"]=["new"];
+EMBSVG["acoustics"]=`<svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#f4f2ec"/><path d="M38 139V42h224v97zM118 42v43m0 20v34m72-97v60" fill="none" stroke="#77736c" stroke-width="3"/><circle cx="78" cy="92" r="7" fill="#d8402a"/><path d="M78 92Q126 48 172 91T245 86M78 92Q132 126 190 106T250 124" fill="none" stroke="#ed8b32" stroke-width="2" stroke-dasharray="3 4"/><path d="M78 92Q132 68 190 122T249 55" fill="none" stroke="#2d9b89" stroke-width="2" stroke-dasharray="2 5"/><circle cx="78" cy="77" r="4" fill="#d8402a"/><path d="M78 81v16m-7-10h14m-7 10-6 10m6-10 6 10" stroke="#d8402a" stroke-width="3"/></svg>`;
+TMETHOD.acoustics=["Sabine reverberation plus deterministic geometric-ray sampling; direct, early and late energy are kept distinct","In your browser","Exports PNG · JSON report"];
+{const an=TSECTIONS.find(x=>x[1]==="Analysis");if(an&&!an[4].includes("acoustics")){const i=an[4].indexOf("movementdepth");an[4].splice(i>=0?i+1:an[4].length,0,"acoustics")}
+ const bi=TSECTIONS.indexOf(an);if(bi>=0&&BASE_SECT[bi]&&!BASE_SECT[bi].includes("acoustics")){const i=BASE_SECT[bi].indexOf("movementdepth");BASE_SECT[bi].splice(i>=0?i+1:BASE_SECT[bi].length,0,"acoustics")}
+ if(!TOOL_IDS.includes("acoustics"))TOOL_IDS.push("acoustics");if(!BASE_NEW.includes("acoustics"))BASE_NEW.push("acoustics");
+ const _aAC=applyTools;applyTools=function(){_aAC();const t=CMS.tools;if(t&&t.sections){const bi2=TSECTIONS.findIndex(x=>x[1]==="Analysis"),known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);if(bi2>=0&&!known.has("acoustics")&&t.sections[bi2]){const a=t.sections[bi2].slice(),i=a.indexOf("movementdepth");a.splice(i>=0?i+1:a.length,0,"acoustics");CMS.tools=Object.assign({},t,{sections:t.sections.map((x,k)=>k===bi2?a:x),newIds:[...(t.newIds||[]),"acoustics"]})}}};}
  applyTools();}
 
 EMB["wfc"]="";
@@ -3448,7 +3460,7 @@ window.addEventListener("hashchange", () => setTimeout(appFit, 0)); window.addEv
   .pmodel{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--hair);background:#fff;border-radius:6px;padding:18px 22px;margin:8px 0 34px}
   .pmodel b{font-size:18px} .pmodel .meta{color:var(--muted);font-size:13.5px}`; document.head.appendChild(st);
 
-  const PLANT = ["modeler", "vent", "isovist", "cameras", "views", "daylight", "spacesyntax"];
+  const PLANT = ["modeler", "vent", "isovist", "cameras", "views", "daylight", "spacesyntax", "movementdepth", "acoustics"];
   P.project = () => {
     const head = `<section class="wrap head"><div class="label">Project</div><h1>your project.</h1><p class="lede">One model, every analysis. Add a result from any tool's Report, and the plan tools open your model for you.</p></section>`;
     if (!signed() || !entitled()) return head + `<div class="wrap" style="padding-bottom:100px"><div class="trialbox" style="max-width:640px"><h3>Projects are part of PlotCloud Pro</h3><p class="muted" style="margin:8px 0 16px">Keep one model across the plan tools and collect every result in one place, ready for your boards. Try it free for 7 days, no payment details.</p><div class="row" style="gap:10px">${signed() ? '<button type="button" class="btn" data-trial="1">Start 7-day free trial</button>' : '<a class="btn" data-go="join">Join free</a>'}<a class="btn sec" data-go="pricing">See plans</a></div></div></div>`;
@@ -3706,7 +3718,7 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
 route();
 
 // === Simulation tools open full screen, like Plan Studio: no site header or footer, one thin app bar (2026-10-19) ===
-{ const SIMFS = ["sunhours", "wind", "daylight", "vent", "structure", "spacesyntax", "movementdepth", "evac", "isovist", "views", "cameras"];
+{ const SIMFS = ["sunhours", "wind", "daylight", "vent", "structure", "spacesyntax", "movementdepth", "acoustics", "evac", "isovist", "views", "cameras"];
   window.__simfs = SIMFS;
   const st = document.createElement("style"); st.textContent = `
   .simfs{position:fixed;inset:0;z-index:70;background:#fff;display:flex;flex-direction:column}
