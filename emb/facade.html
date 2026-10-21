@@ -1412,9 +1412,12 @@ async function download(msgEl) {
   const p = pkg && $('#overlay').hidden === false ? pkg : packageFiles();
   const zip = zipSync(p.files, { level: 0 }), name = p.base + '.zip';
   const dl = await getDL();
-  if (!dl) { m('This view cannot download files. Open the page on claude.ai to save the package.', 'warn'); return; }
-  try { await dl.save({ filename: name, data: zip }); m(`Saved ${name}.`, 'ok'); }
-  catch (e) { m(e && e.code === 'declined' ? 'Save canceled.' : e && e.code === 'rate_limited' ? 'Another save prompt is still open. Close it first.' : 'Could not save: ' + ((e && e.message) || e), 'warn'); }
+  if (dl) {
+    try { await dl.save({ filename: name, data: zip }); m(`Saved ${name}.`, 'ok'); return; }
+    catch (e) { if (e && e.code === 'declined') { m('Save canceled.', 'warn'); return; } if (e && e.code === 'rate_limited') { m('Another save prompt is still open. Close it first.', 'warn'); return; } }
+  }
+  try { const u = URL.createObjectURL(new Blob([zip], { type: 'application/zip' })), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m(`Downloaded ${name}.`, 'ok'); }
+  catch (e) { m('This view cannot download files. Open PlotCloud in a full browser tab to save the package.', 'warn'); }
 }
 $('#dlBtn').addEventListener('click', () => download($('#dlmsg')));
 $('#dlBtn2').addEventListener('click', () => download($('#ovNote')));

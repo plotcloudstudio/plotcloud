@@ -660,12 +660,12 @@ const SITEP = (() => {
   };
   let CFG = JSON.parse(JSON.stringify(DEF)), CFGFROM = 'built-in defaults';
   const setConfig = (c, from) => { if (!c) return; for (const k of Object.keys(DEF)) if (c[k] !== undefined) CFG[k] = c[k] && typeof c[k] === 'object' ? Object.assign({}, DEF[k] || {}, c[k]) : c[k]; CFGFROM = from || 'site config'; };
-  // the claude.ai preview blocks every request to outside services (checked 2026-10-17)
+  // the embedded preview blocks every request to outside services (checked 2026-10-17)
   // tools run in srcdoc frames (about:srcdoc), so look at the page that holds them
   const HOST = (() => { for (const w of [window, window.parent]) { try { if (w.location.hostname) return w.location.hostname; } catch (e) {} } try { return new URL(document.referrer).hostname; } catch (e) { return ''; } })();
   const SANDBOX = /(^|\.)claudeusercontent\.com$|(^|\.)claude\.ai$/.test(HOST);
   let NET = SANDBOX ? 'blocked' : 'unknown';   // unknown → ok | blocked after the first live request
-  const SANDBOX_WHY = 'This preview runs inside claude.ai, which blocks requests to outside services. Live search and import work when PlotCloud runs on its own website. Here, import a file instead.';
+  const SANDBOX_WHY = 'This preview blocks requests to outside services. Live search and import work when PlotCloud runs on its own website. Here, import a file instead.';
 
   // ---------- small cache in this browser (same query → no second request) ----------
   // IndexedDB 'pc-site': 'cache' (provider answers) and 'sites' (site drafts with their raw source data)
@@ -1196,7 +1196,7 @@ const loadML = async () => {
 };
 async function initMap() {
   if (ML) return;
-  if (SITEP.SANDBOX) { mapStatus('off', 'Map tiles and live data cannot load in this claude.ai preview. Import map data, or type coordinates under Data & coordinates.'); return; }
+  if (SITEP.SANDBOX) { mapStatus('off', 'Map tiles and live data cannot load in this preview. Import map data, or type coordinates under Data & coordinates.'); return; }
   const cfg = SITEP.config(); if (cfg.basemap && cfg.basemap.on === false) { mapStatus('off', `The map is switched off in the site’s provider settings (${SITEP.configFrom()}).`); return; }
   mapStatus('', 'Loading the map…');
   let gl; try { gl = await loadML(); } catch (e) { mapStatus('off', e.message + ' Showing the drawn map instead.'); return; }
@@ -1264,7 +1264,7 @@ function onMapClick(e) {
   if (SEL) { SEL = null; selUI(); draw(); }
 }
 $('#chkBtn').addEventListener('click', async () => {
-  if (SITEP.SANDBOX) { mapStatus('off', 'Still inside the claude.ai preview: it blocks map tiles and live data. Import map data, or open PlotCloud on its own website.'); statusUI(); return; }
+  if (SITEP.SANDBOX) { mapStatus('off', 'Still inside the preview: it blocks map tiles and live data. Import map data, or open PlotCloud on its own website.'); statusUI(); return; }
   mapStatus('', 'Checking…'); const c = new AbortController(), t = setTimeout(() => c.abort(), 8000);
   try { const st0 = (SITEP.config().basemap || {}).style; const r = await fetch(typeof st0 === 'string' ? st0 : OFM_TILES, { signal: c.signal, cache: 'no-store' }); clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); if (!ML) initMap(); else mapStatus('ok', 'Map: OpenFreeMap is reachable.'); }
   catch (e) { clearTimeout(t); mapStatus('off', 'The public map server did not answer (' + (e.name === 'AbortError' ? 'timeout' : e.message) + '). It may be busy; the drawn map works meanwhile.'); }
