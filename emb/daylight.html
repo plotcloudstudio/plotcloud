@@ -31,6 +31,17 @@ button { cursor: pointer; }
 .sec h2 i { font-style: normal; font-family: var(--f-mono); color: var(--accent); }
 .note { font-size: 12px; color: var(--muted); margin: 0; }
 .msg { font-size: 12.5px; color: var(--muted); margin: 0; } .msg.warn { color: var(--warn); } .msg.ok { color: var(--ok); }
+.modelcheck { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: #fbfbfa; display: grid; gap: 4px; font-size: 12px; }
+.modelcheck b { font-size: 12px; font-weight: 600; }
+.modelcheck.ok { border-color: #b9d8c2; background: #f2f8f4; }
+.modelcheck.warn { border-color: #e6c991; background: #fff9ee; }
+.modelcheck.bad { border-color: #e4aaa3; background: #fff3f1; }
+.modelcheck ul { margin: 0; padding-left: 18px; color: var(--muted); }
+.live-state { display: flex; align-items: center; gap: 7px; min-height: 18px; }
+.live-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+.live-state.busy::before { background: var(--warn); animation: pcPulse .65s ease-in-out infinite alternate; }
+.live-state.stale::before { background: var(--line-strong); }
+@keyframes pcPulse { to { opacity: .28; } }
 .seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
 .seg button { flex: 1; min-width: 0; border: 0; background: var(--surface); padding: 5px 6px; font-size: 12.5px; white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line); }
@@ -132,8 +143,9 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
 <div class="app">
   <aside class="panel" aria-label="Daylight settings">
     <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
-      <div class="drop" id="drop"><button type="button" class="btn" id="pick">Choose a model file</button><p class="note">Or drop it on the view. Accepts .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), .dxf, or a saved scene (.json).</p><input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.json" hidden></div>
+      <div class="drop" id="drop"><button type="button" class="btn" id="pick">Choose a model file</button><button type="button" class="btn" id="loadExample">Load example</button><p class="note">Or drop it on the view. Accepts .3dm (Rhino), .ifc, .obj, .stl, .glb, .dae (SketchUp export), .dxf, or a saved scene (.json).</p><input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.dae,.dxf,.json" hidden></div>
       <div class="minfo"><b id="mName">—</b><span id="mInfo"></span></div>
+      <div class="modelcheck" id="modelCheck" role="status" aria-live="polite"><b>Model check</b><span>Checking the example…</span></div>
       <div class="two"><div><label class="note" for="units">File units</label><select id="units"><option value="auto">Automatic</option><option value="1">Meters</option><option value="0.001">Millimeters</option><option value="0.01">Centimeters</option><option value="0.0254">Inches</option><option value="0.3048">Feet</option></select></div>
         <div><label class="note">Up axis</label><div class="seg" id="upBar" role="group" aria-label="Up axis"><button type="button" data-up="z" aria-pressed="true">Z up</button><button type="button" data-up="y" aria-pressed="false">Y up</button></div></div></div>
       <p class="note">Anything reaching 2 m above the floor is a wall; lower pieces are furniture the eye can see over if they are high enough to shade the desk. Glass (named <code>glass</code> or <code>window</code>) lets daylight in from its sill to the window head. Draw the buildings across the street as walls with their real height, so they block the sky.</p>
@@ -174,6 +186,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
       <p class="note" id="lvNote"></p>
       <div class="props" id="lvLong" hidden><b id="lvLongT" style="font-size:13px"></b><p class="note" style="margin:0">You can keep using the other views while it runs, and stop it at any time; the last result stays.</p><div class="two"><button type="button" class="go" id="lvStart">Start</button><button type="button" class="btn" id="lvCancel">Cancel</button></div></div>
       <button type="button" class="go" id="run">Analyze the daylight</button>
+      <p class="msg live-state" id="liveState" aria-live="polite">Updated just now</p>
       <div class="prog" id="prog" hidden><i></i></div>
       <div class="two" id="runBar" hidden style="align-items:center"><span class="note" id="runLeft"></span><button type="button" class="btn" id="stop">Stop</button></div>
       <p class="msg" id="runMsg"></p>
@@ -886,9 +899,35 @@ function probeEval(sk, ir) {
 }
 
 // ================= changes & settings =================
-function changed(geo) { if (geo) GC.key = ''; analyse(); hmKey = ''; resKey = ''; if (PROBE) setProbeQuiet(); legend(); results(); props(); lvUI(); panelUI(); capUI(); draw(); if (T3.on) build3D(); }
+function changed(geo) { if (geo) GC.key = ''; analyse(); hmKey = ''; resKey = ''; if (PROBE) setProbeQuiet(); legend(); results(); props(); lvUI(); panelUI(); capUI(); draw(); if (T3.on) build3D(); renderModelCheck(); markLive('Model changed — analyze to update the result.', 'stale'); }
 function setProbeQuiet() { if (!YEAR) buildYear(); const sk = spotSky(PROBE.p, 720, GC.S), rk = roomAt(PROBE.p), ir = rk >= 0 ? roomIRC()[rk] || 0 : 0; PROBE = { p: PROBE.p, sk, ev: probeEval(sk, ir), year: null }; }
-function settingsChanged(climate) { if (climate) { YEAR = null; buildYear(); } if (PROBE && GC.S) setProbeQuiet(); legend(); results(); panelUI(); capUI(); draw(); }
+let AUTO_RUN = 0;
+function markLive(text, kind = '') { const el = $('#liveState'); if (!el) return; el.textContent = text; el.className = 'msg live-state' + (kind ? ' ' + kind : ''); }
+function scheduleDraftRefresh() {
+  clearTimeout(AUTO_RUN); markLive(LEVEL === 'draft' ? 'Recalculating locally…' : `${LV[LEVEL].name} settings changed — analyze to update.`, LEVEL === 'draft' ? 'busy' : 'stale');
+  if (LEVEL !== 'draft' || !RES || BUSY) return;
+  AUTO_RUN = setTimeout(() => runLevel('draft', true, true), 260);
+}
+function settingsChanged(climate) { if (climate) { YEAR = null; buildYear(); } if (PROBE && GC.S) setProbeQuiet(); legend(); results(); panelUI(); capUI(); draw(); renderModelCheck(); scheduleDraftRefresh(); }
+
+function validationIssues() {
+  const issues = [], B = SC.bounds || {}, walls = (SC.walls || []).filter((w) => !w.furnline), glass = walls.filter((w) => w.glass);
+  if (!(B.w > 0) || !(B.h > 0) || !isFinite(B.w) || !isFinite(B.h)) issues.push({ type: 'error', text: 'The model has no usable size — load a model or choose Load example.' });
+  if (Math.max(B.w || 0, B.h || 0) > 500 || Math.min(B.w || 0, B.h || 0) < 0.5) issues.push({ type: 'error', text: 'The model scale looks wrong — choose the correct file unit so the building is measured in metres.' });
+  if (!SC.hm && !walls.length) issues.push({ type: 'error', text: 'No building geometry was found — draw or import the enclosing walls before analysis.' });
+  if (!SC.hm && walls.length && !glass.length) issues.push({ type: 'error', text: 'No glazing was found — mark at least one imported layer as Glazing or draw a Window.' });
+  try { analyse(); if (!GC.R || !(GC.R.area > 0)) issues.push({ type: 'error', text: 'The room boundary is open — close the wall gaps so PlotCloud can find an interior floor area.' }); } catch (e) { issues.push({ type: 'error', text: 'The room geometry cannot be read — simplify crossing or duplicate wall lines and try again.' }); }
+  if (!(OCC[0] < OCC[1])) issues.push({ type: 'error', text: 'Occupied hours are reversed — the end time must be later than the start time.' });
+  if (!isFinite(NORTH) || NORTH < -180 || NORTH > 180) issues.push({ type: 'error', text: 'North direction is invalid — enter an angle from −180° to 180°.' });
+  if (!YEAR || !YEAR.epw) issues.push({ type: 'note', text: 'Using the clearly labelled generic year. Load a public EPW file for location-specific decisions.' });
+  return issues;
+}
+function renderModelCheck(list = validationIssues()) {
+  const el = $('#modelCheck'); if (!el) return list; const errors = list.filter((x) => x.type === 'error'), notes = list.filter((x) => x.type !== 'error');
+  el.className = 'modelcheck ' + (errors.length ? 'bad' : notes.length ? 'warn' : 'ok');
+  el.innerHTML = `<b>${errors.length ? `${errors.length} issue${errors.length === 1 ? '' : 's'} to fix` : 'Model check passed'}</b>` + (errors.length || notes.length ? `<ul>${[...errors, ...notes].map((x) => `<li>${x.text}</li>`).join('')}</ul>` : '<span>Scale, enclosure, glazing and occupied hours look usable.</span>');
+  return list;
+}
 const citySel = $('#city'); citySel.innerHTML = cityOpts(CITIES) + '<optgroup label="Other"><option value="custom">Other location…</option></optgroup>';
 citySel.addEventListener('change', () => { const v = citySel.value; $('#customLoc').hidden = v !== 'custom'; if (v !== 'custom') { const c = CITIES[+v]; Object.assign(LOC, { name: c[0], lat: c[1], lon: c[2], tz: c[3] }); EPW.rows = null; EPW.name = ''; $('#epwInfo').textContent = 'No file: a generic year'; } else { LOC.name = 'Custom'; readLoc(); } settingsChanged(true); });
 function readLoc() { LOC.lat = clamp(+$('#lat').value || 0, -66, 66); LOC.lon = clamp(+$('#lon').value || 0, -180, 180); LOC.tz = clamp(+$('#tz').value || 0, -12, 14); LOC.name = `${Math.abs(LOC.lat).toFixed(1)}°${LOC.lat >= 0 ? 'N' : 'S'} ${Math.abs(LOC.lon).toFixed(1)}°${LOC.lon >= 0 ? 'E' : 'W'}`; }
@@ -901,7 +940,7 @@ $('#epwF').addEventListener('change', async (e) => { const f = e.target.files[0]
     EPW.rows = rows.slice(0, 8760); EPW.name = (head[1] || f.name) + (head[3] ? ', ' + head[3] : '');
     const lat = +head[6], lon = +head[7], tz = +head[8]; if (isFinite(lat) && isFinite(lon) && isFinite(tz)) Object.assign(LOC, { name: (head[1] || 'Climate file').replace(/[_.]/g, ' '), lat, lon, tz });
     $('#epwInfo').textContent = EPW.name; citySel.value = 'custom'; $('#customLoc').hidden = false; $('#lat').value = LOC.lat; $('#lon').value = LOC.lon; $('#tz').value = LOC.tz; settingsChanged(true);
-  } catch (err) { $('#epwInfo').textContent = 'Could not read it: ' + err.message; } });
+  } catch (err) { console.error(err); $('#epwInfo').textContent = 'This climate file is incomplete. Use a valid hourly EPW file from the EnergyPlus weather library.'; } });
 const numSet = (id, set, lo, hi) => $(id).addEventListener('change', (e) => { const v = clamp(+e.target.value, lo, hi); if (!isFinite(v)) return; e.target.value = v; set(v); settingsChanged(); if (T3.on) build3D(); });
 numSet('#north', (v) => (NORTH = v), -180, 180); numSet('#tau', (v) => (TAU = v), 0.1, 0.95); numSet('#rf', (v) => (RF = v), 0.05, 0.9); numSet('#rw', (v) => (RW = v), 0.05, 0.9); numSet('#rc', (v) => (RC = v), 0.05, 0.95);
 numSet('#head', (v) => (HEAD = v), 1.5, 6); numSet('#wp', (v) => (WP = v), 0, 1.5); numSet('#occ0', (v) => (OCC[0] = Math.round(v)), 0, 23); numSet('#occ1', (v) => (OCC[1] = Math.round(v)), 1, 24);
@@ -910,6 +949,7 @@ $$('[data-layer]').forEach((c) => c.addEventListener('change', () => { LAY[c.dat
 function setShow(m) { SHOW = m; if (m !== 'hour') { HOUR = null; HOURVAL = null; $('#showBar [data-show="hour"]').hidden = true; } resKey = ''; $$('#showBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.show === m))); legend(); panelUI(); draw(); if (T3.on) paintFloor3D(); }
 $('#showBar').addEventListener('click', (e) => { const b = e.target.closest('[data-show]'); if (b) setShow(b.dataset.show); });
 $('#preset').addEventListener('change', (e) => { if (!PRESETS[e.target.value]) return; MODEL = null; M3D = null; LASTDXF = null; loadScene(PRESETS[e.target.value]()); $('#impMsg').textContent = ''; $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`; $('#storeyBox').hidden = true; if (e.isTrusted) runLevel('draft', true, true); });
+$('#loadExample').addEventListener('click', () => { $('#preset').value = 'office'; MODEL = null; M3D = null; LASTDXF = null; loadScene(PRESETS.office()); $('#impMsg').textContent = 'Example loaded. The Draft result is calculated locally in this browser.'; $('#impMsg').className = 'msg ok'; $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`; $('#storeyBox').hidden = true; runLevel('draft', true, true); });
 
 // ================= tools & pointer =================
 const HINT = { select: 'Click a wall, window or piece of furniture to edit it; drag to move. Drag empty floor to pan; scroll to zoom. A plain click on the floor checks that spot.', wall: 'Click the start, then the end. Hold Shift on the second click to keep drawing. Esc stops. Give buildings across the street their real height in the panel.', glass: 'Click the start, then the end of a window (vision glazing from a 0.75 m sill up to the head height).', furn: 'Drag a rectangle for a piece of furniture (1.2 m high; change it after).', probe: 'Click the floor to see what that spot sees out of the windows.', del: 'Click a piece to delete it.' };
@@ -1121,6 +1161,16 @@ async function threeModel(f, ext) {   // OBJ, STL, glTF/GLB and SketchUp's Colla
   });
   return { els, fileScale: ext === 'glb' || ext === 'gltf' || ext === 'dae' ? 1 : null, up: 'y' };
 }
+function friendlyImportError(err) {
+  const t = String(err && err.message || err || '').toLowerCase();
+  if (/no meshes|no solids|nothing to draw|empty/.test(t)) return 'No usable building geometry was found. Export visible walls and floors, then try again.';
+  if (/memory|too large|allocation/.test(t)) return 'The model is too large for this browser tab. Export only the level and nearby context needed for this study.';
+  if (/json|scene/.test(t)) return 'This JSON is not a PlotCloud Daylight scene. Open a saved Daylight scene or use a supported model file.';
+  if (/ifc|wasm/.test(t)) return 'The IFC could not be read. Export a coordination-view IFC with visible building elements and try again.';
+  if (/dxf|polyline|entity/.test(t)) return 'The DXF could not be read. Save it as an ASCII DXF with visible model-space geometry and try again.';
+  if (/unsupported|use \.|extension|format/.test(t)) return 'That file type is not supported here. Use Rhino, IFC, OBJ, STL, glTF/GLB, SketchUp DAE, DXF or a saved PlotCloud scene.';
+  return 'The model could not be read. Check that the file is not empty or damaged, then export it again in a supported format.';
+}
 async function loadFile(f) {
   const ext = f.name.split('.').pop().toLowerCase(); msg('Reading ' + f.name + '…');
   try {
@@ -1132,7 +1182,7 @@ async function loadFile(f) {
     if (!r.els.length) throw new Error('no meshes or solids found');
     MODEL = { name: f.name, ...r }; setUp(DEF_UP[ext] || r.up); MODEL.up = DEF_UP[ext] || r.up; if (ext === 'ifc') { $('#units').value = 'auto'; }
     prepModel(); placeModel();
-  } catch (err) { console.error(err); msg('Could not read ' + f.name + ': ' + (err.message || err), 'warn'); }
+  } catch (err) { console.error(err); msg(`${f.name}: ${friendlyImportError(err)}`, 'warn'); }
 }
 $('#pick').addEventListener('click', () => $('#file').click());
 $('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) await loadFile(f); });
@@ -1257,15 +1307,17 @@ $('#lvCancel').addEventListener('click', () => { $('#lvLong').hidden = true; });
 $('#lvStart').addEventListener('click', () => { $('#lvLong').hidden = true; runLevel(PENDING, true); });
 $('#stop').addEventListener('click', () => { STOP = true; });
 async function runLevel(level, confirmed, quiet) {
-  if (BUSY) return; const p = lvPlan(level);
+  if (BUSY) return; const issues = renderModelCheck(), errors = issues.filter((x) => x.type === 'error');
+  if (errors.length) { $('#runMsg').textContent = errors[0].text; $('#runMsg').className = 'msg warn'; markLive('Fix the model check before analysis.', 'stale'); return; }
+  const p = lvPlan(level);
   if (p.est > 60 && !confirmed) { PENDING = level; $('#lvLongT').textContent = `${LV[level].name} takes about ${tfmt(p.est)} on this computer (a spot every ${Math.round(p.sp * 100)} cm, ${p.nb} bearings, a year of hours).`; $('#lvLong').hidden = false; return; }
-  BUSY = true; STOP = false; EXPLICIT = !quiet; if (!quiet && CAM !== 'split') await setCam('split');
+  BUSY = true; STOP = false; EXPLICIT = !quiet; markLive('Calculating locally…', 'busy'); if (!quiet && CAM !== 'split') await setCam('split');
   $('#run').disabled = true; $('#prog').hidden = false; $('#runBar').hidden = false; $('#runMsg').textContent = ''; const t0 = performance.now(), bar = $('#prog i');
   const res = await compute(p.sp, p.nb, (f) => { bar.style.width = (f * 100).toFixed(1) + '%'; const el = (performance.now() - t0) / 1000; $('#runLeft').textContent = f > 0.03 ? `${Math.round(f * 100)}% · about ${tfmt(Math.max(0, el / f - el))} left` : `${LV[level].name}: starting…`; });
   BUSY = false; $('#run').disabled = false; $('#prog').hidden = true; $('#runBar').hidden = true; bar.style.width = '0';
-  if (!res) { $('#runMsg').textContent = 'Stopped. The last result stays.'; EXPLICIT = false; return; }
+  if (!res) { $('#runMsg').textContent = 'Stopped. The last result stays.'; markLive('Calculation stopped — previous result retained.', 'stale'); EXPLICIT = false; return; }
   const secs = (performance.now() - t0) / 1000; VRATE = Math.max(1e-12, (secs - 0.3) / p.work); try { localStorage.setItem('pc-day-rate', String(VRATE)); } catch (e) {}
-  res.level = level; RES = res; resKey = ''; if (SHOW === 'hour') setShow('sda'); $('#runMsg').textContent = `${LV[level].name} done in ${secs.toFixed(1)} s.`; $('#runMsg').className = 'msg ok';
+  res.level = level; RES = res; resKey = ''; if (SHOW === 'hour') setShow('sda'); $('#runMsg').textContent = `${LV[level].name} done in ${secs.toFixed(1)} s.`; $('#runMsg').className = 'msg ok'; markLive(`Updated just now · ${LV[level].name}`, '');
   if (!PROBE) { const sm = summary(), r0 = sm && sm.rooms[0]; let k = 0, bd = Infinity; if (r0) RES.pts.forEach((q, j) => { if (GC.R.room[q.ci] !== r0.k) return; const dd = Math.hypot(q.x - r0.x, q.y - r0.y); if (dd < bd) { bd = dd; k = j; } }); if (RES.pts[k]) setProbe([RES.pts[k].x, RES.pts[k].y]); }
   legend(); results(); lvUI(); panelUI(); capUI(); draw(); if (T3.on) paintFloor3D();
   if (EXPLICIT) { EXPLICIT = false; setTimeout(() => { if (CAM === 'split' && !BUSY) setCam('plan'); }, 1100); }
