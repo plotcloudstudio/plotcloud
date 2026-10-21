@@ -198,7 +198,7 @@ footer.fine { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 5
   <section class="stage split" id="stage" aria-label="Plan">
     <div class="vbar">
       <div class="views" id="camBar" role="group" aria-label="View"><button type="button" data-cam="split" aria-pressed="true">Plan + chart</button><button type="button" data-cam="plan" aria-pressed="false">Plan</button><button type="button" data-cam="3d" aria-pressed="false">3D</button></div>
-      <div class="views" id="showBar" role="group" aria-label="Color by"><button type="button" data-show="integ" aria-pressed="true">Integration</button><button type="button" data-show="r3" aria-pressed="false">Integration R3</button><button type="button" data-show="conn" aria-pressed="false">Connectivity</button><button type="button" data-show="gate" aria-pressed="false" hidden>Agents</button><button type="button" data-show="depth" aria-pressed="false" hidden>Steps from spot</button></div>
+      <div class="views" id="showBar" role="group" aria-label="Color by"><button type="button" data-show="integ" aria-pressed="true">Integration</button><button type="button" data-show="r3" aria-pressed="false">Integration R3</button><button type="button" data-show="conn" aria-pressed="false">Connectivity</button><button type="button" data-show="flowdepth" aria-pressed="false" hidden>Movement + depth</button><button type="button" data-show="gate" aria-pressed="false" hidden>Agents</button><button type="button" data-show="depth" aria-pressed="false" hidden>Steps from spot</button></div>
     </div>
     <canvas id="cv" aria-label="Plan with the space syntax analysis"></canvas>
     <canvas id="cv3" aria-label="3D view" hidden></canvas>
@@ -376,6 +376,7 @@ const CADIO = (() => {
 </script>
 <script type="module">
 const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+const MOVEMENT_DEPTH = !!(window.frameElement && window.frameElement.dataset.emb === 'movementdepth');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 let TGT = 0, EYE = 1.6, HEAD = 2.4, VH = 1.6, GLASS = true, DOOR = 2, TOOL = 'select', SEL = null, SHOW = 'integ', EXCL = [];
 const LAY = { res: true, furn: true, rooms: true, agents: true, land: true };
@@ -753,12 +754,21 @@ new ResizeObserver(() => { const first = VP.w === 10; resize(); if (first) { fit
 let EXP = 0; const PXR = () => EXP || devicePixelRatio || 1;
 // ================= colors =================
 const SPEC = [[0, [40, 40, 150]], [0.2, [30, 110, 220]], [0.4, [40, 200, 170]], [0.6, [235, 225, 50]], [0.8, [245, 135, 30]], [1, [215, 25, 45]]];
+const DEPTHMAP_SPEC = [[0, [79, 129, 183]], [0.28, [141, 185, 226]], [0.5, [250, 248, 247]], [0.72, [255, 179, 190]], [1, [255, 82, 101]]];
 const rampOf = (R, t) => { t = clamp(t, 0, 1); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], f = (t - a) / (b - a); return ca.map((c, k) => c + (cb[k] - c) * f); } return R[R.length - 1][1]; };
-const MEAS = { integ: { name: 'Visual integration [HH]', short: 'Integration' }, r3: { name: 'Visual integration R3', short: 'Integration R3' }, conn: { name: 'Connectivity (nodes in view)', short: 'Connectivity' }, gate: { name: 'Agent counts', short: 'Agents' }, depth: { name: 'Visual steps from the spot', short: 'Steps' } };
+const MEAS = { integ: { name: 'Visual integration [HH]', short: 'Integration' }, r3: { name: 'Visual integration R3', short: 'Integration R3' }, conn: { name: 'Connectivity (nodes in view)', short: 'Connectivity' }, flowdepth: { name: 'Movement gathering × spatial depth', short: 'Movement + depth' }, gate: { name: 'Agent counts', short: 'Agents' }, depth: { name: 'Visual steps from the spot', short: 'Steps' } };
 let DEPTH = null, HL = null;   // depth from the probed node; highlighted value range from the histogram
-function valsOf(m) { if (!RES) return null; if (m === 'depth') return DEPTH; if (m === 'gate') return RES.gate; return RES[m]; }
-function rangeOf(v) { if (!v) return [0, 1]; if (SHOW === 'depth') { let mx = 0; for (const x of v) if (x > mx) mx = x; return [0, Math.max(1, mx)]; } const s = Array.from(v).filter((x) => x >= 0).sort((a, b) => a - b); if (!s.length) return [0, 1]; const lo = s[Math.floor(s.length * 0.01)], hi = s[Math.floor(s.length * 0.99)]; return [lo, hi > lo ? hi : lo + 1]; }
-function nodeColour(k, v, rg) { const x = v[k]; if (x < 0) return [214, 212, 206]; let t = (x - rg[0]) / (rg[1] - rg[0]); if (SHOW === 'depth') t = 1 - t; return rampOf(SPEC, t); }
+const paletteOf = () => MOVEMENT_DEPTH || SHOW === 'flowdepth' ? DEPTHMAP_SPEC : SPEC;
+function robustRange(v) { const s = Array.from(v || []).filter((x) => x >= 0).sort((a, b) => a - b); if (!s.length) return [0, 1]; const lo = s[Math.floor(s.length * 0.01)], hi = s[Math.floor(s.length * 0.99)]; return [lo, hi > lo ? hi : lo + 1]; }
+function flowDepthValues() {
+  if (!RES) return null; if (!RES.gate) return RES.integ; if (RES.flowdepth && RES.flowStamp === RES.gateStamp) return RES.flowdepth;
+  const fr = robustRange(RES.gate), ir = robustRange(RES.integ), out = new Float32Array(RES.N);
+  for (let k = 0; k < RES.N; k++) { const flow = clamp((RES.gate[k] - fr[0]) / (fr[1] - fr[0]), 0, 1), shallow = clamp((RES.integ[k] - ir[0]) / (ir[1] - ir[0]), 0, 1); out[k] = 0.65 * Math.sqrt(flow) + 0.35 * shallow; }
+  RES.flowStamp = RES.gateStamp; return RES.flowdepth = out;
+}
+function valsOf(m) { if (!RES) return null; if (m === 'depth') return DEPTH; if (m === 'gate') return RES.gate; if (m === 'flowdepth') return flowDepthValues(); return RES[m]; }
+function rangeOf(v) { if (!v) return [0, 1]; if (SHOW === 'flowdepth') return [0, 1]; if (SHOW === 'depth') { let mx = 0; for (const x of v) if (x > mx) mx = x; return [0, Math.max(1, mx)]; } return robustRange(v); }
+function nodeColour(k, v, rg) { const x = v[k]; if (x < 0) return [214, 212, 206]; let t = (x - rg[0]) / (rg[1] - rg[0]); if (SHOW === 'depth') t = 1 - t; return rampOf(paletteOf(), t); }
 let resC = null, resKey = '';
 function resImage() {
   const v = valsOf(SHOW) || RES.integ, key = [SHOW, RES.key, RES.spacing, ROOMSEL, HL && HL.join(), PROBE && PROBE.k, RES.gateStamp].join('|'); if (resC && resKey === key) return resC; resKey = key;
@@ -838,10 +848,10 @@ function draw() { if (T3.on) { render3D(); return; } g2.setTransform(1, 0, 0, 1,
 
 // ================= legend, caption, report =================
 function legend() {
-  const g = `linear-gradient(90deg,${SPEC.map(([t, c]) => `rgb(${c.join(',')}) ${t * 100}%`).join(',')})`, rg = rangeOf(valsOf(SHOW)), m = MEAS[SHOW] || MEAS.integ;
-  let h = `<b>${m.name}</b><div style="height:10px;border-radius:2px;background:${SHOW === 'depth' ? `linear-gradient(90deg,${SPEC.slice().reverse().map(([t, c], i) => `rgb(${c.join(',')}) ${i * 20}%`).join(',')})` : g}"></div>`;
-  h += `<div class="it" style="grid-template-columns:1fr auto"><span>${SHOW === 'depth' ? '0 steps' : 'low · ' + (RES ? (+rg[0].toFixed(SHOW === 'conn' || SHOW === 'gate' ? 0 : 2)) : '')}</span><span>${SHOW === 'depth' ? rg[1] + ' steps' : (RES ? (+rg[1].toFixed(SHOW === 'conn' || SHOW === 'gate' ? 0 : 2)) : '') + ' · high'}</span></div>`;
-  h += `<p class="note" style="margin:0">${SHOW === 'integ' ? 'Red: the most integrated spots, easy to see and reach from everywhere; where people tend to gather and move. Blue: segregated, private corners.' : SHOW === 'r3' ? 'Integration within three visual steps: the local centers of each area.' : SHOW === 'conn' ? 'How many floor spots can be seen from each spot.' : SHOW === 'gate' ? 'How often walking agents passed each spot: where movement concentrates.' : 'Visual steps (turns of view) needed to reach each spot from the chosen one.'} Analyzed at ${VH >= 1.2 ? 'eye height (see over low furniture)' : 'knee height (furniture blocks, as for walking)'}.</p>`;
+  const P = paletteOf(), stops = (SHOW === 'depth' ? P.slice().reverse().map(([t, c]) => [1 - t, c]).sort((a, b) => a[0] - b[0]) : P), g = `linear-gradient(90deg,${stops.map(([t, c]) => `rgb(${c.join(',')}) ${t * 100}%`).join(',')})`, rg = rangeOf(valsOf(SHOW)), m = MEAS[SHOW] || MEAS.integ;
+  let h = `<b>${m.name}</b><div style="height:10px;border-radius:2px;background:${g}"></div>`;
+  h += `<div class="it" style="grid-template-columns:1fr auto"><span>${SHOW === 'flowdepth' ? 'deep / quiet' : SHOW === 'depth' ? '0 steps' : 'low · ' + (RES ? (+rg[0].toFixed(SHOW === 'conn' || SHOW === 'gate' ? 0 : 2)) : '')}</span><span>${SHOW === 'flowdepth' ? 'shallow / gathered' : SHOW === 'depth' ? rg[1] + ' steps' : (RES ? (+rg[1].toFixed(SHOW === 'conn' || SHOW === 'gate' ? 0 : 2)) : '') + ' · high'}</span></div>`;
+  h += `<p class="note" style="margin:0">${SHOW === 'flowdepth' ? 'Blue marks spatially deeper, quieter floor; white is the transition; pink and red combine shallow integration with repeated agent footfall.' : SHOW === 'integ' ? 'Red: the most integrated spots, easy to see and reach from everywhere; where people tend to gather and move. Blue: segregated, private corners.' : SHOW === 'r3' ? 'Integration within three visual steps: the local centers of each area.' : SHOW === 'conn' ? 'How many floor spots can be seen from each spot.' : SHOW === 'gate' ? 'How often walking agents passed each spot: where movement concentrates.' : 'Visual steps (turns of view) needed to reach each spot from the chosen one.'} Analyzed at ${VH >= 1.2 ? 'eye height (see over low furniture)' : 'knee height (furniture blocks, as for walking)'}.</p>`;
   $('#legend').innerHTML = h;
 }
 function capUI() {
@@ -869,7 +879,7 @@ function drawHist() {
   const c = $('#cHist'), v = valsOf(SHOW); if (!v) return msgCv(c, 'Analyze to see the spread.'); const rg = rangeOf(v), NB = SHOW === 'depth' ? Math.max(1, rg[1]) + 1 : 24, cnt = new Array(NB).fill(0);
   for (const x of v) { if (x < 0) continue; const b = SHOW === 'depth' ? x : clamp(Math.floor((x - rg[0]) / (rg[1] - rg[0]) * NB), 0, NB - 1); cnt[b]++; }
   const { x, w, h, k } = sizeCv(c, 120), mx = Math.max(1, ...cnt), bw = (w - 8 * k) / NB; HITS.hist = [];
-  for (let b = 0; b < NB; b++) { const lo = SHOW === 'depth' ? b : rg[0] + (rg[1] - rg[0]) * b / NB, hi = SHOW === 'depth' ? b : rg[0] + (rg[1] - rg[0]) * (b + 1) / NB, on = !HL || (HL[0] <= lo + 1e-9 && HL[1] >= hi - 1e-9), bh = (h - 30 * k) * cnt[b] / mx, col = rampOf(SPEC, SHOW === 'depth' ? 1 - b / Math.max(1, NB - 1) : (b + 0.5) / NB);
+  for (let b = 0; b < NB; b++) { const lo = SHOW === 'depth' ? b : rg[0] + (rg[1] - rg[0]) * b / NB, hi = SHOW === 'depth' ? b : rg[0] + (rg[1] - rg[0]) * (b + 1) / NB, on = !HL || (HL[0] <= lo + 1e-9 && HL[1] >= hi - 1e-9), bh = (h - 30 * k) * cnt[b] / mx, col = rampOf(paletteOf(), SHOW === 'depth' ? 1 - b / Math.max(1, NB - 1) : (b + 0.5) / NB);
     x.globalAlpha = on ? 1 : 0.3; x.fillStyle = `rgb(${col.map(Math.round).join(',')})`; x.fillRect(4 * k + b * bw + 1 * k, h - 18 * k - bh, bw - 2 * k, bh); HITS.hist.push({ x0: (4 * k + b * bw) / k, x1: (4 * k + (b + 1) * bw) / k, lo, hi }); }
   x.globalAlpha = 1; x.font = `${9.5 * k}px IBM Plex Mono, monospace`; x.fillStyle = '#5a5853'; x.textAlign = 'left'; x.fillText(SHOW === 'depth' ? '0 steps' : (+rg[0].toFixed(2)) + '', 4 * k, h - 4 * k); x.textAlign = 'right'; x.fillText(SHOW === 'depth' ? rg[1] + ' steps' : (+rg[1].toFixed(2)) + '', w - 4 * k, h - 4 * k);
 }
@@ -919,7 +929,8 @@ function roomAt(p) { const G = GC.G, cx = Math.floor(p[0] / G.c), cy = Math.floo
 let AGRAF = 0;
 function agentsGo() {
   if (!RES) return; cancelAnimationFrame(AGRAF); const n = clamp(+$('#agN').value || 200, 10, 2000); AG = runAgents(RES, n); RES.gate = AG.gate; const total = 1500, t0 = performance.now(); $('#agBtn').textContent = 'Agents walking…';
-  const frame = () => { for (let s = 0; s < 12 && AG.n < total; s++) AG.step(); RES.gateStamp = AG.n; if (SHOW !== 'gate') setShow('gate'); else { resKey = ''; draw(); if (AG.n % 60 === 0) { drawHist(); legend(); } }
+  const target = MOVEMENT_DEPTH ? 'flowdepth' : 'gate';
+  const frame = () => { for (let s = 0; s < 12 && AG.n < total; s++) AG.step(); RES.gateStamp = AG.n; if (SHOW !== target) setShow(target); else { resKey = ''; draw(); if (AG.n % 60 === 0) { drawHist(); legend(); } }
     $('#agMsg').textContent = `${n} agents · step ${AG.n} of ${total}`; if (AG.n < total) AGRAF = requestAnimationFrame(frame); else { $('#agBtn').textContent = 'Release agents again'; $('#agMsg').textContent = `${n} agents walked ${total} steps (each picks a spot in its 170° view, walks 3 steps, picks again).`; legend(); panelUI(); spotUI(); void t0; } };
   AGRAF = requestAnimationFrame(frame);
 }
@@ -933,7 +944,7 @@ $('#glass').addEventListener('change', (e) => { GLASS = e.target.checked; settin
 $('#door').addEventListener('change', (e) => { DOOR = clamp(+e.target.value || 2, 0.6, 6); e.target.value = DOOR; JG = null; JROOT = null; analyse(); resKey = ''; results(); panelUI(); draw(); });
 function applySettings(o) { if (o.vh) VH = o.vh; if (o.glass != null) GLASS = !!o.glass; $$('#vhBar button').forEach((q) => q.setAttribute('aria-pressed', String(+q.dataset.vh === VH))); $('#glass').checked = GLASS; }
 $$('[data-layer]').forEach((c) => c.addEventListener('change', () => { LAY[c.dataset.layer] = c.checked; hmKey = ''; draw(); if (T3.on) build3D(); }));
-function setShow(m) { SHOW = m; HL = null; if (m !== 'depth') { $('#showBar [data-show="depth"]').hidden = !DEPTH; } else $('#showBar [data-show="depth"]').hidden = false; if (m === 'gate') $('#showBar [data-show="gate"]').hidden = false; resKey = ''; $$('#showBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.show === m))); legend(); panelUI(); capUI(); draw(); if (T3.on) build3D(); }
+function setShow(m) { SHOW = m; HL = null; if (m !== 'depth') { $('#showBar [data-show="depth"]').hidden = !DEPTH; } else $('#showBar [data-show="depth"]').hidden = false; if (m === 'gate') $('#showBar [data-show="gate"]').hidden = false; if (m === 'flowdepth') $('#showBar [data-show="flowdepth"]').hidden = false; resKey = ''; $$('#showBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.show === m))); legend(); panelUI(); capUI(); draw(); if (T3.on) build3D(); }
 $('#showBar').addEventListener('click', (e) => { const b = e.target.closest('[data-show]'); if (b) setShow(b.dataset.show); });
 $('#preset').addEventListener('change', (e) => { if (!PRESETS[e.target.value]) return; MODEL = null; M3D = null; LASTDXF = null; loadScene(PRESETS[e.target.value]()); $('#impMsg').textContent = ''; $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`; $('#storeyBox').hidden = true; if (e.isTrusted) runLevel('draft', true, true); });
 
@@ -1188,7 +1199,7 @@ function board() {
   try { VP.w = pw; VP.h = ph; V.k = Math.min(pw * 0.92 / B.w, ph * 0.9 / B.h); V.cx = B.w / 2; V.cy = B.h / 2; drawPlan(x); } finally { EXP = 0; Object.assign(V, keep.V); Object.assign(VP, keep.VP); SEL = prevSel; PROBE = prevP; AG = prevA; resKey = ''; }
   x.fillStyle = '#fff'; x.fillRect(pw, 0, Wd - pw, Hh); x.fillRect(0, ph, pw, Hh - ph);
   const X0 = pw + 50; let y = 90; x.textAlign = 'left'; x.fillStyle = '#111'; x.font = `700 ${22 * k}px Noto Sans, sans-serif`; x.fillText('Space syntax · VGA', X0, y); y += 40; x.font = `${11 * k}px IBM Plex Mono, monospace`; x.fillStyle = '#5a5853'; x.fillText(SC.name, X0, y); y += 60;
-  if (RES) { x.fillStyle = '#111'; x.font = `600 ${13 * k}px Noto Sans, sans-serif`; x.fillText((MEAS[SHOW] || MEAS.integ).name, X0, y); y += 30; const g = x.createLinearGradient(X0, 0, X0 + 900, 0); SPEC.forEach(([t, cc]) => g.addColorStop(SHOW === 'depth' ? 1 - t : t, `rgb(${cc.join(',')})`)); x.fillStyle = g; x.fillRect(X0, y, 900, 30); y += 70;
+  if (RES) { x.fillStyle = '#111'; x.font = `600 ${13 * k}px Noto Sans, sans-serif`; x.fillText((MEAS[SHOW] || MEAS.integ).name, X0, y); y += 30; const g = x.createLinearGradient(X0, 0, X0 + 900, 0); paletteOf().forEach(([t, cc]) => g.addColorStop(SHOW === 'depth' ? 1 - t : t, `rgb(${cc.join(',')})`)); x.fillStyle = g; x.fillRect(X0, y, 900, 30); y += 70;
     x.font = `${11 * k}px IBM Plex Mono, monospace`; x.fillStyle = '#3a3833'; for (const t of [`${RES.N.toLocaleString('en-CA')} nodes every ${Math.round(RES.spacing * 100)} cm`, `mean integration ${mean(RES.integ).toFixed(2)}`, `intelligibility R² ${RES.r2.toFixed(2)}`, `mean connectivity ${Math.round(mean(RES.conn))} nodes`, VH >= 1.2 ? 'eye level (see over low furniture)' : 'knee level (furniture blocks)']) { x.fillText(t, X0, y); y += 44; } }
   x.fillStyle = '#5a5853'; x.font = `${10 * k}px IBM Plex Mono, monospace`; x.fillText('Visibility graph analysis (Turner 2001), integration as in DepthmapX · PlotCloud Space syntax', 60, Hh - 40);
   return c;
@@ -1250,7 +1261,7 @@ function build3D() {
   T3.floorC = fc; T3.floorTex = new THREE.CanvasTexture(fc); T3.floorTex.colorSpace = THREE.SRGBColorSpace; T3.floorTex.anisotropy = T3.r.capabilities.getMaxAnisotropy(); paintFloor3D();
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(gw, gh), new THREE.MeshBasicMaterial({ map: T3.floorTex })); floor.rotation.x = -Math.PI / 2; floor.position.set(gw / 2, 0.006, -gh / 2); T3.grp.add(floor);
   if (RES && LAY.land && LAY.res) { const v = valsOf(SHOW) || RES.integ, rg = rangeOf(v), Hm = 1.6, sees = (a, b) => !!(RES.adj[a * RES.W + (b >>> 5)] & (1 << (b & 31))), pos = [], col = [], tri = (a, b, c) => { for (const q of [a, b, c]) { pos.push(q[0], q[1], q[2]); col.push(q[3], q[4], q[5]); } };
-    const P = (k) => { const p = RES.pts[k]; let t = (v[k] - rg[0]) / (rg[1] - rg[0]); if (SHOW === 'depth') t = 1 - t; t = clamp(t, 0, 1); const c = rampOf(SPEC, t); return [p.x, 0.05 + t * Hm, -p.y, c[0] / 255, c[1] / 255, c[2] / 255]; };
+    const P = (k) => { const p = RES.pts[k]; let t = (v[k] - rg[0]) / (rg[1] - rg[0]); if (SHOW === 'depth') t = 1 - t; t = clamp(t, 0, 1); const c = rampOf(paletteOf(), t); return [p.x, 0.05 + t * Hm, -p.y, c[0] / 255, c[1] / 255, c[2] / 255]; };
     for (let j = 0; j < RES.PH - 1; j++) for (let i = 0; i < RES.PW - 1; i++) { const a = RES.at[j * RES.PW + i], b = RES.at[j * RES.PW + i + 1], c = RES.at[(j + 1) * RES.PW + i], d = RES.at[(j + 1) * RES.PW + i + 1]; if (a >= 0 && b >= 0 && d >= 0 && sees(a, b) && sees(b, d) && sees(a, d)) tri(P(a), P(b), P(d)); if (a >= 0 && d >= 0 && c >= 0 && sees(a, d) && sees(d, c) && sees(a, c)) tri(P(a), P(d), P(c)); }
     if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals(); T3.grp.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }))); } }
   if (PROBE && RES) { const p = RES.pts[PROBE.k], eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10), new THREE.MeshStandardMaterial({ color: 0x111111 })); eye.position.set(p.x, VH, -p.y); T3.grp.add(eye); }
@@ -1291,9 +1302,9 @@ async function runLevel(level, confirmed, quiet) {
   BUSY = false; $('#run').disabled = false; $('#prog').hidden = true; $('#runBar').hidden = true; bar.style.width = '0';
   if (!res) { $('#runMsg').textContent = 'Stopped. The last result stays.'; EXPLICIT = false; return; }
   const secs = (performance.now() - t0) / 1000, work = res.N ** 3 / 32 + res.N * p.nr * Math.max(8, GC.S.length) * 3 + res.N * res.N * 4; VRATE = Math.max(1e-13, (secs - 0.3) / work); try { localStorage.setItem('pc-ss-rate', String(VRATE)); } catch (e) {}
-  res.level = level; RES = res; resKey = ''; DEPTH = null; PROBE = null; HL = null; $('#showBar [data-show="gate"]').hidden = true; if (SHOW === 'depth' || SHOW === 'gate') SHOW = 'integ'; setShow(SHOW);
+  res.level = level; RES = res; resKey = ''; DEPTH = null; PROBE = null; HL = null; $('#showBar [data-show="gate"]').hidden = true; const fd = $('#showBar [data-show="flowdepth"]'); if (fd) fd.hidden = true; if (SHOW === 'depth' || SHOW === 'gate' || SHOW === 'flowdepth') SHOW = 'integ'; setShow(SHOW);
   $('#runMsg').textContent = `${LV[level].name}: ${res.N.toLocaleString('en-CA')} nodes in ${secs.toFixed(1)} s.`; $('#runMsg').className = 'msg ok'; $('#agBtn').disabled = false;
-  legend(); results(); lvUI(); panelUI(); capUI(); draw(); if (T3.on) build3D();
+  legend(); results(); lvUI(); panelUI(); capUI(); draw(); if (T3.on) build3D(); if (MOVEMENT_DEPTH) agentsGo();
   if (EXPLICIT) { EXPLICIT = false; setTimeout(() => { if (CAM === 'split' && !BUSY) setCam('plan'); }, 1100); }
 }
 
@@ -1301,7 +1312,7 @@ const HINT_PROBE_VGA = HINT.probe;
 // ================= modes: VGA · axial · segment =================
 const SHOWSETS = { vga: [['integ', 'Integration'], ['r3', 'Integration R3'], ['conn', 'Connectivity']], axial: [['ax_int', 'Integration'], ['ax_r3', 'Integration R3'], ['ax_choice', 'Choice'], ['ax_conn', 'Connectivity']], segment: [['sg_nach', 'NACH n'], ['sg_nain', 'NAIN n'], ['sg_nachR', 'NACH R'], ['sg_nainR', 'NAIN R']] };
 function showBarFor(m) {
-  const extra = m === 'vga' ? `<button type="button" data-show="gate" aria-pressed="false" ${RES && RES.gate ? '' : 'hidden'}>Agents</button><button type="button" data-show="depth" aria-pressed="false" ${DEPTH ? '' : 'hidden'}>Steps from spot</button>` : `<button type="button" data-show="depth" aria-pressed="false" ${DEPTH ? '' : 'hidden'}>${m === 'axial' ? 'Steps from line' : 'Turns from street'}</button>`;
+  const extra = m === 'vga' ? `<button type="button" data-show="flowdepth" aria-pressed="false" ${RES && RES.gate ? '' : 'hidden'}>Movement + depth</button><button type="button" data-show="gate" aria-pressed="false" ${RES && RES.gate ? '' : 'hidden'}>Agents</button><button type="button" data-show="depth" aria-pressed="false" ${DEPTH ? '' : 'hidden'}>Steps from spot</button>` : `<button type="button" data-show="depth" aria-pressed="false" ${DEPTH ? '' : 'hidden'}>${m === 'axial' ? 'Steps from line' : 'Turns from street'}</button>`;
   $('#showBar').innerHTML = SHOWSETS[m].map(([k, t]) => `<button type="button" data-show="${k}" aria-pressed="${k === SHOW}">${t}</button>`).join('') + extra;
 }
 function setMode(m, run = true) {
@@ -1387,6 +1398,15 @@ cv.addEventListener('pointermove', () => { if (sdraw) draw(); });
 $('#axr').addEventListener('change', (e) => { AXR = clamp(+e.target.value || 2, 0.5, 10); e.target.value = AXR; AX = null; if (MODE === 'axial') runLevel(LEVEL, true, true); });
 
 // ================= start =================
+if (MOVEMENT_DEPTH) {
+  document.title = 'PlotCloud Movement & Spatial Depth';
+  $('#h-set').innerHTML = '<i>3</i>Movement &amp; depth';
+  $('#modeBar [data-mode="axial"]').hidden = true; $('#modeBar [data-mode="segment"]').hidden = true;
+  $('#run').textContent = 'Calculate movement + depth'; $('#agBtn').textContent = 'Recalculate movement';
+  $('#agMsg').textContent = 'The map combines Depthmap-style visual agents (65%) with visual integration / shallow spatial depth (35%). Blue is deeper or quieter; white is transition; pink and red are gathered, shallow routes.';
+  $('#cpTitle').textContent = 'Movement gathering · spatial depth';
+  $('#cv').setAttribute('aria-label', 'Plan with movement gathering and spatial depth mapping');
+}
 setTool('select'); loadScene(PRESETS.gallery()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;
 resize(); fit(); draw(); runLevel('draft', true, true);
 window.__ss = { SC, get RES() { return RES; }, runLevel, setCam, setProbe, setProbeNode, get PROBE() { return PROBE; }, lvPlan, PRESETS, loadScene, get GC() { return GC; }, get JG() { return JG; }, T3, agentsGo, get AG() { return AG; }, setShow, depthFrom, setMode, get MODE() { return MODE; }, get AX() { return AX; }, get SG() { return SG; }, selectLine, computeAxial, computeSegment };

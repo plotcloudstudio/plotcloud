@@ -693,9 +693,10 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"architectural-render": "camera-20261020-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "6574adec", "modeler": "camera-20261020-1", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBV = {"architectural-render": "camera-20261020-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261020-1", "movementdepth": "movement-depth-20261020-1", "modeler": "camera-20261020-1", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBFILE = {movementdepth:"spacesyntax"};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
-function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
+function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${EMBFILE[id] || id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
   pcFetchEmb(id).then((h) => { if (fr.isConnected) fr.srcdoc = h; }).catch(() => { if (!fr.isConnected) return; pcEmbNote(fr, `<div style="text-align:center">The tool could not load. Check your connection.<br><br><button onclick="parent.pcRetryEmb && parent.pcRetryEmb('${id}')" style="font:inherit;padding:6px 14px;border-radius:6px;border:1px solid #999;background:#fff;cursor:pointer">Try again</button></div>`); }); }
 window.pcRetryEmb = (id) => document.querySelectorAll(`iframe[data-emb="${id}"]`).forEach((fr) => pcLoadEmb(fr));
@@ -3228,6 +3229,19 @@ TMETHOD.spacesyntax=["Visibility graph analysis (Turner 2001), integration after
  const _aS=applyTools;applyTools=function(){const t=CMS.tools;if(t&&t.sections){const bi2=TSECTIONS.findIndex(x=>x[1]==="Analysis");const known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);if(bi2>=0&&!known.has("spacesyntax")&&t.sections[bi2]){const a=t.sections[bi2].slice(),i=a.indexOf("evac");a.splice(i>=0?i:a.length,0,"spacesyntax");CMS.tools=Object.assign({},t,{sections:t.sections.map((x,k)=>k===bi2?a:x),newIds:[...(t.newIds||[]),"spacesyntax"]})}}_aS()};
  applyTools();}
 
+// A focused movement-and-depth tool reuses the Space Syntax engine and model importers.
+EMB["movementdepth"]="@";
+EMBI["movementdepth"]={title:"movement & spatial depth",crumb:"Movement & spatial depth",lede:'Map where everyday movement gathers and how shallow or deep each part of a plan is. The tool reuses PlotCloud’s visibility graph, room topology and model import pipeline, then blends agent footfall with visual integration into one Depthmap-style surface. Blue marks deeper, quieter or less-used areas; white is the transition; pink and red identify shallow, highly connected gathering routes. Import DXF, Rhino, IFC, OBJ, STL, glTF or SketchUp, or draw directly in the browser.'};
+XT.push(["movementdepth","movement & spatial depth","Combine everyday movement gathering with spatial depth in one Depthmap-style blue–white–pink–red map.",""]);
+TMETA["movementdepth"]=["new"];
+EMBSVG["movementdepth"]=`<svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#f4f3ef"/><path d="M32 38 H268 V144 H32 Z M102 38 V92 M178 38 V92 M32 96 H88 M116 96 H162 M190 96 H268" fill="#6f9fcf" stroke="#20242a" stroke-width="4"/><path d="M42 116 H92 L112 96 H164 L186 76 H246" fill="none" stroke="#fff8f8" stroke-width="25" opacity=".92"/><path d="M42 116 H92 L112 96 H164 L186 76 H246" fill="none" stroke="#ff9fab" stroke-width="14"/><circle cx="112" cy="96" r="12" fill="#ff5666"/><circle cx="186" cy="76" r="9" fill="#ff5666"/></svg>`;
+TMETHOD.movementdepth=["Visibility graph integration plus Depthmap-style visual agents; normalized composite score with robust percentile ranges","In your browser","Imports DXF · Rhino · IFC · OBJ · STL · glTF · SketchUp"];
+{const an=TSECTIONS.find(x=>x[1]==="Analysis");if(an&&!an[4].includes("movementdepth")){const i=an[4].indexOf("spacesyntax");an[4].splice(i>=0?i+1:an[4].length,0,"movementdepth")}
+ const bi=TSECTIONS.indexOf(an);if(bi>=0&&BASE_SECT[bi]&&!BASE_SECT[bi].includes("movementdepth")){const i=BASE_SECT[bi].indexOf("spacesyntax");BASE_SECT[bi].splice(i>=0?i+1:BASE_SECT[bi].length,0,"movementdepth")}
+ if(!TOOL_IDS.includes("movementdepth"))TOOL_IDS.push("movementdepth");if(!BASE_NEW.includes("movementdepth"))BASE_NEW.push("movementdepth");
+ const _aMD=applyTools;applyTools=function(){_aMD();const t=CMS.tools;if(t&&t.sections){const bi2=TSECTIONS.findIndex(x=>x[1]==="Analysis"),known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);if(bi2>=0&&!known.has("movementdepth")&&t.sections[bi2]){const a=t.sections[bi2].slice(),i=a.indexOf("spacesyntax");a.splice(i>=0?i+1:a.length,0,"movementdepth");CMS.tools=Object.assign({},t,{sections:t.sections.map((x,k)=>k===bi2?a:x),newIds:[...(t.newIds||[]),"movementdepth"]})}}};
+ applyTools();}
+
 EMB["wfc"]="";
 EMBI["wfc"]={title:"wave function collapse",crumb:"Wave Function Collapse",lede:'Generate facades, floor plans, villages and paving with Wave Function Collapse, the constraint-solving algorithm from games. Each module says what may sit beside it on every edge; the grid starts with every module possible everywhere, and step by step the cell with the fewest choices left is decided and its neighbors are pruned, until the whole drawing fits together. Watch it collapse, with entropy, the order of collapse and steps back when it hits a dead end. Change module weights, pin modules where you want them, make one area again, or teach it a style from a sample image (the overlapping model). Export PNG, SVG, DXF, a 3D OBJ and the scene.'};
 XT.push(["wfc","wave function collapse","Grow facades, plans, villages and paving from modules and their neighbor rules, or learn a style from a sample image.",""]);
@@ -3584,6 +3598,12 @@ TMETHOD.sitectx=["Local transverse Mercator from WGS84; footprints extruded by h
  const _aSC=applyTools;applyTools=function(){const t=CMS.tools;if(t&&t.sections){const known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);const bi=TSECTIONS.findIndex(x=>x[1]==="Brief & codes");
    if(bi>=0&&!known.has("sitectx")&&t.sections[bi]){const a=["sitectx",...t.sections[bi]];CMS.tools=Object.assign({},t,{sections:t.sections.map((x,k)=>k===bi?a:x),newIds:[...(t.newIds||[]),"sitectx"]})}}_aSC()};
  applyTools();}
+
+// Plan Tracer remains reachable from existing links and Site Planner remains a top-level product, but neither appears in Tools.
+{const HIDE_TOOLS=["tracer","sitectx"],drop=a=>{if(Array.isArray(a))for(let i=a.length-1;i>=0;i--)if(HIDE_TOOLS.includes(a[i]))a.splice(i,1)};
+ const hide=()=>{TSECTIONS.forEach(x=>drop(x[4]));BASE_SECT.forEach(drop);drop(TOOL_IDS);drop(BASE_NEW);for(let i=XT.length-1;i>=0;i--)if(HIDE_TOOLS.includes(XT[i][0]))XT.splice(i,1)};
+ const _aHT=applyTools;applyTools=function(){_aHT();const t=CMS.tools;if(t){const f=a=>Array.isArray(a)?a.filter(id=>!HIDE_TOOLS.includes(id)):a;CMS.tools=Object.assign({},t,{sections:(t.sections||[]).map(f),newIds:f(t.newIds),soon:f(t.soon),hidden:f(t.hidden)})}hide()};
+ applyTools();hide();}
 // provider settings for Site Context: the shared db doc config/siteProviders (admins), else config/site-providers.json on PlotCloud's own host.
 // Switching a source off here takes effect without a new release (Nominatim's usage policy asks for that).
 window.addEventListener("message", async (e) => { const d = e.data; if (!d || !d.pc || d.t !== "siteConfigReq") return; const fr = [...document.querySelectorAll("iframe[data-emb]")].find((f) => f.contentWindow === e.source); if (!fr) return;
@@ -3686,7 +3706,7 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
 route();
 
 // === Simulation tools open full screen, like Plan Studio: no site header or footer, one thin app bar (2026-10-19) ===
-{ const SIMFS = ["sunhours", "wind", "daylight", "vent", "structure", "spacesyntax", "evac", "isovist", "views", "cameras"];
+{ const SIMFS = ["sunhours", "wind", "daylight", "vent", "structure", "spacesyntax", "movementdepth", "evac", "isovist", "views", "cameras"];
   window.__simfs = SIMFS;
   const st = document.createElement("style"); st.textContent = `
   .simfs{position:fixed;inset:0;z-index:70;background:#fff;display:flex;flex-direction:column}
