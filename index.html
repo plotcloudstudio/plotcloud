@@ -693,7 +693,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"architectural-render": "drawing-20261020-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261020-1", "movementdepth": "movement-depth-20261020-1", "modeler": "camera-20261020-1", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBV = {"architectural-render": "drawing-20261020-2","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "47b73e89", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261020-2", "movementdepth": "movement-depth-20261020-2", "modeler": "drawing-20261020-2", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
 const EMBFILE = {movementdepth:"spacesyntax"};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${EMBFILE[id] || id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
@@ -2624,11 +2624,11 @@ const CMS=(S.cms&&typeof S.cms==="object")?S.cms:{home:null,settings:null,tools:
 const BASE_RES=RES.map(r=>r.slice()),BASE_ADDED=Object.assign({},ADDED);
 // Standalone Architectural AI Render: register before CMS tool defaults are captured.
 STD.push(["architectural-render","R.01","architectural drawing","Turn Studio views into material drawings or single-colour architectural illustrations.",""]);
-TMETA["architectural-render"]=["new","ai"];
+TMETA["architectural-render"]=["new"];
 TSECTIONS[3][4].unshift("architectural-render");
 EMB["architectural-render"]="@";
 EMBI["architectural-render"]={title:"architectural drawing",crumb:"Architectural Drawing",short:"Material drawings and single-colour illustrations from saved Studio views or uploads.",lede:"Open a Studio view or upload an axonometric, elevation, section or model image. Create a restrained material drawing with wood, stone and metal textures, or a white-and-gray architectural illustration with one selected accent colour. Geometry stays authoritative; generated dimensions are never treated as verified."};
-EMBV["architectural-render"]="drawing-20261020-1";
+EMBV["architectural-render"]="drawing-20261020-2";
 EMBSVG["architectural-render"]='<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="180" fill="#fbfbfa"/><path d="M42 132V48L146 20V124Z" fill="#fff" stroke="#343638" stroke-width="1.4"/><path d="M146 20L258 62V151L146 124Z" fill="#f0f0ed" stroke="#343638" stroke-width="1.4"/><path d="M60 70L124 52V112L60 126Z" fill="#d9b895" stroke="#555"/><path d="M73 68v55M88 64v55M103 60v55M118 56v55" stroke="#9b7656" stroke-width=".7"/><path d="M164 64L238 91V136L164 115Z" fill="#4f7fc8" opacity=".88" stroke="#315c9e"/><g stroke="#fff" stroke-width=".8"><path d="M181 70v51M199 77v51M218 84v50"/><path d="M164 82l74 28M164 98l74 28"/></g><path d="M35 151H264M35 147v8M264 147v8" stroke="#777" stroke-width=".8"/></svg>';
 const BASE_SECT=TSECTIONS.map(s=>s[4].slice()),BASE_DEV=DEVIDS.slice();
 const BASE_NEW=Object.keys(TMETA).filter(k=>(TMETA[k]||[]).includes("new"));

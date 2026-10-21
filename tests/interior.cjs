@@ -1,98 +1,15 @@
-// Workflow acceptance uses a mocked image service; this does not measure AI image quality.
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
-(async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
- const page=await browser.newPage({viewport:{width:1440,height:1000},acceptDownloads:true});
- const errors=[],requests=[],dir='/tmp/plotcloud-screenshots';fs.mkdirSync(dir,{recursive:true});
- page.on('pageerror',e=>errors.push(e.message));
- let releaseResponse;
- try{
-  await page.goto(base+'/#/studio');await page.locator('#wfrail a.st[data-n="5"]').waitFor();
-  assert.deepEqual(await page.locator('#wfrail a.st').evaluateAll(els=>els.map(el=>el.dataset.n)),['1','2','3','4','5'],'Project workflow order changed');
-  assert.match(await page.locator('#wfrail a.st[data-n="4"]').innerText(),/Rendering/);
-  assert.equal(await page.locator('#wfrail a.st[data-n="4"]').getAttribute('href'),'#/tool/architectural-render');
-  assert.match(await page.locator('#wfrail a.st[data-n="5"]').innerText(),/Boards/);
-  await page.goto(base+'/emb/architectural-render.html');
-  await page.waitForFunction(()=>!!window.__pcRender);
-  const source=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=640;c.height=400;const x=c.getContext('2d');x.fillStyle='#c8c5b8';x.fillRect(0,0,640,400);x.fillStyle='#73877b';x.fillRect(180,170,280,140);return c.toDataURL('image/png');});
-  const reference=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=320;c.height=200;const x=c.getContext('2d');x.fillStyle='#603e2e';x.fillRect(0,0,320,200);return c.toDataURL('image/png');});
-  const webpOutput=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=320;c.height=200;const x=c.getContext('2d');x.fillStyle='#78543b';x.fillRect(0,0,320,200);return c.toDataURL('image/webp');});
-  const upload=(selector,data,name)=>page.locator(selector).setInputFiles({name,mimeType:'image/png',buffer:Buffer.from(data.split(',')[1],'base64')});
-  const paint=async()=>{const canvas=page.locator('#maskEditor');await canvas.scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.getElementById('maskEditor').width===640);const r=await canvas.boundingBox();await page.mouse.move(r.x+r.width*.45,r.y+r.height*.6);await page.mouse.down();await page.mouse.move(r.x+r.width*.55,r.y+r.height*.6,{steps:8});await page.mouse.up();};
-  const workflow=()=>page.evaluate(()=>window.__pcRender.payload().interior_workflow);
-  await upload('#source',source,'living-room.png');await page.waitForFunction(()=>window.__pcRender.payload().source_image);
-  const sceneValues=await page.locator('#scene option').allTextContents();assert(sceneValues.length>0);assert(sceneValues.every(s=>!/exterior|landscape|urban|site/i.test(s)),'Non-interior scene offered');
-  await page.locator('#connectionSetup summary').first().click();await page.locator('#endpoint').fill('https://render.example.test/interior');
-  await page.locator('#serviceToken').fill('operator-access-secret');
-  await page.route('https://render.example.test/interior',async route=>{
-   const req=route.request();requests.push({body:req.postDataJSON(),authorization:req.headers().authorization});
-   if(requests.length===1)await new Promise(resolve=>{releaseResponse=resolve;});
-   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({image_data_url:requests.length===2?webpOutput:reference,provider:'mock-test',model:'fixture-image-model',created_at:'2026-10-20T12:00:00.000Z',limitations:['semantic_mask_only'],internal_debug:'must-not-export'})});
-  });
-  await page.locator('#referencePurpose').selectOption('replace');
-  await page.locator('#run').click();assert.equal(requests.length,0,'Replacement sent with no furniture reference');
-  await upload('#refs',reference,'brown-sofa.png');await page.waitForFunction(()=>window.__pcRender.payload().reference_images.length===1);
-  await page.locator('#run').click();assert.equal(requests.length,0,'Replacement sent with no target');
-  await page.locator('#targetDescription').fill('Sofa against the rear wall');
-  await page.locator('#run').click();assert.equal(requests.length,0,'Replacement sent with an empty edit region');
-  await paint();
-  await page.locator('#prompt').fill('Replace only the selected sofa; retain the room and camera.');
-  const sent=page.waitForRequest(r=>r.url()==='https://render.example.test/interior');
-  await page.locator('#run').click();await sent;await page.waitForFunction(()=>document.getElementById('run').textContent.includes('Cancel'));
-  // Wait for the route handler without fixed sleeps.
-  await page.waitForFunction(()=>document.getElementById('refs').disabled);
-  assert(await page.locator('#refs').isDisabled());assert(await page.locator('#referencePurpose').isDisabled());assert(await page.locator('#serviceToken').isDisabled());
-  assert.equal(requests.length,1);const original=requests[0].body;
-  assert.equal(requests[0].authorization,'Bearer operator-access-secret');assert(!JSON.stringify(original).includes('operator-access-secret'),'Access token leaked into render record');
-  assert.equal(original.edit_mode,'inpaint');assert(original.mask_image.startsWith('data:image/png;base64,'));
-  assert.equal(original.interior_workflow.intent,'replace');assert.equal(original.interior_workflow.target.description,'Sofa against the rear wall');
-  assert.equal(original.interior_workflow.reference_bindings[0].reference_index,0);
-  assert.equal(original.interior_workflow.reference_bindings[0].purpose,'replacement');
-  releaseResponse();await page.waitForFunction(()=>window.__pcRender.hasOutput());
-  await page.locator('#targetDescription').fill('Changed target after generation');await page.locator('#prompt').fill('Changed instructions');
-  const exported=page.waitForEvent('download');await page.locator('#exportVersion').click();const record=JSON.parse(fs.readFileSync(await(await exported).path(),'utf8'));
-  assert.deepEqual(record.request,original,'Saved result inputs changed with the form');
-  assert.equal(record.serviceMetadata.provider,'mock-test');assert.equal(record.serviceMetadata.model,'fixture-image-model');assert.deepEqual(record.serviceMetadata.limitations,['semantic_mask_only']);
-  assert(!JSON.stringify(record).includes('must-not-export'),'Export retained an unapproved server response field');
-  assert(!JSON.stringify(record).includes('operator-access-secret'),'Export contains service access token');
-  await page.locator('#history button').first().click();
-  assert.equal(await page.locator('#targetDescription').inputValue(),'Sofa against the rear wall','History failed to restore furniture target');
-  assert.equal(await page.locator('#referencePurpose').inputValue(),'replace');
-  await page.waitForFunction(expected=>window.__pcRender.payload().mask_image===expected,original.mask_image);
-  assert.deepEqual((await workflow()).reference_bindings,original.interior_workflow.reference_bindings,'History lost resource bindings');
-  await page.locator('#run').click();await page.waitForFunction(()=>window.__pcRender.hasOutput()&&window.__pcRender.versions().length===2);
-  const compareValues=await page.locator('#compareA option').evaluateAll(els=>els.map(el=>el.value).filter(Boolean));assert(compareValues.length>=2,'A/B comparison requires two saved results');
-  await page.locator('#compareA').selectOption(compareValues[0]);await page.locator('#compareB').selectOption(compareValues[1]);
-  assert.equal(await page.locator('#compareBasis').getAttribute('data-basis'),'same-image','Matching source images not identified');
-  const comparisonPng=page.waitForEvent('download');await page.locator('#downloadComparison').click();const png=fs.readFileSync(await(await comparisonPng).path());
-  assert(png.length>100,'Comparison image is empty');assert.equal(png.subarray(1,4).toString(),'PNG','Comparison export is not PNG');
-  const comparisonJson=page.waitForEvent('download');await page.locator('#exportComparison').click();const comparisonText=fs.readFileSync(await(await comparisonJson).path(),'utf8');
-  const comparisonRecord=JSON.parse(comparisonText);assert.equal(comparisonRecord.kind,'interior-option-comparison');assert.equal(comparisonRecord.options.length,2);assert.equal(comparisonRecord.baseline.kind,'same-image');assert(!comparisonText.includes('operator-access-secret'),'Comparison export leaks service token');
-  for(const option of comparisonRecord.options){assert.equal(option.serviceMetadata.provider,'mock-test');assert.equal(option.serviceMetadata.model,'fixture-image-model');assert.deepEqual(option.serviceMetadata.limitations,['semantic_mask_only']);}
-  assert(!comparisonText.includes('must-not-export'),'Comparison retained an unapproved server response field');
-  assert(comparisonText.includes(original.request_id),'Comparison export lost original render provenance');
-  assert(comparisonText.includes(requests[1].body.request_id),'Comparison export lost second render provenance');
-  await page.locator('#compareBasis').scrollIntoViewIfNeeded();await page.screenshot({path:dir+'/interior-comparison-desktop.png',fullPage:true});
-  // Pause a real reuse action, change source, then let the stale fetch finish.
-  await page.evaluate(()=>{
-   const originalFetch=window.fetch,button=document.getElementById('reuse'),originalReuse=button.onclick;
-   const output=window.__pcRender.getVersionSnapshots()[0].img;
-   window.__reuseSettled=false;window.__reusePaused=false;
-   window.fetch=function(input,...args){if(String(input)===output&&!window.__reusePaused){window.__reusePaused=true;return new Promise(resolve=>{window.__releaseReuse=async()=>resolve(await originalFetch.call(window,input,...args));});}return originalFetch.call(window,input,...args);};
-   button.onclick=async function(event){try{return await originalReuse.call(this,event);}finally{window.__reuseSettled=true;window.fetch=originalFetch;button.onclick=originalReuse;}};
-  });
-  await page.locator('#reuse').click();await page.waitForFunction(()=>window.__reusePaused);
-  await upload('#source',reference,'different-room.png');await page.waitForFunction(()=>window.__pcRender.payload().source_context?.fileName==='different-room.png');
-  await page.evaluate(()=>window.__releaseReuse());await page.waitForFunction(()=>window.__reuseSettled);
-  assert.equal(await page.evaluate(()=>window.__pcRender.context().fileName),'different-room.png','Late reuse overwrote the newly uploaded source context');
-  assert.equal(await page.evaluate(()=>window.__pcRender.payload().source_image),reference,'Late reuse overwrote the newly uploaded source pixels');
-  assert.equal((await page.evaluate(()=>window.__pcRender.payload())).reference_images.length,0,'New source kept stale furniture references');
-  assert.equal(await page.locator('#targetDescription').inputValue(),'','New source kept stale target');
-  assert.equal(await page.locator('#referencePurpose').inputValue(),'atmosphere');
-  await page.locator('#editMode').selectOption('inpaint');await page.locator('#run').click();assert.equal(requests.length,2,'New source reused old painted region');
-  await page.locator('#clear').click();assert.equal(await page.evaluate(()=>window.__pcRender.hasOutput()),false);
-  assert.deepEqual(errors,[],'Browser errors');
-  console.log('PASS interior-only choices; target/reference/region validation; authenticated PNG/WebP mocked render; locked in-flight inputs; immutable export; history restore; desktop A/B PNG and JSON export; stale input reset and delayed reuse. AI quality was not tested.');
- }finally{releaseResponse?.();await page.screenshot({path:dir+'/interior-final.png',fullPage:true}).catch(()=>{});await browser.close();}
-})().catch(e=>{console.error(e.stack||e);process.exit(1)});
+(async()=>{const browser=await chromium.launch({headless:true,args:['--no-sandbox']}),page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+try{
+ await page.goto(base+'/emb/architectural-render.html');await page.waitForFunction(()=>!!window.__pcRender);
+ const source=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=2400;c.height=1200;const x=c.getContext('2d');x.fillStyle='#f4f1ea';x.fillRect(0,0,c.width,c.height);x.fillStyle='#b98f62';x.fillRect(500,300,1100,650);x.fillStyle='#6d777a';x.fillRect(900,500,420,300);return c.toDataURL('image/png')});
+ await page.locator('#source').setInputFiles({name:'studio-view.png',mimeType:'image/png',buffer:Buffer.from(source.split(',')[1],'base64')});
+ await page.waitForFunction(()=>window.__pcRender.hasOutput());let request=await page.evaluate(()=>window.__pcRender.payload());assert.equal(request.engine,'plotcloud-local-drawing');assert.equal(request.style,'material');assert.equal(request.preserve_geometry,true);assert.equal(await page.locator('#output').evaluate(c=>c.width),1920,'Output safety limit was not applied');
+ assert.equal(await page.locator('#connectionSetup').count(),0,'External image service remained in the primary UI');assert.equal(await page.locator('textarea').count(),0,'Prompt form remained in Drawing Studio');
+ await page.locator('[data-style="mono"]').click();await page.waitForFunction(()=>window.__pcRender.payload().style==='mono');assert.equal(await page.locator('#accentField').isVisible(),true);await page.locator('[data-colour="#d66859"]').click();assert.equal((await page.evaluate(()=>window.__pcRender.payload())).accent_colour,'#d66859');
+ await page.locator('#reset').click();request=await page.evaluate(()=>window.__pcRender.payload());assert.equal(request.style,'material');assert.equal(request.accent_colour,'#4f7fc8');assert.equal(await page.locator('#line').inputValue(),'55');
+ const exported=page.waitForEvent('download');await page.locator('#exportVersion').click();const record=JSON.parse(fs.readFileSync(await(await exported).path(),'utf8'));assert.equal(record.request.engine,'plotcloud-local-drawing');assert.equal(record.request.preserve_geometry,true);
+ await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Drawing Studio overflows mobile width');
+ await page.locator('#clear').click();assert.equal(await page.evaluate(()=>window.__pcRender.hasOutput()),false);assert.deepEqual(errors,[],'Browser errors: '+errors.join(' | '));console.log('PASS local deterministic material/mono drawing, 1920 px safety limit, reset, export, responsive layout and source clearing');
+}finally{await browser.close()}})().catch(e=>{console.error(e.stack||e);process.exit(1)});

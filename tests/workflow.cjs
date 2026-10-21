@@ -60,24 +60,13 @@ try{
  const context=await work.evaluate(()=>window.__pcRender.context());
  assert.equal(context.project,option);assert(context.version>0);
  assert((await work.evaluate(()=>window.__pcRender.payload())).source_image.startsWith('data:image/'));
- assert(/model v/.test(await work.locator('#sourceContext').innerText()));
- const sourceDownload=page.waitForEvent('download');await work.locator('#downloadSource').click();assert.equal((await sourceDownload).suggestedFilename(),'plotcloud-source-view.png');
- await work.locator('#run').click();assert(/valid HTTPS/.test(await work.locator('#status').innerText()));
- assert.equal(await work.evaluate(()=>window.__pcRender.hasOutput()),false);
- // Test HTTP adapter with a mocked endpoint. This validates client behavior, not AI model quality.
- pixel=await work.evaluate(()=>{const c=document.createElement('canvas');c.width=2;c.height=2;return c.toDataURL('image/png');});
- let request;
- await page.route('https://render.example.test/api',async route=>{request=route.request().postDataJSON();await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({image_data_url:pixel})});});
- await work.locator('#endpoint').fill('https://render.example.test/api');
- await work.locator('#run').click();await work.waitForFunction(()=>window.__pcRender.hasOutput());
- assert.equal(request.source_context.project,option);assert(request.request_id);assert.equal(request.preserve_geometry,true);
- await work.locator('#prompt').fill('A changed prompt after generation');
- const record=await work.evaluate(()=>window.__pcRender.versions()[0]);assert(!record.request.prompt.includes('A changed prompt'),'History metadata changed with form input');
- const download=page.waitForEvent('download');await work.locator('#exportVersion').click();assert.equal((await download).suggestedFilename(),'plotcloud-render-record.json');
+ assert(/model v/.test(await work.locator('#sourceMeta').innerText()));
+ const sourceDownload=page.waitForEvent('download');await work.locator('#downloadSource').click();assert.equal((await sourceDownload).suggestedFilename(),'plotcloud-source.png');
+ await work.waitForFunction(()=>window.__pcRender.hasOutput());let request=await work.evaluate(()=>window.__pcRender.payload());
+ assert.equal(request.source_context.project,option);assert.equal(request.engine,'plotcloud-local-drawing');assert.equal(request.preserve_geometry,true);
+ await work.locator('[data-style="mono"]').click();await work.waitForFunction(()=>window.__pcRender.payload().style==='mono');request=await work.evaluate(()=>window.__pcRender.payload());assert.equal(request.highlight,'furniture');
+ const download=page.waitForEvent('download');await work.locator('#exportVersion').click();assert.equal((await download).suggestedFilename(),'plotcloud-drawing-record.json');
  await page.screenshot({path:dir+'/render-workflow.png',fullPage:true});
- await page.route('https://render.example.test/api',route=>route.fulfill({status:200,contentType:'application/json',body:'{"image_data_url":"data:image/png;base64,invalid"}'}));
- await work.locator('#run').click();await work.waitForFunction(()=>document.getElementById('status').textContent.includes('Render failed'));
- assert.equal(await work.evaluate(()=>window.__pcRender.hasOutput()),false,'Unreadable image accepted');
 
  for(const tool of ['views','daylight']){
   await page.goto(base+'/#/tool/'+tool);
@@ -87,6 +76,6 @@ try{
   if(tool==='views'){await work.evaluate(()=>window.__views.setEye(1.15));await work.waitForFunction(()=>window.__pcAnalysisState().stale);assert.equal(await work.evaluate(()=>window.__pcAnalysisState().ready),false);}
  }
  assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
- console.log('PASS showroom relationships; project brief isolation and reopen; layout issues; option comparison; analysis provenance; Studio render handoff; mocked render contract and invalid image rejection');
+ console.log('PASS showroom relationships; project brief isolation and reopen; layout issues; option comparison; analysis provenance; Studio drawing handoff and local deterministic output');
 }finally{await page.screenshot({path:dir+'/workflow-final.png',fullPage:true}).catch(()=>{});await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});

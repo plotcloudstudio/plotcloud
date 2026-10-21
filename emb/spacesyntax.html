@@ -931,7 +931,7 @@ function agentsGo() {
   if (!RES) return; cancelAnimationFrame(AGRAF); const n = clamp(+$('#agN').value || 200, 10, 2000); AG = runAgents(RES, n); RES.gate = AG.gate; const total = 1500, t0 = performance.now(); $('#agBtn').textContent = 'Agents walking…';
   const target = MOVEMENT_DEPTH ? 'flowdepth' : 'gate';
   const frame = () => { for (let s = 0; s < 12 && AG.n < total; s++) AG.step(); RES.gateStamp = AG.n; if (SHOW !== target) setShow(target); else { resKey = ''; draw(); if (AG.n % 60 === 0) { drawHist(); legend(); } }
-    $('#agMsg').textContent = `${n} agents · step ${AG.n} of ${total}`; if (AG.n < total) AGRAF = requestAnimationFrame(frame); else { $('#agBtn').textContent = 'Release agents again'; $('#agMsg').textContent = `${n} agents walked ${total} steps (each picks a spot in its 170° view, walks 3 steps, picks again).`; legend(); panelUI(); spotUI(); void t0; } };
+    $('#agMsg').textContent = `${n} agents · step ${AG.n} of ${total}`; if (AG.n < total) AGRAF = requestAnimationFrame(frame); else { $('#agBtn').textContent = 'Release agents again'; $('#agMsg').textContent = `${n} agents walked ${total} steps (each picks a spot in its 170° view, walks 3 steps, picks again).`; legend(); panelUI(); spotUI(); if (T3.on) build3D(); void t0; } };
   AGRAF = requestAnimationFrame(frame);
 }
 $('#agBtn').addEventListener('click', agentsGo);
@@ -1232,7 +1232,7 @@ function init3D() {
   const clip = [new THREE.Plane(new THREE.Vector3(0, -1, 0), 2.7)]; T3.clip = clip; T3.r.localClippingEnabled = true;
   T3.mat = { wall: new THREE.MeshStandardMaterial({ color: 0xf1f0ec, roughness: 0.95 }), ctx: new THREE.MeshStandardMaterial({ color: 0xbdb9b0, roughness: 0.95, transparent: true, opacity: 0.18, depthWrite: false }), low: new THREE.MeshStandardMaterial({ color: 0xe6e3dc, roughness: 0.95 }), furn: new THREE.MeshStandardMaterial({ color: 0xdedbd4, roughness: 0.95 }),
     glass: new THREE.MeshStandardMaterial({ color: 0x9cc3e0, transparent: true, opacity: 0.3, depthWrite: false, roughness: 0.2 }),
-    model: new THREE.MeshStandardMaterial({ color: 0xeceae5, roughness: 0.95, side: THREE.DoubleSide }), mglass: new THREE.MeshStandardMaterial({ color: 0x9cc3e0, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }), mdoor: new THREE.MeshStandardMaterial({ color: 0xb9a68c, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }) };
+    model: new THREE.MeshStandardMaterial({ color: 0xeceae5, roughness: 0.95, side: THREE.DoubleSide }), mglass: new THREE.MeshStandardMaterial({ color: 0x9cc3e0, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }), mdoor: new THREE.MeshStandardMaterial({ color: 0xb9a68c, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }), agent: new THREE.MeshStandardMaterial({ color: 0xff5265, roughness: 0.72 }) };
   new ResizeObserver(() => { if (T3.on) { size3D(); render3D(); } }).observe(stage);
 }
 function size3D() { const r = stage.getBoundingClientRect(); T3.r.setSize(Math.max(10, r.width), Math.max(10, r.height), false); T3.cam.aspect = r.width / Math.max(1, r.height); T3.cam.updateProjectionMatrix(); }
@@ -1248,6 +1248,15 @@ function boxGeo(list) {   // merged prisms: each item {P: four plan corners, z0,
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); return g;
 }
 const wallBox = (a, b, t, z0, z1) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / L * t / 2, ny = (b[0] - a[0]) / L * t / 2; return { P: [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]], z0, z1 }; };
+// The same simple head/body/limb language as Studio's walkthrough figure, now in 3D.
+function agentFigure3D(A) {
+  const THREE = T3.lib, red = T3.mat.agent, G = new THREE.Group(), limb = (r, h) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 8), red);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), red); head.position.y = 1.62; G.add(head);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.15, 0.62, 10), red); body.position.y = 1.18; G.add(body);
+  const armL = limb(0.035, 0.58), armR = limb(0.035, 0.58); armL.position.set(-0.2, 1.2, 0); armR.position.set(0.2, 1.2, 0); armL.rotation.z = -0.25; armR.rotation.z = 0.25; G.add(armL, armR);
+  const legL = limb(0.045, 0.72), legR = limb(0.045, 0.72); legL.position.set(-0.09, 0.54, 0); legR.position.set(0.09, 0.54, 0); legL.rotation.z = 0.09; legR.rotation.z = -0.09; G.add(legL, legR);
+  G.position.set(A.x, 0.04, -A.y); G.rotation.y = -(A.h || 0) + Math.PI / 2; G.scale.setScalar(0.82); G.name = 'movement-agent'; return G;
+}
 function build3D() {
   if (!T3.lib) return; const THREE = T3.lib;
   for (const o of [...T3.grp.children]) { T3.grp.remove(o); o.traverse((m) => { if (m.geometry) m.geometry.dispose(); if (m.material && m.material.map) { m.material.map.dispose(); m.material.dispose(); } }); }
@@ -1264,6 +1273,7 @@ function build3D() {
     const P = (k) => { const p = RES.pts[k]; let t = (v[k] - rg[0]) / (rg[1] - rg[0]); if (SHOW === 'depth') t = 1 - t; t = clamp(t, 0, 1); const c = rampOf(paletteOf(), t); return [p.x, 0.05 + t * Hm, -p.y, c[0] / 255, c[1] / 255, c[2] / 255]; };
     for (let j = 0; j < RES.PH - 1; j++) for (let i = 0; i < RES.PW - 1; i++) { const a = RES.at[j * RES.PW + i], b = RES.at[j * RES.PW + i + 1], c = RES.at[(j + 1) * RES.PW + i], d = RES.at[(j + 1) * RES.PW + i + 1]; if (a >= 0 && b >= 0 && d >= 0 && sees(a, b) && sees(b, d) && sees(a, d)) tri(P(a), P(b), P(d)); if (a >= 0 && d >= 0 && c >= 0 && sees(a, d) && sees(d, c) && sees(a, c)) tri(P(a), P(d), P(c)); }
     if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals(); T3.grp.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }))); } }
+  if (AG && LAY.agents) { const step = Math.max(1, Math.ceil(AG.ag.length / 36)); for (let i = 0; i < AG.ag.length; i += step) T3.grp.add(agentFigure3D(AG.ag[i])); }
   if (PROBE && RES) { const p = RES.pts[PROBE.k], eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10), new THREE.MeshStandardMaterial({ color: 0x111111 })); eye.position.set(p.x, VH, -p.y); T3.grp.add(eye); }
   render3D();
 }
