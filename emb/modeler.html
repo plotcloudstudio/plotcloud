@@ -2096,23 +2096,25 @@ const C = { ink: '#1c1b1a', muted: '#6e6a60', line: '#e1dfda', view: '#f5f6f8', 
 const KINDS = { stair: 'Stair', atrium: 'Atrium', shaft: 'Shaft', roof: 'Roof opening' };
 
 let M = STC.migrate(STC.TEMPLATES.house()), LV = 'L1', TOOL = 'select', CAM = 'plan', SHOW = 'air', SEL = null, HOV = null;
-const cycleSelection = { candidates: [], index: -1, anchorScreen: null, hoverId: null, active: false };
+const cycleSelection = { candidates: [], index: -1, anchorScreen: null, hoverId: null, active: false, pointer: null, cycled: false };
 const cycleKey = (c) => `${c.k}:${c.id}${c.version ? ':' + c.version : ''}`;
-const cycleClear = () => { cycleSelection.candidates = []; cycleSelection.index = -1; cycleSelection.anchorScreen = null; cycleSelection.hoverId = null; cycleSelection.active = false; if (HOV) { HOV = null; draw(); } tipOff(); };
+const cycleClear = () => { cycleSelection.candidates = []; cycleSelection.index = -1; cycleSelection.anchorScreen = null; cycleSelection.hoverId = null; cycleSelection.active = false; cycleSelection.cycled = false; if (HOV) { HOV = null; draw(); } if (CAM === '3d' && window.S3?.hover) S3.hover(null); tipOff(); };
 const cycleCurrent = () => cycleSelection.active && cycleSelection.candidates[cycleSelection.index] || null;
 function cycleLabel(c) { const n = c.k === 'furn' ? ((libOf((selObj(c) || {}).type) || [,'Furniture'])[1]) : c.k === 'op' ? ((selObj(c) || {}).kind === 'door' ? 'Door' : 'Window') : c.k === 'wall' || c.k === 'end' ? 'Wall' : c.k === 'room' ? 'Room' : c.k === 'floor' ? 'Floor' : c.k === 'void' ? 'Opening' : c.k; return `${n}${c.version ? ' · ' + c.version : ''}`; }
-function cycleSet(cands, anchor) { cycleSelection.candidates = cands.slice(0, 20); cycleSelection.index = cycleSelection.candidates.length ? 0 : -1; cycleSelection.anchorScreen = anchor ? [anchor[0], anchor[1]] : null; cycleSelection.active = cycleSelection.index >= 0; const c = cycleCurrent(); cycleSelection.hoverId = c ? cycleKey(c) : null; HOV = c && c.k !== 'room' ? c : null; }
-function cycleStep(dir) { if (!cycleSelection.active || !cycleSelection.candidates.length) return; cycleSelection.index = (cycleSelection.index + dir + cycleSelection.candidates.length) % cycleSelection.candidates.length; const c = cycleCurrent(); cycleSelection.hoverId = cycleKey(c); HOV = c.k !== 'room' ? c : null; draw(); if (window.__cycleEvent) window.__cycleEvent(); }
-function cycleCandidates2D(p, anchor) { const out = [], seen = new Set(), tol = 16 / Math.max(1, V.s); const add = (c, dist, pri) => { if (!c || seen.has(cycleKey(c)) || dist > tol) return; seen.add(cycleKey(c)); out.push(Object.assign(c, { score: dist * V.s, priority: pri })); };
+function cycleSet(cands, anchor, front) { if (front) { const i = cands.findIndex(c => cycleKey(c) === cycleKey(front)); if (i > 0) cands.unshift(cands.splice(i, 1)[0]); } cycleSelection.candidates = cands; cycleSelection.index = cands.length ? 0 : -1; cycleSelection.anchorScreen = anchor ? anchor.slice() : null; cycleSelection.active = cycleSelection.index >= 0; cycleSelection.cycled = false; const c = cycleCurrent(); cycleSelection.hoverId = c ? cycleKey(c) : null; HOV = c && c.k !== 'room' ? c : null; }
+function cycleStep(dir) { if (!cycleSelection.active || !cycleSelection.candidates.length) return; cycleSelection.cycled = true; cycleSelection.index = (cycleSelection.index + dir + cycleSelection.candidates.length) % cycleSelection.candidates.length; const c = cycleCurrent(); cycleSelection.hoverId = cycleKey(c); HOV = c.k !== 'room' ? c : null; draw(); if (CAM === '3d' && window.S3?.hover) S3.hover(HOV); if (cycleSelection.pointer) tipAt(cycleSelection.pointer, `${cycleLabel(c)} · ${cycleSelection.index + 1} of ${cycleSelection.candidates.length} — Tab / Shift+Tab to cycle; click or Enter to select`); if (window.__cycleEvent) window.__cycleEvent(); }
+function cycleCandidates2D(p) { const out = [], seen = new Set(), tol = 16 * VP.d / Math.max(1, V.s); const add = (c, dist, pri) => { if (!c || isHidden(c.id) || seen.has(cycleKey(c)) || dist > tol) return; seen.add(cycleKey(c)); out.push(Object.assign(c, { score: dist * V.s, priority: pri })); };
   const distSeg = (q, a, b) => { const dx=b[0]-a[0],dy=b[1]-a[1], t=Math.max(0,Math.min(1,((q[0]-a[0])*dx+(q[1]-a[1])*dy)/(dx*dx+dy*dy||1))), x=a[0]+t*dx,y=a[1]+t*dy; return Math.hypot(q[0]-x,q[1]-y); };
-  if (VIS.Wall) for (const o of M.ops) { const w=wallById(o.wall); if (!w || w.lv!==LV) continue; const d=distSeg(p,w.a,w.b); const dir=STC.wallDir(w), t=(p[0]-w.a[0])*dir[0]+(p[1]-w.a[1])*dir[1]; if (d <= (w.t||.2)/2+tol && Math.abs(t-o.pos)<=o.w/2+tol) { add({k:'op',id:o.id},d,1); add({k:'wall',id:w.id},d+.01,3); } }
-  if (VIS.Wall) for (const w of lvWalls()) { const d=distSeg(p,w.a,w.b); if (d <= (w.t||.2)/2+tol) add({k:'wall',id:w.id},d,3); }
-  if (VIS.Furniture) for (const f of M.furn) if (f.lv===LV && furnOk(f,'plan') && !isHidden(f.id)) { const q=STC.furnCorners(f), d=Math.min(...q.map((a,i)=>distSeg(p,a,q[(i+1)%q.length]))); if (d<=tol || (p[0]>=f.x-f.w/2-tol&&p[0]<=f.x+f.w/2+tol&&p[1]>=f.y-f.d/2-tol&&p[1]<=f.y+f.d/2+tol)) add({k:'furn',id:f.id},d,2); }
-  if (VIS.Floor) for (const f of M.floors||[]) if (f.lv===LV && p[0]>=f.x-tol&&p[0]<=f.x+f.w+tol&&p[1]>=f.y-tol&&p[1]<=f.y+f.d+tol) add({k:'floor',id:f.id},0,5);
-  const rk=STC.roomAtR(S.L[LV],p[0],p[1]); if(rk>=0){const r=S.rooms.find(q=>q.lv===LV&&q.id===rk);if(r)add({k:'room',id:r.key},0,6);}
+  if (VIS.Wall) for (const o of M.ops) { const w=wallById(o.wall); if (!w || w.lv!==LV || isHidden(w.id)) continue; const dir=STC.wallDir(w), a=[w.a[0]+dir[0]*(o.pos-o.w/2),w.a[1]+dir[1]*(o.pos-o.w/2)], b=[w.a[0]+dir[0]*(o.pos+o.w/2),w.a[1]+dir[1]*(o.pos+o.w/2)]; add({k:'op',id:o.id},Math.max(0,distSeg(p,a,b)-(w.t||.2)/2),1); }
+  if (VIS.Wall) { for (const w of lvWalls()) add({k:'wall',id:w.id},Math.max(0,distSeg(p,w.a,w.b)-(w.t||.2)/2),3); for (const f of M.fences||[]) if(f.lv===LV) for(let i=1;i<f.points.length;i++) add({k:'fence',id:f.id},distSeg(p,f.points[i-1],f.points[i]),3); }
+  if (VIS.Furniture) for (const f of M.furn) if (f.lv===LV && furnOk(f,'plan')) { const c=Math.cos(f.rot||0),s=Math.sin(f.rot||0),dx=p[0]-f.x,dy=p[1]-f.y,u=dx*c+dy*s,v=-dx*s+dy*c; add({k:'furn',id:f.id},Math.hypot(Math.max(0,Math.abs(u)-f.w/2),Math.max(0,Math.abs(v)-f.d/2)),2); }
+  if (VIS.Floor) { for (const f of M.floors||[]) if (f.lv===LV && floorContains(f,p)) add({k:'floor',id:f.id},0,5); for (const v of M.voids||[]) if(v.lv===LV&&!v.fromStair) add({k:'void',id:v.id},Math.hypot(Math.max(v.x-p[0],0,p[0]-v.x-v.w),Math.max(v.y-p[1],0,p[1]-v.y-v.d)),4); }
+  const rk=STC.roomAtR(S.L[LV],p[0],p[1]); if(VIS.Floor&&rk>=0){const r=S.rooms.find(q=>q.lv===LV&&q.id===rk);if(r)add({k:'room',id:r.key},0,6);}
   return out.sort((a,b)=>a.score-b.score||a.priority-b.priority||cycleKey(a).localeCompare(cycleKey(b)));
 }
-function cycleRefresh2D(p, anchor) { const a=cycleSelection.anchorScreen; if (!cycleSelection.active || !a || Math.hypot(anchor[0]-a[0],anchor[1]-a[1])>10) cycleSet(cycleCandidates2D(p,anchor),anchor); }
+function cycleRefresh2D(p, anchor) { const a=cycleSelection.anchorScreen; if (!cycleSelection.active || !a || Math.hypot(anchor[0]-a[0],anchor[1]-a[1])>10*VP.d) cycleSet(cycleCandidates2D(p),anchor,hitTest(p)); }
+function cycleCandidates3D(e) { return S3.hits(e.clientX,e.clientY).map(h=>({k:h.ud.k,id:h.ud.id})).filter(c=>LAYER_OF[c.k]&&VIS[LAYER_OF[c.k]]&&!isHidden(c.id)&&selObj(c)); }
+function cycleRefresh(e) { cycleSelection.pointer={clientX:e.clientX,clientY:e.clientY}; const a=evP(e); if(CAM==='plan'&&VIEW2D==='plan')cycleRefresh2D(S2W(...a),a); else if(CAM==='3d'&&window.S3?.on){const old=cycleSelection.anchorScreen;if(!cycleSelection.active||!old||Math.hypot(a[0]-old[0],a[1]-old[1])>10*VP.d)cycleSet(cycleCandidates3D(e),a);} }
 let LAYER = 'Wall'; const VIS = { Floor: true, Furniture: true, Wall: true };   // the three fixed layers: the active one, and which are shown
 let PICK = null, PREV = null;   // the library piece chosen for the Place tool, and its preview
 let S = null, RES = null;   // RES = { S, af, dl, vw } — results belong to the build they were run on
@@ -2160,6 +2162,7 @@ function afterLoad(refit) { if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !sel
 // ---------- rebuild and analyze ----------
 let aT = 0;
 function changed(live, keepProps) {
+  cycleClear();
   S = STC.build(M); clearTimeout(aT); aT = setTimeout(analyse, live ? 140 : 30); miniSoon();
   draw(); levelsUI(); layersUI(); if (!keepProps) propsUI(); $('#undo').disabled = !UNDO.length; $('#redo').disabled = !REDO.length;
   const nw = lvWalls().length; $('#empty').hidden = nw > 0 || CAM === '3d' || !!M.site;
@@ -2223,6 +2226,7 @@ function resize() {
   draw(); if (window.S3 && S3.on) S3.resize();
 }
 function fitView() {
+  cycleClear();
   const vb = $('.vbar'), vbB = vb ? vb.getBoundingClientRect().bottom - stage.getBoundingClientRect().top : 40;
   const B0 = STC.bounds(M), d = VP.d, wide = VP.w / d > 620, sr = M.site && !M.walls.length ? Math.min(100, (M.site.boundary && M.site.boundary.r) || 100) : 0, so = sr ? SITEC.siteToPlan(M.site, [0, 0], M.north || 0) : null, B = sr ? { x0: so[0] - sr, x1: so[0] + sr, y0: so[1] - sr, y1: so[1] + sr } : B0, padL = 70 * d, padR = 70 * d, padT = 84 * d, padB = 84 * d; void wide; void vbB;
   const bw = Math.max(4, B.x1 - B.x0), bh = Math.max(4, B.y1 - B.y0);
@@ -2301,7 +2305,7 @@ function draw() {
   blitRaster(LV, roomImage(LV, (r) => showPts ? '#ffffff' : roomCol(r.gi), 'room:' + SHOW + ':' + LAY.res + ':' + (live() ? 'L' : 'S') + ':' + (RES ? RES.stamp || (RES.stamp = Math.random()) : 0)));
   if (showPts) { const st = 0.5 * V.s; for (const p of (SHOW === 'day' ? RES.dl : RES.vw)?.pts || []) { if (p.lv !== LV) continue; const q = W2S([p.x, p.y]); g.fillStyle = SHOW === 'day' ? dfCol(p.df) : vwCol(p.see); g.fillRect(q[0] - st / 2, q[1] - st / 2, st + 0.6, st + 0.6); } }
   if (SEL && SEL.k === 'room') { const r = S.rooms.find((q) => q.key === SEL.id); if (r && r.lv === LV) { g.globalAlpha = 0.16; blitRaster(LV, roomImage(LV, (q) => q.key === SEL.id ? C.accent : null, 'sel:' + SEL.id)); g.globalAlpha = 1; } }
-  if (VIS.Floor) for (const f of M.floors) { if (f.lv !== LV) continue; const a = W2S([f.x, f.y + f.d]), sel = SEL && SEL.k === 'floor' && SEL.id === f.id, hov = HOV && HOV.k === 'floor' && HOV.id === f.id; if (LAYER !== 'Floor' && !sel) continue; g.setLineDash(sel ? [] : [6 * d, 4 * d]); g.strokeStyle = sel ? C.accent : (hov ? C.ink : 'rgba(28,27,26,.45)'); g.lineWidth = (sel ? 2 : 1.2) * d; floorPath(f);g.stroke(); g.setLineDash([]); }
+  if (VIS.Floor) for (const f of M.floors) { if (f.lv !== LV) continue; const a = W2S([f.x, f.y + f.d]), sel = SEL && SEL.k === 'floor' && SEL.id === f.id, hov = HOV && HOV.k === 'floor' && HOV.id === f.id; if (LAYER !== 'Floor' && !sel && !hov) continue; g.setLineDash(sel ? [] : [6 * d, 4 * d]); g.strokeStyle = sel ? C.accent : (hov ? C.ink : 'rgba(28,27,26,.45)'); g.lineWidth = (sel ? 2 : 1.2) * d; floorPath(f);g.stroke(); g.setLineDash([]); }
   // floor openings: this level's (in its ceiling) and the one below (a hole in this floor)
   if (VIS.Floor) fade('Floor');
   for (const v of (VIS.Floor ? M.voids : [])) {
@@ -2658,8 +2662,9 @@ cv.addEventListener('pointerdown', (e) => {
     const o = STC.addOp(M, LV, p, kind, Math.min(opW(TOOL), Math.max(0.4, STC.wallLen(h.w) - 0.3)), hole ? { hole: true } : { gen: { id: OPM[TOOL], vals: dDefaults(genModel(OPM[TOOL])) } });
     if (o) { if (o.gen) opFit(o, h.w.t || 0.2); o.pos = sg(o.pos); STC.fixOp(M, o); SEL = { k: 'op', id: o.id }; } commit(b); return; }
   if (TOOL === 'del') { const h = hitTest(p, { noEnds: true, only: true }); if (h) { SEL = h; delSel(); } else { const o = hitTest(p, { noEnds: true }); if (o && LAYER_OF[o.k]) flash(`That is on the ${LAYER_OF[o.k]} layer. Switch to it to delete it.`); } return; }
-  // select
-  const cyc = cycleCurrent(); if (cyc) { SEL = cyc.k === 'end' ? { k: 'wall', id: cyc.id } : { k: cyc.k, id: cyc.id }; cycleClear(); changedSel(); }
+  // select: keep the highlighted Tab candidate until the confirming click.
+  if (TOOL === 'select') cycleRefresh(e);
+  const cyc = cycleSelection.cycled ? cycleCurrent() : null; cycleClear();
   const h = cyc || hitTest(p); const b = snapM();
   if (!h || h.k === 'room') { SEL = h; if (CAM !== '3d') { drag = { k: 'pan', sx, sy, ox: V.ox, oy: V.oy, click: true }; cv.setPointerCapture(e.pointerId); } changedSel(); return; }
   SEL = h.k === 'end' ? { k: 'wall', id: h.id } : h; if (LAYER_OF[h.k] && LAYER_OF[h.k] !== LAYER) { setLayer(LAYER_OF[h.k], true); flash(`Switched to the ${LAYER} layer.`); } changedSel(); cv.setPointerCapture(e.pointerId);
@@ -2696,8 +2701,8 @@ cv.addEventListener('pointermove', (e) => {
   if (TOOL === 'win' || TOOL === 'door' || TOOL === 'hole') { const h = STC.wallAt(M, LV, p); drawing = h ? { kind: 'op', op: TOOL, hit: h, ow: opW(TOOL) } : null; draw(); return; }
   if (RECT.has(TOOL) || TOOL === 'wall' || TOOL === 'arc') { snapPt(p); draw(); }
   // hover
-  if (TOOL === 'select' && CAM === 'plan' && !e.buttons) cycleRefresh2D(p, [sx, sy]);
-  const cyc = cycleCurrent(), h = cyc || (TOOL === 'select' || TOOL === 'del' ? hitTest(p, { noEnds: TOOL === 'del' }) : null), key = h ? h.k + h.id : '';
+  if (TOOL === 'select' && !e.buttons) cycleRefresh(e);
+  const cyc = TOOL === 'select' ? cycleCurrent() : null, h = cyc || (TOOL === 'select' || TOOL === 'del' ? hitTest(p, { noEnds: TOOL === 'del' }) : null), key = h ? h.k + h.id : '';
   if (key !== (HOV ? HOV.k + HOV.id : '')) { HOV = h && h.k !== 'room' ? h : null; draw(); }
   cv.classList.toggle('sel', TOOL === 'select');
   if (h && TOOL === 'select') { const o = selObj(h); let t = ''; if (cycleSelection.active) t = `${cycleLabel(h)} · ${cycleSelection.index + 1} of ${cycleSelection.candidates.length} — Tab to cycle`; else if (h.k === 'wall' || h.k === 'end') t = `Wall ${Math.round(STC.wallLen(o) * 1000)} mm · drag to move`; else if (h.k === 'op') t = `${o.kind === 'door' ? 'Door' : 'Window'} ${o.w.toFixed(2)} m · drag along the wall`; else if (h.k === 'furn') t = `${(libOf(o.type) || [, 'Furniture'])[1]} · drag; R turns it`; else if (h.k === 'void') t = `${KINDS[o.kind] || 'Opening'} ${o.w.toFixed(1)} × ${o.d.toFixed(1)} m`; else if (h.k === 'floor') t = `Floor ${o.w.toFixed(2)} × ${o.d.toFixed(2)} m · drag to move`; else if (h.k === 'room') t = roomTip(o); tipAt(e, t); } else tipOff();
@@ -2709,8 +2714,8 @@ cv.addEventListener('pointerup', (e) => {
 });
 cv.addEventListener('dblclick', () => { if (drawing && drawing.kind === 'wall') finishWall(); });
 cv.addEventListener('contextmenu', (e) => e.preventDefault());
-cv.addEventListener('pointerleave', () => { tipOff(); PREV = null; if (drawing && drawing.kind === 'op') { drawing = null; draw(); } if (HOV) { HOV = null; draw(); } });
-cv.addEventListener('wheel', (e) => { if (CAM !== 'plan' && CAM !== 'split') return; e.preventDefault(); const [sx, sy] = evP(e), p = S2W(sx, sy), k = Math.exp(-e.deltaY * 0.0015); V.s = Math.max(3 * VP.d, Math.min(400 * VP.d, V.s * k)); V.ox = sx - p[0] * V.s; V.oy = sy + p[1] * V.s; V.user = true; draw(); }, { passive: false });
+cv.addEventListener('pointerleave', () => { cycleClear(); cycleSelection.pointer = null; PREV = null; if (drawing && drawing.kind === 'op') { drawing = null; draw(); } });
+cv.addEventListener('wheel', (e) => { cycleClear(); if (CAM !== 'plan' && CAM !== 'split') return; e.preventDefault(); const [sx, sy] = evP(e), p = S2W(sx, sy), k = Math.exp(-e.deltaY * 0.0015); V.s = Math.max(3 * VP.d, Math.min(400 * VP.d, V.s * k)); V.ox = sx - p[0] * V.s; V.oy = sy + p[1] * V.s; V.user = true; draw(); }, { passive: false });
 function cutAt(sy) { if (!INSET) return; const { y, h, k, B } = INSET; SECY = STC.clamp(B.y0 + (y + h - 8 * VP.d - sy) / k, B.y0, B.y1); draw(); }
 function tipAt(e, t) { if (!t) return tipOff(); const r = stage.getBoundingClientRect(); tipEl.textContent = t; tipEl.style.display = 'block'; const x = e.clientX - r.left + 14, y = e.clientY - r.top + 16; tipEl.style.left = Math.min(x, r.width - tipEl.offsetWidth - 8) + 'px'; tipEl.style.top = Math.min(y, r.height - 40) + 'px'; tipEl.style.right = 'auto'; tipEl.style.bottom = 'auto'; }
 function tipOff() { tipEl.style.display = 'none'; }
@@ -2838,6 +2843,7 @@ $('#lyList').addEventListener('change', (e) => { if (e.target.name === 'ly') set
 $('#lyList').addEventListener('click', (e) => { const b = e.target.closest('[data-eye]'); if (!b) return; const L = b.dataset.eye; VIS[L] = !VIS[L]; if (!VIS[L] && SEL && LAYER_OF[SEL.k] === L) SEL = null; layersUI(); propsUI(); draw(); if (window.S3 && S3.on) upd3D(); });
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-layer-go]'); if (b) setLayer(b.dataset.layerGo); });
 function setLayer(L, keepSel) {
+  cycleClear();
   if (!STC.LAYERS.includes(L)) return; LAYER = L; if (!VIS[L]) VIS[L] = true;
   if (!keepSel && SEL && LAYER_OF[SEL.k] && LAYER_OF[SEL.k] !== L) SEL = null;
   const tb = $(`[data-tool="${TOOL}"]`); if (tb && tb.dataset.layer && tb.dataset.layer !== L) TOOL = 'select';
@@ -2847,7 +2853,7 @@ function setLayer(L, keepSel) {
 // ---------- keys ----------
 addEventListener('keydown', (e) => {
   const tg = e.target; if (tg && (tg.matches('input, select, textarea') || tg.isContentEditable)) return;
-  if (e.key === 'Tab' && cycleSelection.active) { e.preventDefault(); cycleStep(e.shiftKey ? -1 : 1); return; }
+  if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey && TOOL === 'select' && !drag && !drawing && !SPACE && cycleSelection.pointer && (CAM === '3d' || (CAM === 'plan' && VIEW2D === 'plan'))) { cycleRefresh(cycleSelection.pointer); if (cycleSelection.active) { e.preventDefault(); cycleStep(e.shiftKey ? -1 : 1); return; } }
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
@@ -2855,7 +2861,7 @@ addEventListener('keydown', (e) => {
   if (e.key === ' ' && document.activeElement === cv) { SPACE = true; if (window.S3) S3.orbitLeft(true); e.preventDefault(); return; }
   if (drawing && /^[0-9.,x×]$/.test(e.key)) { typed += e.key; draw(); e.preventDefault(); return; }
   if (drawing && e.key === 'Backspace' && typed) { typed = typed.slice(0, -1); draw(); e.preventDefault(); return; }
-  if (e.key === 'Enter') { if (cycleSelection.active) { const c = cycleCurrent(); SEL = c.k === 'end' ? { k: 'wall', id: c.id } : { k: c.k, id: c.id }; cycleClear(); changedSel(); e.preventDefault(); return; } if (applyTyped()) { e.preventDefault(); return; } if (drawing && drawing.kind === 'wall') { finishWall(); e.preventDefault(); } return; }
+  if (e.key === 'Enter') { if (TOOL === 'select' && cycleSelection.active && !drag && !drawing) { const c = cycleCurrent(); SEL = { k: c.k, id: c.id }; cycleClear(); if (LAYER_OF[c.k] && LAYER_OF[c.k] !== LAYER) setLayer(LAYER_OF[c.k], true); changedSel(); e.preventDefault(); return; } if (applyTyped()) { e.preventDefault(); return; } if (drawing && drawing.kind === 'wall') { finishWall(); e.preventDefault(); } return; }
   if (e.key === 'Escape') { if (cycleSelection.active) { cycleClear(); return; } if (drawing && drawing.kind === 'wall' && drawing.pts.length >= 2) finishWall(); else { drawing = null; typed = ''; } if (TOOL === 'place') { PICK = null; setTool('select'); libUI(); } SEL = null; changedSel(); return; }
   if (CAM === 'section' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { SECY = (SECY ?? secDefault()) + (e.key === 'ArrowUp' ? 0.25 : -0.25); draw(); e.preventDefault(); return; }
   if ((e.key === 'Delete' || e.key === 'Backspace') && SEL) { e.preventDefault(); delSel(); return; }
@@ -2880,10 +2886,12 @@ function delSel() {
 // ---------- tools, views, show ----------
 const HINT = { orbit: 'Drag to orbit the view. Scroll to zoom. Switch back to Edit to select and move things.', arc: 'Click the start, click the end, then move to bend the wall and click once more. Esc cancels.', hole: 'Click on a wall to cut a door or window opening with no leaf.', place: 'Pick a piece in the Library, then click on the plan.', floor: 'Drag a rectangle of floor (Floor layer). Rooms drawn with Room get their floor automatically.', select: 'Click to select; drag to move. Drag empty space to pan; scroll to zoom.', room: 'Drag a rectangle. Type sizes like 6,4 and press Enter for exact ones.', wall: 'Click point to point. Type a length and Enter for an exact one. Double-click or Esc to finish; Shift for any angle.', win: 'Click on a wall to add a window. Then drag it along the wall.', door: 'Click on a wall to add a door. Flip it in its settings.', void: 'Drag over a stair, atrium or shaft. It joins this level to the one above, so warm air can rise. On the top level it is a roof light or vent.', del: 'Click a wall, window, door, opening or piece of furniture to delete it.' };
 function setTool(t) {
+  cycleClear();
   const b0 = $(`[data-tool="${t}"]`); if (!b0) return;
   if (b0.dataset.layer && b0.dataset.layer !== LAYER) { if (b0.dataset.layer === 'Furniture') { blockedFurniture(); return; } setLayer(b0.dataset.layer, false); }
   TOOL = t; drawing = null; typed = ''; guides = []; toolsUI(); cv.classList.toggle('sel', t === 'select'); if (CAM === 'section') setCam('plan'); if (window.S3) S3.orbitLeft(t === 'orbit'); draw();
 }
+HINT.select = 'Hover near objects; Tab / Shift+Tab cycles the highlight. Click or Enter to select; Esc to cancel. Drag to move; scroll to zoom.';
 function toolsUI() {   // the toolbar shows the tools of the active layer only
   for (const b of $$('[data-tool]')) b.setAttribute('aria-pressed', String(b.dataset.tool === TOOL && (!b.dataset.opm || OPM[TOOL] === b.dataset.opm)));
   for (const b of $$('[data-stair]')) b.setAttribute('aria-pressed', String(TOOL === 'place' && PICK === b.dataset.stair));
@@ -2891,6 +2899,7 @@ function toolsUI() {   // the toolbar shows the tools of the active layer only
 }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-tool]'); if (b && !b.closest('#simstub')) { if (b.dataset.opm) OPM[b.dataset.tool] = b.dataset.opm; setTool(b.dataset.tool); } });
 async function setCam(c) {
+  cycleClear(); cycleSelection.pointer = null;
   CAM = c; $$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === c))); stage.classList.toggle('split', c === 'split');
   const is3 = c === '3d'; cv.hidden = false; cv3.hidden = !is3; $('.kj').classList.toggle('v3d', is3); if (!is3 && TOOL === 'orbit') setTool('select'); $('#toolBar').hidden = c === 'section'; $('#toolHint').hidden = c === 'section'; $('#empty').hidden = is3 || lvWalls().length > 0; tipOff();
   requestAnimationFrame(() => { resize(); legend(); miniSoon(); zoomUI(); selBar(); toolsUI(); });
@@ -3576,6 +3585,7 @@ $('#replPop').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.s
 const CEILF = { on: XS.get('ceilFurn', true), a: XS.get('ceilFurn', true) ? 1 : 0 };
 let CTOOL = 'select', CDRAW = null, CDRAG = null;
 function setView2D(v) {
+  cycleClear(); cycleSelection.pointer = null;
   if (v === 'elev') { openWallPicker(); return; }
   closeElevView(true); if (CAM !== 'plan') { VIEW2D = v; setCam('plan'); } else VIEW2D = v;
   if (v !== 'ceiling' && SEL && SEL.k === 'ceil') SEL = null; if (v === 'ceiling' && SEL && SEL.k !== 'ceil') SEL = null;
@@ -4376,7 +4386,7 @@ cv.addEventListener('pointermove', (e) => {
 });
 cv.addEventListener('pointerleave', () => { if (HOVX) { HOVX = null; annotUI(); } });
 { let raf = 0, last = null; cv.addEventListener('pointermove', (e) => { if (CAM !== '3d' || !window.S3 || !S3.on || !S3.hover) return; last = e; if (raf) return; raf = requestAnimationFrame(() => { raf = 0; const ev = last;
-  if (WALKING || XPL.on || ELV3.on || GZD || (e.buttons & 7) || TOOL !== 'select') { S3.hover(null); return; } const h = S3.hit(ev.clientX, ev.clientY), ud = h && h.ud && SELK.has(h.ud.k) && !(SEL && SEL.k === h.ud.k && SEL.id === h.ud.id) ? h.ud : null; S3.hover(ud); }); });
+  if (WALKING || XPL.on || ELV3.on || GZD || (e.buttons & 7) || TOOL !== 'select') { S3.hover(null); return; } const h = S3.hit(ev.clientX, ev.clientY), ud = h && h.ud && SELK.has(h.ud.k) && !(SEL && SEL.k === h.ud.k && SEL.id === h.ud.id) ? h.ud : null; S3.hover(cycleCurrent() || ud); }); });
   cv.addEventListener('pointerleave', () => { if (window.S3 && S3.hover) S3.hover(null); }); }
 // the wall's own blue chain line would repeat the length: the selection shows it now
 { const _sd = selDim; selDim = function (w) { if (SEL && kOf(SEL) === 'wall' && CAM === 'plan') return; _sd(w); }; }
@@ -4721,7 +4731,7 @@ function floorPath(f){g.beginPath();for(const ring of [floorPoints(f),...(f.hole
 function newSlabThickness(){return M.drawing?.slabThicknessByLevel?.[LV]||lvObj()?.slab||.22;}
 function siteOpacity(){return OP.site??.5;}
 function snapWalls(){const below=lvBelow();return lvWalls().concat(below&&$('#ghost').checked?lvWalls(below.id):[]);}
-function drawFences(){for(const f of M.fences||[]){if(f.lv!==LV||isHidden(f.id))continue;g.save();g.strokeStyle=SEL?.k==='fence'&&SEL.id===f.id?C.accent:'#58606a';g.lineWidth=2*VP.d;g.beginPath();f.points.forEach((p,i)=>{const q=W2S(p);i?g.lineTo(...q):g.moveTo(...q);});g.stroke();for(const p of fencePostPoints(f)){const q=W2S(p);g.fillStyle=g.strokeStyle;g.fillRect(q[0]-3*VP.d,q[1]-3*VP.d,6*VP.d,6*VP.d);}g.restore();}}
+function drawFences(){for(const f of M.fences||[]){if(f.lv!==LV||isHidden(f.id))continue;g.save();g.strokeStyle=SEL?.k==='fence'&&SEL.id===f.id?C.accent:HOV?.k==='fence'&&HOV.id===f.id?C.ink:'#58606a';g.lineWidth=2*VP.d;g.beginPath();f.points.forEach((p,i)=>{const q=W2S(p);i?g.lineTo(...q):g.moveTo(...q);});g.stroke();for(const p of fencePostPoints(f)){const q=W2S(p);g.fillStyle=g.strokeStyle;g.fillRect(q[0]-3*VP.d,q[1]-3*VP.d,6*VP.d,6*VP.d);}g.restore();}}
 function fencePostPoints(f){const pts=[];for(let i=1;i<f.points.length;i++){const a=f.points[i-1],b=f.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(len/(f.spacing||1.5)));for(let j=0;j<n;j++)pts.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]);}pts.push(f.points[f.points.length-1]);return pts;}
 function finishFence(){const D=drawing;drawing=null;typed='';if(!D||D.kind!=='fence'||D.pts.length<2){draw();return;}const before=snapM(),f={id:STC.uid('fence'),lv:LV,points:D.pts.map(p=>p.slice()),h:1.1,spacing:1.5,post:.06,rail:.05,object_type:'fence',layer:'Wall'};(M.fences||(M.fences=[])).push(f);SEL={k:'fence',id:f.id};tidy();commit(before);}
 function previewModel(){if(drawing?.kind!=='floor'||!drawing.b)return M;const a=drawing.a,b=drawing.b,w=Math.abs(a[0]-b[0]),d=Math.abs(a[1]-b[1]);if(w<.05||d<.05)return M;return {...M,floors:[...M.floors,{id:'drawing-preview',lv:LV,x:Math.min(a[0],b[0]),y:Math.min(a[1],b[1]),w,d,thickness:newSlabThickness(),preview:true}]};}
