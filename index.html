@@ -3638,7 +3638,7 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
   const _bar = tBar; tBar = function () { let h = _bar(); if (!TFILTERS.some(([k]) => k !== "all" && k !== "dev")) h = h.replace('<span class="tdiv" aria-hidden="true"></span>', ""); return h; };
   // the two kinds of analysis, each reading its own list; anything new in Analysis lands in Interior
   window.ENV_GROUPS = { site: ["sunhours", "wind"], interior: null };
-  const GROUP = { site: ["Site analysis", "Read the site before you draw: screened with your boundary and the surrounding building heights from the Site page."],
+  const GROUP = { site: ["Site model", "Generate an editable 3D context model from the site boundary and surrounding building heights."],
     interior: ["Interior simulation", "Inside the rooms: daylight, air, structure, movement and sightlines, on the model you draw in Plan Studio."] };
   const CARD = { sunhours: ["Sun hours", "Site sun: hours of direct sun and the shadows across your site, its neighbors and your massing — any city, date and time. Needs your site from the Site page (boundary and building heights) or a 3D model."],
     wind: [null, "Site wind: how air moves around your massing and the buildings next to it, at street level and in section. Needs your site from the Site page (boundary and building heights) or a 3D model. Screening only."],
@@ -3654,7 +3654,7 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
     const full = run(all), n = an[0], open = `<section class="tsec2" id="tsec-${n}">`, k = full.indexOf(open); if (k < 0) return full;
     const end = full.indexOf("</section>", k) + 10, gridOf = (h) => { const i = h.indexOf(open), g = h.indexOf('<div class="tgrid2">', i), e = h.indexOf("</div></section>", g); return h.slice(g, e + 6); };
     const group = (key, ids) => { const h = run(ids); return `<div class="agrp" id="agrp-${key}"><h3 class="agrp-h">${GROUP[key][0]} <span>(${ids.length})</span></h3><p class="asub-l">${GROUP[key][1]}</p>${gridOf(h)}</div>`; };
-    const nav = `<nav class="anav" aria-label="On this page">On this page: <a href="#agrp-site" data-agrp="site">Site analysis</a> · <a href="#agrp-interior" data-agrp="interior">Interior simulation</a></nav>`;
+    const nav = `<nav class="anav" aria-label="On this page">On this page: <a href="#agrp-site" data-agrp="site">Site model</a> · <a href="#agrp-interior" data-agrp="interior">Interior simulation</a></nav>`;
     const g0 = full.indexOf('<div class="tgrid2">', k), sec = full.slice(k, end), head = full.slice(k, g0);
     return full.slice(0, k) + head + nav + group("site", site) + group("interior", interior) + "</section>" + full.slice(end); };
   document.addEventListener("click", (e) => { const a = e.target.closest("[data-agrp]"); if (!a) return; e.preventDefault(); const t = document.getElementById("agrp-" + a.dataset.agrp); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); });
@@ -3716,7 +3716,7 @@ route();
 
 // === Site analysis atlas (2026-10-19): eight diagrams in one style replace the two cards of the Site analysis group ===
 EMB["atlas"] = "@";
-EMBI["atlas"] = { title: "site analysis", crumb: "Site Analysis", short: "Pick the site once, choose the analyses, generate eight diagrams in one style.", lede: "Pick the site once, choose the analyses, generate them in one style." };
+EMBI["atlas"] = { title: "boards", crumb: "Boards", short: "Lay drawings and images out on a presentation board.", lede: "Lay drawings and images out on a presentation board." };
 if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
 EMB["render"] = "@";
 EMBI["render"] = { title: "render", crumb: "Render", short: "Plan Studio plan → colour mask → your own GPU → back into Boards.", lede: "Turn a Plan Studio plan into a colour mask, render it on your own computer, and bring the image back to Boards." };
@@ -3745,14 +3745,14 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
     else g = `<rect width="300" height="180" fill="#F4F2EC"/><circle cx="105" cy="70" r="26" fill="#F4C542"/><g stroke="#F4C542" stroke-width="2">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M${105 + Math.cos(a * Math.PI / 180) * 34} ${70 + Math.sin(a * Math.PI / 180) * 34}L${105 + Math.cos(a * Math.PI / 180) * 44} ${70 + Math.sin(a * Math.PI / 180) * 44}"/>`).join("")}</g><g stroke="#2F6DB5" stroke-width="2" fill="none" stroke-linecap="round"><path d="M150 120C185 105 205 135 245 118"/><path d="M140 140C180 128 205 156 262 138"/><path d="M165 100C190 90 215 110 250 98"/></g>`;
     const clip = d === "sunwind" ? "" : `<clipPath id="atc-${d}"><circle cx="150" cy="90" r="82"/></clipPath>`;
     return `<svg viewBox="0 0 300 180" aria-hidden="true" style="background:#fff">${clip}<g ${d === "sunwind" ? "" : `clip-path="url(#atc-${d})"`}>${g}</g>${d === "sunwind" ? "" : '<circle cx="150" cy="90" r="82" fill="none" stroke="#1C1B1A" stroke-width=".8"/>'}</svg>`; };
-  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site analysis <span>(1)</span></h3><p class="asub-l">Eight diagrams · one site · one style.</p><div class="tgrid2"><article class="tc"><div class="tc-vis atl go" data-go="site">${thumb("land")}</div><div class="tc-body" data-go="site"><div class="tc-head"><h3>Site Analysis</h3></div><p class="tc-d">Pick a place once, then draw urban fabric, streets, uses, green and water, transit, walking, the site and the sun.</p><span class="tc-open">Open →</span></div></article></div></div>`;
+  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site model <span>(1)</span></h3><p class="asub-l">One place · editable context · one 3D massing model.</p><div class="tgrid2"><article class="tc"><div class="tc-vis atl go" data-go="site"><svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#f4f2ec"/><path d="M35 126 150 62l115 42-116 66Z" fill="#e4e1d8" stroke="#1c1b1a"/><path d="m67 112 30-17 27 10-30 18Z" fill="#fff" stroke="#1c1b1a"/><path d="m67 112 27 11v28l-27-11Z" fill="#cbc7bd" stroke="#1c1b1a"/><path d="m94 123 30-18v28l-30 18Z" fill="#aaa59a" stroke="#1c1b1a"/><path d="m132 91 35-20 31 12-35 20Z" fill="#fff" stroke="#1c1b1a"/><path d="m132 91 31 12v43l-31-12Z" fill="#cbc7bd" stroke="#1c1b1a"/><path d="m163 103 35-20v43l-35 20Z" fill="#aaa59a" stroke="#1c1b1a"/><path d="m199 111 26-15 23 9-26 15Z" fill="#fff" stroke="#1c1b1a"/><path d="m199 111 23 9v23l-23-9Z" fill="#cbc7bd" stroke="#1c1b1a"/><path d="m222 120 26-15v23l-26 15Z" fill="#aaa59a" stroke="#1c1b1a"/><circle cx="151" cy="136" r="5" fill="#d8402a"/></svg></div><div class="tc-body" data-go="site"><div class="tc-head"><h3>3D Site Model</h3></div><p class="tc-d">Choose a place, generate surrounding massing, correct heights and continue with the 3D context model.</p><span class="tc-open">Open →</span></div></article></div></div>`;
   const _t = tSections; tSections = function () { const h = _t.apply(this, arguments), a = h.indexOf('<div class="agrp" id="agrp-site">'), b = h.indexOf('<div class="agrp" id="agrp-interior">'); if (a < 0 || b < 0) return h; return h.slice(0, a) + html() + h.slice(b); };
   const st = document.createElement("style"); st.textContent = `.tc-vis.atl{display:grid;place-items:center;background:#fff;aspect-ratio:5/3;overflow:hidden}.tc-vis.atl svg{width:100%;height:100%;display:block}`; document.head.appendChild(st); }
 
 /* v140 · home: one main line of six steps replaces the Practice / Competition journeys */
 (function () {
   const STEPS = [
-    { n: 1, name: "Site analysis", go: "site", p: "Pick the site, read it in eight diagrams, see it in 3D.", cta: "Open Site analysis" },
+    { n: 1, name: "Site model", go: "site", p: "Choose the site and generate an editable 3D context model.", cta: "Generate a site model" },
     { n: 2, name: LABELS.studio, go: "studio", p: "Draw the plan inside the boundary, with its surroundings.", cta: "Open " + LABELS.studio },
     { n: 3, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
     { n: 4, name: "Rendering", go: "tool/architectural-render", p: "Render interior options from a saved view and furniture references.", cta: "Open Rendering" },
@@ -3792,7 +3792,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   const EMBEDDED = window.parent !== window && /[?&]drawer=1/.test(location.search);
   const SIM = window.__simfs || [];
   const STEPS = [
-    { n: 1, name: "Site analysis", ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
+    { n: 1, name: "Site model", ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
     { n: 2, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
     { n: 3, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
     { n: 4, name: "Rendering", ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 17l5-4 4 3 3-5 4 6"/>' },
@@ -3848,7 +3848,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   document.body.append(rail, top, dr, ck);
   const chipText = () => CX.lat == null ? "No site yet" : `${CX.label || (+CX.lat).toFixed(2) + ", " + (+CX.lng).toFixed(2)} · R ${CX.R} m`;
   const drawRail = () => { const cur = where();
-    rail.innerHTML = `<a class="lg" data-go="home" title="plotcloud home">plotcloud</a><button class="chip" type="button" id="wfchip" title="Choose the place again in Site Analysis"><small>Site</small><b>${esc(chipText())}</b></button>` +
+    rail.innerHTML = `<a class="lg" data-go="home" title="plotcloud home">plotcloud</a><button class="chip" type="button" id="wfchip" title="Open the 3D site model"><small>Site</small><b>${esc(chipText())}</b></button>` +
       STEPS.map((s) => `<a class="st${cur === s.n ? " on" : ""}" href="#/${urlOf(s.n)}" data-n="${s.n}" data-done="${CX.done[s.n] ? 1 : 0}" ${cur === s.n ? 'aria-current="step"' : ""} title="${s.n} · ${esc(s.name)}"><svg viewBox="0 0 24 24" aria-hidden="true">${s.ic}</svg><span>${s.n} · ${esc(s.name)}</span><i class="tk" aria-label="done">✓</i></a>`).join("") +
       `<span class="sp"></span><button class="col" type="button" id="wfcol" aria-label="Collapse the rail"><span>${document.body.classList.contains("rc") ? "" : "Collapse"}</span>⇔</button>`; };
   const NAMES = { home: "Home", tools: "Tools", library: "Resources", showroom: "Showroom", learn: "Learn", pricing: "Pricing" };
@@ -3864,7 +3864,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   dr.querySelector(".dh button").addEventListener("click", closeDr);
   document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-dr]"); if (b) { dr.classList.contains("on") && dr.dataset.k === b.dataset.dr ? closeDr() : openDr(b.dataset.dr); return; }
     if (e.target.closest && e.target.closest("[data-k]")) { openK(); return; }
-    if (e.target.closest && e.target.closest("#wfchip")) { go("tool/atlas?step=1" + (CX.lat == null ? "" : "&" + pinQ())); return; }
+    if (e.target.closest && e.target.closest("#wfchip")) { go("site"); return; }
     if (e.target.closest && e.target.closest("#wfcol")) { document.body.classList.toggle("rc"); try { localStorage.setItem("pc-rc", document.body.classList.contains("rc") ? "1" : ""); } catch (x) {} drawRail(); dispatchEvent(new Event("resize")); return; }
     const a = e.target.closest && e.target.closest("#wfrail a.st"); if (a) { e.preventDefault(); go(urlOf(+a.dataset.n)); } });
   try { if (localStorage.getItem("pc-rc")) document.body.classList.add("rc"); } catch (e) {}
@@ -3882,7 +3882,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeK(); } else if (e.key === "ArrowDown") { e.preventDefault(); mv(1); } else if (e.key === "ArrowUp") { e.preventDefault(); mv(-1); } else if (e.key === "Enter") { e.preventDefault(); pick(sel); } }, true);
   ck.querySelector("input").addEventListener("input", (e) => listK(e.target.value));
   ck.addEventListener("click", (e) => { const l = e.target.closest("li[data-i]"); if (l) pick(+l.dataset.i); else if (e.target === ck) closeK(); });
-  // the pin comes from the Site Planner and the atlas
+  // the shared site pin comes from the 3D Site Model page
   addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc || d.t !== "ctx") return; const fr = [...document.querySelectorAll("iframe[data-emb]")].find((f) => f.contentWindow === e.source); if (!fr) return;
     if (typeof d.lat === "number" && typeof d.lng === "number") { CX.lat = d.lat; CX.lng = d.lng; if (typeof d.r === "number") CX.R = d.r; CX.label = typeof d.label === "string" ? d.label.slice(0, 40) : CX.label; CX.src = "site"; CX.shape = d.shape === "square" ? "square" : "circle"; CX.done[1] = true; }
     if (d.board) CX.done[5] = true; saveCx(); drawRail(); });
@@ -3890,56 +3890,18 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   window.__wf = { where, urlOf, openK, openDr, update, drawRail, get CX() { return CX; } };
 })();
 
-/* v142 · one page, three segments: Select site → Diagrams → 3D model. #/site stays the route; the segments are a state inside the page. */
+/* v143 · Site is one focused tool: choose a place and generate its editable 3D context model. */
 (function () {
-  const NAMES = ["Select site", "Diagrams", "3D model"];
-  let SEG = 1;
-  const segOf = () => { const m = /[?&]seg=(\d)/.exec(location.hash); return m ? Math.min(3, Math.max(1, +m[1])) : 1; };
-  const PRI = { 1: "Confirm site → Diagrams", 2: "View 3D model →", 3: "Enter Plan Studio →" };
   const st = document.createElement("style");
-  st.textContent = `.sitepage{padding:0 20px}.segbar{display:flex;align-items:center;gap:8px;height:48px;flex-wrap:nowrap;overflow:hidden}
-  .segbar ol{list-style:none;margin:0;padding:0;display:flex;align-items:center;gap:6px}.segbar li{display:flex;align-items:center;gap:6px}.segbar li+li::before{content:"→";color:var(--muted)}
-  .segbar button.sg{all:unset;cursor:pointer;display:flex;gap:8px;align-items:center;padding:5px 14px 5px 6px;border:1px solid var(--hair);border-radius:999px;font:600 13.5px var(--sans,inherit);background:#fff;white-space:nowrap}
-  .segbar button.sg b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E4E1D8;font:600 12px var(--mono)}
-  .segbar button.sg[aria-current=step]{background:var(--ink,#111);color:#fff;border-color:var(--ink,#111)}.segbar button.sg[aria-current=step] b{background:#D8402A;color:#fff}.segbar button.sg[disabled]{opacity:.45;cursor:default}
-  .segbar .sp{flex:1}.segbar .segpri{all:unset;cursor:pointer;font:700 14px var(--sans,inherit);padding:8px 18px;border-radius:999px;background:#D8402A;color:#fff;white-space:nowrap}.segbar .segpri:hover{background:#b9341f}.segbar .segpri[disabled]{opacity:.4;cursor:not-allowed}
-  .segbar button:focus-visible{outline:2px solid #D8402A;outline-offset:2px}
-  .segfr{position:relative;height:var(--segh,640px)}.segfr iframe{position:absolute;inset:0;width:100%;height:100%;border:1px solid var(--hair);border-radius:4px;background:#fff}.segfr iframe.off{visibility:hidden;pointer-events:none}
-  @media (max-width:900px){.sitepage{padding:0 10px}.segbar{height:auto;flex-wrap:wrap;padding:6px 0}}`;
+  st.textContent = `.sitepage{padding:12px 20px}.segfr{position:relative;height:var(--segh,680px)}.segfr iframe{position:absolute;inset:0;width:100%;height:100%;border:1px solid var(--hair);border-radius:4px;background:#fff}@media (max-width:900px){.sitepage{padding:8px 10px}}`;
   document.head.appendChild(st);
-  const frames = () => ({ s: document.querySelector('.segfr iframe[data-emb="sitectx"]'), a: document.querySelector('.segfr iframe[data-emb="atlas"]') });
-  const post = (fr, m) => { try { fr && fr.contentWindow.postMessage(Object.assign({ pc: 1 }, m), "*"); } catch (e) {} };
-  const ctxMsg = () => { const c = window.PCX; return c && c.lat != null ? { t: "atlas-ctx", ctx: { lat: c.lat, lng: c.lng, r: c.R, shape: c.shape || "circle", label: c.label || "" } } : null; };
-  const hasPin = () => !!(window.PCX && window.PCX.lat != null);
-  function bar() {
-    const b = document.getElementById("segbar"); if (!b) return;
-    b.innerHTML = `<ol>${NAMES.map((n, i) => `<li><button type="button" class="sg" data-seg="${i + 1}" ${SEG === i + 1 ? 'aria-current="step"' : ""} ${i > 0 && !hasPin() ? "disabled" : ""}><b>${i + 1}</b>${n}</button></li>`).join("")}</ol><span class="sp"></span><button type="button" class="segpri" id="segpri" ${!hasPin() ? "disabled" : ""} ${!hasPin() ? 'title="Search an address or click the map first"' : ""}>${PRI[SEG]}</button>`;
-  }
-  function apply(go) {
-    const f = frames(); if (!f.s) return; SEG = go || SEG;
-    f.s.classList.toggle("off", SEG === 2); f.a && f.a.classList.toggle("off", SEG !== 2);
-    if (SEG === 2) { const m = ctxMsg(); if (m) post(f.a, m); }
-    else post(f.s, { t: "mode", v: SEG === 3 ? "3d" : "map" });
-    try { history.replaceState(null, "", "#/site?seg=" + SEG); } catch (e) {}
-    bar(); fit(); if (window.__wf) window.__wf.update();
-  }
   function fit() { const w = document.querySelector(".segfr"); if (!w) return; window.scrollTo(0, 0); w.style.setProperty("--segh", Math.max(520, Math.floor(innerHeight - w.getBoundingClientRect().top - 12)) + "px"); }
-  P.site = () => { SEG = segOf(); setTimeout(() => { chrome("site"); fit(); bar(); apply(SEG); }, 0);
-    return `<div class="sitepage"><div class="segbar" id="segbar" role="navigation" aria-label="Site analysis steps"></div><div class="segfr"><iframe data-emb="sitectx" title="Site Planner" allow="clipboard-write"></iframe><iframe data-emb="atlas" data-merged="1" class="off" title="Site diagrams" allow="clipboard-write"></iframe></div></div>`; };
-  // old links: the Site Planner tool and the diagrams land on the same page; Boards keeps its own page
+  P.site = () => { setTimeout(() => { chrome("site"); fit(); }, 0); return `<div class="sitepage"><div class="segfr"><iframe data-emb="sitectx" title="3D Site Model" allow="clipboard-write"></iframe></div></div>`; };
+  // Old Site Planner and diagram links now land on the focused 3D site-model page. Boards keeps its own atlas mode.
   const _t = P.tool; P.tool = function (id) {
-    if (id === "sitectx") { try { history.replaceState(null, "", "#/site"); } catch (e) {} setTimeout(() => chrome("site"), 0); return P.site(); }
-    if (id === "atlas" && !/[?&]d=boards/.test(location.hash)) { const m = /[?&](lat|lng|r)=/.test(location.hash); try { history.replaceState(null, "", "#/site?seg=" + (m ? 2 : 1)); } catch (e) {} setTimeout(() => chrome("site"), 0); return P.site(); }
+    if (id === "sitectx" || id === "atlas" && !/[?&]d=boards/.test(location.hash)) { try { history.replaceState(null, "", "#/site"); } catch (e) {} setTimeout(() => chrome("site"), 0); return P.site(); }
     return _t.apply(this, arguments); };
-  document.addEventListener("click", (e) => {
-    const sg = e.target.closest && e.target.closest("[data-seg]"); if (sg && !sg.disabled) { apply(+sg.dataset.seg); return; }
-    if (e.target.closest && e.target.closest("#segpri")) { const f = frames();
-      if (SEG === 1) { post(f.s, { t: "generate", ifEmpty: true }); apply(2); } else if (SEG === 2) { post(f.s, { t: "generate", ifEmpty: true }); apply(3); } else post(f.s, { t: "enter" }); } });
-  addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc || !document.getElementById("segbar")) return; const f = frames();
-    if (d.t === "ctx" && f.s && e.source === f.s.contentWindow) setTimeout(bar, 0);
-    if (d.t === "atlas-ready" && f.a && e.source === f.a.contentWindow) { const m = ctxMsg(); if (m) post(f.a, m); } });
   addEventListener("resize", () => setTimeout(fit, 0));
-  window.__site = { get seg() { return SEG; }, apply, bar };
 })();
 
 // Unavailable services remain addressable without appearing as released tools.

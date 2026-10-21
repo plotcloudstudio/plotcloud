@@ -142,8 +142,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     <section class="sec" aria-labelledby="h-model">
       <h2 id="h-model"><i>1</i>Model</h2>
       <div class="drop" id="drop">
-        <div><button type="button" class="btn" id="pick">Choose a model file</button></div>
-        <p>Or drop it on the view. Accepts .3dm (Rhino), .dae (SketchUp export), .obj, .stl and .glb</p>
+        <div class="two openrow"><button type="button" class="btn" id="pick">Choose a model file</button><button type="button" class="btn" id="resetAnalysis">Reset</button></div>
+        <p>Or drop it on the view. Accepts .3dm, .dae, .obj, .stl and .glb up to 20 MB / 350,000 triangles. Simplify larger models before importing.</p>
         <input type="file" id="file" accept=".3dm,.obj,.stl,.dae,.glb,.gltf,.json" hidden>
       </div>
       <div class="fileinfo" id="fileinfo"><b>Sample: corner courtyard block with tower</b><span>Demo model · meters</span></div>
@@ -851,8 +851,22 @@ async function read3dm(buf) {
   if (!geoms.length) throw new Error(noMesh ? 'None of the surfaces in this file have a render mesh. Save it from Rhino in a shaded view, or export .obj.' : 'No surfaces to analyze were found in this file.');
   return { geoms, unit: unitName ? UNIT_OF_RHINO[unitName] : null, up: 'z', warn, unitKnown: !!unitName };
 }
+const MODEL_LIMITS = Object.freeze({ bytes: 20 * 1024 * 1024, triangles: 350000 });
+function checkFileSize(file) {
+  const mb = file.size / 1048576;
+  if (file.size > MODEL_LIMITS.bytes) throw new Error(`This model is ${mb.toFixed(1)} MB. For reliable browser analysis, the limit is 20 MB. Simplify the model, purge unused objects and textures, then export only the geometry needed for the sun study.`);
+}
+function checkMeshSize(parsed) {
+  const triangles = parsed.geoms.reduce((n, g) => n + Math.ceil((g.index ? g.index.count : g.attributes.position.count) / 3), 0);
+  if (triangles > MODEL_LIMITS.triangles) {
+    for (const g of parsed.geoms) if (g && g.dispose) g.dispose();
+    throw new Error(`This model contains about ${triangles.toLocaleString('en-CA')} triangles. For reliable browser analysis, the limit is ${MODEL_LIMITS.triangles.toLocaleString('en-CA')}. Reduce mesh density and remove hidden, interior or distant geometry, then export again.`);
+  }
+  return triangles;
+}
 async function readFile(file) {
   const ext = file.name.toLowerCase().split('.').pop();
+  checkFileSize(file);
   const buf = await file.arrayBuffer();
   if (ext === '3dm') return read3dm(buf);
   if (ext === 'obj') return { geoms: meshesOf(new OBJLoader().parse(new TextDecoder().decode(buf))), up: 'y', unit: null };
@@ -861,6 +875,13 @@ async function readFile(file) {
   if (ext === 'glb' || ext === 'gltf') { const g = await new Promise((res, rej) => new GLTFLoader().parse(buf, '', res, rej)); return { geoms: meshesOf(g.scene), up: 'y', unit: 1, unitKnown: true }; }
   if (ext === 'json') return readScene(JSON.parse(new TextDecoder().decode(buf)));
   throw new Error(`.${ext} files are not supported. From SketchUp, export .dae. From AutoCAD, export .obj.`);
+}
+function readableFileError(error, file) {
+  const detail = String(error && (error.message || error.name) || '');
+  if (error && error.name === 'NotReadableError' || /requested file could not be read|permission|not readable/i.test(detail)) {
+    return `The browser lost access to “${file.name}”. The file may have been moved, renamed, locked, or made cloud-only after it was selected. Keep a local copy in place, then choose it again. Use Reset if the old session still appears.`;
+  }
+  return detail || 'The file could not be read. Choose the file again, or use Reset to start over.';
 }
 // a PlotCloud scene from Plan Studio or Site Context: masses with roles, terrain, location and north (plan meters, Z up)
 //   proposed: measured · context: casts shadows only · terrain: measured inside the analysis area, shadows elsewhere
@@ -1332,6 +1353,7 @@ async function loadFile(file) {
   try {
     const r = await readFile(file);
     if (!r.geoms.length) throw new Error('No meshes were found in this file.');
+    checkMeshSize(r);
     S.raw = { geoms: r.geoms, name: r.scene && r.scene.name ? r.scene.name : file.name, roles: r.roles || null, refs: r.refs || null, scene: r.scene || null }; window.__sunScene = r.scene || null;
     setUp(r.up);
     S.unit = r.unit ?? guessUnit(r.geoms);
@@ -1347,7 +1369,7 @@ async function loadFile(file) {
     if (r.warn) tips.push(r.warn);
     if (!r.unitKnown) tips.push('Check the size below. If it is wrong, change the units. If the model is lying on its side, switch the up axis.');
     msg('#loadmsg', tips.filter(Boolean).join(' ') || 'Loaded. Set true north, then calculate.', r.warn || (r.scene && r.scene.source && r.scene.source.fixture) ? 'warn' : '');
-  } catch (e) { msg('#loadmsg', e.message || 'The file could not be read.', 'warn'); }
+  } catch (e) { msg('#loadmsg', readableFileError(e, file), 'warn'); }
 }
 $('#pick').addEventListener('click', () => $('#file').click());
 $('#file').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
@@ -1570,6 +1592,20 @@ function sample() {
   S.raw = { geoms: g, name: 'sample' }; S.unit = 1; setUp('z'); $('#units').value = '1';
   buildModel();
 }
+function resetAnalysis() {
+  runToken++;
+  S.busy = false; S.lastR = null; S.hl = null; PREP = null; PREV = null; RERUN = false;
+  if (DAYS) DAYS.clear();
+  $('#file').value = '';
+  for (const id of ['prog', 'setProg', 'stopSet', 'busy', 'gwarn', 'longBox', 'ctxDirty']) $('#' + id).hidden = true;
+  lockUI(false); clearResult(); sample();
+  $('#fileinfo').innerHTML = '<b>Sample: corner courtyard block with tower</b><span>Demo model · meters</span>';
+  $('#windRow').hidden = true; window.__sunScene = null;
+  msg('#loadmsg', 'Reset complete. Open a local model file when you are ready.', 'ok');
+  msg('#runmsg', ''); msg('#setmsg', ''); msg('#expmsg', '');
+  setNote(); lvlUI(); panelUI(); capUI();
+}
+$('#resetAnalysis').addEventListener('click', resetAnalysis);
 
 // ---------- the chart panel: dates to compare, area by hours (click to highlight), sun through the day ----------
 const $$ = (q) => [...document.querySelectorAll(q)];
@@ -1633,7 +1669,7 @@ function applyLevel(level) { if (level === 'custom' || !S.model) return; const p
 $('#lvlSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-l]'); if (!b) return; S.level = b.dataset.l; $$('#lvlSeg button').forEach((q) => q.setAttribute('aria-pressed', String(q === b))); stale(); lvlUI(); });
 $('#longGo').addEventListener('click', () => { $('#longBox').hidden = true; runAnalysis({ confirmed: true }); }); $('#longNo').addEventListener('click', () => { $('#longBox').hidden = true; });
 
-window.__sun = { get S() { return S; } };
+window.__sun = { get S() { return S; }, reset: resetAnalysis, readableFileError, limits: MODEL_LIMITS, checkFileSize, checkMeshSize };
 // ---------- start ----------
 if (window.PC_EMBED) { document.querySelector('.brand').hidden = true; }
 applyTheme();
@@ -1970,7 +2006,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   const shown = () => lefts.filter((x) => !x.hidden && getComputedStyle(x).display !== 'none');
 
   // ---- section 1: one compact row; file notes behind "More"
-  const drop = $('#drop'); if (drop && $('#pick', drop)) { drop.classList.add('compact'); if ($('#pick').parentElement !== drop) drop.prepend($('#pick')); const n = [...drop.children].find((e) => !e.matches('button, input') && txt(e).length > 20); if (n) $('#pick').title = txt(n); if (/choose a model file/i.test(txt($('#pick')))) $('#pick').textContent = 'Open a plan or model…'; }
+  const drop = $('#drop'); if (drop && $('#pick', drop)) { drop.classList.add('compact'); if ($('#pick').parentElement !== drop && !$('#pick').parentElement.matches('.openrow')) drop.prepend($('#pick')); const n = [...drop.children].find((e) => !e.matches('button, input') && txt(e).length > 20); if (n) $('#pick').title = txt(n); if (/choose a model file/i.test(txt($('#pick')))) $('#pick').textContent = 'Open a plan or model…'; }
   { const pick = $('#pick'), pre = $('#preset'), save = $('#saveJ') || $('#save'); if (pick && pre && drop) { const row = document.createElement('div'); row.className = 'row3 openrow'; pick.textContent = 'Open…'; const oldBox = pre.closest('.two, div:not(.drop)'); row.append(pick, pre); if (save && save.closest('.sec') === drop.closest('.sec')) { save.textContent = 'Save'; row.append(save); } pre.setAttribute('aria-label', 'Or start from a case'); drop.prepend(row); if (oldBox && oldBox !== drop && !oldBox.querySelector('input, select, button')) oldBox.hidden = true; }
     else if (pick && drop) { const sm = $$('[id^="sample"]', drop.closest('.sec')).filter((b) => b.tagName === 'BUTTON'); if (sm.length) { const row = document.createElement('div'); row.className = 'row3 openrow'; pick.textContent = 'Open…'; const box = sm[0].parentElement; row.append(pick, ...sm); for (const b of sm) b.textContent = b.textContent.replace(/^Sample\s+/i, '').replace(/\s+floor$/i, '').replace(/^./, (c) => c.toUpperCase()); drop.prepend(row); if (box && !box.querySelector('button, input, select')) box.hidden = true; } } }
   { const cl = $('#clear'); if (cl && /clear canvas/i.test(txt(cl))) cl.textContent = 'Clear'; }
