@@ -696,13 +696,12 @@ async function doExport(btn, status) {
     const dl = await getDownloads();
     const kb = Math.max(1, Math.round(zip.length / 1024));
     if (!dl) {
-      const u = URL.createObjectURL(new Blob([zip], { type: 'application/zip' })), a = document.createElement('a');
-      a.href = u; a.download = base + '.zip'; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(u), 4000);
-    } else {
-      status.textContent = t('请在弹出的确认框里保存文件。');
-      await dl.save({ filename: base + '.zip', data: new Blob([zip], { type: 'application/zip' }) });
+      status.className = 'status warn';
+      status.textContent = M.noDownload(kb);
+      return;
     }
+    status.textContent = t('请在弹出的确认框里保存文件。');
+    await dl.save({ filename: base + '.zip', data: new Blob([zip], { type: 'application/zip' }) });
     const missing3dm = state.formats.includes('3dm') && !rhino;
     status.className = missing3dm ? 'status warn' : 'status ok';
     status.textContent = missing3dm ? M.savedNo3dm(base + '.zip', kb) : M.saved(base + '.zip', kb, report);

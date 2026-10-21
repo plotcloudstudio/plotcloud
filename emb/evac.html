@@ -1497,7 +1497,7 @@ async function save(name, data) {
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data, dl = await getDL();
   if (dl) { try { await dl.save({ filename: name, data: bytes }); m('Saved ' + name + '.', 'ok'); return; } catch (e) { if (e && e.code === 'declined') { m('Save canceled.'); return; } } }
   try { const u = URL.createObjectURL(new Blob([bytes])), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); m('Downloaded ' + name + '.', 'ok'); }
-  catch (e) { m('This view cannot download files. Open PlotCloud in a full browser tab to save.', 'warn'); }
+  catch (e) { m('This view cannot download files. Open the page on claude.ai to save.', 'warn'); }
 }
 const toPNG = (c) => { const u = c.toDataURL('image/png'), s = atob(u.split(',')[1]), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
 function board(modes) {

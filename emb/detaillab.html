@@ -1169,7 +1169,7 @@ async function offer(name, data) {
   const dl = await getDL();
   if (dl) { try { await dl.save({ filename: name, data }); msg('#xmsg', `Saved ${name}.`, 'ok'); return true; } catch (e) { if (e && e.code === 'declined') { msg('#xmsg', 'Save canceled.'); return false; } if (e && e.code === 'rate_limited') { msg('#xmsg', 'Another save prompt is still open. Close it first.', 'warn'); return false; } } }
   try { const blob = data instanceof Blob ? data : new Blob([data]); const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); msg('#xmsg', `Downloaded ${name}.`, 'ok'); return true; } catch (e) {}
-  msg('#xmsg', 'This view cannot download files. Open PlotCloud in a full browser tab to save.', 'warn'); return false;
+  msg('#xmsg', 'This view cannot download files. Open the page on claude.ai to save.', 'warn'); return false;
 }
 const baseName = () => `${(S.sheet.number || 'detail').replace(/[^\w-]+/g, '-')}_${(S.sheet.title || 'detail').replace(/[^\w]+/g, '-').slice(0, 40)}_1-${S.sheet.scale}`.replace(/-+/g, '-');
 const drawSheet = () => DL.sheet(S, { mode: 'draw' });

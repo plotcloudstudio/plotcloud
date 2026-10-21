@@ -49,8 +49,8 @@ export function t(s) { return LANG === 'en' ? (EN[s] ?? s) : s; }
 // Messages with values
 export const M = {
   noDownload: (kb) => LANG === 'en'
-    ? `Files built (${kb} KB), but the download was blocked in this view. Open PlotCloud in a full browser tab and export again.`
-    : `文件已生成（${kb} KB），但这个视图不能下载。请在浏览器中打开 PlotCloud 再导出。`,
+    ? `Files built (${kb} KB), but this view can't download. Open the page on claude.ai and export again.`
+    : `文件已生成（${kb} KB），但这个视图不能下载。请在 claude.ai 里打开本页面再导出。`,
   saved: (name, kb, r) => LANG === 'en'
     ? `Saved ${name} (${kb} KB)${r ? `. Rhino file: ${r.nurbs} NURBS solids, ${r.meshes} meshes` : ''}.`
     : `已保存 ${name}（${kb} KB）${r ? `，Rhino 文件含 ${r.nurbs} 个 NURBS 实体、${r.meshes} 个网格` : ''}。`,

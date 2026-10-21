@@ -1815,7 +1815,7 @@ async function offer(name, data, statusSel, previewCanvas) {
   if (dl) { try { await dl.save({ filename: name, data }); msg(statusSel, `Saved ${name}.`, 'ok'); return true; } catch (e) { if (e && e.code === 'declined') { msg(statusSel, 'Save canceled.'); return false; } if (e && e.code === 'rate_limited') { msg(statusSel, 'Another save prompt is still open. Close it first.', 'warn'); return false; } } }
   try { const blob = data instanceof Blob ? data : new Blob([data]); const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); msg(statusSel, `Downloaded ${name}.`, 'ok'); return true; } catch (e) {}
   if (previewCanvas) { msg(statusSel, 'This view cannot download files. Right-click or long-press the image below to save it.'); const img = new Image(); img.src = previewCanvas.toDataURL('image/png'); img.alt = 'Exported image'; $(statusSel).appendChild(img); }
-  else msg(statusSel, 'This view cannot download files. Open PlotCloud in a full browser tab to save.', 'warn');
+  else msg(statusSel, 'This view cannot download files. Open the page on claude.ai to save.', 'warn');
   return false;
 }
 $('#export').addEventListener('click', async () => { const { w, h } = imgSize(), cv = compose(snapshot(w, h), titleNow(), subNow()); await offer(`structure-${S.show}-${S.combo}.png`, await toPNG(cv), '#expmsg', cv); });
