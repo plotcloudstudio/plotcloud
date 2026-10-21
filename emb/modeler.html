@@ -537,6 +537,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 .cmp-plan,.cmp-sim{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#c9cdd4}.cmp-plan[hidden],.cmp-sim[hidden]{display:none}
 .cmp-pane{position:relative;background:#f7f7f5;overflow:auto;padding:38px 10px 10px;min-width:0}.cmp-pane h4{position:absolute;top:8px;left:12px;margin:0;z-index:2;background:rgba(29,33,41,.82);color:#fff;border-radius:6px;padding:4px 10px;font:600 12px var(--f-body)}
 .cmp-pane canvas{position:static;display:block;width:100%;height:auto;margin:0 0 10px;border:1px solid #dde0e6;background:#fff;border-radius:6px}.cmp-pane .lvt{font:700 11px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:#6e6a60;margin:0 0 4px}.cmp-pane .none{color:#6e6a60;font:500 13px var(--f-body);padding:20px 4px}
+.cmp-plan .cmp-pane{overflow:auto;padding:38px 8px 8px}.cmp-plan .cmp-sheet{position:relative;height:clamp(280px,calc(100vh - 210px),720px);min-height:220px;margin:0 0 10px;background:#fff;border:1px solid #dde0e6;border-radius:6px;overflow:hidden}.cmp-plan .cmp-sheet canvas{position:absolute;inset:0;width:100%;height:100%;margin:0;border:0;border-radius:0;touch-action:none;cursor:default}.cmp-plan .cmp-sheet canvas.space-pan{cursor:grab}.cmp-plan .cmp-sheet canvas.panning{cursor:grabbing}.cmp-plan .lvt{position:absolute;left:10px;bottom:8px;z-index:1;margin:0;padding:3px 7px;border-radius:4px;background:rgba(255,255,255,.88);pointer-events:none}.cmp-plan .none{position:absolute;inset:0;display:grid;place-items:center;margin:0}.cmp-tools .view2d-only[hidden]{display:none}
 .cmp-pane img{display:block;width:100%;height:auto;border:1px solid #dde0e6;border-radius:6px;background:#fff}.cmp-delta{grid-column:1 / -1;background:#fff;padding:10px 14px;overflow:auto;max-height:40%}.cmp-delta table{border-collapse:collapse;font:500 13px var(--f-body);width:100%}.cmp-delta th,.cmp-delta td{text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid #eceae5}.cmp-delta .dd{font-family:var(--f-mono);font-weight:600}.cmp-delta .up{color:#1f7a46}.cmp-delta .dn{color:#b3321f}
 .cmp-sim{grid-template-rows:minmax(0,1fr) auto}.vnote2{font:500 11.5px var(--f-body);color:#6e6a60;margin:0 0 0 2px;align-self:center}
 .cmp-tools{display:flex;align-items:center;gap:10px}.cmp-tools .btn{height:30px;border:1px solid var(--kj-line2);border-radius:6px;background:#fff;padding:0 12px}
@@ -791,7 +792,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 </div>
 <div class="sdlg cmpdlg" id="cmpDlg" role="dialog" aria-modal="true" aria-labelledby="cmpTitle" hidden>
   <div class="sdlg-in cmp-in">
-    <div class="sdlg-h"><h2 id="cmpTitle">Compare</h2><div class="cmp-tools"><div class="seg2" id="cmpModes" role="group" aria-label="Layout"><button type="button" data-cm="side" aria-pressed="true">Side by side</button><button type="button" data-cm="slider" aria-pressed="false">Slider</button></div><label class="switch" id="cmpHlW">Highlight changes<input type="checkbox" id="cmpHl" checked></label><button type="button" class="btn" id="cmpPng">Export PNG</button><button type="button" class="btn" id="cmpX" aria-label="Close">×</button></div></div>
+    <div class="sdlg-h"><h2 id="cmpTitle">Compare</h2><div class="cmp-tools"><div class="seg2" id="cmpModes" role="group" aria-label="Layout"><button type="button" data-cm="side" aria-pressed="true">Side by side</button><button type="button" data-cm="slider" aria-pressed="false">Slider</button></div><label class="switch" id="cmpHlW">Highlight changes<input type="checkbox" id="cmpHl" checked></label><button type="button" class="btn view2d-only" id="cmpFit" hidden>Fit view</button><button type="button" class="btn view2d-only" id="cmpReset" hidden>Reset view</button><button type="button" class="btn" id="cmpPng">Export PNG</button><button type="button" class="btn" id="cmpX" aria-label="Close">×</button></div></div>
     <div class="cmp-sel" id="cmpSel"><label>Version A<select id="cmpSA"></select></label><label>Version B<select id="cmpSB"></select></label><label>Level<select id="cmpLv"></select></label><label>Compare<select id="cmpTy"></select></label><div class="seg2" id="cmpView" role="group" aria-label="View"><button type="button" data-cv="3d" aria-pressed="true">3D</button><button type="button" data-cv="2d" aria-pressed="false">2D plan</button></div></div>
     <div class="cmp-stage"><div class="cmp-plan" id="cmpPlan" hidden></div><div class="cmp-sim" id="cmpSim" hidden></div><canvas id="cmpCv" aria-label="The versions in 3D"></canvas><div class="cmp-split" id="cmpSplit" role="separator" aria-label="Divider" hidden><span></span></div><span class="cmp-lab" id="cmpLA"></span><span class="cmp-lab" id="cmpLB"></span></div>
     <p class="note" id="cmpNote" aria-live="polite"></p>
@@ -3268,11 +3269,11 @@ $('#snapBtn').addEventListener('click', () => $('[data-ex="png"]').click());
 // the overview: the other view of the model (3D while you draw, the plan while you look at 3D), or the list of rooms
 let MINI = 'view', miniT = 0, MINI3 = null, miniBusy = false;
 function miniSoon() { clearTimeout(miniT); miniT = setTimeout(miniDraw, 140); }
-function miniPlan(x, w, h, d, hl) {
+function miniPlan(x, w, h, d, hl, view) {
   const ws = lvWalls(), R = S.L[LV]; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const q of ws) for (const p of [q.a, q.b]) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
   if (!isFinite(x0)) { x.fillStyle = '#86909c'; x.font = `${12 * d}px ${FB}`; x.textAlign = 'center'; x.fillText('No walls on this level yet', w / 2, h / 2); return; }
-  const pad = 22 * d, k = Math.min((w - 2 * pad) / Math.max(1, x1 - x0), (h - 2 * pad) / Math.max(1, y1 - y0)), ox = (w - (x1 - x0) * k) / 2 - x0 * k, oy = (h + (y1 - y0) * k) / 2 + y0 * k, P = (p) => [ox + p[0] * k, oy - p[1] * k];
+  const pad = 22 * d, k = view ? view.scale : Math.min((w - 2 * pad) / Math.max(1, x1 - x0), (h - 2 * pad) / Math.max(1, y1 - y0)), ox = view ? view.offsetX : (w - (x1 - x0) * k) / 2 - x0 * k, oy = view ? view.offsetY : (h + (y1 - y0) * k) / 2 + y0 * k, P = (p) => [ox + p[0] * k, oy - p[1] * k];
   const c = roomImage(LV, () => '#ffffff', 'mini'), a = P([R.x0, R.y0 + R.H * STC.CELL]); x.imageSmoothingEnabled = false; x.drawImage(c, a[0], a[1], R.W * STC.CELL * k, R.H * STC.CELL * k); x.imageSmoothingEnabled = true;
   x.fillStyle = '#dde0e6'; x.strokeStyle = '#aeb3bc'; x.lineWidth = d; for (const f of M.furn) { if (f.lv !== LV || isHidden(f.id)) continue; const q = STC.furnCorners(f).map(P); x.beginPath(); x.moveTo(...q[0]); for (const p of q.slice(1)) x.lineTo(...p); x.closePath(); x.fill(); x.stroke(); }
   x.strokeStyle = '#5b5f66'; x.lineCap = 'square'; for (const q of ws) { x.lineWidth = Math.max(1.5 * d, (q.t || 0.2) * k); const a1 = P(q.a), b1 = P(q.b); x.beginPath(); x.moveTo(...a1); x.lineTo(...b1); x.stroke(); }
@@ -3922,7 +3923,8 @@ const cmpLevels = () => { const seen = new Map(); for (const X of [CMP.A, CMP.B]
 async function openCompare(vs, st) {
   if (!vs.length || vs.some((v) => !v)) return; const dlg = $('#cmpDlg'), A = vs[0], B = vs[1] || null; st = st || {};
   const mk = (v) => { const N = STC.migrate(JSON.parse(v.model)); return { M: N, S: STC.build(N), label: v.name + (v.note ? ' — ' + v.note : ''), v }; };
-  CMP = { A: mk(A), B: B ? mk(B) : null, mode: XS.get('cmpMode', 'side'), split: 0.5, hl: true, lv: st.lv || 'all', type: st.type || '3d', view: st.view || '3d', res: await simResults() };
+  if (CMP && CMP.ro) CMP.ro.disconnect();
+  CMP = { A: mk(A), B: B ? mk(B) : null, mode: XS.get('cmpMode', 'side'), split: 0.5, hl: true, lv: st.lv || 'all', type: st.type || '3d', view: st.view || '3d', res: await simResults(), view2d: { scale: 1, targetScale: 1, offsetX: 0, offsetY: 0, minScale: .01, maxScale: 1e4, width: 0, height: 0, fitted: false, autoFit: true, raf: 0 } };
   if (CMP.lv !== 'all' && !cmpLevels().some((l) => l.id === CMP.lv)) CMP.lv = 'all';
   dlg.hidden = false; $('#cmpHl').checked = true; await new Promise((r) => requestAnimationFrame(r)); await cmpRefresh(true);
 }
@@ -3934,12 +3936,51 @@ function cmpSelUI() {   // fill the four selectors from what exists right now
   const ty = cmpTypes(); if (!ty.some(([k]) => k === CMP.type)) CMP.type = '3d'; $('#cmpTy').innerHTML = ty.map(([k, t]) => opt(k, t, CMP.type === k)).join(''); $('#cmpTy').disabled = !two;
   for (const b of $$('#cmpView [data-cv]')) { b.setAttribute('aria-pressed', String(b.dataset.cv === CMP.view)); b.disabled = CMP.type !== '3d'; }
 }
-function cmpPlanPane(X, hl) {   // every chosen level of one version, drawn by the Plan Studio plan renderer, changed objects outlined
+const cmpPlanLevels = () => CMP.lv === 'all' ? cmpLevels() : cmpLevels().filter((l) => l.id === CMP.lv);
+function cmp2Bounds() {   // one union in model coordinates: both drawings share the same crop, centre and metres-per-pixel
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const ids = new Set(cmpPlanLevels().map((l) => l.id));
+  const add = (p) => { if (!p || !isFinite(p[0]) || !isFinite(p[1])) return; x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); };
+  for (const X of [CMP.A, CMP.B]) if (X) {
+    for (const w of X.M.walls || []) if (ids.has(w.lv)) { add(w.a); add(w.b); }
+    for (const f of X.M.furn || []) if (ids.has(f.lv)) for (const p of STC.furnCorners(f)) add(p);
+    for (const f of X.M.floors || []) if (ids.has(f.lv)) { add([f.x, f.y]); add([f.x + (f.w || 0), f.y + (f.d || 0)]); }
+  }
+  if (!isFinite(x0)) return { x0: -3, y0: -3, x1: 3, y1: 3 };
+  if (x1 - x0 < .1) { x0 -= .5; x1 += .5; } if (y1 - y0 < .1) { y0 -= .5; y1 += .5; }
+  return { x0, y0, x1, y1 };
+}
+const cmp2Canvases = () => $$('#cmpPlan canvas[data-cmp-side]');
+function cmp2Size() {
+  const cvs = cmp2Canvases(); if (!cvs.length) return null; const r0 = cvs[0].getBoundingClientRect(), width = Math.max(80, r0.width), height = Math.max(80, r0.height), dpr = Math.min(2, Math.max(1, devicePixelRatio || 1));
+  for (const cv of cvs) { const r = cv.getBoundingClientRect(), w = Math.max(80, r.width), h = Math.max(80, r.height), bw = Math.round(w * dpr), bh = Math.round(h * dpr); if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; } cv._cmpSize = { width: w, height: h, dpr }; }
+  return { width, height };
+}
+function cmp2SetFit(drawNow) {
+  if (!CMP || CMP.view !== '2d') return; const sz = cmp2Size(); if (!sz) return; const b = cmp2Bounds(), pad = Math.min(48, Math.max(24, Math.min(sz.width, sz.height) * .07)), scale = Math.max(.0001, Math.min((sz.width - pad * 2) / (b.x1 - b.x0), (sz.height - pad * 2) / (b.y1 - b.y0))), v = CMP.view2d;
+  if (v.raf) cancelAnimationFrame(v.raf); v.raf = 0; v.scale = v.targetScale = scale; v.offsetX = sz.width / 2 - (b.x0 + b.x1) * .5 * scale; v.offsetY = sz.height / 2 + (b.y0 + b.y1) * .5 * scale; v.minScale = scale * .15; v.maxScale = scale * 40; v.width = sz.width; v.height = sz.height; v.fitted = true; v.autoFit = true; if (drawNow !== false) cmp2Draw();
+}
+function cmp2Draw() {
+  if (!CMP || CMP.view !== '2d') return; const sz = cmp2Size(); if (!sz) return; const v = CMP.view2d;
+  if (!v.fitted) { cmp2SetFit(false); }
+  else if (v.width && (Math.abs(v.width - sz.width) > .5 || Math.abs(v.height - sz.height) > .5)) { if (v.autoFit) cmp2SetFit(false); else { const wx = (v.width / 2 - v.offsetX) / v.scale, wy = (v.offsetY - v.height / 2) / v.scale; v.offsetX = sz.width / 2 - wx * v.scale; v.offsetY = sz.height / 2 + wy * v.scale; v.width = sz.width; v.height = sz.height; } }
+  const hl = CMP.hl ? CMP.diff : null;
+  for (const cv of cmp2Canvases()) { const X = cv.dataset.cmpSide === 'B' ? CMP.B : CMP.A, size = cv._cmpSize, x = cv.getContext('2d'); x.setTransform(size.dpr, 0, 0, size.dpr, 0, 0); x.clearRect(0, 0, size.width, size.height); x.fillStyle = '#fff'; x.fillRect(0, 0, size.width, size.height); const l = X && X.M.levels.find((q) => q.id === cv.dataset.cmpLevel); if (!l) { x.fillStyle = '#86909c'; x.font = `12px ${FB}`; x.textAlign = 'center'; x.fillText('This version has no matching level', size.width / 2, size.height / 2); continue; } const keep = [M, S, LV]; try { M = X.M; S = X.S; LV = l.id; miniPlan(x, size.width, size.height, 1, hl, v); } finally { [M, S, LV] = keep; } }
+}
+function cmp2ZoomTo(cv, e) {
+  const v = CMP.view2d, r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top, wx = (sx - v.offsetX) / v.scale, wy = (v.offsetY - sy) / v.scale, factor = Math.exp(-e.deltaY * .0015); v.targetScale = STC.clamp(v.targetScale * factor, v.minScale, v.maxScale); v.fitted = true; v.autoFit = false;
+  if (v.raf) cancelAnimationFrame(v.raf); const tick = () => { const n = v.scale + (v.targetScale - v.scale) * .28; v.scale = Math.abs(n - v.targetScale) < v.targetScale * .001 ? v.targetScale : n; v.offsetX = sx - wx * v.scale; v.offsetY = sy + wy * v.scale; cmp2Draw(); if (v.scale !== v.targetScale) v.raf = requestAnimationFrame(tick); else v.raf = 0; }; v.raf = requestAnimationFrame(tick);
+}
+let CMP2PAN = null, CMP2SPACE = false;
+function cmp2Bind(cv) {
+  cv.addEventListener('wheel', (e) => { if (!CMP) return; e.preventDefault(); cmp2ZoomTo(cv, e); }, { passive: false });
+  cv.addEventListener('pointerdown', (e) => { if (!CMP || !(e.button === 1 || (e.button === 0 && CMP2SPACE))) return; e.preventDefault(); const v = CMP.view2d; if (v.raf) cancelAnimationFrame(v.raf); v.raf = 0; v.targetScale = v.scale; v.fitted = true; v.autoFit = false; CMP2PAN = { id: e.pointerId, x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); for (const q of cmp2Canvases()) q.classList.add('panning'); });
+  cv.addEventListener('pointermove', (e) => { if (!CMP2PAN || e.pointerId !== CMP2PAN.id || !CMP) return; const v = CMP.view2d; v.offsetX += e.clientX - CMP2PAN.x; v.offsetY += e.clientY - CMP2PAN.y; CMP2PAN.x = e.clientX; CMP2PAN.y = e.clientY; cmp2Draw(); });
+  const up = (e) => { if (!CMP2PAN || e.pointerId !== CMP2PAN.id) return; CMP2PAN = null; for (const q of cmp2Canvases()) q.classList.remove('panning'); };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+}
+function cmpPlanPane(X, side) {   // every chosen level uses the same orthographic camera and the same CSS viewport size
   const pane = document.createElement('div'); pane.className = 'cmp-pane'; const h = document.createElement('h4'); h.textContent = X.label; pane.appendChild(h);
-  const lvs = CMP.lv === 'all' ? X.M.levels.slice().sort((a, b) => a.z - b.z) : X.M.levels.filter((l) => l.id === CMP.lv);
-  if (!lvs.length) { const n = document.createElement('p'); n.className = 'none'; n.textContent = `${X.v.name} has no ${(cmpLevels().find((l) => l.id === CMP.lv) || { name: 'such' }).name} level.`; pane.appendChild(n); return pane; }
-  for (const l of lvs) { const t = document.createElement('p'); t.className = 'lvt'; t.textContent = l.name; pane.appendChild(t); const cv = document.createElement('canvas'), W = 900, H = CMP.lv === 'all' ? 560 : 640, d = 1.4; cv.width = W; cv.height = H; cv.setAttribute('aria-label', `${X.v.name}, ${l.name}, plan`); pane.appendChild(cv);
-    const keep = [M, S, LV]; try { M = X.M; S = X.S; LV = l.id; miniPlan(cv.getContext('2d'), W, H, d, hl); } finally { [M, S, LV] = keep; } }
+  for (const l of cmpPlanLevels()) { const sheet = document.createElement('div'); sheet.className = 'cmp-sheet'; const t = document.createElement('p'); t.className = 'lvt'; t.textContent = l.name; sheet.appendChild(t); const cv = document.createElement('canvas'); cv.dataset.cmpSide = side; cv.dataset.cmpLevel = l.id; cv.setAttribute('aria-label', `${X.v.name}, ${l.name}, plan`); sheet.appendChild(cv); cmp2Bind(cv); pane.appendChild(sheet); }
   return pane;
 }
 const cmpNum = (t) => { const m = /^\s*([-+]?\d*\.?\d+)\s*(.*)$/.exec(String(t == null ? '' : t)); return m ? { n: parseFloat(m[1]), u: m[2].trim() } : null; };
@@ -3952,12 +3993,12 @@ function cmpSimUI() {
 }
 const r2name = (r) => r.title || 'Result';
 async function cmpRefresh(first) {   // one place that shows what the four selectors + the view say
-  if (!CMP) return; const two = !!CMP.B; cmpSelUI(); const is3 = CMP.type === '3d', plan = is3 && CMP.view === '2d';
+  if (!CMP) return; if (CMP.ro) { CMP.ro.disconnect(); CMP.ro = null; } const two = !!CMP.B; cmpSelUI(); const is3 = CMP.type === '3d', plan = is3 && CMP.view === '2d';
   $('#cmpPlan').hidden = !plan; $('#cmpSim').hidden = is3; $('#cmpCv').style.visibility = is3 && !plan ? 'visible' : 'hidden';
   $('#cmpTitle').textContent = two ? `Compare ${CMP.A.v.name} and ${CMP.B.v.name}` : `Preview ${CMP.A.v.name}`; $('#cmpModes').hidden = !two || !is3 || plan; $('#cmpHlW').hidden = !two || !is3;
   const diff = two ? WBP.diffModels(CMP.A.M, CMP.B.M) : new Set(); CMP.diff = diff;
   if (!is3) { cmpSimUI(); S3.cmp.close(); }
-  else if (plan) { const pl = $('#cmpPlan'); pl.innerHTML = ''; const hl = CMP.hl ? diff : null; pl.appendChild(cmpPlanPane(CMP.A, hl)); if (two) pl.appendChild(cmpPlanPane(CMP.B, hl)); else pl.style.gridTemplateColumns = '1fr'; if (two) pl.style.gridTemplateColumns = '1fr 1fr'; }
+  else if (plan) { const pl = $('#cmpPlan'); pl.innerHTML = ''; pl.appendChild(cmpPlanPane(CMP.A, 'A')); if (two) pl.appendChild(cmpPlanPane(CMP.B, 'B')); pl.style.gridTemplateColumns = two ? '1fr 1fr' : '1fr'; CMP.view2d.fitted = false; CMP.view2d.autoFit = true; await new Promise((r) => requestAnimationFrame(r)); cmp2SetFit(); let rt = 0; CMP.ro = new ResizeObserver(() => { cancelAnimationFrame(rt); rt = requestAnimationFrame(() => cmp2Draw()); }); CMP.ro.observe(pl); }
   else { try { await S3.cmp.open($('#cmpCv'), CMP.A, CMP.B, { mode: CMP.mode, diff, lv: CMP.lv }); S3.cmp.highlight(CMP.hl); } catch (e) { console.warn(e); $('#cmpNote').textContent = 'The 3D viewer could not load (it needs its library).'; return; } }
   cmpUI(); cmpHash(); if (first) $('#cmpX').focus();
 }
@@ -3965,8 +4006,8 @@ function cmpUI() { if (!CMP) return; for (const b of $$('#cmpModes [data-cm]')) 
   $('#cmpSplit').hidden = !sl; $('#cmpSplit').style.left = (CMP.split * 100) + '%'; $('#cmpLA').hidden = !is3 || plan; $('#cmpLB').hidden = !two || !is3 || plan; $('#cmpLA').textContent = CMP.A.label + lv; $('#cmpLB').textContent = two ? CMP.B.label + lv : '';
   $('#cmpLA').style.left = '12px'; $('#cmpLB').style.left = (two && CMP.mode === 'side' ? 'calc(50% + 12px)' : 'auto'); $('#cmpLB').style.right = (two && CMP.mode === 'slider') ? '12px' : 'auto';
   const cnt = `${CMP.diff.size} object${CMP.diff.size === 1 ? '' : 's'} changed${CMP.diff.size ? ' (outlined in orange)' : ''}`;
-  $('#cmpPng').disabled = !is3 || plan; $('#cmpPng').title = is3 && !plan ? '' : 'The picture export is for the 3D view';
-  $('#cmpNote').textContent = !is3 ? `Simulation results saved for each version${lv ? ' (' + lv.slice(3) + ')' : ''}. Numbers are the tool\'s own; nothing is estimated here.` : plan ? (two ? `${cnt}. Plan${CMP.lv === 'all' ? 's of every level' : lv}, drawn the same way as the editor.` : 'Read-only plan preview.') : two ? `${cnt}. Turn, pan or zoom either side: both follow.` : 'Read-only preview. Turn, pan or zoom to look around.'; }
+  $('#cmpPng').disabled = !is3; $('#cmpPng').title = is3 ? '' : 'The picture export is available for model views'; $('#cmpFit').hidden = !plan; $('#cmpReset').hidden = !plan;
+  $('#cmpNote').textContent = !is3 ? `Simulation results saved for each version${lv ? ' (' + lv.slice(3) + ')' : ''}. Numbers are the tool\'s own; nothing is estimated here.` : plan ? (two ? `${cnt}. Both plans share one scale and centre. Wheel to zoom; middle-drag or Space + drag to pan.` : 'Read-only plan preview. Wheel to zoom; middle-drag or Space + drag to pan.') : two ? `${cnt}. Turn, pan or zoom either side: both follow.` : 'Read-only preview. Turn, pan or zoom to look around.'; }
 // the state is kept in the page address, so a refresh (or a copied link, in this browser) comes back to the same view
 function cmpHash() { try { const par = window.parent; if (!par || par === window || !CMP) return; const q = `cmp=${CMP.A.v.name}${CMP.B ? ',' + CMP.B.v.name : ''}&lv=${encodeURIComponent(CMP.lv)}&type=${encodeURIComponent(CMP.type)}&view=${CMP.view}&p=${encodeURIComponent(M.id)}`; par.history.replaceState(null, '', '#/studio?' + q); } catch (e) { } }
 function cmpHashClear() { try { const par = window.parent; if (par && par !== window && /[?]cmp=/.test(par.location.hash)) par.history.replaceState(null, '', '#/studio'); } catch (e) { } }
@@ -3978,13 +4019,21 @@ $('#cmpLv').addEventListener('change', (e) => { if (!CMP) return; CMP.lv = e.tar
 $('#cmpTy').addEventListener('change', (e) => { if (!CMP) return; CMP.type = e.target.value; cmpRefresh(); });
 $('#cmpView').addEventListener('click', (e) => { const b = e.target.closest('[data-cv]'); if (!b || !CMP || b.disabled) return; CMP.view = b.dataset.cv; cmpRefresh(); });
 $('#cmpModes').addEventListener('click', (e) => { const b = e.target.closest('[data-cm]'); if (!b || !CMP) return; CMP.mode = b.dataset.cm; XS.set('cmpMode', CMP.mode); S3.cmp.mode(CMP.mode); cmpUI(); });
-$('#cmpHl').addEventListener('change', (e) => { if (!CMP) return; CMP.hl = e.target.checked; if (CMP.view === '2d') cmpRefresh(); else S3.cmp.highlight(CMP.hl); });
+$('#cmpHl').addEventListener('change', (e) => { if (!CMP) return; CMP.hl = e.target.checked; if (CMP.view === '2d') { cmp2Draw(); cmpUI(); } else S3.cmp.highlight(CMP.hl); });
 { let sd = false; $('#cmpSplit').addEventListener('pointerdown', (e) => { sd = true; $('#cmpSplit').setPointerCapture(e.pointerId); e.stopPropagation(); });
   $('#cmpSplit').addEventListener('pointermove', (e) => { if (!sd || !CMP) return; const r = $('#cmpCv').getBoundingClientRect(); CMP.split = STC.clamp((e.clientX - r.left) / r.width, 0.05, 0.95); S3.cmp.split(CMP.split); cmpUI(); });
   $('#cmpSplit').addEventListener('pointerup', () => { sd = false; }); }
-const closeCompare = () => { $('#cmpDlg').hidden = true; if (window.S3 && S3.cmp) S3.cmp.close(); CMP = null; cmpHashClear(); };
+const closeCompare = () => { $('#cmpDlg').hidden = true; if (window.S3 && S3.cmp) S3.cmp.close(); if (CMP && CMP.ro) CMP.ro.disconnect(); if (CMP && CMP.view2d.raf) cancelAnimationFrame(CMP.view2d.raf); CMP2PAN = null; CMP2SPACE = false; CMP = null; cmpHashClear(); };
 $('#cmpX').addEventListener('click', closeCompare); $('#cmpDlg').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeCompare(); } });
-$('#cmpPng').addEventListener('click', () => { if (!CMP) return; try { const url = S3.cmp.png(1920, CMP.B ? `${CMP.A.label}   ·   ${CMP.B.label}` : CMP.A.label); download(`${slug()}-${CMP.A.v.name}${CMP.B ? '-vs-' + CMP.B.v.name : ''}.png`, url, 'image/png'); toast('Comparison saved as PNG, 1920 px wide.'); } catch (e) { console.warn(e); flash('Could not make the picture.'); } });
+$('#cmpFit').addEventListener('click', () => cmp2SetFit()); $('#cmpReset').addEventListener('click', () => cmp2SetFit());
+document.addEventListener('keydown', (e) => { if (e.code !== 'Space' || !CMP || CMP.view !== '2d' || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; CMP2SPACE = true; e.preventDefault(); for (const q of cmp2Canvases()) q.classList.add('space-pan'); });
+document.addEventListener('keyup', (e) => { if (e.code !== 'Space') return; CMP2SPACE = false; for (const q of cmp2Canvases()) q.classList.remove('space-pan'); });
+function cmp2Png(width, label) {
+  cmp2Draw(); const src = cmp2Canvases(), cols = CMP.B ? 2 : 1, gap = 2, head = 54, foot = 42, colW = Math.floor((width - gap * (cols - 1)) / cols), first = src[0], ratio = first && first._cmpSize ? first._cmpSize.height / first._cmpSize.width : .65, rowH = Math.max(180, Math.round(colW * ratio)), levels = cmpPlanLevels(), out = document.createElement('canvas'); out.width = width; out.height = head + levels.length * rowH + Math.max(0, levels.length - 1) * gap + foot; const x = out.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, out.width, out.height); x.fillStyle = '#1d2129'; x.font = '600 24px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(CMP.A.label, colW / 2, head / 2); if (CMP.B) x.fillText(CMP.B.label, colW + gap + colW / 2, head / 2);
+  levels.forEach((l, row) => { const y = head + row * (rowH + gap); for (let col = 0; col < cols; col++) { const cv = src.find((q) => q.dataset.cmpSide === (col ? 'B' : 'A') && q.dataset.cmpLevel === l.id); if (cv) x.drawImage(cv, col * (colW + gap), y, colW, rowH); } });
+  x.fillStyle = '#4e5969'; x.font = '18px system-ui,sans-serif'; x.textAlign = 'left'; x.fillText(label, 18, out.height - foot / 2); return out.toDataURL('image/png');
+}
+$('#cmpPng').addEventListener('click', () => { if (!CMP) return; try { const label = CMP.B ? `${CMP.A.label}   ·   ${CMP.B.label}` : CMP.A.label, url = CMP.view === '2d' ? cmp2Png(1920, label) : S3.cmp.png(1920, label); download(`${slug()}-${CMP.A.v.name}${CMP.B ? '-vs-' + CMP.B.v.name : ''}.png`, url, 'image/png'); toast('Comparison saved as PNG, 1920 px wide.'); } catch (e) { console.warn(e); flash('Could not make the picture.'); } });
 { const _um = useModel; useModel = function (N, o) { _um(N, o); verLoad(); }; }
 
 // ---------- 9 · export: open formats for real; Rhino, SketchUp and Revit through IFC ----------
@@ -4632,7 +4681,7 @@ async function backRestore() { const st = backFromHash(); if (!st) return; REFIN
 { const _al = applyDelta; applyDelta = async function () { const r = await _al.apply(this, arguments); if (r && r.ok) { REFINE = true; loopUI(); } return r; }; }
 { const _vl = verLoad; verLoad = async function () { await _vl.apply(this, arguments); vresLoad(); }; }
 vresLoad(); backRestore(); loopUI();
-window.__wb.cmp = { get state() { return CMP; }, refresh: cmpRefresh, types: () => CMP && cmpTypes() }; window.__wb.site = { siteOk, parcelPlan, clipToParcel, get anchor() { return M.site && M.site.anchor; }, get ancSel() { return ANCSEL; } }; window.__wb.CLR = CLR; window.__wb.clearanceOf = clearanceOf; window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
+window.__wb.cmp = { get state() { return CMP; }, open: openCompare, refresh: cmpRefresh, types: () => CMP && cmpTypes(), fit2d: cmp2SetFit, camera2d: () => CMP && CMP.view2d ? { scale: CMP.view2d.scale, offsetX: CMP.view2d.offsetX, offsetY: CMP.view2d.offsetY, minScale: CMP.view2d.minScale, maxScale: CMP.view2d.maxScale } : null, worldToScreen2d: (x, y) => CMP && CMP.view2d ? [x * CMP.view2d.scale + CMP.view2d.offsetX, CMP.view2d.offsetY - y * CMP.view2d.scale] : null, screenToWorld2d: (x, y) => CMP && CMP.view2d ? [(x - CMP.view2d.offsetX) / CMP.view2d.scale, (CMP.view2d.offsetY - y) / CMP.view2d.scale] : null, png2d: () => CMP ? cmp2Png(1920, CMP.B ? `${CMP.A.label} · ${CMP.B.label}` : CMP.A.label) : null }; window.__wb.site = { siteOk, parcelPlan, clipToParcel, get anchor() { return M.site && M.site.anchor; }, get ancSel() { return ANCSEL; } }; window.__wb.CLR = CLR; window.__wb.clearanceOf = clearanceOf; window.__wb.applyDelta = applyDelta; window.__wb.planScene = (lv, tool) => STC.planScene(M, S, lv || LV, tool || 'views'); window.__wb.viewMode = viewMode; window.__wb.ELV3 = ELV3; window.__wb.WMARK = WMARK; window.__wb.walkGo = walkGo; window.__wb.poseGet = poseGet; window.__wb.poseSet = poseSet; window.__wb.wmScreen = () => { const m = wmScreen(), r = cv.getBoundingClientRect(); return { c: [r.left + m.c[0] / VP.d, r.top + m.c[1] / VP.d], tip: [r.left + m.tip[0] / VP.d, r.top + m.tip[1] / VP.d] }; }; window.__wb.frameOf = frameOf; window.__wb.catOf = catOf; window.__wb.krFit = krFit; window.__wb.exMenuOpen = exMenuOpen;
 Object.defineProperty(window.__wb, 'HOVX', { get: () => HOVX }); Object.defineProperty(window.__wb, 'DIMS', { get: () => DIMS });
 viewUI();
 
