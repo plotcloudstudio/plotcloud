@@ -5,8 +5,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PlotCloud — Architectural Design, Analysis & Resources</title>
-<link rel="stylesheet" href="site-shell.css?v=20261020-2">
-<script src="site-shell.js?v=20261020-camera1" defer></script>
+<link rel="stylesheet" href="site-shell.css?v=20261021-2">
+<script src="site-shell.js?v=20261021-interior1" defer></script>
 <meta name="description" content="Browser-based architectural design tools and resources for architects and architecture students. Develop layouts, analyze environmental performance and present your work.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700;800&display=swap">
@@ -2622,12 +2622,12 @@ const CMS=(S.cms&&typeof S.cms==="object")?S.cms:{home:null,settings:null,tools:
 // ----- base snapshots of the built-in content, so edits are stored as overrides
 const BASE_RES=RES.map(r=>r.slice()),BASE_ADDED=Object.assign({},ADDED);
 // Standalone Architectural AI Render: register before CMS tool defaults are captured.
-STD.push(["architectural-render","R.01","architectural ai render","Upload a sketch or model screenshot, direct materials and image edits, and connect a secure render service.",""]);
+STD.push(["architectural-render","R.01","architectural ai render","Develop interior images, bind furniture references, compare options and connect a secure rendering service.",""]);
 TMETA["architectural-render"]=["new","ai"];
 TSECTIONS[3][4].unshift("architectural-render");
 EMB["architectural-render"]="@";
-EMBI["architectural-render"]={title:"architectural ai render",crumb:"Architectural AI Render",short:"Render saved Studio views or uploaded images; external AI service required.",lede:"Open a saved Studio view, sketch, photograph or model screenshot. Choose materials and architectural controls, then save linked results back to your project."};
-EMBV["architectural-render"]="2";
+EMBI["architectural-render"]={title:"architectural ai render",crumb:"Architectural AI Render",short:"Render saved Studio views or uploaded images; external AI service required.",lede:"Open an interior Studio view or upload a room image. Bind furniture references, mark an edit region and compare saved results."};
+EMBV["architectural-render"]="interior-20261021-1";
 EMBSVG["architectural-render"]='<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="180" fill="#efebe0"/><path d="M50 135V47L153 18V130Z" fill="#fff" stroke="#333"/><path d="M153 18L252 62V160L153 130Z" fill="#d2d4d0" stroke="#333"/><rect x="75" y="57" width="50" height="55" fill="#88a1a5"/><path d="M175 66L226 87V140L175 120Z" fill="#839a9e"/></svg>';
 const BASE_SECT=TSECTIONS.map(s=>s[4].slice()),BASE_DEV=DEVIDS.slice();
 const BASE_NEW=Object.keys(TMETA).filter(k=>(TMETA[k]||[]).includes("new"));
@@ -3755,7 +3755,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
     { n: 1, name: "Site analysis", go: "site", p: "Pick the site, read it in eight diagrams, see it in 3D.", cta: "Open Site analysis" },
     { n: 2, name: LABELS.studio, go: "studio", p: "Draw the plan inside the boundary, with its surroundings.", cta: "Open " + LABELS.studio },
     { n: 3, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
-    { n: 4, name: LABELS.studio, go: "studio", tag: "improve", p: "Fix the weak spots and keep every version.", cta: "Back to " + LABELS.studio },
+    { n: 4, name: "Rendering", go: "tool/architectural-render", p: "Render interior options from a saved view and furniture references.", cta: "Open Rendering" },
     { n: 5, name: "Boards", go: "tool/atlas?d=boards", p: "Lay the drawings out on one board and export it.", cta: "Make a board" }];
   window.JOURNEYS = { main: STEPS.map((x) => ({ no: String(x.n).padStart(2, "0") + " · " + x.name, go: x.go, h: x.name, p: x.p, cta: x.cta })) };
   const st = document.createElement("style");
@@ -3780,7 +3780,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
    .hline li:nth-child(3) .dot::after{display:block}.hline li:last-child .dot::after{display:none}.hline h3{margin-top:5px}}`;
   document.head.appendChild(st);
   const block = () => `<section class="wrap hsec" aria-labelledby="hmapT"><div class="hhead"><h2 id="hmapT">how plotcloud fits together.</h2></div>
-    <p class="jsub">One line, five steps: read the place, draw, check, improve, present.</p>
+    <p class="jsub">One line, five steps: read the place, draw, check, render, present.</p>
     <nav aria-label="The five steps"><ol class="hline">${STEPS.map((x) => `<li data-t="${x.tag || ""}"><a data-go="${x.go}"${x.anchor ? ` data-anchor="${x.anchor}"` : ""}><span class="dot"><b>${x.n}</b><i></i></span><h3>${x.name}</h3>${x.tag ? `<span class="tg">${x.tag}</span>` : ""}<p>${x.p}</p><span class="jcta">${x.cta} →</span></a></li>`).join("")}</ol></nav>
     <p class="hall">Showroom, Library and Learn are available at every step: <a data-go="showroom">Showroom</a> · <a data-go="library">Library</a> · <a data-go="learn">Learn</a>.</p></section>`;
   const MAP = /<section class="wrap hsec" aria-labelledby="hmapT">[\s\S]*?<\/section>/;
@@ -3795,15 +3795,17 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
     { n: 1, name: "Site analysis", ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
     { n: 2, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
     { n: 3, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
-    { n: 4, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
+    { n: 4, name: "Rendering", ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 17l5-4 4 3 3-5 4 6"/>' },
+    { n: 5, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
   const CX = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("pc-ctx") || "{}"); } catch (e) {} return Object.assign({ lat: null, lng: null, R: 600, label: "", src: "", done: {}, sim: "" }, o); })();
   const saveCx = () => { try { localStorage.setItem("pc-ctx", JSON.stringify(CX)); } catch (e) {} };
+  if (CX.workflowVersion !== 2) { if (CX.done[4]) CX.done[5] = CX.done[4]; delete CX.done[4]; CX.workflowVersion = 2; saveCx(); }
   window.PCX = CX;   // the one site-context: the pin, the radius and what is done
   const pinQ = (withFrom) => CX.lat == null ? "" : `lat=${(+CX.lat).toFixed(5)}&lng=${(+CX.lng).toFixed(5)}&r=${CX.R}${withFrom ? "&from=analysis" : ""}`;
-  const urlOf = (n) => n === 1 ? "site" : n === 2 ? "studio" : n === 3 ? (CX.sim ? "tool/" + CX.sim : "tools") : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
+  const urlOf = (n) => n === 1 ? "site" : n === 2 ? "studio" : n === 3 ? (CX.sim ? "tool/" + CX.sim : "tools?group=analysis") : n === 4 ? "tool/architectural-render" : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
   const where = () => { const h = (location.hash.replace(/^#\/?/, "") || "home"), [path, q] = h.split("?"), pg = path.split("/"), id = pg[1];
     if (pg[0] === "site" || (pg[0] === "tool" && id === "sitectx")) return 1; if (pg[0] === "studio") return 2;
-    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 4 : 1; if (pg[0] === "tool" && id === "render") return 4; if (pg[0] === "tool" && SIM.includes(id)) return 3; return 0; };
+    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 5 : 1; if (pg[0] === "tool" && (id === "render" || id === "architectural-render")) return 4; if (pg[0] === "tool" && id === "composer") return 5; if (pg[0] === "tools" && /(^|&)group=analysis(&|$)/.test(q || "")) return 3; if (pg[0] === "tool" && SIM.includes(id)) return 3; return 0; };
   const st = document.createElement("style");
   st.textContent = `:root{--wfrail:0px;--wftop:0px}
   body.wf{--wfrail:220px;--wftop:40px}body.wf.rc{--wfrail:64px}
@@ -3854,7 +3856,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
     top.innerHTML = `<span class="ttl">${s ? s.n + " · " + esc(s.name) : ""}</span><span class="sp"></span><button type="button" data-k class="kb" aria-label="Quick jump, Ctrl or Command K">Jump <kbd>Ctrl K</kbd></button>` +
       [["showroom", "Showroom"], ["library", "Library"], ["learn", "Learn"]].map(([k, l]) => `<button type="button" data-dr="${k}" aria-label="Open ${l} in a drawer">${l}</button>`).join("") + `<a data-go="${signed() ? "account" : "login"}" aria-label="${signed() ? "Account" : "Log in"}">${signed() ? "Account" : "Log in"}</a>`; };
   const update = () => { const cur = where(), on = cur > 0; document.body.classList.toggle("wf", on); if (!on) { closeDr(); return; }
-    if (cur === 2) CX.done[2] = true; if (cur === 3) CX.sim = location.hash.replace(/^#\/?tool\//, "").split("?")[0]; CX.done[1] = CX.lat != null; saveCx();
+    if (cur === 2) CX.done[2] = true; if (cur === 3 && /^#\/?tool\//.test(location.hash)) CX.sim = location.hash.replace(/^#\/?tool\//, "").split("?")[0]; CX.done[1] = CX.lat != null; saveCx();
     try { if (typeof pget === "function") pget().then((p) => { const d = !!(p && p.results && p.results.length); if (!!CX.done[3] !== d) { CX.done[3] = d; saveCx(); drawRail(); } }).catch(() => {}); } catch (e) {}
     drawRail(); drawTop(); };
   const openDr = (k) => { const f = dr.querySelector("iframe"); $("#dtl").textContent = NAMES[k] || k; const u = `index.html?drawer=1#/${k}`; if (f.dataset.k !== k) { f.dataset.k = k; f.src = u; } dr.classList.add("on"); dr.dataset.k = k; };
@@ -3883,7 +3885,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   // the pin comes from the Site Planner and the atlas
   addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc || d.t !== "ctx") return; const fr = [...document.querySelectorAll("iframe[data-emb]")].find((f) => f.contentWindow === e.source); if (!fr) return;
     if (typeof d.lat === "number" && typeof d.lng === "number") { CX.lat = d.lat; CX.lng = d.lng; if (typeof d.r === "number") CX.R = d.r; CX.label = typeof d.label === "string" ? d.label.slice(0, 40) : CX.label; CX.src = "site"; CX.shape = d.shape === "square" ? "square" : "circle"; CX.done[1] = true; }
-    if (d.board) CX.done[4] = true; saveCx(); drawRail(); });
+    if (d.board) CX.done[5] = true; saveCx(); drawRail(); });
   addEventListener("hashchange", () => setTimeout(update, 0)); addEventListener("storage", () => { drawRail(); }); update();
   window.__wf = { where, urlOf, openK, openDr, update, drawRail, get CX() { return CX; } };
 })();

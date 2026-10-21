@@ -18,9 +18,12 @@ jobs:
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
+      - name: Verify render service and comparison contracts
+        run: node --test server/render-api.test.mjs tests/render-compare.cjs
       - name: Serve site and run browser smoke
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/plotcloud-http.log 2>&1 &
+          node tests/interior.cjs
           node tests/views.cjs
           node tests/workflow.cjs
           node tests/shell.cjs
