@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PlotCloud — Architectural Design, Analysis & Resources</title>
 <link rel="stylesheet" href="site-shell.css?v=20261021-2">
-<script src="site-shell.js?v=20261021-acoustics1" defer></script>
+<script src="site-shell.js?v=20261022-stormwater1" defer></script>
 <meta name="description" content="Browser-based architectural design tools and resources for architects and architecture students. Develop layouts, analyze environmental performance and present your work.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700;800&display=swap">
@@ -3254,6 +3254,16 @@ TMETHOD.acoustics=["Sabine reverberation plus deterministic geometric-ray sampli
  const _aAC=applyTools;applyTools=function(){_aAC();const t=CMS.tools;if(t&&t.sections){const bi2=TSECTIONS.findIndex(x=>x[1]==="Analysis"),known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);if(bi2>=0&&!known.has("acoustics")&&t.sections[bi2]){const a=t.sections[bi2].slice(),i=a.indexOf("movementdepth");a.splice(i>=0?i+1:a.length,0,"acoustics");CMS.tools=Object.assign({},t,{sections:t.sections.map((x,k)=>k===bi2?a:x),newIds:[...(t.newIds||[]),"acoustics"]})}}};}
  applyTools();}
 
+// Stormwater uses the confirmed browser-only surface-routing workspace.
+EMB.stormwater="@";
+EMBV.stormwater="stormwater-20261022-1";
+EMBI.stormwater={title:"stormwater & waterlogging",crumb:"Stormwater & Waterlogging",lede:"Follow rainfall across exposed model surfaces. Explore slope, D8 direction, contributing area, catchments, event runoff and ponding, then compare offline detention. Soil, rainfall and drainage conditions are explicit assumptions."};
+XT.push(["stormwater","stormwater & waterlogging","Trace surface runoff, identify ponding and compare detention storage using a 3D site model.",""]);
+TMETA.stormwater=[];
+TMETHOD.stormwater=["D8 terrain routing, NRCS SCS-CN event runoff and conservative eight-neighbour surface storage; early-design screening","In your browser · model files stay local","Imports Rhino · OBJ · STL · GLB · DAE · PlotCloud scene JSON; exports PNG · analysis JSON"];
+EMBSVG.stormwater=`<svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#f3f5f4"/><path d="M25 100 150 35 275 99 151 164Z" fill="#d9e6e9"/><path d="m74 92 33-17 30 16-33 18zm94-31 32-17 29 15-32 18z" fill="#aaaead"/><path d="m74 92 30 17v-23L74 70zm30 17 33-18V68l-33 18m64-25 29 16V54l-29-16m29 39 32-18V36l-32 18" fill="#bec2be"/><path d="m74 70 33-17 30 15-33 18zm94-32 32-17 29 15-32 18z" fill="#eceee9"/><ellipse cx="177" cy="123" rx="30" ry="15" fill="#367d9f"/><ellipse cx="177" cy="123" rx="18" ry="9" fill="#1e5473"/><g fill="none" stroke="#5c96b0" stroke-width="2"><path d="m67 118 57 9 23-2m89-29-29 18m-56-58 8 33 12 20"/><path d="m136 120 11 5-10 6m61-20 9 3-2-10m-40-2 6 7 4-10"/></g><g stroke="#87b4ca" stroke-width="1.5"><path d="m49 45-3 12m110-37-3 12m91 51-3 12m-105-17-3 12"/></g></svg>`;
+{const i=TSECTIONS.findIndex(s=>s[1]==="Analysis");if(i>=0){if(!TSECTIONS[i][4].includes("stormwater"))TSECTIONS[i][4].push("stormwater");if(!BASE_SECT[i].includes("stormwater"))BASE_SECT[i].push("stormwater");}if(!TOOL_IDS.includes("stormwater"))TOOL_IDS.push("stormwater");applyTools();}
+
 EMB["wfc"]="";
 EMBI["wfc"]={title:"wave function collapse",crumb:"Wave Function Collapse",lede:'Generate facades, floor plans, villages and paving with Wave Function Collapse, the constraint-solving algorithm from games. Each module says what may sit beside it on every edge; the grid starts with every module possible everywhere, and step by step the cell with the fewest choices left is decided and its neighbors are pruned, until the whole drawing fits together. Watch it collapse, with entropy, the order of collapse and steps back when it hits a dead end. Change module weights, pin modules where you want them, make one area again, or teach it a style from a sample image (the overlapping model). Export PNG, SVG, DXF, a 3D OBJ and the scene.'};
 XT.push(["wfc","wave function collapse","Grow facades, plans, villages and paving from modules and their neighbor rules, or learn a style from a sample image.",""]);
@@ -3718,7 +3728,7 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
 route();
 
 // === Simulation tools open full screen, like Plan Studio: no site header or footer, one thin app bar (2026-10-19) ===
-{ const SIMFS = ["sunhours", "wind", "daylight", "vent", "structure", "spacesyntax", "movementdepth", "acoustics", "evac", "isovist", "views", "cameras"];
+{ const SIMFS = ["sunhours", "wind", "daylight", "vent", "structure", "spacesyntax", "movementdepth", "acoustics", "stormwater", "evac", "isovist", "views", "cameras"];
   window.__simfs = SIMFS;
   const st = document.createElement("style"); st.textContent = `
   .simfs{position:fixed;inset:0;z-index:70;background:#fff;display:flex;flex-direction:column}
