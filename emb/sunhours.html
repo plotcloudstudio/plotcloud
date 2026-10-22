@@ -1302,6 +1302,19 @@ function applyScene(sc) {
   // ground on terrain: the flat ground grid steps aside
   if (sc.terrain) { S.ground = false; const gs = $('#ground'); if (gs) gs.value = '0'; }
 }
+
+// Project settings feed the existing solar engine; rendering and analysis are unchanged.
+window.addEventListener('message', e => {
+ if(e.source!==window.parent || !e.data?.pc || e.data.t!=='project-context')return;
+ const p=e.data.project;if(!p?.settings)return;
+ const a=p.settings,loc=a.location;
+ if(!loc||!Number.isFinite(loc.lat)||!Number.isFinite(loc.lon))return;
+ applyScene({loc:{...loc,dst:S.loc.dst||0},north:-(a.north||0)});
+ let bar=document.getElementById('projectSettingNote');
+ if(!bar){bar=document.createElement('p');bar.id='projectSettingNote';bar.className='note';bar.style.cssText='margin:8px 12px;font-size:11px';document.getElementById('panelL').prepend(bar);}
+ bar.textContent='Project: '+p.name+' · Location and true north from Main Setting.'+(S.result?' Results use previous settings; recalculate.':'');
+});
+window.parent.postMessage({pc:1,t:'project-context-request'},'*');
 function setUp(u) { S.up = u; document.querySelectorAll('#upSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.up === u))); }
 document.querySelectorAll('.views button').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
 $('#run').addEventListener('click', runAnalysis);

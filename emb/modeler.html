@@ -2298,7 +2298,7 @@ function draw() {
   const below = lvBelow();
   const fade = (L) => { g.globalAlpha = L === LAYER ? 1 : 0.55; };
   // floors (Floor layer): the slabs people stand on
-  if (VIS.Floor) { fade('Floor'); for (const f of M.floors) { if (f.lv !== LV) continue; g.fillStyle='#ece9e2';floorPath(f);g.fill('evenodd'); } g.globalAlpha = 1; }
+  if (VIS.Floor) { fade('Floor'); for (const f of M.floors) { if (f.lv !== LV) continue; if(f.exclude){g.save();g.strokeStyle='#aaa';g.setLineDash([5*d,4*d]);floorPath(f);g.stroke();g.restore();}else{g.fillStyle='#ece9e2';floorPath(f);g.fill('evenodd');} } g.globalAlpha = 1; }
   // rooms
   const lvRooms = S.rooms.filter((r) => r.lv === LV);
   const showPts = LAY.res && live() && SHOW !== 'air';
@@ -2341,6 +2341,7 @@ function draw() {
   hud(); zoomUI(); miniSoon(); selBar();
 }
 function drawWall(w) {
+  if(w.exclude){g.save();g.strokeStyle='#aaa';g.lineWidth=1.5*VP.d;g.setLineDash([5*VP.d,4*VP.d]);const a=W2S(w.a),b=W2S(w.b);g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke();g.restore();return;}
   const d = VP.d, { L, os, solid } = wallPieces(w), dir = STC.wallDir(w), n = [-dir[1], dir[0]], t = w.t || 0.2, sel = SEL && SEL.k === 'wall' && SEL.id === w.id, hov = HOV && HOV.k === 'wall' && HOV.id === w.id;
   const P = (s, k) => W2S([w.a[0] + dir[0] * s + n[0] * k, w.a[1] + dir[1] * s + n[1] * k]);
   g.fillStyle = sel ? C.accent : (hov ? '#4a4d52' : '#6a6e75');
@@ -2384,6 +2385,7 @@ function drawGen(f, sel) {   // a generated piece seen from above: its parts, lo
   if (sel || (HOV && HOV.k === 'furn' && HOV.id === f.id)) { g.strokeStyle = sel ? C.accent : 'rgba(28,27,26,.55)'; g.lineWidth = (sel ? 2 : 1.2) * d; g.stroke(); }
 }
 function drawFurn(f, sel) {
+  if(f.exclude){g.save();g.strokeStyle='#aaa';g.lineWidth=VP.d;g.setLineDash([5*VP.d,4*VP.d]);const pts=STC.furnCorners(f).map(W2S);g.beginPath();pts.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.closePath();g.stroke();g.restore();return;}
   if (f.gen) return drawGen(f, sel);
   const d = VP.d, P = STC.furnCorners(f).map(W2S), loc = (u, v) => { if (f.mirror) u = -u; const c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0); return W2S([f.x + u * c - v * s, f.y + u * s + v * c]); };
   g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath(); g.fillStyle = 'rgba(255,255,255,.92)'; g.fill(); g.strokeStyle = sel ? C.accent : '#8a867d'; g.lineWidth = (sel ? 2 : 1) * d; g.stroke();
@@ -2939,7 +2941,7 @@ for (const [id, k] of [['opW', 'w'], ['opF', 'f']]) $('#' + id).addEventListener
 function addLevel(dir) {
   const b = snapM(), src = lvObj(), ls = lvSorted(), n = M.levels.length + 1; let id = 'L' + n; while (M.levels.some((l) => l.id === id)) id += 'x';
   const top = ls[ls.length - 1], bot = ls[0];
-  const nl = { id, name: `Level ${n}`, z: dir === 'above' ? +(top.z + top.h + 0.3).toFixed(2) : +(bot.z - src.h - 0.3).toFixed(2), h: src.h }; if (src.slab) nl.slab = src.slab; M.levels.push(nl);
+  const nl = { id, name: `Level ${n}`, z: dir === 'above' ? +(top.z + top.h + 0.3).toFixed(2) : +(bot.z - src.h - 0.3).toFixed(2), h: PROJECT_CONTEXT?.settings.storeyHeight || src.h }; if (src.slab) nl.slab = src.slab; M.levels.push(nl);
   // New levels are empty. The previous level remains a read-only tracing reference.
   // a roof opening on the old top level now opens into the new level
   if (dir === 'above') for (const v of M.voids) if (v.lv === top.id && v.kind === 'roof') { v.kind = 'atrium'; v.glazed = false; }
@@ -4107,6 +4109,64 @@ $('#exCard').addEventListener('click', (e) => { const f = e.target.closest('[dat
 // the top bar's Export menu uses the same exporters
 document.addEventListener('click', (e) => { const b = e.target.closest('#exPop [data-ex="obj"],#exPop [data-ex="dxf"],#exPop [data-ex="ifc"]'); if (!b) return; e.stopPropagation(); $('#exPop').hidden = true; $('#exBtn').setAttribute('aria-expanded', 'false'); exDownload(b.dataset.ex); }, true);
 
+
+// Shared project context and annotations. Geometry remains the editable Studio model.
+let PROJECT_CONTEXT=null, projectApplying=false, projectTimer=0, projectLastScene='';
+const SEMANTIC_COLORS={Wall:'#8F4C45',Glazing:'#479DC1',Door:'#A47B44',Furniture:'#8981A4',Floor:'#8D977F',Ceiling:'#B7A56F',Structure:'#4C7182'};
+const semanticRows=()=>[['wall',M.walls],['op',M.ops],['floor',M.floors||[]],['furn',M.furn],['fence',M.fences||[]]].flatMap(([kind,items])=>items.map(o=>({kind,o})));
+const semanticDefault=(kind,o)=>kind==='furn'?'Furniture':kind==='floor'?'Floor':kind==='op'?(o.kind==='win'?'Glazing':'Door'):'Wall';
+const semanticName=(kind,o)=>Object.hasOwn(o,'semanticCategory')?o.semanticCategory:semanticDefault(kind,o);
+const semanticLayer=o=>String(o.sourceLayer||o.sourceName||'').trim().toLowerCase();
+function semanticInitialise(){
+ const habits=PROJECT_CONTEXT?.habits||{};
+ for(const {kind,o} of semanticRows()){
+  if(Object.hasOwn(o,'semanticCategory'))continue;
+  const name=semanticLayer(o),words=name.replace(/[_\-\d]+/g,' ');
+  if(name&&/(?:\b(?:text|anno|annotation|dim|dimension|axis|grid)\b|尺寸|标注|红线|轴线)/i.test(words)){o.exclude=true;o.semanticSource='Automatically excluded';o.semanticCategory=null;continue;}
+  if(name&&Object.hasOwn(habits,name)){o.semanticCategory=habits[name];o.semanticSource='Your learned layer name';continue;}
+  const matches=[['Wall',/\b(wall|w)\b|墙/],['Glazing',/\b(win|window|glass|glazing)\b|窗|玻璃/],['Door',/\b(door|d)\b|门/],['Furniture',/\b(furn|furniture)\b|家具/],['Floor',/\b(slab|floor)\b|楼板/],['Ceiling',/\b(ceil|ceiling)\b|天花/],['Structure',/\b(col|column|beam)\b|柱|梁/]].filter(([,re])=>re.test(words));
+  o.semanticCategory=name?(matches.length===1?matches[0][0]:null):semanticDefault(kind,o);
+  o.semanticSource=name?(matches.length===1?'Layer dictionary':'Needs review'):'Plan Studio object';
+ }
+}
+function semanticAnalysisModel(input){
+ const n=JSON.parse(JSON.stringify(input));
+ for(const k of ['walls','ops','floors','furn','fences','voids'])n[k]=(n[k]||[]).filter(o=>!o.exclude);
+ const moved=[];
+ n.walls=n.walls.filter(w=>{if(w.semanticCategory!=='Furniture')return true;const dx=w.b[0]-w.a[0],dy=w.b[1]-w.a[1];moved.push({id:w.id,lv:w.lv,type:'box',x:(w.a[0]+w.b[0])/2,y:(w.a[1]+w.b[1])/2,w:Math.hypot(dx,dy),d:w.t||.2,h:w.h||n.levels.find(l=>l.id===w.lv)?.h||3,rot:Math.atan2(dy,dx),object_type:'furniture',layer:'Furniture'});return false;});
+ const newWalls=[];
+ n.furn=n.furn.filter(f=>{if(f.semanticCategory!==null&&!['Wall','Structure'].includes(f.semanticCategory))return true;const pts=STC.furnCorners(f);for(let i=0;i<pts.length;i++)newWalls.push({id:f.id+'-semantic-'+i,lv:f.lv,a:pts[i],b:pts[(i+1)%pts.length],t:.05,h:f.h,object_type:'wall',layer:'Wall'});return false;});
+ n.walls.push(...newWalls);n.furn.push(...moved);
+ const wallIds=new Set(n.walls.map(w=>w.id));n.ops=n.ops.filter(o=>wallIds.has(o.wall));
+ for(const o of n.ops)if(o.semanticCategory==='Glazing'){o.kind='win';o.object_type='window';}else if(o.semanticCategory==='Door'){o.kind='door';o.object_type='door';}
+ return n;
+}
+const semanticBuild=STC.build,semanticPlanScene=STC.planScene,semanticValidate=STC.validate;
+STC.build=m=>semanticBuild(semanticAnalysisModel(m));
+STC.validate=m=>semanticValidate(semanticAnalysisModel(m));
+STC.planScene=(m,scene,level,tool)=>{const n=semanticAnalysisModel(m),result=semanticPlanScene(n,semanticBuild(n),level,tool);if(PROJECT_CONTEXT){result.north=-(PROJECT_CONTEXT.settings.north||0);if(tool==='sunhours')result.loc=PROJECT_CONTEXT.settings.location;if(result.settings)result.settings.north=PROJECT_CONTEXT.settings.north||0;}return result;};
+function queueProjectModel(){if(projectApplying||!PROJECT_CONTEXT)return;clearTimeout(projectTimer);projectTimer=setTimeout(()=>{try{const scene=sceneJSON();if(scene===projectLastScene)return;projectLastScene=scene;window.parent.postMessage({pc:1,t:'project-model',projectId:PROJECT_CONTEXT.id,scene,sunScene:JSON.stringify(STC.planScene(M,S,LV,'sunhours'))},'*');}catch(e){msgEx('The project model could not be linked. Download a JSON backup.','warn');}},250);}
+function semanticPanel(){
+ let box=$('#semanticPanel');if(!box){box=document.createElement('section');box.id='semanticPanel';box.className='sec lgdsec';$('#secProps').before(box);}
+ const rows=semanticRows(),inbox=rows.filter(({kind,o})=>!semanticName(kind,o)&&!o.exclude);
+ box.innerHTML=`<h2>Model annotations</h2><p class="note">Furniture · Slab · Wall. Openings and structure retain their analysis roles. Excluded objects stay editable.</p><div class="two"><a class="btn" href="#/account" id="semanticSettings">Main Setting</a><button class="btn" type="button" id="semanticInbox">Unclassified (${inbox.length})</button></div><label for="semanticElement" class="note">Select an element</label><select id="semanticElement" style="width:100%"><option value="">Select in plan or choose here…</option>${rows.map(({kind,o})=>`<option value="${kind}:${esc(o.id)}" ${SEL?.k===kind&&SEL.id===o.id?'selected':''}>${o.exclude?'Excluded · ':''}${esc(semanticName(kind,o)||'Unclassified')} · ${esc(o.sourceLayer||o.label||o.id)}</option>`).join('')}</select><p class="note" id="semanticProject">${PROJECT_CONTEXT?'Current project: '+esc(PROJECT_CONTEXT.name):'No account project linked. Annotations are saved with this Studio model.'}</p>`;
+ $('#semanticSettings').onclick=e=>{e.preventDefault();if(window.parent!==window)window.parent.postMessage({pc:1,t:'project-settings'},'*');else location.href='../#/account';};
+ $('#semanticElement').onchange=e=>{const [kind,...id]=e.target.value.split(':');if(!kind)return;SEL={k:kind,id:id.join(':')};const o=selObj();if(o?.lv)LV=o.lv;changedSel();};
+ $('#semanticInbox').onclick=()=>{if(!inbox.length){msgEx('Every active object has a category.','ok');return;}const {kind,o}=inbox[0];SEL={k:kind,id:o.id};if(o.lv)LV=o.lv;changedSel();};
+}
+function semanticProps(o){if(!o||!['wall','op','floor','furn','fence'].includes(SEL?.k))return;
+ const box=$('#props'),row=document.createElement('div'),value=semanticName(SEL.k,o);
+ row.style.cssText='border-top:1px solid var(--line,#ddd);padding-top:12px;margin-top:12px';
+ row.innerHTML=`<label class="note" for="semanticCategory">Analysis category</label><select id="semanticCategory" style="width:100%;border-left:4px solid ${SEMANTIC_COLORS[value]||'#999'}"><option value="" ${!value?'selected':''}>Unclassified — treated as wall</option>${[['Furniture',['Furniture']],['Slab',['Floor','Ceiling']],['Wall',['Wall','Glazing','Door','Structure']]].map(([label,values])=>`<optgroup label="${label}">${values.map(v=>`<option value="${v}" ${value===v?'selected':''}>${v==='Floor'?'Floor slab':v}</option>`).join('')}</optgroup>`).join('')}</select><label class="note" style="display:block;margin-top:10px"><input type="checkbox" id="semanticExclude" ${o.exclude?'checked':''}> Exclude from all simulation handoffs</label><p class="note">${esc(o.semanticSource||'Plan Studio object')} · Original geometry: ${esc(o.object_type||SEL.k)}</p>`;
+ box.append(row);
+ $('#semanticCategory').onchange=e=>{const before=snapM();o.semanticCategory=e.target.value||null;o.semanticSource='Assigned by you';const layer=semanticLayer(o);if(layer&&o.semanticCategory&&PROJECT_CONTEXT){PROJECT_CONTEXT.habits[layer]=o.semanticCategory;window.parent.postMessage({pc:1,t:'semantic-habit',layer,category:o.semanticCategory},'*');}commit(before);};
+ $('#semanticExclude').onchange=e=>{const before=snapM();o.exclude=e.target.checked;commit(before);};
+}
+const semanticPropsOriginal=propsUI;propsUI=function(){semanticPropsOriginal();semanticProps(selObj());semanticPanel();};
+const semanticChanged=changed;changed=function(){semanticInitialise();const r=semanticChanged.apply(this,arguments);queueProjectModel();return r;};
+window.addEventListener('message',e=>{if(e.source!==window.parent||!e.data?.pc||e.data.t!=='project-context')return;const context=e.data.project;if(!context){PROJECT_CONTEXT=null;semanticPanel();return;}const switched=PROJECT_CONTEXT?.id!==context.id;PROJECT_CONTEXT=context;window.__pcMainProject=context.id;projectApplying=true;try{if(switched&&context.scene){const json=JSON.parse(context.scene);if(json.studio?.levels)useModel(loadJSON(json,context.name),{msg:'Opened the current project model.'});}M.north=context.settings.north||0;M.name=context.name;M.projectSettings=JSON.parse(JSON.stringify(context.settings));semanticInitialise();changed();syncInputs();projectLastScene='';}catch{msgEx('This project model could not be opened. The Studio model has been kept.','warn');}finally{projectApplying=false;queueProjectModel();}});
+semanticInitialise();semanticPanel();
+
 // ---------- start ----------
 viewUI(); lpUI(); verLoad().then(() => cmpRestore());
 window.__wb = { WBP, commands, layerOn, setLayerVis, LYR, setView2D, walkEnter, walkExit, birdView, explodeEnter, explodeExit, showAllHidden, openWallPicker, showElevation, setGap, gapsOf, exporters, exPrep, simArchive, verLoad, openCompare, cycleSelection, cycleStep, cycleClear,
@@ -4763,7 +4823,7 @@ new ResizeObserver(() => resize()).observe(stage);
 { const cp = $('#chartp'); if (cp) new ResizeObserver(() => { resize(); if (live()) charts(); }).observe(cp); }
 cv.tabIndex = 0;
 changed(); requestAnimationFrame(() => { resize(); fitView(); draw(); });
-startProject();
+startProject().then(()=>window.parent.postMessage({pc:1,t:'project-context-request'},'*'));
 if (document.fonts) document.fonts.ready.then(() => { draw(); if (live()) charts(); });
 
 // ===== Plan Studio: 3D view (three.js, loaded on first use) and OBJ export =====
@@ -5339,7 +5399,7 @@ window.__pcWorkflow={getModel:()=>JSON.parse(snapM()),conditions:()=>pcModelCond
   }
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
+    if (d.t === 'project' && d.scene && canScene && !window.__pcMainProject) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
     if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
