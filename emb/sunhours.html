@@ -1992,16 +1992,19 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   // ---- columns
   L.id = 'panelL'; L.classList.add('col');
   const inL = document.createElement('div'); inL.className = 'colIn'; while (L.firstChild) inL.appendChild(L.firstChild); L.appendChild(inL);
-  const R = document.createElement('aside'); R.className = 'panel col'; R.id = 'panelR'; R.setAttribute('aria-label', 'Report and export');
+  const R = document.createElement('aside'); R.className = 'panel col'; R.id = 'panelR'; R.setAttribute('aria-label', 'Results');
   const inR = document.createElement('div'); inR.className = 'colIn'; R.appendChild(inR); stage.after(R);
   const lg = stage.querySelector('.lgd, .legend'); if (lg) { const s = document.createElement('section'); s.className = 'sec lgdsec'; s.setAttribute('aria-label', 'Legend'); s.appendChild(lg); inR.appendChild(s); }
   let rep = null;
   const RIGHT = { 'Facade Studio': ['h-gh'] }[name] || [];
-  for (const s of $$(':scope > .sec', inL)) { const hh = s.querySelector('h2'), h = txt(hh || s); if (/report|results|export|layers\s*(&|and)/i.test(h) || (hh && RIGHT.includes(hh.id))) { inR.appendChild(s); if (!rep && /report|results/i.test(h)) rep = s; } }
+  for (const s of $$(':scope > .sec', inL)) { const hh = s.querySelector('h2'), h = txt(hh || s); if (/report|results|layers\s*(&|and)/i.test(h) || (hh && RIGHT.includes(hh.id))) { inR.appendChild(s); if (!rep && /report|results/i.test(h)) rep = s; } }
   if (!rep) rep = $$(':scope > .sec:not(.lgdsec)', inR)[0];
   if (rep) rep.classList.add('grow');
   for (const x of $$(':scope > .sec', inL)) if (!x.querySelector('h2') && !x.querySelector('input, select, button:not(.lnk)') ) { const t = rep || $$(':scope > .sec', inR).pop(); if (t) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = x.innerHTML.replace(/<\/?p[^>]*>/g, ' '); t.appendChild(p); x.remove(); } }
   const ft = app.querySelector(':scope > footer.fine'); if (ft && rep) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = ft.innerHTML; rep.appendChild(p); }
+  // Export belongs with inputs; keep result inspection and its legend on the right.
+  const exportSection = $('#h-set')?.closest('.sec'), pngExport = $('#export'), exportMessage = $('#expmsg');
+  if (exportSection && pngExport) { const row = document.createElement('div'); row.className = 'row'; row.appendChild(pngExport); if (exportMessage) row.appendChild(exportMessage); $('#h-set').after(row); }
   const lefts = $$(':scope > .sec', inL); if (lefts.length) lefts[lefts.length - 1].classList.add('grow');
   const shown = () => lefts.filter((x) => !x.hidden && getComputedStyle(x).display !== 'none');
 
@@ -2131,12 +2134,14 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   }
 
   // ---- "Add to project" row in the report
-  const rep = $$('#panelR .sec, aside .sec').find((s) => /report|results/i.test(txt(s.querySelector('h2')))) || $$('#panelR .sec:not(.lgdsec)')[0];
+  const rep = $('#h-set')?.closest('.sec') || $$('#panelR .sec, aside .sec').find((s) => /report|results/i.test(txt(s.querySelector('h2')))) || $$('#panelR .sec:not(.lgdsec)')[0];
   let note = null;
   if (rep) {
     const row = document.createElement('div'); row.className = 'pcproj';
     row.innerHTML = '<button type="button" class="btn" id="pcAdd">Add to project</button><span class="note" id="pcProjN" aria-live="polite"></span>';
     const h2 = rep.querySelector('h2'); if (h2) h2.after(row); else rep.prepend(row);
+    const resultSection = $('#resSec');
+    if (resultSection) { const syncSave = () => { row.hidden = resultSection.hidden; }; syncSave(); new MutationObserver(syncSave).observe(resultSection, { attributes: true, attributeFilter: ['hidden'] }); }
     note = $('#pcProjN', row);
     const st = document.createElement('style');
     st.textContent = '.pcproj{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pcproj .note{font-size:11.5px;color:var(--muted,#6E6A60);flex:1 1 120px;min-width:0}.pcproj a{color:inherit;text-decoration:underline;cursor:pointer}.pcproj #pcAdd{white-space:nowrap}';
@@ -2170,5 +2175,16 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   }
 })();
 </script><!--/PCSHELL-->
+
+<!-- Sun Hours settings expansion: explicit panel selector, in-flow column, no canvas overlap. -->
+<style>
+@media (min-width: 901px) {
+.app.fitapp.railL.peek { grid-template-columns: clamp(272px, 24vw, 318px) minmax(0, 1fr) clamp(250px, 22vw, 300px); }
+.app.fitapp.railL.peek > #panelL { position: relative !important; inset: auto !important; width: auto !important; min-width: 0; z-index: 10; box-shadow: none; animation: none; overflow-y: auto !important; overflow-x: hidden !important; }
+.app.fitapp.railL.peek > #panelL > .colIn { display: flex !important; }
+.app.fitapp.railL.peek > #panelL > .rail { display: none !important; }
+.app.fitapp.railL.peek > #panelL > .peekX { z-index: 20; }
+}
+</style>
 </body>
 </html>
