@@ -4,7 +4,7 @@
   const link = (to, label, cls = '') => `<a href="#/${to}" data-go="${to}"${cls ? ` class="${cls}"` : ''}>${label}</a>`;
   const groups = [
     {id:'site', title:'Site & Model', text:'Understand the place and develop your design.', ids:new Set(['sitectx','atlas','tracer','furniture','facade','detaillab','lsystem','doors3d','stairs3d'])},
-    {id:'analysis', title:'Analyze', text:'Study sunlight, daylight, airflow, acoustics, movement and structure.', ids:new Set(['sunhours','wind','vent','structure','evac','isovist','cameras','views','daylight','spacesyntax','movementdepth','acoustics'])},
+    {id:'analysis', title:'Analyze', text:'Study sunlight, daylight, airflow, stormwater, acoustics, movement and structure.', ids:new Set(['sunhours','wind','vent','structure','evac','isovist','cameras','views','daylight','spacesyntax','movementdepth','acoustics','stormwater'])},
     {id:'present', title:'Render & Present', text:'Prepare images, materials and presentation boards.', ids:new Set(['architectural-render','render','cutout','depth','lines','upscale','sky','composer','axon','studio','palette','topo'])},
     {id:'utility', title:'Utilities & References', text:'Scales, dimensions, codes and other supporting tools.', ids:new Set()}
   ];
@@ -14,6 +14,7 @@
     tracer:'Trace a scaled plan image, then export it or open it in Plan Studio.',
     daylight:'Explore daylight distribution, sDA, ASE and daylight factor in your rooms.',
     wind:'Screen airflow around buildings and site massing.',
+    stormwater:'Follow rainfall across a site model, identify runoff paths and ponding, and compare detention storage.',
     vent:'Explore airflow through rooms and openings.',
     composer:'Arrange drawings, images and captions on a presentation board.',
     render:'Prepare color masks, material references and a render pack for local rendering.',
