@@ -19,41 +19,26 @@ try{
  await work.evaluate(()=>window.__wbTour?.close());
  const fixture={v:2,id:'workflow-office',name:'Office original',version:0,units:'m',north:0,targets:{ach:5,df:2,view:.75},climate:{from:225,U10:3.5,terrain:'suburban',Tout:18,Tin:24},levels:[{id:'L1',name:'Ground',z:0,h:3}],walls:[{id:'w1',lv:'L1',a:[0,0],b:[10,0],t:.2},{id:'w2',lv:'L1',a:[10,0],b:[10,8],t:.2},{id:'w3',lv:'L1',a:[10,8],b:[0,8],t:.2},{id:'w4',lv:'L1',a:[0,8],b:[0,0],t:.2}],ops:[],floors:[],voids:[],names:[{lv:'L1',x:5,y:4,name:'Office'}],furn:[{id:'f1',lv:'L1',type:'desk',x:3,y:3,w:1.4,d:.7,h:.75,rot:0},{id:'f2',lv:'L1',type:'desk',x:3.2,y:3.1,w:1.4,d:.7,h:.75,rot:.4}]};
  await work.evaluate(N=>window.__pcWorkflow.load(N),fixture);
- await work.locator('[data-lt="project"]').click();await work.locator('#projectWorkflow summary').click();
- await work.locator('#wfBrief [name="people"]').fill('20');
- await work.locator('#wfBrief [name="area"]').fill('100');
- await work.locator('#wfBrief [name="perPerson"]').fill('8');
- await work.locator('#wfBrief [name="constraints"]').fill('Keep existing perimeter walls. Meeting room for six.');
- await work.locator('#wfBrief button[type="submit"]').click();
- await work.locator('#wfCheck').click();assert(/Furniture overlaps/.test(await work.locator('#wfReport').innerText()));
- assert(/below/.test(await work.locator('#wfReport').innerText()));assert(await work.locator('#wfReport [data-wf-issue]').count()>0);
- await work.locator('#wfReport [data-wf-issue]').first().click();
- assert(await work.evaluate(()=>window.__pcWorkflow.report().area>70),'Enclosed area not computed');
+ // The Project brief panel is switched off (Plan Studio opens on the drawing tools); options and provenance are still covered through the workflow API.
  assert(await work.evaluate(()=>window.__pcWorkflow.save()),'Save failed');
- const original=await work.evaluate(()=>window.__pcWorkflow.getModel());
- assert.equal(original.brief.people,20);
- const option=await work.evaluate(()=>window.__pcWorkflow.duplicate());assert(option&&option!==original.id);
- await work.locator('#wfBrief [name="people"]').fill('10');await work.locator('#wfBrief button[type="submit"]').click();
- assert(await work.evaluate(()=>window.__pcWorkflow.save()));
+ const original=await work.evaluate(()=>window.__pcWorkflow.getModel());assert.equal(original.name,'Office original');
+ const option=await work.evaluate(()=>window.__pcWorkflow.duplicate());assert(option&&option!==original.id,'Option was not created');
+ const copy=await work.evaluate(()=>window.__pcWorkflow.getModel());assert.equal(copy.parentOption.id,original.id);assert.equal(copy.furn.length,original.furn.length);
+ await work.evaluate(()=>{const N=window.__pcWorkflow.getModel();N.furn[0].x+=1;window.__pcWorkflow.load(N);});
+ assert(await work.evaluate(()=>window.__pcWorkflow.save()));const moved=(await work.evaluate(()=>window.__pcWorkflow.getModel())).furn[0].x;
  assert(await work.evaluate(id=>window.__pcWorkflow.open(id),original.id));
- assert.equal(await work.locator('#wfBrief [name="people"]').inputValue(),'20','Option brief leaked into original');
+ assert.equal((await work.evaluate(()=>window.__pcWorkflow.getModel())).furn[0].x,original.furn[0].x,'Option edit leaked into original');
  assert(await work.evaluate(id=>window.__pcWorkflow.open(id),option));
- assert.equal(await work.locator('#wfBrief [name="people"]').inputValue(),'10');
- await work.locator('#wfOffice').click();await work.waitForFunction(()=>window.__pcWorkflow.getModel().name==='Small office');
- assert.equal((await work.evaluate(()=>window.__pcWorkflow.report())).rooms.length,3,'Office example should have three enclosed rooms');
- assert(await work.evaluate(id=>window.__pcWorkflow.open(id),option));
- await work.locator('#wfParent').click();await work.locator('#cmpDlg').waitFor({state:'visible'});
- await page.screenshot({path:dir+'/option-comparison.png',fullPage:true});
- await work.evaluate(()=>document.getElementById('cmpDlg').hidden=true);
+ assert.equal((await work.evaluate(()=>window.__pcWorkflow.getModel())).furn[0].x,moved);
  const conditions=await work.evaluate(()=>window.__pcWorkflow.conditions());assert.equal(conditions.level,'L1');assert.equal(conditions.north,0);
  const scene=await work.evaluate(()=>window.__wb.planScene('L1','daylight'));assert.equal(scene.source.conditions.level,'L1','Analysis provenance missing');
  await page.reload();work=await (await page.locator('iframe[data-emb="modeler"]').elementHandle()).contentFrame();await work.waitForFunction(()=>!!window.__pcWorkflow,{},{timeout:60000});
  await work.waitForFunction(id=>window.__pcWorkflow.getModel().id===id,option);
- assert.equal((await work.evaluate(()=>window.__pcWorkflow.getModel())).brief.people,10,'Saved project did not reopen');
+ assert.equal((await work.evaluate(()=>window.__pcWorkflow.getModel())).furn[0].x,moved,'Saved project did not reopen');
  await work.evaluate(()=>window.__wbTour?.close());
  await page.screenshot({path:dir+'/project-workflow.png',fullPage:true});
  // Capture an actual Studio preview; no fake renderer is used for this handoff.
- await work.locator('#wfRender').click();await work.locator('#rvSend').click();
+ await work.locator('[data-lt="render"]').click();await work.waitForFunction(()=>window.S3?.on);await work.locator('#rvSend').click();
  await page.waitForURL('**/#/tool/architectural-render');
  work=await (await page.locator('iframe[data-emb="architectural-render"]').elementHandle()).contentFrame();
  await work.waitForFunction(()=>!!window.__pcRender);
@@ -76,6 +61,6 @@ try{
   if(tool==='views'){await work.evaluate(()=>window.__views.setEye(1.15));await work.waitForFunction(()=>window.__pcAnalysisState().stale);assert.equal(await work.evaluate(()=>window.__pcAnalysisState().ready),false);}
  }
  assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
- console.log('PASS showroom relationships; project brief isolation and reopen; layout issues; option comparison; analysis provenance; Studio drawing handoff and local deterministic output');
+ console.log('PASS showroom relationships; option isolation and reopen; analysis provenance; Studio drawing handoff and local deterministic output');
 }finally{await page.screenshot({path:dir+'/workflow-final.png',fullPage:true}).catch(()=>{});await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
