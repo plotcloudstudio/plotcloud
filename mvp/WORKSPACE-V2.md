@@ -19,7 +19,7 @@ New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` 
 | Left · Model | Import status message | Left panel → Import model | Kept. Now also says how many meshes went to each layer |
 | Left · Model | Unit and axis conversion (`importModel` in viewport.js) | Same function, imported unchanged | Kept |
 | Left · Model | Imported meshes all go to the Imported layer | Sorted by mesh name: walls → Walls, furniture → Furniture, windows → Glazing, slabs → Structure, roofs → Roof, anything else → Imported | Changed as specified |
-| Left · Model | "Add a component" (Massing block / Wall / Window / Room / Slab) | Right column, top of Layers | Moved. Same options; new parts go to their category's layer |
+| Left · Model | "Add a component" (Massing block / Wall / Window / Room / Slab) | Removed at review | Furniture is now placed from the left panel (drag or click, as in Plan Studio). Walls, rooms, slabs and windows will come from the Draw room and Window tools in step 2; until then they can be duplicated from existing parts |
 | Left · Model | Links: Plan Studio ↗ · Site Planner ↗ · Plan tracer ↗ | Left panel, Project state | Kept. The "bringing their models in is Planned" sentence is dropped: the tool rail replaces it (placement in step 2) |
 | Left · Layers | "+ Layer" | Right column, Layers header | Moved, same behaviour |
 | Left · Layers | Layer row: colour, name/expand, count, Hide/Show, Lock | Right column: table row with colour, name/expand, count, eye icon, lock icon | Moved. Hide removes the layer from the view; Lock blocks picking in the view and in the tree, and clears the selection if it was on that layer |
@@ -27,12 +27,12 @@ New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` 
 | Centre | 3D viewport (orbit, pan, zoom, click to select) | Centre, fills the remaining space | Kept |
 | Centre | View buttons: Shaded / Wireframe / Plan | Floating menu at the top left of the viewport. Display: Shaded / Ghosted / Wireframe. View: Perspective, plus one "Plan · Level n" per level | Replaced, see below |
 | Centre | Fit | Top right of the viewport | Kept |
-| Centre | PNG | Top right of the viewport | Kept |
+| Centre | PNG | Left panel, Project state → Export (with Import) | Moved at review |
 | Centre | Status badge (project · version · unsaved changes) | Status bar, right side | Moved |
 | Centre | Help line (orbit / pan / zoom / select) | Bottom of the viewport | Kept. Text changes with the view |
 | Right · Selection | Empty state ("Click a component… N components on M layers") | Right column, Selection | Kept |
 | Right · Selection | Name, Layer, Type, Material or floor/ceiling finish, Position x/y/z, Size w/d/h | Left panel, Parameters state (opens when you select something) | Moved. Same fields, same rules (imported meshes keep their size); edits go to the same draft and redraw the view |
-| Right · Selection | Clear, Duplicate, Delete | Right column, Selection, with a one-line summary and "Edit parameters" | Kept |
+| Right · Selection | Clear, Duplicate, Delete | Right column, Selection, with a one-line summary and "Edit parameters"; with several selected: count, Clear, Delete all | Kept |
 | Right · Versions | Unsaved / up-to-date line, description, Save version, Open / Simulate on each version | Right column, Versions | Kept, same behaviour |
 | Right · Next | "Choose a simulation" (red) and its note | Right column, Next | Kept |
 
@@ -48,6 +48,17 @@ New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` 
 | Import site | The button and the rule: site geometry goes on the Site layer, locked | Clicking shows "Site import arrives in Step 2". Plan Studio's "Real site" exists, but it lives inside Plan Studio and cannot be called from this page without changing Plan Studio, so it will be extracted in step 2 |
 | Status bar: End, Near, Mid, Cen, Gumball | Settings are saved in this browser and survive a reload | No snapping or gumball behaviour yet (step 6); the tooltips say so |
 | Status bar: Clearance | Works now (brought forward at review). A dashed red outline round each furniture piece: footprint plus the free space it wants, using Plan Studio's rules from `furniture/models.js` (default front 0.6 m, back and sides 0.3 m; bed and fridge front 0.9 m, sofa front 0.8 m, and so on). Front is −y, as in Plan Studio. A hint only: it blocks and snaps nothing. Visible in every view, hidden behind solids in perspective. The setting survives a reload | Pieces without a stored kind get one guessed from the name (for example "Long table" → Dining table). Parameters show the guess and a "Furniture kind" dropdown to correct it, which is saved on the piece |
+
+
+## Added at review (round 2)
+
+| Feature | How it works | Not yet |
+|---|---|---|
+| Interior elevation | Replaces the right-column Elevation button. It opens a plan map of the level's walls, as in Plan Studio. Click a wall on the side you want to look at; a blue arrow shows the direction and the room it is seen from. The view is orthographic on the same scene, clipped to that room (its depth, width and height), so the opposite wall and anything outside the room are cut away. The exterior front elevation stays in the view menu | Labels and dimensions on the elevation |
+| Explode | Next to Interior elevation. As in Plan Studio: storeys pulled apart along Z (one band per level, plus a roof band). Gap slider 0–4000 mm (default 1500), storey labels, Reset, Close. Display only; selection is off while exploded | — |
+| Export | In the left panel under Import. PNG of the current view; Rhino .3dm (meshes on their layers, metres, written with rhino3dm); SketchUp .dae (Collada, which SketchUp imports); OBJ (Y up); glTF .glb; STL; DXF (3D faces on layers); IFC4 (walls, slabs, windows, furniture and spaces as their IFC classes, tessellated). Hidden layers are left out. Every format was read back in the browser (three.js loaders, rhino3dm, web-ifc) | .skp itself: only SketchUp's SDK can write it |
+| Selection like Rhino and Revit | Left-drag a box: left→right selects what is fully inside (solid red box), right→left selects what it touches (dashed blue box). Shift adds, Ctrl or Cmd removes, Esc clears. Right-drag orbits, Shift+right-drag or middle-drag pans. Hovering pre-highlights in blue; Tab and Shift+Tab cycle through everything under the cursor (the hint shows "2 of 4"), and a click selects the highlighted one. In plan views, picking uses the footprint below the cut, as on a drawing. With several selected, the left panel lists them, moves them to a layer or deletes them | — |
+| Furniture placement | "Add a component" is gone from the right column. Drag a furniture card onto the model, or click it and then click on the floor (a ghost box follows the cursor, snapped to 5 cm; Esc stops). The piece is Plan Studio's own parametric model (`furniture/models.js` + `furniture/geom.js`) with its part colours. It goes on the Furniture layer (placing is refused while that layer is locked or hidden) and is selected after placing. Parameters show Plan Studio's fields in English (for example Mattress width), plus 90° rotation; size follows the parameters. Only the kind, parameters and rotation are saved; the mesh is rebuilt when the page opens | Door, window, wall, room, stair and light tools (step 2); free rotation and on-plan dragging |
 
 ## One store
 

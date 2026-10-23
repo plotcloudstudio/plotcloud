@@ -302,3 +302,39 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .w2-tile img, .w2-tile svg { width: 46px; height: 46px; object-fit: contain; }
 .w2-card:hover .im, .w2-tile:hover .im { border-color: var(--red); }
 .w2-card:hover, .w2-tile:hover { color: var(--ink); }
+.w2-box { position: absolute; z-index: 5; pointer-events: none; border: 1.5px solid var(--red); background: rgba(216,64,42,.08); }
+.w2-box.cross { border-style: dashed; border-color: #2f7ad8; background: rgba(47,122,216,.08); }
+.w2-box[hidden] { display: none; }
+.w2-xlabels { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.w2-xlabels span { position: absolute; transform: translate(-4px, -130%); font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; background: var(--chip); color: var(--ink); border: 1px solid var(--line2); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.w2-xpanel { position: absolute; top: 60px; left: 12px; z-index: 4; width: 260px; display: grid; gap: 10px; padding: 14px; background: var(--card); border: 1px solid var(--line2); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.3); font-size: 13px; }
+.w2-xpanel[hidden] { display: none; }
+.w2-xpanel label { display: grid; gap: 4px; color: var(--ink2); }
+.w2-xpanel label.ck { display: flex; align-items: center; gap: 6px; }
+.w2-xpanel output { font: 11px var(--mono); color: var(--mut); }
+.w2-xpanel .row, .w2-dlg .row { display: flex; gap: 8px; justify-content: flex-end; }
+.w2-dlg { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; background: rgba(0,0,0,.35); }
+.w2-dlg[hidden] { display: none; }
+.w2-dlg-in { width: min(620px, calc(100% - 32px)); display: grid; gap: 10px; padding: 18px; background: var(--card); color: var(--ink); border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+.w2-dlg .hd { display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+#wpSvg { width: 100%; aspect-ratio: 560 / 360; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+#wpSvg .wp-room { fill: #eceef1; }
+#wpSvg .wp-rn { font: 600 11px Inter, sans-serif; fill: #8a8f98; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+#wpSvg .wp-hit { fill: transparent; cursor: pointer; }
+#wpSvg .wp-solid { fill: #6e6a60; pointer-events: none; }
+#wpSvg .wp-wall:hover .wp-solid, #wpSvg .wp-wall:focus .wp-solid { fill: #1f6fd1; }
+#wpSvg .wp-wall.sel .wp-solid { fill: #d8402a; }
+#wpSvg .wp-wall:focus { outline: none; }
+.w2-exp { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.w2-exp .btn { justify-content: center; }
+.w2-mlist { display: grid; gap: 2px; max-height: 220px; overflow: auto; }
+.w2-mlist button { display: flex; justify-content: space-between; gap: 8px; text-align: left; border: 0; background: none; padding: 5px 8px; border-radius: 8px; font-size: 13px; color: var(--ink2); }
+.w2-mlist button:hover { background: var(--chip); color: var(--ink); }
+.w2-mlist small { font: 11px var(--mono); color: var(--mut2); }
+.w2-mini { flex-wrap: wrap; }
+.w2-card[aria-pressed="true"] .im { border-color: var(--red); box-shadow: 0 0 0 2px var(--red) inset; }
+.w2-card[draggable="true"] { cursor: grab; }
+.w2-fp { display: grid; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.w2-fp .ck { display: flex; align-items: center; gap: 6px; }
+.w2-rot { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.w2-stage .hint { pointer-events: none; }
