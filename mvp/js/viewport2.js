@@ -48,7 +48,7 @@ export function wallFrame(model, c, side) {
   return { alongX, n, face, t, u0: a0, u1: a1, z0, z1, depth: Math.max(0.5, depth), room };
 }
 
-export function createViewport2(host, { onPick, onBox, onHover, onPlace } = {}) {
+export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame, canDrag, onDrag } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setClearColor(look().clear, 1); renderer.localClippingEnabled = true; host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
@@ -77,10 +77,10 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace } = {}) 
     const g = new THREE.BoxGeometry(dims.w, dims.d, dims.h); g.translate(0, 0, dims.h / 2);
     ghost.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: SEL_COL, transparent: true, opacity: 0.18, depthWrite: false })), new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: SEL_COL })));
   }
-  function floorAt(x, y) {
+  function floorAt(x, y, step = 0.05) {
     const lv = levelsOf(model), L = lv.find((q) => q.n === view.level) || lv[0], ray = new THREE.Raycaster(); ray.setFromCamera(ndc(x, y), camera);
     const pt = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -L.z), new THREE.Vector3()); if (!pt) return null;
-    const sn = (v) => Math.round(v / 0.05) * 0.05; return { x: +sn(pt.x).toFixed(2), y: +sn(pt.y).toFixed(2), z: L.z };
+    const sn = (v) => (step ? Math.round(v / step) * step : v); return { x: +sn(pt.x).toFixed(3), y: +sn(pt.y).toFixed(3), z: L.z };
   }
   const boxEl = document.createElement('div'); boxEl.className = 'w2-box'; boxEl.hidden = true; host.appendChild(boxEl);
 
@@ -169,7 +169,7 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace } = {}) 
       const p = new THREE.Vector3(bb.min.x, bb.min.y, bb.max.z).project(camera); if (p.z > 1) return;
       const d = document.createElement('span'); d.textContent = b.name; d.style.left = ((p.x + 1) / 2 * r.width) + 'px'; d.style.top = ((1 - p.y) / 2 * r.height) + 'px'; labelBox.appendChild(d); void i; });
   }
-  function render() { if (camera === walkCam) aimWalk(); renderer.render(scene, camera); labels(); }
+  function render() { if (camera === walkCam) aimWalk(); renderer.render(scene, camera); labels(); onFrame?.(); }
   controls.addEventListener('change', render);
 
   function applyExplode() {
@@ -214,12 +214,12 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace } = {}) 
   const kept = (pt) => clip.every((pl) => pl.distanceToPoint(pt) >= -1e-3);
   function candidatesAt(x, y) {
     if (!model || xpl.on) return [];
-    if (camera === plan) {   // plan: pick by footprint below the cut, as on a drawing (highest first, then the smaller one)
+    if (camera === plan) {   // plan: pick by footprint below the cut, as on a drawing
       const ray = new THREE.Raycaster(); ray.setFromCamera(ndc(x, y), camera); const o = ray.ray.origin, locked = lockedSet(), cut = clip[0] ? clip[0].constant : Infinity, low = clip[1] ? -clip[1].constant : -Infinity, hits = [];
       for (const [id, g] of objects) { const c = g.userData.c; if (locked.has(c.layer)) continue; const bb = new THREE.Box3().setFromObject(g.userData.face);
         if (bb.min.z > cut - 1e-3 || bb.max.z < low) continue; if (o.x < bb.min.x - 0.03 || o.x > bb.max.x + 0.03 || o.y < bb.min.y - 0.03 || o.y > bb.max.y + 0.03) continue;
-        hits.push({ id, top: Math.min(bb.max.z, cut), area: (bb.max.x - bb.min.x) * (bb.max.y - bb.min.y) }); }
-      return hits.sort((a, b) => b.top - a.top || a.area - b.area).map((h) => h.id);
+        hits.push({ id, rank: c.type === 'room' ? 1 : c.type === 'slab' || c.type === 'terrain' ? 2 : 0, top: Math.min(bb.max.z, cut), area: (bb.max.x - bb.min.x) * (bb.max.y - bb.min.y) }); }
+      return hits.sort((a, b) => a.rank - b.rank || b.top - a.top || a.area - b.area).map((h) => h.id);   // solids first, then rooms, then floors
     }
     const ray = new THREE.Raycaster(); ray.setFromCamera(ndc(x, y), camera); const locked = lockedSet(), seen = new Set(), out = [];
     for (const h of ray.intersectObjects([...objects.values()].map((g) => g.userData.face), false)) { const c = objects.get(h.object.userData.id)?.userData.c; if (!c || seen.has(c.id) || locked.has(c.layer) || !kept(h.point)) continue; seen.add(c.id); out.push(c.id); }
@@ -234,13 +234,18 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace } = {}) 
   // ---- pointer: left = click / box select, right = orbit (perspective) or pan (orthographic); walkthrough: left drag looks around
   let drag = null;
   el.addEventListener('contextmenu', (e) => e.preventDefault());
-  el.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, b: e.button, moved: false }; try { el.setPointerCapture(e.pointerId); } catch (er) { } });
+  el.addEventListener('pointerdown', (e) => {
+    drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, b: e.button, moved: false }; try { el.setPointerCapture(e.pointerId); } catch (er) { }
+    // plan: pressing on a movable piece and dragging moves it (as in Plan Studio)
+    if (e.button === 0 && camera === plan && !placing && !xpl.on && canDrag) { const id = candidatesAt(e.clientX, e.clientY)[0]; if (id && canDrag(id)) { const f = floorAt(e.clientX, e.clientY, 0), c = objects.get(id).userData.c; drag.move = { id, off: { x: f.x - c.g.x, y: f.y - c.g.y } }; } }
+  });
   el.addEventListener('pointermove', (e) => {
     over = true; last = { x: e.clientX, y: e.clientY };
     if (placing && (!drag || drag.b === 0)) { const f = floorAt(e.clientX, e.clientY); ghost.visible = !!f; if (f) ghost.position.set(f.x, f.y, f.z); setHover(null); render(); if (!drag) return; }
     if (!drag || !e.buttons) { refreshCand(e.clientX, e.clientY); return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4) drag.moved = true; if (!drag.moved) return;
     const r = host.getBoundingClientRect();
+    if (drag.move) { const f = floorAt(e.clientX, e.clientY, 0); if (f) { const nx = Math.round((f.x - drag.move.off.x) / 0.01) * 0.01, ny = Math.round((f.y - drag.move.off.y) / 0.01) * 0.01; onDrag?.(drag.move.id, +nx.toFixed(2), +ny.toFixed(2), 'move'); } drag.x = e.clientX; drag.y = e.clientY; return; }
     if (camera === walkCam) { walk.yaw -= dx * 0.005; walk.pitch = Math.max(-1.2, Math.min(1.2, walk.pitch - dy * 0.005)); }
     else if (drag.b === 0 && !xpl.on && !placing) {   // selection box
       const x0 = Math.min(drag.sx, e.clientX) - r.left, y0 = Math.min(drag.sy, e.clientY) - r.top, w = Math.abs(e.clientX - drag.sx), h = Math.abs(e.clientY - drag.sy);
@@ -259,6 +264,7 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace } = {}) 
   const mods = (e) => ({ add: e.shiftKey, remove: e.ctrlKey || e.metaKey });
   el.addEventListener('pointerup', (e) => {
     if (!drag) return; const d = drag; drag = null;
+    if (d.move && d.moved) { onDrag?.(d.move.id, null, null, 'end'); return; }
     if (d.b !== 0 || xpl.on) return;
     if (placing) { if (!d.moved) { const f = floorAt(e.clientX, e.clientY); if (f) onPlace?.(f); } return; }
     if (!d.moved) { const id = cand.length ? cand[ci] : (candidatesAt(e.clientX, e.clientY)[0] ?? null); onPick?.(id, mods(e)); return; }
@@ -288,6 +294,10 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace } = {}) 
     setView, get view() { return view; }, get display() { return display; },
     select(ids) { selected = new Set((Array.isArray(ids) ? ids : [ids]).filter(Boolean)); highlight(); },
     setPlacing, floorAt, get placing() { return placing; },
+    // move one object without rebuilding the scene (dragging); the page updates the model
+    moveObject(id, x, y) { const g = objects.get(id); if (!g) return; g.position.x = x; g.position.y = y; render(); },
+    toScreen(x, y, z = 0) { const r = el.getBoundingClientRect(), q = new THREE.Vector3(x, y, z).project(camera); return [(q.x + 1) / 2 * r.width, (1 - q.y) / 2 * r.height]; },
+    pxPerMetre() { if (camera !== plan) return null; const r = el.getBoundingClientRect(); return r.height / (2 * plan.userData.span); },
     setClearance(rects) { clrRects = rects || []; drawClearance(); render(); }, clearanceCount: () => clrRects.length,
     setExplode({ on, d, labels: lb } = {}) { if (on != null) xpl.on = on; if (d != null) xpl.d = d; if (lb != null) xpl.labels = lb; if (xpl.on) { cand = []; hover = null; } applyExplode(); drawClearance(); if (on != null) fit(); else render(); highlight(); },
     get explode() { return { ...xpl, bands: xpl.bands.map((b) => ({ name: b.name, n: b.ids.length })) }; },

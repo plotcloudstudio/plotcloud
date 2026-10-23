@@ -11,6 +11,7 @@ import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js';   // Plan Studio's parametric furniture: names, groups and clearance rules
 import { TOOL_ICONS } from '../tool-icons.js';
 import { newFurniture, fitBox, paramsOf, label as fl, paramVisible } from '../furn3d.js';
+import { drawPlan, measure, wallFaces, clampGap, gapMove, footprint, boxOf } from '../plan2d.js';
 
 // as in the archived Workspace
 const TYPES = ['wall', 'slab', 'roof', 'window', 'room', 'mass', 'terrain', 'furniture', 'imported'];
@@ -102,6 +103,7 @@ export function render(app, [pid]) {
   <aside class="w2-panel" id="panel" aria-label="Panel"></aside>
   <section class="stage w2-stage" aria-label="3D model">
     <div class="vp" id="vp"></div>
+    <svg class="w2-annot" id="annot" aria-label="Distances of the selected piece to the walls"></svg><input class="w2-inl" id="inl" type="number" hidden aria-label="Distance in millimetres">
     <div class="w2-cap" id="cap">
       <div><button type="button" id="vBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="vMenu" role="menu" hidden></div></div>
       <span class="w2-sep" aria-hidden="true"></span>
@@ -144,9 +146,11 @@ export function render(app, [pid]) {
   </footer></div>`;
 
   let tabInfo = null;
-  const vp = createViewport2($('#vp', app), { onPick: pick, onBox: boxPick, onHover: (h) => { tabInfo = h; hint(); }, onPlace: (pt) => place(placingId, pt) });
-  const clearance = () => vp.setClearance(UI.clearance ? clearanceRects(M()) : []);
-  const persist = () => { S.save(); state(); clearance(); };
+  let overlay = () => {};
+  const vp = createViewport2($('#vp', app), { onPick: pick, onBox: boxPick, onHover: (h) => { tabInfo = h; hint(); }, onPlace: (pt) => place(placingId, pt), onFrame: () => overlay(),
+    canDrag: (id) => { const c = comp(id); return !!c && c.type === 'furniture' && selectable(id); }, onDrag: (id, x, y, phase) => dragPiece(id, x, y, phase) });
+  const clearance = () => vp.setClearance(UI.clearance && vp.view.kind !== 'plan' ? clearanceRects(M()) : []);   // in plan views the overlay draws it, as Plan Studio does
+  const persist = () => { S.save(); state(); clearance(); overlay(); };
 
   // ---- viewport menu: view list (perspective, one plan per real level, front elevation) and display modes
   const DISPLAYS = [['shaded', 'Shaded'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe']];
@@ -175,7 +179,7 @@ export function render(app, [pid]) {
     $$('[data-disp]', app).forEach((b) => b.onclick = () => { vp.setDisplay(b.dataset.disp); UI.display = b.dataset.disp; saveUI(); closeMenus(); menus(); });
     hint();
   }
-  function go(v) { if (xplOn) explode(false); vp.setView(v); UI.view = vp.view.kind; UI.level = vp.view.level; UI.wall = vp.view.wall || null; UI.side = vp.view.side || 1; saveUI(); closeMenus(); menus(); }
+  function go(v) { if (xplOn) explode(false); vp.setView(v); clearance(); UI.view = vp.view.kind; UI.level = vp.view.level; UI.wall = vp.view.wall || null; UI.side = vp.view.side || 1; saveUI(); closeMenus(); menus(); }
   const closeMenus = () => { for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) { $('#' + m, app).hidden = true; $('#' + b, app).setAttribute('aria-expanded', 'false'); } };
   for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) $('#' + b, app).onclick = (e) => { e.stopPropagation(); const was = !$('#' + m, app).hidden; closeMenus(); if (!was) { $('#' + m, app).hidden = false; $('#' + b, app).setAttribute('aria-expanded', 'true'); } };
   const outside = (e) => { if (!e.target.closest('#cap')) closeMenus(); }; document.addEventListener('click', outside);
@@ -231,6 +235,41 @@ export function render(app, [pid]) {
   $('#xLab', app).onchange = (e) => { UI.xlabels = e.target.checked; saveUI(); vp.setExplode({ labels: UI.xlabels }); };
   $('#xReset', app).onclick = () => { UI.xd = 1.5; saveUI(); $('#xD', app).value = 1500; $('#xDv', app).textContent = '1500 mm'; vp.setExplode({ d: 1.5 }); };
   $('#xClose', app).onclick = () => explode(false);
+
+  // ---- plan views work like Plan Studio: drag a piece to move it, distances to the walls, clearance outlines
+  const annot = $('#annot', app), inl = $('#inl', app);
+  const levelZ = () => { const lv = levelsOf(M()); return (lv.find((x) => x.n === vp.view.level) || lv[0]).z; };
+  const levelFurniture = () => { const z = levelZ(); return M().components.filter((c) => c.type === 'furniture' && layerOf(c)?.visible !== false && Math.abs(c.g.z - z) < 0.6); };
+  overlay = () => {
+    if (vp.view.kind !== 'plan' || xplOn) { if (annot.innerHTML) annot.innerHTML = ''; return; }
+    const z = levelZ(), one = UI.sels.length === 1 ? comp(UI.sels[0]) : null, sel = one && one.type === 'furniture' && Math.abs(one.g.z - z) < 0.6 ? one : null;
+    drawPlan(annot, { S: (x, y) => vp.toScreen(x, y, z), ppm: vp.pxPerMetre() || 40, sel, walls: levelWalls(), furniture: levelFurniture(), showClearance: UI.clearance, clearanceOf: (c) => furnKind(c).m?.clearance || null });
+  };
+  let dragged = false;
+  function dragPiece(id, x, y, phase) {
+    const c = comp(id); if (!c) return;
+    if (phase === 'move') { if (!isSel(id) || UI.sels.length !== 1) setSel([id], { params: showParams }); c.g.x = x; c.g.y = y; dragged = true; vp.moveObject(id, x, y); return; }
+    if (dragged) { dragged = false; persist(); selPane(); if (showParams) setTimeout(panel, 0); }
+  }
+  function setGap(side, mm) {
+    const c = comp(UI.sels[0]); if (!c) return; const F = footprint(c), res = measure(boxOf(F.corners), wallFaces(levelWalls())); if (!isFinite(res[side].d)) return;
+    const k = clampGap(side, mm, res); if (!k.ok) { toast('Type a distance in millimetres.'); return; }
+    if (k.clamped) toast(k.mm === 0 ? 'A distance cannot be below 0 mm, so it is set to 0 mm.' : `Limited to ${Math.round(k.mm)} mm, the most this side allows (wall to the opposite wall, minus the piece).`);
+    const mv = gapMove(side, k.mm, res); c.g.x = +(c.g.x + mv[0]).toFixed(3); c.g.y = +(c.g.y + mv[1]).toFixed(3); ch(); if (showParams) setTimeout(panel, 0);
+  }
+  annot.addEventListener('click', (e) => { const l = e.target.closest('.pl-lab'); if (!l) return; const r = l.getBoundingClientRect(), h = $('#vp', app).getBoundingClientRect();
+    Object.assign(inl.style, { left: (r.left - h.left + r.width / 2 - 42) + 'px', top: (r.top - h.top + r.height / 2 - 14) + 'px' }); inl.value = l.parentNode.dataset.mm; inl.dataset.side = l.dataset.side; inl.hidden = false; inl.focus(); inl.select(); });
+  annot.addEventListener('keydown', (e) => { const l = e.target.closest('.pl-lab'); if (l && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); l.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
+  inl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const v = inl.value, sd = inl.dataset.side; inl.hidden = true; setGap(sd, v === '' ? NaN : +v); } else if (e.key === 'Escape') { e.stopPropagation(); inl.hidden = true; } });
+  inl.addEventListener('blur', () => { inl.hidden = true; });
+  // turn handle: drag to rotate about the centre, snaps to 5° on release
+  annot.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.pl-rot')) return; const c = comp(UI.sels[0]); if (!c?.furn) return; e.preventDefault(); e.stopPropagation(); annot.setPointerCapture(e.pointerId);
+    const ctr = { x: c.g.x + c.g.w / 2, y: c.g.y + c.g.d / 2 };
+    const mv = (ev) => { const f = vp.floorAt(ev.clientX, ev.clientY, 0); if (!f) return; const deg = Math.atan2(f.y - ctr.y, f.x - ctr.x) * 180 / Math.PI - 90; c.rot = +(((deg % 360) + 360) % 360).toFixed(1); fitBox(c, ctr); vp.setModel(M()); vp.select(UI.sels); };
+    const up = () => { annot.removeEventListener('pointermove', mv); annot.removeEventListener('pointerup', up); c.rot = (Math.round(c.rot / 5) * 5) % 360; fitBox(c, ctr); ch(); if (showParams) setTimeout(panel, 0); };
+    annot.addEventListener('pointermove', mv); annot.addEventListener('pointerup', up);
+  });
 
   // ---- placing furniture (as in Plan Studio): drag a card onto the model, or click a card and then click in the model
   let placingId = null;
@@ -412,12 +451,12 @@ export function render(app, [pid]) {
 
   // ---- status bar
   $$('[data-snap]', app).forEach((i) => i.onchange = () => { UI.snap[i.dataset.snap] = i.checked; saveUI(); });
-  $$('[data-sw]', app).forEach((b) => b.onclick = () => { const k = b.dataset.sw; UI[k] = !UI[k]; b.setAttribute('aria-checked', String(UI[k])); saveUI(); if (k === 'clearance') clearance(); });
+  $$('[data-sw]', app).forEach((b) => b.onclick = () => { const k = b.dataset.sw; UI[k] = !UI[k]; b.setAttribute('aria-checked', String(UI[k])); saveUI(); if (k === 'clearance') { clearance(); overlay(); } });
   // Esc clears the selection, Delete removes it (not while typing)
   const onKey = (e) => { if (e.target.closest?.('input,select,textarea') || !$('#elvDlg', app).hidden) return; if (e.key === 'Escape') { if (placingId) startPlacing(null); else if (UI.sels.length) setSel([]); } };
   addEventListener('keydown', onKey);
 
-  subs.push((ids) => vp.select(ids), () => layers(), () => selPane(), () => { rail(); panel(); });
+  subs.push((ids) => vp.select(ids), () => layers(), () => selPane(), () => { rail(); panel(); }, () => overlay());
   function refresh(refit) { vp.setModel(M(), { refit }); layers(); selPane(); state(); menus(); clearance(); }
 
   // restore: display, view (a plan level or wall that no longer exists falls back), selection on this project
