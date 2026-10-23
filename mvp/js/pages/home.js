@@ -1,5 +1,5 @@
 import * as S from '../store.js';
-import { SIMS } from '../data.js';
+import { SIMS, simImg } from '../data.js';
 import { esc, img, setCurrent } from '../app.js';
 
 export function render(app) {
@@ -33,11 +33,11 @@ export function render(app) {
     <div class="split" style="margin-top:22px"><h2 class="display md">${SIMS.length === 14 ? 'Fourteen' : SIMS.length} studies.<br><span>Real engines.</span></h2>
       <p class="lede">Each one is a working PlotCloud tool with its method and limits written down. Results are screening studies for design decisions, not code compliance.</p></div>
     <div class="figs">
-      <figure><img data-holo="daylight" src="${img('daylight')}" alt="Daylight study view"><figcaption><b>Sun &amp; daylight</b><span>3D view · whole year</span></figcaption></figure>
-      <figure><img data-holo="acoustics" src="${img('acoustics')}" alt="Acoustic wavefronts in the studio room"><figcaption><b>Indoor acoustics</b><span>Wireframe view · per room</span></figcaption></figure>
-      <figure><img data-holo="wind" src="${img('wind')}" alt="Wind streamlines around the massing"><figcaption><b>Wind &amp; stormwater</b><span>Site · streamlines and runoff</span></figcaption></figure>
+      <figure><img data-holo="sim-daylight" src="${img('sim-daylight')}" alt="Daylight study view"><figcaption><b>Sun &amp; daylight</b><span>3D view · whole year</span></figcaption></figure>
+      <figure><img data-holo="sim-acoustics" src="${img('sim-acoustics')}" alt="Acoustic wavefronts in the studio room"><figcaption><b>Indoor acoustics</b><span>Wireframe view · per room</span></figcaption></figure>
+      <figure><img data-holo="sim-wind" src="${img('sim-wind')}" alt="Wind streamlines around the massing"><figcaption><b>Wind &amp; stormwater</b><span>Site · streamlines and runoff</span></figcaption></figure>
     </div>
-    <ol class="numlist cols" style="margin-top:56px">${SIMS.map((s, i) => `<li><span>${String(i + 1).padStart(2, '0')}</span><div><b>${esc(s.name)}</b><p>${esc(s.blurb)}</p></div></li>`).join('')}</ol>
+    <ol class="simmini" style="margin-top:56px">${SIMS.map((s, i) => `<li><a href="#/simulations/${s.id}"><img data-holo="${simImg(s.id)}" src="${img(simImg(s.id))}" alt="" loading="lazy"><span class="n">${String(i + 1).padStart(2, '0')}</span><b>${esc(s.name)}</b><p>${esc(s.blurb)}</p></a></li>`).join('')}</ol>
     <a class="btn lg" href="#/simulations" style="margin-top:28px">Browse simulations →</a>
   </section>
 

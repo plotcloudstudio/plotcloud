@@ -1,7 +1,7 @@
 import * as S from '../store.js';
-import { SIMS, FULL } from '../data.js';
+import { SIMS, FULL, simImg } from '../data.js';
 import { run as mockRun } from '../mocksim.js';
-import { $, $$, esc, fmt, when, toast, currentProject, setCurrent, MOCK, LIVE } from '../app.js';
+import { $, $$, esc, fmt, when, toast, currentProject, setCurrent, MOCK, LIVE, img } from '../app.js';
 import { createViewport } from '../viewport.js';
 
 export function render(app, [simId], params) {
@@ -24,6 +24,7 @@ function catalog(app, params) {
     <p class="note" style="margin-top:28px">${LIVE} opens the existing PlotCloud tool. ${MOCK} previews here use simple model quantities and are for the workflow only. All studies are for design screening, not code compliance.</p>
   </div>`;
   const draw = () => { $('#grid', app).innerHTML = SIMS.map((s, i) => [s, i]).filter(([s]) => g === 'All' || s.group === g).map(([s, i]) => `<article class="card sim">
+      <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true"><img data-holo="${simImg(s.id)}" src="${img(simImg(s.id))}" alt="" loading="lazy"></a>
       <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(s.group)}</span><span>${s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>
       <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
       <div class="acts"><a class="btn sm primary" href="${q(s)}">${v ? `Run on v${v.n}` : 'Preview'}</a><a class="btn sm" href="${FULL(s.tool)}" target="_blank" rel="noopener">Open full tool ↗</a></div></article>`).join('');

@@ -2,6 +2,8 @@
 // (../index.html#/tool/<id>). Nothing here replaces those engines; the prototype only adds a project layer around them.
 
 export const FULL = (id) => `../index.html#/tool/${id}`;
+// holographic picture for each simulation: img/sim-<id>-day|night.jpg, rendered with holo-render.html
+export const simImg = (id) => 'sim-' + id;
 export const PAGE = (route) => `../index.html#/${route}`;
 
 // Analysis tools that exist today, grouped for the Simulations page.
