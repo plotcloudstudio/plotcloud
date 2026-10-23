@@ -64,6 +64,6 @@ export function render(app) {
       <div><p class="lede">Every analysis tool is free. PlotCloud Pro keeps your projects, versions and results together: CAD 9 a month or CAD 79 a year, 7 days free.</p><a class="btn lg" href="#/pricing" style="margin-top:20px">See pricing →</a></div></div>
   </section>
   </div>
-  <footer class="foot">${logo}<span>Prototype · screening studies for design, not code compliance · <a href="../index.html">current site</a></span></footer>`;
+  <footer class="foot">${logo}<span>Prototype · screening studies for design, not code compliance · <a href="../index.html#/home">classic site</a></span></footer>`;
   app.querySelectorAll('[data-p]').forEach((a) => a.addEventListener('click', () => setCurrent(S.project(a.dataset.p))));
 }
