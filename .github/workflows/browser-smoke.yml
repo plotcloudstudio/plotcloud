@@ -23,16 +23,16 @@ jobs:
       - name: Serve site and run browser smoke
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/plotcloud-http.log 2>&1 &
-          node tests/ui-unification.cjs
-          node tests/acoustics.cjs
-          node tests/home-hero.cjs
-          node hero/toronto.test.cjs
-          node tests/interior.cjs
-          node tests/views.cjs
-          node tests/compare-2d.cjs
-          node tests/workflow.cjs
-          node tests/shell.cjs
-          node tests/smoke.cjs
+          node tests/run-browser-check.cjs tests/ui-unification.cjs
+          node tests/run-browser-check.cjs tests/acoustics.cjs
+          node tests/run-browser-check.cjs tests/home-hero.cjs
+          node tests/run-browser-check.cjs hero/toronto.test.cjs
+          node tests/run-browser-check.cjs tests/interior.cjs
+          node tests/run-browser-check.cjs tests/views.cjs
+          node tests/run-browser-check.cjs tests/compare-2d.cjs
+          node tests/run-browser-check.cjs tests/workflow.cjs
+          node tests/run-browser-check.cjs tests/shell.cjs
+          node tests/run-browser-check.cjs tests/smoke.cjs
       - name: Save responsive screenshots
         if: always()
         uses: actions/upload-artifact@v4
