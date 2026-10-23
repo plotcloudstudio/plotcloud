@@ -5295,6 +5295,12 @@ function pcModelConditions(N,lv){return {schema:1,level:lv,north:N.north||0,clim
 // An independent copy of the open project (Option B); saved views travel with it, captured images stay with the original.
 async function pcDuplicate(){if(isDirty()&&!await saveProject())return null;const original={id:M.id,version:M.version},N=JSON.parse(snapM());N.id=STC.uid('p');N.name=(M.name+' · Option B').slice(0,80);N.version=0;delete N.savedAt;N.parentOption=original;useModel(N,{msg:'Independent option created. The original project is preserved.'});if(!await saveProject())return null;return N.id;}
 window.__pcWorkflow={getModel:()=>JSON.parse(snapM()),duplicate:pcDuplicate,conditions:()=>pcModelConditions(M,LV),open:async id=>{if(isDirty()&&!await saveProject())return false;const rec=await DB.get('projects',id);if(!rec)return false;useModel(STC.migrate(rec.model),{saved:true});return true;},save:saveProject,load:N=>useModel(STC.migrate(N))};
+// Read-only scene access for hosts that run a simulation engine on a model they hand in (the PlotCloud Workspace).
+// Same scenes as Send to Simulation: STC.planScene for the chosen tool and level; nothing is computed differently.
+// use(N) opens a model as saved, so nothing is kept as a draft in this browser's Plan Studio.
+Object.assign(window.__pcWorkflow,{use:N=>useModel(STC.migrate(N),{saved:true}),levels:()=>lvSorted().map(l=>({id:l.id,name:l.name,z:l.z,h:l.h})),
+ toolScene:(tool,lvId)=>{const V=STC.validate(M);if(V.errors.length)return{ok:false,why:V.errors.map(e=>e.msg)};const lv=lvId&&M.levels.some(l=>l.id===lvId)?lvId:lvSorted()[0].id;const c=STC.compat(M,V.S,lv,tool);if(!c.ok)return{ok:false,why:c.why};return{ok:true,level:lv,scene:JSON.stringify(STC.planScene(M,V.S,lv,tool))};},
+ dxf:(lvId)=>{const V=STC.validate(M);return WBP.dxf(M,V.S,lvId||lvSorted()[0].id).text;}});
 
 // Named 3D views, immutable source captures and project rendering history.
 {

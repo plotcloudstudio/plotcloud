@@ -934,7 +934,8 @@ let AGRAF = 0;
 function agentsGo() {
   if (!RES) return; cancelAnimationFrame(AGRAF); const n = clamp(+$('#agN').value || 200, 10, 2000); AG = runAgents(RES, n); RES.gate = AG.gate; const total = 1500, t0 = performance.now(); $('#agBtn').textContent = 'Agents walking…';
   const target = MOVEMENT_DEPTH ? 'flowdepth' : 'gate';
-  const frame = () => { for (let s = 0; s < 12 && AG.n < total; s++) AG.step(); RES.gateStamp = AG.n; if (SHOW !== target) setShow(target); else { resKey = ''; draw(); if (AG.n % 60 === 0) { drawHist(); legend(); } }
+  const frame = () => { if (!AG || !RES) return;   // a new model or analysis cleared the agents mid-walk
+    for (let s = 0; s < 12 && AG.n < total; s++) AG.step(); RES.gateStamp = AG.n; if (SHOW !== target) setShow(target); else { resKey = ''; draw(); if (AG.n % 60 === 0) { drawHist(); legend(); } }
     $('#agMsg').textContent = `${n} agents · step ${AG.n} of ${total}`; if (AG.n < total) AGRAF = requestAnimationFrame(frame); else { $('#agBtn').textContent = 'Release agents again'; $('#agMsg').textContent = `${n} agents walked ${total} steps (each picks a spot in its 170° view, walks 3 steps, picks again).`; legend(); panelUI(); spotUI(); if (T3.on) build3D(); void t0; } };
   AGRAF = requestAnimationFrame(frame);
 }

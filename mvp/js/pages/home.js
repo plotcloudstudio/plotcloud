@@ -49,8 +49,8 @@ export function render(app) {
     <div class="grid g2" style="margin-top:44px">
       <figure class="shot" style="margin:0;height:340px"><img data-holo="heroA" src="${img('heroA')}" alt="Version 1"><figcaption class="chip" style="left:16px;top:16px">V1 · Baseline</figcaption></figure>
       <figure class="shot" style="margin:0;height:340px"><img data-holo="hero" src="${img('hero')}" alt="Version 2"><figcaption class="chip" style="left:16px;top:16px">V2 · Wider glazing · acoustic ceiling</figcaption></figure></div>
-    <div class="stats"><div><small>sDA 300/50%</small><b>41 → <em>50</em><i> %</i></b></div><div><small>RT60 · studio room</small><b>2.66 → <em>0.55</em><i> s</i></b></div><div><small>Facade sun</small><b>2.2 → <em>1.9</em><i> h/day</i></b></div></div>
-    <p class="note">Sample project, prototype estimates labelled Mock. Same settings on both versions, so the difference comes from the design.</p>
+    <div class="stats"><div><small>sDA 300/50%</small><b>27.5 → <em>34.5</em><i> %</i></b></div><div><small>RT60 · studio room</small><b>2.96 → <em>0.53</em><i> s</i></b></div><div><small>Quality views</small><b>78.6 → <em>78.9</em><i> %</i></b></div></div>
+    <p class="note">Sample project, computed by the PlotCloud engines (Daylight at Draft detail, Indoor acoustics at 500 Hz, View analysis) on 23 Oct 2026. Same settings on both versions, so the difference comes from the design.</p>
     <a class="btn lg" href="#/results" style="margin-top:24px">Compare versions →</a>
   </section>
 

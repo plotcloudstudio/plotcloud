@@ -93,10 +93,20 @@ On a local server, from a clean browser profile:
 ## Global interface rules (patch)
 
 - **One entry point per simulation.** "All tools" and every "Open full tool" link are gone from the formal site. Each simulation has one route, `#/simulations/<id>`, reached from the Workspace ("Choose a simulation", or "Simulate" on a version row, then Enter) or from a Simulations card (Enter). Both arrive at the same page in the same state. The project and version come from what was chosen, not from the address; older links that carry `?project=&version=` are cleaned to the same route. "← Back" returns to the page the simulation was entered from. Resources entries never open a simulation.
-- **Sun Hours** runs the PlotCloud Sun Hours engine itself (`emb/sunhours.html`, the same file as the classic tool), in the current page shell (`js/pages/sim-sunhours.js`):
-  - Model, site and north come from Account and the project, sent in the engine's own scene format (`js/sunscene.js`). The engine's Model and Site & north sections are hidden.
-  - The left column keeps only the engine's Analysis and Export sections, and each can be collapsed. Views are Plan / 3D / Sun's view. The engine's own results column is on the right.
-  - Results are saved to the version.
-  - The prototype Sun Hours estimate and its sample results are retired.
-  - Acceptance: with the same scene and the same settings (Custom, 0.5 m grid, 15 min), the new page and the original tool gave identical figures (window, ground average, ground ≥ 2 h, extent, roofs, facades, sample points) and the same picture.
-  - The other 13 simulations are unchanged until their turn.
+- **Every simulation runs its PlotCloud engine** (the same `emb/<tool>.html` file the classic tool runs) in one page shell, `js/pages/sim-engine.js`. Nothing on the page computes or draws a result.
+  - **Model:** the model is edited only in the Workspace. Each engine gets the version's model in its own input format:
+    - Plan tools (Daylight, Natural ventilation, Space syntax, Movement & spatial depth, Isovist, Views, Cameras) get the scene Plan Studio's Send to Simulation makes. Plan Studio runs hidden (`js/studio-bridge.js`), opens the version converted to its model format (`js/studio-convert.js`), and returns `STC.planScene` for the tool and level. It opens the model as saved, so no draft is kept, and its "last project" is put back.
+    - Sun hours and Wind get the masses scene (`js/sunscene.js`).
+    - Circulation gets the level as Plan Studio's DXF. Stormwater gets the model as OBJ, in its Imported model mode.
+    - Indoor acoustics gets the room picked in the bar as one closed wall loop.
+    - Structural analysis (quick mode) and Structure sizer get storeys, storey height, bays and the longest room span from the model.
+  - **Hidden:** the engine's Model / file section, and its wall, window, door and furniture drawing tools. Analysis placements (check a spot, viewpoint, path, camera, places) stay.
+  - **Site and climate** come from Account and are prefilled into the engine's own inputs, where they stay editable: location, north, time zone, prevailing wind, design storm, work plane, occupied hours and eye height.
+  - **Layout:** all of the engine's views are kept, Plan + chart included (also for Sun hours). The left sections collapse. The engine's own results column is on the right, with every row it reports (its fit-to-height trimming is turned off; the columns scroll).
+  - **Bar:** Back, project, version, level (plan tools on several levels), room (acoustics), and the site chip linking to Account.
+  - **Saving:** "Save result to vN" stores the engine's own figures (label and value) with the settings used. Results compares versions on those figures. A result is refused until the engine has produced one.
+  - **Retired:** the prototype estimates (`mocksim.js`), their preview page and the seeded mock results. Old mock results are removed when the browser's data loads.
+  - **Doors:** the Workspace has no door tool yet. An opening named "door", or one that starts at the floor, goes to the engines as a door. The sample model has an interior door and an entrance.
+  - **Acceptance (same input, same output):** the page and the original tool, given the same input (file and inputs), gave identical results for Daylight, Views, Space syntax and Cameras (whole report), Indoor acoustics (RT60, SPL, C50, D50), Stormwater (peak depth, area deeper than 0.05 m, detention, balance), Structural analysis (results section) and Structure sizer (answer, range, system detail, column). Sun hours was checked earlier with identical figures and picture (Custom, 0.5 m grid, 15 min).
+  - **Run and saved on the page (sample project):** Natural ventilation (Studio 14.1 ACH, Office 3.8 ACH), Circulation (3 places: average walk 7.6 m), Isovist (one viewpoint: 2.7 % blind), Movement & spatial depth. Wind loads the massing and solves; on the test machine the Standard run did not finish inside the 8-minute test window, so no Wind figure was saved in testing.
+  - **Home page figures** (v1 → v2 of the sample) are engine results: sDA 27.5 → 34.5 %, RT60 studio room 2.96 → 0.53 s, quality views 78.6 → 78.9 %.

@@ -37,8 +37,8 @@ export function render(app, [pid], params) {
 
   function log() {
     $('#log', app).innerHTML = p.runs.slice().sort((a, b) => b.created.localeCompare(a.created)).map((r) => { const s = SIMS.find((x) => x.id === r.simId), v = S.version(p, r.versionId);
-      return `<tr><td>${when(r.created)}</td><td class="mono">v${v?.n ?? '?'}</td><td>${esc(s?.name)}</td><td class="small">${Object.entries(r.settings).filter(([k]) => k !== 'room').map(([, x]) => esc(x)).join(' · ')}${r.results.roomName ? ' · ' + esc(r.results.roomName) : ''}</td>
-      <td class="small mono">${s.metrics.map(([k, l, u, d]) => `${fmt(r.results[k], d)}${u ? ' ' + u : ''}`).join(' · ')}</td><td>${r.source === 'prototype-mock' ? MOCK : LIVE}</td><td><button class="btn sm danger" data-del="${r.id}">Delete</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="note">Nothing saved yet.</td></tr>';
+      return `<tr><td>${when(r.created)}</td><td class="mono">v${v?.n ?? '?'}</td><td>${esc(s?.name)}</td><td class="small">${Object.entries(r.settings).filter(([k, x]) => x != null && x !== '').map(([k, x]) => k === 'site' ? esc(x) : `${esc(k)} ${esc(x)}`).join(' · ')}${r.results.roomName ? ' · ' + esc(r.results.roomName) : ''}</td>
+      <td class="small mono">${r.results.kpis ? r.results.kpis.slice(0, 4).map(([k, x]) => `${esc(k)} ${esc(x)}`).join(' · ') : s.metrics.map(([k, l, u, d]) => `${fmt(r.results[k], d)}${u ? ' ' + u : ''}`).join(' · ')}</td><td>${r.source === 'prototype-mock' ? MOCK : LIVE}</td><td><button class="btn sm danger" data-del="${r.id}">Delete</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="note">Nothing saved yet.</td></tr>';
     $$('[data-del]', app).forEach((b) => b.onclick = () => { if (!confirm('Delete this saved result?')) return; S.deleteRun(p, b.dataset.del); toast('Result deleted'); location.reload(); });
   }
   function compare() {

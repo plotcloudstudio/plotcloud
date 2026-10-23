@@ -2,10 +2,9 @@
 // Shape (ready to move to a backend later):
 //   project { id, name, created, updated, draft (working model), versions[], runs[] }
 //   version { id, n, note, created, model }            — immutable snapshot
-//   run     { id, versionId, simId, settings, results, created, source: 'prototype-mock' | 'full-tool' }
+//   run     { id, versionId, simId, settings, results { kpis: [[label, value]], <metric>: number }, created, source: 'full-tool' }
 //   account { user, site, defaults }                  — site and defaults every new project and run starts from
 import { sampleModel } from './data.js';
-import { run as mockRun } from './mocksim.js';
 
 const KEY = 'pc-mvp-v1';
 const uid = (p) => p + Math.random().toString(36).slice(2, 9);
@@ -21,10 +20,8 @@ export const DEFAULTS = { units: 'Metric', radius: 250, plane: 0.8, occStart: 8,
 function seed() {
   const p = { id: 'demo-courtyard', name: 'Courtyard studio (sample)', created: now(), updated: now(), versions: [], runs: [], sample: true, site: clone(SAMPLE_SITE) };
   const add = (model, note) => { const v = { id: uid('v'), n: p.versions.length + 1, note, created: now(), model }; p.versions.push(v); return v; };
-  const v1 = add(sampleModel('A'), 'Baseline massing and glazing');
+  add(sampleModel('A'), 'Baseline massing and glazing');
   const v2 = add(sampleModel('B'), 'Larger south windows, overhang, acoustic ceiling');
-  for (const v of [v1, v2]) for (const [simId, settings] of [['daylight', { plane: 0.8 }], ['acoustics', { room: 'c15', band: '500 Hz' }]])
-    p.runs.push({ id: uid('r'), versionId: v.id, simId, settings: { site: p.site.label, ...settings }, results: mockRun(simId, v.model, settings, p.site), created: now(), source: 'prototype-mock' });
   p.draft = clone(v2.model);
   return { projects: [p], account: { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } } };
 }
@@ -34,8 +31,8 @@ export function load() {
   try { const raw = localStorage.getItem(KEY); DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; }
   if (!DB.account) DB.account = { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } };
   for (const p of DB.projects) if (!p.site) p.site = clone(DB.account.site);
-  // Sun Hours estimates from the old prototype preview are retired: Sun Hours results now come only from the engine
-  for (const p of DB.projects) p.runs = p.runs.filter((r) => !(r.simId === 'sunhours' && r.source === 'prototype-mock'));
+  // estimates from the old prototype preview are retired: every result now comes from a PlotCloud engine
+  for (const p of DB.projects) p.runs = p.runs.filter((r) => r.source !== 'prototype-mock');
   return DB;
 }
 export function save() { if (memoryOnly) return false; try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; } catch (e) { memoryOnly = true; return false; } }
@@ -53,7 +50,7 @@ export function saveVersion(p, note) {
   const v = { id: uid('v'), n: p.versions.length + 1, note: note || `Version ${p.versions.length + 1}`, created: now(), model: clone(p.draft) };
   p.versions.push(v); p.updated = now(); save(); return v;
 }
-export function addRun(p, versionId, simId, settings, results, source = 'prototype-mock') {
+export function addRun(p, versionId, simId, settings, results, source = 'full-tool') {
   const r = { id: uid('r'), versionId, simId, settings: clone(settings), results, created: now(), source };
   p.runs.push(r); p.updated = now(); save(); return r;
 }
