@@ -9,10 +9,9 @@ export const PAGE = (route) => `../index.html#/${route}`;
 // Analysis tools that exist today, grouped for the Simulations page.
 // inputs: what the model must contain · metrics: what the prototype preview reports (mock) and Results compares
 export const SIMS = [
-  { id: 'sunhours', group: 'Climate', name: 'Sun hours', tool: 'sunhours', view: 'shaded',
-    blurb: 'Hours of direct sun on ground, roofs and facades through the year.', inputs: ['Site massing', 'True north', 'City'],
-    settings: [{ k: 'period', label: 'Period', type: 'select', options: ['Winter solstice', 'Equinox', 'Summer solstice', 'Whole year'], v: 'Equinox' }],
-    metrics: [['facadeSun', 'Mean facade sun', 'h/day', 1], ['groundSun', 'Courtyard ground ≥ 2 h', '%', 0]] },
+  { id: 'sunhours', group: 'Climate', name: 'Sun hours', tool: 'sunhours', view: 'shaded', engine: true,
+    blurb: 'Hours of direct sun on ground, roofs and facades through the year.', inputs: ['Model massing', 'Site and north from Account'],
+    settings: [], metrics: [['ground', 'Ground, mean', 'h', 1], ['ground2h', 'Ground with ≥ 2 h', '%', 0], ['roofs', 'Roofs, mean', 'h', 1], ['facades', 'Facades, mean', 'h', 1]] },
   { id: 'daylight', group: 'Climate', name: 'Daylight', tool: 'daylight', view: 'shaded',
     blurb: 'sDA, ASE and daylight factor on the work plane, room by room.', inputs: ['Rooms with walls', 'Windows', 'Location'],
     settings: [{ k: 'plane', label: 'Work plane (m)', type: 'number', v: 0.8, step: 0.05 }],

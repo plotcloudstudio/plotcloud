@@ -1,8 +1,15 @@
-# Workspace v2 (step 1): skeleton reconciliation
+# Workspace (merged, formerly Workspace v2): reconciliation
 
-`#/workspace-v2` is the merged Workspace skeleton, laid out like Rhino: tool rail and panel on the left, a large viewport, layers on the right and a status bar at the bottom. The archived Workspace (`#/workspace`, `js/pages/workspace.js`, `js/viewport.js`) is unchanged and remains available for rollback. The nav entry "Workspace v2" carries a TEMP badge until review decides.
+`#/workspace` is now the merged Workspace (it was `#/workspace-v2`; old links redirect). It is laid out, laid out like Rhino: tool rail and panel on the left, a large viewport, layers on the right and a status bar at the bottom. The earlier Workspace (`js/pages/workspace.js`, `js/viewport.js`) is unchanged and kept as an archive at `#/workspace-archive` for rollback. The TEMP nav entry is gone.
 
 New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` block at the end of `css/mvp.css`. Edited: `js/app.js` (one route) and `index.html` (one nav link).
+
+## Top bar
+
+| Control | Placement |
+|---|---|
+| Main nav, PROTOTYPE badge and its hint, Day / Night, Log in / Start free | Unchanged |
+| All tools ↗ | Removed from the formal site (merged version only). Kept only in the archived Workspace's top bar, unchanged |
 
 ## Where every control of the archived Workspace went
 
@@ -82,3 +89,14 @@ On a local server, from a clean browser profile:
 - Status-bar settings and the display mode survive a reload.
 - There is no Drawing entry. Save version adds v3.
 - No console errors.
+
+## Global interface rules (patch)
+
+- **One entry point per simulation.** "All tools" and every "Open full tool" link are gone from the formal site. Each simulation has one route, `#/simulations/<id>`, reached from the Workspace ("Choose a simulation", or "Simulate" on a version row, then Enter) or from a Simulations card (Enter). Both arrive at the same page in the same state. The project and version come from what was chosen, not from the address; older links that carry `?project=&version=` are cleaned to the same route. "← Back" returns to the page the simulation was entered from. Resources entries never open a simulation.
+- **Sun Hours** runs the PlotCloud Sun Hours engine itself (`emb/sunhours.html`, the same file as the classic tool), in the current page shell (`js/pages/sim-sunhours.js`):
+  - Model, site and north come from Account and the project, sent in the engine's own scene format (`js/sunscene.js`). The engine's Model and Site & north sections are hidden.
+  - The left column keeps only the engine's Analysis and Export sections, and each can be collapsed. Views are Plan / 3D / Sun's view. The engine's own results column is on the right.
+  - Results are saved to the version.
+  - The prototype Sun Hours estimate and its sample results are retired.
+  - Acceptance: with the same scene and the same settings (Custom, 0.5 m grid, 15 min), the new page and the original tool gave identical figures (window, ground average, ground ≥ 2 h, extent, roofs, facades, sample points) and the same picture.
+  - The other 13 simulations are unchanged until their turn.

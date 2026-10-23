@@ -42,7 +42,7 @@ export function run(simId, model, settings = {}, site = null) {
   const ratio = m.floor ? m.glazing / m.floor : 0;
   switch (simId) {
     case 'daylight': r.sda = clamp(18 + ratio * 320 * latK(site), 0, 100); r.ase = clamp(m.southGlazing / Math.max(1, m.floor) * 140 - m.shade * 0.55, 0, 60); r.df = clamp(ratio * 20, 0, 12); break;
-    case 'sunhours': r.facadeSun = clamp(3.4 * latK(site) - m.ctxH * 0.08 - m.shade * 0.02, 0.5, 12); r.groundSun = clamp(70 - m.ctxH * 3.1, 0, 100); break;
+    // sunhours: no estimate here; Sun Hours runs the PlotCloud engine (pages/sim-sunhours.js)
     case 'wind': r.comfort = clamp(88 - m.ctxH * 1.6 - (settings.speed || 5) * 2.2, 10, 100); r.peak = 1 + m.ctxH * 0.04 + (settings.speed || 5) * 0.01; break;
     case 'vent': r.ach = clamp(m.glazing * (settings.open ?? 0.5) * 1.8 / Math.max(1, m.floor * 3.2) * 60, 0.3, 20); break;
     case 'stormwater': { const P = (settings.rain || 50) * (settings.duration || 60) / 60 / 1000; r.runoff = P * (m.roof * 0.9 + Math.max(0, m.site - m.roof) * 0.35); r.ponding = Math.max(0, m.site - m.roof) * 0.04 * (settings.rain || 50) / 50; break; }

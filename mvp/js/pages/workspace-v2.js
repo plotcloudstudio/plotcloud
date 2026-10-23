@@ -1,10 +1,10 @@
-// Workspace v2 (TEMP, for review): the merged Workspace skeleton with a Rhino-like layout.
-// The archived Workspace (pages/workspace.js, #/workspace) is not changed. Same project data (store.js), same import code (viewport.js).
+// The Workspace (#/workspace): the merged Workspace with a Rhino-like layout.
+// The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 // One page store (UI below, saved in this browser) holds view, display mode, panel, selection and the status-bar settings;
 // hide / lock live on the project's layers, exactly as in the archived Workspace, so versions keep them.
 import * as S from '../store.js';
 import { LAYER_COLORS, PAGE, FULL } from '../data.js';
-import { $, $$, esc, when, toast, currentProject, setCurrent } from '../app.js';
+import { $, $$, esc, when, toast, currentProject, setCurrent, setCurrentVersion } from '../app.js';
 import { importModel } from '../viewport.js';
 import { createViewport2, levelsOf, wallFrame, EYE, CUT } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
@@ -331,7 +331,7 @@ export function render(app, [pid]) {
       <div class="w2-exp">${FORMATS.map(([k, n, d]) => `<button type="button" class="btn sm" data-exp="${k}" title="${esc(d)}">${esc(n)}</button>`).join('')}</div>
       <p class="note">Exports what is visible, in metres; hidden layers are left out. SketchUp's own .skp can only be written by SketchUp, so use the .dae, which SketchUp opens directly.</p>
       <p class="note" id="expMsg" role="status" aria-live="polite"></p></div>`;
-    $('#proj', host).onchange = (e) => { location.hash = '#/workspace-v2/' + e.target.value; };
+    $('#proj', host).onchange = (e) => { location.hash = '#/workspace/' + e.target.value; };
     $('#siteBtn', host).onclick = () => { $('#siteMsg', host).textContent = 'Site import arrives in Step 2'; };
     $$('[data-exp]', host).forEach((b) => b.onclick = async () => {
       const k = b.dataset.exp, f = FORMATS.find((x) => x[0] === k), msg = $('#expMsg', host), base = p.name.replace(/\W+/g, '-').replace(/^-|-$/g, '');
@@ -442,9 +442,10 @@ export function render(app, [pid]) {
     $('#state', app).innerHTML = `${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Edits are kept in this browser.'} · ${esc(p.name)} · ${v ? 'v' + v.n : 'no version yet'}${d ? ' · <span class="dirty">unsaved changes</span>' : ''}`;
     $('#dirty', app).textContent = d ? (v ? `Changes since v${v.n} are not saved.` : 'Save the first version to run simulations.') : `Up to date with v${v.n}.`;
     $('#versions', app).innerHTML = p.versions.slice().reverse().map((x) => `<div class="vrow ${x === v && !d ? 'cur' : ''}"><span class="vn">v${x.n}</span><div><div>${esc(x.note)}</div><div class="vmeta">${when(x.created)} · ${p.runs.filter((r) => r.versionId === x.id).length} results</div></div>
-      <div style="display:grid;gap:4px"><button class="btn sm" data-load="${x.id}">Open</button><a class="btn sm" href="#/simulations?project=${p.id}&version=${x.id}">Simulate</a></div></div>`).join('') || '<p class="note">No versions yet.</p>';
+      <div style="display:grid;gap:4px"><button class="btn sm" data-load="${x.id}">Open</button><a class="btn sm" href="#/simulations" data-simv="${x.id}">Simulate</a></div></div>`).join('') || '<p class="note">No versions yet.</p>';
     $$('[data-load]', app).forEach((b) => b.onclick = () => { if (dirty() && !confirm('Discard unsaved changes and open this version?')) return; p.draft = S.clone(S.version(p, b.dataset.load).model); persist(); refresh(true); setSel([]); toast('Version opened'); });
-    $('#toSim', app).href = v ? `#/simulations?project=${p.id}&version=${v.id}` : '#/simulations';
+    $$('[data-simv]', app).forEach((a) => a.onclick = () => setCurrentVersion(p, a.dataset.simv));
+    $('#toSim', app).href = '#/simulations'; $('#toSim', app).onclick = () => { if (last()) setCurrentVersion(p, last().id); };
   }
   $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if (!name || M().layers.find((l) => l.name === name.trim())) return; M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); open.add(name.trim()); persist(); layers(); };
   $('#saveV', app).onclick = () => { if (!dirty() && last()) { toast('No changes since v' + last().n); return; } const v = S.saveVersion(p, $('#note', app).value.trim()); $('#note', app).value = ''; state(); toast(`Saved v${v.n}`); };

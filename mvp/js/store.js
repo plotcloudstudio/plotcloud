@@ -23,7 +23,7 @@ function seed() {
   const add = (model, note) => { const v = { id: uid('v'), n: p.versions.length + 1, note, created: now(), model }; p.versions.push(v); return v; };
   const v1 = add(sampleModel('A'), 'Baseline massing and glazing');
   const v2 = add(sampleModel('B'), 'Larger south windows, overhang, acoustic ceiling');
-  for (const v of [v1, v2]) for (const [simId, settings] of [['daylight', { plane: 0.8 }], ['acoustics', { room: 'c15', band: '500 Hz' }], ['sunhours', { period: 'Equinox' }]])
+  for (const v of [v1, v2]) for (const [simId, settings] of [['daylight', { plane: 0.8 }], ['acoustics', { room: 'c15', band: '500 Hz' }]])
     p.runs.push({ id: uid('r'), versionId: v.id, simId, settings: { site: p.site.label, ...settings }, results: mockRun(simId, v.model, settings, p.site), created: now(), source: 'prototype-mock' });
   p.draft = clone(v2.model);
   return { projects: [p], account: { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } } };
@@ -34,6 +34,8 @@ export function load() {
   try { const raw = localStorage.getItem(KEY); DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; }
   if (!DB.account) DB.account = { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } };
   for (const p of DB.projects) if (!p.site) p.site = clone(DB.account.site);
+  // Sun Hours estimates from the old prototype preview are retired: Sun Hours results now come only from the engine
+  for (const p of DB.projects) p.runs = p.runs.filter((r) => !(r.simId === 'sunhours' && r.source === 'prototype-mock'));
   return DB;
 }
 export function save() { if (memoryOnly) return false; try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; } catch (e) { memoryOnly = true; return false; } }
