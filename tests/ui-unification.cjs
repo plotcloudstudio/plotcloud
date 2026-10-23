@@ -2,12 +2,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {chromium}=require('playwright');
 const inventory=require('../ui/inventory.json');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
+let currentTarget='browser startup';
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
  const results=[];
  try{
   const context=await browser.newContext({viewport:{width:1440,height:900}});
   for(const host of inventory.hosts){
+   currentTarget=host.file;
    const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
    try{
     const url=host.file==='index.html'?'/index.html#/home':host.url;
@@ -33,6 +35,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   // Verify every top-level route, not only the shared shell's initial page.
   const routeChecks=[];
   for(const url of [...inventory.mvpRoutes,...inventory.classicRoutes,...inventory.classicToolRoutes]){
+   currentTarget=url;
    const routePage=await context.newPage();const errors=[];routePage.on('pageerror',e=>errors.push(e.message));
    await routePage.goto(base+url,{waitUntil:'domcontentloaded'});
    await routePage.waitForFunction(()=>window.PlotCloudUI?.version===1);
@@ -60,4 +63,8 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   assert.equal(results.filter(r=>r.status==='failed').length,0,'Every inventory host must load the common UI and both themes');
   console.log('PASS all '+results.length+' UI hosts and '+routeChecks.length+' site routes, both themes, public workspace navigation and embedded theme propagation. Host checks validate UI integration; they are not functional analysis-engine tests.');
  }finally{await browser.close()}
-})().catch(e=>{console.error(e);process.exitCode=1});
+})().catch(e=>{
+ console.error('UI check target:',currentTarget);console.error(e);
+ if(process.env.GITHUB_ACTIONS){const message=('Target '+currentTarget+'\n'+(e.stack||e.message)).replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A');console.error('::error title=UI inventory failed::'+message)}
+ process.exitCode=1;
+});
