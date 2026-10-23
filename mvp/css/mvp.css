@@ -293,3 +293,12 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
   .w2-right { grid-column: 2; grid-row: 3; border-left: 0; border-top: 1px solid var(--line); }
   .w2-status { grid-row: 4; flex-wrap: wrap; white-space: normal; padding: 6px 12px; }
 }
+
+.w2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w2-card, .w2-tile { display: grid; gap: 4px; justify-items: start; text-align: left; border: 0; background: none; padding: 0; font-size: 12.5px; color: var(--ink2); }
+.w2-card .im, .w2-tile .im { width: 100%; aspect-ratio: 1.3; display: grid; place-items: center; background: #f2f3f5; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.w2-tile .im { aspect-ratio: 1.6; }
+.w2-card img { width: 92%; height: 92%; object-fit: contain; }
+.w2-tile img, .w2-tile svg { width: 46px; height: 46px; object-fit: contain; }
+.w2-card:hover .im, .w2-tile:hover .im { border-color: var(--red); }
+.w2-card:hover, .w2-tile:hover { color: var(--ink); }

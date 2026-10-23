@@ -9,6 +9,10 @@ const LOOK = {
   night: { clear: 0x08090c, grid: [0x2a2d35, 0x1c1f26], solid: 0x2a2f3a, ctx: 0x1d2028, edge: 0xffffff, ctxEdge: 0.3, hemi: [0xffffff, 0x1a1d24, 1.3] },
 };
 const look = () => LOOK[document.documentElement.dataset.theme === 'day' ? 'day' : 'night'];
+// Shaded and Ghosted use Plan Studio's warm model colours (beige walls, light timber, pale blue glass), by material first, then by type.
+const SHADE_MAT = { Plaster: 0xece4d6, Gypsum: 0xefe9df, Concrete: 0xdcd5c9, Timber: 0xd9c4a0, Carpet: 0xb9a58e, 'Acoustic panel': 0xcdbfa6, Glass: 0x9ec3dc, Grass: 0xc5cfae, Context: 0xd6d2ca, Imported: 0xe2ddd3 };
+const SHADE_TYPE = { wall: 0xece4d6, slab: 0xd9cdb8, roof: 0xe3ddd2, window: 0x9ec3dc, furniture: 0xd9c4a0, mass: 0xd6d2ca, terrain: 0xc5cfae, imported: 0xe2ddd3, room: 0xe8b04a };
+const shadeOf = (c) => (c.type === 'room' ? 0xe8b04a : c.type === 'window' ? 0x9ec3dc : SHADE_MAT[c.mat] ?? SHADE_TYPE[c.type] ?? 0xe2ddd3);
 export const EYE = 1.6, CUT = 1.2;
 
 // Levels come from the model: the top of every slab is a floor level. A model with no slab has one level at z = 0.
@@ -31,6 +35,7 @@ export function createViewport2(host, { onPick } = {}) {
   const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-0.5, -0.35, 1); scene.add(sun);
   let grid = null; const makeGrid = () => { if (grid) { scene.remove(grid); grid.geometry.dispose(); } grid = new THREE.GridHelper(120, 60, ...look().grid); grid.rotation.x = Math.PI / 2; grid.position.z = -0.32; scene.add(grid); }; makeGrid();
   const root = new THREE.Group(); scene.add(root);
+  const clrGroup = new THREE.Group(); scene.add(clrGroup); let clrRects = [];
   let model = null, display = 'shaded', view = { kind: 'persp', level: 1 }, selected = null, objects = new Map(), bounds = new THREE.Box3(), clip = [];
   const walk = { yaw: Math.PI / 2, pitch: 0, pos: new THREE.Vector3() };
 
@@ -43,9 +48,11 @@ export function createViewport2(host, { onPick } = {}) {
   function paint(grp) {
     const k = grp.userData.kind, face = grp.userData.face, edges = grp.userData.edges, L = look(), fm = face.material, em = edges.material;
     const ghost = display === 'ghosted', wire = display === 'wire';
-    const op = wire ? 0 : ghost ? 0.5 : k === 'room' ? 0 : k === 'glass' ? 0.35 : 1;
+    const op = wire ? 0 : ghost ? 0.5 : k === 'room' ? 0 : k === 'glass' ? 0.45 : 1;
+    fm.color.setHex(wire ? grp.userData.themeColor : grp.userData.shadeColor);
+    em.color.setHex(display === 'shaded' && k !== 'room' ? 0x4a453d : k === 'room' ? 0xe8b04a : L.edge);
     fm.opacity = op; fm.transparent = op < 1; fm.depthWrite = op === 1; fm.colorWrite = op > 0;
-    const eo = k === 'room' ? (display === 'shaded' ? 0 : 1) : k === 'ctx' ? Math.max(L.ctxEdge, wire ? 0.6 : 0) : 0.9;
+    const eo = k === 'room' ? (display === 'shaded' ? 0 : 1) : display === 'shaded' ? 0.45 : k === 'ctx' ? Math.max(L.ctxEdge, wire ? 0.6 : 0) : 0.9;
     em.opacity = eo; em.visible = eo > 0;
     fm.clippingPlanes = clip; em.clippingPlanes = clip; fm.needsUpdate = true; em.needsUpdate = true;
     const sel = grp.getObjectByName('sel'); if (sel) { sel.material.clippingPlanes = clip; sel.material.needsUpdate = true; }
@@ -61,12 +68,23 @@ export function createViewport2(host, { onPick } = {}) {
       const face = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: k === 'glass' ? 0xcfe0f2 : k === 'room' ? 0xe8b04a : k === 'ctx' ? L.ctx : L.solid, roughness: 0.5 }));
       face.userData.id = c.id;
       const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({ color: k === 'room' ? 0xe8b04a : L.edge, transparent: true }));
-      grp.add(face, edges); Object.assign(grp.userData, { kind: k, face, edges, c });
+      grp.add(face, edges); Object.assign(grp.userData, { kind: k, face, edges, c, shadeColor: shadeOf(c), themeColor: face.material.color.getHex() });
       root.add(grp); objects.set(c.id, grp); paint(grp);
       if (k !== 'ctx') bounds.expandByObject(grp);
     }
     if (bounds.isEmpty()) for (const g of objects.values()) bounds.expandByObject(g);
     highlight();
+  }
+  // clearance hint: a dashed red outline on the floor round each piece (footprint + the free space it wants), as in Plan Studio
+  function drawClearance() {
+    for (const o of [...clrGroup.children]) { clrGroup.remove(o); o.geometry.dispose(); o.material.dispose(); }
+    for (const r of clrRects) {
+      const z = r.z + 0.02, pts = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1], [r.x0, r.y0]].map(([x, y]) => new THREE.Vector3(x, y, z));
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0xd8402a, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.95, clippingPlanes: clip }));
+      line.computeLineDistances(); line.renderOrder = 11; clrGroup.add(line);
+      const fill = new THREE.Mesh(new THREE.PlaneGeometry(r.x1 - r.x0, r.y1 - r.y0), new THREE.MeshBasicMaterial({ color: 0xd8402a, transparent: true, opacity: 0.08, depthWrite: false, clippingPlanes: clip }));
+      fill.position.set((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2, z); clrGroup.add(fill);
+    }
   }
   function highlight() {
     for (const [id, grp] of objects) {
@@ -104,7 +122,7 @@ export function createViewport2(host, { onPick } = {}) {
       walk.pos.set(room ? room.g.x + room.g.w / 2 : c.x, room ? room.g.y + room.g.d / 2 : c.y, L.z + EYE); walk.yaw = Math.PI / 2; walk.pitch = 0; camera = walkCam;
     } else camera = persp;
     controls.enabled = camera === persp;
-    for (const g of objects.values()) paint(g); size(); render();
+    for (const g of objects.values()) paint(g); drawClearance(); size(); render();
   }
 
   const onTheme = () => { renderer.setClearColor(look().clear, 1); hemi.color.set(look().hemi[0]); hemi.groundColor.set(look().hemi[1]); hemi.intensity = look().hemi[2]; makeGrid(); build(); render(); };
@@ -147,9 +165,10 @@ export function createViewport2(host, { onPick } = {}) {
     setDisplay(d) { display = d; for (const g of objects.values()) paint(g); render(); },
     setView, get view() { return view; }, get display() { return display; },
     select(id) { selected = id; highlight(); },
+    setClearance(rects) { clrRects = rects || []; drawClearance(); render(); }, clearanceCount: () => clrRects.length,
     fit() { fit(); setView({}); }, render, png: () => { render(); return el.toDataURL('image/png'); },
     // for tests: what the materials are doing right now
-    probe: () => [...objects.values()].map((g) => ({ id: g.userData.id, kind: g.userData.kind, op: g.userData.face.material.opacity, edges: g.userData.edges.visible, clip: g.userData.face.material.clippingPlanes?.length || 0 })),
+    probe: () => [...objects.values()].map((g) => ({ id: g.userData.id, kind: g.userData.kind, op: g.userData.face.material.opacity, color: g.userData.face.material.color.getHexString(), edges: g.userData.edges.visible, clip: g.userData.face.material.clippingPlanes?.length || 0 })),
     camera: () => (camera === persp ? 'persp' : camera === plan ? 'plan' : camera === elev ? 'elev' : 'walk'),
     eye: () => walkCam.position.z,
     dispose() { removeEventListener('pc-theme', onTheme); ro.disconnect(); controls.dispose(); renderer.dispose(); el.remove(); },

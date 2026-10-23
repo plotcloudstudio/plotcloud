@@ -7,6 +7,8 @@ import { LAYER_COLORS, PAGE, FULL } from '../data.js';
 import { $, $$, esc, when, toast, currentProject, setCurrent } from '../app.js';
 import { importModel } from '../viewport.js';
 import { createViewport2, levelsOf, EYE, CUT } from '../viewport2.js';
+import { MODELS, GROUPS } from '../../../furniture/models.js';   // Plan Studio's parametric furniture: names, groups and clearance rules
+import { TOOL_ICONS } from '../tool-icons.js';
 
 // as in the archived Workspace
 const TYPES = ['wall', 'slab', 'roof', 'window', 'room', 'mass', 'terrain', 'furniture', 'imported'];
@@ -29,14 +31,25 @@ const TOOLS = {
     ['Doors', ['Exterior door', 'Interior door', 'Exit door', 'Accessible door']]] },
   window: { label: 'Window', icon: I('<rect x="4" y="5" width="16" height="14"/><path d="M12 5v14M4 12h16"/>'), sections: [
     ['Windows & openings', ['Window', 'Wall opening']]] },
-  furniture: { label: 'Furniture', icon: I('<path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 12a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z"/><path d="M5 17v2M19 17v2"/>'), sections: [
-    ['Bedroom', ['Bed', 'Nightstand', 'Wardrobe', 'Dresser']], ['Living', ['Sofa', 'Sectional sofa', 'Armchair', 'Coffee table', 'Side table', 'TV stand', 'Bookshelf']],
-    ['Dining & Office', ['Dining table', 'Dining chair', 'Computer desk', 'Office chair']], ['Kitchen', ['Kitchen cabinets', 'Kitchen island', 'Refrigerator', 'Range', 'Washer / dryer']],
-    ['Bathroom', ['Toilet', 'Bathroom vanity', 'Bathtub', 'Shower']], ['Outdoor & Fence', ['Balcony railing', 'Backyard fence']], ['People', ['Adult', 'Elderly', 'Child', 'Wheelchair user']],
-    ['Pets', ['Cat', 'Dog']], ['Vehicles', ['Car', 'Bicycle']], ['Decor', ['Picture frame', 'Mirror']], ['Plants', ['Potted plant', 'Tree']], ['Entry', ['Shoe cabinet']]] },
+  furniture: { label: 'Furniture', icon: I('<path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 12a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z"/><path d="M5 17v2M19 17v2"/>'), cards: true,
+    sections: GROUPS.map((g) => [g, MODELS.filter((m) => m.group === g).map((m) => m.en)]).filter(([, l]) => l.length) },
   light: { label: 'Light', icon: I('<path d="M12 3v5"/><path d="M7 13a5 5 0 0 1 10 0z"/><path d="M10 16.5h4M12 13v1"/><path d="M8 20l1-2M16 20l-1-2M12 21v-2"/>'), sections: [
     ['Lights', ['Recessed downlight', 'Flush mount', 'Pendant', 'Track spot', 'Wall sconce', 'LED strip']]] },
 };
+const FURN_BY_NAME = new Map(MODELS.map((m) => [m.en, m]));
+// a piece without a stored kind gets one guessed from its name, and the panel says it was guessed
+const GUESS = [[/desk|workstation/i, 'desk'], [/dining|table/i, 'dining'], [/sofa|couch/i, 'sofa'], [/\bbed\b/i, 'bed'], [/office chair/i, 'office'], [/chair/i, 'chair'], [/wardrobe/i, 'wardrobe'], [/shelf|bookcase/i, 'bookshelf'], [/cabinet/i, 'kitchen']];
+function furnKind(c) {
+  if (c.furn) return { m: MODELS.find((x) => x.id === c.furn), guessed: false };
+  const g = GUESS.find(([re]) => re.test(c.name)) || null, m = g ? MODELS.find((x) => x.id === g[1]) : MODELS.find((x) => c.name.toLowerCase().includes(x.en.toLowerCase()));
+  return { m: m || null, guessed: true };
+}
+function clearanceRects(model) {
+  const vis = new Set(model.layers.filter((l) => l.visible).map((l) => l.name)), out = [];
+  for (const c of model.components) { if (c.type !== 'furniture' || !vis.has(c.layer)) continue; const r = furnKind(c).m?.clearance; if (!r) continue;
+    out.push({ id: c.id, z: c.g.z, x0: c.g.x - r.left, x1: c.g.x + c.g.w + r.right, y0: c.g.y - r.front, y1: c.g.y + c.g.d + r.back }); }   // front faces -y, as in Plan Studio's models
+  return out;
+}
 const PROJECT_ICON = I('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>');
 const EYE_ON = I('<path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/>');
 const EYE_OFF = I('<path d="M3 3l18 18"/><path d="M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3 3.6M6.4 7.4C3.8 9.1 2 12 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4-.9"/>');
@@ -112,12 +125,13 @@ export function render(app, [pid]) {
     ${Object.keys(DEF_UI.snap).map((k) => `<label title="Saved preference. Object snaps arrive in Step 6."><input type="checkbox" data-snap="${k}" ${UI.snap[k] ? 'checked' : ''}> ${k}</label>`).join('')}
     <span class="w2-div" aria-hidden="true"></span>
     <button type="button" class="w2-sw" role="switch" data-sw="gumball" aria-checked="${UI.gumball}" title="Saved preference. The gumball arrives in Step 6.">Gumball</button>
-    <button type="button" class="w2-sw" role="switch" data-sw="clearance" aria-checked="${UI.clearance}" title="Saved preference. Clearance display arrives in Step 6.">Clearance</button>
+    <button type="button" class="w2-sw" role="switch" data-sw="clearance" aria-checked="${UI.clearance}" title="Show the free space each piece wants around it (front, back and sides). A hint only: nothing is blocked or snapped.">Clearance</button>
     <span class="sp"></span><span class="w2-state" id="state"></span>
   </footer></div>`;
 
   const vp = createViewport2($('#vp', app), { onPick: (id) => setSel(id) });
-  const persist = () => { S.save(); state(); };
+  const clearance = () => vp.setClearance(UI.clearance ? clearanceRects(M()) : []);
+  const persist = () => { S.save(); state(); clearance(); };
 
   // ---- viewport menu: view list (perspective + one plan per real level) and display modes
   const DISPLAYS = [['shaded', 'Shaded'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe']];
@@ -157,7 +171,9 @@ export function render(app, [pid]) {
     if (showParams && c) return params(host, c);
     if (UI.panel === 'project') return projectPanel(host);
     const t = TOOLS[UI.panel];
-    host.innerHTML = `<div class="pane w2-tools"><h2>${t.label}</h2>${t.sections.map(([h, items]) => `<div class="w2-sec"><h3>${esc(h)}</h3>${items.map((n) => `<button type="button" class="w2-item" data-tool="${esc(n)}">${esc(n)}</button>`).join('')}</div>`).join('')}
+    const tile = (n) => { if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" title="${esc(n)}"><span class="im"><img src="img/furniture/${m.id}.png" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
+      const ic = TOOL_ICONS[n]; return `<button type="button" class="w2-tile" data-tool="${esc(n)}" title="${esc(n)}"><span class="im">${ic?.img ? `<img src="${ic.img}" alt="">` : ic?.svg || ''}</span><span>${esc(n)}</span></button>`; };
+    host.innerHTML = `<div class="pane w2-tools"><h2>${t.label}</h2>${t.sections.map(([h, items]) => `<div class="w2-sec"><h3>${esc(h)}</h3><div class="w2-grid">${items.map(tile).join('')}</div></div>`).join('')}
       <p class="note" id="toolMsg" role="status" aria-live="polite"></p></div>`;
     $$('[data-tool]', host).forEach((b) => b.onclick = () => { $('#toolMsg', host).textContent = 'Placement arrives in Step 2'; });
   }
@@ -200,6 +216,8 @@ export function render(app, [pid]) {
         <label class="f">Type<select id="pType">${TYPES.map((t) => `<option ${t === c.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label></div>
       ${c.type === 'room' ? `<div class="grid g2"><label class="f">Floor finish<select data-room="floor">${MATS.map((m) => `<option ${m === c.room?.floor ? 'selected' : ''}>${m}</option>`).join('')}</select></label><label class="f">Ceiling finish<select data-room="ceiling">${MATS.map((m) => `<option ${m === c.room?.ceiling ? 'selected' : ''}>${m}</option>`).join('')}</select></label></div>`
         : `<label class="f">Material<select id="pMat">${MATS.map((m) => `<option ${m === c.mat ? 'selected' : ''}>${m}</option>`).join('')}</select></label>`}
+      ${c.type === 'furniture' ? (() => { const k = furnKind(c), r = k.m?.clearance; return `<label class="f">Furniture kind<select id="pFurn"><option value="">Not set</option>${GROUPS.map((g) => `<optgroup label="${esc(g)}">${MODELS.filter((m) => m.group === g).map((m) => `<option value="${m.id}" ${k.m?.id === m.id ? 'selected' : ''}>${esc(m.en)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+        <p class="note">${k.m ? (k.guessed ? `Guessed from the name “${esc(c.name)}”. Change it if it is wrong. ` : '') + (r ? `Clearance: front ${r.front} m, back ${r.back} m, sides ${r.left} / ${r.right} m (Plan Studio rule).` : 'This kind has no clearance in Plan Studio.') : 'Choose a kind to show its clearance.'}</p>`; })() : ''}
       <span class="note">Position (m)</span><div class="dims">${num('x', 'x')}${num('y', 'y')}${num('z', 'z')}</div>
       <span class="note">Size (m)</span><div class="dims">${num('w', 'Width')}${num('d', 'Depth')}${num('h', 'Height')}</div>
       ${isMesh ? '<p class="note">Imported mesh: position can change, size stays as imported.</p>' : ''}</div>`;
@@ -209,6 +227,7 @@ export function render(app, [pid]) {
     $('#pLayer', host).onchange = (e) => { c.layer = e.target.value; open.add(c.layer); ch(); };
     $('#pType', host).onchange = (e) => { c.type = e.target.value; if (c.type === 'room' && !c.room) c.room = { floor: 'Timber', ceiling: 'Gypsum' }; ch(); panel(); };
     $('#pMat', host)?.addEventListener('change', (e) => { c.mat = e.target.value; ch(); });
+    $('#pFurn', host)?.addEventListener('change', (e) => { if (e.target.value) c.furn = e.target.value; else delete c.furn; ch(); panel(); });
     $$('[data-room]', host).forEach((s) => s.onchange = () => { c.room = { ...c.room, [s.dataset.room]: s.value }; ch(); });
     $$('[data-g]', host).forEach((i) => i.onchange = () => { const v = parseFloat(i.value); if (!Number.isFinite(v) || ('wdh'.includes(i.dataset.g) && v <= 0)) { i.value = c.g[i.dataset.g]; return; } c.g[i.dataset.g] = v; ch(); });
   }
@@ -255,16 +274,16 @@ export function render(app, [pid]) {
 
   // ---- status bar: saved settings only in this step
   $$('[data-snap]', app).forEach((i) => i.onchange = () => { UI.snap[i.dataset.snap] = i.checked; saveUI(); });
-  $$('[data-sw]', app).forEach((b) => b.onclick = () => { const k = b.dataset.sw; UI[k] = !UI[k]; b.setAttribute('aria-checked', String(UI[k])); saveUI(); });
+  $$('[data-sw]', app).forEach((b) => b.onclick = () => { const k = b.dataset.sw; UI[k] = !UI[k]; b.setAttribute('aria-checked', String(UI[k])); saveUI(); if (k === 'clearance') clearance(); });
 
   subs.push((id) => vp.select(id), () => layers(), () => selPane(), () => { rail(); panel(); });
-  function refresh(refit) { vp.setModel(M(), { refit }); layers(); selPane(); state(); menus(); }
+  function refresh(refit) { vp.setModel(M(), { refit }); layers(); selPane(); state(); menus(); clearance(); }
 
   // restore: display, view (a plan level that no longer exists falls back to Level 1), selection on this project
   vp.setModel(M(), { refit: true });
   vp.setDisplay(UI.display);
   const lv = levelsOf(M()); vp.setView({ kind: UI.view, level: lv.some((l) => l.n === UI.level) ? UI.level : 1 });
-  state(); menus();
+  state(); menus(); clearance();
   setSel(UI.selProject === p.id ? UI.sel : null, { params: false });
   window.__ws2 = { vp, UI, sel: () => UI.sel };   // read-only hook for the browser checks in tests
   return () => { document.removeEventListener('click', outside); vp.dispose(); delete window.__ws2; };
