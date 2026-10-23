@@ -16,8 +16,12 @@ try{
  const before=report.statistics.rt[2];
  await work.locator('#allWalls').click();await work.locator('#wallMat').selectOption('panel');
  const after=await work.evaluate(()=>AcousticStudy.stats.rt[2]);assert(after<before,'Absorptive wall material should lower RT60');
- for(const view of ['section','three','plan']){await work.locator(`[data-view="${view}"]`).click();assert.equal(await work.locator(`[data-view="${view}"]`).getAttribute('aria-pressed'),'true');}
- assert(await work.locator('#webgl canvas').count(),'3D view must create its real WebGL canvas');
+ for(const view of ['section','three','plan']){await work.locator(`[data-view="${view}"]`).click();assert.equal(await work.locator(`[data-view="${view}"]`).getAttribute('aria-pressed'),'true');
+  if(view!=='three')continue;
+  // 3D loads three.js asynchronously; await the same load the click started, then let a frame present (software GL in CI blocks for seconds).
+  const three=await work.evaluate(async()=>{const api=await ensureThree();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const c=document.querySelector('#webgl canvas');return{own:api.canvas===c,engine:c?.dataset.engine||'',webgl:!!c?.getContext('webgl2'),visible:!!c&&!document.querySelector('#webgl').hidden&&c.clientWidth>0&&c.clientHeight>0}});
+  assert(three.own&&/^three\.js/.test(three.engine)&&three.webgl&&three.visible,'3D view must create its real WebGL canvas: '+JSON.stringify(three));}
+ assert(await work.locator('#webgl canvas[data-engine^="three.js"]').count(),'3D view must keep its real WebGL canvas');
  const download=page.waitForEvent('download');await work.locator('#json').click();const file=await download;
  assert.equal(file.suggestedFilename(),'plotcloud-indoor-acoustics-report.json');
  const exported=JSON.parse(fs.readFileSync(await file.path(),'utf8'));assert.equal(exported.schema,'plotcloud-acoustics-prototype-v2');assert.equal(exported.model.name,studio.name);assert.equal(exported.statistics.rt[2],after);
