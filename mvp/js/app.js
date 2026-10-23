@@ -38,23 +38,40 @@ const PAGES = {
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'),
 };
-const TITLES = { '': 'Home', workspace: 'Workspace', 'workspace-v2': 'Workspace v2', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account' };
+const TITLES = { '': 'Home', workspace: 'Workspace', 'workspace-v2': 'Advanced workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account' };
 let cleanup = null;
 export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
-  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === (key === 'workspace-v2' ? 'workspace' : key)) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
+  document.querySelector('.pc-ui-context')?.remove();
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
   who();
   const app = $('#app'); app.innerHTML = '';
   const mod = await PAGES[key]();
   cleanup = (await mod.render(app, rest.map((x) => decodeURIComponent(x.split('?')[0])), params)) || null;
+  if (['workspace','workspace-v2','simulations','results'].includes(key)) {
+    const requested=params.get('project')||rest[0]?.split('?')[0];
+    const project=S.project(requested)||currentProject();
+    if(project){
+      const context=document.createElement('div');context.className='pc-ui-context';context.setAttribute('aria-label','Current project');
+      const version=project.versions.find(v=>v.id===params.get('version'))||project.versions.at(-1);
+      context.innerHTML='<strong>'+esc(project.name)+'</strong><span data-pc-version>'+(version?(params.has('version')?'Saved v':'Latest saved v')+version.n:'No saved version')+'</span><span>'+esc((project.site?.label||'Site not set').split(',')[0])+'</span><a href="#/account">Site defaults</a><span class="pc-ui-storage">'+(S.persistent()?'Saved in this browser':'Session only · storage unavailable')+'</span>';
+      app.before(context);
+    }
+  }
   document.title = 'PlotCloud — ' + TITLES[key];
   window.scrollTo(0, 0);
 }
 export const refreshWho = who;
+addEventListener('pc-ui-theme',event=>setTheme(event.detail));
+document.addEventListener('change',event=>{
+  if(event.target.id!=='ver')return;
+  const version=currentProject()?.versions.find(v=>v.id===event.target.value);
+  const label=document.querySelector('[data-pc-version]');if(label&&version)label.textContent='Saved v'+version.n;
+});
 addEventListener('hashchange', route);
 $('#menuBtn').addEventListener('click', () => { const o = $('#nav').classList.toggle('open'); $('#menuBtn').setAttribute('aria-expanded', String(o)); });
 $$('#themeSeg button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));

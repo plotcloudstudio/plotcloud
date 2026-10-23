@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "hosts": [
+    {
+      "file": "index.html",
+      "surface": "classic",
+      "url": "/index.html"
+    },
+    {
+      "file": "mvp/index.html",
+      "surface": "site",
+      "url": "/mvp/index.html"
+    },
+    {
+      "file": "mvp/workspace.html",
+      "surface": "site",
+      "url": "/mvp/workspace.html"
+    },
+    {
+      "file": "emb/acoustics.html",
+      "surface": "tool",
+      "url": "/emb/acoustics.html"
+    },
+    {
+      "file": "emb/architectural-render.html",
+      "surface": "tool",
+      "url": "/emb/architectural-render.html"
+    },
+    {
+      "file": "emb/atlas.html",
+      "surface": "tool",
+      "url": "/emb/atlas.html"
+    },
+    {
+      "file": "emb/cameras.html",
+      "surface": "tool",
+      "url": "/emb/cameras.html"
+    },
+    {
+      "file": "emb/composer.html",
+      "surface": "tool",
+      "url": "/emb/composer.html"
+    },
+    {
+      "file": "emb/daylight.html",
+      "surface": "tool",
+      "url": "/emb/daylight.html"
+    },
+    {
+      "file": "emb/detaillab.html",
+      "surface": "tool",
+      "url": "/emb/detaillab.html"
+    },
+    {
+      "file": "emb/doors3d.html",
+      "surface": "tool",
+      "url": "/emb/doors3d.html"
+    },
+    {
+      "file": "emb/evac.html",
+      "surface": "tool",
+      "url": "/emb/evac.html"
+    },
+    {
+      "file": "emb/facade.html",
+      "surface": "tool",
+      "url": "/emb/facade.html"
+    },
+    {
+      "file": "emb/furniture.html",
+      "surface": "tool",
+      "url": "/emb/furniture.html"
+    },
+    {
+      "file": "emb/isovist.html",
+      "surface": "tool",
+      "url": "/emb/isovist.html"
+    },
+    {
+      "file": "emb/modeler.html",
+      "surface": "tool",
+      "url": "/emb/modeler.html"
+    },
+    {
+      "file": "emb/render.html",
+      "surface": "tool",
+      "url": "/emb/render.html"
+    },
+    {
+      "file": "emb/sitectx.html",
+      "surface": "tool",
+      "url": "/emb/sitectx.html"
+    },
+    {
+      "file": "emb/spacesyntax.html",
+      "surface": "tool",
+      "url": "/emb/spacesyntax.html"
+    },
+    {
+      "file": "emb/span.html",
+      "surface": "tool",
+      "url": "/emb/span.html"
+    },
+    {
+      "file": "emb/stairs3d.html",
+      "surface": "tool",
+      "url": "/emb/stairs3d.html"
+    },
+    {
+      "file": "emb/stormwater.html",
+      "surface": "tool",
+      "url": "/emb/stormwater.html"
+    },
+    {
+      "file": "emb/structure.html",
+      "surface": "tool",
+      "url": "/emb/structure.html"
+    },
+    {
+      "file": "emb/studio.html",
+      "surface": "tool",
+      "url": "/emb/studio.html"
+    },
+    {
+      "file": "emb/sunhours.html",
+      "surface": "tool",
+      "url": "/emb/sunhours.html"
+    },
+    {
+      "file": "emb/topo.html",
+      "surface": "tool",
+      "url": "/emb/topo.html"
+    },
+    {
+      "file": "emb/tracer.html",
+      "surface": "tool",
+      "url": "/emb/tracer.html"
+    },
+    {
+      "file": "emb/vent.html",
+      "surface": "tool",
+      "url": "/emb/vent.html"
+    },
+    {
+      "file": "emb/views.html",
+      "surface": "tool",
+      "url": "/emb/views.html"
+    },
+    {
+      "file": "emb/wind.html",
+      "surface": "tool",
+      "url": "/emb/wind.html"
+    }
+  ],
+  "mvpRoutes": [
+    "/mvp/#/",
+    "/mvp/#/workspace",
+    "/mvp/#/workspace-v2",
+    "/mvp/#/simulations",
+    "/mvp/#/results",
+    "/mvp/#/resources",
+    "/mvp/#/pricing",
+    "/mvp/#/login",
+    "/mvp/#/account"
+  ],
+  "classicRoutes": [
+    "/index.html#/home",
+    "/index.html#/tools",
+    "/index.html#/site",
+    "/index.html#/studio",
+    "/index.html#/project",
+    "/index.html#/library",
+    "/index.html#/showroom",
+    "/index.html#/pricing",
+    "/index.html#/learn",
+    "/index.html#/login",
+    "/index.html#/join",
+    "/index.html#/account",
+    "/index.html#/terms",
+    "/index.html#/privacy",
+    "/index.html#/license",
+    "/index.html#/refunds",
+    "/index.html#/saved",
+    "/index.html#/support",
+    "/index.html#/requests",
+    "/index.html#/donate",
+    "/index.html#/admin",
+    "/index.html#/resources",
+    "/index.html#/res/lounge-chair-set",
+    "/index.html#/post"
+  ],
+  "analysisEntries": [
+    "sunhours",
+    "daylight",
+    "wind",
+    "vent",
+    "stormwater",
+    "acoustics",
+    "spacesyntax",
+    "movementdepth",
+    "evac",
+    "isovist",
+    "views",
+    "cameras",
+    "structure",
+    "span"
+  ],
+  "classicToolRoutes": [
+    "/index.html#/tool/code-bc",
+    "/index.html#/tool/access-bc",
+    "/index.html#/tool/leed",
+    "/index.html#/tool/ergo",
+    "/index.html#/tool/span",
+    "/index.html#/tool/furniture",
+    "/index.html#/tool/facade",
+    "/index.html#/tool/detaillab",
+    "/index.html#/tool/palette",
+    "/index.html#/tool/sunhours",
+    "/index.html#/tool/daylight",
+    "/index.html#/tool/wind",
+    "/index.html#/tool/vent",
+    "/index.html#/tool/structure",
+    "/index.html#/tool/spacesyntax",
+    "/index.html#/tool/movementdepth",
+    "/index.html#/tool/acoustics",
+    "/index.html#/tool/evac",
+    "/index.html#/tool/isovist",
+    "/index.html#/tool/views",
+    "/index.html#/tool/cameras",
+    "/index.html#/tool/stormwater",
+    "/index.html#/tool/architectural-render",
+    "/index.html#/tool/cutout",
+    "/index.html#/tool/composer",
+    "/index.html#/tool/axon",
+    "/index.html#/tool/studio",
+    "/index.html#/tool/topo",
+    "/index.html#/tool/scale"
+  ]
+}

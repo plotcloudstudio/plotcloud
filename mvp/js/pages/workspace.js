@@ -26,7 +26,7 @@ export function render(app, [pid]) {
   <aside aria-label="Model and layers">
     <div class="pane"><h2>Project</h2>
       <select class="inp" id="proj" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-      <p class="note">Site: ${esc(p.site?.label || '—')}${p.site?.sample ? ' (sample)' : ''} · north ${p.site?.north ?? 0}°</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
+      <p class="note">Site: ${esc(p.site?.label || '—')}${p.site?.sample ? ' (sample)' : ''} · north ${p.site?.north ?? 0}°</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p><div class="pc-ui-workspace-links"><a class="btn sm" href="#/workspace-v2/${p.id}">Advanced workspace</a><a class="btn sm" href="workspace.html">Plan Studio</a></div>
     </div>
     <div class="pane"><h2>Model</h2>
       <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb</button><div style="margin-top:6px">or drop a file here · read locally</div></div>

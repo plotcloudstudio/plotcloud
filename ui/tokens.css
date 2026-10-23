@@ -1,0 +1,43 @@
+/* PlotCloud UI v1. Semantic interface colors; simulation palettes remain owned by tools. */
+:root[data-pc-ui] {
+  --pc-ui-font: Inter, 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --pc-ui-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  --pc-ui-page:#eef0f3; --pc-ui-surface:#ffffff; --pc-ui-subtle:#f5f6f8; --pc-ui-view:#e9ecef;
+  --pc-ui-text:#20242b; --pc-ui-secondary:#505a66; --pc-ui-muted:#626c78;
+  --pc-ui-border:#dce0e5; --pc-ui-border-strong:#b4bcc6;
+  --pc-ui-primary:#c7362c; --pc-ui-primary-hover:#aa2a22; --pc-ui-on-primary:#ffffff; --pc-ui-primary-soft:#faeae7;
+  --pc-ui-selection:#28659f; --pc-ui-selection-soft:#e8f0f9; --pc-ui-focus:#28659f;
+  --pc-ui-success:#227443; --pc-ui-warning:#8a580b; --pc-ui-danger:#b12e32;
+  --pc-ui-warning-soft:#fff3db; --pc-ui-danger-soft:#fcebed;
+  --pc-ui-radius:7px; --pc-ui-panel-radius:10px; --pc-ui-field-height:36px;
+  --pc-ui-shadow:0 12px 36px #18202b20;
+}
+:root[data-pc-ui][data-pc-theme="night"] {
+  --pc-ui-page:#111317; --pc-ui-surface:#1a1d22; --pc-ui-subtle:#22262c; --pc-ui-view:#14171c;
+  --pc-ui-text:#eceff3; --pc-ui-secondary:#c4cbd4; --pc-ui-muted:#a0aab7;
+  --pc-ui-border:#343a43; --pc-ui-border-strong:#596370;
+  --pc-ui-primary:#df5145; --pc-ui-primary-hover:#ee6256; --pc-ui-on-primary:#ffffff; --pc-ui-primary-soft:#39211f;
+  --pc-ui-selection:#8dbbea; --pc-ui-selection-soft:#21384f; --pc-ui-focus:#8dbbea;
+  --pc-ui-success:#88cf9f; --pc-ui-warning:#e8bd70; --pc-ui-danger:#f49a9f;
+  --pc-ui-warning-soft:#352c1d; --pc-ui-danger-soft:#382126;
+  --pc-ui-shadow:0 12px 36px #00000055;
+}
+/* Compatibility aliases let existing geometry, event handlers and chart code keep their APIs. */
+:root[data-pc-ui][data-pc-theme] {
+  --bg:var(--pc-ui-page); --paper:var(--pc-ui-page); --surface:var(--pc-ui-surface); --panel:var(--pc-ui-surface); --card:var(--pc-ui-surface); --panel-2:var(--pc-ui-subtle); --field:var(--pc-ui-surface); --sand:var(--pc-ui-subtle); --view:var(--pc-ui-view);
+  --ink:var(--pc-ui-text); --ink2:var(--pc-ui-secondary); --ink-2:var(--pc-ui-secondary); --muted:var(--pc-ui-muted); --mut:var(--pc-ui-muted); --mut2:var(--pc-ui-muted);
+  --line:var(--pc-ui-border); --hair:var(--pc-ui-border); --rule:var(--pc-ui-border); --line2:var(--pc-ui-border-strong); --line-strong:var(--pc-ui-border-strong);
+  --accent:var(--pc-ui-primary); --red:var(--pc-ui-primary); --btn:var(--pc-ui-primary); --red-dk:var(--pc-ui-primary-hover); --accent-ink:var(--pc-ui-on-primary); --accent-soft:var(--pc-ui-primary-soft);
+  --ok:var(--pc-ui-success); --good:var(--pc-ui-success); --warn:var(--pc-ui-warning); --danger:var(--pc-ui-danger);
+  --sans:var(--pc-ui-font); --f-body:var(--pc-ui-font); --ui:var(--pc-ui-font); --mono:var(--pc-ui-mono); --f-mono:var(--pc-ui-mono);
+  --inv:var(--pc-ui-text); --invfg:var(--pc-ui-surface); --chip:var(--pc-ui-subtle); --miss:var(--pc-ui-warning);
+  --pc-ink:var(--pc-ui-text); --pc-muted:var(--pc-ui-muted); --pc-paper:var(--pc-ui-page); --pc-sand:var(--pc-ui-subtle); --pc-red:var(--pc-ui-primary); --pc-red-dk:var(--pc-ui-primary-hover); --pc-hair:var(--pc-ui-border); --pc-accent:var(--pc-ui-primary); --pc-border:var(--pc-ui-border);
+  --kj-bg:var(--pc-ui-page); --kj-panel:var(--pc-ui-surface); --kj-line:var(--pc-ui-border); --kj-text:var(--pc-ui-text); --kj-sub:var(--pc-ui-muted); --kj-acc:var(--pc-ui-primary);
+  --ws:var(--pc-ui-view);
+}
+:root[data-pc-ui][data-pc-theme] {
+ --kj-ink:var(--pc-ui-text);--kj-fill:var(--pc-ui-subtle);--kj-fill2:var(--pc-ui-subtle);--kj-muted:var(--pc-ui-muted);--kj-line2:var(--pc-ui-border-strong);
+}
+:root[data-pc-ui][data-pc-theme="night"]{--pc-ui-primary:#c9483c;--pc-ui-primary-hover:#d95144}
+:root[data-pc-ui][data-pc-theme]{--kj-mut:var(--pc-ui-muted);--kj-acc-bg:var(--pc-ui-primary-soft);--kj-acc-dk:var(--pc-ui-primary-hover)}
+:root[data-pc-ui][data-pc-theme]{--mat:var(--pc-ui-surface);--mat-line:var(--pc-ui-border);--mat-line2:var(--pc-ui-border-strong)}

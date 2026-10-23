@@ -88,9 +88,9 @@
     document.body.classList.toggle('pc-home-page',root==='home');
     document.body.classList.toggle('pc-tools-page',root==='tools');
     const active=root==='site'||root==='studio'||root==='tool'?'tools':root==='res'||root==='resources'||root==='showroom'?'library':root;
-    document.querySelector('header.site a[data-go="home"]').setAttribute('href','#/home');
+    const brand=document.querySelector('header.site .logo')?.closest('a');if(brand){brand.setAttribute('href','mvp/');brand.removeAttribute('data-go');}
     const nav=document.getElementById('nav');nav.setAttribute('aria-label','Main navigation');
-    nav.innerHTML=NAV.map(([k,l])=>`<a href="#/${k}" data-go="${k}"${k===active?' class="on" aria-current="page"':''}>${l}</a>`).join('');
+    nav.innerHTML=[['workspace','Workspace','mvp/#/workspace'],['simulations','Simulations','mvp/#/simulations'],['project','Projects &amp; Results','mvp/#/results'],['library','Resources','mvp/#/resources'],['pricing','Pricing','mvp/#/pricing'],['tools','All tools ↗','#/tools']].map(([k,l,url])=>`<a href="${url}"${k==='tools'?' data-go="tools"':''}${k===active?' class="on" aria-current="page"':''}>${l}</a>`).join('');
     document.getElementById('mpanel').innerHTML=nav.innerHTML+'<hr>'+ (signed()?link('account','My account')+link('project','My project')+(S.role==='admin'?link('admin','Admin'):'')+'<a href="#/home" data-act="logout">Log out</a>':link('login','Log in or join'));
     document.getElementById('burger').setAttribute('aria-expanded','false');
     for(const id of ['sitelink','wblink','gform'])document.getElementById(id).hidden=true;

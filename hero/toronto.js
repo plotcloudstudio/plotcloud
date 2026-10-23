@@ -47,7 +47,7 @@ try {
   const baseMaterial = new T.MeshStandardMaterial({color:0xe2e1d7,roughness:1});
   const roadMaterial = new T.MeshStandardMaterial({color:0xc9cdc4,roughness:1});
   renderer = new T.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'low-power'});
-  const backgroundColor=()=>embedded?(visualTheme==='night'?0x0a0a0b:0xeef0f3):0xf7f7f2;
+  const backgroundColor=()=>embedded?(visualTheme==='night'?0x111317:0xeef0f3):0xf7f7f2;
   renderer.setClearColor(backgroundColor());
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
   renderer.shadowMap.enabled = true;

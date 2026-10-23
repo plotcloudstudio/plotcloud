@@ -13,7 +13,7 @@ html[data-embedded=true]{background:#eef0f3}
 [data-embedded=true] .study-controls{padding:3px;max-width:450px}
 [data-embedded=true] .study-caption{padding-top:12px}
 [data-embedded=true] .disclaimer{margin-top:8px}
-[data-embedded=true][data-theme=night]{background:#0a0a0b;color:#e7e6df;color-scheme:dark;--accent:#dbb56d;--tint:#28251d}
+[data-embedded=true][data-theme=night]{background:#111317;color:#e7e6df;color-scheme:dark;--accent:#dbb56d;--tint:#28251d}
 [data-embedded=true][data-theme=night] [data-mode=wind]{--accent:#80bcc1;--tint:#192c2e}
 [data-embedded=true][data-theme=night] [data-mode=rain]{--accent:#8bb4dd;--tint:#1d2937}
 [data-embedded=true][data-theme=night] [data-mode=sound]{--accent:#bfa3dc;--tint:#2a2233}

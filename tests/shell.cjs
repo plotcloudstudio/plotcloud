@@ -9,7 +9,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
  const noOverflow=async()=>assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Horizontal overflow at '+page.url());
  try{
   await visit('home');
-  assert.deepEqual(await page.locator('#nav a').allTextContents(),['Tools','Resources','Pricing']);
+  assert.deepEqual(await page.locator('#nav a').allTextContents(),['Workspace','Simulations','Projects & Results','Resources','Pricing','All tools ↗']);
   assert.equal(await page.locator('.pc-home>section').count(),4,'Home should have four focused sections');
   assert.equal(await page.locator('.pc-task').count(),3);
   assert.deepEqual(await page.locator('footer.site .fg h5').allTextContents(),['PlotCloud','Help & examples','Legal']);

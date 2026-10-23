@@ -57,7 +57,11 @@ footer{padding:14px 20px;color:var(--muted);font-size:12px;border-top:1px solid 
 #printbox{display:none}
 @media (max-width:1000px){.s1{grid-template-columns:1fr}#mapbox{height:420px}.cards{grid-template-columns:1fr}}
 @media print{body.printone>*:not(#printbox),body.printboard>*:not(#printbox){display:none!important}body.printone #printbox,body.printboard #printbox{display:block}#printbox svg{width:100%;height:auto}@page{margin:8mm}}
-</style></head>
+</style>
+<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=1" data-surface="tool" defer></script>
+</head>
 <body>
 <div class="top"><h1>Site Analysis</h1><div class="steps" id="steps" role="group" aria-label="Steps"></div><span class="sp"></span><span id="topx"></span></div>
 <main id="main"></main>

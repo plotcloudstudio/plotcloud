@@ -1,0 +1,126 @@
+/* Scoped to UI hosts. No rules target scene geometry, user artwork or result color scales. */
+html[data-pc-ui] { accent-color:var(--pc-ui-selection); }
+html[data-pc-ui] body { font-family:var(--pc-ui-font); }
+[data-pc-ui] :where(.btn,.go,.rbtn,.chipbtn,.kj-btn,.exbtn,.export,.pc-ui-button) {
+  font-family:var(--pc-ui-font); border-radius:var(--pc-ui-radius); letter-spacing:0;
+}
+[data-pc-ui] :where(.btn,.go,.pc-ui-button) { min-height:32px; }
+[data-pc-ui] :where(.btn.lg) { min-height:46px; font-size:14px; }
+[data-pc-ui] :where(input:not([type=range]):not([type=color]):not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea) {
+  font-family:var(--pc-ui-font);border-radius:var(--pc-ui-radius);color:var(--pc-ui-text);background-color:var(--pc-ui-surface);border-color:var(--pc-ui-border-strong);
+}
+[data-pc-ui] :where(input[type=number],.mono,.num,.n,.dims input,.kv input) { font-family:var(--pc-ui-mono);font-variant-numeric:tabular-nums; }
+[data-pc-ui] :where(button,a,input,select,textarea,summary,[tabindex]):focus-visible { outline:2px solid var(--pc-ui-focus);outline-offset:3px; }
+[data-pc-ui] :where(button:disabled,input:disabled,select:disabled) { cursor:not-allowed;opacity:.5; }
+[data-pc-ui] :where(.card,.notice,.sdlg-in,.dialog,.modal,.toast) { border-radius:var(--pc-ui-panel-radius); }
+[data-pc-ui] :where(.tag,.badge-pill) { font-family:var(--pc-ui-mono); }
+[data-pc-ui] :where(.notice.warn,.gwarn,.draft) { color:var(--pc-ui-warning);background:var(--pc-ui-warning-soft);border-color:var(--pc-ui-warning); }
+.pc-ui-theme { display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:none;font:500 12px var(--pc-ui-font);padding:5px 9px;min-height:32px;border:1px solid var(--pc-ui-border-strong);border-radius:var(--pc-ui-radius);background:var(--pc-ui-surface);color:var(--pc-ui-text);cursor:pointer; }
+.pc-ui-theme svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5}
+.pc-ui-context{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:40px;padding:8px 28px;border-bottom:1px solid var(--pc-ui-border);background:var(--pc-ui-surface);color:var(--pc-ui-secondary);font:12px var(--pc-ui-font)}
+.pc-ui-context strong{font-weight:600;color:var(--pc-ui-text)}
+.pc-ui-context a{color:var(--pc-ui-selection);text-decoration:none}
+.pc-ui-context .pc-ui-storage{margin-left:auto;color:var(--pc-ui-muted)}
+.pc-ui-workspace-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+[data-pc-ui][data-pc-surface="site"] :is(.top,header.site,footer.site){background:var(--pc-ui-page);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="site"] .card{background:var(--pc-ui-surface);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="site"] .display:not(.hero .display){font-size:clamp(30px,4vw,48px);line-height:1.08;letter-spacing:-.04em}
+[data-pc-ui][data-pc-surface="site"] .card h2,[data-pc-ui][data-pc-surface="site"] .pane h2{font-size:14px;letter-spacing:0}
+[data-pc-ui][data-pc-surface="site"] .section{margin-top:80px}
+[data-pc-ui][data-pc-surface="site"] :is(.ws,.run){height:calc(100dvh - 105px)}
+/* Classic public pages share the same shell without changing their routes. */
+[data-pc-ui][data-pc-surface="classic"] body{background:var(--pc-ui-page);color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-surface="classic"] body.pc-shell :is(.pc-home,.pc-catalog){color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-surface="classic"] :is(.pc-text-link,.pc-hero-description,.pc-task p,.pc-tool-section p,.pc-count){color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-surface="classic"] :is(.pc-tool-controls,.pc-product-preview,.pc-preview-bar,.pc-search input,.pc-tool-card,.pc-utilities,.pc-example){background:var(--pc-ui-surface);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="classic"] :is(.pc-group-tabs button,.pc-search input){color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-surface="classic"] header.site .in{height:64px}
+[data-pc-ui][data-pc-surface="classic"] .pc-group-tabs button[aria-pressed=true]{background:var(--pc-ui-text);color:var(--pc-ui-surface);border-color:var(--pc-ui-text)}
+/* Interface-only panel adapters. They intentionally exclude canvas, artwork and export roots. */
+[data-pc-ui][data-pc-surface="tool"] body{color:var(--pc-ui-text);background:var(--pc-ui-page)}
+[data-pc-ui][data-pc-surface="tool"] :is(.panel,.pane,.kl-left,.kr-right,.kj-top,.side,.sec,.props,.sdlg-in,.group,.app>aside,.app>header){color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="tool"] :is(.panel,.kl-left,.kr-right,.kj-top,.side,.props,.sdlg-in,.app>aside,.app>header){background-color:var(--pc-ui-surface)}
+[data-pc-ui][data-pc-surface="tool"] :is(.kj-top,.kl-tabs,.ks-h,.kj-foot,.kr-b,.kl-tabs button,.kj-btn,.kj-mi,.tl,.kb){font-family:var(--pc-ui-font);color:var(--pc-ui-text);border-color:var(--pc-ui-border);background-color:var(--pc-ui-surface)}
+[data-pc-ui][data-pc-surface="tool"] :is(.kl-tabs button[aria-selected=true],.tl.on,.kb.on,.btn.on){background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection);border-color:var(--pc-ui-selection)}
+[data-pc-ui][data-pc-surface="tool"] :is(.go,#sendBtn){background:var(--pc-ui-primary)!important;color:var(--pc-ui-on-primary)!important;border-color:var(--pc-ui-primary)}
+[data-pc-ui][data-pc-surface="tool"] :is(.go.alt,.go.ghost2){background:var(--pc-ui-surface)!important;color:var(--pc-ui-text)!important;border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-surface="tool"] :is(.panel h1,.panel h2,.pane h2,.sec h2,.side h2){font-family:var(--pc-ui-font)}
+[data-pc-ui][data-pc-surface="tool"] :is(.panel input,.panel select,.props input,.props select,.kv input,.kv select,.side input,.side select){background-color:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
+@media(pointer:coarse){[data-pc-ui] :where(.btn,.go,.rbtn,.pc-ui-button,.pc-ui-theme){min-height:44px}}
+@media(max-width:640px){.pc-ui-context{padding:8px 16px;gap:6px}.pc-ui-context .pc-ui-storage{margin-left:0;width:100%}}
+@media(prefers-reduced-motion:reduce){[data-pc-ui] :where(.btn,.go,.card,.pc-ui-button){transition:none!important}}
+/* Legacy analysis shells include hard-coded white cards; adapt the interface cards explicitly. */
+[data-pc-ui][data-pc-surface="tool"] :is(.col .sec,.col .brand,.col .pane,.lcard,.lhead,#chartp,.chartp,.kj-right,.kj-foot,.sdlg-in,.kl-tabs,.kr-tabs,.pc-workflow){background-color:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="tool"] :is(.btn,.rbtn,.kj-btn,.kj-mi,.chipbtn){background-color:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong);border-radius:var(--pc-ui-radius)}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg,.views,.dirs,.tabs,.tools){color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg button,.views button,.dirs button,.tabs button,.tools button){color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg button[aria-pressed=true],.views button[aria-pressed=true],.dirs button[aria-pressed=true],.tabs button[aria-pressed=true],.btn.on,.btn[aria-pressed=true],.chipbtn[aria-pressed=true]){background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection);border-color:var(--pc-ui-selection)}
+[data-pc-ui][data-pc-surface="tool"] :is(.go,.rbtn,.btn){border-radius:var(--pc-ui-radius)!important}
+[data-pc-ui][data-pc-surface="tool"] :is(.btn.primary,.btn.pri,.btn.red,.rbtn.open){background:var(--pc-ui-primary);color:var(--pc-ui-on-primary);border-color:var(--pc-ui-primary)}
+[data-pc-ui][data-pc-surface="tool"] :is(.col select,.col input[type=number],.optab input,.wchips input){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-surface="tool"] :is(.col .note,.fine2,.lcard p,.kj-foot,.kj-sub){color:var(--pc-ui-muted)}
+[data-pc-ui][data-pc-surface="tool"] .tstrip{background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="tool"] .tstrip button{color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-surface="tool"] .tstrip button[aria-pressed=true]{background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection)}
+/* Drawing Studio UI is separate from the white output sheet and swatch colors. */
+[data-pc-ui][data-pc-tool="architectural-render"] :is(.topbar,.bottom,.source){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-tool="architectural-render"] :is(.icon,.secondary){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-tool="architectural-render"] .primary{background:var(--pc-ui-primary);color:var(--pc-ui-on-primary);border-color:var(--pc-ui-primary)}
+[data-pc-ui][data-pc-tool="architectural-render"] :is(.badge,.group .note,.group p,.source span){color:var(--pc-ui-muted)}
+[data-pc-ui][data-pc-tool="architectural-render"] .badge{background:var(--pc-ui-subtle)}
+[data-pc-ui][data-pc-tool="architectural-render"] #styles button{background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-tool="architectural-render"] #styles button.active{background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection);border-color:var(--pc-ui-selection)}
+/* These are interface overlays, not the drawing/chart/artwork surfaces beneath them. */
+[data-pc-ui][data-pc-surface="tool"] :is(.legend,.badge,.tabs,.props,.card):not(.sheet .badge){border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="tool"] :is(.legend,.tabs,.props,.card){background-color:var(--pc-ui-surface);color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="modeler"] :is(.kl-tabs,.kj-right,.kj-foot){background:var(--pc-ui-surface);color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="modeler"] .kj-right :is(h2,h3,label,button){color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg,.views,.dirs,.tabs){background:var(--pc-ui-subtle);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg button,.views button,.dirs button,.tabs button){background-color:transparent;color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg button[aria-pressed=true],.views button[aria-pressed=true],.dirs button[aria-pressed=true],.tabs button[aria-pressed=true]){background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection)}
+[data-pc-ui][data-pc-tool="architectural-render"] .group :is(input:not([type=range]):not([type=color]),select){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-tool="modeler"] .kj-status{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-tool="modeler"] .kj-status :is(strong,b){color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-surface="tool"] :is(.top h1,.brand b,.topbar strong){font-family:var(--pc-ui-font)}
+[data-pc-ui][data-pc-surface="site"] :is(label.f input,label.f select,label.f textarea,.inp){border-radius:var(--pc-ui-radius);background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-surface="site"] :is(.ws,.run,.w2){height:calc(100dvh - var(--pc-ui-shell-height,64px))}
+[data-pc-ui][data-pc-context=true] #app{min-height:0}
+/* Final adapters override hard-coded legacy skin colors on interface controls only. */
+[data-pc-ui][data-pc-surface="tool"] :is(.btn,.rbtn,.kj-btn,.kj-mi,.chipbtn,.tl){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-text)!important;border-color:var(--pc-ui-border-strong)!important}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg button,.views button,.dirs button,.tabs button,.tools button,.walllist button,.timebar button){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-secondary)!important}
+[data-pc-ui][data-pc-surface="tool"] :is(.seg button[aria-pressed=true],.views button[aria-pressed=true],.dirs button[aria-pressed=true],.tabs button[aria-pressed=true],.tools button[aria-pressed=true],.walllist button.on,.timebar button.on,.btn.on,.btn[aria-pressed=true],.chipbtn[aria-pressed=true],.tl.on){background:var(--pc-ui-selection-soft)!important;color:var(--pc-ui-selection)!important;border-color:var(--pc-ui-selection)!important}
+[data-pc-ui][data-pc-surface="tool"] :is(.btn.primary,.btn.pri,.btn.red,.rbtn.open){background:var(--pc-ui-primary)!important;color:var(--pc-ui-on-primary)!important;border-color:var(--pc-ui-primary)!important}
+[data-pc-ui][data-pc-surface="classic"] :is(header.site,.pc-tool,.pc-tool-content,.pc-utilities,.pc-tool-controls){background:var(--pc-ui-surface)!important;color:var(--pc-ui-text)!important;border-color:var(--pc-ui-border)!important}
+[data-pc-ui][data-pc-surface="classic"] :is(header.site nav a,header.site #acctlabel,.pc-tool-content h3 a,.pc-open){color:var(--pc-ui-text)!important}
+[data-pc-ui][data-pc-surface="classic"] :is(.pc-tool-content p,.pc-method,.pc-result-count){color:var(--pc-ui-secondary)!important}
+[data-pc-ui][data-pc-tool="atlas"] body>.top,[data-pc-ui][data-pc-tool="render"] body>.top{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="atlas"] :is(.steps button,#zin,#zout){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-tool="atlas"] .steps button[aria-current=step]{background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection)}
+[data-pc-ui][data-pc-tool="render"] .sub{color:var(--pc-ui-muted)}
+[data-pc-ui][data-pc-surface="tool"] :is(.cap,.shint,.radl,.src){color:var(--pc-ui-muted)}
+/* Theme colors switch together: avoid a pale background briefly keeping the new pale text. */
+[data-pc-ui] :where(.btn,.go,.rbtn,.tl,.chipbtn,.kj-btn,.kj-mi,.seg button,.views button,.dirs button,.tabs button,.tools button,.walllist button,.timebar button){transition-property:border-color,box-shadow,transform!important}
+[data-pc-ui][data-pc-surface="tool"] :is(.capbox,.thint,.qbox,.runpill,.timebar,.shaperow,.progrow){background:var(--pc-ui-surface)!important;color:var(--pc-ui-secondary);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="tool"] :is(.capbox,.thint,.qbox,.runpill,.timebar,.shaperow,.progrow) :is(small,span,label,b){color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-surface="tool"] .seg button small{color:var(--pc-ui-secondary)!important}
+[data-pc-ui][data-pc-tool="modeler"] #toolHint{background:var(--pc-ui-surface);color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-tool="tracer"] #empty{background:var(--pc-ui-surface);color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-tool="tracer"] #empty b{color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="topo"] button.ghost{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="render"] .msg.warn{color:var(--pc-ui-warning)}
+[data-pc-ui][data-pc-tool="architectural-render"] .upload{color:var(--pc-ui-selection)}
+[data-pc-ui][data-pc-tool="architectural-render"] .group :is(label,output,label span){color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-tool="structure"] .legend .ticks{color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="evac"] #ptList .row{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="evac"] #ptList .row b{color:var(--pc-ui-selection)!important}
+[data-pc-ui][data-pc-tool="structure"] .legend .ticks span{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
+[data-pc-ui][data-pc-tool="architectural-render"] :is(#lineValue,#toneValue,#textureValue){color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-tool="sitectx"] :is(.bdn,.topc .views){background:var(--pc-ui-surface);color:var(--pc-ui-secondary)}
+[data-pc-ui][data-pc-tool="evac"] .tpick button{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-tool="modeler"] .zpct{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-tool="sitectx"] .mapview button{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
+[data-pc-ui][data-pc-tool="sitectx"] .mapview button[aria-pressed=true]{background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection)}
+[data-pc-ui][data-pc-surface="classic"] header.site .in{gap:24px}
+[data-pc-ui][data-pc-surface="classic"] header.site #nav{gap:20px;font-size:14px}
+[data-pc-ui][data-pc-surface="classic"] :is(.pc-catalog-head>p,.pc-section-heading p,.pc-task p,.pc-eyebrow,.pc-hero-note){color:var(--pc-ui-muted)!important}
+@media(max-width:1100px){[data-pc-ui][data-pc-surface="classic"] header.site #nav{display:none}[data-pc-ui][data-pc-surface="classic"] #burger{display:inline-flex}[data-pc-ui][data-pc-surface="classic"] #mpanel.open{display:block}}
