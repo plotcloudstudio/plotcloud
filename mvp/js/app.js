@@ -34,11 +34,11 @@ function who() {
 }
 
 const PAGES = {
-  '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace.js'), simulations: () => import('./pages/simulations.js'),
+  '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace.js'), 'workspace-v2': () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'),
 };
-const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account' };
+const TITLES = { '': 'Home', workspace: 'Workspace', 'workspace-v2': 'Workspace v2', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account' };
 let cleanup = null;
 export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
