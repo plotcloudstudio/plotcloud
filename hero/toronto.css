@@ -23,3 +23,8 @@ html[data-embedded=true]{background:#eef0f3}
 [data-embedded=true][data-theme=night] .view-actions button{background:#161618;border-color:#343439;color:#d5d6cf}
 [data-embedded=true][data-theme=night] .topline,[data-embedded=true][data-theme=night] .view-hint,[data-embedded=true][data-theme=night] .study-caption span,[data-embedded=true][data-theme=night] .disclaimer{color:#a5a79e}
 @media(max-width:500px){[data-embedded=true] .study{padding:14px 12px 10px;grid-template-rows:20px minmax(0,1fr) 54px 52px 28px}}
+
+/* Homepage presentation contains only the model and its environmental layer. */
+[data-embedded=true] .study{display:block;padding:0;min-height:0;height:100svh;overflow:hidden}
+[data-embedded=true] .study>.topline,[data-embedded=true] .study>.study-controls,[data-embedded=true] .study>.study-caption,[data-embedded=true] .study>.disclaimer,[data-embedded=true] .view-hint,[data-embedded=true] .view-actions,[data-embedded=true] .fallback-message{display:none}
+[data-embedded=true] .viewport{height:100%;width:100%;min-height:0}

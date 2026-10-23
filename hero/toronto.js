@@ -33,6 +33,11 @@ function syncPause() {
     : '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 3h3v10H4zm5 0h3v10H9z" fill="currentColor"/></svg>';
 }
 syncPause();
+if(embedded){
+  canvas.tabIndex=0;canvas.removeAttribute('aria-hidden');canvas.setAttribute('role','img');
+  canvas.setAttribute('aria-label','Illustrative Toronto architectural model. Drag to rotate. Press Space to pause or resume motion.');
+  canvas.addEventListener('keydown',event=>{if(event.code==='Space'){event.preventDefault();paused=!paused;syncPause();}});
+}
 try {
   const T = await import('../furniture/three.module.min.js');
   const white = new T.MeshStandardMaterial({color:0xf1f0e8,roughness:.93,metalness:0});
@@ -290,7 +295,7 @@ try {
   function resize(){
     const {width,height}=viewport.getBoundingClientRect();if(!width||!height)return;
     renderer.setSize(width,height,false);
-    const aspect=width/height,halfHeight=Math.max(7.1,7.6/aspect);
+    const aspect=width/height,halfHeight=embedded?Math.max(6.15,6.8/aspect):Math.max(7.1,7.6/aspect);
     camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;camera.top=halfHeight;camera.bottom=-halfHeight;
     camera.updateProjectionMatrix();render(0);
   }

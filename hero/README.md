@@ -22,3 +22,5 @@ Validation: with Playwright available in Node's module path, run `node hero/toro
 Rebuild the standalone file after editing source: with esbuild 0.25.12 available in Node’s module path, run `node hero/build-standalone.cjs`.
 
 For local browser checks in this environment, set `NODE_PATH=/workspace/plotcloud-tools/node_modules` and `CHROMIUM_PATH=/usr/bin/chromium` for the standalone suite. The homepage integration suite can use the existing system-Chromium preload adapter via `NODE_OPTIONS=--require=/workspace/plotcloud-tools/use-system-chromium.cjs`. CI uses the installed Playwright Chromium.
+
+The homepage embed is deliberately free of visible UI; only geometry and effects are shown. Keyboard users can focus the canvas and press Space to pause/resume. The standalone source/demo retains its development controls.

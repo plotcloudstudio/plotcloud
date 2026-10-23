@@ -35,16 +35,20 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.locator('#themeSeg [data-theme=night]').click();
   await page.waitForFunction(()=>document.querySelector('[data-home-hero]').contentWindow.PlotCloudHero.state.theme==='night');
   assert.equal((await current()).mode,'sound','Theme changes must not advance the environmental mode');
-  await frame().getByRole('button',{name:'Wind',exact:true}).click();await ready('wind');
-  assert.equal(await page.evaluate(()=>sessionStorage.getItem('pc-toronto-hero-mode')),'wind');
-  await page.reload();await ready('rain');
+  assert.equal(await frame().locator('.study-controls').isVisible(),false,'Embedded controls must not be shown');
+  assert.equal(await frame().locator('.topline').isVisible(),false);
+  assert.equal(await frame().locator('.view-actions').isVisible(),false);
+  assert.equal(await page.locator('.home-hero-study').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
+  await frame().locator('canvas').focus();await page.keyboard.press('Space');
+  assert.equal((await current()).paused,true,'Keyboard users must be able to pause the uncluttered scene');
+  await page.reload();await ready('sun');
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Homepage must not overflow');
-  assert(await frame().getByRole('button',{name:'Sound',exact:true}).isVisible());
+  assert(await frame().locator('canvas').isVisible());
   // A same-window forged message is not accepted as a scene event.
-  await page.evaluate(()=>postMessage({type:'plotcloud-hero-state',mode:'sun'},location.origin));
-  await page.waitForTimeout(50);assert.equal(await page.evaluate(()=>sessionStorage.getItem('pc-toronto-hero-mode')),'rain');
+  await page.evaluate(()=>postMessage({type:'plotcloud-hero-state',mode:'rain'},location.origin));
+  await page.waitForTimeout(50);assert.equal(await page.evaluate(()=>sessionStorage.getItem('pc-toronto-hero-mode')),'sun');
   assert.deepEqual(errors,[]);
-  console.log('PASS homepage hero: Sun initial → Wind reload → Rain route return → Sound visibility return; hover, manual-state persistence, theme sync, narrow layout, message isolation and bundled assets');
+  console.log('PASS homepage hero: Sun initial → Wind reload → Rain route return → Sound visibility return; hover, borderless presentation, keyboard pause, theme sync, narrow layout, message isolation and bundled assets');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

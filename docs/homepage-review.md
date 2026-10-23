@@ -21,3 +21,7 @@ The environmental mode is remembered in sessionStorage under its own key. First 
 The iframe uses the bundled HTML so its styles and 3D engine require no additional requests. The source HTML remains available for development; regenerate the bundled file with `hero/build-standalone.cjs` after changing source. Rendered effects are illustrative, not engineering output.
 
 Validation: `tests/home-hero.cjs` covers integration, refresh/route-return cycling, simulated visibility lifecycle events, manual selection persistence, pointer response, theme sync, narrow layout, message-source validation and bundled assets. `hero/toronto.test.cjs` covers rendered differences between states, animation/pause, drag/reset, reduced motion and WebGL fallback. Visibility events are simulated for deterministic headless testing; do not equate that check with a manual test in every browser.
+
+## Presentation refinement
+
+The homepage embed now shows only the model and environmental effects: no outer frame, scene heading, location labels, control strip, reset/pause buttons, hint or visible disclaimer. The hidden accessible description still identifies the scene as illustrative. Its canvas fills the entire embed, with a closer camera and a larger, borderless desktop stage. Hover, drag and return-based cycling are preserved. Space pauses/resumes motion when the canvas has keyboard focus; reduced-motion preferences are still respected. Standalone development controls are retained outside the homepage embed.
