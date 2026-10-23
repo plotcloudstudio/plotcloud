@@ -1,0 +1,94 @@
+import * as S from '../store.js';
+import { SIMS, FULL } from '../data.js';
+import { run as mockRun } from '../mocksim.js';
+import { $, $$, esc, fmt, when, toast, currentProject, setCurrent, MOCK, LIVE } from '../app.js';
+import { createViewport } from '../viewport.js';
+
+export function render(app, [simId], params) {
+  const sim = SIMS.find((s) => s.id === simId);
+  return sim ? runPage(app, sim, params) : catalog(app, params);
+}
+
+function catalog(app, params) {
+  const p = params.get('project') ? S.project(params.get('project')) : currentProject(), v = p && (S.version(p, params.get('version')) || p.versions.at(-1));
+  const q = (s) => `#/simulations/${s.id}${p ? `?project=${p.id}${v ? '&version=' + v.id : ''}` : ''}`;
+  const groups = [...new Set(SIMS.map((s) => s.group))];
+  app.innerHTML = `<div class="wrap">
+    <span class="eyebrow">Simulations</span><h1 style="font-size:30px;margin:8px 0 6px">Choose an analysis</h1>
+    <p class="muted" style="max-width:680px">All ${SIMS.length} analysis tools PlotCloud has today. Each one runs in full in its existing tool. Inside a project, a quick preview can be saved against a model version so you can compare versions in Results.</p>
+    ${p ? `<div class="notice" style="margin-top:16px">Running on <b>${esc(p.name)}</b> · ${v ? `<b>v${v.n}</b> — ${esc(v.note)}` : 'no saved version yet — <a href="#/workspace/' + p.id + '">save one in the workspace</a>'}</div>` : ''}
+    ${groups.map((g) => `<div class="sec-h"><h2>${g}</h2></div><div class="simgrid">${SIMS.filter((s) => s.group === g).map((s) => `<article class="card sim">
+      <span class="eyebrow">${s.view === 'wire' ? 'Wireframe view' : s.view === 'plan' ? 'Plan view' : '3D view'}</span><h3>${esc(s.name)}</h3><p class="small muted">${esc(s.blurb)}</p>
+      <p class="inputs">Needs: ${s.inputs.map(esc).join(' · ')}</p>
+      <div class="acts"><a class="btn sm primary" href="${q(s)}">Preview on project</a><a class="btn sm" href="${FULL(s.tool)}" target="_blank" rel="noopener">Open full tool ↗</a></div></article>`).join('')}</div>`).join('')}
+    <p class="note" style="margin-top:28px">${LIVE} opens the existing PlotCloud tool with its own model input. ${MOCK} previews in this prototype use simple model quantities and are for the workflow only.</p>
+  </div>`;
+}
+
+function runPage(app, sim, params) {
+  const p = (params.get('project') && S.project(params.get('project'))) || currentProject();
+  if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; return; }
+  setCurrent(p);
+  let v = S.version(p, params.get('version')) || p.versions.at(-1);
+  const rooms = () => (v ? v.model.components.filter((c) => c.type === 'room') : []);
+  const vals = {}; for (const f of sim.settings) vals[f.k] = f.type === 'room' ? rooms()[0]?.id : f.v;
+  let result = null;
+
+  app.innerHTML = `<div class="run">
+  <aside><div class="pane"><a class="btn sm ghost" href="#/simulations" style="justify-self:start">← All simulations</a><span class="eyebrow">${sim.group}</span><h1 style="font-size:22px">${esc(sim.name)}</h1><p class="small muted">${esc(sim.blurb)}</p></div>
+    <div class="pane"><h2>Model</h2>
+      <label class="f">Project<select id="proj">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+      <label class="f">Version<select id="ver">${p.versions.slice().reverse().map((x) => `<option value="${x.id}" ${x === v ? 'selected' : ''}>v${x.n} — ${esc(x.note)}</option>`).join('') || '<option>No saved versions</option>'}</select></label>
+      <p class="note">Needs: ${sim.inputs.map(esc).join(' · ')}</p></div>
+    <div class="pane"><h2>Full analysis</h2><p class="note">The complete ${esc(sim.name.toLowerCase())} engine, methods and exports are in the existing tool.</p>
+      <a class="btn" href="${FULL(sim.tool)}" target="_blank" rel="noopener">Open full tool ↗</a>${LIVE}
+      <p class="note">Sending this version's model straight into the tool and saving its result back here is <span class="tag plan">Planned</span>.</p></div>
+  </aside>
+  <section class="stage"><div class="vp" id="vp"></div>
+    <div class="bar"><span class="btn" style="cursor:default">${sim.view === 'wire' ? 'Wireframe' : sim.view === 'plan' ? 'Plan' : 'Shaded'} view</span><button class="btn" id="fit">Fit</button></div>
+    <div class="badge" id="vlabel"></div></section>
+  <aside class="r">
+    <div class="pane"><h2>Settings</h2><div id="form" class="grid"></div>
+      <button class="btn accent" id="go" ${v ? '' : 'disabled'}>Run preview</button><div class="prog" id="prog" hidden><i></i></div>
+      ${v ? '' : `<p class="note">Save a model version first: <a href="#/workspace/${p.id}">open the workspace</a>.</p>`}</div>
+    <div class="pane" id="res"><h2>Result</h2><p class="note">Run a preview to see the result for this version.</p></div>
+    <div class="pane"><h2>History on this version</h2><div id="hist"></div></div>
+  </aside></div>`;
+
+  const vp = createViewport($('#vp', app));
+  vp.setMode(sim.view === 'wire' ? 'wire' : sim.view === 'plan' ? 'plan' : 'shaded');
+  function show() {
+    vp.setModel(v ? v.model : p.draft, { refit: true });
+    vp.markers(sim.id === 'acoustics' ? rooms().find((r) => r.id === vals.room) : null);
+    $('#vlabel', app).textContent = v ? `${p.name} · v${v.n}` : `${p.name} · unsaved draft`;
+    form(); history();
+  }
+  function form() {
+    $('#form', app).innerHTML = sim.settings.map((f) => f.type === 'select' ? `<label class="f">${f.label}<select data-k="${f.k}">${f.options.map((o) => `<option ${o === vals[f.k] ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`
+      : f.type === 'room' ? `<label class="f">${f.label}<select data-k="${f.k}">${rooms().map((r) => `<option value="${r.id}" ${r.id === vals[f.k] ? 'selected' : ''}>${esc(r.name)}</option>`).join('') || '<option value="">No room in this version</option>'}</select></label>`
+      : `<label class="f">${f.label}<input type="number" step="${f.step || 1}" data-k="${f.k}" value="${vals[f.k]}"></label>`).join('') || '<p class="note">No settings needed for the preview.</p>';
+    $$('[data-k]', app).forEach((i) => i.onchange = () => { vals[i.dataset.k] = i.type === 'number' ? +i.value : i.value; if (i.dataset.k === 'room') vp.markers(rooms().find((r) => r.id === vals.room)); });
+  }
+  function history() {
+    const runs = v ? p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).sort((a, b) => b.created.localeCompare(a.created)) : [];
+    $('#hist', app).innerHTML = runs.map((r) => `<div class="vrow"><span class="vn">${sim.metrics.map(([k, , u, d]) => fmt(r.results[k], d) + (u ? ' ' + u : '')).slice(0, 1).join('')}</span><div class="vmeta">${when(r.created)}<br>${Object.entries(r.settings).filter(([k]) => k !== 'room').map(([k, x]) => esc(x)).join(' · ')}</div>${r.source === 'prototype-mock' ? MOCK : LIVE}</div>`).join('') || '<p class="note">No saved results yet.</p>';
+  }
+  function showResult() {
+    const host = $('#res', app);
+    if (result.error) { host.innerHTML = `<h2>Result</h2><p class="notice warn">${esc(result.error)}</p>`; return; }
+    host.innerHTML = `<h2>Result ${MOCK}</h2>
+      <div class="kpis">${sim.metrics.map(([k, label, u, d]) => `<div><small>${esc(label)}</small><b>${fmt(result[k], d)}</b> <span class="small muted">${u}</span></div>`).join('')}</div>
+      ${result.roomName ? `<p class="note">Room: ${esc(result.roomName)}</p>` : ''}
+      <p class="notice">Prototype estimate from model quantities (areas, glazing, volume, finishes). Use the full tool for the real analysis.</p>
+      <button class="btn primary" id="keep">Save result to v${v.n}</button>`;
+    $('#keep', host).onclick = () => { S.addRun(p, v.id, sim.id, vals, result); history(); toast(`Saved to v${v.n}`); host.querySelector('#keep').outerHTML = `<a class="btn" href="#/results/${p.id}?sim=${sim.id}">Compare versions →</a>`; };
+  }
+  $('#go', app).onclick = () => {
+    const bar = $('#prog', app), i = bar.firstElementChild; bar.hidden = false; $('#go', app).disabled = true; let t = 0;
+    const tick = setInterval(() => { t += 12; i.style.width = Math.min(100, t) + '%'; if (t >= 100) { clearInterval(tick); bar.hidden = true; i.style.width = 0; $('#go', app).disabled = false; result = mockRun(sim.id, v.model, vals); showResult(); } }, 40);
+  };
+  $('#fit', app).onclick = () => vp.fit();
+  $('#proj', app).onchange = (e) => { location.hash = `#/simulations/${sim.id}?project=${e.target.value}`; };
+  $('#ver', app).onchange = (e) => { v = S.version(p, e.target.value); for (const f of sim.settings) if (f.type === 'room') vals[f.k] = rooms()[0]?.id; result = null; $('#res', app).innerHTML = '<h2>Result</h2><p class="note">Run a preview to see the result for this version.</p>'; show(); };
+  show();
+}
