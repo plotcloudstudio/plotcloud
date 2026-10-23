@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/plotcloud-http.log 2>&1 &
           node tests/run-browser-check.cjs tests/ui-unification.cjs
+          node tests/run-browser-check.cjs tests/sunhours.cjs
           node tests/run-browser-check.cjs tests/acoustics.cjs
           node tests/run-browser-check.cjs tests/home-hero.cjs
           node tests/run-browser-check.cjs hero/toronto.test.cjs
