@@ -34,14 +34,15 @@ export function rt60(room, model, band = '500 Hz') {
 const inside = (c, g) => c.g.x + c.g.w / 2 >= g.x - 0.5 && c.g.x + c.g.w / 2 <= g.x + g.w + 0.5 && c.g.y + c.g.d / 2 >= g.y - 0.5 && c.g.y + c.g.d / 2 <= g.y + g.d + 0.5;
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const cityK = { Vancouver: 0.92, Toronto: 1, 'Montréal': 0.97, Calgary: 1.08 };
+// more daylight and sun nearer the equator; a rough latitude factor for the preview only
+const latK = (site) => (site && Number.isFinite(site.lat) ? clamp(1.25 - Math.abs(site.lat) / 110, 0.6, 1.25) : 1);
 
-export function run(simId, model, settings = {}) {
+export function run(simId, model, settings = {}, site = null) {
   const m = measure(model), r = {};
   const ratio = m.floor ? m.glazing / m.floor : 0;
   switch (simId) {
-    case 'daylight': r.sda = clamp(18 + ratio * 320 * (cityK[settings.city] || 1), 0, 100); r.ase = clamp(m.southGlazing / Math.max(1, m.floor) * 140 - m.shade * 0.55, 0, 60); r.df = clamp(ratio * 20, 0, 12); break;
-    case 'sunhours': r.facadeSun = clamp(3.2 * (cityK[settings.city] || 1) - m.ctxH * 0.08 - m.shade * 0.02, 0.5, 12); r.groundSun = clamp(70 - m.ctxH * 3.1, 0, 100); break;
+    case 'daylight': r.sda = clamp(18 + ratio * 320 * latK(site), 0, 100); r.ase = clamp(m.southGlazing / Math.max(1, m.floor) * 140 - m.shade * 0.55, 0, 60); r.df = clamp(ratio * 20, 0, 12); break;
+    case 'sunhours': r.facadeSun = clamp(3.4 * latK(site) - m.ctxH * 0.08 - m.shade * 0.02, 0.5, 12); r.groundSun = clamp(70 - m.ctxH * 3.1, 0, 100); break;
     case 'wind': r.comfort = clamp(88 - m.ctxH * 1.6 - (settings.speed || 5) * 2.2, 10, 100); r.peak = 1 + m.ctxH * 0.04 + (settings.speed || 5) * 0.01; break;
     case 'vent': r.ach = clamp(m.glazing * (settings.open ?? 0.5) * 1.8 / Math.max(1, m.floor * 3.2) * 60, 0.3, 20); break;
     case 'stormwater': { const P = (settings.rain || 50) * (settings.duration || 60) / 60 / 1000; r.runoff = P * (m.roof * 0.9 + Math.max(0, m.site - m.roof) * 0.35); r.ponding = Math.max(0, m.site - m.roof) * 0.04 * (settings.rain || 50) / 50; break; }

@@ -18,7 +18,12 @@ Upload model → organise layers and components → save model version → selec
 | Save result linked to version + settings | Run screen | Working (stores the mock result) |
 | Version × simulation matrix, A/B compare with deltas, settings check, model diff, trend | Results | Working on stored results |
 | Send a version into a full tool and save its real result back | — | **Planned** (labelled in the UI) |
-| Accounts, cloud storage, sharing | — | Not in the prototype |
+| Log in / sign up, account with default site, simulation defaults, your projects | Account (`#/login`, `#/account`) | **Mock** auth kept in this browser; no server, no password stored |
+| Worldwide site search (address, place or `lat, lon`), map, true north | Account › Site | Working: Nominatim (OSM) address search, OSM map embed |
+| Site data: time zone, Köppen climate, annual rain, mean wind + prevailing direction, ground elevation, buildings mapped nearby | Account › Site | Working: Open-Meteo (ERA5 last full year, Copernicus DEM) and Overpass. A value a source does not return is shown as missing, never guessed |
+| Pricing (Free / Pro CAD 9 mo or CAD 79 yr, 7-day trial / Teams) | Pricing | Prices as on the production site; no payment in the prototype |
+| Day / night theme (saved per browser) | Header | Working |
+| Cloud storage, sharing, real accounts and billing | — | Not in the prototype |
 
 Labels used in the UI: `Mock` (prototype estimate), `Working tool` (opens the existing PlotCloud tool), `Planned`.
 
@@ -50,13 +55,16 @@ mvp/js/data.js          simulation catalog (real tool ids), resources, sample mo
 mvp/js/store.js         projects / versions / runs in localStorage; model diff
 mvp/js/mocksim.js       prototype estimates (replace with real engine adapters)
 mvp/js/viewport.js      three.js viewport (shaded / wire / plan, picking) and mesh import
-mvp/js/pages/*.js       home, workspace, simulations, results, resources
+mvp/js/site.js          worldwide geocoding + site data (Nominatim, Open-Meteo, Overpass) and Köppen class
+mvp/js/pages/*.js       home, workspace, simulations, results, resources, pricing, login, account
+mvp/img/                holographic simulation renders, -day and -night versions
 ```
 
 ## Data model (ready for a backend)
 
 ```
-project { id, name, draft, versions[], runs[] }
+account { user, site, defaults }                        site: { label, lat, lon, north, tz, koppen, rain, wind, windDir, elev, buildings, year }
+project { id, name, site, draft, versions[], runs[] }   site copied from the account when the project is created
 version { id, n, note, created, model }                 immutable
 model   { units, north, layers[{name,color,visible,locked}], components[{id,name,type,layer,g:{x,y,z,w,d,h},mat,room?,mesh?}] }
 run     { id, versionId, simId, settings, results, created, source: 'prototype-mock' | 'full-tool' }

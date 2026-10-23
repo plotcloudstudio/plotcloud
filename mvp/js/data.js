@@ -9,11 +9,11 @@ export const PAGE = (route) => `../index.html#/${route}`;
 export const SIMS = [
   { id: 'sunhours', group: 'Climate', name: 'Sun hours', tool: 'sunhours', view: 'shaded',
     blurb: 'Hours of direct sun on ground, roofs and facades through the year.', inputs: ['Site massing', 'True north', 'City'],
-    settings: [{ k: 'city', label: 'City', type: 'select', options: ['Vancouver', 'Toronto', 'Montréal', 'Calgary'], v: 'Vancouver' }, { k: 'period', label: 'Period', type: 'select', options: ['Winter solstice', 'Equinox', 'Summer solstice', 'Whole year'], v: 'Equinox' }],
+    settings: [{ k: 'period', label: 'Period', type: 'select', options: ['Winter solstice', 'Equinox', 'Summer solstice', 'Whole year'], v: 'Equinox' }],
     metrics: [['facadeSun', 'Mean facade sun', 'h/day', 1], ['groundSun', 'Courtyard ground ≥ 2 h', '%', 0]] },
   { id: 'daylight', group: 'Climate', name: 'Daylight', tool: 'daylight', view: 'shaded',
     blurb: 'sDA, ASE and daylight factor on the work plane, room by room.', inputs: ['Rooms with walls', 'Windows', 'Location'],
-    settings: [{ k: 'city', label: 'City', type: 'select', options: ['Vancouver', 'Toronto', 'Montréal', 'Calgary'], v: 'Vancouver' }, { k: 'plane', label: 'Work plane (m)', type: 'number', v: 0.8, step: 0.05 }],
+    settings: [{ k: 'plane', label: 'Work plane (m)', type: 'number', v: 0.8, step: 0.05 }],
     metrics: [['sda', 'sDA 300/50%', '%', 0], ['ase', 'ASE 1000/250', '%', 0], ['df', 'Average daylight factor', '%', 1]] },
   { id: 'wind', group: 'Climate', name: 'Wind flow', tool: 'wind', view: 'shaded',
     blurb: 'Where wind speeds up, slows and turns around the massing.', inputs: ['Site massing', 'Wind direction and speed'],

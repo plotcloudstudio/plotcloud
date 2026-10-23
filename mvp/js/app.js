@@ -1,4 +1,4 @@
-// Hash router and small helpers shared by the pages.
+// Hash router, theme, sign-in state and small helpers shared by the pages.
 import * as S from './store.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
@@ -10,6 +10,16 @@ export function toast(msg) { const t = document.createElement('div'); t.classNam
 export const MOCK = '<span class="tag mock" title="Prototype estimate from simple model quantities. Not the PlotCloud simulation engine.">Mock</span>';
 export const LIVE = '<span class="tag live" title="Opens the working PlotCloud tool">Working tool</span>';
 
+// ---- theme: night by default, remembered in this browser; pages and the 3D view follow it
+export const theme = () => document.documentElement.dataset.theme || 'night';
+export const img = (name) => `img/${name}-${theme()}.jpg`;
+export function setTheme(t) {
+  document.documentElement.dataset.theme = t; try { localStorage.setItem('pc-mvp-theme', t); } catch (e) { }
+  $$('#themeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === t)));
+  $$('img[data-holo]').forEach((im) => { im.src = img(im.dataset.holo); });
+  dispatchEvent(new CustomEvent('pc-theme', { detail: t }));
+}
+
 // the project people are working on, remembered between pages
 export function currentProject() {
   const ps = S.projects(); let id = null; try { id = localStorage.getItem('pc-mvp-current'); } catch (e) { }
@@ -17,24 +27,35 @@ export function currentProject() {
 }
 export function setCurrent(p) { try { localStorage.setItem('pc-mvp-current', p.id); } catch (e) { } }
 
+function who() {
+  const u = S.account().user;
+  $('#who').innerHTML = u ? `<a class="btn sm" href="#/account" style="padding-left:4px"><span class="avatar">${esc(u.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span>Account</a>`
+    : '<a class="btn sm" href="#/login">Log in</a> <a class="btn sm accent" href="#/login?signup=1">Start free</a>';
+}
+
 const PAGES = {
   '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace.js'), simulations: () => import('./pages/simulations.js'),
-  results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'),
+  results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'),
+  login: () => import('./pages/login.js'), account: () => import('./pages/account.js'),
 };
+const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account' };
 let cleanup = null;
-async function route() {
+export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
-  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === (key || 'home')) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
+  who();
   const app = $('#app'); app.innerHTML = '';
   const mod = await PAGES[key]();
   cleanup = (await mod.render(app, rest.map((x) => decodeURIComponent(x.split('?')[0])), params)) || null;
-  document.title = 'PlotCloud — ' + ({ '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources' })[key];
+  document.title = 'PlotCloud — ' + TITLES[key];
   window.scrollTo(0, 0);
 }
+export const refreshWho = who;
 addEventListener('hashchange', route);
 $('#menuBtn').addEventListener('click', () => { const o = $('#nav').classList.toggle('open'); $('#menuBtn').setAttribute('aria-expanded', String(o)); });
-S.load(); route();
+$$('#themeSeg button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));
+S.load(); setTheme(theme()); route();

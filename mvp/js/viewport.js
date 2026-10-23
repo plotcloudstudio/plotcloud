@@ -6,18 +6,24 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const MAT = {
   wall: 0xf1f0ec, slab: 0xe6e3dc, roof: 0xdedbd4, mass: 0xd2cec6, terrain: 0xe9e7e1, furniture: 0xd9d3c7, imported: 0xe6e3dc, window: 0x9cc3e0, room: 0xe8b04a,
 };
+// Holographic look, following the page theme: frosted solids with white edges, misty blue-grey by day, near-black by night.
+const LOOK = {
+  day: { clear: 0x9ca2af, grid: [0xc4c8d2, 0xb3b8c4], solid: 0xe9ecf2, ctx: 0xd5d9e2, op: 0.62, edge: 0xffffff, edgeOp: 0.85, ctxEdge: 0.4, hemi: [0xffffff, 0x8a90a0, 2.4] },
+  night: { clear: 0x08090c, grid: [0x2a2d35, 0x1c1f26], solid: 0x2a2f3a, ctx: 0x1d2028, op: 0.7, edge: 0xffffff, edgeOp: 0.9, ctxEdge: 0.3, hemi: [0xffffff, 0x1a1d24, 1.3] },
+};
+const look = () => LOOK[document.documentElement.dataset.theme === 'day' ? 'day' : 'night'];
 
 export function createViewport(host, { onPick } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setClearColor(0xf3f3f1, 1); host.appendChild(renderer.domElement);
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setClearColor(look().clear, 1); host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
   const persp = new THREE.PerspectiveCamera(35, 1, 0.05, 2000); persp.up.set(0, 0, 1);
   const ortho = new THREE.OrthographicCamera(-10, 10, 10, -10, -100, 500); ortho.up.set(0, 1, 0);
   let camera = persp;
   const controls = new OrbitControls(persp, renderer.domElement); controls.maxPolarAngle = Math.PI * 0.495;
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xcfccc4, 2.1); hemi.position.set(0, 0, 1); scene.add(hemi);
+  const hemi = new THREE.HemisphereLight(...look().hemi); hemi.position.set(0, 0, 1); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-0.5, -0.35, 1); scene.add(sun);
-  const grid = new THREE.GridHelper(80, 80, 0xd9d6cf, 0xe6e3dc); grid.rotation.x = Math.PI / 2; grid.position.z = -0.001; scene.add(grid);
+  let grid = null; const makeGrid = () => { if (grid) { scene.remove(grid); grid.geometry.dispose(); } grid = new THREE.GridHelper(120, 60, ...look().grid); grid.rotation.x = Math.PI / 2; grid.position.z = -0.32; scene.add(grid); }; makeGrid();
   const root = new THREE.Group(); scene.add(root);
   const extra = new THREE.Group(); scene.add(extra);
   let model = null, mode = 'shaded', selected = null, objects = new Map(), bounds = new THREE.Box3();
@@ -35,11 +41,12 @@ export function createViewport(host, { onPick } = {}) {
       const geo = geometryOf(c), grp = new THREE.Group(); grp.position.set(c.g.x, c.g.y, c.g.z); grp.userData.id = c.id;
       const isRoom = c.type === 'room', isGlass = c.type === 'window';
       const wire = mode === 'wire';
-      const face = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: MAT[c.type] ?? 0xe6e3dc, roughness: 0.95,
-        transparent: isRoom || isGlass || wire, opacity: wire ? (isRoom ? 0.07 : 0.0) : isRoom ? 0.0 : isGlass ? 0.45 : 1, depthWrite: !(isRoom || isGlass || wire) }));
+      const L = look(), isCtx = c.type === 'mass' || c.type === 'terrain';
+      const face = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: isGlass ? 0xcfe0f2 : isRoom ? MAT.room : isCtx ? L.ctx : L.solid, roughness: 0.4,
+        transparent: true, opacity: wire ? (isRoom ? 0.07 : 0.0) : isRoom ? 0.0 : isGlass ? 0.35 : (c.type === 'terrain' ? 0.5 : L.op), depthWrite: !(isRoom || isGlass || wire) }));
       face.userData.id = c.id; grp.add(face);
-      if (wire || isRoom || mode === 'plan') {
-        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({ color: isRoom ? 0xc9852a : c.type === 'terrain' || c.type === 'mass' ? 0xb7b3ab : 0x55524c, transparent: true, opacity: isRoom && mode === 'shaded' ? 0.0 : 1 }));
+      {
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({ color: isRoom ? 0xe8b04a : L.edge, transparent: true, opacity: isRoom ? (mode === 'shaded' ? 0 : 1) : isCtx ? L.ctxEdge : L.edgeOp }));
         grp.add(edges);
       }
       root.add(grp); objects.set(c.id, grp);
@@ -68,6 +75,8 @@ export function createViewport(host, { onPick } = {}) {
   }
   function render() { renderer.render(scene, camera); }
   controls.addEventListener('change', render);
+  const onTheme = () => { renderer.setClearColor(look().clear, 1); hemi.color.set(look().hemi[0]); hemi.groundColor.set(look().hemi[1]); hemi.intensity = look().hemi[2]; makeGrid(); build(); size(); render(); };
+  addEventListener('pc-theme', onTheme);
   new ResizeObserver(() => { size(); render(); }).observe(host);
 
   // plan view: pan with drag, zoom with wheel

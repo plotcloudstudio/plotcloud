@@ -1,47 +1,69 @@
 import * as S from '../store.js';
-import { SIMS, PAGE } from '../data.js';
-import { esc, when, setCurrent, toast } from '../app.js';
-import { createViewport } from '../viewport.js';
+import { SIMS } from '../data.js';
+import { esc, img, setCurrent } from '../app.js';
 
 export function render(app) {
-  const ps = S.projects();
-  const groups = [...new Set(SIMS.map((s) => s.group))];
+  const logo = document.querySelector('.brand .logo')?.outerHTML || 'plotcloud';
+  const A = S.account(), site = A.site;
+  const uses = [['Latitude, longitude and time', 'Sun hours · Daylight · View analysis'], ['True north', 'Sun · Daylight · Wind · Natural ventilation'], ['A year of weather', 'Daylight · Natural ventilation · Wind flow'],
+    ['Rainfall and terrain', 'Stormwater & waterlogging'], ['Buildings around the site', 'Sun · Daylight · Wind · Views']];
   app.innerHTML = `<div class="wrap">
   <section class="hero">
-    <div>
-      <span class="eyebrow">Architecture analysis in the browser</span>
-      <h1>Test a design before you commit to it.</h1>
-      <p class="lede">Bring in a model, organise it, and run sun, daylight, wind, stormwater, acoustics, movement and structure studies. Every result is saved with the model version it came from, so you can compare what a design change actually did.</p>
-      <div class="cta"><a class="btn primary" href="#/workspace">Open your workspace</a><a class="btn" href="#/simulations">Browse ${SIMS.length} simulations</a></div>
-    </div>
-    <div class="shot" id="heroVp" aria-label="Sample project model"></div>
+    <span class="badge-pill">One site · ${SIMS.length} simulations · every version</span>
+    <h1 class="display" style="margin-top:28px">Test the design<br><span>on the real site.</span></h1>
+    <p class="lede">Pin the site once, anywhere in the world. Sun, daylight, wind, stormwater, acoustics, movement and structure run on the same location, climate and model, and every result is saved with the version it came from.</p>
+    <div class="cta"><a class="btn accent lg" href="#/${A.user ? 'account' : 'login?signup=1'}">${A.user ? 'Set your site →' : 'Start free →'}</a><a class="btn lg" href="#/workspace">Open the workspace</a></div>
+    <p class="eyebrow" style="margin-top:18px;color:var(--mut2)">Sample project included · runs in the browser</p>
+    <figure class="shot"><img data-holo="hero" src="${img('hero')}" alt="Sample project in the simulation view: the building, its neighbours and sample points with values">
+      <figcaption class="chip" style="left:20px;bottom:20px">Courtyard studio · v2</figcaption><span class="chip" style="left:230px;bottom:20px">${esc(site.label.split(',')[0])} · ${site.lat.toFixed(3)}°, ${site.lon.toFixed(3)}°</span></figure>
   </section>
 
-  <div class="flow" aria-label="How it works">
-    ${['Upload a model', 'Organise layers and components', 'Save a version', 'Pick a simulation', 'Run the analysis', 'Save the result', 'Compare versions'].map((t, i) => `<div><b>${String(i + 1).padStart(2, '0')}</b>${t}</div>`).join('')}
-  </div>
+  <section class="section">
+    <div class="kicker"><b>01</b>One site, every study</div>
+    <div class="split" style="margin-top:22px;align-items:start">
+      <div><h2 class="display md">Pin it once.<br><span>Every study uses it.</span></h2>
+        <p class="lede" style="margin-top:22px">Set the location in your account, anywhere in the world. Elevation, a year of weather, the climate class and the buildings around the site are read for the pin and shared by every simulation in your projects. Anything not found is marked missing, never guessed.</p>
+        <a class="btn lg" href="#/account" style="margin-top:28px">See the site settings →</a></div>
+      <ol class="numlist">${uses.map(([a, b], i) => `<li><span>0${i + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join('')}</ol>
+    </div>
+  </section>
 
-  <div class="sec-h"><h2>Your projects</h2><button class="btn" id="newP">New project</button></div>
-  <div class="grid g3">${ps.map((p) => `<article class="card pcard"><h3>${esc(p.name)}</h3>
-    <p class="meta">${p.versions.length} version${p.versions.length === 1 ? '' : 's'} · ${p.runs.length} saved result${p.runs.length === 1 ? '' : 's'} · ${when(p.updated)}</p>
-    <div class="acts"><a class="btn sm primary" href="#/workspace/${p.id}" data-p="${p.id}">Open</a><a class="btn sm" href="#/results/${p.id}" data-p="${p.id}">Results</a></div></article>`).join('')}
-  </div>
+  <section class="section">
+    <div class="kicker"><b>02</b>Simulations</div>
+    <div class="split" style="margin-top:22px"><h2 class="display md">${SIMS.length === 14 ? 'Fourteen' : SIMS.length} studies.<br><span>Real engines.</span></h2>
+      <p class="lede">Each one is a working PlotCloud tool with its method and limits written down. Results are screening studies for design decisions, not code compliance.</p></div>
+    <div class="figs">
+      <figure><img data-holo="daylight" src="${img('daylight')}" alt="Daylight study view"><figcaption><b>Sun &amp; daylight</b><span>3D view · whole year</span></figcaption></figure>
+      <figure><img data-holo="acoustics" src="${img('acoustics')}" alt="Acoustic wavefronts in the studio room"><figcaption><b>Indoor acoustics</b><span>Wireframe view · per room</span></figcaption></figure>
+      <figure><img data-holo="wind" src="${img('wind')}" alt="Wind streamlines around the massing"><figcaption><b>Wind &amp; stormwater</b><span>Site · streamlines and runoff</span></figcaption></figure>
+    </div>
+    <ol class="numlist cols" style="margin-top:56px">${SIMS.map((s, i) => `<li><span>${String(i + 1).padStart(2, '0')}</span><div><b>${esc(s.name)}</b><p>${esc(s.blurb)}</p></div></li>`).join('')}</ol>
+    <a class="btn lg" href="#/simulations" style="margin-top:28px">Browse simulations →</a>
+  </section>
 
-  <div class="sec-h"><h2>Simulations</h2><a class="btn ghost" href="#/simulations">All simulations →</a></div>
-  <div class="grid g4">${groups.map((g) => `<div class="card"><span class="eyebrow">${g}</span><p style="margin-top:8px">${SIMS.filter((s) => s.group === g).map((s) => esc(s.name)).join(' · ')}</p></div>`).join('')}</div>
+  <section class="section">
+    <div class="kicker"><b>03</b>Versions</div>
+    <h2 class="display md" style="margin-top:22px">Change the design.<br><span>See what it did.</span></h2>
+    <div class="grid g2" style="margin-top:44px">
+      <figure class="shot" style="margin:0;height:340px"><img data-holo="heroA" src="${img('heroA')}" alt="Version 1"><figcaption class="chip" style="left:16px;top:16px">V1 · Baseline</figcaption></figure>
+      <figure class="shot" style="margin:0;height:340px"><img data-holo="hero" src="${img('hero')}" alt="Version 2"><figcaption class="chip" style="left:16px;top:16px">V2 · Wider glazing · acoustic ceiling</figcaption></figure></div>
+    <div class="stats"><div><small>sDA 300/50%</small><b>41 → <em>50</em><i> %</i></b></div><div><small>RT60 · studio room</small><b>2.66 → <em>0.55</em><i> s</i></b></div><div><small>Facade sun</small><b>2.2 → <em>1.9</em><i> h/day</i></b></div></div>
+    <p class="note">Sample project, prototype estimates labelled Mock. Same settings on both versions, so the difference comes from the design.</p>
+    <a class="btn lg" href="#/results" style="margin-top:24px">Compare versions →</a>
+  </section>
 
-  <div class="sec-h"><h2>Free resources</h2><a class="btn ghost" href="#/resources">All resources →</a></div>
-  <div class="grid g3">
-    <a class="card" href="#/resources" style="text-decoration:none"><span class="eyebrow">AI image tools</span><p style="margin-top:8px">Cut-outs, line drawings, upscaling, sky replacement and material drawings.</p></a>
-    <a class="card" href="#/resources" style="text-decoration:none"><span class="eyebrow">CAD &amp; 3D files</span><p style="margin-top:8px">CAD blocks, Rhino and Revit sets, case study models and templates.</p></a>
-    <a class="card" href="#/resources" style="text-decoration:none"><span class="eyebrow">References</span><p style="margin-top:8px">Building code, accessibility, LEED and ergonomics finders.</p></a>
+  <section class="section">
+    <div class="kicker"><b>04</b>Free resources</div>
+    <h2 class="display sm" style="margin-top:22px">Tools and files,<br><span>free to use.</span></h2>
+    <div class="pills" style="margin-top:28px">${['Image toolkit', 'Architectural drawing', 'Color palettes', 'Pin-up composer', 'CAD blocks', 'Rhino & Revit sets', 'Case study models', 'Building code finder'].map((r) => `<a class="btn" href="#/resources">${r}</a>`).join('')}</div>
+  </section>
+
+  <section class="section">
+    <div class="kicker"><b>05</b>Pricing</div>
+    <div class="split" style="margin-top:22px"><h2 class="display sm">Free tools.<br><span>Pro projects.</span></h2>
+      <div><p class="lede">Every analysis tool is free. PlotCloud Pro keeps your projects, versions and results together: CAD 9 a month or CAD 79 a year, 7 days free.</p><a class="btn lg" href="#/pricing" style="margin-top:20px">See pricing →</a></div></div>
+  </section>
   </div>
-  <p class="note" style="margin-top:36px">Prototype. Projects are stored in this browser only. Results marked <span class="tag mock">Mock</span> are prototype estimates; the full analysis runs in the existing PlotCloud tools (<a href="${PAGE('tools')}">current tools page</a>). <button class="btn sm ghost" id="reset">Reset sample data</button></p>
-</div>`;
+  <footer class="foot">${logo}<span>Prototype · screening studies for design, not code compliance · <a href="../index.html">current site</a></span></footer>`;
   app.querySelectorAll('[data-p]').forEach((a) => a.addEventListener('click', () => setCurrent(S.project(a.dataset.p))));
-  app.querySelector('#newP').onclick = () => { const name = prompt('Project name', 'New project'); if (name === null) return; const p = S.createProject(name.trim() || 'New project', { units: 'm', north: 0, layers: [{ name: 'Imported', color: '#d5d2cb', visible: true, locked: false }], components: [] }); setCurrent(p); toast('Project created'); location.hash = '#/workspace/' + p.id; };
-  app.querySelector('#reset').onclick = () => { if (!confirm('Remove all prototype projects in this browser and restore the sample?')) return; S.reset(); location.hash = '#/'; location.reload(); };
-  // the sample model in the hero, as people will see it in the workspace
-  const sample = ps.find((p) => p.sample) || ps[0]; let vp = null;
-  if (sample) try { vp = createViewport(app.querySelector('#heroVp')); vp.setModel(sample.versions.at(-1)?.model || sample.draft, { refit: true }); } catch (e) { app.querySelector('#heroVp').textContent = ''; }
 }

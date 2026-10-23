@@ -13,15 +13,15 @@ export function render(app, [pid], params) {
   const vps = [];
 
   app.innerHTML = `<div class="wrap">
-    <div class="sec-h" style="margin-top:0"><div><span class="eyebrow">Results</span><h1 style="font-size:30px;margin-top:8px">${esc(p.name)}</h1></div>
+    <div class="sec-h" style="margin-top:0;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:end"><div><span class="eyebrow">Results · ${esc(p.name)} · ${esc((p.site?.label || "").split(",")[0])}</span><h1 class="display" style="margin-top:16px">Change the design.<br><span>See what it did.</span></h1></div>
       <select class="inp" id="proj" style="max-width:280px" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
     <p class="muted">Every saved result is tied to the model version it ran on, with its settings.</p>
-    <div class="sec-h"><h2>Versions × simulations</h2><span class="note">latest saved result per cell</span></div>
+    <div class="sec-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:56px 0 16px"><h2 class="display sm">Versions × simulations</h2><span class="note">latest saved result per cell</span></div>
     <div style="overflow-x:auto"><table class="t matrix"><thead><tr><th>Version</th>${used.map((s) => `<th>${esc(s.name)}<br><span style="text-transform:none">${esc(s.metrics[0][1])}${s.metrics[0][2] ? ' · ' + s.metrics[0][2] : ''}</span></th>`).join('')}<th></th></tr></thead>
       <tbody>${p.versions.slice().reverse().map((v) => `<tr><td><b class="mono">v${v.n}</b> ${esc(v.note)}<br><span class="note">${when(v.created)}</span></td>${used.map((s) => { const r = S.lastRun(p, v.id, s.id); return `<td class="n">${r ? fmt(r.results[s.metrics[0][0]], s.metrics[0][3]) : `<a class="note" href="#/simulations/${s.id}?project=${p.id}&version=${v.id}">run</a>`}</td>`; }).join('')}<td><a class="btn sm" href="#/simulations?project=${p.id}&version=${v.id}">Simulate</a></td></tr>`).join('')}</tbody></table></div>
     ${used.length ? '' : '<p class="note" style="margin-top:10px">No saved results yet. Run a simulation on a saved version.</p>'}
 
-    <div class="sec-h"><h2>Compare versions</h2></div>
+    <div class="sec-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:56px 0 16px"><h2 class="display sm">Compare versions</h2></div>
     ${p.versions.length < 2 ? '<p class="note">Save at least two versions in the workspace to compare them.</p>' : `
     <div class="grid g3" style="margin-bottom:14px">
       <label class="f">Simulation<select id="sim">${used.map((s) => `<option value="${s.id}" ${s === sim ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
@@ -31,7 +31,7 @@ export function render(app, [pid], params) {
     <div class="grid g2" style="margin-top:14px"><div class="card" id="metrics"></div><div class="card" id="changes"></div></div>
     <div class="card" id="trend" style="margin-top:14px"></div>`}
 
-    <div class="sec-h"><h2>All saved results</h2><span class="note">${p.runs.length}</span></div>
+    <div class="sec-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:56px 0 16px"><h2 class="display sm">All saved results</h2><span class="note">${p.runs.length}</span></div>
     <div style="overflow-x:auto"><table class="t"><thead><tr><th>When</th><th>Version</th><th>Simulation</th><th>Settings</th><th>Result</th><th>Source</th><th></th></tr></thead><tbody id="log"></tbody></table></div>
   </div>`;
 
