@@ -693,7 +693,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"architectural-render": "drawing-20261020-2","acoustics":"wavefront-20261021-2","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "project-20261022-2", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261020-2", "movementdepth": "movement-depth-20261020-2", "modeler": "semantic-20261022-2", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBV = {"architectural-render": "drawing-20261020-2","acoustics":"standard-20261023-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "project-20261022-2", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261020-2", "movementdepth": "movement-depth-20261020-2", "modeler": "semantic-20261022-2", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
 const EMBFILE = {movementdepth:"spacesyntax"};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${EMBFILE[id] || id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
@@ -3256,7 +3256,7 @@ TMETHOD.acoustics=["Six-band Sabine reverberation and finite-surface image-sourc
 
 // Stormwater uses the confirmed browser-only surface-routing workspace.
 EMB.stormwater="@";
-EMBV.stormwater="rain-workspaces-20261021-2";
+EMBV.stormwater="standard-20261023-1";
 EMBI.stormwater={title:"stormwater & waterlogging",crumb:"Stormwater & Waterlogging",lede:"Use Grid rainfall for editable terrain, D8 runoff, sink-cell ponding, drain scenarios and same-screen charts. Switch to Imported site model for the existing 3D model, SCS-CN and detention workspace. Both are local early-design screening methods."};
 XT.push(["stormwater","stormwater & waterlogging","Explore grid rainfall with terrain brushes and drains, or analyze an imported site model and compare detention.",""]);
 TMETA.stormwater=[];
