@@ -1,10 +1,11 @@
 import * as S from '../store.js';
+import { mountHomeHero } from '../home-hero.js';
 import { SIMS, simImg } from '../data.js';
 import { esc, img, setCurrent } from '../app.js';
 
 export function render(app) {
   const logo = document.querySelector('.brand .logo')?.outerHTML || 'plotcloud';
-  const A = S.account(), site = A.site;
+  const A = S.account();
   const uses = [['Latitude, longitude and time', 'Sun hours · Daylight · View analysis'], ['True north', 'Sun · Daylight · Wind · Natural ventilation'], ['A year of weather', 'Daylight · Natural ventilation · Wind flow'],
     ['Rainfall and terrain', 'Stormwater & waterlogging'], ['Buildings around the site', 'Sun · Daylight · Wind · Views']];
   app.innerHTML = `<div class="wrap">
@@ -14,8 +15,9 @@ export function render(app) {
     <p class="lede">Pin the site once, anywhere in the world. Sun, daylight, wind, stormwater, acoustics, movement and structure run on the same location, climate and model, and every result is saved with the version it came from.</p>
     <div class="cta"><a class="btn accent lg" href="#/${A.user ? 'account' : 'login?signup=1'}">${A.user ? 'Set your site →' : 'Start free →'}</a><a class="btn lg" href="#/workspace">Open the workspace</a></div>
     <p class="eyebrow" style="margin-top:18px;color:var(--mut2)">Sample project included · runs in the browser</p>
-    <figure class="shot"><img data-holo="hero" src="${img('hero')}" alt="Sample project in the simulation view: the building, its neighbours and sample points with values">
-      <figcaption class="chip" style="left:20px;bottom:20px">Courtyard studio · v2</figcaption><span class="chip" style="left:230px;bottom:20px">${esc(site.label.split(',')[0])} · ${site.lat.toFixed(3)}°, ${site.lon.toFixed(3)}°</span></figure>
+    <figure class="shot home-hero-study" aria-label="Interactive Toronto environmental study">
+      <iframe title="Toronto CN Tower — interactive Sun, Wind, Rain and Sound study" data-home-hero loading="eager"></iframe>
+      <figcaption class="sr-only">Illustrative Toronto maquette, not your project's simulation results. Move the pointer or drag to explore. The scene advances Sun, Wind, Rain, Sound on refresh and return.</figcaption></figure>
   </section>
 
   <section class="section">
@@ -66,4 +68,5 @@ export function render(app) {
   </div>
   <footer class="foot">${logo}<span>Prototype · screening studies for design, not code compliance · <a href="../index.html#/home">classic site</a></span></footer>`;
   app.querySelectorAll('[data-p]').forEach((a) => a.addEventListener('click', () => setCurrent(S.project(a.dataset.p))));
+  return mountHomeHero(app.querySelector('.home-hero-study'));
 }

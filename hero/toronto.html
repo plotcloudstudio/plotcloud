@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PlotCloud — Toronto environmental study</title>
+<link rel="stylesheet" href="toronto.css"></head><body>
+<main class="study" data-mode="sun">
+  <div class="topline"><span><i></i> A living architectural study</span><span class="edition">01 / TORONTO</span></div>
+  <div class="viewport" aria-label="Interactive schematic white architectural model of CN Tower and Toronto. Drag to rotate." role="group">
+    <div class="fallback" aria-hidden="true"><svg viewBox="0 0 700 560" fill="none" xmlns="http://www.w3.org/2000/svg"><g stroke="#bcbcb5" stroke-width="1.5" stroke-linejoin="round"><path d="M90 370 350 240 620 365 360 510Z" fill="#e8e7df"/><path d="M90 370v24l270 140 260-145v-24L360 510Z" fill="#d9d8cf"/><path d="m145 342 267 142m-186-181 263 135m-313-24 254-127M260 461l257-127"/><path d="m375 347 38 19v-120l-38-19-33 17v120l33-17Z" fill="#f7f6ef"/><path d="m463 354 32 16V274l-32-16-31 16v96l31-16Z" fill="#f7f6ef"/><ellipse cx="260" cy="380" rx="67" ry="32" fill="#f7f6ef"/><path d="m324 362 12-207h12l12 207Z" fill="#f7f6ef"/><ellipse cx="342" cy="178" rx="28" ry="11" fill="#deddd6"/><ellipse cx="342" cy="168" rx="28" ry="11" fill="#f7f6ef"/><path d="M338 157V92h8v65m-4-65V40"/></g></svg><p class="fallback-message">Preparing the architectural study…</p></div>
+    <canvas aria-hidden="true"></canvas>
+    <span class="view-hint">Drag to explore <span aria-hidden="true">↔</span></span>
+    <div class="view-actions"><button type="button" data-action="reset" aria-label="Reset view" title="Reset view">↺</button><button type="button" data-action="pause" aria-label="Pause animation" aria-pressed="false" title="Pause animation">Ⅱ</button></div>
+  </div>
+  <div class="study-controls" role="group" aria-label="Environmental visual state">
+    <button type="button" data-mode="sun" aria-pressed="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/></svg><span>Sun</span></button>
+    <button type="button" data-mode="wind" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M2 8h13c5 0 5-6 1-6-2 0-3 1-3 2M2 12h18c4 0 4 6 0 6-2 0-3-1-3-2M2 16h8c4 0 4 6 0 6"/></svg><span>Wind</span></button>
+    <button type="button" data-mode="rain" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M5 14a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 0 1 4 10M7 17l-1 3m6-3-1 3m6-3-1 3"/></svg><span>Rain</span></button>
+    <button type="button" data-mode="sound" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M3 10v4m4-7v10m5-15v20m5-17v14m4-9v4"/></svg><span>Sound</span></button>
+  </div>
+  <div class="study-caption"><div><strong>CN Tower & surroundings</strong><span>Toronto, Canada · 43.6426° N / 79.3871° W</span></div><span class="state-label" aria-live="polite">Sun / light & shadow</span></div>
+  <p class="disclaimer">Illustrative environmental study <span>·</span> Not simulation results</p>
+</main><script type="module" src="toronto.js"></script></body></html>

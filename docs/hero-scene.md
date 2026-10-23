@@ -1,0 +1,13 @@
+# Toronto hero scene
+
+Purpose: help architects exploring PlotCloud understand its environmental design focus through an interactive, illustrative maquette. This is a schematic composition around CN Tower and Rogers Centre, not a surveyed site or computed simulation. The existing `/mvp/` homepage now embeds this scene in place of its first hero image; other site flows are preserved.
+
+Design: matte warm-white modular terrain and building massing, a recognizable CN Tower profile, a restrained editorial layout. Keep physical structure dominant over visual effects. Desktop is the primary design target; narrow screens retain the same scene and reachable controls.
+
+Renderer contract: one locally bundled Three.js WebGL2 scene on a standalone page. World coordinates are arbitrary maquette units, Y up; camera is orthographic and targets the landmark. No geospatial precision or measurements are claimed. DOM owns controls and descriptions; WebGL owns geometry. The fallback is an inline SVG landmark illustration, shown only while loading or when WebGL fails. Context loss reveals the fallback. No external models, CDNs or API credentials.
+
+States: Sun (amber directional light and moving shadows), Wind (cyan schematic streamlines and advecting tracers), Rain (blue falling segments and surface runoff paths), Sound (violet points forming an expanding wave surface, with faint ground rings). Colors encode the selected demonstration, not measured magnitudes. Airflow and runoff are designed paths, not CFD or drainage predictions. Transitions preserve camera and geometry. Drag rotates with limited elevation; no wheel interception. Reset restores the camera. Pause freezes all motion; reduced motion defaults to paused. State changes remain usable when paused. Keyboard controls are native buttons with pressed states and visible focus. Hidden/offscreen scenes suspend rendering; page exit releases GPU resources.
+
+Performance: one scene, capped DPR (1.5), shared geometry/materials, bounded 30 fps animation, 1024 shadow map, reusable typed buffers. ResizeObserver owns framing. No postprocessing or bloom. Render readiness is exposed on the document and through a small read-only diagnostic API for QA. Validate all four states, frame differences, pointer/reset, pause, reduced motion, WebGL failure, route lifecycle, and narrow viewport overflow. Inspect screenshots after functionality passes.
+
+Reference limitation: igloo-v.vercel.app returned a network-policy 403 in this environment; no claim of direct inspection. The supplied visual brief and generated concept sheet guide this original composition.
