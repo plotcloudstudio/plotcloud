@@ -5,6 +5,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 try{
  await page.goto(base+'/mvp/#/simulations');await page.locator('a[href="#/simulations/acoustics"]').first().waitFor();
  await page.goto(base+'/index.html#/tool/acoustics');const work=await(await page.locator('iframe[data-emb="acoustics"]').elementHandle()).contentFrame();
+ await page.locator('#eng[data-pc-settings-ready="true"]').waitFor();
  await work.waitForFunction(()=>!!window.AcousticStudy?.stats);
  let report=await work.evaluate(()=>AcousticStudy.report());
  for(const value of report.statistics.rt)assert(Number.isFinite(value)&&value>0,'RT60 bands must be finite and positive');

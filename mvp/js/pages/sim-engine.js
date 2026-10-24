@@ -191,11 +191,13 @@ export function render(app, sim, params = new URLSearchParams()) {
   // Account values into the engine's own inputs (each stays editable there)
   const OV = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })();   // values changed in the batch panel
   function prefill() {
-    const D = doc(), vals = Object.assign({}, cfg.prefill?.(ctx) || {}); if (!D) return;
+    const D = doc(), vals = Object.assign({}, cfg.prefill?.(ctx) || {}); if (!alive || !D) return;
     if (batch) for (const [id, val] of Object.entries(OV)) if (val != null && val !== '') { if (!(id in vals)) vals[id] = val; else ovApply[id] = val; }
     for (const [id, val] of Object.entries(vals)) { if (id === '@day') { const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) { b.click(); filled[id] = val; } continue; }
       const el = D.getElementById(id); if (!el || val == null || (typeof val === 'number' && !Number.isFinite(val))) continue;
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
+    // Distinguish the engine's startup sample from the project's applied model/settings.
+    fr.dataset.pcSettingsReady = 'true';
   }
   // file-based inputs (DXF plan, OBJ site) go into the engine's own file picker, as if the person had opened the file
   const giveFile = (input, text, fname, type) => { const dt = new DataTransfer(); dt.items.add(new File([text], fname, { type })); input.files = dt.files; input.dispatchEvent(new Event('change', { bubbles: true })); };

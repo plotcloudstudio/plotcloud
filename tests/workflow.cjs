@@ -32,6 +32,7 @@ try{
  await page.screenshot({path:dir+'/project-workflow.png',fullPage:true});
  for(const tool of ['views','daylight']){
   await page.goto(base+'/#/tool/'+tool);
+  await page.locator('#eng[data-pc-settings-ready="true"]').waitFor();
   work=await (await page.locator('iframe[data-emb="'+tool+'"]').elementHandle()).contentFrame();
   await work.waitForFunction(()=>window.__pcAnalysisState?.().ready,{},{timeout:90000});
   const state=await work.evaluate(()=>window.__pcAnalysisState());assert.equal(state.conditions.tool,tool);assert(state.conditions.parameters);
