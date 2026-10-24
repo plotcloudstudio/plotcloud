@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
-const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth','isovist','cameras','views','acoustics','evac','structure','stormwater','span'];
+const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth','isovist','cameras','views','acoustics','evac','structure','stormwater','span','wayfinding','privacy','noise'];
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
  const report=[];

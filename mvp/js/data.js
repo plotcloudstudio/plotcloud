@@ -27,6 +27,9 @@ export const SIMS = [
   { id: 'acoustics', group: 'Acoustics', name: 'Indoor acoustics', tool: 'acoustics', view: 'wire',
     blurb: 'Reverberation by frequency and reflection wavefronts in one room.', inputs: ['One closed room', 'Surface materials'],
     metrics: [['rt60', 'RT60', 's', 2, /^rt60/i], ['c50', 'C50 (estimate)', 'dB', 1, /^c50/i]] },
+  { id: 'noise', group: 'Acoustics', name: 'Outdoor noise', tool: 'noise', view: 'plan',
+    blurb: 'Road noise across the site and on every façade, and which side stays quiet.', inputs: ['Building masses and neighbours', 'Roads and their levels'],
+    metrics: [['loud', 'Loudest façade', 'dB', 0, /^loudest/i], ['quiet', 'Quietest façade', 'dB', 0, /^quietest/i], ['over', 'Façade over 65 dB', '%', 1, /façade over 65/i]] },
   { id: 'spacesyntax', group: 'Space & movement', name: 'Space syntax', tool: 'spacesyntax', view: 'plan',
     blurb: 'Integration and connectivity of the plan as a visibility graph.', inputs: ['Floor plan'], metrics: [['integration', 'Mean integration', '', 2, /^mean int/i], ['connectivity', 'Mean connectivity', '', 0, /^mean conn/i]] },
   { id: 'movementdepth', group: 'Space & movement', name: 'Movement & spatial depth', tool: 'movementdepth', view: 'plan',
@@ -37,6 +40,12 @@ export const SIMS = [
     blurb: 'What an observer can see at child, wheelchair or adult eye height.', inputs: ['Floor plan', 'Observer'], metrics: [['blind', 'Blind floor', '%', 1, /^blind/i], ['seen', 'Seen floor', 'm²', 0, /^seen/i]] },
   { id: 'views', group: 'Space & movement', name: 'View analysis', tool: 'views', view: 'shaded',
     blurb: 'Quality of outward views from each spot in the plan.', inputs: ['Rooms', 'Windows'], metrics: [['view', 'Floor with a view out', '%', 1, /^view out|line of sight/i], ['quality', 'Quality views', '%', 1, /quality/i]] },
+  { id: 'wayfinding', group: 'Space & movement', name: 'Wayfinding', tool: 'wayfinding', view: 'plan',
+    blurb: 'Where people must choose a way, whether they can see where to go, and where a sign helps.', inputs: ['Rooms', 'Doors'],
+    metrics: [['signs', 'Signs suggested', '', 0, /^signs/i], ['decide', 'Decision points', '', 0, /^decision/i], ['depth', 'Mean visual depth', '', 1, /visual depth/i]] },
+  { id: 'privacy', group: 'Space & movement', name: 'Privacy', tool: 'privacy', view: 'plan',
+    blurb: 'What the street and the building opposite can see inside, room by room.', inputs: ['Rooms', 'Windows'],
+    metrics: [['seen', 'Floor seen from outside', '%', 1, /^floor seen/i], ['private', 'Private floor seen', '%', 1, /^private floor/i]] },
   { id: 'cameras', group: 'Space & movement', name: 'Camera coverage', tool: 'cameras', view: 'plan',
     blurb: 'Where security cameras should go for the detail you need.', inputs: ['Floor plan'], metrics: [['cover', 'Floor covered', '%', 1, /^covered/i], ['cams', 'Cameras', '', 0, /^cameras$/i]] },
   { id: 'structure', group: 'Structure', name: 'Structural analysis', tool: 'structure', view: 'wire',
@@ -46,7 +55,7 @@ export const SIMS = [
 ];
 
 // Spatial scope is independent of discipline: Climate contains both indoor and outdoor studies.
-for(const sim of SIMS) sim.scope=['sunhours','wind','stormwater'].includes(sim.id)?'Exterior':['structure','span'].includes(sim.id)?'Building':'Interior';
+for(const sim of SIMS) sim.scope=['sunhours','wind','stormwater','noise'].includes(sim.id)?'Exterior':['structure','span'].includes(sim.id)?'Building':'Interior';
 
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [

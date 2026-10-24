@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlotCloud Wayfinding</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="lib/plansim.css?v=1">
+</head>
+<body>
+<div class="app">
+  <aside class="col" id="panelL" aria-label="Wayfinding settings"><div class="colIn">
+    <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
+      <div class="minfo"><b id="mName">Sample flat</b></div>
+      <p class="note" id="mInfo">Opened on its own: a sample flat. From the Simulations page, the plan of the version and level you pick comes in.</p>
+    </section>
+    <section class="sec" aria-labelledby="h-set"><h2 id="h-set"><i>2</i>Start and people</h2>
+      <div class="ctl"><label for="entr">Start from</label><select id="entr"></select></div>
+      <div class="ctl"><label>Eye height</label><div class="seg" id="eyeSeg" role="group" aria-label="Eye height"><button type="button" data-eye="1.6" aria-pressed="true">Standing 1.6 m</button><button type="button" data-eye="1.2" aria-pressed="false">Wheelchair 1.2 m</button></div></div>
+      <label class="switch">Furniture is in the way when walking<input type="checkbox" id="furnWalk" checked></label>
+      <p class="note">Furniture taller than the eye blocks the view; lower pieces are seen over. Doors count as open passages. Rooms named corridor, hall, lobby, landing or stair are walked through, not destinations.</p>
+    </section>
+    <section class="sec" aria-labelledby="h-run"><h2 id="h-run"><i>3</i>Analysis</h2>
+      <button type="button" class="go" id="run">Find the routes</button>
+      <div class="prog" id="prog" hidden><i></i></div>
+      <p class="msg" id="runMsg"></p>
+      <p class="note">Shortest walk from the start to every room's door, the places where routes split (decision points), whether the way on can be seen from there, and the visual depth: how many times you must turn and look again before a spot comes into view.</p>
+    </section>
+    <section class="sec" aria-labelledby="h-lay"><h2 id="h-lay"><i>4</i>Export</h2>
+      <div class="two"><button type="button" class="btn" id="exPng">Plan PNG</button><button type="button" class="btn" id="exCsv">Rooms CSV</button></div>
+    </section>
+  </div></aside>
+
+  <section class="stage" id="stage" aria-label="Plan">
+    <div class="vbar"><div class="views" id="showBar" role="group" aria-label="Show"><button type="button" data-show="depth" aria-pressed="true">Visual depth</button><button type="button" data-show="routes" aria-pressed="false">Routes</button></div></div>
+    <canvas id="cv" aria-label="Plan with routes, decision points and visual depth"></canvas>
+    <div class="lgd" id="legend"></div>
+    <div class="tip" id="tip"></div>
+  </section>
+
+  <aside class="col" id="panelR" aria-label="Results"><div class="colIn">
+    <section class="sec" aria-labelledby="h-res"><h2 id="h-res">Results</h2>
+      <div class="pcproj"><button type="button" class="btn" id="pcAdd">Add to project</button><span class="note" id="pcProjN" aria-live="polite"></span></div>
+      <div class="kpis" id="kpis"><div><small>Decision points</small><b>—</b></div><div><small>Signs suggested</small><b>—</b></div><div><small>Rooms seen from the start</small><b>—</b></div><div><small>Mean visual depth</small><b>—</b></div></div>
+      <div id="res"><p class="note">Find the routes to see each room.</p></div>
+    </section>
+  </div></aside>
+  <footer class="fine">Geometric screening for early design: routes on a walking grid, sight lines in plan at one eye height. Not a code check of exit signage or accessibility.</footer>
+</div>
+
+<script type="module">
+import { $, $$, clamp, r1, esc, planView, ramp, rampCSS, rgb, fieldImage, drawField, raster, paintSeg, paintRect, cellOf, centre, los, march, sliced, runUI, bridge, keep, seg, wallPieces, ROOM_SKIP, sampleFlat, drawPlanScene, sceneBounds, dist } from './lib/plansim.js?v=1';
+
+let SC = sampleFlat(), RES = null, KEY = '', SHOW = 'depth', EYE = 1.6, PICK = null, IMG = null;
+const F_WALL = 1, F_FURN = 2, F_IN = 4, F_OUT = 8, S_OPQ = 1, S_FURN = 2;
+const DEPTH = [[0, [46, 160, 90]], [0.34, [240, 205, 80]], [0.67, [240, 140, 60]], [1, [200, 50, 50]]];
+const depthCol = (d) => ramp(DEPTH, Math.min(d, 3) / 3);
+
+const view = planView($('#cv'), { draw, onClick: (p) => { PICK = p; view.redraw(); }, onHover: hover, onLeave: () => { $('#tip').style.display = 'none'; } });
+const setKey = () => JSON.stringify([SC.name, SC.walls.length, SC.open.length, EYE, $('#entr').value, $('#furnWalk').checked]);
+
+// ---- the start: each door to the outside, else a room
+function starts() {
+  const out = [];
+  SC.open.filter((o) => o.kind === 'door' && o.ext).forEach((o, i) => { const m = [(o.a[0] + o.b[0]) / 2, (o.a[1] + o.b[1]) / 2], dx = o.b[0] - o.a[0], dy = o.b[1] - o.a[1], L = Math.hypot(dx, dy) || 1, n = [-dy / L, dx / L];
+    const inRoom = (p) => SC.rooms.some((r) => r.rects.some(([x, y, w, d]) => p[0] >= x && p[0] <= x + w && p[1] >= y && p[1] <= y + d));
+    const p = [m[0] + n[0] * 0.5, m[1] + n[1] * 0.5], q = [m[0] - n[0] * 0.5, m[1] - n[1] * 0.5]; out.push({ id: 'd' + i, name: `Door to outside ${i + 1} (${r1(o.w || L)} m)`, p: inRoom(p) ? p : q, door: o }); });
+  SC.rooms.forEach((r, i) => out.push({ id: 'r' + i, name: `Room: ${r.name}`, p: r.label || [r.rects[0][0] + r.rects[0][2] / 2, r.rects[0][1] + r.rects[0][3] / 2], room: r }));
+  return out;
+}
+function startUI() { const S = starts(), cur = $('#entr').value; $('#entr').innerHTML = S.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join(''); if (S.some((s) => s.id === cur)) $('#entr').value = cur; }
+
+// ---- the analysis
+async function analyse(ui) {
+  const B = sceneBounds(SC), area = B.x1 * B.y1, c = clamp(Math.sqrt(area / 30000), 0.2, 0.5);
+  const R = raster(B, c), SR = raster(B, c), walkFurn = $('#furnWalk').checked;
+  for (const r of SC.rooms) for (const [x, y, w, d] of r.rects) paintRect(R, x, y, w, d, F_IN);
+  for (let k = 0; k < R.a.length; k++) if (!(R.a[k] & F_IN)) R.a[k] |= F_OUT;
+  for (const w of SC.walls) { for (const [a, b] of wallPieces(w, SC.open, ['door', 'hole'])) { paintSeg(R, a, b, (w.t || 0.2) / 2 + 0.12, F_WALL); paintSeg(SR, a, b, (w.t || 0.2) / 2, S_OPQ); } }
+  for (const f of SC.furn || []) { if (walkFurn && f.h > 0.3) paintRect(R, f.x, f.y, f.w, f.d, F_FURN, 0.05); if (f.h >= EYE) paintRect(SR, f.x, f.y, f.w, f.d, S_FURN); }
+  const free = (k) => k >= 0 && !(R.a[k] & (F_WALL | F_FURN | F_OUT)), N = R.W * R.H;
+  const S = starts(), st = S.find((s) => s.id === $('#entr').value) || S[0]; if (!st) throw new Error('No rooms on this level.');
+  // the start cell: the free cell nearest the start point
+  const nearestFree = (p, maxR = 3) => { let best = -1, bd = Infinity; const k0 = cellOf(R, p); if (free(k0)) return k0; const n = Math.ceil(maxR / c), i0 = Math.floor((p[0] - R.x0) / c), j0 = Math.floor((p[1] - R.y0) / c);
+    for (let j = j0 - n; j <= j0 + n; j++) for (let i = i0 - n; i <= i0 + n; i++) { if (i < 0 || j < 0 || i >= R.W || j >= R.H) continue; const k = j * R.W + i; if (!free(k)) continue; const d = dist(centre(R, k), p); if (d < bd) { bd = d; best = k; } } return best; };
+  const s0 = nearestFree(st.p); if (s0 < 0) throw new Error('The start is not on free floor.');
+  ui.say('Walking every route…'); ui.prog(0.05);
+  // shortest walks (8 directions, no cutting corners)
+  const D = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1); D[s0] = 0;
+  { const heap = [[0, s0]], push = (e) => { heap.push(e); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const pop = () => { const t = heap[0], l = heap.pop(); if (heap.length) { heap[0] = l; let i = 0; for (;;) { const a = 2 * i + 1, b = a + 1; let m = i; if (a < heap.length && heap[a][0] < heap[m][0]) m = a; if (b < heap.length && heap[b][0] < heap[m][0]) m = b; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return t; };
+    const NB = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
+    while (heap.length) { const [d, k] = pop(); if (d > D[k]) continue; const i = k % R.W, j = (k / R.W) | 0;
+      for (const [di, dj, w] of NB) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= R.W || b >= R.H) continue; const q = b * R.W + a; if (!free(q)) continue; if (di && dj && (!free(j * R.W + a) || !free(b * R.W + i))) continue;
+        const nd = d + w * c; if (nd < D[q]) { D[q] = nd; prev[q] = k; push([nd, q]); } } } }
+  // each room: its door is the room cell reached first; the route is pulled tight
+  const rooms = [], wl = (p, q) => los(R, p, q, F_WALL | F_FURN | F_OUT);
+  for (const r of SC.rooms) {
+    if (st.room === r) continue; let best = -1, bd = Infinity;
+    for (const [x, y, w, d] of r.rects) { const i0 = Math.max(0, Math.floor((x - R.x0) / c)), i1 = Math.min(R.W - 1, Math.floor((x + w - R.x0) / c)), j0 = Math.max(0, Math.floor((y - R.y0) / c)), j1 = Math.min(R.H - 1, Math.floor((y + d - R.y0) / c));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const k = j * R.W + i, cc = centre(R, k); if (cc[0] < x + c * 0.5 || cc[0] > x + w - c * 0.5 || cc[1] < y + c * 0.5 || cc[1] > y + d - c * 0.5) continue; if (D[k] < bd) { bd = D[k]; best = k; } } }
+    const skip = ROOM_SKIP.test(r.name);
+    if (best < 0 || !Number.isFinite(bd)) { rooms.push({ r, skip, unreached: true }); continue; }
+    const cells = []; for (let k = best; k >= 0; k = prev[k]) cells.push(centre(R, k)); cells.reverse(); cells[0] = st.p;
+    const pts = [cells[0]]; let i = 0; while (i < cells.length - 1) { let j = Math.min(cells.length - 1, i + 400); while (j > i + 1 && !wl(cells[i], cells[j])) j--; pts.push(cells[j]); i = j; }
+    let turns = 0; for (let t = 1; t < pts.length - 1; t++) { const a = Math.atan2(pts[t][1] - pts[t - 1][1], pts[t][0] - pts[t - 1][0]), b = Math.atan2(pts[t + 1][1] - pts[t][1], pts[t + 1][0] - pts[t][0]); let da = Math.abs(b - a); if (da > Math.PI) da = 2 * Math.PI - da; if (da > 0.44) turns++; }
+    // the door of the room: the opening nearest where the walk enters it (its middle is what people look for)
+    const end = centre(R, best); let door = end, dd = 1.2, op = null;
+    for (const o of SC.open) { if (o.kind === 'win') continue; const m = [(o.a[0] + o.b[0]) / 2, (o.a[1] + o.b[1]) / 2], e = dist(m, end); if (e < dd) { dd = e; door = m; op = o; } }
+    pts.push(door);
+    // what counts as seeing the door: any of a few points across the doorway, just either side of it
+    const marks = [door]; if (op) { const L = dist(op.a, op.b) || 1, n = [-(op.b[1] - op.a[1]) / L, (op.b[0] - op.a[0]) / L];
+      for (const u of [0.25, 0.5, 0.75]) for (const sgn of [-1, 1]) marks.push([op.a[0] + (op.b[0] - op.a[0]) * u + n[0] * 0.25 * sgn, op.a[1] + (op.b[1] - op.a[1]) * u + n[1] * 0.25 * sgn]); }
+    rooms.push({ r, skip, pts, len: bd, turns, door, marks });
+  }
+  ui.prog(0.2);
+  // decision points: places where the routes go off in different directions
+  const routes = rooms.filter((x) => x.pts && !x.skip), cand = [];
+  for (const x of routes) for (let t = 1; t < x.pts.length - 1; t++) cand.push(x.pts[t]);
+  const clusters = []; for (const p of cand) { const cl = clusters.find((q) => dist(q.p, p) < 1.1); if (cl) { cl.n++; cl.p = [(cl.p[0] * (cl.n - 1) + p[0]) / cl.n, (cl.p[1] * (cl.n - 1) + p[1]) / cl.n]; } else clusters.push({ p, n: 1 }); }
+  const segNear = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy, t = L ? clamp(((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L, 0, 1) : 0; return [Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]), t]; };
+  const outDir = (x, p) => { for (let t = 0; t < x.pts.length - 1; t++) { const [d, u] = segNear(p, x.pts[t], x.pts[t + 1]); if (d < 0.8) { const nx = u > 0.97 && t + 2 < x.pts.length ? [x.pts[t + 1], x.pts[t + 2]] : [x.pts[t], x.pts[t + 1]]; if (dist(nx[1], p) < 0.6) return 'end'; return Math.atan2(nx[1][1] - p[1], nx[1][0] - p[0]); } } return null; };
+  const sightOK = (p, q) => los(SR, p, q, S_OPQ | S_FURN), seesDoor = (p, x) => x.marks.some((q) => sightOK(p, q));
+  const decisions = [];
+  for (const cl of clusters) { const by = []; for (const x of routes) { const a = outDir(x, cl.p); if (a == null || a === 'end') continue; by.push([x, a]); }
+    const dirs = []; for (const [, a] of by) if (!dirs.some((b) => { let d = Math.abs(a - b); if (d > Math.PI) d = 2 * Math.PI - d; return d < 0.5; })) dirs.push(a);
+    if (dirs.length < 2) continue;
+    const hidden = by.filter(([x]) => !seesDoor(cl.p, x)).map(([x]) => x.r.name);
+    decisions.push({ p: cl.p, ways: dirs.length, routes: by.length, hidden: [...new Set(hidden)] }); }
+  const startHidden = routes.filter((x) => !seesDoor(st.p, x)).map((x) => x.r.name);
+  ui.say('Looking around: visual depth…');
+  // visual depth: 0 where the start sees, 1 where a spot seen from it sees, and so on
+  const depth = new Float32Array(N).fill(NaN), NR = 300, maxD = Math.hypot(B.x1, B.y1), m = Math.max(1, Math.round(0.7 / c));
+  let src = [s0], level = 0;
+  const look = (k, lv, out) => { const p = centre(R, k); if (Number.isNaN(depth[k]) && (R.a[k] & F_IN)) { depth[k] = lv; out.push(k); } for (let r = 0; r < NR; r++) { const a = (r / NR) * 2 * Math.PI; march(SR, p, Math.cos(a), Math.sin(a), S_OPQ | S_FURN, maxD, (q) => { if (!(R.a[q] & F_IN)) return; if (Number.isNaN(depth[q])) { depth[q] = lv; out.push(q); } }); } };
+  while (src.length && level < 8) {
+    const fresh = []; const ok = await sliced(src.length, (i) => look(src[i], level, fresh), { onProg: (f) => ui.prog(0.25 + 0.7 * (level + f) / 6) }); if (!ok) break;
+    src = fresh.filter((k) => (k % R.W) % m === 0 && ((k / R.W) | 0) % m === 0 && free(k)); if (!src.length && fresh.length) src = [fresh[0]];
+    level++;
+  }
+  for (const x of rooms) { if (!x.marks) { x.depth = NaN; continue; } const ds = x.marks.map((q) => depth[cellOf(R, q)]).filter((d) => d >= 0); x.depth = ds.length ? Math.min(...ds) : NaN; }
+  RES = { key: setKey(), R, c, D, depth, rooms, decisions, start: st, startHidden, level }; IMG = null; ui.prog(1);
+  const vis = rooms.filter((x) => !x.skip && x.pts);
+  ui.say(`${vis.length} rooms routed, ${decisions.length} decision point${decisions.length === 1 ? '' : 's'}.`, 'ok');
+  results(); view.redraw();
+}
+
+// ---- figures
+function figures() {
+  if (!RES) return null; const vis = RES.rooms.filter((x) => !x.skip && x.pts), seen = vis.filter((x) => x.depth === 0).length;
+  const signs = RES.decisions.filter((d) => d.hidden.length).length + (RES.startHidden.length ? 1 : 0), md = vis.length ? vis.reduce((s, x) => s + (Number.isFinite(x.depth) ? x.depth : 3), 0) / vis.length : 0;
+  const longest = vis.slice().sort((a, b) => b.len - a.len)[0], hard = vis.filter((x) => !(x.depth < 2) || x.turns >= 3);
+  return { vis, seen, signs, md, longest, hard };
+}
+function results() {
+  const F = figures(); if (!F) return;
+  const K = [['Decision points', String(RES.decisions.length)], ['Signs suggested', String(F.signs)], ['Rooms seen from the start', `${F.seen} of ${F.vis.length}`], ['Mean visual depth', r1(F.md).toFixed(1)], ['Longest route', F.longest ? `${r1(F.longest.len)} m` : '—'], ['Hard to find', `${F.hard.length} room${F.hard.length === 1 ? '' : 's'}`]];
+  $('#kpis').innerHTML = K.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('');
+  const dtxt = (d) => Number.isFinite(d) ? String(d) : '—';
+  $('#res').innerHTML = `<table class="res"><thead><tr><th>Room</th><th>Walk</th><th>Turns</th><th>Depth</th></tr></thead><tbody>${RES.rooms.filter((x) => !x.skip).map((x, i) => x.unreached ? `<tr><td>${esc(x.r.name)}</td><td colspan="3" class="n">no way in</td></tr>`
+    : `<tr data-k="${i}"><td>${esc(x.r.name)}</td><td class="n">${r1(x.len)} m</td><td class="n">${x.turns}</td><td class="n">${dtxt(x.depth)}</td></tr>`).join('')}</tbody></table>
+    <p class="note" style="margin-top:6px"><b>Depth</b> 0: the room's door is in sight from the start; 1: one look-around on the way; 2 or more: the room is hard to find without signs.</p>
+    ${RES.startHidden.length ? `<p class="note"><b>At the start</b>: ${esc(RES.startHidden.join(', '))} can't be seen, so a directory or first sign helps.</p>` : '<p class="note"><b>At the start</b>: every room door is in sight.</p>'}
+    ${RES.decisions.map((d, i) => `<p class="note"><b>Decision point ${i + 1}</b> · ${d.ways} ways · ${d.hidden.length ? `sign for ${esc(d.hidden.join(', '))}` : 'the way on is in sight'}</p>`).join('')}`;
+  const list = RES.rooms.filter((x) => !x.skip);
+  $$('#res tr[data-k]').forEach((tr) => tr.onclick = () => { const x = list[+tr.dataset.k]; RES.sel = RES.sel === x ? null : x; $$('#res tr').forEach((t) => t.classList.toggle('on', t === tr && RES.sel)); view.redraw(); });
+  legend();
+}
+function legend() {
+  $('#legend').innerHTML = SHOW === 'depth' ? `<b>Visual depth from the start</b><div class="ramp" style="background:${rampCSS(DEPTH)}"></div><div class="ends"><span>0 in sight</span><span>1</span><span>2</span><span>3+</span></div>
+    <div class="key"><i style="background:#f39c12;border-radius:50%"></i>Decision point</div><div class="key"><i style="background:#d8402a"></i>Sign suggested</div>`
+    : `<b>Routes</b><div class="key"><i style="background:#3b6fb6"></i>Walk to each room's door</div><div class="key"><i style="background:#f39c12;border-radius:50%"></i>Decision point</div><div class="key"><i style="background:#d8402a"></i>Sign suggested</div>`;
+}
+
+// ---- drawing
+function draw(g, v) {
+  const plan = drawPlanScene(g, v, SC, { roomFill: SHOW === 'depth' && RES ? '#ffffff' : '#fbfbfa' });
+  if (RES && SHOW === 'depth') { if (!IMG) IMG = fieldImage(RES.R, RES.depth, (d) => [...depthCol(d), 215]); drawField(g, v, RES.R, IMG); }
+  plan.over();
+  if (!RES) return;
+  const P = (p) => v.W2S(p);
+  for (const x of RES.rooms) { if (!x.pts || x.skip) continue; const on = RES.sel === x; if (RES.sel && !on && SHOW === 'depth') continue;
+    g.strokeStyle = on ? '#d8402a' : SHOW === 'routes' ? 'rgba(59,111,182,.85)' : 'rgba(30,30,30,.45)'; g.lineWidth = on ? 3 : SHOW === 'routes' ? 2 : 1.2; g.lineJoin = 'round';
+    g.beginPath(); x.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(...q) : g.moveTo(...q); }); g.stroke(); const e = P(x.door); g.fillStyle = g.strokeStyle; g.beginPath(); g.arc(e[0], e[1], on ? 4 : 2.5, 0, 7); g.fill(); }
+  const s = P(RES.start.p); g.fillStyle = '#111'; g.beginPath(); g.arc(s[0], s[1], 7, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = '700 9px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('S', s[0], s[1] + 0.5);
+  const sign = (p) => { g.fillStyle = '#d8402a'; g.fillRect(p[0] + 6, p[1] - 17, 12, 12); g.fillStyle = '#fff'; g.font = '700 9px serif'; g.fillText('i', p[0] + 12, p[1] - 10.5); };
+  if (RES.startHidden.length) sign(s);
+  RES.decisions.forEach((d, i) => { const p = P(d.p); g.fillStyle = '#f39c12'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(p[0], p[1], 7, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#111'; g.font = '700 9px sans-serif'; g.fillText(String(i + 1), p[0], p[1] + 0.5); if (d.hidden.length) sign(p); });
+  if (PICK && RES.R) { const k = cellOf(RES.R, PICK); if (k >= 0 && !Number.isNaN(RES.depth[k])) { const p = P(PICK); g.strokeStyle = '#111'; g.lineWidth = 1.5; g.beginPath(); g.arc(p[0], p[1], 5, 0, 7); g.stroke(); } }
+}
+function hover(p, s) {
+  const tip = $('#tip'); if (!RES) { tip.style.display = 'none'; return; } const k = cellOf(RES.R, p); const d = k >= 0 ? RES.depth[k] : NaN;
+  const dp = RES.decisions.findIndex((q) => Math.hypot(q.p[0] - p[0], q.p[1] - p[1]) < 0.5);
+  let t = ''; if (dp >= 0) { const q = RES.decisions[dp]; t = `Decision point ${dp + 1}: ${q.ways} ways${q.hidden.length ? ` · not in sight: ${q.hidden.join(', ')}` : ''}`; }
+  else if (!Number.isNaN(d)) t = `Visual depth ${d}${d === 0 ? ' · seen from the start' : ''} · walk ${Number.isFinite(RES.D[k]) ? r1(RES.D[k]) + ' m' : '—'}`;
+  if (!t) { tip.style.display = 'none'; return; } tip.textContent = t; tip.style.display = 'block'; tip.style.left = (s[0] + 14) + 'px'; tip.style.top = (s[1] + 10) + 'px';
+}
+
+// ---- inputs and outputs
+function loadScene(sc, name) {
+  SC = { ...sc, walls: sc.walls || [], open: sc.open || [], rooms: sc.rooms || [], furn: sc.furn || [] }; RES = null; IMG = null; PICK = null;
+  $('#mName').textContent = name || sc.name || 'Project model';
+  $('#mInfo').textContent = `${SC.rooms.length} rooms, ${SC.open.filter((o) => o.kind === 'door').length} doors (${SC.open.filter((o) => o.kind === 'door' && o.ext).length} to outside).`;
+  if (!SC.rooms.length) $('#runMsg').textContent = 'This level has no closed rooms.';
+  startUI(); $('#kpis').innerHTML = '<div><small>Decision points</small><b>—</b></div><div><small>Signs suggested</small><b>—</b></div>'; $('#res').innerHTML = '<p class="note">Find the routes to see each room.</p>';
+  view.fit({ x0: 0, y0: 0, x1: SC.bounds.w, y1: SC.bounds.h }); legend();
+}
+const ui = runUI(analyse);
+seg($('#showBar'), 'data-show', (v) => { SHOW = v; legend(); view.redraw(); });
+seg($('#eyeSeg'), 'data-eye', (v) => { EYE = +v; });
+$('#exPng').onclick = () => { const a = document.createElement('a'); a.href = $('#cv').toDataURL('image/png'); a.download = 'wayfinding.png'; a.click(); };
+$('#exCsv').onclick = () => { if (!RES) return; const rows = [['Room', 'Walk (m)', 'Turns', 'Visual depth'], ...RES.rooms.filter((x) => !x.skip && x.pts).map((x) => [x.r.name, r1(x.len), x.turns, Number.isFinite(x.depth) ? x.depth : ''])];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' })); a.download = 'wayfinding-rooms.csv'; a.click(); };
+bridge({ onScene: (sc, d) => loadScene(sc, d.name), canvas: () => $('#cv'),
+  state: () => ({ ready: !!RES && RES.key === setKey(), conditions: { schema: 1, tool: 'wayfinding', eye: EYE, start: $('#entr').selectedOptions[0]?.textContent, furnitureBlocksWalking: $('#furnWalk').checked, grid: RES?.c } }) });
+loadScene(SC, 'Sample flat');
+// for Results: visual depth per walking cell, in the model's plan metres
+window.__psim = { get RES() { return RES; }, get SC() { return SC; }, run: () => ui.start(), figures,
+  field: () => { if (!RES) return null; const o = SC.origin || [0, 0], pts = []; for (let k = 0; k < RES.depth.length; k++) { const d = RES.depth[k]; if (Number.isNaN(d)) continue; const p = centre(RES.R, k); pts.push(Math.round((p[0] + o[0]) * 100) / 100, Math.round((p[1] + o[1]) * 100) / 100, d); }
+    return { label: 'Visual depth from the start', unit: 'turns', step: Math.round(RES.c * 100) / 100, pts }; } };
+</script>
+</body>
+</html>

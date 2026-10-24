@@ -13,7 +13,7 @@ Upload model → organise layers and components → save model version → selec
 | 3D viewport: shaded, wireframe (acoustics view), plan | Workspace | Working |
 | Layers: show/hide, lock, add; components: select, rename, move to layer, type, material, room finishes, position/size, duplicate, delete | Workspace | Working |
 | Save version (immutable snapshot + note), reopen any version, unsaved-changes state | Workspace › Versions | Working (this browser only) |
-| Browse all 14 analysis tools, open each full tool | Simulations | Working (links to production tools) |
+| Browse all 17 analysis tools, open each full tool | Simulations | Working (links to production tools) |
 | Run on a saved version with settings | Simulations › Preview | **Mock**: prototype estimate, labelled in the UI |
 | Save result linked to version + settings | Run screen | Working (stores the mock result) |
 | Version × simulation matrix, A/B compare with deltas, settings check, model diff, trend | Results | Working on stored results |

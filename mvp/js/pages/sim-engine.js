@@ -59,6 +59,9 @@ const CFG = {
   isovist: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT], prefill: ({ A }) => ({ eye: A.eye }) },
   views: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT] },
   cameras: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT] },
+  wayfinding: { input: 'studio', hide: ['.sec:has(#h-scene)'] },
+  privacy: { input: 'studio', hide: ['.sec:has(#h-scene)'] },
+  noise: { input: 'masses', hide: ['.sec:has(#h-scene)'] },
   acoustics: { input: 'room', hide: [], save: '#add',
     prefill: ({ room, A }) => ({ band: Math.max(0, BANDS.indexOf(A.band)), ...(room?.room ? { floorMat: ACOUSTIC[room.room.floor], ceilingMat: ACOUSTIC[room.room.ceiling] } : {}) }) },
   evac: { input: 'dxf', hide: ['.sec:has(#h-plan) :is(#drop, #pick, #sample, #sampleFlat, div:has(> #pick), div:has(> #sample))'] },
@@ -86,7 +89,9 @@ function ptsField(R, val, label, unit, origin, n) {
   for (let i = 0; i < R.pts.length; i++) { const v = val(i); if (!Number.isFinite(v)) continue; out.push(r2(R.pts[i].x + ox), r2(R.pts[i].y + oy), r2(v)); }
   return out.length ? { label, unit, step: r2(R.spacing || 0.5), pts: out, n: n || out.length / 3 } : null;
 }
+const PSIM = (w) => w.__psim?.field?.() || null;   // the plan engines built on emb/lib/plansim.js give their field in model metres
 const FIELDS = {
+  wayfinding: PSIM, privacy: PSIM, noise: PSIM,
   daylight: (w, sc) => ptsField(w.__day?.RES, (i) => w.__day.RES.ev[i]?.df, 'Daylight factor', '%', sc?.origin),
   views: (w, sc) => ptsField(w.__views?.RES, (i) => (w.__views.RES.ev[i]?.F ?? NaN) * 100, 'Outward view (share of a 90° cone)', '%', sc?.origin),
   spacesyntax: (w, sc) => ptsField(w.__ss?.RES, (i) => w.__ss.RES.integ?.[i], 'Integration', '', sc?.origin),
@@ -133,7 +138,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
     </div>
-    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${sim.id === 'acoustics' ? '?v=wire-20261023-1' : sim.id === 'sunhours' ? '?v=charts-20261024-2' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
+    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${sim.id === 'acoustics' ? '?v=wire-20261023-1' : sim.id === 'sunhours' ? '?v=charts-20261024-2' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); render(app, sim, params); };
   $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); render(app, sim, params); };
