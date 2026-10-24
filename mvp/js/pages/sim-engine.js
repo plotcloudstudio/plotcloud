@@ -13,6 +13,7 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
+import { installSimulationFit } from '../../../ui/simulation-fit.js?v=singlepage-20261024-1';
 
 const PLAN_EDIT = '.sec:has(#h-draw) :is([data-tool="wall"], [data-tool="glass"], [data-tool="win"], [data-tool="door"], [data-tool="furn"], #clear)';
 const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : NaN; };
@@ -276,7 +277,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   // the page shell around the engine: style only
   const CSS = `
     ${cfg.hide.join(', ')}${cfg.hide.length ? ', ' : ''}.pcproj { display: none !important; }
-    #panelL, #panelL > .colIn, #panelR, #panelR > .colIn { overflow-y: auto !important; }
+    #panelL, #panelL > .colIn, #panelR, #panelR > .colIn { overflow: hidden !important; }
     .col > .colIn { transform: none !important; width: auto !important; }
     .sec.pc-col > :not(h2) { display: none !important; }
     .sec > h2.pc-tog { cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; }
@@ -289,6 +290,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     const ready = D && D.readyState !== 'loading' && D.body && (sim.id === 'stormwater' ? D.getElementById('gridWorkspace')?.contentDocument?.querySelector('h2') : sim.id === 'span' ? D.getElementById('span') : D.querySelector('.sec h2'));
     if (!ready) { if (tries++ < 200) setTimeout(shell, 100); return; }
     if (!D.getElementById('pc-shell')) { const st = D.createElement('style'); st.id = 'pc-shell'; st.textContent = CSS; D.head.appendChild(st); }
+    installSimulationFit(D);
     // every row the engine reports stays visible: its shell trims rows to fit a short window, here the columns scroll instead
     const unfit = () => D.querySelectorAll('[data-fit]').forEach((el) => el.removeAttribute('data-fit'));
     if (!D.body.dataset.pcUnfit) { D.body.dataset.pcUnfit = '1'; new MutationObserver(unfit).observe(D.body, { subtree: true, attributes: true, attributeFilter: ['data-fit'] }); unfit(); }

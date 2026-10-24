@@ -36,11 +36,13 @@ const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     assert.match(await page.locator('#stats').innerText(), /cumulative/i);
     assert.equal(await page.locator('#t0').inputValue(), '08:30'); assert.equal(await page.locator('#t0').isEnabled(), true);
     // The same result, not a day preset, is exported with range provenance.
+    await page.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Export',exact:true}).click();
     await page.locator('#export').click();
     await page.locator('#expmsg img').waitFor();
     const image = await page.locator('#expmsg img').evaluate(img => ({ src: img.src.slice(0, 22), bytes: img.src.length }));
     assert.equal(image.src, 'data:image/png;base64,'); assert(image.bytes > 10000);
     await page.screenshot({ path: process.env.SUN_SCREENSHOT || 'sun-period-check.png' });
+    await page.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Analysis',exact:true}).click();
     await change('date', '2028-02-28'); await change('dateEnd', '2028-03-01');
     assert.deepEqual(await page.evaluate(() => __sun.dates()), ['2028-02-28', '2028-02-29', '2028-03-01']);
     await change('dateEnd', '2028-02-27'); await page.locator('#run').click();
