@@ -9,6 +9,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
  try{
   await open('resources');await page.locator('.resource-card').first().waitFor();
   assert.equal(await page.locator('.resource-card').count(),19);
+  assert.equal(new Set((await page.request.get(base+'/mvp/resource-catalog.json').then(r=>r.json())).items.map(x=>x.id)).size,19,'Every catalog item must have a unique stable ID');
   assert.equal(await page.locator('#app a[href*="index.html"]').count(),0);
   assert.equal(await page.locator('#app a[href*="studio"],#app a[href*="render"],#app a[href*="composer"],#app a[href*="atlas"]').count(),0);
   assert.equal(await page.locator('#nav').getByRole('link',{name:/All tools/}).count(),0);

@@ -2,7 +2,7 @@
 (function(root){
  function destination(hash){
   const text=String(hash||'').replace(/^#\/?/,''),[path,query='']=text.split('?'),[page,id]=path.split('/'),q=new URLSearchParams(query);
-  const studies=new Set(['sunhours','wind','stormwater','daylight','vent','spacesyntax','movementdepth','isovist','cameras','views','acoustics','evac','structure','span']);
+  const studies=new Set(['sunhours','wind','stormwater','daylight','vent','spacesyntax','movementdepth','isovist','cameras','views','acoustics','evac','structure','span','wayfinding','privacy','noise']);
   const retired=new Set(['render','atlas','composer','studio','architectural-render','image-toolkit']);
   if(['studio','workspace','workspace-v2'].includes(page))return '#/workspace';
   if(['library','resources'].includes(page)){const category=q.get('category')||q.get('cat');return '#/resources'+(page==='library'?'/files':'')+(category?'?category='+encodeURIComponent(category):'');}

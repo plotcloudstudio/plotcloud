@@ -37,7 +37,7 @@ structure (Structural analysis), span (Structure sizer).
 **Model building** — Plan Studio (`#/studio`), 3D model generator (`furniture`), Facade studio, DetailLab.
 
 **Presentation tools** — Color palettes, Pin-up composer, Board studio, Exploded site axon, Physical model (`topo`).
-Also in the production site: Site analysis atlas (`emb/atlas.html`), Render workspace (`emb/render.html`), Boards.
+The standalone Site analysis atlas, Render workspace and Boards public pages are retired. Their old addresses redirect to the current Resources page; shared Workspace and analysis engines remain available.
 
 **References** — Building code finder (BC/ON), Accessibility finder, LEED v5 finder, Ergonomics cheat sheet, Scale & sheets.
 
