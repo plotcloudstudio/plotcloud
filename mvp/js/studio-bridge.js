@@ -44,3 +44,12 @@ export function studioScene(version, site, name, tool, level) {
 export function studioDXF(version, site, name, level) {
   return cache(`pc-dxf:${version.id}:${level || ''}`, () => withModel(version, site, name, (W) => ({ ok: true, text: W.dxf(level), levels: W.levels(), level: level || W.levels()[0]?.id })));
 }
+// the meshes of a version as Plan Studio draws them (plan metres, z up), for Results' compare views; kept in memory per version
+const MESH = new Map();
+export function studioMeshes(version, site, name) {
+  if (MESH.has(version.id)) return MESH.get(version.id);
+  const pr = studio().then(() => withModel(version, site, name, () => { const w = frame.contentWindow, M = w.__st.M, Sx = w.__st.S;
+    return { studio: JSON.parse(JSON.stringify(M)), meshes: w.S3.wsMeshes(M, Sx, { hidden: new Set(M.hiddenIds || []) }) }; }))
+    .then(async (r) => ({ studio: r.studio, meshes: await r.meshes }));
+  pr.catch(() => MESH.delete(version.id)); MESH.set(version.id, pr); return pr;
+}

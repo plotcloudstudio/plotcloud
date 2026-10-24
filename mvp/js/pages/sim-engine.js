@@ -67,17 +67,58 @@ const CFG = {
   span: { input: 'none', hide: [], prefill: ({ x }) => x && ({ span: r1(x.span), spanR: r1(x.span), storeys: x.storeys }) },
 };
 
+// ---- what a result keeps for Results: a small picture of the engine's own view, and its per-point values where the engine
+// has them (plan metres, the same frame for every version, so two versions can be compared point by point)
+function thumbOf(D) {
+  try {
+    const docs = [D, D.getElementById('modelWorkspace')?.contentDocument, D.getElementById('gridWorkspace')?.contentDocument].filter(Boolean);
+    const cvs = docs.flatMap((d) => [...d.querySelectorAll('canvas')]).filter((c) => c.offsetParent && c.width > 80 && c.height > 60);
+    const cv = cvs.find((c) => c.id === 'cv') || cvs.sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (!cv) return null;
+    const w = 360, k = w / cv.width, c2 = document.createElement('canvas'); c2.width = w; c2.height = Math.max(40, Math.round(cv.height * k)); const g = c2.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c2.width, c2.height); g.drawImage(cv, 0, 0, c2.width, c2.height); return c2.toDataURL('image/jpeg', 0.7);
+  } catch (e) { return null; }
+}
+const r2 = (v) => Math.round(v * 100) / 100;
+// points of a plan engine (RES.pts in scene metres) moved back to the model's frame with the scene's origin
+function ptsField(R, val, label, unit, origin, n) {
+  if (!R?.pts?.length) return null; const [ox, oy] = origin || [0, 0], out = [];
+  for (let i = 0; i < R.pts.length; i++) { const v = val(i); if (!Number.isFinite(v)) continue; out.push(r2(R.pts[i].x + ox), r2(R.pts[i].y + oy), r2(v)); }
+  return out.length ? { label, unit, step: r2(R.spacing || 0.5), pts: out, n: n || out.length / 3 } : null;
+}
+const FIELDS = {
+  daylight: (w, sc) => ptsField(w.__day?.RES, (i) => w.__day.RES.ev[i]?.df, 'Daylight factor', '%', sc?.origin),
+  views: (w, sc) => ptsField(w.__views?.RES, (i) => (w.__views.RES.ev[i]?.F ?? NaN) * 100, 'Outward view (share of a 90° cone)', '%', sc?.origin),
+  spacesyntax: (w, sc) => ptsField(w.__ss?.RES, (i) => w.__ss.RES.integ?.[i], 'Integration', '', sc?.origin),
+  movementdepth: (w, sc) => ptsField(w.__ss?.RES, (i) => w.__ss.RES.integ?.[i], 'Integration', '', sc?.origin),
+  // Sun hours: hours on the ground, averaged in square cells; the engine centres the model, so its offset is found from
+  // the masses it was given (the scene) and its own copy of them
+  sunhours: (w, sc) => {
+    const S0 = w.__sun?.S, R = S0?.lastR || S0?.result?.R, P = R?.prep, pos = S0?.model?.pos; if (!R?.hours || !P?.smpP || !pos || !sc?.masses?.length) return null;
+    let ex = Infinity, ey = Infinity; for (let i = 0; i < pos.length; i += 3) { if (pos[i] < ex) ex = pos[i]; if (pos[i + 1] < ey) ey = pos[i + 1]; }
+    const mx = Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[0]))), my = Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[1]))), dx = ex - mx, dy = ey - my;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const K = P.smpK, SP = P.smpP;
+    for (let k = 0; k < R.hours.length; k++) if (K[k] === 0) { const x = SP[3 * k] - dx, y = SP[3 * k + 1] - dy; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (!Number.isFinite(x0)) return null; const cs = Math.max(0.5, Math.sqrt((x1 - x0) * (y1 - y0) / 2400)), nx = Math.ceil((x1 - x0) / cs) + 1, ny = Math.ceil((y1 - y0) / cs) + 1, sum = new Float64Array(nx * ny), cnt = new Uint32Array(nx * ny);
+    for (let k = 0; k < R.hours.length; k++) if (K[k] === 0) { const i = Math.floor((SP[3 * k] - dx - x0) / cs), j = Math.floor((SP[3 * k + 1] - dy - y0) / cs), q = j * nx + i; sum[q] += R.hours[k]; cnt[q]++; }
+    const out = []; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = j * nx + i; if (cnt[q]) out.push(r2(x0 + (i + 0.5) * cs), r2(y0 + (j + 0.5) * cs), r2(sum[q] / cnt[q])); }
+    return { label: 'Sun hours on the ground', unit: 'h', step: r2(cs), pts: out };
+  },
+};
+
 export function render(app, sim, params = new URLSearchParams()) {
-  const p = currentProject(), cfg = CFG[sim.id];
-  if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; return; }
-  setCurrent(p);
-  const v = currentVersion(p), site = S.siteOf(p), A = S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
-  const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
+  // batch: Results runs this page in a hidden frame for one simulation of a batch (#/batch-run?…): the project, version,
+  // level, room and parameter changes come in the address, the engine runs on its own and the result goes back to Results
+  const batch = params.get('batch'), cfg = CFG[sim.id], p = batch ? S.project(params.get('project')) : currentProject();
+  const tell = (m) => { if (batch) try { window.parent.postMessage({ pcBatch: batch, sim: sim.id, ...m }, location.origin); } catch (e) { } };
+  if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; tell({ ok: false, why: 'No project.' }); return; }
+  if (!batch) setCurrent(p);
+  const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = S.siteOf(p), A = S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
+  const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
   const perLevel = cfg.input === 'studio' || cfg.input === 'dxf';
   // Indoor acoustics studies one closed room: the room picked here goes in as its own wall loop
   const rooms = v && cfg.input === 'room' ? v.model.components.filter((c) => c.type === 'room') : [], rmKey = `pc-sim-room:${p.id}`, rmPick = (() => { try { return sessionStorage.getItem(rmKey); } catch (e) { return null; } })();
-  const room = rooms.find((c) => c.id === rmPick) || rooms[0] || null;
+  const room = rooms.find((c) => c.id === (batch ? params.get('room') : rmPick)) || rooms[0] || null;
   app.innerHTML = `<div class="shx">
     <div class="shbar" role="region" aria-label="Simulation">
       <a class="btn sm ghost" href="${simBack()}">← Back</a>
@@ -97,7 +138,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); render(app, sim, params); };
   const lvSel = $('#lvl', app); if (lvSel) lvSel.onchange = (e) => { try { sessionStorage.setItem(lvKey, e.target.value); } catch (er) { } render(app, sim, params); };
   const rmSel = $('#room', app); if (rmSel) rmSel.onchange = (e) => { try { sessionStorage.setItem(rmKey, e.target.value); } catch (er) { } render(app, sim, params); };
-  if (!v) return;
+  if (!v) { tell({ ok: false, why: 'No saved version.' }); return; }
 
   const fr = $('#eng', app), msg = $('#shmsg', app), saveBtn = $('#save', app), name = `${p.name} · v${v.n}`, x = extent(v.model);
   const ctx = { site, A, t, level, x, room }, filled = {};
@@ -107,7 +148,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     if (more.length) chip.insertAdjacentHTML('beforeend', more.map(([id, val]) => ` · ${esc(ACCT[id][0])} ${esc(shown(id, val))}`).join(''));
     chip.title = `Linked to Account${p.siteLinked === false ? ' (this project keeps its own site)' : ''}: change a value there and this simulation uses it the next time it opens. Values changed here are recorded with the result.\n`
       + [`Site ${site?.label || '—'}`, ...linked.map(([id, val]) => `${ACCT[id][0]} ${shown(id, val)}`)].join('\n'); }
-  let alive = true, loaded = false;
+  let alive = true, loaded = false, sentScene = null, done = false, batchNoResult = false; const ovApply = {};
   const doc = () => { try { return fr.contentDocument; } catch (e) { return null; } };
   const say = (h, warn) => { msg.innerHTML = h; msg.classList.toggle('warn', !!warn); };
 
@@ -121,8 +162,8 @@ export function render(app, sim, params = new URLSearchParams()) {
       return Promise.resolve({ ok: true, info: room.name, scene: JSON.stringify({ name: room.name, walls: q.map((a, i) => ({ a, b: q[(i + 1) % 4], h: +g.h.toFixed(3) })), source: { app: 'plotcloud-workspace', project: p.id, version: v.id, room: room.id } }) }); }
     return Promise.resolve({ ok: true });
   })();
-  input.catch(() => null).then((r) => { if (!alive || !r) return; if (!r.ok) say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); });
-  input.catch((e) => { if (alive) say(esc(e.message || 'The model could not be prepared.'), true); });
+  input.catch(() => null).then((r) => { if (!alive || !r) return; if (!r.ok) { say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); tell({ ok: false, why: `This version can't run here yet: ${(r.why || []).join(' ')}` }); } });
+  input.catch((e) => { if (alive) { say(esc(e.message || 'The model could not be prepared.'), true); tell({ ok: false, why: e.message || 'The model could not be prepared.' }); } });
 
   // the engine asks for the model at once (it is waiting for this page) instead of after its demo analysis
   window.__pcHO = { tool: sim.id };
@@ -130,8 +171,9 @@ export function render(app, sim, params = new URLSearchParams()) {
     if (e.source !== fr.contentWindow || !e.data?.pc) return; const d = e.data;
     if (d.t === 'hello' && (cfg.input === 'masses' || cfg.input === 'studio' || cfg.input === 'room')) {
       const r = await input.catch(() => null); if (!alive || !r?.ok) return;
+      try { sentScene = JSON.parse(r.scene); } catch (er) { sentScene = null; }
       fr.contentWindow.postMessage({ pc: 1, t: 'project', scene: r.scene, name, source: { app: 'plotcloud-workspace', project: p.id, version: v.id, level: level?.id || 'all', ...(room ? { room: room.id } : {}) } }, '*');
-      loaded = true; say(`Model: ${esc(name)}${r.info ? ' · ' + esc(r.info) : level && levels.length > 1 ? ' · Level ' + level.id.slice(1) : ''}`); setTimeout(prefill, 900);
+      loaded = true; say(`Model: ${esc(name)}${r.info ? ' · ' + esc(r.info) : level && levels.length > 1 ? ' · Level ' + level.id.slice(1) : ''}`); setTimeout(prefill, 900); if (batch) setTimeout(autoRun, 1500);
     }
     if (d.t === 'save') {
       if (sim.id === 'acoustics' && (d.source?.project !== p.id || d.source?.version !== v.id || d.source?.room !== room?.id)) { say('This result belongs to another project version or room. Run the current room before saving.', true); return; }
@@ -141,8 +183,10 @@ export function render(app, sim, params = new URLSearchParams()) {
   addEventListener('message', onMsg);
 
   // Account values into the engine's own inputs (each stays editable there)
+  const OV = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })();   // values changed in the batch panel
   function prefill() {
-    const D = doc(), vals = cfg.prefill?.(ctx); if (!D || !vals) return;
+    const D = doc(), vals = Object.assign({}, cfg.prefill?.(ctx) || {}); if (!D) return;
+    if (batch) for (const [id, val] of Object.entries(OV)) if (val != null && val !== '') { if (!(id in vals)) vals[id] = val; else ovApply[id] = val; }
     for (const [id, val] of Object.entries(vals)) { if (id === '@day') { const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) { b.click(); filled[id] = val; } continue; }
       const el = D.getElementById(id); if (!el || val == null || (typeof val === 'number' && !Number.isFinite(val))) continue;
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -180,9 +224,11 @@ export function render(app, sim, params = new URLSearchParams()) {
     let K = kpis.map(([k, s]) => [String(k), String(s ?? '').trim()]).filter(([, s]) => s && !/^[—–-]+(\s|$)/.test(s));
     const D = doc();
     if (sim.id === 'sunhours') { const stats = [...(D?.querySelectorAll('#stats dt') || [])].map((dt) => [dt.textContent.trim(), (dt.nextElementSibling?.textContent || '').trim()]); K = K.concat(stats.filter(([k]) => !/window|extent/i.test(k))); }
-    if (sim.id === 'acoustics' && !fr.contentWindow.AcousticStudy?.canSaveFor?.({ project: p.id, version: v.id, room: room?.id })) { say('The engine is showing its sample room, not this room. Reload the page to send the room again.', true); return; }
-    if (!K.some(([, s]) => /\d/.test(s))) { say('Run the analysis first; then save its result.', true); return; }
+    if (sim.id === 'acoustics' && !fr.contentWindow.AcousticStudy?.canSaveFor?.({ project: p.id, version: v.id, room: room?.id })) { say('The engine is showing its sample room, not this room. Reload the page to send the room again.', true); if (batch) batchNoResult = true; return; }
+    if (!K.some(([, s]) => /\d/.test(s))) { say('Run the analysis first; then save its result.', true); if (batch) batchNoResult = true; return; }
     const results = { kpis: K };
+    const th = thumbOf(D); if (th) results.thumb = th;
+    try { const f = FIELDS[sim.id]?.(fr.contentWindow, sentScene); if (f && f.pts.length) results.field = f; } catch (e) { }
     if (sim.id === 'acoustics' && analysis?.engine === 'deterministic-ray-accumulation-v2') results.analysis = analysis;
     for (const [k, , , , re] of sim.metrics) { const hit = re && K.find(([l]) => re.test(l)); if (hit) results[k] = num(hit[1]); }
     // the Account values this run used, and any changed in the engine before it ran
@@ -193,9 +239,31 @@ export function render(app, sim, params = new URLSearchParams()) {
       const k = ACCT[id][0], now = cur(id); fromAccount[k] = shown(id, val);
       if (now != null && String(now) !== String(val) && !(now !== '' && Number(now) === Number(val))) changed.push(`${k} ${shown(id, now)} (Account ${shown(id, val)})`); }
     const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };
+    if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
     try { fr.contentWindow.postMessage({ pc: 1, t: 'saved', count: p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).length }, '*'); } catch (e) { }
     toast(`Saved to v${v.n}`); say(`Saved to v${v.n} · <a href="#/results/${p.id}?sim=${sim.id}">Compare versions →</a>`);
+  }
+  // batch: run the engine the way a person would (its own Run button, its own Start confirmation for long runs), wait until it
+  // is idle with figures that came from this run, then save through the same path as "Save result"
+  const domK = (D) => [...D.querySelectorAll('.kpis > div, .kp4 > div, #stats dt')].map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim()).join('|');
+  const busyNow = (D) => { const vis = (el) => el && !el.hidden && el.offsetParent !== null; return vis(D.getElementById('prog')) || vis(D.getElementById('runPill')) || vis(D.getElementById('stopRun')) || !!D.getElementById('run')?.disabled; };
+  async function autoRun() {
+    if (!alive || done) return; const D = doc(); if (!D) { tell({ ok: false, why: 'The engine did not load.' }); return; }
+    tell({ stage: 'running' });
+    for (const [id, val] of Object.entries(ovApply)) { if (id === '@day') { const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) b.click(); continue; }
+      const el = D.getElementById(id); if (el) { el.value = String(val); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); } }
+    const before = domK(D), t0 = Date.now(); let sawBusy = false, calm = 0, tries = 0;
+    const run = D.getElementById('run'); if (run && !run.disabled) run.click();
+    await new Promise((r) => setTimeout(r, 700)); const lg = D.getElementById('longGo'); if (lg && lg.offsetParent !== null && !lg.disabled) lg.click();
+    const limit = sim.id === 'vent' || sim.id === 'wind' ? 600000 : 240000;
+    while (alive && !done) {
+      await new Promise((r) => setTimeout(r, 500)); const D2 = doc(); if (!D2) break;
+      if (busyNow(D2)) { sawBusy = true; calm = 0; } else calm++;
+      const fresh = sawBusy || domK(D2) !== before || Date.now() - t0 > 12000 || !run;
+      if (calm >= 3 && fresh && Date.now() - t0 > 2000) { batchNoResult = false; saveBtn.onclick(); await new Promise((r) => setTimeout(r, 900)); if (done) return; if (batchNoResult && ++tries > 6) { tell({ ok: false, why: msg.textContent || 'The engine gave no figures.' }); return; } calm = 0; }
+      if (Date.now() - t0 > limit) { tell({ ok: false, why: `No result after ${Math.round(limit / 1000)} s.` }); return; }
+    }
   }
   saveBtn.onclick = () => {
     const D = doc(); if (!D) return;
@@ -234,8 +302,20 @@ export function render(app, sim, params = new URLSearchParams()) {
       h.addEventListener('click', tog); h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } }); }
     saveBtn.disabled = false;
     D.defaultView.dispatchEvent(new Event('resize'));
-    if (!loaded && (cfg.input === 'dxf' || cfg.input === 'obj' || cfg.input === 'none')) setTimeout(feedFile, cfg.input === 'none' ? 300 : 1200);
+    if (!loaded && (cfg.input === 'dxf' || cfg.input === 'obj' || cfg.input === 'none')) setTimeout(async () => { await feedFile(); if (batch && loaded) setTimeout(autoRun, cfg.input === 'obj' ? 2500 : 1500); }, cfg.input === 'none' ? 300 : 1200);
   };
   fr.addEventListener('load', () => { tries = 0; loaded = false; shell(); }); shell();
   return () => { alive = false; removeEventListener('message', onMsg); delete window.__pcHO; };
+}
+
+// ---- for the batch panel in Results: the inputs this engine takes from Account (the ones its own left column prefills),
+// with the value the page would put in them, and how to show them; changes there go to the engine the same way
+const OPTS = { band: BANDS.map((b, i) => [i, b]), '@day': [['03-20', 'Mar 20 (equinox)'], ['06-21', 'Jun 21 (summer solstice)'], ['12-21', 'Dec 21 (winter solstice)']], 'q-loc': Object.entries(QNAME) };
+export function batchInfo(simId, p, v) {
+  const cfg = CFG[simId]; if (!cfg) return null; const site = S.siteOf(p), A = S.account().defaults, t = tzInfo(site), levels = v ? levelsOf(v.model) : [];
+  const rooms = v && cfg.input === 'room' ? v.model.components.filter((c) => c.type === 'room') : [];
+  const ctx = { site, A, t, level: levels[0] ? { id: 'L' + levels[0].n, z: levels[0].z } : null, x: v ? extent(v.model) : null, room: rooms[0] || null };
+  const fields = Object.entries(cfg.prefill?.(ctx) || {}).filter(([id, val]) => ACCT[id] && val != null && !(typeof val === 'number' && !Number.isFinite(val)) && !(id === 'wdir' && false))
+    .map(([id, val]) => ({ id, label: ACCT[id][0], unit: ACCT[id][1].startsWith(':') ? '' : ACCT[id][1], value: val, options: OPTS[id] || null }));
+  return { fields, perLevel: cfg.input === 'studio' || cfg.input === 'dxf', levels: levels.map((L) => ({ id: 'L' + L.n, name: `Level ${L.n}` })), rooms: rooms.map((c) => ({ id: c.id, name: c.name })), input: cfg.input };
 }

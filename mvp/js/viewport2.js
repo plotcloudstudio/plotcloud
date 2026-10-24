@@ -48,7 +48,7 @@ export function wallFrame(model, c, side) {
   return { alongX, n, face, t, u0: a0, u1: a1, z0, z1, depth: Math.max(0.5, depth), room };
 }
 
-export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame, canDrag, onDrag } = {}) {
+export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame, canDrag, onDrag, onCam } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setClearColor(look().clear, 1); renderer.localClippingEnabled = true; host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
@@ -90,7 +90,8 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     if (c.mesh) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(c.mesh, 3)); if (c.meshCol) g.setAttribute('color', new THREE.Float32BufferAttribute(c.meshCol, 3)); g.computeVertexNormals(); return g; }   // meshCol: Plan Studio's own part colours (Workspace panes)
     const g = new THREE.BoxGeometry(c.g.w, c.g.d, c.g.h); g.translate(c.g.w / 2, c.g.d / 2, c.g.h / 2); return g;
   }
-  const kindOf = (c) => (c.type === 'room' ? 'room' : c.type === 'window' || c.glass ? 'glass' : c.type === 'mass' || c.type === 'terrain' ? 'ctx' : 'solid');
+  const TINT = { map: new Map(), neutral: false };   // compare views: a colour per changed component, the rest grey (Highlight only)
+  const kindOf = (c) => (c.ghostWire ? 'ghost' : c.type === 'room' ? 'room' : c.type === 'window' || c.glass ? 'glass' : c.type === 'mass' || c.type === 'terrain' ? 'ctx' : 'solid');
   // display modes: only material properties change, the scene is not rebuilt
   function paint(grp) {
     const k = grp.userData.kind, face = grp.userData.face, edges = grp.userData.edges, L = look(), fm = face.material, em = edges.material;
@@ -101,6 +102,9 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     fm.opacity = op; fm.transparent = op < 1; fm.depthWrite = op === 1; fm.colorWrite = op > 0;
     const eo = k === 'room' ? (display === 'shaded' ? 0 : 1) : display === 'shaded' ? 0.45 : k === 'ctx' ? Math.max(L.ctxEdge, wire ? 0.6 : 0) : 0.9;
     em.opacity = eo; em.visible = eo > 0;
+    const tn = TINT.map.get(grp.userData.id);
+    if (k === 'ghost') { fm.opacity = 0; fm.transparent = true; fm.depthWrite = false; fm.colorWrite = false; em.color.setHex(grp.userData.c.ghostWire); em.opacity = 1; em.visible = true; em.depthTest = false; edges.renderOrder = 12; }
+    else if (tn != null || TINT.neutral) { fm.vertexColors = false; fm.color.setHex(tn ?? 0xc9c9c6); if (tn != null && !wire) { fm.opacity = ghost ? 0.75 : 1; fm.transparent = fm.opacity < 1; fm.depthWrite = fm.opacity === 1; fm.colorWrite = true; em.color.setHex(0x3a3324); em.opacity = 0.9; em.visible = true; } }
     fm.clippingPlanes = clip; em.clippingPlanes = clip; fm.needsUpdate = true; em.needsUpdate = true;
     for (const nm of ['sel', 'hov']) { const o = grp.getObjectByName(nm); if (o) { o.material.clippingPlanes = clip; o.material.needsUpdate = true; } }
   }
@@ -182,7 +186,8 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
       const d = document.createElement('span'); d.textContent = b.name; d.style.left = ((p.x + 1) / 2 * r.width) + 'px'; d.style.top = ((1 - p.y) / 2 * r.height) + 'px'; labelBox.appendChild(d); void i; });
   }
   function render() { if (camera === walkCam) aimWalk(); renderer.render(scene, camera); labels(); onFrame?.(); }
-  controls.addEventListener('change', render);
+  let camQuiet = false; const camChanged = () => { if (!camQuiet && onCam) onCam(); };
+  controls.addEventListener('change', () => { render(); camChanged(); });
 
   function applyExplode() {
     xpl.bands = model ? bandsOf(model) : [];
@@ -262,7 +267,7 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     else if (drag.b === 0 && !xpl.on && !placing) {   // selection box
       const x0 = Math.min(drag.sx, e.clientX) - r.left, y0 = Math.min(drag.sy, e.clientY) - r.top, w = Math.abs(e.clientX - drag.sx), h = Math.abs(e.clientY - drag.sy);
       Object.assign(boxEl.style, { left: x0 + 'px', top: y0 + 'px', width: w + 'px', height: h + 'px' }); boxEl.hidden = false; boxEl.classList.toggle('cross', e.clientX < drag.sx); setHover(null);
-    } else if (camera !== persp) { const s = camera.userData.span * 2 / r.height; if (camera === plan) { plan.position.x -= dx * s; plan.position.y += dy * s; } else { const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion); camera.position.addScaledVector(right, -dx * s); camera.position.z += dy * s; } }
+    } else if (camera !== persp) { const s = camera.userData.span * 2 / r.height; if (camera === plan) { plan.position.x -= dx * s; plan.position.y += dy * s; camChanged(); } else { const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion); camera.position.addScaledVector(right, -dx * s); camera.position.z += dy * s; } }
     else return;
     drag.x = e.clientX; drag.y = e.clientY; render();
   });
@@ -270,7 +275,7 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
   el.addEventListener('wheel', (e) => {
     if (camera === persp) return; e.preventDefault();
     if (camera === walkCam) { const step = -Math.sign(e.deltaY) * 0.6; walk.pos.x += Math.cos(walk.yaw) * step; walk.pos.y += Math.sin(walk.yaw) * step; }
-    else { camera.userData.span *= Math.exp(e.deltaY * 0.001); size(); }
+    else { camera.userData.span *= Math.exp(e.deltaY * 0.001); size(); camChanged(); }
     render();
   }, { passive: false });
   const mods = (e) => ({ add: e.shiftKey, remove: e.ctrlKey || e.metaKey });
@@ -313,7 +318,16 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     setClearance(rects) { clrRects = rects || []; drawClearance(); render(); }, clearanceCount: () => clrRects.length,
     setExplode({ on, d, labels: lb } = {}) { if (on != null) xpl.on = on; if (d != null) xpl.d = d; if (lb != null) xpl.labels = lb; if (xpl.on) { cand = []; hover = null; } applyExplode(); drawClearance(); if (on != null) fit(); else render(); highlight(); },
     get explode() { return { ...xpl, bands: xpl.bands.map((b) => ({ name: b.name, n: b.ids.length })) }; },
-    fit() { fit(); setView({}); }, render, png: () => { render(); return el.toDataURL('image/png'); },
+    fit() { fit(); setView({}); camChanged(); }, render,
+    // compare views: colours per component, a flash, focus on one, and the camera as numbers so two views can share it
+    setTint(map, { neutral = false } = {}) { TINT.map = new Map(Object.entries(map || {})); TINT.neutral = neutral; for (const g of objects.values()) paint(g); render(); },
+    flash(id) { const g = objects.get(id); if (!g) return; let n = 0; const on = () => { outline(g, 'sel', n % 2 ? 0 : 0xffb000); render(); if (++n < 7) setTimeout(on, 170); else { highlight(); } }; on(); },
+    focusOn(id) { const g = objects.get(id); if (!g) return false; const b = new THREE.Box3().setFromObject(g.userData.face), c = b.getCenter(new THREE.Vector3()), r = Math.max(1.5, b.getSize(new THREE.Vector3()).length());
+      if (camera === persp) { const d = persp.position.clone().sub(controls.target).normalize(); controls.target.copy(c); persp.position.copy(c).addScaledVector(d, r * 2.6); controls.update(); }
+      else if (camera === plan) { plan.position.x = c.x; plan.position.y = c.y; plan.userData.span = Math.max(3, r * 1.4); size(); }
+      render(); camChanged(); return true; },
+    getCam() { return { p: persp.position.toArray(), t: controls.target.toArray(), q: [plan.position.x, plan.position.y, plan.userData.span || 10] }; },
+    setCam(c) { if (!c) return; camQuiet = true; try { persp.position.fromArray(c.p); controls.target.fromArray(c.t); controls.update(); plan.position.x = c.q[0]; plan.position.y = c.q[1]; plan.userData.span = c.q[2]; size(); render(); } finally { camQuiet = false; } }, png: () => { render(); return el.toDataURL('image/png'); },
     // for tests
     probe: () => [...objects.values()].map((g) => ({ id: g.userData.id, kind: g.userData.kind, op: g.userData.face.material.opacity, color: g.userData.face.material.color.getHexString(), edges: g.userData.edges.visible, clip: g.userData.face.material.clippingPlanes?.length || 0, z: +g.position.z.toFixed(3) })),
     camera: () => (camera === persp ? 'persp' : camera === plan ? 'plan' : camera === elev ? 'elev' : camera === iel ? 'ielev' : 'walk'),

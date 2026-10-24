@@ -4,7 +4,8 @@
 //     siteLinked (default true): the project follows the Account site, so a new address in Account reaches every
 //     simulation of the project; false: the project keeps its own site (p.site)
 //   version { id, n, note, created, model }            — immutable snapshot
-//   run     { id, versionId, simId, settings, results { kpis: [[label, value]], <metric>: number }, created, source: 'full-tool' }
+//   run     { id, versionId, simId, settings, results { kpis: [[label, value]], <metric>: number, thumb?: jpeg data URL,
+//             field?: { label, unit, step, pts: [x, y, value, …] in plan metres } }, created, source: 'full-tool' | 'batch' }
 //   account { user, site, defaults }                  — site and defaults every new project and run starts from
 import { sampleModel } from './data.js';
 
@@ -30,14 +31,27 @@ function seed() {
 
 export function load() {
   if (DB) return DB;
-  try { const raw = localStorage.getItem(KEY); DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; }
+  let fresh = false; try { const raw = localStorage.getItem(KEY); fresh = !raw; DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; }
   if (!DB.account) DB.account = { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } };
   for (const p of DB.projects) { if (!p.site) p.site = clone(DB.account.site); if (p.siteLinked == null) p.siteLinked = true; }
   // estimates from the old prototype preview are retired: every result now comes from a PlotCloud engine
   for (const p of DB.projects) p.runs = p.runs.filter((r) => r.source !== 'prototype-mock');
+  if (fresh) save();   // the sample is written at once, so every page of the site (and a batch frame) sees the same versions
   return DB;
 }
-export function save() { if (memoryOnly) return false; try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; } catch (e) { memoryOnly = true; return false; } }
+// A result keeps a small picture (thumb) and its per-point values (field) for Results; when the browser runs out of room,
+// pictures and fields of older results go first, so the figures themselves are always kept.
+function pruneMedia(keep = 0) {
+  const all = DB.projects.flatMap((p) => p.runs).filter((r) => r.results && (r.results.thumb || r.results.field)).sort((a, b) => a.created.localeCompare(b.created));
+  const n = Math.max(1, Math.ceil((all.length - keep) / 2)); for (const r of all.slice(0, n)) { delete r.results.thumb; delete r.results.field; r.results.mediaDropped = true; } return n > 0 && all.length > 0;
+}
+export function save() {
+  if (memoryOnly) return false;
+  for (let i = 0; i < 6; i++) { try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; } catch (e) { if (e && e.name === 'SecurityError') break; if (!pruneMedia(4)) break; } }
+  memoryOnly = true; return false;
+}
+// read the store again (another page of this site, e.g. a batch run, may have written to it)
+export function reload() { DB = null; return load(); }
 export const persistent = () => !memoryOnly;
 export function reset() { DB = seed(); save(); }
 
@@ -57,6 +71,7 @@ export function saveVersion(p, note) {
 }
 export function addRun(p, versionId, simId, settings, results, source = 'full-tool') {
   const r = { id: uid('r'), versionId, simId, settings: clone(settings), results, created: now(), source };
+  if (results && (results.thumb || results.field)) for (const o of p.runs) if (o.versionId === versionId && o.simId === simId && o.results) { delete o.results.thumb; delete o.results.field; }   // only the newest result of a version keeps its picture
   p.runs.push(r); p.updated = now(); save(); return r;
 }
 export function deleteRun(p, id) { p.runs = p.runs.filter((r) => r.id !== id); save(); }

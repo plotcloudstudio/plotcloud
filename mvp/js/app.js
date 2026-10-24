@@ -41,9 +41,9 @@ function who() {
 const PAGES = {
   '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), 'workspace-archive': () => import('./pages/workspace.js'), simulations: () => import('./pages/simulations.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'),
-  login: () => import('./pages/login.js'), account: () => import('./pages/account.js'),
+  login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { '': 'Home', workspace: 'Workspace', 'workspace-archive': 'Workspace (archive)', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account' };
+const TITLES = { '': 'Home', workspace: 'Workspace', 'workspace-archive': 'Workspace (archive)', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account', 'batch-run': 'Batch run' };
 let cleanup = null, prevHash = '';
 export async function route() {
   // one route per simulation, one state: old links that carry ?project=&version= set the current project and version, then the address is cleaned
