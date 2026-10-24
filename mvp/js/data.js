@@ -3,7 +3,7 @@
 
 export const FULL = (id) => `../index.html#/tool/${id}`;
 // holographic picture for each simulation: img/sim-<id>-day|night.jpg, rendered with holo-render.html
-export const simImg = (id) => 'sim-' + id;
+export const simImg = (id) => 'analysis-' + id;
 export const PAGE = (route) => `../index.html#/${route}`;
 
 // Analysis tools that exist today, grouped for the Simulations page.

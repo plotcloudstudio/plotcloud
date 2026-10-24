@@ -1,72 +1,18 @@
-import * as S from '../store.js';
-import { mountHomeHero } from '../home-hero.js?v=20261024-click2';
-import { SIMS, simImg } from '../data.js';
-import { esc, img, setCurrent } from '../app.js';
+import {mountHomeHero} from '../home-hero.js?v=20261024-click2';
+import {img,theme} from '../app.js';
 
-export function render(app) {
-  const logo = document.querySelector('.brand .logo')?.outerHTML || 'plotcloud';
-  const A = S.account();
-  const uses = [['Latitude, longitude and time', 'Sun hours · Daylight · View analysis'], ['True north', 'Sun · Daylight · Wind · Natural ventilation'], ['A year of weather', 'Daylight · Natural ventilation · Wind flow'],
-    ['Rainfall and terrain', 'Stormwater & waterlogging'], ['Buildings around the site', 'Sun · Daylight · Wind · Views']];
-  app.innerHTML = `<div class="wrap">
-  <section class="hero">
-    <span class="badge-pill">One site · ${SIMS.length} simulations · every version</span>
-    <h1 class="display" style="margin-top:28px">Test the design<br><span>on the real site.</span></h1>
-    <p class="lede">Pin the site once, anywhere in the world. Sun, daylight, wind, stormwater, acoustics, movement and structure run on the same location, climate and model, and every result is saved with the version it came from.</p>
-    <div class="cta"><a class="btn accent lg" href="#/${A.user ? 'account' : 'login?signup=1'}">${A.user ? 'Set your site →' : 'Start free →'}</a><a class="btn lg" href="#/workspace">Open the workspace</a></div>
-    <p class="eyebrow" style="margin-top:18px;color:var(--mut2)">Sample project included · runs in the browser</p>
-    <figure class="shot home-hero-study" aria-label="Interactive Toronto environmental study">
-      <iframe title="Toronto CN Tower — interactive Sun, Wind, Rain, Sound and Snow study" data-home-hero loading="eager"></iframe>
-      <figcaption class="sr-only">Illustrative Toronto model. Click to change weather; drag to rotate.</figcaption></figure>
-  </section>
-
-  <section class="section">
-    <div class="kicker"><b>01</b>One site, every study</div>
-    <div class="split" style="margin-top:22px;align-items:start">
-      <div><h2 class="display md">Pin it once.<br><span>Every study uses it.</span></h2>
-        <p class="lede" style="margin-top:22px">Set the location in your account, anywhere in the world. Elevation, a year of weather, the climate class and the buildings around the site are read for the pin and shared by every simulation in your projects. Anything not found is marked missing, never guessed.</p>
-        <a class="btn lg" href="#/account" style="margin-top:28px">See the site settings →</a></div>
-      <ol class="numlist">${uses.map(([a, b], i) => `<li><span>0${i + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join('')}</ol>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="kicker"><b>02</b>Simulations</div>
-    <div class="split" style="margin-top:22px"><h2 class="display md">${SIMS.length === 14 ? 'Fourteen' : SIMS.length} studies.<br><span>Real engines.</span></h2>
-      <p class="lede">Each one is a working PlotCloud tool with its method and limits written down. Results are screening studies for design decisions, not code compliance.</p></div>
-    <div class="figs">
-      <figure><img data-holo="sim-daylight" src="${img('sim-daylight')}" alt="Daylight study view"><figcaption><b>Sun &amp; daylight</b><span>3D view · whole year</span></figcaption></figure>
-      <figure><img data-holo="sim-acoustics" src="${img('sim-acoustics')}" alt="Acoustic wavefronts in the studio room"><figcaption><b>Indoor acoustics</b><span>Wireframe view · per room</span></figcaption></figure>
-      <figure><img data-holo="sim-wind" src="${img('sim-wind')}" alt="Wind streamlines around the massing"><figcaption><b>Wind &amp; stormwater</b><span>Site · streamlines and runoff</span></figcaption></figure>
-    </div>
-    <ol class="simmini" style="margin-top:56px">${SIMS.map((s, i) => `<li><a href="#/simulations/${s.id}"><img data-holo="${simImg(s.id)}" src="${img(simImg(s.id))}" alt="" loading="lazy"><span class="n">${String(i + 1).padStart(2, '0')}</span><b>${esc(s.name)}</b><p>${esc(s.blurb)}</p></a></li>`).join('')}</ol>
-    <a class="btn lg" href="#/simulations" style="margin-top:28px">Browse simulations →</a>
-  </section>
-
-  <section class="section">
-    <div class="kicker"><b>03</b>Versions</div>
-    <h2 class="display md" style="margin-top:22px">Change the design.<br><span>See what it did.</span></h2>
-    <div class="grid g2" style="margin-top:44px">
-      <figure class="shot" style="margin:0;height:340px"><img data-holo="heroA" src="${img('heroA')}" alt="Version 1"><figcaption class="chip" style="left:16px;top:16px">V1 · Baseline</figcaption></figure>
-      <figure class="shot" style="margin:0;height:340px"><img data-holo="hero" src="${img('hero')}" alt="Version 2"><figcaption class="chip" style="left:16px;top:16px">V2 · Wider glazing · acoustic ceiling</figcaption></figure></div>
-    <div class="stats"><div><small>sDA 300/50%</small><b>27.5 → <em>34.5</em><i> %</i></b></div><div><small>RT60 · studio room</small><b>2.96 → <em>0.53</em><i> s</i></b></div><div><small>Quality views</small><b>78.6 → <em>78.9</em><i> %</i></b></div></div>
-    <p class="note">Sample project, computed by the PlotCloud engines (Daylight at Draft detail, Indoor acoustics at 500 Hz, View analysis) on 23 Oct 2026. Same settings on both versions, so the difference comes from the design.</p>
-    <a class="btn lg" href="#/results" style="margin-top:24px">Compare versions →</a>
-  </section>
-
-  <section class="section">
-    <div class="kicker"><b>04</b>Free resources</div>
-    <h2 class="display sm" style="margin-top:22px">Tools and files,<br><span>free to use.</span></h2>
-    <div class="pills" style="margin-top:28px">${['Image toolkit', 'Architectural drawing', 'Color palettes', 'Pin-up composer', 'CAD blocks', 'Rhino & Revit sets', 'Case study models', 'Building code finder'].map((r) => `<a class="btn" href="#/resources">${r}</a>`).join('')}</div>
-  </section>
-
-  <section class="section">
-    <div class="kicker"><b>05</b>Pricing</div>
-    <div class="split" style="margin-top:22px"><h2 class="display sm">Free tools.<br><span>Pro projects.</span></h2>
-      <div><p class="lede">Every analysis tool is free. PlotCloud Pro keeps your projects, versions and results together: CAD 9 a month or CAD 79 a year, 7 days free.</p><a class="btn lg" href="#/pricing" style="margin-top:20px">See pricing →</a></div></div>
-  </section>
-  </div>
-  <footer class="foot">${logo}<span>Prototype · screening studies for design, not code compliance · <a href="../index.html#/home">classic site</a></span></footer>`;
-  app.querySelectorAll('[data-p]').forEach((a) => a.addEventListener('click', () => setCurrent(S.project(a.dataset.p))));
-  return mountHomeHero(app.querySelector('.home-hero-study'));
+// The approved preview is the single layout source for the public homepage.
+export async function render(app){
+  const response=await fetch(new URL('../../home-preview.html?v=20261024-live1',import.meta.url));
+  if(!response.ok)throw new Error('Homepage could not load');
+  const doc=new DOMParser().parseFromString(await response.text(),'text/html');
+  const style=document.createElement('style');style.textContent=doc.querySelector('style').textContent;document.head.append(style);
+  app.innerHTML=doc.querySelector('main').innerHTML;
+  const footer=app.querySelector('.preview-foot p');footer.textContent='Building simulation for design decisions. Screening studies, not code compliance.';
+  const note=app.querySelector('.source-note');note.textContent='Sample project: Draft daylight, acoustics at 500 Hz, and view analysis. Catalogue images illustrate analysis types; project results are generated by the simulation engines.';
+  const update=()=>app.querySelectorAll('[data-image]').forEach(image=>{image.src=img(image.dataset.image.replace(/^sim-/,'analysis-'));});
+  update();addEventListener('pc-theme',update);
+  app.querySelector('.scene').classList.add('home-hero-study');
+  const dispose=mountHomeHero(app.querySelector('.scene'));
+  return()=>{dispose();style.remove();removeEventListener('pc-theme',update);};
 }

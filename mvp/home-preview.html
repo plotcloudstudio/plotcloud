@@ -34,7 +34,7 @@ html{scroll-behavior:smooth}body{overflow-x:hidden}.preview-nav{max-width:1440px
 <script type="module">
 import {mountHomeHero} from './js/home-hero.js?v=20261024-click2';
 const button=document.querySelector('#theme');
-function theme(value){document.documentElement.dataset.theme=value;button.textContent=value==='night'?'Day ↗':'Night ↗';document.querySelectorAll('[data-image]').forEach(image=>image.src=`img/${image.dataset.image}-${value}.jpg`);dispatchEvent(new CustomEvent('pc-theme'));}
+function theme(value){document.documentElement.dataset.theme=value;button.textContent=value==='night'?'Day ↗':'Night ↗';document.querySelectorAll('[data-image]').forEach(image=>image.src=`img/${image.dataset.image.replace(/^sim-/,'analysis-')}-${value}.jpg`);dispatchEvent(new CustomEvent('pc-theme'));}
 button.onclick=()=>theme(document.documentElement.dataset.theme==='night'?'day':'night');
 theme('night');const cleanup=mountHomeHero(document.querySelector('.scene'));addEventListener('pagehide',cleanup,{once:true});
 </script>

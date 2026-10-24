@@ -1,0 +1,4 @@
+// Reproducible catalogue illustrations, never presented as computed project results.
+const {chromium}=require('playwright');
+const ids=['sunhours','daylight','wind','vent','stormwater','acoustics','spacesyntax','movementdepth','evac','isovist','views','cameras','structure','span'];
+(async()=>{const b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--enable-unsafe-swiftshader']});try{const p=await b.newPage({viewport:{width:1200,height:900}});for(const id of ids)for(const theme of ['day','night']){await p.goto(`${process.env.TEST_BASE||'http://127.0.0.1:8765'}/mvp/analysis-art.html?mode=${id}&t=${theme}`);await p.waitForFunction(()=>window.__artReady);await p.screenshot({path:`mvp/img/analysis-${id}-${theme}.jpg`,type:'jpeg',quality:92});console.log(id,theme);}}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});
