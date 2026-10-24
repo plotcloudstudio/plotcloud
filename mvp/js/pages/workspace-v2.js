@@ -1,4 +1,6 @@
-// The Workspace (#/workspace): Plan Studio in three panes side by side, with the Workspace's own tools, layers, versions and status bar.
+// The Workspace (#/workspace): Plan Studio in one view (chosen at the top left), with the Workspace's own tools, Rhino-style panels on the
+// right (Layers, Versions, Explode, Walkthrough, Interior elevation: pick which ones with the gear) and the status bar. Nothing in it scrolls:
+// a list that does not fit is cut into pages.
 //   Plan        = Plan Studio's 2D (emb/modeler.html?ws=plan): its wall, room, door, window and furniture tools, handles, toolbars and clearance.
 //   Perspective = Plan Studio's 3D (?ws=persp): its gumball, Bird / Walkthrough / Explode, plus a Ghosted / Wireframe display switch.
 //   Shaded      = a solid shaded 3D view (viewport2.js), view only: Plan Studio's geometry plus anything imported and the site.
@@ -51,6 +53,7 @@ const PS = /^ps:([a-z]+):(.*)$/;
 const psId = (s) => `ps:${s.k === 'end' ? 'wall' : s.k}:${s.id}`;
 const psSel = (id) => { const m = PS.exec(id || ''); return m ? { k: m[1], id: m[2] } : null; };
 
+const GEAR = I('<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>');
 const PROJECT_ICON = I('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>');
 const EYE_ON = I('<path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/>');
 const EYE_OFF = I('<path d="M3 3l18 18"/><path d="M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3 3.6M6.4 7.4C3.8 9.1 2 12 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4-.9"/>');
@@ -66,7 +69,7 @@ const CLASSES = [
 function classify(c) { const k = CLASSES.find(([re]) => re.test(c.name)); if (k) Object.assign(c, { type: k[1], layer: k[2], mat: k[3] }); return c; }
 
 const UKEY = 'pc-mvp-ws2';
-const DEF_UI = { panel: 'project', snap: { End: true, Near: true, Mid: true, Cen: false }, gumball: true, clearance: false, sels: [], selProject: null, open: ['Walls', 'Glazing', 'Rooms', 'Imported'], split: [1, 1, 1], disp: 'shaded', view: 'plan' };
+const DEF_UI = { panel: 'project', snap: { End: true, Near: true, Mid: true, Cen: false }, gumball: true, clearance: false, sels: [], selProject: null, open: [], split: [1, 1, 1], disp: 'shaded', view: 'plan', tabs: ['layers', 'versions', 'explode', 'walk', 'elev'], tab: 'layers', acc: {}, pacc: 'project' };
 function readUI() {
   try { const u = JSON.parse(localStorage.getItem(UKEY) || 'null'); if (!u) return { ...DEF_UI };
     if (!u.sels) u.sels = u.sel ? [u.sel] : []; if (!u.ws3) { u.gumball = true; u.ws3 = 1; }   // the gumball works now: on once, then as the person leaves it
@@ -93,7 +96,8 @@ export function render(app, [pid]) {
   const layerOf = (c) => M().layers.find((l) => l.name === c?.layer);
   const last = () => p.versions.at(-1), dirty = () => !last() || JSON.stringify(last().model) !== JSON.stringify(p.draft);
   const UI = readUI(); const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(UI)); } catch (e) { } };
-  const open = new Set(UI.open);
+  const open = new Set((UI.open || []).slice(-1));   // one layer open at a time, so the list fits without scrolling
+  const openOnly = (n) => { open.clear(); if (n) open.add(n); UI.open = [...open]; };
   let showParams = false, OBJ = [], HIDDEN = new Set(), MESH = new Map(), CLR = [], SNAP = JSON.stringify(p.draft.studio), dead = false;
   const primary = () => UI.sels.at(-1) || null, isSel = (id) => UI.sels.includes(id);
 
@@ -102,7 +106,7 @@ export function render(app, [pid]) {
   const selectable = (id) => { const c = comp(id), l = layerOf(c); return !!(c && l && !l.locked && l.visible !== false); };
   function setSel(ids, { params = true, from = null } = {}) {
     ids = [...new Set((Array.isArray(ids) ? ids : [ids]).filter((id) => id && selectable(id)))];
-    UI.sels = ids; UI.selProject = p.id; for (const id of ids) open.add(comp(id).layer); UI.open = [...open]; saveUI();
+    UI.sels = ids; UI.selProject = p.id; if (ids.length) openOnly(comp(ids.at(-1)).layer); saveUI();
     showParams = ids.length > 0 && params;
     const s = ids.length === 1 ? psSel(ids[0]) : null;   // Plan Studio selects one object: the panes follow a single Plan Studio pick
     for (const [r, I2] of Object.entries(INST)) if (r !== from && I2.ready) I2.ws.select(s);
@@ -139,18 +143,37 @@ export function render(app, [pid]) {
     </div>
     <div class="w2-tr"><button class="btn sm" id="fit">Fit</button></div>
   </section>
-  <aside class="w2-right" aria-label="Layers, selection and versions">
-    <div class="pane"><h2>Layers <button class="btn sm" id="addLayer">+ Layer</button></h2>
-      <div class="w2-lhead" aria-hidden="true"><span></span><span>Layer</span><span>#</span><span>Show</span><span>Lock</span></div>
-      <div id="layers"></div></div>
-    <div class="pane" id="selp"></div>
-    <div class="pane"><h2>Versions</h2>
-      <p id="dirty" class="dirty"></p>
-      <label class="f">Describe this version<input id="note" placeholder="e.g. Larger south windows"></label>
-      <button class="btn primary" id="saveV">Save version</button>
-      <div id="versions"></div>
+  <aside class="w2-right" aria-label="Panels">
+    <div class="w3-tabs"><div class="w3-tlist" role="tablist" id="tabList" aria-label="Panels"></div>
+      <div class="w3-gearw"><button type="button" class="w3-gear" id="tabGear" title="Choose which panels show here" aria-label="Choose panels" aria-haspopup="true" aria-expanded="false">${GEAR}</button><div class="w2-menu w3-tabmenu" id="tabMenu" hidden></div></div></div>
+    <div class="w3-tbody">
+      <section class="pane w3-tp" data-tab="layers" role="tabpanel"><h2>Layers <button class="btn sm" id="addLayer">+ Layer</button></h2>
+        <div class="w2-lhead" aria-hidden="true"><span></span><span>Layer</span><span>#</span><span>Show</span><span>Lock</span></div>
+        <div id="layers" class="w3-fit"></div></section>
+      <section class="pane w3-tp" data-tab="versions" role="tabpanel"><h2>Versions</h2>
+        <p id="dirty" class="dirty"></p>
+        <label class="f">Describe this version<input id="note" placeholder="e.g. Larger south windows"></label>
+        <button class="btn primary" id="saveV">Save version</button>
+        <div id="versions" class="w3-fit"></div>
+        <a class="btn accent" id="toSim" href="#/simulations">Choose a simulation</a><p class="note">Simulations run on a saved version, so each result stays linked to the exact model it came from.</p></section>
+      <section class="pane w3-tp" data-tab="explode" role="tabpanel"><h2>Explode</h2>
+        <p class="note">Pulls the storeys apart in the Perspective view, so each level reads on its own.</p>
+        <p class="w3-stat" id="xStat" role="status"></p><button type="button" class="btn primary" id="xGo"></button>
+        <label class="f"><span class="w3-lrow">Spacing between storeys <output id="xSpv">1500 mm</output></span><input type="range" id="xSp" min="0" max="5000" step="50" value="1500"></label>
+        <label class="w3-ck"><input type="checkbox" id="xLb" checked> Storey labels</label>
+        <div class="grid g2"><button type="button" class="btn sm" id="xRs">Reset spacing</button><span></span><button type="button" class="btn sm" id="xPngB">Save PNG 1920</button><button type="button" class="btn sm" id="xSvgB">Save SVG</button></div>
+        <p class="note">Display only: selecting, moving and deleting are off while the storeys are apart.</p></section>
+      <section class="pane w3-tp" data-tab="walk" role="tabpanel"><h2>Walkthrough</h2>
+        <p class="note">Walk through the model at eye height, 1600 mm, in the Perspective view.</p>
+        <p class="w3-stat" id="wStat" role="status"></p><div class="w3-btns" id="wBtns"></div>
+        <ul class="w3-keys"><li><b>W A S D</b> or arrows: move</li><li><b>Drag</b>: look around</li><li><b>Shift</b>: walk faster</li><li><b>Esc</b>: back to the bird view</li></ul>
+        <p class="note">Walls and windows stop you; doors let you through; you can walk through furniture.</p></section>
+      <section class="pane w3-tp" data-tab="elev" role="tabpanel"><h2>Interior elevation</h2>
+        <p class="note">Looks straight at one wall from inside the room: its doors and windows, the furniture against it and the lights. View only.</p>
+        <p class="w3-stat" id="eStat" role="status"></p><div class="w3-btns" id="eBtns"></div>
+        <label class="w3-ck"><input type="checkbox" id="eLb" checked> Labels</label></section>
     </div>
-    <div class="pane"><h2>Next</h2><a class="btn accent" id="toSim" href="#/simulations">Choose a simulation</a><p class="note">Simulations run on a saved version, so each result stays linked to the exact model it came from.</p></div>
+    <div class="pane w3-selp" id="selp"></div>
   </aside>
   <footer class="w2-status" aria-label="Status bar">
     ${Object.keys(DEF_UI.snap).map((k) => `<label title="${{ End: 'Wall ends', Near: 'Wall bodies and faces', Mid: 'Wall midpoints', Cen: 'Centres: arc walls, furniture, rooms' }[k]} — for drawing in Plan and for the gumball in Perspective"><input type="checkbox" data-snap="${k}" ${UI.snap[k] ? 'checked' : ''}> ${k}</label>`).join('')}
@@ -266,9 +289,9 @@ export function render(app, [pid]) {
     const it = (attrs, on, label, small = '') => `<button role="menuitemradio" ${attrs} aria-checked="${on}">${label}${small ? `<small>${small}</small>` : ''}</button>`;
     $('#vBtn', app).textContent = viewName() + ' ▾';
     $('#vMenu', app).innerHTML = (L ? L.list.slice().reverse().map((l) => it(`data-view="plan" data-level="${esc(l.id)}"`, UI.view === 'plan' && a?.view2d === 'plan' && l.id === L.lv, `Plan · ${esc(l.short)} ${esc(l.name)}`, `${l.z.toFixed(2)} m`)).join('') : it('data-view="plan"', UI.view === 'plan', 'Plan'))
-      + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan') + it('data-view="elev"', UI.view === 'plan' && a?.view2d === 'elev', 'Interior elevation', 'pick a wall')
-      + it('data-view="persp"', UI.view === 'persp' && !b?.walking && !b?.walkpick && !b?.explode, 'Perspective', 'Plan Studio 3D') + it('data-view="walk"', UI.view === 'persp' && !!(b?.walking || b?.walkpick), 'Walkthrough') + it('data-view="explode"', UI.view === 'persp' && !!b?.explode, 'Explode')
-      + it('data-view="shaded"', UI.view === 'shaded', 'Shaded model', 'with imports & site') + '<p class="w2-mnote">Every view shows the same model; an edit in one is in all of them.</p>';
+      + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan')
+      + it('data-view="persp"', UI.view === 'persp' && !b?.walking && !b?.walkpick && !b?.explode, 'Perspective', 'Plan Studio 3D')
+      + it('data-view="shaded"', UI.view === 'shaded', 'Shaded model', 'with imports & site') + '<p class="w2-mnote">Every view shows the same model; an edit in one is in all of them. Explode, Walkthrough and Interior elevation are panels on the right.</p>';
     const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
     $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;
     $('#dMenu', app).innerHTML = DISPLAYS.map(([k, n]) => it(`data-disp="${k}"`, cur === k, n)).join('');
@@ -281,10 +304,92 @@ export function render(app, [pid]) {
   }
   const closeMenus = () => { for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) { $('#' + m, app).hidden = true; $('#' + b, app).setAttribute('aria-expanded', 'false'); } };
   for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) $('#' + b, app).onclick = (e) => { e.stopPropagation(); const was = !$('#' + m, app).hidden; closeMenus(); if (!was) { menus(); $('#' + m, app).hidden = false; $('#' + b, app).setAttribute('aria-expanded', 'true'); } };
-  const outside = (e) => { if (!e.target.closest('#cap')) closeMenus(); }; document.addEventListener('click', outside);
+  const outside = (e) => { if (!e.target.closest('#cap')) closeMenus(); if (!e.target.closest('.w3-gearw')) gearMenu(false); }; document.addEventListener('click', outside);
+  const away = () => { closeMenus(); gearMenu(false); }; addEventListener('blur', away);   // a click in a view (an iframe) closes the menus too
   // the panes' own buttons (Explode in the toolbar, Esc out of a walkthrough, the level) change the name in the pill too
-  const levelUI = () => menus(), paneUI = () => { if ($('#vMenu', app).hidden) menus(); };
+  const levelUI = () => menus(), paneUI = () => { if ($('#vMenu', app).hidden) menus(); tabState(); };
   const paneT = setInterval(paneUI, 700);
+
+
+  // ---- no scroll bars anywhere in the Workspace: a list that would not fit its box is cut into pages (‹ 1 / 3 ›)
+  const PG = {}, FITS = {}, CUR = {};
+  function fit(box, items, key) {
+    FITS[key] = () => fit(box, items, key);
+    box.querySelectorAll(`.w3-pager[data-pk="${key}"]`).forEach((e) => e.remove()); items.forEach((e) => e.classList.remove('w3-pghide'));
+    if (!box.isConnected || !box.offsetParent || !items.length) return;
+    const over = () => box.scrollHeight > box.clientHeight + 1; if (!over()) return;
+    const pg = document.createElement('div'); pg.className = 'w3-pager'; pg.dataset.pk = key;
+    pg.innerHTML = '<button type="button" data-pg="-1" aria-label="Previous page">‹</button><span></span><button type="button" data-pg="1" aria-label="Next page">›</button>';
+    const par = items.at(-1).parentElement; if (par === box || items.some((e) => e.parentElement !== par)) box.appendChild(pg); else par.after(pg);
+    const show = (per, k) => items.forEach((e, i) => e.classList.toggle('w3-pghide', Math.floor(i / per) !== k));
+    let lo = 1, hi = items.length - 1; while (lo < hi) { const m = Math.ceil((lo + hi) / 2); show(m, 0); if (over()) hi = m - 1; else lo = m; }
+    const per = lo, n = Math.ceil(items.length / per), cur = items.findIndex((e) => e.matches('[aria-current="true"],[aria-pressed="true"]') || e.querySelector('[aria-current="true"],[aria-pressed="true"]'));
+    const go = (k) => { PG[key] = Math.max(0, Math.min(n - 1, k)); show(per, PG[key]); pg.querySelector('span').textContent = `${PG[key] + 1} / ${n}`; pg.firstChild.disabled = PG[key] === 0; pg.lastChild.disabled = PG[key] === n - 1; };
+    pg.onclick = (e) => { const b = e.target.closest('[data-pg]'); if (b) go(PG[key] + +b.dataset.pg); };
+    const jump = cur >= 0 && cur !== CUR[key]; CUR[key] = cur; go(jump ? Math.floor(cur / per) : PG[key] || 0);   // a new pick: its page
+  }
+  const refit = () => { for (const f of Object.values(FITS)) f(); };
+  const ro = new ResizeObserver(() => refit()); ro.observe($('.w2', app));
+
+  // ---- right: Rhino-style panels. The gear chooses which ones show; Layers always does.
+  const PANELS = [['layers', 'Layers', I('<path d="M12 4l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/>')],
+    ['versions', 'Versions', I('<circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7.5v9M18 10c0 4.5-6.5 3.5-10.6 7"/>')],
+    ['explode', 'Explode', I('<path d="M4 7l8-3.5L20 7l-8 3.5z"/><path d="M4 17l8-3.5 8 3.5-8 3.5z"/><path d="M12 11.5v1.5" stroke-dasharray="1 1.5"/>')],
+    ['walk', 'Walkthrough', I('<circle cx="13" cy="4.5" r="1.8"/><path d="M10.5 21l2-6 3 3v3M8.5 12.5l2.5-5 4 1.2 2 3.8M12.8 8.5l-1.3 5"/>')],
+    ['elev', 'Interior elevation', I('<rect x="3" y="4" width="18" height="16"/><path d="M6.5 20v-9h4v9M13.5 9h4.5v5h-4.5z"/>')]];
+  let lastMode = null;
+  function tabsUI() {
+    UI.tabs = PANELS.map(([k]) => k).filter((k) => k === 'layers' || UI.tabs.includes(k)); if (!UI.tabs.includes(UI.tab)) UI.tab = 'layers';
+    $('#tabList', app).innerHTML = PANELS.filter(([k]) => UI.tabs.includes(k)).map(([k, n, ic]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === UI.tab}" title="${n}" aria-label="${n}">${ic}</button>`).join('');
+    $$('#tabList [data-tab]', app).forEach((b) => b.onclick = () => { UI.tab = b.dataset.tab; saveUI(); tabsUI(); });
+    $$('.w3-tp', app).forEach((el) => el.hidden = el.dataset.tab !== UI.tab);
+    $('#tabMenu', app).innerHTML = '<p class="w2-mnote">Panels on the right</p>' + PANELS.map(([k, n]) => `<label class="w3-tm"><input type="checkbox" data-tabon="${k}" ${UI.tabs.includes(k) ? 'checked' : ''} ${k === 'layers' ? 'disabled' : ''}> ${n}</label>`).join('') + '<p class="w2-mnote">Layers always stays: it is where you show, hide and lock.</p>';
+    $$('#tabMenu [data-tabon]', app).forEach((i) => i.onchange = () => { const k = i.dataset.tabon; UI.tabs = i.checked ? [...UI.tabs, k] : UI.tabs.filter((x) => x !== k); if (i.checked) UI.tab = k; saveUI(); tabsUI(); });
+    tabState(true); refit();
+  }
+  const gearMenu = (on) => { $('#tabMenu', app).hidden = !on; $('#tabGear', app).setAttribute('aria-expanded', String(on)); };
+  $('#tabGear', app).onclick = (e) => { e.stopPropagation(); gearMenu($('#tabMenu', app).hidden); };
+  const doc = (I2) => { try { return I2.ready ? I2.win.document : null; } catch (e) { return null; } };
+  const tap = (I2, id) => doc(I2)?.getElementById(id)?.click();
+  const BTNS = {};   // a panel's buttons are drawn again only when its state changes, so a click is never lost
+  const btns = (id, key, list) => { if (BTNS[id] === key) return; BTNS[id] = key; const host = $('#' + id, app);
+    host.innerHTML = list.map(([k, label, cls]) => `<button type="button" class="btn ${cls || ''}" data-act="${k}">${label}</button>`).join('');
+    $$('[data-act]', host).forEach((b) => b.onclick = () => ACT[b.dataset.act]()); };
+  const persp3 = async (v) => { showView('persp'); if (INST.persp.ready) await INST.persp.ws.view(v); menus(); tabState(true); };
+  const ACT = {
+    walk: () => persp3('walk'), walkGo: () => { tap(INST.persp, 'wmGo'); setTimeout(() => tabState(true), 300); }, walkX: () => { tap(INST.persp, 'wmX'); tap(INST.persp, 'walkX'); setTimeout(() => tabState(true), 300); },
+    elev: async () => { showView('plan'); if (INST.plan.ready) await INST.plan.ws.view('elev'); menus(); setTimeout(() => tabState(true), 100); }, elevRe: () => { tap(INST.plan, 'elvRe'); setTimeout(() => tabState(true), 200); },
+    elevX: async () => { const dl = doc(INST.plan)?.getElementById('elvDlg'); if (dl && !dl.hidden) tap(INST.plan, 'wpX'); else if (INST.plan.ready) await INST.plan.ws.view('plan'); menus(); tabState(true); },
+  };
+  $('#xGo', app).onclick = () => persp3(INST.persp.ready && INST.persp.ws.state().explode ? 'bird' : 'explode');
+  $('#xSp', app).oninput = (e) => { const r = doc(INST.persp)?.getElementById('xD'); if (!r) return; r.value = e.target.value; r.dispatchEvent(new Event('input', { bubbles: true })); tabState(true); };
+  $('#xLb', app).onchange = (e) => { const c = doc(INST.persp)?.getElementById('xLab'); if (!c) return; c.checked = e.target.checked; c.dispatchEvent(new Event('change', { bubbles: true })); };
+  $('#xRs', app).onclick = () => { tap(INST.persp, 'xReset'); tabState(true); };
+  $('#xPngB', app).onclick = () => tap(INST.persp, 'xPng'); $('#xSvgB', app).onclick = () => tap(INST.persp, 'xSvg');
+  $('#eLb', app).onchange = (e) => { const c = doc(INST.plan)?.getElementById('elvLab'); if (!c) return; c.checked = e.target.checked; c.dispatchEvent(new Event('change', { bubbles: true })); };
+  function tabState(force) {
+    const a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null, pd = doc(INST.persp), qd = doc(INST.plan);
+    if (pd && !pd.getElementById('wsHideX')) { const st = pd.createElement('style'); st.id = 'wsHideX'; st.textContent = '#xPanel{display:none!important}'; pd.head.appendChild(st); }   // its controls are the Explode panel now
+    // started somewhere else (the 3D toolbar's Explode, the Plan's own menu): its panel comes to the front
+    const dlg = qd?.getElementById('elvDlg'), ev = qd?.getElementById('elvView'), picking = !!dlg && !dlg.hidden, picked = !!ev && !ev.hidden, eon = picking || picked;   // Plan Studio: a wall-picker box, then the elevation
+    const mode = b?.explode ? 'explode' : b?.walking || b?.walkpick ? 'walk' : eon ? 'elev' : null;
+    if (mode !== lastMode) { lastMode = mode; if (mode && UI.tabs.includes(mode) && UI.tab !== mode) { UI.tab = mode; saveUI(); return tabsUI(); } }
+    if (UI.tab === 'layers' || UI.tab === 'versions') return;
+    const xon = !!b?.explode;
+    $('#xStat', app).textContent = !b ? 'The Perspective view is still starting.' : xon ? 'Exploded: the storeys are apart in Perspective.' : 'Off.';
+    $('#xGo', app).textContent = xon ? 'Put the storeys back' : 'Explode the storeys'; $('#xGo', app).disabled = !b;
+    for (const id of ['xSp', 'xLb', 'xRs', 'xPngB', 'xSvgB']) $('#' + id, app).disabled = !xon;
+    const xd = pd?.getElementById('xD'); if (xd && document.activeElement !== $('#xSp', app)) $('#xSp', app).value = xd.value;
+    if (pd?.getElementById('xDv')) $('#xSpv', app).textContent = pd.getElementById('xDv').textContent; if (pd?.getElementById('xLab')) $('#xLb', app).checked = pd.getElementById('xLab').checked;
+    const w = b?.walking ? 'on' : b?.walkpick ? 'pick' : 'off';
+    $('#wStat', app).textContent = !b ? 'The Perspective view is still starting.' : w === 'on' ? 'Walking. Click the view first if the keys do nothing.' : w === 'pick' ? 'Where do you start? Drag the figure in the view to move it, drag its arrow to turn it.' : 'Off.';
+    btns('wBtns', w + !!b, w === 'on' ? [['walkX', 'Exit walkthrough']] : w === 'pick' ? [['walkGo', 'Start walking', 'primary'], ['walkX', 'Cancel']] : [['walk', 'Choose where to start', 'primary']]);
+    $$('#wBtns button', app).forEach((x) => x.disabled = !b);
+    $('#eStat', app).textContent = !a ? 'The Plan view is still starting.' : picked ? (qd.getElementById('elvTitle')?.textContent || 'Elevation') : picking ? 'Click a wall in the box over the view, on the side you want to look at.' : 'Off.';
+    btns('eBtns', `${picking}${picked}${!!a}`, picked ? [['elevRe', 'Pick another wall'], ['elevX', 'Back to plan']] : picking ? [['elevX', 'Cancel']] : [['elev', 'Pick a wall', 'primary']]);
+    $$('#eBtns button', app).forEach((x) => x.disabled = !a); $('#eLb', app).disabled = !picked;
+    if (qd?.getElementById('elvLab')) $('#eLb', app).checked = qd.getElementById('elvLab').checked;
+  }
 
   // ---- left: rail + panel (project / tool group / parameters of the selection)
   let LIGHTS = null;
@@ -301,10 +406,12 @@ export function render(app, [pid]) {
     const t = TOOLS[UI.panel];
     const tile = (n) => { if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the Plan to place it"><span class="im"><img src="img/furniture/${m.id}.png" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
       const ic = TOOL_ICONS[n], k = TMAP[n]?.key; return `<button type="button" class="w2-tile" data-tool="${esc(n)}" aria-pressed="false" title="${esc(n)}${k ? ` (${k})` : ''}"><span class="im">${ic?.img ? `<img src="${ic.img}" alt="">` : ic?.svg || ''}</span><span>${esc(n)}${k ? ` <em>(${k})</em>` : ''}</span></button>`; };
-    host.innerHTML = `<div class="pane w2-tools"><h2>${t.label}</h2>${t.sections.map(([h, items]) => `<div class="w2-sec"><h3>${esc(h)}</h3><div class="w2-grid">${items.map(tile).join('')}</div></div>`).join('')}
+    const many = t.sections.length > 1, oi = Math.min(UI.acc[UI.panel] || 0, t.sections.length - 1);   // several groups: one open at a time
+    host.innerHTML = `<div class="pane w2-tools"><h2>${t.label}</h2>${t.sections.map(([h, items], i) => `<div class="w2-sec${i === oi ? ' w3-fit' : ''}">${many ? `<button type="button" class="w3-acc" data-acc="${i}" aria-expanded="${i === oi}"><span>${i === oi ? '▾' : '▸'} ${esc(h)}</span><small>${items.length}</small></button>` : `<h3>${esc(h)}</h3>`}${i === oi ? `<div class="w2-grid">${items.map(tile).join('')}</div>` : ''}</div>`).join('')}
       <p class="note" id="toolMsg" role="status" aria-live="polite"></p></div>`;
     $$('[data-tool]', host).forEach((b) => b.onclick = () => startTool(b));
-    toolUI();
+    $$('[data-acc]', host).forEach((b) => b.onclick = () => { UI.acc[UI.panel] = +b.dataset.acc; saveUI(); panel(); });
+    toolUI(); const box = $('.w3-fit', host); if (box) fit(box, $$('[data-tool]', box), 'tools:' + UI.panel + ':' + oi);
   }
   function startTool(b) {
     const w = INST.plan.ready ? INST.plan.ws : null, msg = $('#toolMsg', app), n = b.dataset.tool; if (!w) { if (msg) msg.textContent = 'The Plan pane is still starting. Try again in a moment.'; return; }
@@ -327,25 +434,26 @@ export function render(app, [pid]) {
   const toolT = setInterval(() => { if (!document.hidden) toolUI(); }, 500);
   $('#pDone', app).onclick = () => { showParams = false; rail(); panel(); };
   function projectPanel(host) {
-    host.innerHTML = `<div class="pane"><h2>Project</h2>
+    host.innerHTML = `<div class="pane w3-accp${UI.pacc === 'project' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="project" aria-expanded="${UI.pacc === 'project'}"><span>${UI.pacc === 'project' ? '▾' : '▸'} Project</span></button></h2><div class="w3-accb">
       <select class="inp" id="proj" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
       <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p><div class="pc-ui-workspace-links"><a class="btn sm" href="#/workspace/${p.id}">Standard workspace</a><a class="btn sm" href="workspace.html">Plan Studio</a></div>
-      <p class="note">Every view is Plan Studio (or the Shaded model). The full Plan Studio, with its own files and send-to-tool, still opens on its own: <a href="${PAGE('studio')}" target="_blank" rel="noopener">Plan Studio ↗</a></p></div>
-    <div class="pane"><h2>Import model</h2>
+      <p class="note">Every view is Plan Studio (or the Shaded model). The full Plan Studio, with its own files and send-to-tool, still opens on its own: <a href="${PAGE('studio')}" target="_blank" rel="noopener">Plan Studio ↗</a></p></div></div>
+    <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
       <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf" hidden>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
-      <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes show in the Shaded model view.</p></div>
-    <div class="pane"><h2>Import site</h2>
+      <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes show in the Shaded model view.</p></div></div>
+    <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Import site</span></button></h2><div class="w3-accb">
       <button class="btn sm" id="siteBtn">Import site</button>
       <p class="note">Site geometry always goes on the Site layer, locked. Unlock it in Layers to edit.</p>
-      <p class="note" id="siteMsg" role="status" aria-live="polite"></p></div>
-    <div class="pane"><h2>Export</h2>
+      <p class="note" id="siteMsg" role="status" aria-live="polite"></p></div></div>
+    <div class="pane w3-accp${UI.pacc === 'export' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="export" aria-expanded="${UI.pacc === 'export'}"><span>${UI.pacc === 'export' ? '▾' : '▸'} Export</span></button></h2><div class="w3-accb">
       <div class="w2-exp">${FORMATS.map(([k, n, d]) => `<button type="button" class="btn sm" data-exp="${k}" title="${esc(d)}">${esc(n)}</button>`).join('')}</div>
       <p class="note">Exports what is visible, in metres; hidden layers are left out. SketchUp's own .skp can only be written by SketchUp, so use the .dae, which SketchUp opens directly.</p>
-      <p class="note" id="expMsg" role="status" aria-live="polite"></p></div>`;
+      <p class="note" id="expMsg" role="status" aria-live="polite"></p></div></div>`;
+    $$('[data-pacc]', host).forEach((b) => b.onclick = () => { UI.pacc = b.dataset.pacc; saveUI(); panel(); });
     $('#proj', host).onchange = (e) => { location.hash = '#/workspace/' + e.target.value; };
     $('#siteBtn', host).onclick = () => { $('#siteMsg', host).textContent = 'Site import arrives in Step 2'; };
     $$('[data-exp]', host).forEach((b) => b.onclick = async () => {
@@ -384,7 +492,7 @@ export function render(app, [pid]) {
       <button class="btn danger" id="mDel">Delete ${list.length}</button></div>`;
     $('#pBack', host).onclick = () => { showParams = false; rail(); panel(); };
     $$('[data-one]', host).forEach((b) => b.onclick = () => setSel([b.dataset.one]));
-    $('#mLayer', host)?.addEventListener('change', (e) => { if (!e.target.value) return; for (const c of nat) c.layer = e.target.value; open.add(e.target.value); ch(); setTimeout(panel, 0); });
+    $('#mLayer', host)?.addEventListener('change', (e) => { if (!e.target.value) return; for (const c of nat) c.layer = e.target.value; openOnly(e.target.value); ch(); setTimeout(panel, 0); });
     $('#mDel', host).onclick = () => { if (!confirm(`Delete ${list.length} components?`)) return; delIds(list.map((c) => c.id)); };
   }
   // parameters of an imported mesh or a site component: the fields it has in the project data
@@ -416,7 +524,8 @@ export function render(app, [pid]) {
       <button class="ic" data-vis="${i}" title="${l.visible ? 'Hide' : 'Show'} ${esc(l.name)}" aria-label="${l.visible ? 'Hide' : 'Show'} ${esc(l.name)}" aria-pressed="${!l.visible}">${l.visible ? EYE_ON : EYE_OFF}</button>
       <button class="ic" data-lock="${i}" title="${l.locked ? 'Unlock' : 'Lock'} ${esc(l.name)}" aria-label="${l.locked ? 'Unlock' : 'Lock'} ${esc(l.name)}" aria-pressed="${l.locked}">${l.locked ? LOCK_ON : LOCK_OFF}</button></div>
       ${o ? `<div class="comps">${list.map((c) => { const h = hid(c), dis = l.locked || !l.visible || h; return `<div class="w3-crow${h ? ' hid' : ''}"><button data-sel="${c.id}" aria-current="${isSel(c.id)}" ${dis ? `aria-disabled="true" title="${h ? 'Hidden piece: show it with the eye' : l.locked ? 'Locked layer: unlock it to select' : 'Hidden layer: show it to select'}"` : 'title="Shift-click adds, Ctrl-click removes"'}>${esc(c.name)}</button>${psSel(c.id)?.k === 'furn' ? `<button class="ic sm" data-pshide="${esc(c.id)}" aria-pressed="${h}" title="${h ? 'Show this piece again' : 'Hide this piece'}" aria-label="${h ? 'Show' : 'Hide'} ${esc(c.name)}">${h ? EYE_OFF : EYE_ON}</button>` : ''}</div>`; }).join('') || '<span class="note">Empty</span>'}</div>` : ''}</div>`; }).join('');
-    $$('[data-open]', host).forEach((b) => b.onclick = () => { const n = M().layers[b.dataset.open].name; open.has(n) ? open.delete(n) : open.add(n); UI.open = [...open]; saveUI(); layers(); });
+    fit(host, $$('.w2-lrow, .comps > *', host), 'layers');   // the tree, line by line: layers and the open layer's components
+    $$('[data-open]', host).forEach((b) => b.onclick = () => { const n = M().layers[b.dataset.open].name; openOnly(open.has(n) ? null : n); saveUI(); layers(); });
     $$('[data-vis]', host).forEach((b) => b.onclick = () => { const l = M().layers[b.dataset.vis]; l.visible = !l.visible; persist(); const map = layerVis(); for (const I2 of ready()) I2.ws.layers(map); drawShaded(false);
       if (!l.visible && UI.sels.some((id) => comp(id)?.layer === l.name)) setSel(UI.sels.filter((id) => comp(id)?.layer !== l.name)); else { vp.select(UI.sels); layers(); } });
     $$('[data-lock]', host).forEach((b) => b.onclick = () => { const l = M().layers[b.dataset.lock]; l.locked = !l.locked; persist(); const lk = lockList(); for (const I2 of ready()) I2.ws.setLocks(lk);
@@ -426,7 +535,7 @@ export function render(app, [pid]) {
   }
   function selPane() {
     const host = $('#selp', app), list = UI.sels.map(comp).filter(Boolean), c = list.at(-1);
-    if (!c) { host.innerHTML = `<h2>Selection</h2><p class="note">Click an object in any pane or in the layer list, or drag a box in the Shaded view. ${M().components.length} components on ${M().layers.length} layers.</p>`; return; }
+    if (!c) { host.innerHTML = `<h2>Selection</h2><p class="note">Nothing selected: click an object in the view or a name in Layers.</p>`; return; }
     if (list.length > 1) {
       host.innerHTML = `<h2>Selection <button class="btn sm" id="desel">Clear</button></h2><p style="font-weight:600">${list.length} components</p><p class="note">${esc(list.map((x) => x.name).slice(0, 4).join(', '))}${list.length > 4 ? ` and ${list.length - 4} more` : ''}</p>
         <button class="btn sm" id="edit">Edit selection</button><button class="btn danger" id="del">Delete ${list.length}</button>`;
@@ -450,12 +559,13 @@ export function render(app, [pid]) {
     $('#dirty', app).textContent = d ? (v ? `Changes since v${v.n} are not saved.` : 'Save the first version to run simulations.') : `Up to date with v${v.n}.`;
     $('#versions', app).innerHTML = p.versions.slice().reverse().map((x) => `<div class="vrow ${x === v && !d ? 'cur' : ''}"><span class="vn">v${x.n}</span><div><div>${esc(x.note)}</div><div class="vmeta">${when(x.created)} · ${p.runs.filter((r) => r.versionId === x.id).length} results</div></div>
       <div style="display:grid;gap:4px"><button class="btn sm" data-load="${x.id}">Open</button><a class="btn sm" href="#/simulations" data-simv="${x.id}">Simulate</a></div></div>`).join('') || '<p class="note">No versions yet.</p>';
+    fit($('#versions', app), $$('#versions .vrow', app), 'versions');
     $$('[data-load]', app).forEach((b) => b.onclick = () => { if (dirty() && !confirm('Discard unsaved changes and open this version?')) return; p.draft = S.clone(S.version(p, b.dataset.load).model); const conv = ensureStudio(p); persist(); loadAll(); setSel([]); toast(conv ? 'Version opened (converted to Plan Studio’s model)' : 'Version opened'); });
     $$('[data-simv]', app).forEach((a) => a.onclick = () => setCurrentVersion(p, a.dataset.simv));
     $('#toSim', app).href = '#/simulations'; $('#toSim', app).onclick = () => { if (last()) setCurrentVersion(p, last().id); };
   }
   function loadAll() { SNAP = JSON.stringify(p.draft.studio); for (const I2 of ready()) { const back = I2.ws.load(SNAP); if (I2 === INST.plan && back !== SNAP) { SNAP = back; p.draft.studio = JSON.parse(back); } tell(I2); } vpFitted = false; derive(false); levelUI(); refresh(true); }
-  $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if (!name || M().layers.find((l) => l.name === name.trim())) return; M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); open.add(name.trim()); persist(); layers(); };
+  $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if (!name || M().layers.find((l) => l.name === name.trim())) return; M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
   $('#saveV', app).onclick = () => { if (!dirty() && last()) { toast('No changes since v' + last().n); return; } const v = S.saveVersion(p, $('#note', app).value.trim()); $('#note', app).value = ''; state(); toast(`Saved v${v.n}`); };
 
   // ---- status bar: snaps for the Plan pane's drawing and the gumball, the gumball itself, clearance in Plan and Shaded
@@ -472,10 +582,10 @@ export function render(app, [pid]) {
 
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
-  state(); layers(); selPane(); rail(); panel();
+  state(); layers(); selPane(); rail(); panel(); tabsUI();
   setSel(UI.selProject === p.id ? UI.sels.filter((id) => comp(id)) : [], { params: false });
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; document.removeEventListener('click', outside); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; ro.disconnect(); document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

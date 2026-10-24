@@ -485,3 +485,54 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .w3-stage .w2-tr { z-index: 5; }
 .w3-stage .w2-cap button:disabled { opacity: .6; cursor: default; }
 @media (max-width: 820px) { .w3-stage { height: 70vh; } }
+/* Workspace (2026-10-24): Rhino-style panels on the right, nothing scrolls (long lists are paged) */
+.w2-panel, .w2-right { overflow: hidden; }
+.w2-right { display: flex; flex-direction: column; }
+#panelBody { flex: 1; min-height: 0; display: flex; flex-direction: column; } #panelBody[hidden] { display: none; }
+#panelBody > .pane.w2-tools { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.w2-tools .w2-sec { flex: none; } .w2-tools .w2-sec.w3-fit { flex: 0 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.w3-fit { min-height: 0; overflow: hidden; }
+.w3-pghide { display: none !important; }
+.w3-pager { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 6px 0 2px; font: 600 11.5px var(--mono); color: var(--mut); flex: none; }
+.w3-pager button { width: 28px; height: 24px; border: 1px solid var(--line2); background: var(--chip); border-radius: 7px; color: var(--ink); font-size: 15px; line-height: 1; padding: 0; }
+.w3-pager button:disabled { opacity: .35; }
+.w3-acc { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; background: none; padding: 6px 2px; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.w2-sec > .w3-acc { font: 700 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--mut2); border-top: 1px solid var(--line); }
+.w2-sec > .w3-acc[aria-expanded="true"] { color: var(--ink); }
+.w3-acc small { font: 11px var(--mono); color: var(--mut2); letter-spacing: 0; }
+.w2-panel > #panelBody > .w3-accp { gap: 8px; padding-top: 10px; padding-bottom: 10px; flex: none; }
+.w2-panel > #panelBody > .w3-accp.on { flex: 0 1 auto; min-height: 0; overflow: hidden; }
+.w3-accp h2 .w3-acc { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; padding: 2px 0; }
+.w3-accp.on h2 .w3-acc { color: var(--ink); }
+.w3-accp:not(.on) > .w3-accb { display: none; }
+.w3-accb { display: grid; gap: 10px; }
+.w3-tabs { flex: none; display: flex; align-items: flex-end; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
+.w3-tlist { display: flex; gap: 2px; flex: 1; min-width: 0; }
+.w3-tlist button { width: 42px; height: 36px; display: grid; place-items: center; border: 1px solid transparent; border-bottom: 0; border-radius: 9px 9px 0 0; background: none; color: var(--mut); margin-bottom: -1px; }
+.w3-tlist button:hover { color: var(--ink); background: var(--chip); }
+.w3-tlist button[aria-selected="true"] { color: var(--ink); background: var(--card, var(--bg)); border-color: var(--line); box-shadow: inset 0 2px 0 var(--red); }
+.w3-gearw { position: relative; align-self: center; padding-bottom: 4px; }
+.w3-gear { width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: none; border-radius: 8px; color: var(--mut); }
+.w3-gear:hover, .w3-gear[aria-expanded="true"] { color: var(--ink); background: var(--chip); }
+.w3-gear svg { width: 17px; height: 17px; }
+.w3-tabmenu { left: auto; right: 0; z-index: 20; min-width: 230px; }
+.w3-tm { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.w3-tm:hover { background: var(--chip); } .w3-tm input { width: 15px; height: 15px; margin: 0; }
+.w3-tbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.w3-tp { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border-bottom: 0; }
+.w3-tp[hidden] { display: none; }
+.w3-tp > * { flex: none; } .w3-tp > .w3-fit { flex: 1 1 0; }
+.w3-tp .w3-fit + .btn { margin-top: 2px; }
+.w3-selp { flex: none; border-top: 1px solid var(--line); border-bottom: 0; }
+.w3-stat { font-size: 13px; font-weight: 600; color: var(--ink); }
+.w3-btns { display: grid; gap: 6px; }
+.w3-lrow { display: flex; justify-content: space-between; } .w3-lrow output { font: 11.5px var(--mono); color: var(--mut); }
+.w3-ck { display: flex; align-items: center; gap: 8px; font-size: 13px; } .w3-ck input { width: 15px; height: 15px; margin: 0; }
+.w3-keys { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink2); } .w3-keys b { font: 600 11.5px var(--mono); color: var(--ink); }
+.w3-tp input[type="range"] { width: 100%; }
+@media (max-width: 820px) { .w2-panel, .w2-right { overflow: visible; } }
+.w2-right .pane { padding: 12px 16px; gap: 8px; }
+.w2-right .w2-lrow { padding: 3px 0; }
+.w2-right .w3-crow > button[data-sel] { padding-top: 3px; padding-bottom: 3px; }
+.w2-sec > .w3-acc { padding: 4px 2px; }
+.w2-tools .w2-sec.w3-fit .w2-grid { flex: none; }

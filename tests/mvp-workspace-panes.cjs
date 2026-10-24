@@ -17,6 +17,10 @@ L.W=(p,role,fn,arg)=>p.evaluate(([role,fn,arg])=>{const w=document.getElementByI
 L.ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};
 
 const {ok,P,W}=L;
+// a furniture card: open its group, then its page (the panel never scrolls)
+const furn=async(p,id)=>{await p.click('[data-panel="furniture"]');for(let i=0;i<20;i++){if(await p.evaluate(id=>{const c=document.querySelector(`[data-furn="${id}"]`);return !!c&&!c.classList.contains('w3-pghide');},id))break;
+ await p.evaluate(id=>{const c=document.querySelector(`[data-furn="${id}"]`);if(c){document.querySelector('#panelBody .w3-pager [data-pg="1"]').click();return;}const acc=[...document.querySelectorAll('#panelBody [data-acc]')],o=acc.findIndex(b=>b.getAttribute('aria-expanded')==='true');acc[(o+1)%acc.length].click();},id);await p.waitForTimeout(80);}
+ await p.click(`[data-furn="${id}"]`);};
 const view=async(p,v)=>{await p.click('#vBtn');await p.click(`#vMenu [data-view="${v}"]`);await p.waitForTimeout(700);};
 (async()=>{
 // ---- §3 walls, doors and windows
@@ -84,7 +88,7 @@ const pen=()=>W(p,'plan',w=>{const M=w.__st.M,out=[];const corners=f=>{const c=M
 const bed=()=>W(p,'plan',(w,id)=>{const f=w.__st.M.furn.find(f=>f.gen&&f.gen.id==='bed');return f?{id:f.id,x:+f.x.toFixed(3),y:+f.y.toFixed(3),w:f.w,d:f.d,rot:+((f.rot||0)*180/Math.PI).toFixed(1),W:f.gen.vals.W}:null;});
 console.log('  pre-existing overlaps:',JSON.stringify(await pen()));
 // place a bed in the studio room
-await p.click('[data-panel="furniture"]');await p.click('[data-furn="bed"]');
+await furn(p,'bed');
 ok((await W(p,'plan',w=>w.__ws.state())).tool==='place','Bed card starts Plan Studio\'s place tool');
 let a=await P(p,5,6);await p.mouse.move(...a);await p.mouse.click(...a);await p.waitForTimeout(1200);
 let B0=await bed();ok(!!B0,'a bed is placed: '+JSON.stringify(B0));
@@ -155,7 +159,7 @@ await b.close(); }
 // ---- §4 / §5 gumball, toolbars, panes
 { const {b,p,errs,B}=await L.open(1700,950);await p.goto(B);await p.evaluate(()=>{localStorage.clear();localStorage.setItem('pc-mvp-ws2',JSON.stringify({split:[1.6,1.6,1],ws3:1,gumball:true}));});await L.ws(p,B,false);
 const bed=(role='plan')=>W(p,role,w=>{const f=w.__st.M.furn.find(f=>f.gen&&f.gen.id==='bed');return f?{id:f.id,x:+f.x.toFixed(3),y:+f.y.toFixed(3),rot:+((f.rot||0)*180/Math.PI).toFixed(1),hidden:(w.__st.M.hiddenIds||[]).includes(f.id),locked:!!f.locked}:null;});
-await p.click('[data-panel="furniture"]');await p.click('[data-furn="bed"]');let a=await P(p,5,6);await p.mouse.move(...a);await p.mouse.click(...a);await p.waitForTimeout(1200);
+await furn(p,'bed');let a=await P(p,5,6);await p.mouse.move(...a);await p.mouse.click(...a);await p.waitForTimeout(1200);
 await W(p,'plan',w=>w.document.querySelector('[data-tool="select"]').click());
 let B0=await bed();
 // §5 · drag the bed 1 m in the Plan: the other two panes follow during the drag
@@ -214,11 +218,27 @@ ok(await W(p,'plan',w=>w.__st.M.notes.some(n=>n.text==='Reading corner')),'…ad
 await W(p,'plan',w=>w.document.querySelector('[data-tool="del"]').click());ok(await W(p,'plan',w=>w.__ws.state().tool)==='del','Delete tool');
 await view(p,'persp');await W(p,'persp',w=>w.document.getElementById('xBtn').click());await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().explode),'Explode in the 3D toolbar');
 await p.waitForTimeout(900);ok(/Exploded view/.test(await p.textContent('#vBtn')),'…and the view pill at the top left follows');
-await W(p,'persp',w=>w.document.getElementById('xBtn').click());await p.waitForTimeout(600);
+ok(await p.evaluate(()=>!document.querySelector('.w3-tp[data-tab="explode"]').hidden),'…and the Explode panel on the right comes to the front');
+ok(await W(p,'persp',w=>getComputedStyle(w.document.getElementById('xPanel')).display==='none'),'Plan Studio\'s own explode box gives way to the panel');
+await p.evaluate(()=>{const r=document.getElementById('xSp');r.value='3000';r.dispatchEvent(new Event('input',{bubbles:true}));});await p.waitForTimeout(400);
+ok(await W(p,'persp',w=>w.document.getElementById('xD').value)==='3000'&&/3000/.test(await p.textContent('#xSpv')),'the panel\'s spacing slider spreads the storeys (3000 mm)');
+await p.click('#xGo');await p.waitForTimeout(900);ok(!(await W(p,'persp',w=>w.__ws.state().explode)),'Put the storeys back, from the panel');
+await p.click('#xGo');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().explode),'Explode the storeys, from the panel');
+await p.click('#xGo');await p.waitForTimeout(700);
 await W(p,'persp',w=>w.document.querySelector('[data-tool="orbit"]').click());ok(await W(p,'persp',w=>w.__ws.state().tool)==='orbit','Orbit');
 // Perspective header: Walkthrough, Bird, Ghosted / Wireframe
-await view(p,'walk');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().walkpick),'Walkthrough: Plan Studio first asks where to start (the figure on the plan)');await W(p,'persp',w=>w.document.getElementById('wmGo').click());await p.waitForTimeout(1200);ok(await W(p,'persp',w=>w.__ws.state().walking),'Start walking: first person in the Perspective pane');await p.screenshot({path:L.SP+'t45walk.png'});
-await view(p,'persp');await p.waitForTimeout(900);ok(!(await W(p,'persp',w=>w.__ws.state().walking)),'Bird');
+const vm=await p.evaluate(()=>{document.getElementById('vBtn').click();const r=[...document.querySelectorAll('#vMenu [data-view]')].map(b=>b.dataset.view);document.getElementById('vBtn').click();return r;});
+ok(!vm.some(v=>['walk','explode','elev'].includes(v))&&vm.includes('persp')&&vm.includes('shaded'),'the top-left pill keeps the views; Explode, Walkthrough and Interior elevation moved to the right ('+vm.join(', ')+')');
+await p.click('#tabList [data-tab="walk"]');await p.click('#wBtns [data-act="walk"]');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().walkpick),'Walkthrough: Plan Studio first asks where to start (the figure on the plan)');await p.click('#wBtns [data-act="walkGo"]');await p.waitForTimeout(1200);ok(await W(p,'persp',w=>w.__ws.state().walking),'Start walking (the panel\'s button): first person in the Perspective view');await p.screenshot({path:L.SP+'t45walk.png'});
+await p.click('#wBtns [data-act="walkX"]');await p.waitForTimeout(900);ok(!(await W(p,'persp',w=>w.__ws.state().walking)),'Exit walkthrough from the panel');
+await p.click('#tabList [data-tab="elev"]');await p.click('#eBtns [data-act="elev"]');await p.waitForTimeout(900);
+ok(await W(p,'plan',w=>!w.document.getElementById('elvDlg').hidden)&&await p.evaluate(()=>__ws2.UI.view)==='plan','Interior elevation panel: Pick a wall opens Plan Studio\'s wall picker in the Plan view');
+await W(p,'plan',w=>{const g=w.document.querySelector('#wpSvg .wp-wall');g.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:0,clientY:0}));});await p.waitForTimeout(300);
+await W(p,'plan',w=>{const go=w.document.getElementById('wpGo');if(!go.disabled)go.click();});await p.waitForTimeout(1200);
+const eSt=await p.textContent('#eStat');console.log('  elevation panel says:',eSt);
+if(await W(p,'plan',w=>!w.document.getElementById('elvView').hidden)){ok(/Elevation/.test(eSt),'…a wall picked: the panel names the elevation');await p.click('#eBtns [data-act="elevX"]');await p.waitForTimeout(800);ok(await W(p,'plan',w=>w.document.getElementById('elvView').hidden),'…Back to plan, from the panel');}
+else {await p.click('#eBtns [data-act="elevX"]');await p.waitForTimeout(500);ok(await W(p,'plan',w=>w.document.getElementById('elvDlg').hidden),'…Cancel closes the wall picker');}
+await p.click('#tabList [data-tab="layers"]');await view(p,'persp');
 await p.click('#dBtn');await p.click('#dMenu [data-disp="ghosted"]');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='ghosted','Ghosted');
 await p.screenshot({path:L.SP+'t45g.png'});
 await p.click('#dBtn');await p.click('#dMenu [data-disp="wire"]');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='wire','Wireframe');
@@ -260,10 +280,10 @@ const dis=await p.evaluate(()=>{const s=[...document.querySelectorAll('[data-sel
 // status bar
 const sb=await p.evaluate(()=>[...document.querySelectorAll('.w2-status [data-snap]')].map(i=>i.dataset.snap).join(',')+'|'+[...document.querySelectorAll('.w2-status [data-sw]')].map(i=>i.dataset.sw).join(','));ok(sb==='End,Near,Mid,Cen|gumball,clearance','status bar: '+sb);
 // versions: save, change, open the saved one again
-await p.fill('#note','Panes test');await p.click('#saveV');await p.waitForTimeout(500);
+await p.click('#tabList [data-tab="versions"]');await p.fill('#note','Panes test');await p.click('#saveV');await p.waitForTimeout(500);
 const v=await p.evaluate(()=>{const P=__ws2.model();const db=JSON.parse(localStorage.getItem('pc-mvp-v1'));const pr=db.projects[0];const v=pr.versions.at(-1);return {n:v.n,note:v.note,studio:!!v.model.studio,walls:v.model.studio?.walls.length,comps:v.model.components.length};});
 ok(v.note==='Panes test'&&v.studio,'Save version keeps Plan Studio\'s model with the version: '+JSON.stringify(v));
-await p.click('[data-panel="furniture"]');await p.click('[data-furn="sofa"]');let a=await P(p,5,6);await p.mouse.move(...a);await p.mouse.click(...a);await p.waitForTimeout(1200);
+await furn(p,'sofa');let a=await P(p,5,6);await p.mouse.move(...a);await p.mouse.click(...a);await p.waitForTimeout(1200);
 const f1=await W(p,'plan',w=>w.__st.M.furn.length);ok(/unsaved/.test(await p.evaluate(()=>document.getElementById('state').textContent)),'a change shows as unsaved changes');
 p.once('dialog',d=>d.accept());await p.evaluate(()=>document.querySelector('[data-load]').click());await p.waitForTimeout(2500);
 const f2=await W(p,'plan',w=>w.__st.M.furn.length),f3=await W(p,'persp',w=>w.__st.M.furn.length);ok(f2===f1-1&&f3===f2,'Open on the saved version puts every pane back ('+f1+' → '+f2+' pieces)');
@@ -276,7 +296,7 @@ ok(sim.ok&&sim.len>100,'a saved version goes to a simulation scene (Daylight) fr
 // import: Units (mm) and Up axis, auto layer by name
 const obj='o north_wall\nv 0 0 0\nv 4000 0 0\nv 4000 200 0\nv 0 200 0\nv 0 0 3000\nv 4000 0 3000\nv 4000 200 3000\nv 0 200 3000\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\no chair_1\nv 1000 1000 0\nv 1500 1000 0\nv 1500 1500 0\nv 1000 1500 0\nv 1000 1000 900\nv 1500 1000 900\nv 1500 1500 900\nv 1000 1500 900\nf 9 10 11 12\nf 13 14 15 16\nf 9 10 14 13\nf 10 11 15 14\nf 11 12 16 15\nf 12 9 13 16\n';
 fs.writeFileSync(L.SP+'imp.obj',obj);
-await p.click('[data-panel="project"]');await p.selectOption('#unit','0.001');await p.selectOption('#up','z');
+await p.click('[data-panel="project"]');await p.click('[data-pacc="import"]');await p.selectOption('#unit','0.001');await p.selectOption('#up','z');
 await p.setInputFiles('#file',L.SP+'imp.obj');await p.waitForTimeout(1500);
 const msg=await p.evaluate(()=>document.getElementById('impMsg').textContent);console.log('  import:',msg);
 const imp=await p.evaluate(()=>__ws2.model().components.filter(c=>c.mesh).map(c=>[c.name,c.layer,+c.g.w.toFixed(2),+c.g.d.toFixed(2),+c.g.h.toFixed(2)]));console.log('  imported:',JSON.stringify(imp));
@@ -285,6 +305,31 @@ ok(imp.some(c=>Math.abs(Math.max(c[2],c[3])-4)<0.05)&&imp.some(c=>Math.abs(c[4]-
 ok(await p.evaluate(()=>__ws2.vp.probe().some(o=>__ws2.model().components.find(c=>c.id===o.id)?.mesh)),'imported meshes show in the Shaded pane');
 ok(await p.evaluate(()=>document.getElementById('unit').value==='0.001'&&document.getElementById('up').value==='z'),'Units and Up axis stay as chosen');
 
+if(errs.length){console.log('page errors:',errs);process.exitCode=1;}
+await b.close(); }
+// ---- Rhino-style panels on the right, and nothing in the Workspace scrolls
+for (const [w,h] of [[1366,768],[1600,900]]) { const {b,p,errs,B}=await L.open(w,h);await L.ws(p,B);
+const tabs=()=>p.evaluate(()=>[...document.querySelectorAll('#tabList [data-tab]')].map(b=>b.dataset.tab));
+ok(JSON.stringify(await tabs())===JSON.stringify(['layers','versions','explode','walk','elev']),w+'px · tabs above the panel: Layers, Versions, Explode, Walkthrough, Interior elevation');
+await p.click('#tabGear');await p.click('#tabMenu [data-tabon="explode"]');await p.waitForTimeout(200);
+ok(!(await tabs()).includes('explode'),'the gear takes a panel away');
+ok(await p.evaluate(()=>document.querySelector('#tabMenu [data-tabon="layers"]').disabled),'…Layers always stays');
+await p.click('#tabMenu [data-tabon="explode"]');await p.waitForTimeout(200);ok((await tabs()).includes('explode')&&await p.evaluate(()=>__ws2.UI.tab)==='explode','…and adds it back, in front');
+await p.mouse.click(700,400);await p.waitForTimeout(200);ok(await p.evaluate(()=>document.getElementById('tabMenu').hidden),'the gear menu closes on a click outside');
+const scrolls=()=>p.evaluate(()=>[...document.querySelectorAll('.w2-panel,.w2-right,.w2-panel *,.w2-right *')].filter(e=>e.offsetParent&&e.tagName!=='IFRAME'&&e.id!=='propsWrap'&&e.scrollHeight>e.clientHeight+1&&!['visible','hidden','clip'].includes(getComputedStyle(e).overflowY)).map(e=>e.id||e.className).concat(document.scrollingElement.scrollHeight>innerHeight+1?['page']:[]).concat(['.w2-panel','.w2-right'].filter(s=>{const e=document.querySelector(s);return getComputedStyle(e).overflowY!=='hidden';})));
+const bad=[];
+for (const t of ['layers','versions','explode','walk','elev']) { await p.click(`#tabList [data-tab="${t}"]`);await p.waitForTimeout(250);const s=await scrolls();if(s.length)bad.push(t+': '+s.join(','));
+  const cut=await p.evaluate(t=>{const tp=document.querySelector(`.w3-tp[data-tab="${t}"]`),r=tp.getBoundingClientRect();return [...tp.querySelectorAll('button,input,a')].filter(e=>e.offsetParent&&!e.closest('.w3-pghide')).some(e=>e.getBoundingClientRect().bottom>r.bottom+1);},t);if(cut)bad.push(t+': a control is cut off'); }
+for (const k of ['draw','door','window','furniture','light','project']) { await p.click(`[data-panel="${k}"]`);await p.waitForTimeout(250);const s=await scrolls();if(s.length)bad.push(k+': '+s.join(','));
+  const cut=await p.evaluate(()=>{const r=document.getElementById('panel').getBoundingClientRect();return [...document.querySelectorAll('#panelBody button,#panelBody select,#panelBody input')].filter(e=>e.offsetParent&&!e.closest('.w3-pghide')).some(e=>e.getBoundingClientRect().bottom>r.bottom+1);});if(cut)bad.push(k+': a control is cut off'); }
+ok(!bad.length,w+'×'+h+' · no scroll bar in any panel or the page, nothing cut off'+(bad.length?' — '+bad.join(' | '):''));
+await p.click('[data-panel="furniture"]');await p.waitForTimeout(300);
+const fp=await p.evaluate(()=>{const g=document.querySelectorAll('#panelBody [data-acc]'),pg=document.querySelector('#panelBody .w3-pager span');return [g.length,pg?pg.textContent:'',document.querySelectorAll('#panelBody [data-acc][aria-expanded="true"]').length];});
+ok(fp[0]>3&&fp[2]===1,'Furniture: one group open at a time ('+fp[0]+' groups)'+(fp[1]?', its cards in pages '+fp[1]:''));
+await p.click('#panelBody [data-acc="1"]');await p.waitForTimeout(200);ok(await p.evaluate(()=>document.querySelector('#panelBody [data-acc="1"]').getAttribute('aria-expanded'))==='true','…opening another group closes the first');
+// layers: open Walls; a long list pages instead of scrolling
+await p.click('#tabList [data-tab="layers"]');const wi=await p.evaluate(()=>[...document.querySelectorAll('.w2-layer .nm')].findIndex(b=>/Walls/.test(b.textContent)));
+await p.click(`[data-open="${wi}"]`);await p.waitForTimeout(200);ok(await p.evaluate(()=>document.querySelectorAll('[data-open][aria-expanded="true"]').length)===1,'one layer open at a time');
 if(errs.length){console.log('page errors:',errs);process.exitCode=1;}
 await b.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1;});

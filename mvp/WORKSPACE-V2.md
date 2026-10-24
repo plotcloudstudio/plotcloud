@@ -4,6 +4,17 @@
 
 New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` block at the end of `css/mvp.css`. Edited: `js/app.js` (one route) and `index.html` (one nav link).
 
+## Panels on the right, like Rhino; nothing scrolls (2026-10-24, evening)
+
+- The right column has a tab strip above the panel: **Layers, Versions, Explode, Walkthrough, Interior elevation**. The gear at the end of the strip chooses which panels show (Layers always stays). The choice and the open tab are remembered in this browser.
+- Explode, Walkthrough and Interior elevation left the top-left view pill; the pill keeps Plan per level, Ceiling plan, Perspective and the Shaded model.
+  - **Explode**: explode / put back, spacing between storeys, storey labels, reset, PNG 1920 and SVG. It drives Plan Studio's own exploded view (whose floating box is hidden in the Workspace).
+  - **Walkthrough**: choose where to start (the figure), start walking, cancel or exit, and the keys.
+  - **Interior elevation**: pick a wall (in the Plan view), pick another wall, labels, back to plan.
+  - Starting one of them elsewhere (the 3D toolbar's Explode, for example) brings its panel to the front.
+- Versions (save, open, simulate) is its own panel; "Choose a simulation" moved into it. Selection stays under the panels.
+- No scroll bars in the Workspace: the side columns never scroll. One layer is open at a time; the tool groups on the left (Furniture's rooms, Draw room's two groups) and the Project panel's sections open one at a time; a list that still does not fit is cut into pages with ‹ 1 / 3 ›.
+
 ## One view again (2026-10-24, later the same day)
 The three side-by-side panes were replaced by one view, chosen in the pill at the top left as before: Plan · each level,
 Ceiling plan, Interior elevation (Plan Studio 2D); Perspective, Walkthrough, Explode (Plan Studio 3D); Shaded model (with
