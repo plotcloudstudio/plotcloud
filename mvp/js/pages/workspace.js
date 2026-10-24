@@ -35,7 +35,7 @@ export function render(app, [pid]) {
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
       <label class="f">Add a component<select id="add"><option value="">Choose…</option><option value="mass">Massing block</option><option value="wall">Wall</option><option value="window">Window</option><option value="room">Room (for acoustics, daylight)</option><option value="slab">Slab</option></select></label>
-      <p class="note">Detailed modelling stays in the existing tools: <a href="${PAGE('studio')}" target="_blank" rel="noopener">Plan Studio ↗</a> · <a href="${PAGE('site')}" target="_blank" rel="noopener">Site Planner ↗</a> · <a href="${FULL('tracer')}" target="_blank" rel="noopener">Plan tracer ↗</a>. Bringing their models into a project here is <span class="tag plan">Planned</span>.</p>
+      <p class="note">Detailed modelling stays in the existing tools: <a href="${PAGE('studio')}" target="_blank" rel="noopener">Plan Studio ↗</a>. Bringing their models into a project here is <span class="tag plan">Planned</span>.</p>
     </div>
     <div class="pane"><h2>Layers &amp; components <button class="btn sm" id="addLayer">+ Layer</button></h2><div id="layers"></div></div>
   </aside>

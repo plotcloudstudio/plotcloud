@@ -11,7 +11,7 @@
 <title>PlotCloud — Architectural Design, Analysis & Resources</title>
 <script>/* The bare site address opens the new simulation-first design; every #/ route, including #/home (classic home) and all tools, stays here. */if(!location.search&&(!location.hash||location.hash==="#"||location.hash==="#/"))location.replace("mvp/");</script>
 <link rel="stylesheet" href="site-shell.css?v=20261021-2">
-<script src="site-shell.js?v=20261023-ui1" defer></script>
+<script src="site-shell.js?v=20261024-1" defer></script>
 <meta name="description" content="Browser-based architectural design tools and resources for architects and architecture students. Develop layouts, analyze environmental performance and present your work.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700;800&display=swap">
@@ -678,7 +678,6 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
   <nav class="main" id="nav"></nav>
   <form id="gform" role="search"><span class="sr-ico">⌕</span><input id="gsearch" type="search" placeholder="What are you looking for?" aria-label="Search plotcloud"></form>
   <div class="hicons">
-    <a class="hbtn wb" data-go="site" id="sitelink" title="Site Planner: pick the place, generate the surroundings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span>Site Planner</span></a><span class="hflow" aria-hidden="true">›</span>
     <a class="hbtn wb" data-go="studio" id="wblink"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/></svg><span>Plan Studio</span></a>
     <div class="acctwrap"><button class="hbtn" id="acct"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span id="acctlabel">Log in or join</span></button><div class="acctmenu" id="acctmenu"></div></div>
     <button class="burger" id="burger" aria-label="Menu"><i></i><i></i><i></i></button>
@@ -698,7 +697,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"architectural-render": "drawing-20261023-1","acoustics":"wire-20261023-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "project-20261022-2", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261023-1", "movementdepth": "movement-depth-20261023-1", "modeler": "semantic-20261023-2", "tracer": "19c8cd93", "sitectx": "a9c40ba2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBV = {"architectural-render": "drawing-20261023-1","acoustics":"wire-20261023-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "project-20261022-2", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261023-1", "movementdepth": "movement-depth-20261023-1", "modeler": "semantic-20261023-2", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
 const EMBFILE = {movementdepth:"spacesyntax"};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${EMBFILE[id] || id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
@@ -766,13 +765,13 @@ const cad=n=>(n<0?"−":n>0?"+":"")+"$"+Math.abs(n).toFixed(2);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._);t._=setTimeout(()=>t.classList.remove("show"),2200)}
 const signed=()=>S.role!=="visitor";
 // ---------- chrome
-// one place for the product names shown in the interface (routes #/site and #/studio do not change). Change a name here; the tool pages carry the same names as plain text.
-const LABELS={site:"Site Planner",studio:"Plan Studio"};
+// one place for the product names shown in the interface (the route #/studio does not change). Change a name here; the tool pages carry the same names as plain text.
+const LABELS={studio:"Plan Studio"};
 const NAV=[["library","Library"],["requests","Requests"],["support","Support"],["tools","Tools"],["learn","Learn"],["donate","Donate"]];
 function chrome(page){
   $("#nav").innerHTML=NAV.map(([k,l])=>`<a data-go="${k}" class="${page.split("/")[0]===k||(k==="tools"&&page.startsWith("tool/"))||(k==="library"&&page.startsWith("res/"))||(k==="learn"&&page.startsWith("post/"))?"on":""}">${l}</a>`).join("");
-  $("#mpanel").innerHTML=NAV.map(([k,l])=>`<a data-go="${k}">${l}</a>`).join("")+`<a data-go="site">${LABELS.site}</a><a data-go="studio">${LABELS.studio}</a>`+`<hr style="border:0;border-top:1px solid var(--hair)">`+(signed()?`${S.role==="admin"?'<a data-go="admin">Admin</a>':""}<a data-go="account">Account</a><a data-act="logout">Log out</a>`:`<a data-go="login">Log in or join</a>`);
-  $("#wblink").classList.toggle("on",page.split("/")[0]==="studio");$("#sitelink").classList.toggle("on",page.split("/")[0]==="site"||page==="tool/sitectx");$("#acctlabel").textContent=signed()?(S.role==="admin"?"Admin":"Account"):"Log in or join";
+  $("#mpanel").innerHTML=NAV.map(([k,l])=>`<a data-go="${k}">${l}</a>`).join("")+`<a data-go="studio">${LABELS.studio}</a>`+`<hr style="border:0;border-top:1px solid var(--hair)">`+(signed()?`${S.role==="admin"?'<a data-go="admin">Admin</a>':""}<a data-go="account">Account</a><a data-act="logout">Log out</a>`:`<a data-go="login">Log in or join</a>`);
+  $("#wblink").classList.toggle("on",page.split("/")[0]==="studio");$("#acctlabel").textContent=signed()?(S.role==="admin"?"Admin":"Account"):"Log in or join";
   $("#acctmenu").innerHTML=signed()?`<a data-go="account">My account</a><a data-go="project">My project</a>${S.role==="admin"?'<a data-go="admin">Admin</a>':""}<hr><a data-act="logout">Log out</a>`:"";
   $("#acctmenu").classList.remove("open");
   
@@ -3475,7 +3474,7 @@ window.addEventListener("hashchange", () => setTimeout(appFit, 0)); window.addEv
     if(d.t==='project-model'&&id==='modeler'){await readyProjects;if(!PROJ||d.projectId!==PROJ.id)return;let scene;try{scene=JSON.parse(d.scene);if(!scene.studio?.levels||!Array.isArray(scene.studio.walls))throw Error();}catch{reply({t:'error',msg:'The model could not be linked. Save a Plan Studio JSON backup.'});return;}PROJ.scene=d.scene;PROJ.sunScene=typeof d.sunScene==='string'?d.sunScene:null;PROJ.from='modeler';await persistProject();return;}
     if(d.t==='semantic-habit'&&id==='modeler'&&typeof d.layer==='string'&&['Wall','Glazing','Door','Furniture','Floor','Ceiling','Structure'].includes(d.category)){await readyProjects;const key=d.layer.trim().toLowerCase();if(key&&key.length<160){habits[key]=d.category;await projectKV('semantic-habits',habits,true);}return;}
     if (d.t === "evt") { try { track(d.name, Object.assign({ tool: id }, d.props || {})); } catch (er) {} return; }
-    if (d.t === "go") { go(d.to === "project" ? "project" : d.to === "studio" ? "studio" : d.to === "tool/sitectx" ? "tool/sitectx" : d.to === "tool/tracer" ? "tool/tracer" : "pricing"); return; }
+    if (d.t === "go") { go(d.to === "project" ? "project" : d.to === "studio" ? "studio" : "pricing"); return; }
      if (d.t === "hello") { if (window.__pcHO && window.__pcHO.tool === id) return; if (d.scene && PROJ && (PROJ.settings || entitled()) && PROJ.scene && (PROJ.from !== id || id === "modeler")) reply({ t: "project", scene: id === "sunhours" ? (PROJ.sunScene || PROJ.scene) : PROJ.scene, name: PROJ.name }); return; }
     if (d.t === "save") {
       if (!signed() || !entitled()) { reply({ t: "upsell" }); try { track("project_upsell", { tool: id }); } catch (er) {} return; }
@@ -3570,9 +3569,6 @@ TMETHOD.modeler=["Parametric 3D furniture from the model generator; walls, windo
     const _aS = applyTools; applyTools = function () { const t = CMS.tools; if (t) { const f = (a) => Array.isArray(a) ? a.filter((id) => id !== "modeler") : a; CMS.tools = Object.assign({}, t, { sections: (t.sections || []).map(f), newIds: f(t.newIds), soon: f(t.soon), hidden: f(t.hidden) }); } _aS(); }; applyTools(); }
   const _toolS = P.tool; P.tool = function (id) { if (id === "modeler") { back("studio"); setTimeout(() => { chrome("studio"); studioFit(); }, 0); return P.studio(); } return _toolS.apply(this, arguments); };
   P.studio = () => `<div class="appwrap studiowrap"><iframe data-emb="modeler" title="Plan Studio" allow="clipboard-write"></iframe></div>`;
-  // v132: the Site page, before Plan Studio: the place, the surrounding massing and the ground area (the upgraded Site Context tool)
-  P.site = () => { setTimeout(() => { chrome("site"); studioFit(); }, 0); return `<div class="appwrap studiowrap sitewrap"><iframe data-emb="sitectx" title="Site Planner" allow="clipboard-write"></iframe></div>`; };
-  { const _toolT = P.tool; P.tool = function (id) { if (id === "sitectx") { back("site"); setTimeout(() => { chrome("site"); studioFit(); }, 0); return P.site(); } return _toolT.apply(this, arguments); }; }
   const st = document.createElement("style"); st.textContent = `.studiobar,.studiowrap{max-width:none;padding-left:20px;padding-right:20px}.studiowrap iframe{min-height:560px}@media (max-width:900px){.studiobar,.studiowrap{padding-left:12px;padding-right:12px}}
   .hmap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin:8px 0 0}
   .hmap a{display:grid;grid-template-rows:auto auto 1fr auto;gap:8px;padding:22px 22px 20px;border-right:1px solid var(--hair);text-decoration:none;color:inherit;cursor:pointer;min-width:0;position:relative}
@@ -3585,7 +3581,7 @@ TMETHOD.modeler=["Parametric 3D furniture from the model generator; walls, windo
   @media (max-width:900px){.hmap{grid-template-columns:1fr 1fr}.hmap a{border-bottom:1px solid var(--hair)}.hmap a:nth-child(2n){border-right:0}.hmap a:nth-child(3){padding-left:0}.hmap a::after{display:none}}
   @media (max-width:560px){.hmap{grid-template-columns:1fr}.hmap a{border-right:0;padding-left:0}}
   @media (max-width:600px){.wrap.head > .tabs{margin-right:-16px}}`; document.head.appendChild(st);
-  function studioFit() { const on = /^#\/?(studio|site)\b/.test(location.hash) || /^#\/?tool\/sitectx\b/.test(location.hash); if (on) { document.body.classList.add("appmode"); document.documentElement.classList.add("appmode"); const fr = document.querySelector(".studiowrap iframe"); if (fr) { window.scrollTo(0, 0); fr.style.height = Math.max(560, Math.floor(innerHeight - fr.getBoundingClientRect().top - 12)) + "px"; } } }
+  function studioFit() { const on = /^#\/?studio\b/.test(location.hash); if (on) { document.body.classList.add("appmode"); document.documentElement.classList.add("appmode"); const fr = document.querySelector(".studiowrap iframe"); if (fr) { window.scrollTo(0, 0); fr.style.height = Math.max(560, Math.floor(innerHeight - fr.getBoundingClientRect().top - 12)) + "px"; } } }
   window.addEventListener("hashchange", () => setTimeout(studioFit, 0)); window.addEventListener("resize", () => setTimeout(studioFit, 0)); setTimeout(studioFit, 0);
   // home: what each part is for, with real numbers, before the shop sections
   const _homeM = P.home; P.home = function () { const h = _homeM.apply(this, arguments); const k = h.indexOf('<section class="wrap hsec">'); if (k < 0) return h;
@@ -3605,7 +3601,7 @@ TMETHOD.modeler=["Parametric 3D furniture from the model generator; walls, windo
   // handoff: Studio sends a checked model to one tool; that tool loads it on its next hello (no Pro needed: Tools are free)
   window.__pcHO = null;
   window.addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc) return; const fr = [...document.querySelectorAll("iframe[data-emb]")].find((f) => f.contentWindow === e.source); if (!fr) return; const id = fr.dataset.emb;
-    if (d.t === "handoff" && (id === "modeler" || id === "tracer" || id === "sitectx" || id === "sunhours") && typeof d.tool === "string" && EMB[d.tool] && typeof d.scene === "string" && d.scene.length < 15e6) {
+    if (d.t === "handoff" && (id === "modeler" || id === "sunhours") && typeof d.tool === "string" && EMB[d.tool] && typeof d.scene === "string" && d.scene.length < 15e6) {
       window.__pcHO = { tool: d.tool, scene: d.scene, name: String(d.name || "Plan Studio model").slice(0, 160), source: d.source || null, at: Date.now() };
       try { track("studio_send", { tool: d.tool, version: d.source && d.source.version }); } catch (er) {} go("tool/" + d.tool); return; }
     if (d.t === "hello" && window.__pcHO && window.__pcHO.tool === id) { const h = window.__pcHO; window.__pcHO = null; if (!d.scene || Date.now() - h.at > 10 * 60e3) return;
@@ -3618,42 +3614,7 @@ TMETHOD.modeler=["Parametric 3D furniture from the model generator; walls, windo
     if (d.t === "wbready" && id === "modeler" && window.__pcDL) { const x = window.__pcDL; window.__pcDL = null; if (Date.now() - x.at > 10 * 60e3) return; try { e.source.postMessage({ pc: 1, t: "delta", delta: x.delta, source: x.source }, "*"); } catch (er) {} } });
 }
 
-// ======================= Plan Tracer (2026-10-17): a satellite tool of Plan Studio, free, in Tools (Model axo was removed 2026-10-19: it overlapped the Plan Studio 3D view) =======================
-// Plan Tracer (Design): trace walls over a scaled plan picture, then Open in Plan Studio or send to an analysis tool.
-EMB["tracer"]="@";
-EMBI["tracer"]={title:"plan tracer",crumb:"Plan tracer",short:"Trace a plan picture to scale: walls, windows and doors, then open it in Plan Studio.",lede:'Put a picture of a plan under the drawing (PNG, JPG, WebP or SVG), set its scale by clicking two points and typing the real distance, lock it and trace walls, windows, doors and floors over it, level by level. Save it in this browser, export DXF, PNG or JSON, open it in Plan Studio to model it in 3D, or send a level straight to Views, Daylight, Natural ventilation, Space syntax or Isovist.'};
-APPMODE.add("tracer");
-XT.push(["tracer","plan tracer","Trace a plan picture to scale — walls, windows, doors — and open it in Plan Studio or send it to an analysis tool.",""]);
-TMETA["tracer"]=["new"];
-EMBSVG["tracer"]=`<svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#f4f3ef"/><g opacity=".55" stroke="#9a968c" stroke-width="1.2" fill="none"><rect x="46" y="30" width="208" height="120"/><path d="M150 30 V95 M150 115 V150 M46 92 H118 M134 92 H150 M200 30 V150"/><path d="M60 44 h30 v18 h-30z M214 120 h28 v20 h-28z"/></g><path d="M46 30 H254 V150 H46 Z M150 30 V95 M150 115 V150 M46 92 H118 M134 92 H150" fill="none" stroke="#111" stroke-width="5" stroke-linecap="square"/><path d="M46 166 H254" stroke="#D8402A" stroke-width="2"/><circle cx="46" cy="166" r="4" fill="#D8402A"/><circle cx="254" cy="166" r="4" fill="#D8402A"/><path d="M200 30 V150" stroke="#111" stroke-width="5" stroke-dasharray="10 8"/></svg>`;
-TMETHOD.tracer=["Scale from two points and a known distance; walls, openings and floors on fixed layers","In your browser","Plan pictures: PNG · JPG · WebP · SVG · Exports DXF · PNG · JSON"];
-{const add=(sec,id,after)=>{const s=TSECTIONS.find(x=>x[1]===sec);if(s&&!s[4].includes(id)){const i=after?s[4].indexOf(after):-1;s[4].splice(after?(i>=0?i+1:s[4].length):0,0,id)}
-   const bi=TSECTIONS.indexOf(s);if(bi>=0&&BASE_SECT[bi]&&!BASE_SECT[bi].includes(id)){const i=after?BASE_SECT[bi].indexOf(after):-1;BASE_SECT[bi].splice(after?(i>=0?i+1:BASE_SECT[bi].length):0,0,id)}
-   if(!TOOL_IDS.includes(id))TOOL_IDS.push(id);if(!BASE_NEW.includes(id))BASE_NEW.push(id);};
- add("Design","tracer",null);
- // a tools order saved from the admin page does not know these tools yet: put them in the same places
- const _aTA=applyTools;applyTools=function(){const t=CMS.tools;if(t&&t.sections){const known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);let secs=t.sections,nw=[...(t.newIds||[])];
-   for(const [sec,id,after] of [["Design","tracer",null]]){const bi=TSECTIONS.findIndex(x=>x[1]===sec);if(bi<0||known.has(id)||!secs[bi])continue;const a=secs[bi].slice(),i=after?a.indexOf(after):-1;a.splice(after?(i>=0?i+1:a.length):0,0,id);secs=secs.map((x,k)=>k===bi?a:x);nw.push(id)}
-   if(secs!==t.sections)CMS.tools=Object.assign({},t,{sections:secs,newIds:nw})}_aTA()};
- applyTools();}
-
-// ======================= Site Context (2026-10-17): a real site → validated context for Plan Studio and Sun hours =======================
-EMB["sitectx"]="@";
-EMBI["sitectx"]={title:"site planner",crumb:"Site Planner",short:"Pick the place on a map, generate the surrounding massing, set the ground area, then enter Plan Studio.",lede:'Find the site by address or coordinates, or import an OpenStreetMap or GeoJSON file. Set the context area (300 m to start, or draw your own boundary) and import the surrounding buildings and terrain. Every height is labeled by where it came from: the data source, the floor count, you, or an estimate; missing and invalid buildings are listed so you can fix or leave them out. Then open the site in Plan Studio, where it stays read-only around your design, or send it straight to Sun hours.'};
-APPMODE.add("sitectx");
-XT.push(["sitectx","site context","A real address becomes a checked 3D context: neighboring buildings with labeled heights, terrain and location, for Plan Studio and Sun hours.",""]);
-TMETA["sitectx"]=["new"];
-EMBSVG["sitectx"]=`<svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#f4f3ef"/><circle cx="150" cy="92" r="70" fill="rgba(216,64,42,.05)" stroke="#D8402A" stroke-width="1.5" stroke-dasharray="7 5"/><g stroke="#2b2a28" stroke-width="1.2"><rect x="102" y="52" width="34" height="22" fill="#4a4a46"/><rect x="150" y="48" width="22" height="18" fill="#8a8a82"/><rect x="186" y="60" width="18" height="34" fill="#4a4a46"/><rect x="110" y="104" width="16" height="28" fill="#8a8a82"/><rect x="168" y="110" width="40" height="16" fill="#4a4a46"/></g><rect x="138" y="128" width="26" height="14" fill="#fff" stroke="#b3261e" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M143 92h14M150 85v14" stroke="#D8402A" stroke-width="2.5"/><circle cx="150" cy="92" r="3.5" fill="#D8402A"/><path d="M262 40l6 18-6-4-6 4z" fill="#111"/></svg>`;
-TMETHOD.sitectx=["Local transverse Mercator from WGS84; footprints extruded by height with provenance; separate sun and wind readiness checks","In your browser","OpenStreetMap .osm · Overpass JSON · GeoJSON · live OpenStreetMap where the site can reach it"];
-{const add=(sec,id,after)=>{const s=TSECTIONS.find(x=>x[1]===sec);if(s&&!s[4].includes(id)){const i=after?s[4].indexOf(after):-1;s[4].splice(after?(i>=0?i+1:s[4].length):0,0,id)}
-   const bi=TSECTIONS.indexOf(s);if(bi>=0&&BASE_SECT[bi]&&!BASE_SECT[bi].includes(id)){const i=after?BASE_SECT[bi].indexOf(after):-1;BASE_SECT[bi].splice(after?(i>=0?i+1:BASE_SECT[bi].length):0,0,id)}
-   if(!TOOL_IDS.includes(id))TOOL_IDS.push(id);if(!BASE_NEW.includes(id))BASE_NEW.push(id);};
- add("Brief & codes","sitectx",null);
- const _aSC=applyTools;applyTools=function(){const t=CMS.tools;if(t&&t.sections){const known=new Set([...(t.sections||[]).flat(),...(t.soon||[]),...(t.hidden||[])]);const bi=TSECTIONS.findIndex(x=>x[1]==="Brief & codes");
-   if(bi>=0&&!known.has("sitectx")&&t.sections[bi]){const a=["sitectx",...t.sections[bi]];CMS.tools=Object.assign({},t,{sections:t.sections.map((x,k)=>k===bi?a:x),newIds:[...(t.newIds||[]),"sitectx"]})}}_aSC()};
- applyTools();}
-
-// Plan Tracer remains reachable from existing links and Site Planner remains a top-level product, but neither appears in Tools.
+// Plan Tracer and Site Planner were removed (2026-10-24): a tools order saved earlier from the admin page must not bring them back.
 {const HIDE_TOOLS=["tracer","sitectx"],drop=a=>{if(Array.isArray(a))for(let i=a.length-1;i>=0;i--)if(HIDE_TOOLS.includes(a[i]))a.splice(i,1)};
  const hide=()=>{TSECTIONS.forEach(x=>drop(x[4]));BASE_SECT.forEach(drop);drop(TOOL_IDS);drop(BASE_NEW);for(let i=XT.length-1;i>=0;i--)if(HIDE_TOOLS.includes(XT[i][0]))XT.splice(i,1)};
  const _aHT=applyTools;applyTools=function(){_aHT();const t=CMS.tools;if(t){const f=a=>Array.isArray(a)?a.filter(id=>!HIDE_TOOLS.includes(id)):a;CMS.tools=Object.assign({},t,{sections:(t.sections||[]).map(f),newIds:f(t.newIds),soon:f(t.soon),hidden:f(t.hidden)})}hide()};
@@ -3712,10 +3673,10 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
   const _bar = tBar; tBar = function () { let h = _bar(); if (!TFILTERS.some(([k]) => k !== "all" && k !== "dev")) h = h.replace('<span class="tdiv" aria-hidden="true"></span>', ""); return h; };
   // the two kinds of analysis, each reading its own list; anything new in Analysis lands in Interior
   window.ENV_GROUPS = { site: ["sunhours", "wind"], interior: null };
-  const GROUP = { site: ["Site model", "Generate an editable 3D context model from the site boundary and surrounding building heights."],
+  const GROUP = { site: ["Site simulation", "Around the building: sun and wind on your massing and the buildings next to it."],
     interior: ["Interior simulation", "Inside the rooms: daylight, air, structure, movement and sightlines, on the model you draw in Plan Studio."] };
-  const CARD = { sunhours: ["Sun hours", "Site sun: hours of direct sun and the shadows across your site, its neighbors and your massing — any city, date and time. Needs your site from the Site page (boundary and building heights) or a 3D model."],
-    wind: [null, "Site wind: how air moves around your massing and the buildings next to it, at street level and in section. Needs your site from the Site page (boundary and building heights) or a 3D model. Screening only."],
+  const CARD = { sunhours: ["Sun hours", "Site sun: hours of direct sun and the shadows across your site, its neighbors and your massing — any city, date and time. Needs your massing from Plan Studio or a 3D model."],
+    wind: [null, "Site wind: how air moves around your massing and the buildings next to it, at street level and in section. Needs your massing from Plan Studio or a 3D model. Screening only."],
     daylight: ["Interior daylight", "Daylight inside your rooms through the year: sDA, ASE and daylight factor on every desk, checked against LEED v4/v4.1."] };
   const _card = tCard; tCard = function (id, no) { let h = _card(id, no).replace('<div class="tc-tags"></div>', ""); const c = CARD[id];
     if (c) { if (c[0]) h = h.replace(/<h3>[^<]*<\/h3>/, `<h3>${c[0]}</h3>`); h = h.replace(/<p class="tc-d">[\s\S]*?<\/p>/, `<p class="tc-d">${c[1]}</p>`); }
@@ -3728,7 +3689,7 @@ function pcBadge(kind) { return kind === "new" ? '<span class="pcb pcb-new">New<
     const full = run(all), n = an[0], open = `<section class="tsec2" id="tsec-${n}">`, k = full.indexOf(open); if (k < 0) return full;
     const end = full.indexOf("</section>", k) + 10, gridOf = (h) => { const i = h.indexOf(open), g = h.indexOf('<div class="tgrid2">', i), e = h.indexOf("</div></section>", g); return h.slice(g, e + 6); };
     const group = (key, ids) => { const h = run(ids); return `<div class="agrp" id="agrp-${key}"><h3 class="agrp-h">${GROUP[key][0]} <span>(${ids.length})</span></h3><p class="asub-l">${GROUP[key][1]}</p>${gridOf(h)}</div>`; };
-    const nav = `<nav class="anav" aria-label="On this page">On this page: <a href="#agrp-site" data-agrp="site">Site model</a> · <a href="#agrp-interior" data-agrp="interior">Interior simulation</a></nav>`;
+    const nav = `<nav class="anav" aria-label="On this page">On this page: <a href="#agrp-site" data-agrp="site">Site simulation</a> · <a href="#agrp-interior" data-agrp="interior">Interior simulation</a></nav>`;
     const g0 = full.indexOf('<div class="tgrid2">', k), sec = full.slice(k, end), head = full.slice(k, g0);
     return full.slice(0, k) + head + nav + group("site", site) + group("interior", interior) + "</section>" + full.slice(end); };
   document.addEventListener("click", (e) => { const a = e.target.closest("[data-agrp]"); if (!a) return; e.preventDefault(); const t = document.getElementById("agrp-" + a.dataset.agrp); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); });
@@ -3788,52 +3749,24 @@ route();
   new MutationObserver(() => { document.querySelectorAll(".simfs iframe").forEach((fr) => { if (!fr.dataset.esc) { fr.dataset.esc = "1"; fr.addEventListener("load", () => hook(fr)); } hook(fr); }); }).observe(document.getElementById("app"), { childList: true, subtree: true });
 }
 
-// === Site analysis atlas (2026-10-19): eight diagrams in one style replace the two cards of the Site analysis group ===
+// === Boards (emb/atlas.html in its board mode) and Render ===
 EMB["atlas"] = "@";
 EMBI["atlas"] = { title: "boards", crumb: "Boards", short: "Lay drawings and images out on a presentation board.", lede: "Lay drawings and images out on a presentation board." };
 if (typeof APPMODE !== "undefined") APPMODE.add("atlas");
 EMB["render"] = "@";
 EMBI["render"] = { title: "render", crumb: "Render", short: "Plan Studio plan → colour mask → your own GPU → back into Boards.", lede: "Turn a Plan Studio plan into a colour mask, render it on your own computer, and bring the image back to Boards." };
 if (typeof APPMODE !== "undefined") APPMODE.add("render");
-{ const ATLAS = [
-    ["fg", "Figure-ground", "Buildings as solid black on white: how dense the ground is."],
-    ["streets", "Streets", "Streets in four weights, with length, density and intersections."],
-    ["land", "Land use", "Land use in pastel blocks, with the share of each use."],
-    ["green", "Green & water", "Parks and water against the built ground, as shares."],
-    ["transit", "Transit", "Bus and rail stops with five and ten minute walking rings."],
-    ["walk", "Walk pulse", "Streets coloured by minutes of walking from the site."],
-    ["reading", "Site reading", "The site in gold, places by kind, and a 5 minute circle."],
-    ["sunwind", "Sun & wind", "Sun hours and wind flow, each in its own tool for now."]];
-  window.ATLAS_LIST = ATLAS;
-  const thumb = (d) => { const r = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })(), B = [], cell = 34, c0 = 150, cy = 90;
-    for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) B.push([c0 + i * cell - cell / 2 + 3, cy + j * cell - cell / 2 + 3, cell - 6, cell - 6, r()]);
-    const lu = ["#F2C94C", "#E88AA8", "#9B8BD4", "#7FB3D5", "#D9D9D9", "#F2C94C", "#F2C94C", "#BFDDB0"];
-    let g = "";
-    if (d === "fg") g = B.map((b) => `<rect x="${b[0] + 3}" y="${b[1] + 3}" width="${b[2] - 6}" height="${b[3] - 6}" fill="#1C1B1A"/>`).join("");
-    else if (d === "streets") g = [-3, -2, -1, 0, 1, 2, 3, 4].map((k, n) => { const w = n % 4 === 0 ? 3 : n % 2 ? .8 : 1.5, p = c0 + (k - .5) * cell, q = cy + (k - .5) * cell; return `<path d="M${p} 0V180M0 ${q}H300" stroke="#1C1B1A" stroke-width="${w}"/>`; }).join("");
-    else if (d === "land") g = B.map((b) => `<rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" fill="${lu[Math.floor(b[4] * 8)]}"/>`).join("");
-    else if (d === "green") g = B.map((b) => `<rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" fill="${b[4] < .25 ? "#9CC98B" : "#F1EFE8"}"/>`).join("") + `<path d="M0 120C80 70 200 140 300 80V105C200 165 80 95 0 145Z" fill="#8EC3E6"/>`;
-    else if (d === "transit") g = [-3, -1, 1, 3].map((k) => `<path d="M${c0 + k * cell} 0V180M0 ${cy + k * cell}H300" stroke="#BDB9B0"/>`).join("") + `<circle cx="150" cy="90" r="34" fill="none" stroke="#D8402A" stroke-dasharray="5 3"/><circle cx="150" cy="90" r="68" fill="none" stroke="#D8402A" stroke-dasharray="5 3"/>` + [[100, 56], [196, 124], [150, 160], [230, 60]].map((p, i) => i === 1 ? `<rect x="${p[0] - 5}" y="${p[1] - 5}" width="10" height="10" fill="#D8402A"/>` : `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#2F6DB5"/>`).join("") + `<rect x="140" y="82" width="20" height="16" fill="#E8B93C" stroke="#1C1B1A"/>`;
-    else if (d === "walk") g = [-3, -2, -1, 0, 1, 2, 3].map((k) => { const col = (a) => ["#FDE6CF", "#F9B27A", "#EC6A3A", "#B3220F"][Math.min(3, Math.floor(Math.abs(a) * .9))], p = c0 + k * cell, q = cy + k * cell; return `<path d="M${p} 0V180" stroke="${col(k)}" stroke-width="2"/><path d="M0 ${q}H300" stroke="${col(k)}" stroke-width="2"/>`; }).join("") + `<circle cx="150" cy="90" r="30" fill="none" stroke="#1C1B1A" stroke-dasharray="4 3"/><circle cx="150" cy="90" r="62" fill="none" stroke="#1C1B1A" stroke-dasharray="4 3"/><rect x="141" y="83" width="18" height="14" fill="#E8B93C" stroke="#1C1B1A"/>`;
-    else if (d === "reading") g = B.map((b) => `<rect x="${b[0] + 3}" y="${b[1] + 3}" width="${b[2] - 6}" height="${b[3] - 6}" fill="#D6D2C8"/>`).join("") + `<circle cx="150" cy="90" r="52" fill="none" stroke="#1C1B1A" stroke-dasharray="5 3"/><rect x="136" y="80" width="28" height="20" fill="#E8B93C" stroke="#1C1B1A"/>` + [[112, 62, "#2F6DB5"], [190, 70, "#2E8B57"], [120, 128, "#D8402A"], [186, 122, "#8A5A36"], [160, 50, "#D8402A"]].map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${p[2]}" stroke="#fff"/>`).join("");
-    else g = `<rect width="300" height="180" fill="#F4F2EC"/><circle cx="105" cy="70" r="26" fill="#F4C542"/><g stroke="#F4C542" stroke-width="2">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M${105 + Math.cos(a * Math.PI / 180) * 34} ${70 + Math.sin(a * Math.PI / 180) * 34}L${105 + Math.cos(a * Math.PI / 180) * 44} ${70 + Math.sin(a * Math.PI / 180) * 44}"/>`).join("")}</g><g stroke="#2F6DB5" stroke-width="2" fill="none" stroke-linecap="round"><path d="M150 120C185 105 205 135 245 118"/><path d="M140 140C180 128 205 156 262 138"/><path d="M165 100C190 90 215 110 250 98"/></g>`;
-    const clip = d === "sunwind" ? "" : `<clipPath id="atc-${d}"><circle cx="150" cy="90" r="82"/></clipPath>`;
-    return `<svg viewBox="0 0 300 180" aria-hidden="true" style="background:#fff">${clip}<g ${d === "sunwind" ? "" : `clip-path="url(#atc-${d})"`}>${g}</g>${d === "sunwind" ? "" : '<circle cx="150" cy="90" r="82" fill="none" stroke="#1C1B1A" stroke-width=".8"/>'}</svg>`; };
-  const html = () => `<div class="agrp" id="agrp-site"><h3 class="agrp-h">Site model <span>(1)</span></h3><p class="asub-l">One place · editable context · one 3D massing model.</p><div class="tgrid2"><article class="tc"><div class="tc-vis atl go" data-go="site"><svg viewBox="0 0 300 180" aria-hidden="true"><rect width="300" height="180" fill="#f4f2ec"/><path d="M35 126 150 62l115 42-116 66Z" fill="#e4e1d8" stroke="#1c1b1a"/><path d="m67 112 30-17 27 10-30 18Z" fill="#fff" stroke="#1c1b1a"/><path d="m67 112 27 11v28l-27-11Z" fill="#cbc7bd" stroke="#1c1b1a"/><path d="m94 123 30-18v28l-30 18Z" fill="#aaa59a" stroke="#1c1b1a"/><path d="m132 91 35-20 31 12-35 20Z" fill="#fff" stroke="#1c1b1a"/><path d="m132 91 31 12v43l-31-12Z" fill="#cbc7bd" stroke="#1c1b1a"/><path d="m163 103 35-20v43l-35 20Z" fill="#aaa59a" stroke="#1c1b1a"/><path d="m199 111 26-15 23 9-26 15Z" fill="#fff" stroke="#1c1b1a"/><path d="m199 111 23 9v23l-23-9Z" fill="#cbc7bd" stroke="#1c1b1a"/><path d="m222 120 26-15v23l-26 15Z" fill="#aaa59a" stroke="#1c1b1a"/><circle cx="151" cy="136" r="5" fill="#d8402a"/></svg></div><div class="tc-body" data-go="site"><div class="tc-head"><h3>3D Site Model</h3></div><p class="tc-d">Choose a place, generate surrounding massing, correct heights and continue with the 3D context model.</p><span class="tc-open">Open →</span></div></article></div></div>`;
-  const _t = tSections; tSections = function () { const h = _t.apply(this, arguments), a = h.indexOf('<div class="agrp" id="agrp-site">'), b = h.indexOf('<div class="agrp" id="agrp-interior">'); if (a < 0 || b < 0) return h; return h.slice(0, a) + html() + h.slice(b); };
-  const st = document.createElement("style"); st.textContent = `.tc-vis.atl{display:grid;place-items:center;background:#fff;aspect-ratio:5/3;overflow:hidden}.tc-vis.atl svg{width:100%;height:100%;display:block}`; document.head.appendChild(st); }
 
 /* v140 · home: one main line of six steps replaces the Practice / Competition journeys */
 (function () {
   const STEPS = [
-    { n: 1, name: "Site model", go: "site", p: "Choose the site and generate an editable 3D context model.", cta: "Generate a site model" },
-    { n: 2, name: LABELS.studio, go: "studio", p: "Draw the plan inside the boundary, with its surroundings.", cta: "Open " + LABELS.studio },
-    { n: 3, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
-    { n: 4, name: "Drawing", go: "tool/architectural-render", p: "Turn a saved view into a material drawing or a single-colour architectural illustration.", cta: "Make a drawing" },
-    { n: 5, name: "Boards", go: "tool/atlas?d=boards", p: "Lay the drawings out on one board and export it.", cta: "Make a board" }];
+    { n: 1, name: LABELS.studio, go: "studio", p: "Draw the plan: walls, levels, doors, windows and furniture.", cta: "Open " + LABELS.studio },
+    { n: 2, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
+    { n: 3, name: "Drawing", go: "tool/architectural-render", p: "Turn a saved view into a material drawing or a single-colour architectural illustration.", cta: "Make a drawing" },
+    { n: 4, name: "Boards", go: "tool/atlas?d=boards", p: "Lay the drawings out on one board and export it.", cta: "Make a board" }];
   window.JOURNEYS = { main: STEPS.map((x) => ({ no: String(x.n).padStart(2, "0") + " · " + x.name, go: x.go, h: x.name, p: x.p, cta: x.cta })) };
   const st = document.createElement("style");
-  st.textContent = `.hline{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;counter-reset:s}
+  st.textContent = `.hline{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;counter-reset:s}
   .hline li{position:relative;padding:0 14px 0 0;min-width:0}
   .hline li+li{padding-left:0}
   .hline a{display:grid;gap:8px;align-content:start;text-decoration:none;color:inherit;cursor:pointer;padding:0 8px 4px 0;height:100%}
@@ -3854,8 +3787,8 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
    .hline li:nth-child(3) .dot::after{display:block}.hline li:last-child .dot::after{display:none}.hline h3{margin-top:5px}}`;
   document.head.appendChild(st);
   const block = () => `<section class="wrap hsec" aria-labelledby="hmapT"><div class="hhead"><h2 id="hmapT">how plotcloud fits together.</h2></div>
-    <p class="jsub">One line, five steps: read the place, draw, check, render, present.</p>
-    <nav aria-label="The five steps"><ol class="hline">${STEPS.map((x) => `<li data-t="${x.tag || ""}"><a data-go="${x.go}"${x.anchor ? ` data-anchor="${x.anchor}"` : ""}><span class="dot"><b>${x.n}</b><i></i></span><h3>${x.name}</h3>${x.tag ? `<span class="tg">${x.tag}</span>` : ""}<p>${x.p}</p><span class="jcta">${x.cta} →</span></a></li>`).join("")}</ol></nav>
+    <p class="jsub">One line, four steps: draw, check, render, present.</p>
+    <nav aria-label="The four steps"><ol class="hline">${STEPS.map((x) => `<li data-t="${x.tag || ""}"><a data-go="${x.go}"${x.anchor ? ` data-anchor="${x.anchor}"` : ""}><span class="dot"><b>${x.n}</b><i></i></span><h3>${x.name}</h3>${x.tag ? `<span class="tg">${x.tag}</span>` : ""}<p>${x.p}</p><span class="jcta">${x.cta} →</span></a></li>`).join("")}</ol></nav>
     <p class="hall">Showroom, Library and Learn are available at every step: <a data-go="showroom">Showroom</a> · <a data-go="library">Library</a> · <a data-go="learn">Learn</a>.</p></section>`;
   const MAP = /<section class="wrap hsec" aria-labelledby="hmapT">[\s\S]*?<\/section>/;
   const _h = P.home; P.home = function () { let h = _h.apply(this, arguments); h = h.replace(MAP, ""); const k = h.indexOf('<section class="wrap hsec dlsec"'); return k < 0 ? h.replace(/<\/section>/, (m) => m + block()) : h.slice(0, k) + block() + h.slice(k); };
@@ -3866,20 +3799,20 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   const EMBEDDED = window.parent !== window && /[?&]drawer=1/.test(location.search);
   const SIM = window.__simfs || [];
   const STEPS = [
-    { n: 1, name: "Site model", ic: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>' },
-    { n: 2, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
-    { n: 3, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
-    { n: 4, name: "Drawing", ic: '<path d="M3 18V7l9-3 9 5v11l-9-3z"/><path d="M12 4v13M7 8v8M16 7v11"/>' },
-    { n: 5, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
+    { n: 1, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
+    { n: 2, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
+    { n: 3, name: "Drawing", ic: '<path d="M3 18V7l9-3 9 5v11l-9-3z"/><path d="M12 4v13M7 8v8M16 7v11"/>' },
+    { n: 4, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
   const CX = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("pc-ctx") || "{}"); } catch (e) {} return Object.assign({ lat: null, lng: null, R: 600, label: "", src: "", done: {}, sim: "" }, o); })();
   const saveCx = () => { try { localStorage.setItem("pc-ctx", JSON.stringify(CX)); } catch (e) {} };
-  if (CX.workflowVersion !== 2) { if (CX.done[4]) CX.done[5] = CX.done[4]; delete CX.done[4]; CX.workflowVersion = 2; saveCx(); }
+  if (CX.workflowVersion !== 2 && CX.workflowVersion !== 3) { if (CX.done[4]) CX.done[5] = CX.done[4]; delete CX.done[4]; CX.workflowVersion = 2; saveCx(); }
+  if (CX.workflowVersion === 2) { const o = CX.done || {}; CX.done = { 1: o[2], 2: o[3], 3: o[4], 4: o[5] }; CX.workflowVersion = 3; saveCx(); }   // the Site step was removed: steps move up by one
   window.PCX = CX;   // the one site-context: the pin, the radius and what is done
   const pinQ = (withFrom) => CX.lat == null ? "" : `lat=${(+CX.lat).toFixed(5)}&lng=${(+CX.lng).toFixed(5)}&r=${CX.R}${withFrom ? "&from=analysis" : ""}`;
-  const urlOf = (n) => n === 1 ? "site" : n === 2 ? "studio" : n === 3 ? (CX.sim ? "tool/" + CX.sim : "tools?group=analysis") : n === 4 ? "tool/architectural-render" : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
+  const urlOf = (n) => n === 1 ? "studio" : n === 2 ? (CX.sim ? "tool/" + CX.sim : "tools?group=analysis") : n === 3 ? "tool/architectural-render" : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
   const where = () => { const h = (location.hash.replace(/^#\/?/, "") || "home"), [path, q] = h.split("?"), pg = path.split("/"), id = pg[1];
-    if (pg[0] === "site" || (pg[0] === "tool" && id === "sitectx")) return 1; if (pg[0] === "studio") return 2;
-    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 5 : 1; if (pg[0] === "tool" && (id === "render" || id === "architectural-render")) return 4; if (pg[0] === "tool" && id === "composer") return 5; if (pg[0] === "tools" && /(^|&)group=analysis(&|$)/.test(q || "")) return 3; if (pg[0] === "tool" && SIM.includes(id)) return 3; return 0; };
+    if (pg[0] === "studio") return 1;
+    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 4 : 0; if (pg[0] === "tool" && (id === "render" || id === "architectural-render")) return 3; if (pg[0] === "tool" && id === "composer") return 4; if (pg[0] === "tools" && /(^|&)group=analysis(&|$)/.test(q || "")) return 2; if (pg[0] === "tool" && SIM.includes(id)) return 2; return 0; };
   const st = document.createElement("style");
   st.textContent = `:root{--wfrail:0px;--wftop:0px}
   body.wf{--wfrail:220px;--wftop:40px}body.wf.rc{--wfrail:64px}
@@ -3920,9 +3853,8 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   const ck = document.createElement("div"); ck.id = "cmdk"; ck.setAttribute("role", "dialog"); ck.setAttribute("aria-label", "Quick jump"); ck.innerHTML = '<div class="bx"><input type="text" placeholder="Jump to a step, a tool, Showroom…" aria-label="Jump to" autocomplete="off"><ul role="listbox"></ul></div>';
   if (EMBEDDED) { document.body.classList.add("drawer"); return; }
   document.body.append(rail, top, dr, ck);
-  const chipText = () => CX.lat == null ? "No site yet" : `${CX.label || (+CX.lat).toFixed(2) + ", " + (+CX.lng).toFixed(2)} · R ${CX.R} m`;
   const drawRail = () => { const cur = where();
-    rail.innerHTML = `<a class="lg" data-go="home" title="plotcloud home">plotcloud</a><button class="chip" type="button" id="wfchip" title="Open the 3D site model"><small>Site</small><b>${esc(chipText())}</b></button>` +
+    rail.innerHTML = `<a class="lg" data-go="home" title="plotcloud home">plotcloud</a>` +
       STEPS.map((s) => `<a class="st${cur === s.n ? " on" : ""}" href="#/${urlOf(s.n)}" data-n="${s.n}" data-done="${CX.done[s.n] ? 1 : 0}" ${cur === s.n ? 'aria-current="step"' : ""} title="${s.n} · ${esc(s.name)}"><svg viewBox="0 0 24 24" aria-hidden="true">${s.ic}</svg><span>${s.n} · ${esc(s.name)}</span><i class="tk" aria-label="done">✓</i></a>`).join("") +
       `<span class="sp"></span><button class="col" type="button" id="wfcol" aria-label="Collapse the rail"><span>${document.body.classList.contains("rc") ? "" : "Collapse"}</span>⇔</button>`; };
   const NAMES = { home: "Home", tools: "Tools", library: "Resources", showroom: "Showroom", learn: "Learn", pricing: "Pricing" };
@@ -3930,15 +3862,14 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
     top.innerHTML = `<span class="ttl">${s ? s.n + " · " + esc(s.name) : ""}</span><span class="sp"></span><button type="button" data-k class="kb" aria-label="Quick jump, Ctrl or Command K">Jump <kbd>Ctrl K</kbd></button>` +
       [["showroom", "Showroom"], ["library", "Library"], ["learn", "Learn"]].map(([k, l]) => `<button type="button" data-dr="${k}" aria-label="Open ${l} in a drawer">${l}</button>`).join("") + `<a data-go="${signed() ? "account" : "login"}" aria-label="${signed() ? "Account" : "Log in"}">${signed() ? "Account" : "Log in"}</a>`; };
   const update = () => { const cur = where(), on = cur > 0; document.body.classList.toggle("wf", on); if (!on) { closeDr(); return; }
-    if (cur === 2) CX.done[2] = true; if (cur === 3 && /^#\/?tool\//.test(location.hash)) CX.sim = location.hash.replace(/^#\/?tool\//, "").split("?")[0]; CX.done[1] = CX.lat != null; saveCx();
-    try { if (typeof pget === "function") pget().then((p) => { const d = !!(p && p.results && p.results.length); if (!!CX.done[3] !== d) { CX.done[3] = d; saveCx(); drawRail(); } }).catch(() => {}); } catch (e) {}
+    if (cur === 1) CX.done[1] = true; if (cur === 2 && /^#\/?tool\//.test(location.hash)) CX.sim = location.hash.replace(/^#\/?tool\//, "").split("?")[0]; saveCx();
+    try { if (typeof pget === "function") pget().then((p) => { const d = !!(p && p.results && p.results.length); if (!!CX.done[2] !== d) { CX.done[2] = d; saveCx(); drawRail(); } }).catch(() => {}); } catch (e) {}
     drawRail(); drawTop(); };
   const openDr = (k) => { const f = dr.querySelector("iframe"); $("#dtl").textContent = NAMES[k] || k; const u = `index.html?drawer=1#/${k}`; if (f.dataset.k !== k) { f.dataset.k = k; f.src = u; } dr.classList.add("on"); dr.dataset.k = k; };
   const closeDr = () => dr.classList.remove("on");
   dr.querySelector(".dh button").addEventListener("click", closeDr);
   document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-dr]"); if (b) { dr.classList.contains("on") && dr.dataset.k === b.dataset.dr ? closeDr() : openDr(b.dataset.dr); return; }
     if (e.target.closest && e.target.closest("[data-k]")) { openK(); return; }
-    if (e.target.closest && e.target.closest("#wfchip")) { go("site"); return; }
     if (e.target.closest && e.target.closest("#wfcol")) { document.body.classList.toggle("rc"); try { localStorage.setItem("pc-rc", document.body.classList.contains("rc") ? "1" : ""); } catch (x) {} drawRail(); dispatchEvent(new Event("resize")); return; }
     const a = e.target.closest && e.target.closest("#wfrail a.st"); if (a) { e.preventDefault(); go(urlOf(+a.dataset.n)); } });
   try { if (localStorage.getItem("pc-rc")) document.body.classList.add("rc"); } catch (e) {}
@@ -3947,7 +3878,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   let items = [], sel = 0;
   const catalog = () => { const out = STEPS.map((s) => ({ t: `${s.n} · ${s.name}`, k: "step", u: urlOf(s.n) }));
     out.push({ t: "Home", k: "page", u: "home" }, { t: "Tools", k: "page", u: "tools" }, { t: "Showroom", k: "drawer", dr: "showroom" }, { t: "Resources library", k: "drawer", dr: "library" }, { t: "Learn", k: "drawer", dr: "learn" }, { t: "Pricing", k: "page", u: "pricing" });
-    for (const id of Object.keys(EMB)) { if (id === "modeler" || id === "sitectx") continue; const i = EMBI[id]; if (i) out.push({ t: i.crumb || i.title, k: "tool", u: "tool/" + id }); } return out; };
+    for (const id of Object.keys(EMB)) { if (id === "modeler") continue; const i = EMBI[id]; if (i) out.push({ t: i.crumb || i.title, k: "tool", u: "tool/" + id }); } return out; };
   const listK = (q) => { q = q.trim().toLowerCase(); items = catalog().filter((x) => !q || x.t.toLowerCase().includes(q)).slice(0, 40); sel = 0; const ul = ck.querySelector("ul"); ul.innerHTML = items.map((x, i) => `<li role="option" data-i="${i}" aria-selected="${i === 0}">${esc(x.t)}<small>${x.k}</small></li>`).join("") || '<li aria-selected="false">Nothing matches</li>'; };
   const pick = (i) => { const x = items[i]; if (!x) return; closeK(); if (x.dr) openDr(x.dr); else go(x.u); };
   const openK = () => { ck.classList.add("on"); const i = ck.querySelector("input"); i.value = ""; listK(""); i.focus(); }, closeK = () => ck.classList.remove("on");
@@ -3956,26 +3887,22 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeK(); } else if (e.key === "ArrowDown") { e.preventDefault(); mv(1); } else if (e.key === "ArrowUp") { e.preventDefault(); mv(-1); } else if (e.key === "Enter") { e.preventDefault(); pick(sel); } }, true);
   ck.querySelector("input").addEventListener("input", (e) => listK(e.target.value));
   ck.addEventListener("click", (e) => { const l = e.target.closest("li[data-i]"); if (l) pick(+l.dataset.i); else if (e.target === ck) closeK(); });
-  // the shared site pin comes from the 3D Site Model page
+  // a board can say it was made (the site pin, if one was saved earlier, stays for Boards)
   addEventListener("message", (e) => { const d = e.data; if (!d || !d.pc || d.t !== "ctx") return; const fr = [...document.querySelectorAll("iframe[data-emb]")].find((f) => f.contentWindow === e.source); if (!fr) return;
-    if (typeof d.lat === "number" && typeof d.lng === "number") { CX.lat = d.lat; CX.lng = d.lng; if (typeof d.r === "number") CX.R = d.r; CX.label = typeof d.label === "string" ? d.label.slice(0, 40) : CX.label; CX.src = "site"; CX.shape = d.shape === "square" ? "square" : "circle"; CX.done[1] = true; }
-    if (d.board) CX.done[5] = true; saveCx(); drawRail(); });
+    if (typeof d.lat === "number" && typeof d.lng === "number") { CX.lat = d.lat; CX.lng = d.lng; if (typeof d.r === "number") CX.R = d.r; CX.label = typeof d.label === "string" ? d.label.slice(0, 40) : CX.label; CX.src = "site"; CX.shape = d.shape === "square" ? "square" : "circle"; }
+    if (d.board) CX.done[4] = true; saveCx(); drawRail(); });
   addEventListener("hashchange", () => setTimeout(update, 0)); addEventListener("storage", () => { drawRail(); }); update();
   window.__wf = { where, urlOf, openK, openDr, update, drawRail, get CX() { return CX; } };
 })();
 
-/* v143 · Site is one focused tool: choose a place and generate its editable 3D context model. */
+/* 2026-10-24 · Plan Tracer and Site Planner were removed. Their old links (#/site, #/tool/sitectx, #/tool/tracer, and the
+   site-diagram view of #/tool/atlas, which had moved into Site Planner) open Plan Studio. Boards keeps its atlas mode. */
 (function () {
-  const st = document.createElement("style");
-  st.textContent = `.sitepage{padding:12px 20px}.segfr{position:relative;height:var(--segh,680px)}.segfr iframe{position:absolute;inset:0;width:100%;height:100%;border:1px solid var(--hair);border-radius:4px;background:#fff}@media (max-width:900px){.sitepage{padding:8px 10px}}`;
-  document.head.appendChild(st);
-  function fit() { const w = document.querySelector(".segfr"); if (!w) return; window.scrollTo(0, 0); w.style.setProperty("--segh", Math.max(520, Math.floor(innerHeight - w.getBoundingClientRect().top - 12)) + "px"); }
-  P.site = () => { setTimeout(() => { chrome("site"); fit(); }, 0); return `<div class="sitepage"><div class="segfr"><iframe data-emb="sitectx" title="3D Site Model" allow="clipboard-write"></iframe></div></div>`; };
-  // Old Site Planner and diagram links now land on the focused 3D site-model page. Boards keeps its own atlas mode.
+  const toStudio = () => { try { history.replaceState(null, "", "#/studio"); } catch (e) {} setTimeout(() => { chrome("studio"); dispatchEvent(new Event("hashchange")); }, 0); return P.studio(); };
+  P.site = toStudio;
   const _t = P.tool; P.tool = function (id) {
-    if (id === "sitectx" || id === "atlas" && !/[?&]d=boards/.test(location.hash)) { try { history.replaceState(null, "", "#/site"); } catch (e) {} setTimeout(() => chrome("site"), 0); return P.site(); }
+    if (id === "sitectx" || id === "tracer" || (id === "atlas" && !/[?&]d=boards/.test(location.hash))) return toStudio();
     return _t.apply(this, arguments); };
-  addEventListener("resize", () => setTimeout(fit, 0));
 })();
 
 // Unavailable services remain addressable without appearing as released tools.

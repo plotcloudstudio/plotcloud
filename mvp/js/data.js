@@ -47,9 +47,7 @@ export const SIMS = [
 
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [
-  { name: 'Site Planner', route: 'site', blurb: 'Pick a place on the map and generate surrounding massing.' },
   { name: 'Plan Studio', route: 'studio', blurb: 'Draw walls, rooms, doors, windows and furniture across levels.' },
-  { name: 'Plan tracer', tool: 'tracer', blurb: 'Trace a plan image to scale, then open it in Plan Studio.' },
   { name: '3D model generator', tool: 'furniture', blurb: 'Parametric furniture and fittings.' },
   { name: 'Facade studio', tool: 'facade', blurb: 'Parametric facade studies.' },
   { name: 'DetailLab', tool: 'detaillab', blurb: 'Construction details in 3D.' },

@@ -34,7 +34,7 @@ sunhours (Sun hours), daylight, wind (Wind flow), vent (Natural ventilation), st
 spacesyntax, movementdepth (Movement & spatial depth), evac (Circulation), isovist (Isovist safety), views (View analysis), cameras (Camera coverage),
 structure (Structural analysis), span (Structure sizer).
 
-**Model building** — Site Planner (`#/site`), Plan Studio (`#/studio`), Plan tracer (`tracer`), 3D model generator (`furniture`), Facade studio, DetailLab.
+**Model building** — Plan Studio (`#/studio`), 3D model generator (`furniture`), Facade studio, DetailLab.
 
 **Render & present (free AI tools)** — Image toolkit (`cutout`: cut-out, depth, lines, upscale, sky, removal), Architectural drawing, Color palettes, Pin-up composer, Board studio, Exploded site axon, Physical model (`topo`).
 Also in the production site: Site analysis atlas (`emb/atlas.html`), Render workspace (`emb/render.html`), Boards.
@@ -75,4 +75,4 @@ run     { id, versionId, simId, settings, results, created, source: 'prototype-m
 1. Adapter per tool: export a version as the scene format each tool already reads (Plan Studio scene JSON / `plotcloud-scene`), open the tool with it, and post the tool's result back (`source: 'full-tool'`). The production tools already exchange scenes this way with Plan Studio.
 2. Replace `mocksim.js` previews with those real results; keep the label until then.
 3. Move `store.js` to an API (projects, versions, runs) with accounts.
-4. Bring Plan Studio and Site Planner models into the workspace as versions.
+4. Bring Plan Studio models into the workspace as versions.

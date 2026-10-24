@@ -104,8 +104,6 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-surface="tool"] :is(.capbox,.thint,.qbox,.runpill,.timebar,.shaperow,.progrow) :is(small,span,label,b){color:var(--pc-ui-secondary)}
 [data-pc-ui][data-pc-surface="tool"] .seg button small{color:var(--pc-ui-secondary)!important}
 [data-pc-ui][data-pc-tool="modeler"] #toolHint{background:var(--pc-ui-surface);color:var(--pc-ui-secondary)}
-[data-pc-ui][data-pc-tool="tracer"] #empty{background:var(--pc-ui-surface);color:var(--pc-ui-secondary)}
-[data-pc-ui][data-pc-tool="tracer"] #empty b{color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-tool="topo"] button.ghost{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-tool="render"] .msg.warn{color:var(--pc-ui-warning)}
 [data-pc-ui][data-pc-tool="architectural-render"] .upload{color:var(--pc-ui-selection)}
@@ -115,11 +113,8 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-tool="evac"] #ptList .row b{color:var(--pc-ui-selection)!important}
 [data-pc-ui][data-pc-tool="structure"] .legend .ticks span{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-tool="architectural-render"] :is(#lineValue,#toneValue,#textureValue){color:var(--pc-ui-secondary)}
-[data-pc-ui][data-pc-tool="sitectx"] :is(.bdn,.topc .views){background:var(--pc-ui-surface);color:var(--pc-ui-secondary)}
 [data-pc-ui][data-pc-tool="evac"] .tpick button{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
 [data-pc-ui][data-pc-tool="modeler"] .zpct{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
-[data-pc-ui][data-pc-tool="sitectx"] .mapview button{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
-[data-pc-ui][data-pc-tool="sitectx"] .mapview button[aria-pressed=true]{background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection)}
 [data-pc-ui][data-pc-surface="classic"] header.site .in{gap:24px}
 [data-pc-ui][data-pc-surface="classic"] header.site #nav{gap:20px;font-size:14px}
 [data-pc-ui][data-pc-surface="classic"] :is(.pc-catalog-head>p,.pc-section-heading p,.pc-task p,.pc-eyebrow,.pc-hero-note){color:var(--pc-ui-muted)!important}

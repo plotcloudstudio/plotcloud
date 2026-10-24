@@ -182,7 +182,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
         <div class="row"><label for="hgt">Slice height</label><div class="two" style="grid-template-columns:1fr auto;align-items:center"><input type="number" id="hgt" min="0.5" max="60" step="0.5" value="1.5"><span class="note">m</span></div></div>
       </div>
       <p class="note" id="gridNote">—</p>
-      <div class="gwarn" id="ctxDirty" role="status" hidden><div><b>Surroundings changed on the Site page — re-run recommended.</b> <span id="ctxDirtyT"></span></div><div class="gw-btns"><button type="button" class="go" id="ctxRerun">Re-run with current surroundings</button></div></div>
+      <div class="gwarn" id="ctxDirty" role="status" hidden><div><b>The saved surroundings changed — re-run recommended.</b> <span id="ctxDirtyT"></span></div><div class="gw-btns"><button type="button" class="go" id="ctxRerun">Re-run with current surroundings</button></div></div>
       <div class="two"><button type="button" class="go" id="run">Run simulation</button><button type="button" class="btn" id="stop" hidden>Stop</button></div>
       <div id="longBox" hidden style="border:1px solid var(--line,#ddd);border-radius:8px;padding:10px 12px;display:grid;gap:8px;background:#fbfbfa"><b id="longT" style="font-size:12.5px"></b><span style="font-size:12px;color:#5a5853">You can stop it at any time.</span><div class="two"><button type="button" class="go" id="longGo">Start</button><button type="button" class="btn" id="longNo">Cancel</button></div></div>
       <div class="prog" id="prog" hidden><i></i></div>
@@ -622,7 +622,7 @@ const PCS = (() => {
     const north = -(scene.north || 0), site = st.site, keep = scene.masses.filter((m) => m.role !== 'context');
     const nOld = scene.masses.length - keep.length, ctx = SITE.contextMasses(site, north);
     const notes = (scene.notes || []).filter((n) => !/^Surroundings updated/.test(n));
-    notes.unshift(`Surroundings updated from the Site page (“${st.name}”, v${site.version}): ${nOld} → ${ctx.length} buildings.`);
+    notes.unshift(`Surroundings updated from the saved site (“${st.name}”, v${site.version}): ${nOld} → ${ctx.length} buildings.`);
     return Object.assign({}, scene, { masses: keep.concat(ctx), terrain: SITE.terrainForPlan(site, north) || null,
       source: Object.assign({}, scene.source, { site: st.id, siteVersion: site.version, siteHash: SITE.simHash(site), surroundingsFrom: 'site-page' }), notes });
   }
@@ -1555,7 +1555,7 @@ function setUp(u) { S.up = u; document.querySelectorAll('#upSeg button').forEach
 // ---------- v132 · a PlotCloud scene: your building + the Site page's surroundings near it (read-only) ----------
 // flat ground: context blocks stand on the lowest base in the scene; terrain is not modeled here
 function readWindScene(j) {
-  if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Sun hours or the Site page, or open a 3D file.');
+  if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Plan Studio or Sun hours, or open a 3D file.');
   const W = PCS.windMasses(j), ok = W.masses.filter((m) => Array.isArray(m.outer) && m.outer.length > 2 && m.h > (m.base || 0)), b0 = ok.length ? Math.min(...ok.map((m) => m.base || 0)) : 0;
   const geoms = []; let skipped = W.masses.length - ok.length;
   for (const m of ok) { const base = m.role === 'context' ? b0 : (m.base || 0); if (!(m.h > base)) { skipped++; continue; }
@@ -1570,7 +1570,7 @@ const escH = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&
 let PREV = null, RERUN = false, CTXCHK = 0;
 function windInflHTML(sim) {
   const sc = S.raw && S.raw.wscene, w = S.raw && S.raw.wind, row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`; if (!sc || !w) return '';
-  let h = '<dt class="ihead">Surroundings</dt><dd class="ihead">' + (w.n ? `${w.n} building${w.n === 1 ? '' : 's'} within ${w.R} m, from the Site page (read-only, solid blocks in the grid)` : (w.dropped ? `none within ${w.R} m: the building stands alone in the grid` : 'none in this model')) + '</dd>';
+  let h = '<dt class="ihead">Surroundings</dt><dd class="ihead">' + (w.n ? `${w.n} building${w.n === 1 ? '' : 's'} within ${w.R} m, from the saved site (read-only, solid blocks in the grid)` : (w.dropped ? `none within ${w.R} m: the building stands alone in the grid` : 'none in this model')) + '</dd>';
   if (w.dropped) h += row('Left out', `${w.dropped} farther building${w.dropped === 1 ? '' : 's'} (beyond ${w.R} m)`);
   if (w.n) { const f = flowVec(sim.D.fromDeg), up = PCS.upwind(sc, [f.x, f.y], S.north).slice(0, 2);
     h += row(w.proposed ? 'Upwind of your building' : 'Upwind of the site', up.length ? up.map((u) => `<span data-up="${escH(u.dir)}">${escH(u.text)}</span>`).join('<br>') : 'nothing taller than 3 m directly upwind');
@@ -1589,8 +1589,8 @@ async function ctxCheck() {
 window.addEventListener('storage', (e) => { if (!e.key || /^pc-site-/.test(e.key)) ctxCheck(); });
 window.addEventListener('focus', ctxCheck); document.addEventListener('visibilitychange', () => { if (!document.hidden) ctxCheck(); }); setInterval(ctxCheck, 2500);
 async function ctxRerun() {
-  const sc = S.raw && S.raw.scene; if (!sc || S.busy) return; const b = $('#ctxRerun'); b.disabled = true; msg('#runmsg', 'Reading the current surroundings from the Site page…');
-  try { const st = await PCS.fresh(sc); if (!st) throw new Error('The site this model came from is no longer saved in this browser. Open it on the Site page and send the model again.');
+  const sc = S.raw && S.raw.scene; if (!sc || S.busy) return; const b = $('#ctxRerun'); b.disabled = true; msg('#runmsg', 'Reading the current saved surroundings…');
+  try { const st = await PCS.fresh(sc); if (!st) throw new Error('The site this model came from is no longer saved in this browser. Send the model again from Plan Studio.');
     const last = SIMS.get(S.dir); PREV = last && last.st ? { st: last.st, n: S.raw.wind ? S.raw.wind.n : 0 } : null;
     const ns = PCS.rebuild(sc, st); RERUN = true; try { await loadFile(new File([JSON.stringify(ns)], (ns.name || 'scene') + '.json', { type: 'application/json' })); } finally { RERUN = false; }
     await ctxCheck(); $('#run').click();
@@ -1618,7 +1618,7 @@ async function loadFile(file) {
     const tips = [];
     if (r.warn) tips.push(r.warn);
     if (!r.unitKnown) tips.push('Check the size below. If it is wrong, change the units. If the model is lying on its side, switch the up axis.');
-    if (r.scene) tips.push(r.wind.n ? `Surroundings from the Site page go into the grid as solid blocks (read-only)${r.wind.dropped ? `; ${r.wind.dropped} farther ones are left out` : ''}. Terrain is not modeled here: flat ground.` : '');
+    if (r.scene) tips.push(r.wind.n ? `Surroundings from the saved site go into the grid as solid blocks (read-only)${r.wind.dropped ? `; ${r.wind.dropped} farther ones are left out` : ''}. Terrain is not modeled here: flat ground.` : '');
     if (!r.scene) tips.push('Remove trees, people and furniture first: the solver treats every object as a solid wall.');
     msg('#loadmsg', tips.join(' '), r.warn ? 'warn' : '');
   } catch (e) { msg('#loadmsg', e.message || 'The file could not be read.', 'warn'); }

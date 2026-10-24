@@ -196,7 +196,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
         <div class="row"><label for="ground">Ground</label><select id="ground"><option value="1" selected>Include surroundings</option><option value="0">Model surfaces only</option></select></div>
         <div class="row"><label for="margin">Ground extent</label><select id="margin"><option value="auto" selected>Automatic</option><option value="10">+10 m</option><option value="25">+25 m</option><option value="50">+50 m</option><option value="100">+100 m</option></select></div>
       </div>
-      <div class="gwarn" id="ctxDirty" role="status" hidden><div><b>Surroundings changed on the Site page — re-run recommended.</b> <span id="ctxDirtyT"></span></div><div class="gw-btns"><button type="button" class="go" id="ctxRerun">Re-run with current surroundings</button></div></div>
+      <div class="gwarn" id="ctxDirty" role="status" hidden><div><b>The saved surroundings changed — re-run recommended.</b> <span id="ctxDirtyT"></span></div><div class="gw-btns"><button type="button" class="go" id="ctxRerun">Re-run with current surroundings</button></div></div>
       <button type="button" class="go" id="run">Calculate sunlight hours</button>
       <div class="prog" id="prog" hidden><i></i></div>
       <div class="gwarn" id="gwarn" hidden></div>
@@ -635,7 +635,7 @@ const PCS = (() => {
     const north = -(scene.north || 0), site = st.site, keep = scene.masses.filter((m) => m.role !== 'context');
     const nOld = scene.masses.length - keep.length, ctx = SITE.contextMasses(site, north);
     const notes = (scene.notes || []).filter((n) => !/^Surroundings updated/.test(n));
-    notes.unshift(`Surroundings updated from the Site page (“${st.name}”, v${site.version}): ${nOld} → ${ctx.length} buildings.`);
+    notes.unshift(`Surroundings updated from the saved site (“${st.name}”, v${site.version}): ${nOld} → ${ctx.length} buildings.`);
     return Object.assign({}, scene, { masses: keep.concat(ctx), terrain: SITE.terrainForPlan(site, north) || null,
       source: Object.assign({}, scene.source, { site: st.id, siteVersion: site.version, siteHash: SITE.simHash(site), surroundingsFrom: 'site-page' }), notes });
   }
@@ -1331,7 +1331,7 @@ let PREV = null, RERUN = false, CTXCHK = 0;
 function influenceHTML(R) {
   const sc = S.raw && S.raw.scene, row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`; if (!sc || !R.blk) return '';
   const nC = sc.masses.filter((m) => m.role === 'context').length;
-  let h = '<dt class="ihead">Surroundings</dt><dd class="ihead">' + (nC ? `${nC} building${nC === 1 ? '' : 's'} from the Site page (read-only, shadows only)` : 'none in this scene: only the model shades itself') + '</dd>';
+  let h = '<dt class="ihead">Surroundings</dt><dd class="ihead">' + (nC ? `${nC} building${nC === 1 ? '' : 's'} from the saved site (read-only, shadows only)` : 'none in this scene: only the model shades itself') + '</dd>';
   if (nC) { const list = []; R.blk.ctx.forEach((v, gi) => { const m = S.raw.refs && S.raw.refs[gi]; if (v > 0 && m && m.role === 'context') list.push([v, m]); }); list.sort((a, b) => b[0] - a[0]);
     const ctxSum = list.reduce((a, x) => a + x[0], 0), tot = ctxSum + R.blk.self, pct = (v) => (v / tot * 100 < 1 ? '< 1' : Math.round(v / tot * 100)) + '%';
     if (!ctxSum) h += row('Shade from surroundings', 'none in this time window');
@@ -1351,8 +1351,8 @@ async function ctxCheck() {
 window.addEventListener('storage', (e) => { if (!e.key || /^pc-site-/.test(e.key)) ctxCheck(); });
 window.addEventListener('focus', ctxCheck); document.addEventListener('visibilitychange', () => { if (!document.hidden) ctxCheck(); }); setInterval(ctxCheck, 2500);
 async function ctxRerun() {
-  const sc = S.raw && S.raw.scene; if (!sc || S.busy) return; const b = $('#ctxRerun'); b.disabled = true; msg('#runmsg', 'Reading the current surroundings from the Site page…');
-  try { const st = await PCS.fresh(sc); if (!st) throw new Error('The site this model came from is no longer saved in this browser. Open it on the Site page and send the model again.');
+  const sc = S.raw && S.raw.scene; if (!sc || S.busy) return; const b = $('#ctxRerun'); b.disabled = true; msg('#runmsg', 'Reading the current saved surroundings…');
+  try { const st = await PCS.fresh(sc); if (!st) throw new Error('The site this model came from is no longer saved in this browser. Send the model again from Plan Studio.');
     PREV = S.lastR ? { st: statsOf(S.lastR), n: sc.masses.filter((m) => m.role === 'context').length } : null;
     const ns = PCS.rebuild(sc, st); RERUN = true; try { await loadFile(new File([JSON.stringify(ns)], (ns.name || 'scene') + '.json', { type: 'application/json' })); } finally { RERUN = false; }
     await ctxCheck(); await runAnalysis({ confirmed: true });

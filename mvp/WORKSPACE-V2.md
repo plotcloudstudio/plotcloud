@@ -27,7 +27,7 @@ New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` 
 | Left · Model | Unit and axis conversion (`importModel` in viewport.js) | Same function, imported unchanged | Kept |
 | Left · Model | Imported meshes all go to the Imported layer | Sorted by mesh name: walls → Walls, furniture → Furniture, windows → Glazing, slabs → Structure, roofs → Roof, anything else → Imported | Changed as specified |
 | Left · Model | "Add a component" (Massing block / Wall / Window / Room / Slab) | Removed at review | Furniture is now placed from the left panel (drag or click, as in Plan Studio). Walls, rooms, slabs and windows will come from the Draw room and Window tools in step 2; until then they can be duplicated from existing parts |
-| Left · Model | Links: Plan Studio ↗ · Site Planner ↗ · Plan tracer ↗ | Left panel, Project state | Kept. The "bringing their models in is Planned" sentence is dropped: the tool rail replaces it (placement in step 2) |
+| Left · Model | Links: Plan Studio ↗ (Site Planner and Plan tracer were removed 2026-10-24) | Left panel, Project state | Kept. The "bringing their models in is Planned" sentence is dropped: the tool rail replaces it (placement in step 2) |
 | Left · Layers | "+ Layer" | Right column, Layers header | Moved, same behaviour |
 | Left · Layers | Layer row: colour, name/expand, count, Hide/Show, Lock | Right column: table row with colour, name/expand, count, eye icon, lock icon | Moved. Hide removes the layer from the view; Lock blocks picking in the view and in the tree, and clears the selection if it was on that layer |
 | Left · Layers | Component list (click to select) | Right column, inside each expanded layer | Moved. Items on hidden or locked layers are disabled |

@@ -87,11 +87,6 @@
       "url": "/emb/render.html"
     },
     {
-      "file": "emb/sitectx.html",
-      "surface": "tool",
-      "url": "/emb/sitectx.html"
-    },
-    {
       "file": "emb/spacesyntax.html",
       "surface": "tool",
       "url": "/emb/spacesyntax.html"
@@ -132,11 +127,6 @@
       "url": "/emb/topo.html"
     },
     {
-      "file": "emb/tracer.html",
-      "surface": "tool",
-      "url": "/emb/tracer.html"
-    },
-    {
       "file": "emb/vent.html",
       "surface": "tool",
       "url": "/emb/vent.html"
@@ -166,7 +156,6 @@
   "classicRoutes": [
     "/index.html#/home",
     "/index.html#/tools",
-    "/index.html#/site",
     "/index.html#/studio",
     "/index.html#/project",
     "/index.html#/library",
