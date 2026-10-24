@@ -37,7 +37,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.locator('[data-shell-reset]').click();
   assert.equal(await search.inputValue(),'');
   await page.locator('[data-shell-group="present"]').click();
-  assert(await page.locator('[data-catalog-tool="architectural-render"]').isVisible(),'Independent renderer omitted');
+  assert(await page.locator('[data-catalog-tool="composer"]').isVisible(),'Presentation tools missing');
   const method=page.locator('[data-catalog-tool="composer"] details');await method.locator('summary').click();assert(await method.getAttribute('open')!==null,'Method disclosure failed');
   await noOverflow();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:dir+'/tools-desktop.png',fullPage:true});
   await page.reload();await page.waitForFunction(()=>document.body.classList.contains('pc-shell'));

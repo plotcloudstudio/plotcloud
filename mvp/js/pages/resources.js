@@ -10,7 +10,7 @@ export function render(app) {
     <span class="eyebrow">Resources</span>
     <div class="split" style="margin-top:16px"><h1 class="display">Tools and files,<br><span>free to use.</span></h1>
       <p class="lede">Useful on their own, and a way into the platform. Every link opens what PlotCloud already offers.</p></div>
-    ${list('01', 'AI image and presentation tools', RESOURCES.ai)}
+    ${list('01', 'Presentation tools', RESOURCES.ai)}
     ${list('02', 'CAD blocks and 3D files', RESOURCES.files.map(([name, blurb]) => ({ name, blurb })))}
     ${list('03', 'Model-building tools', MODEL_TOOLS)}
     ${list('04', 'References', RESOURCES.refs)}

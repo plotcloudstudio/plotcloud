@@ -5,11 +5,10 @@
   const groups = [
     {id:'site', title:'Model', text:'Develop your design in 3D: furniture, facades, details and stairs.', ids:new Set(['atlas','furniture','facade','detaillab','lsystem','doors3d','stairs3d'])},
     {id:'analysis', title:'Analyze', text:'Study sunlight, daylight, airflow, stormwater, acoustics, movement and structure.', ids:new Set(['sunhours','wind','vent','structure','evac','isovist','cameras','views','daylight','spacesyntax','movementdepth','acoustics','stormwater'])},
-    {id:'present', title:'Render & Present', text:'Prepare images, materials and presentation boards.', ids:new Set(['architectural-render','render','cutout','depth','lines','upscale','sky','composer','axon','studio','palette','topo'])},
+    {id:'present', title:'Render & Present', text:'Prepare images, materials and presentation boards.', ids:new Set(['render','composer','axon','studio','palette','topo'])},
     {id:'utility', title:'Utilities & References', text:'Scales, dimensions, codes and other supporting tools.', ids:new Set()}
   ];
   const describe = {
-    'architectural-render':'Turn the Studio model into a repeatable material drawing or single-colour architectural illustration. Processing runs locally.',
     daylight:'Explore daylight distribution, sDA, ASE and daylight factor in your rooms.',
     wind:'Screen airflow around buildings and site massing.',
     stormwater:'Follow rainfall across a site model, identify runoff paths and ponding, and compare detention storage.',
@@ -17,7 +16,6 @@
     composer:'Arrange drawings, images and captions on a presentation board.',
     render:'Prepare color masks, material references and a render pack for local rendering.',
     scale:'Convert real dimensions to drawing scale and choose a suitable sheet.',
-    cutout:'Image tools for cutouts, linework, depth, upscaling and skies.'
   };
   const info = id => id === '__plan' ? {title:'Plan Studio',desc:'Draw walls, furnish rooms and send your model to an analysis tool.'} : tFind(id);
   const to = id => id === '__plan' ? 'studio' : `tool/${id}`;
@@ -70,7 +68,7 @@
     <section class="wrap pc-hero" aria-labelledby="pc-hero-title"><div class="pc-hero-copy"><p class="pc-eyebrow">Architecture, in your browser</p><h1 id="pc-hero-title">Design.<br> Analyze.<br> Present.</h1><p class="pc-hero-description">Tools for architects and architecture students to develop layouts, study performance and present their work.</p><div class="pc-actions">${link('tools','Explore tools <span aria-hidden="true">→</span>','btn')}<a href="#pc-example" data-anchor="pc-example" class="pc-text-link">See the workflow <span aria-hidden="true">↘</span></a></div><p class="pc-hero-note">Start with an individual tool. Build a connected workflow when you need it.</p></div>
     <figure class="pc-product-preview"><div class="pc-preview-bar"><span><i></i> Plan Studio</span><span>Product screenshot</span></div><a href="#/studio" data-go="studio" aria-label="Open Plan Studio"><img src="img/proto/studio.jpg" alt="PlotCloud Plan Studio showing a furnished floor plan with dimensions and a 3D room view" fetchpriority="high" width="1440" height="816"></a><figcaption>Draw a plan. Furnish the space. Test the design.</figcaption></figure></section>
     <section class="wrap pc-start" aria-labelledby="pc-start-title"><div class="pc-section-heading"><h2 id="pc-start-title">Choose your next step.</h2>${link('tools','All tools ↗','pc-text-link')}</div><div class="pc-task-grid">${groups.slice(0,3).map((g,i)=>`<a href="#/tools?group=${g.id}" data-go="tools?group=${g.id}" class="pc-task"><span class="pc-task-number">0${i+1}</span><h3>${g.title}</h3><p>${g.text}</p><span class="pc-task-cta">${['Explore modeling tools','Explore analysis tools','Explore rendering & presentation'][i]} <span aria-hidden="true">→</span></span></a>`).join('')}</div></section>
-    <section class="pc-example" id="pc-example" aria-labelledby="pc-example-title"><div class="wrap"><div class="pc-section-heading"><div><p class="pc-eyebrow">A workflow to explore</p><h2 id="pc-example-title">From a plan to a design decision.</h2></div></div><p class="pc-example-intro">Move from the plan to client presentation. Open any step directly, or keep working with your project.</p><nav class="pc-workflow-steps" aria-label="Project workflow">${[['studio','1 · Plan Studio'],['tools?group=analysis','2 · Simulation'],['tool/architectural-render','3 · Rendering'],['tool/atlas?d=boards','4 · Boards']].map(([url,label])=>link(url,label)).join('')}</nav><div class="pc-example-grid">${[
+    <section class="pc-example" id="pc-example" aria-labelledby="pc-example-title"><div class="wrap"><div class="pc-section-heading"><div><p class="pc-eyebrow">A workflow to explore</p><h2 id="pc-example-title">From a plan to a design decision.</h2></div></div><p class="pc-example-intro">Move from the plan to client presentation. Open any step directly, or keep working with your project.</p><nav class="pc-workflow-steps" aria-label="Project workflow">${[['studio','1 · Plan Studio'],['tools?group=analysis','2 · Simulation'],['tool/render','3 · Rendering'],['tool/atlas?d=boards','4 · Boards']].map(([url,label])=>link(url,label)).join('')}</nav><div class="pc-example-grid">${[
       ['studio','01 · Develop the plan','img/proto/studio.jpg','Plan Studio floor plan and room modeling interface','Draw rooms, place furniture and refine the layout.'],
       ['tool/daylight','02 · Test a design decision','img/proto/sim.jpg','Daylight example showing a floor plan heatmap and analysis results','Explore daylight distribution and export your results.']
     ].map(([url,h,img,alt,txt])=>`<article><a href="#/${url}" data-go="${url}"><img src="${img}" alt="${alt}" loading="lazy" width="1440" height="900"><h3>${h}</h3></a><p>${txt}</p></article>`).join('')}</div><p class="pc-example-caption">Product screenshots show different example models. Analysis tools display their methods, inputs and limitations.</p></div></section>
@@ -127,7 +125,5 @@
     html=html.replace(/(<button class="spot[^>]*data-spot="[^"]+"[^>]*>)/g, '$1<span class="pc-spot-label" aria-hidden="true">+</span>');
     return resourceTabs('showroom')+'<div class="wrap pc-resource-breadcrumb">'+link('library','Resources')+' / Showroom</div>'+html;
   };
-  addEventListener('message',e=>{if(e.origin!==location.origin||e.data?.pc!==1||e.data.t!=='render-handoff')return;const frame=document.querySelector('iframe[data-emb="modeler"]');if(frame&&e.source===frame.contentWindow)go('tool/architectural-render');});
-  addEventListener('message',e=>{if(e.origin!==location.origin||e.data?.pc!==1||e.data.t!=='render-return')return;const frame=document.querySelector('iframe[data-emb="architectural-render"]');if(frame&&e.source===frame.contentWindow)go('studio');});
   route();
 })();

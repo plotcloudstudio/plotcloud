@@ -37,22 +37,6 @@ try{
  assert.equal((await work.evaluate(()=>window.__pcWorkflow.getModel())).furn[0].x,moved,'Saved project did not reopen');
  await work.evaluate(()=>window.__wbTour?.close());
  await page.screenshot({path:dir+'/project-workflow.png',fullPage:true});
- // Capture an actual Studio preview; no fake renderer is used for this handoff.
- await work.locator('[data-lt="render"]').click();await work.waitForFunction(()=>window.S3?.on);await work.locator('#rvSend').click();
- await page.waitForURL('**/#/tool/architectural-render');
- work=await (await page.locator('iframe[data-emb="architectural-render"]').elementHandle()).contentFrame();
- await work.waitForFunction(()=>!!window.__pcRender);
- const context=await work.evaluate(()=>window.__pcRender.context());
- assert.equal(context.project,option);assert(context.version>0);
- assert((await work.evaluate(()=>window.__pcRender.payload())).source_image.startsWith('data:image/'));
- assert(/model v/.test(await work.locator('#sourceMeta').innerText()));
- const sourceDownload=page.waitForEvent('download');await work.locator('#downloadSource').click();assert.equal((await sourceDownload).suggestedFilename(),'plotcloud-source.png');
- await work.waitForFunction(()=>window.__pcRender.hasOutput());let request=await work.evaluate(()=>window.__pcRender.payload());
- assert.equal(request.source_context.project,option);assert.equal(request.engine,'plotcloud-local-drawing');assert.equal(request.preserve_geometry,true);
- await work.locator('[data-style="mono"]').click();await work.waitForFunction(()=>window.__pcRender.payload().style==='mono');request=await work.evaluate(()=>window.__pcRender.payload());assert.equal(request.highlight,'furniture');
- const download=page.waitForEvent('download');await work.locator('#exportVersion').click();assert.equal((await download).suggestedFilename(),'plotcloud-drawing-record.json');
- await page.screenshot({path:dir+'/render-workflow.png',fullPage:true});
-
  for(const tool of ['views','daylight']){
   await page.goto(base+'/#/tool/'+tool);
   work=await (await page.locator('iframe[data-emb="'+tool+'"]').elementHandle()).contentFrame();
@@ -61,6 +45,6 @@ try{
   if(tool==='views'){await work.evaluate(()=>window.__views.setEye(1.15));await work.waitForFunction(()=>window.__pcAnalysisState().stale);assert.equal(await work.evaluate(()=>window.__pcAnalysisState().ready),false);}
  }
  assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
- console.log('PASS showroom relationships; option isolation and reopen; analysis provenance; Studio drawing handoff and local deterministic output');
+ console.log('PASS showroom relationships; option isolation and reopen; analysis provenance; model workflow');
 }finally{await page.screenshot({path:dir+'/workflow-final.png',fullPage:true}).catch(()=>{});await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});

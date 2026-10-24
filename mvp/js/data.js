@@ -59,8 +59,6 @@ export const MODEL_TOOLS = [
 // Resources: free tools and files that bring people in.
 export const RESOURCES = {
   ai: [
-    { name: 'Image toolkit', tool: 'cutout', blurb: 'Cut-outs, depth, line drawings, upscaling, sky replacement and object removal.' },
-    { name: 'Architectural drawing', tool: 'architectural-render', blurb: 'Material and single-colour drawings from model views or uploads.' },
     { name: 'Color palettes', tool: 'palette', blurb: 'Palettes for boards, renders and materials.' },
     { name: 'Pin-up composer', tool: 'composer', blurb: 'Lay out renders, plans and diagrams on crit boards.' },
     { name: 'Board studio', tool: 'studio', blurb: 'Presentation boards from your project images.' },

@@ -62,14 +62,6 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-surface="tool"] .tstrip{background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
 [data-pc-ui][data-pc-surface="tool"] .tstrip button{color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-surface="tool"] .tstrip button[aria-pressed=true]{background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection)}
-/* Drawing Studio UI is separate from the white output sheet and swatch colors. */
-[data-pc-ui][data-pc-tool="architectural-render"] :is(.topbar,.bottom,.source){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
-[data-pc-ui][data-pc-tool="architectural-render"] :is(.icon,.secondary){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
-[data-pc-ui][data-pc-tool="architectural-render"] .primary{background:var(--pc-ui-primary);color:var(--pc-ui-on-primary);border-color:var(--pc-ui-primary)}
-[data-pc-ui][data-pc-tool="architectural-render"] :is(.badge,.group .note,.group p,.source span){color:var(--pc-ui-muted)}
-[data-pc-ui][data-pc-tool="architectural-render"] .badge{background:var(--pc-ui-subtle)}
-[data-pc-ui][data-pc-tool="architectural-render"] #styles button{background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
-[data-pc-ui][data-pc-tool="architectural-render"] #styles button.active{background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection);border-color:var(--pc-ui-selection)}
 /* These are interface overlays, not the drawing/chart/artwork surfaces beneath them. */
 [data-pc-ui][data-pc-surface="tool"] :is(.legend,.badge,.tabs,.props,.card):not(.sheet .badge){border-color:var(--pc-ui-border)}
 [data-pc-ui][data-pc-surface="tool"] :is(.legend,.tabs,.props,.card){background-color:var(--pc-ui-surface);color:var(--pc-ui-text)}
@@ -78,7 +70,6 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-surface="tool"] :is(.seg,.views,.dirs,.tabs){background:var(--pc-ui-subtle);border-color:var(--pc-ui-border-strong)}
 [data-pc-ui][data-pc-surface="tool"] :is(.seg button,.views button,.dirs button,.tabs button){background-color:transparent;color:var(--pc-ui-secondary)}
 [data-pc-ui][data-pc-surface="tool"] :is(.seg button[aria-pressed=true],.views button[aria-pressed=true],.dirs button[aria-pressed=true],.tabs button[aria-pressed=true]){background:var(--pc-ui-selection-soft);color:var(--pc-ui-selection)}
-[data-pc-ui][data-pc-tool="architectural-render"] .group :is(input:not([type=range]):not([type=color]),select){background:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
 [data-pc-ui][data-pc-tool="modeler"] .kj-status{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border)}
 [data-pc-ui][data-pc-tool="modeler"] .kj-status :is(strong,b){color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-surface="tool"] :is(.top h1,.brand b,.topbar strong){font-family:var(--pc-ui-font)}
@@ -106,13 +97,10 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-tool="modeler"] #toolHint{background:var(--pc-ui-surface);color:var(--pc-ui-secondary)}
 [data-pc-ui][data-pc-tool="topo"] button.ghost{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-tool="render"] .msg.warn{color:var(--pc-ui-warning)}
-[data-pc-ui][data-pc-tool="architectural-render"] .upload{color:var(--pc-ui-selection)}
-[data-pc-ui][data-pc-tool="architectural-render"] .group :is(label,output,label span){color:var(--pc-ui-secondary)}
 [data-pc-ui][data-pc-tool="structure"] .legend .ticks{color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-tool="evac"] #ptList .row{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
 [data-pc-ui][data-pc-tool="evac"] #ptList .row b{color:var(--pc-ui-selection)!important}
 [data-pc-ui][data-pc-tool="structure"] .legend .ticks span{background:var(--pc-ui-surface);color:var(--pc-ui-text)}
-[data-pc-ui][data-pc-tool="architectural-render"] :is(#lineValue,#toneValue,#textureValue){color:var(--pc-ui-secondary)}
 [data-pc-ui][data-pc-tool="evac"] .tpick button{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
 [data-pc-ui][data-pc-tool="modeler"] .zpct{background:var(--pc-ui-surface);color:var(--pc-ui-secondary);border-color:var(--pc-ui-border-strong)}
 [data-pc-ui][data-pc-surface="classic"] header.site .in{gap:24px}

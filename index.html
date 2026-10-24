@@ -697,7 +697,7 @@ mark.lgmiss{background:#FFE7A3;color:#111;padding:0 3px;border-radius:2px}
 <div class="toast" id="toast"></div>
 <script>
 // tools live in their own files (emb/<id>.html) and load the first time they are opened
-const EMBV = {"architectural-render": "drawing-20261023-1","acoustics":"wire-20261023-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "project-20261022-2", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261023-1", "movementdepth": "movement-depth-20261023-1", "modeler": "ws3-20261024-1", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
+const EMBV = {"acoustics":"wire-20261023-1","furniture": "0e1019cc", "stairs3d": "bbfbdb9d", "doors3d": "6a96000a", "span": "6e44e51f", "topo": "cb701c14", "facade": "f040a74c", "sunhours": "project-20261022-2", "wind": "b03f8f9b", "evac": "bd9d69d8", "structure": "b8303e6f", "detaillab": "989a9502", "isovist": "03a51232", "cameras": "fdc65043", "vent": "441d2e86", "views": "camera-20261020-1", "daylight": "camera-20261020-1", "spacesyntax": "movement-depth-20261023-1", "movementdepth": "movement-depth-20261023-1", "modeler": "ws3-20261024-1", "composer": "0459c881", "studio": "fcccf77e", "atlas": "b931feba", "render": "c0a6d15a"}; const EMBCACHE = {};
 const EMBFILE = {movementdepth:"spacesyntax"};
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${EMBFILE[id] || id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
@@ -708,7 +708,7 @@ window.pcRetryEmb = (id) => document.querySelectorAll(`iframe[data-emb="${id}"]`
 document.addEventListener('pointerover', (e) => { const a = e.target.closest && e.target.closest('[data-go^="tool/"], [data-go="studio"]'); if (!a) return; const id = a.dataset.go === 'studio' ? 'modeler' : a.dataset.go.slice(5); if (EMBV[id]) pcFetchEmb(id).catch(() => {}); }, { passive: true });
 </script>
 <script>
-const IMG={"hall": "img/hall.jpg?v=9281093e", "cutout-after": "img/cutout-after.jpg?v=3fd2e342", "depth-after": "img/depth-after.jpg?v=e6409f32", "lines-after": "img/lines-after.jpg?v=0dd48ed1", "upscale-before": "img/upscale-before.jpg?v=ba2b1f75", "sky-before": "img/sky-before.jpg?v=408623bf", "sky-after": "img/sky-after.jpg?v=006e74cb", "removal-before": "img/removal-before.jpg?v=b037b024", "teaser-plan": "img/teaser-plan.jpg?v=267d1cc1", "teaser-elevation": "img/teaser-elevation.jpg?v=0e0c15ce", "teaser-dusk": "img/teaser-dusk.jpg?v=544260a0", "teaser-text": "img/teaser-text.jpg?v=a47663cd"};
+const IMG={"hall": "img/hall.jpg?v=9281093e",        "teaser-plan": "img/teaser-plan.jpg?v=267d1cc1", "teaser-elevation": "img/teaser-elevation.jpg?v=0e0c15ce", "teaser-dusk": "img/teaser-dusk.jpg?v=544260a0", "teaser-text": "img/teaser-text.jpg?v=a47663cd"};
 const EMAIL="plotcloudstudio@gmail.com";
 const CATS=[
  ["portfolio","Portfolio & Job Application","Resume · CV · Cover letter"],["cad","CAD Resources","Blocks · Details"],["rhino","Rhino Resources","Components · Models"],
@@ -774,7 +774,7 @@ function chrome(page){
   $("#wblink").classList.toggle("on",page.split("/")[0]==="studio");$("#acctlabel").textContent=signed()?(S.role==="admin"?"Admin":"Account"):"Log in or join";
   $("#acctmenu").innerHTML=signed()?`<a data-go="account">My account</a><a data-go="project">My project</a>${S.role==="admin"?'<a data-go="admin">Admin</a>':""}<hr><a data-act="logout">Log out</a>`:"";
   $("#acctmenu").classList.remove("open");
-  
+
 }
 
 // ---------- components
@@ -810,9 +810,9 @@ P.home=()=>`<div class="catbar"><div class="wrap catbar-in">${CATS.map(c=>`<a da
  </div></section>
 <section class="wrap hsec"><div class="hhead"><h2>shop by category.</h2><a class="tlink" data-go="library">See all resources</a></div>
  <div class="cats">${CATS.map(c=>{const n=RES.filter(r=>r[2]===c[0]).length;return `<a class="cat" data-go="library" data-cat="${c[0]}"><div class="cat-img">${draw(CAT_ART[c[0]]??0)}</div><b>${c[1]}</b><span>${n?n+" sets":"Unavailable"}</span></a>`}).join("")}</div></section>
-<section class="wrap hsec"><div class="hhead"><h2>tools for every stage.</h2><a class="tlink" data-go="tools">See all tools</a></div>${rail("tools",[["tool/code-bc","Research & codes","Code & accessibility finders, LEED v5","teaser-plan"],["tool/sunhours","Calculate & draw","3D furniture, sun hours, wind flow, scales","upscale-before"],["tool/cutout","Image tools","Cutout, depth, line drawing, sky","cutout-after"],["tool/palette","Color & render","Color palettes from photos","sky-after"],["tool/composer","Boards & present","Pin-up composer, board studio, axon","lines-after"],["tool/ergo","Interior","Ergonomics and clearances","depth-after"]].map(([g,t,d,im])=>`<a class="stage" data-go="${g}"><img src="${IMG[im]}" alt=""><b>${t}</b><span>${d}</span></a>`).join(""))}</section>
+<section class="wrap hsec"><div class="hhead"><h2>tools for every stage.</h2><a class="tlink" data-go="tools">See all tools</a></div>${rail("tools",[["tool/code-bc","Research & codes","Code & accessibility finders, LEED v5","teaser-plan"],["tool/sunhours","Calculate & draw","3D furniture, sun hours, wind flow, scales","upscale-before"],["tool/palette","Color & render","Color palettes from photos","sky-after"],["tool/composer","Boards & present","Pin-up composer, board studio, axon","lines-after"],["tool/ergo","Interior","Ergonomics and clearances","depth-after"]].map(([g,t,d,im])=>`<a class="stage" data-go="${g}"><img src="${IMG[im]}" alt=""><b>${t}</b><span>${d}</span></a>`).join(""))}</section>
 <section class="wrap hsec"><div class="hhead"><h2>new this week.</h2><a class="tlink" data-go="library">Shop all new</a></div>${rail("new",byNewest().slice(0,8).map(r=>pcard(r,isNew(r)?"New":"")).join(""))}</section>
-<section class="feature"><div class="wrap feature-in"><div><span class="kick">Free · in your browser</span><h2>Tools for architectural design.</h2><p>Cut out, trace, upscale, swap skies, check stairs and codes — no install, no sign-up.</p><a class="btn" data-go="tools">Explore tools</a></div><div class="feature-img">${ba("hall","cutout-after","cutout")}</div></div></section>
+<section class="feature"><div class="wrap feature-in"><div><span class="kick">Free · in your browser</span><h2>Tools for architectural design.</h2><p>Model, analyse, check stairs and codes — no install, no sign-up.</p><a class="btn" data-go="tools">Explore tools</a></div><div class="feature-img">${ba("hall","cutout-after","cutout")}</div></div></section>
 
 <section class="wrap hsec"><div class="hhead"><h2>staff picks.</h2><a class="tlink" data-go="library">Browse the library</a></div>${rail("picks",staffPicks().map(r=>pcard(r,"")).join(""))}</section>
 <section class="wrap hsec"><div class="split2"><a class="promo" data-go="requests"><span class="kick">Requests</span><h3>tell us what to make next.</h3><ol>${[...S.reqs].sort((a,b)=>b.v-a.v).slice(0,3).map(r=>`<li><b>▲ ${r.v}</b> ${esc(r.d)}</li>`).join("")}</ol><span class="tlink">Vote on the board →</span></a>
@@ -837,7 +837,7 @@ function track(name,props){const ev=Object.assign({event:name,t:new Date().toISO
  try{const k="pc-events",a=JSON.parse(localStorage.getItem(k)||"[]");a.push(ev);localStorage.setItem(k,JSON.stringify(a.slice(-500)))}catch(e){}}
 // words students type → words that appear in our resource data
 const SYN={furniture:["chair","table","bench","lamp","furniture"],chair:["chair","seating"],seating:["chair","bench"],sofa:["sofa","couch"],couch:["sofa","couch"],
- people:["figure","people"],person:["figure","people"],human:["figure","people"],entourage:["figure","tree","plant","entourage"],cutout:["figure","cutout"],figure:["figure"],
+ people:["figure","people"],person:["figure","people"],human:["figure","people"],entourage:["figure","tree","plant","entourage"],figure:["figure"],
  vegetation:["tree","plant"],landscape:["tree","plant","landscape"],greenery:["tree","plant"],plant:["plant"],tree:["tree"],
  texture:["material","texture"],material:["material"],wood:["oak","wood"],timber:["oak","wood"],floor:["floor","ground"],ground:["ground","floor"],
  lighting:["lamp","light"],light:["lamp","light"],lamp:["lamp"],
@@ -909,12 +909,12 @@ P.requests=()=>{const list=[...S.reqs].filter(r=>r.status!=="declined").sort((a,
  :`<div class="panel"><div class="label">What do you need?</div><p class="muted">Join free to submit requests and vote on what gets made next.</p><div class="row"><a class="btn" data-go="join">Join free</a><a class="tlink" data-go="login">Log in</a></div></div>`}
  <ul class="req" style="margin-top:40px">${list.map(r=>`<li><button class="vote ${r.voted?"on":""}" data-vote="${r.id}" title="${signed()?"Vote":"Log in to vote"}"><span>▲</span><b>${r.v}</b></button><div><div class="meta">${catName(r.cat)} · ${r.date}${r.status!=="open"?` <span class="badge ${r.status==="done"?"ok":"warn"}">${r.status}</span>`:""}${r.mine?' <span class="badge">Yours</span>':""}</div><p>${esc(r.d)}</p></div></li>`).join("")}</ul></div>`};
 const TOOLS=[
- ["cutout","T.01","cutout","White-background cutouts from any photo.","hall","cutout-after","Concrete hall · original / cutout"],
- ["depth","T.02","depth map","Grayscale depth from a single image.","hall","depth-after","Concrete hall · original / depth"],
- ["lines","T.03","line drawing","Turn renders into clean linework.","hall","lines-after","Concrete hall · original / linework"],
- ["upscale","T.04","upscale","2× enlarge for print-ready sheets.","upscale-before","hall","Same file · low-res / enlarged"],
- ["sky","T.05","background replace","Swap a dull sky for a better one in one click. Runs in your browser — free.","sky-before","sky-after","Concrete hall · flat sky / new sky"],
- ["removal","T.06","object removal","Brush over wires, people or bins and erase them. External AI service required.","removal-before","sky-before","Concrete hall · wires / cleaned",1],
+
+
+
+
+
+
  ["plan","T.07 · AI","plan colorizer","Line plan → colored presentation plan. External AI service required.","teaser-plan",0,"External AI service required",2],
  ["elev","T.08 · AI","elevation renderer","Elevation linework → photoreal render.","teaser-elevation",0,"External AI service required",2],
  ["dusk","T.09 · AI","day to dusk","One click from noon to golden hour.","teaser-dusk",0,"External AI service required",2],
@@ -927,11 +927,11 @@ const UTILS=[
  ["units","U.06","unit converter","Metric ↔ imperial, plus drawing-scale math.",0],
  ["statement","U.07","statement","Draft your design statement fast.",0]];
 const stCard=`<div class="st"><div><div class="label">You type</div><p style="margin:0;font-size:17px">“brick tower, shared courtyard, late sun”</p></div><div><div class="label">You get</div><p style="margin:0;font-weight:700;font-size:17px;line-height:1.45">“A brick tower organized around a shared courtyard, caught in late sun.” A working draft to edit — not a final text.</p></div></div>`;
-const TMETA={cutout:["ai"],depth:["ai"],lines:["ai"],upscale:["ai"],sky:["ai"],removal:["ai","dev"],plan:["ai","dev"],elev:["ai","dev"],dusk:["ai","dev"],t2r:["ai","dev"],
+const TMETA={plan:["ai","dev"],elev:["ai","dev"],dusk:["ai","dev"],t2r:["ai","dev"],
  "image-prompt":["ai","dev"],statement:["ai","dev"],"code-bc":["canada"],"code-on":["canada"],"access-bc":["canada","new"],"access-on":["canada","new"],leed:["canada"],scale:[],sheets:[],units:[],palette:[]};
 const TSECTIONS=[["01","Research & codes","research & codes.","Find the right section of the BC or Ontario Building Code, and plan LEED v5 points.",["code-bc","code-on","access-bc","access-on","leed"]],
  ["02","Calculate & draw","calculate & draw.","Scales, sheets and units — metric first, based on Canadian practice.",["scale","sheets","units"]],
- ["03","Image tools","image tools.","Cut out, map depth, trace, upscale and swap skies — in your browser. Drag the handle to compare.",["cutout","depth","lines","upscale","sky","removal"]],
+ ["03","Presentation utilities","presentation utilities.","Colour palettes and presentation utilities.",[]],
  ["04","Color & render","color & render.","Palettes and AI renders for your boards.",["palette","image-prompt","plan","elev","dusk","t2r"]],
  ["05","Write & present","write & present.","Words for crits, portfolios and applications.",["statement"]]];
 const TFILTERS=[["all","All"],["free","Free · no sign-up"],["ai","Uses AI"],["canada","Canada"],["dev","Unavailable"]];
@@ -1052,7 +1052,7 @@ function devPage(id){const x=tFind(id);return `<section class="wrap head" style=
  <div class="devbox"><span class="tdev">Unavailable</span><h3 style="margin:14px 0 6px">Currently unavailable.</h3><p class="muted" style="margin:0">This tool is currently unavailable. Explore the available tools for your project.</p></div>
  <div style="max-width:560px;margin-top:28px">${id==="statement"?stCard:`<div class="pbox"><div class="label">Example</div><p>Upload a render or photo → “eye-level architectural photograph of a concrete building with stacked cantilevered volumes, pine trees, clear sky, late-afternoon sun, 35mm lens”</p></div>`}</div>
  <p style="margin-top:28px"><a class="tlink" data-go="requests">Want it sooner? Vote on the Requests board</a></p></section>`}
-P.tool=id=>{if(id==="statement"||id==="image-prompt")return devPage(id);
+P.tool=id=>{if(![...TOOLS,...UTILS,...STD].some(t=>t[0]===id)&&!XUI[id])return `<section class="wrap head"><h1>Tool not found</h1><a data-go="tools">Browse available tools</a></section>`;if(id==="statement"||id==="image-prompt")return devPage(id);
  if(id==="axon")return `<section class="wrap head" style="padding-bottom:40px"><p class="label"><a data-go="tools">Tools</a> &nbsp;/&nbsp; Exploded site axon</p><h1>exploded site axon</h1><p class="lede" style="margin-bottom:0">Turn your site-analysis plans into a stacked exploded axonometric for your boards. Your images never leave this browser.</p></section><div class="axwrap" data-axon></div>`; if(XUI[id]){const x=tFind(id);return `<section class="wrap head" style="padding-bottom:100px"><p class="label"><a data-go="tools">Tools</a> &nbsp;/&nbsp; ${x.title.charAt(0).toUpperCase()+x.title.slice(1)}</p><h1>${x.title}</h1><p class="lede" style="margin-bottom:36px">${x.desc}</p>${XUI[id]()}</section>`} const u=UTILS.find(x=>x[0]===id)||STD.find(x=>x[0]===id)||(id==="gh-plugins"?GHPAGE:null); const t=u?[u[0],u[1],u[2],u[3]]:(TOOLS.find(x=>x[0]===id)||TOOLS[0]);
  const crumb=`<p class="label"><a data-go="tools">Tools</a> &nbsp;/&nbsp; ${t[2]}</p><h1>${t[2]}.</h1><p class="lede" style="margin-bottom:40px">${t[3]}</p>`;
  if(id==="scale") return `<section class="wrap head" style="padding-bottom:100px">${crumb}${scaleUI()}</section>`;
@@ -1064,9 +1064,7 @@ P.tool=id=>{if(id==="statement"||id==="image-prompt")return devPage(id);
  if(id==="gh-plugins") return `<section class="wrap head" style="padding-bottom:100px">${crumb}${ghUI()}</section>`;
  if(id==="leed") return `<section class="wrap head" style="padding-bottom:100px">${crumb}${leedUI()}</section>`;
  const body=id==="units"?`<div style="max-width:520px">${uc()}</div>`:id==="statement"?`${stCard}<form class="panel" data-form="stmt" style="margin-top:28px"><div class="field"><label class="f">Your statement</label><textarea placeholder="Paste 50–400 words…"></textarea></div><button class="btn">Improve my statement</button><p class="small muted" style="margin:12px 0 0">On the live site, Claude rewrites your text and suggests three jury questions.</p></form>`:
- `<div style="max-width:760px">${ba(t[4],t[5],t[2])}<div class="cap">${t[6]}</div></div>
- <div class="drop" data-drop style="margin-top:40px">Drop an image here, or <span class="tlink">choose a file</span><div class="small muted" style="margin-top:6px">JPG, PNG or WebP</div><input type="file" accept="image/*" hidden></div>
- <div data-out></div><p class="small muted" style="margin-top:16px">${id==="lines"?"This runs the real “Clean” line-drawing filter on your image, in your browser.":"For now only Line drawing processes your image. The other image tools show an example result because their AI services are unavailable."}</p>`;
+ `<p class="muted">Choose an available tool from the catalogue.</p>`;
  return `<section class="wrap head" style="padding-bottom:100px"><p class="label"><a data-go="tools">Tools</a> &nbsp;/&nbsp; ${t[2]}</p><h1>${t[2]}.</h1><p class="lede" style="margin-bottom:40px">${t[3]}</p>${body}</section>`};
 let newsKind="all";
 P.learn=()=>`<section class="wrap head" style="padding-bottom:100px"><div class="label">Learn</div><h1>news from the studio.</h1><p class="lede" style="margin-bottom:30px">Updates, design events and competitions for architects and architecture students worldwide.</p>
@@ -1966,20 +1964,9 @@ function bind(){
    S.donors=String(fd.get("donors")).split("\n").map(l=>l.split(",")).filter(p=>p.length>1&&p[0].trim()).map(p=>[p[0].trim(),parseFloat(p[1])||0]);save();route();toast("Saved — open Donate to see it")}
   if(k==="stmt"){toast("This service is currently unavailable")}}));
  document.querySelectorAll("[data-rstatus]").forEach(s=>s.addEventListener("change",()=>{const q=S.reqs.find(x=>x.id==s.dataset.rstatus);q.status=s.value;save();toast("Status: "+s.value)}));
- const drop=$("[data-drop]"); if(drop){const inp=drop.querySelector("input");drop.addEventListener("click",()=>inp.click());
-  drop.addEventListener("dragover",e=>e.preventDefault());drop.addEventListener("drop",e=>{e.preventDefault();handle(e.dataTransfer.files[0])});inp.addEventListener("change",()=>handle(inp.files[0]))}
+
 }
-// real "Clean" line drawing (XDoG) for the Line drawing tool
-async function handle(file){if(!file)return;const out=$("[data-out]");const bmp=await createImageBitmap(file);const s=Math.min(1,1200/Math.max(bmp.width,bmp.height));
- const w=Math.round(bmp.width*s),h=Math.round(bmp.height*s);const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.drawImage(bmp,0,0,w,h);
- const url=c.toDataURL("image/jpeg",.9);const id=(location.hash.split("/")[2]||"");
- if(id!=="lines"){out.innerHTML=`<div class="cmp"><img src="${url}" alt="your image"><div class="panel" style="display:grid;place-items:center;text-align:center"><div><b>Ready on the live site</b><p class="small muted">This tool runs an AI model in your browser on plotcloud.com.</p></div></div></div>`;return}
- const d=x.getImageData(0,0,w,h).data,g=new Float32Array(w*h);for(let i=0;i<w*h;i++)g[i]=(.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2])/255;
- const blur=(src,r)=>{const t=new Float32Array(w*h),o=new Float32Array(w*h),sz=2*r+1;for(let y=0;y<h;y++){let a=0;for(let k=-r;k<=r;k++)a+=src[y*w+Math.min(w-1,Math.max(0,k))];for(let X=0;X<w;X++){t[y*w+X]=a/sz;a+=src[y*w+Math.min(w-1,X+r+1)]-src[y*w+Math.max(0,X-r)]}}
-  for(let X=0;X<w;X++){let a=0;for(let k=-r;k<=r;k++)a+=t[Math.min(h-1,Math.max(0,k))*w+X];for(let y=0;y<h;y++){o[y*w+X]=a/sz;a+=t[Math.min(h-1,y+r+1)*w+X]-t[Math.max(0,y-r)*w+X]}}return o};
- const g1=blur(blur(blur(g,1),1),1),g2=blur(blur(blur(g,2),2),2);const oc=document.createElement("canvas");oc.width=w;oc.height=h;const ox=oc.getContext("2d");const im=ox.createImageData(w,h);
- for(let i=0;i<w*h;i++){const D=g1[i]-.99*g2[i];let ink=D>=-.008?0:-Math.tanh(160*(D+.008));ink=ink<.12?0:Math.min(1,(ink-.12)/.55);const v=Math.round(255*(1-ink));im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v;im.data[i*4+3]=255}
- ox.putImageData(im,0,0);out.innerHTML=`<div class="cmp"><img src="${url}" alt="original"><img src="${oc.toDataURL("image/png")}" alt="line drawing"></div>`}
+
 
 // ======================= embedded studio apps: pin-up composer + board studio =======================
 const EMB={composer:"@",studio:"@"};
@@ -2060,7 +2047,7 @@ TSECTIONS[0][3]="Look up the BC or Ontario Building Code by topic, check accessi
 {const cb=STD.find(x=>x[0]==="code-bc");cb[2]="building code finder";cb[3]="BC Building Code 2024 and Ontario Building Code 2024 by topic — the section to read, a plain-language summary and typical values. Switch province any time.";}
 {const sc=UTILS.find(x=>x[0]==="scale");sc[3]="Real ↔ paper at any scale, metric or imperial — find the scale that fits your sheet, or convert units.";}
 {const i=TFILTERS.findIndex(f=>f[0]==="dev");if(i>=0)TFILTERS.splice(i,1);if(tF==="dev")tF="all";}
-const DEVIDS=["removal","plan","elev","dusk","t2r","image-prompt","statement"];
+const DEVIDS=["plan","elev","dusk","t2r","image-prompt","statement"];
 const _toolsT=P.tools; P.tools=function(){const html=_toolsT();
  const strip="";
  const k=html.indexOf('<section class="sec" style="margin-top:40px">');return k<0?html+strip:html.slice(0,k)+strip+html.slice(k)};
@@ -2071,8 +2058,7 @@ const _toolU=P.tool; P.tool=function(id){const h=_toolU(id);if(id!=="scale")retu
 const FAM={
  "code-bc":{title:"building code finder",tabs:[["code-bc","BC"],["code-on","Ontario"]]},
  "access-bc":{title:"accessibility finder",desc:"Accessibility requirements in the BC Building Code 2024 and Ontario Building Code 2024 by topic — the article to read, a plain-language summary and the key dimensions. Switch province any time.",tabs:[["access-bc","BC"],["access-on","Ontario"]]},
- scale:{title:"scale & sheets",desc:"Real ↔ paper at any scale, the scale that fits your sheet, ISO and ARCH sheet sizes, and a metric ↔ imperial unit converter.",tabs:[["scale","Scale"],["sheets","Sheet sizes"]]},
- cutout:{title:"image toolkit",desc:"Cutout, depth map, line drawing, upscale and background replace — five image tools in one place, all running in your browser.",tabs:[["cutout","Cutout"],["depth","Depth map"],["lines","Line drawing"],["upscale","Upscale"],["sky","Background replace"]]}};
+ scale:{title:"scale & sheets",desc:"Real ↔ paper at any scale, the scale that fits your sheet, ISO and ARCH sheet sizes, and a metric ↔ imperial unit converter.",tabs:[["scale","Scale"],["sheets","Sheet sizes"]]}};
 const FAMOF={};for(const [lead,f] of Object.entries(FAM))for(const [id] of f.tabs)FAMOF[id]=lead;
 const _tFindF=tFind; tFind=function(id){const x=_tFindF(id),f=FAM[id];return f?{...x,title:f.title,desc:f.desc||x.desc}:x};
 const keep=new Set(Object.keys(FAM)),drop=new Set(Object.values(FAM).flatMap(f=>f.tabs.map(t=>t[0]).filter(i=>!keep.has(i))));
@@ -2627,13 +2613,13 @@ const CMS=(S.cms&&typeof S.cms==="object")?S.cms:{home:null,settings:null,tools:
 // ----- base snapshots of the built-in content, so edits are stored as overrides
 const BASE_RES=RES.map(r=>r.slice()),BASE_ADDED=Object.assign({},ADDED);
 // Standalone Architectural AI Render: register before CMS tool defaults are captured.
-STD.push(["architectural-render","R.01","architectural drawing","Turn Studio views into material drawings or single-colour architectural illustrations.",""]);
-TMETA["architectural-render"]=["new"];
-TSECTIONS[3][4].unshift("architectural-render");
-EMB["architectural-render"]="@";
-EMBI["architectural-render"]={title:"architectural drawing",crumb:"Architectural Drawing",short:"Material drawings and single-colour illustrations from saved Studio views or uploads.",lede:"Open a Studio view or upload an axonometric, elevation, section or model image. Create a restrained material drawing with wood, stone and metal textures, or a white-and-gray architectural illustration with one selected accent colour. Geometry stays authoritative; generated dimensions are never treated as verified."};
-EMBV["architectural-render"]="drawing-20261023-1";
-EMBSVG["architectural-render"]='<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="180" fill="#fbfbfa"/><path d="M42 132V48L146 20V124Z" fill="#fff" stroke="#343638" stroke-width="1.4"/><path d="M146 20L258 62V151L146 124Z" fill="#f0f0ed" stroke="#343638" stroke-width="1.4"/><path d="M60 70L124 52V112L60 126Z" fill="#d9b895" stroke="#555"/><path d="M73 68v55M88 64v55M103 60v55M118 56v55" stroke="#9b7656" stroke-width=".7"/><path d="M164 64L238 91V136L164 115Z" fill="#4f7fc8" opacity=".88" stroke="#315c9e"/><g stroke="#fff" stroke-width=".8"><path d="M181 70v51M199 77v51M218 84v50"/><path d="M164 82l74 28M164 98l74 28"/></g><path d="M35 151H264M35 147v8M264 147v8" stroke="#777" stroke-width=".8"/></svg>';
+
+
+
+
+
+
+
 const BASE_SECT=TSECTIONS.map(s=>s[4].slice()),BASE_DEV=DEVIDS.slice();
 const BASE_NEW=Object.keys(TMETA).filter(k=>(TMETA[k]||[]).includes("new"));
 const TOOL_IDS=[...new Set([...BASE_SECT.flat(),...BASE_DEV])];
@@ -2852,7 +2838,7 @@ const TMETHOD={
  detaillab:["Layer-by-layer assembly; RSI from the sum of layer resistances","In your browser","Exports PDF · SVG · DXF"],
  topo:["Marching-squares contours, shelf-packed onto the laser bed","In your browser","Exports SVG · DXF"],
  scale:["Scale arithmetic, ISO and ARCH sheet tables, unit conversion","In your browser"],
- cutout:["Image models that run on your device: cutout, depth, lines, upscale, sky","In your browser"],
+
  palette:["Color picking, or colors pulled from your photo","In your browser"],
  composer:["Automatic board layout for crit and competition formats","In your browser","Exports PDF · JPG"],
  axon:["Your plans stacked in an exploded axonometric","In your browser","Exports PNG"],
@@ -2970,7 +2956,7 @@ const LXF=[["bike","LT",3,"Bike racks"],["bus","LT",7,"Bus stop at the door"],["
  ["tank","WE",3,"Rainwater cistern"],["rain","WE",6,"Rain garden"],
  ["glaze","EA",6,"High-performance glazing"],["fins","EA",13,"Solar shading fins"],["pv1","EA",20,"Solar panels"],["pv2","EA",28,"More solar panels"],
  ["bins","MR",4,"Recycling and compost"],["wood1","MR",9,"Timber cladding"],["wood2","MR",14,"Mass-timber building"],
- ["sky","EQ",4,"Skylights for daylight"],["win","EQ",8,"Taller windows"],
+ ["EQ",4,"Skylights for daylight"],["win","EQ",8,"Taller windows"],
  ["bees","PR",4,"Pollinator garden"],["plaza","PR",7,"Public plaza with seating"]];
 const LXG=[["hp","Heat pumps instead of a gas flue"],["","Envelope at the Platinum threshold"],["pvall","Solar canopy for 100% of site energy"],["wood2g","Timber structure (≥ 20% less embodied carbon)"]];
 const LXCAT={IP:"#6E6A60",LT:"#2563eb",SS:"#3E8E41",WE:"#0891b2",EA:"#D8402A",MR:"#9A6B3F",EQ:"#ca8a04",PR:"#7c3aed"};
@@ -3147,7 +3133,7 @@ TCOVER.vent="covers/vent.webp?v=cf7d8490";
  ["01","Brief & codes","brief & codes.","Before you draw: building code and accessibility rules by topic, LEED v5 points, room clearances and first structure sizes.",["code-bc","access-bc","leed","ergo","span"]],
  ["02","Design","design.","Make the pieces of your project: furniture, stairs, doors and windows in 3D, facades, construction details, planting and color.",["furniture","facade","detaillab","lsystem","palette"]],
  ["03","Analysis","analysis.","Analyze the design on your own model: sunlight, wind outside, natural ventilation inside, structure, circulation, sightlines and camera coverage — every tool with the same plan, chart and 3D views.",["sunhours","wind","vent","structure","evac","isovist","cameras"]],
- ["04","Present","present.","Get ready for the crit: images, boards and axons, physical models, scales and sheet sizes.",["architectural-render","cutout","composer","axon","studio","topo","scale"]]];
+ ["04","Present","present.","Get ready for the crit: images, boards and axons, physical models, scales and sheet sizes.",["composer","axon","studio","topo","scale"]]];
  const all=new Set(TSECTIONS.flatMap(s=>s[4]));for(const sct of NEWSECT)for(const id of sct[4])all.delete(id);
  if(all.size)NEWSECT[1][4].push(...all);   // anything not placed above still shows, under Design
  TSECTIONS.splice(0,TSECTIONS.length,...NEWSECT.map(x=>x.map(v=>Array.isArray(v)?v.slice():v)));
@@ -3284,7 +3270,7 @@ TMETHOD.wfc=["Wave Function Collapse (Gumin 2016): simple tiled and overlapping 
 
 // === app mode: a tool that opens like software — one screen, no page scroll, no long introduction ===
 const APPMODE = new Set(["vent"]);
-APPMODE.add("architectural-render");
+
 EMBI.vent.short = "Airflow through your plan: air changes per room, by wind direction and by window opening.";
 { const _toolA = P.tool; P.tool = function (id) { if (!APPMODE.has(id) || !EMB[id]) return _toolA(id); const i = EMBI[id];
   return `<section class="appbar"><div class="appbar-in"><a class="appback" data-go="tools" aria-label="Back to all tools">← Tools</a><h1>${i.title}.</h1><p class="appsub">${i.short || ""}</p></div></section><div class="appwrap"><iframe data-emb="${id}" title="${i.crumb}" allow="clipboard-write"></iframe></div>`; }; }
@@ -3762,7 +3748,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   const STEPS = [
     { n: 1, name: LABELS.studio, go: "studio", p: "Draw the plan: walls, levels, doors, windows and furniture.", cta: "Open " + LABELS.studio },
     { n: 2, name: "Simulation", go: "tools", anchor: "agrp-interior", tag: "check", p: "Check daylight, air, views and movement on your model.", cta: "Run a simulation" },
-    { n: 3, name: "Drawing", go: "tool/architectural-render", p: "Turn a saved view into a material drawing or a single-colour architectural illustration.", cta: "Make a drawing" },
+    { n: 3, name: "Render", go: "tool/render", p: "Prepare model views and presentation outputs.", cta: "Open render" },
     { n: 4, name: "Boards", go: "tool/atlas?d=boards", p: "Lay the drawings out on one board and export it.", cta: "Make a board" }];
   window.JOURNEYS = { main: STEPS.map((x) => ({ no: String(x.n).padStart(2, "0") + " · " + x.name, go: x.go, h: x.name, p: x.p, cta: x.cta })) };
   const st = document.createElement("style");
@@ -3801,7 +3787,7 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   const STEPS = [
     { n: 1, name: LABELS.studio, ic: '<path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/>' },
     { n: 2, name: "Simulation", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
-    { n: 3, name: "Drawing", ic: '<path d="M3 18V7l9-3 9 5v11l-9-3z"/><path d="M12 4v13M7 8v8M16 7v11"/>' },
+    { n: 3, name: "Render", ic: '<path d="M3 18V7l9-3 9 5v11l-9-3z"/><path d="M12 4v13M7 8v8M16 7v11"/>' },
     { n: 4, name: "Boards", ic: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/>' }];
   const CX = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("pc-ctx") || "{}"); } catch (e) {} return Object.assign({ lat: null, lng: null, R: 600, label: "", src: "", done: {}, sim: "" }, o); })();
   const saveCx = () => { try { localStorage.setItem("pc-ctx", JSON.stringify(CX)); } catch (e) {} };
@@ -3809,10 +3795,10 @@ if (typeof APPMODE !== "undefined") APPMODE.add("render");
   if (CX.workflowVersion === 2) { const o = CX.done || {}; CX.done = { 1: o[2], 2: o[3], 3: o[4], 4: o[5] }; CX.workflowVersion = 3; saveCx(); }   // the Site step was removed: steps move up by one
   window.PCX = CX;   // the one site-context: the pin, the radius and what is done
   const pinQ = (withFrom) => CX.lat == null ? "" : `lat=${(+CX.lat).toFixed(5)}&lng=${(+CX.lng).toFixed(5)}&r=${CX.R}${withFrom ? "&from=analysis" : ""}`;
-  const urlOf = (n) => n === 1 ? "studio" : n === 2 ? (CX.sim ? "tool/" + CX.sim : "tools?group=analysis") : n === 3 ? "tool/architectural-render" : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
+  const urlOf = (n) => n === 1 ? "studio" : n === 2 ? (CX.sim ? "tool/" + CX.sim : "tools?group=analysis") : n === 3 ? "tool/render" : "tool/atlas?d=boards" + (CX.lat == null ? "" : "&" + pinQ() + "&shape=" + (CX.shape || "circle"));
   const where = () => { const h = (location.hash.replace(/^#\/?/, "") || "home"), [path, q] = h.split("?"), pg = path.split("/"), id = pg[1];
     if (pg[0] === "studio") return 1;
-    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 4 : 0; if (pg[0] === "tool" && (id === "render" || id === "architectural-render")) return 3; if (pg[0] === "tool" && id === "composer") return 4; if (pg[0] === "tools" && /(^|&)group=analysis(&|$)/.test(q || "")) return 2; if (pg[0] === "tool" && SIM.includes(id)) return 2; return 0; };
+    if (pg[0] === "tool" && id === "atlas") return /(^|&)d=boards/.test(q || "") ? 4 : 0; if (pg[0] === "tool" && (id === "render" || id === "render")) return 3; if (pg[0] === "tool" && id === "composer") return 4; if (pg[0] === "tools" && /(^|&)group=analysis(&|$)/.test(q || "")) return 2; if (pg[0] === "tool" && SIM.includes(id)) return 2; return 0; };
   const st = document.createElement("style");
   st.textContent = `:root{--wfrail:0px;--wftop:0px}
   body.wf{--wfrail:220px;--wftop:40px}body.wf.rc{--wfrail:64px}

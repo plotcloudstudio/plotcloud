@@ -22,11 +22,6 @@
       "url": "/emb/acoustics.html"
     },
     {
-      "file": "emb/architectural-render.html",
-      "surface": "tool",
-      "url": "/emb/architectural-render.html"
-    },
-    {
       "file": "emb/atlas.html",
       "surface": "tool",
       "url": "/emb/atlas.html"
@@ -217,8 +212,6 @@
     "/index.html#/tool/views",
     "/index.html#/tool/cameras",
     "/index.html#/tool/stormwater",
-    "/index.html#/tool/architectural-render",
-    "/index.html#/tool/cutout",
     "/index.html#/tool/composer",
     "/index.html#/tool/axon",
     "/index.html#/tool/studio",
