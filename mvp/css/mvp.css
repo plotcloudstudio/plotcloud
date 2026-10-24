@@ -461,3 +461,17 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .cw-tab td.chg { background: rgba(242,194,0,.28); font-weight: 700; }
 @media (max-width: 1080px) { .cw-main { grid-template-columns: 1fr; } }
 @media (max-width: 720px) { .cw-views { grid-template-columns: 1fr; } .cw-v { height: 320px; } }
+/* Compare: A | B on one row, then the simulation and the model changes in words, each with Copy */
+.cw-views { grid-template-columns: 1fr 1fr; }
+.cw-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.cw-card { display: grid; gap: 10px; align-content: start; }
+.cw-ch { display: flex; align-items: center; gap: 10px; } .cw-ch h3 { font-size: 17px; margin: 0; }
+.cw-copy { order: -1; }
+.cw-txt p { margin: 0 0 8px; line-height: 1.55; }
+.cw-card .cw-side { border: 0; padding: 0; max-height: none; background: none; border-radius: 0; }
+.cw-gh { font-size: 14px; margin: 4px 0 2px; }
+.cw-words { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
+.cw-words button { display: grid; grid-template-columns: 16px 1fr; align-items: baseline; width: 100%; border: 0; background: none; padding: 3px 6px; text-align: left; color: var(--ink); font-size: 14px; line-height: 1.5; border-radius: 6px; cursor: pointer; }
+.cw-words button i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.cw-words button:hover { background: var(--chip); } .cw-words button[aria-current="true"] { background: rgba(242,194,0,.22); }
+@media (max-width: 900px) { .cw-cards { grid-template-columns: 1fr; } }

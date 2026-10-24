@@ -18,6 +18,7 @@ const CONV = new Set(['wall', 'window', 'slab', 'room', 'furniture', 'roof']);  
 const len = (w) => Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
 export function nameOf(k, o) {
   if (!o) return k;
+  if (o.name && typeof o.name === 'string' && !/^ws-/.test(o.name)) return o.name;   // a name the object carries (e.g. "South window 1" from an older version)
   if (k === 'wall') return `Wall ${len(o).toFixed(2)} m`;
   if (k === 'op') return o.hole ? 'Wall opening' : DOORS[o.gen?.id] || (o.kind === 'door' ? 'Door' : 'Window');
   if (k === 'furn') return (o.gen && MODELS.find((m) => m.id === o.gen.id)?.en) || o.label || o.name || 'Furniture';
@@ -37,20 +38,24 @@ const GROUP = { a: 'position', b: 'position', x: 'position', y: 'position', z: '
   w: 'size', d: 'size', h: 'size', t: 'size', sill: 'size', head: 'size', thickness: 'size', rot: 'rotation', mirror: 'rotation', kind: 'category', type: 'category', object_type: 'category', hole: 'category' };
 const same = (a, b) => (typeof a === 'number' && typeof b === 'number') ? Math.abs(a - b) < 1e-4 : JSON.stringify(a) === JSON.stringify(b);
 const show = (v) => typeof v === 'number' ? (+v.toFixed(3)).toString() : Array.isArray(v) ? (v.length <= 2 && v.every((x) => typeof x === 'number') ? v.map((x) => +x.toFixed(2)).join(', ') : `${v.length} points`) : v == null ? '—' : String(v);
+const LBL = { w: 'width', d: 'depth', h: 'height', t: 'thickness', pos: 'position along the wall', sill: 'sill', head: 'head height', rot: 'rotation', x: 'x', y: 'y', z: 'z', a: 'start', b: 'end',
+  lv: 'level', wall: 'host wall', kind: 'kind', type: 'type', thickness: 'thickness', points: 'outline', label: 'name', name: 'name', mirror: 'mirrored', clr: 'clearance' };
+const METRE = new Set(['w', 'd', 'h', 't', 'pos', 'sill', 'head', 'x', 'y', 'z', 'thickness']);
+const say = (key, a, b) => key === 'rot' ? `rotation ${Math.round((a || 0) * 180 / Math.PI)}° → ${Math.round((b || 0) * 180 / Math.PI)}°` : `${LBL[key] || key} ${show(a)}${METRE.has(key) && typeof a === 'number' ? ' m' : ''} → ${show(b)}${METRE.has(key) && typeof b === 'number' ? ' m' : ''}`;
 function objDiff(A, B) {
   const what = [];
   for (const key of new Set([...Object.keys(A), ...Object.keys(B)])) {
     if (IGN.has(key)) continue;
     if (key === 'gen') { const ga = A.gen || {}, gb = B.gen || {}; if (ga.id !== gb.id) what.push({ g: 'category', t: `kind ${ga.id || '—'} → ${gb.id || '—'}` });
-      else for (const k of new Set([...Object.keys(ga.vals || {}), ...Object.keys(gb.vals || {})])) if (!same(ga.vals?.[k], gb.vals?.[k])) what.push({ g: 'parameter', t: `${k} ${show(ga.vals?.[k])} → ${show(gb.vals?.[k])}` }); continue; }
-    if (!same(A[key], B[key])) what.push({ g: GROUP[key] || 'parameter', t: `${key} ${show(A[key])} → ${show(B[key])}` });
+      else for (const k of new Set([...Object.keys(ga.vals || {}), ...Object.keys(gb.vals || {})])) if (!same(ga.vals?.[k], gb.vals?.[k])) what.push({ g: 'parameter', t: `parameter ${k} ${show(ga.vals?.[k])} → ${show(gb.vals?.[k])}` }); continue; }
+    if (!same(A[key], B[key])) what.push({ g: GROUP[key] || 'parameter', t: say(key, A[key], B[key]) });
   }
   return what;
 }
 function compDiff(A, B) {
   const what = [];
-  for (const k of ['x', 'y', 'z']) if (!same(A.g[k], B.g[k])) what.push({ g: 'position', t: `${k} ${show(A.g[k])} → ${show(B.g[k])} m` });
-  for (const k of ['w', 'd', 'h']) if (!same(A.g[k], B.g[k])) what.push({ g: 'size', t: `${k} ${show(A.g[k])} → ${show(B.g[k])} m` });
+  for (const k of ['x', 'y', 'z']) if (!same(A.g[k], B.g[k])) what.push({ g: 'position', t: `position ${k} ${show(A.g[k])} → ${show(B.g[k])} m` });
+  for (const k of ['w', 'd', 'h']) if (!same(A.g[k], B.g[k])) what.push({ g: 'size', t: `${LBL[k]} ${show(A.g[k])} → ${show(B.g[k])} m` });
   if (A.type !== B.type) what.push({ g: 'category', t: `type ${A.type} → ${B.type}` });
   if (A.layer !== B.layer) what.push({ g: 'layer', t: `layer ${A.layer} → ${B.layer}` });
   for (const k of ['mat', 'furn']) if (!same(A[k], B[k])) what.push({ g: 'parameter', t: `${k} ${show(A[k])} → ${show(B[k])}` });

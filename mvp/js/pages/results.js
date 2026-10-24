@@ -53,15 +53,17 @@ export async function render(app, [pid], params) {
     ${p.versions.length < 2 ? '<p class="note">Save at least two versions in the workspace to compare them.</p>' : `
     <div class="cw" id="cw">
       <div class="cw-bar">
+        <label class="f" id="simW">Simulation<select id="simSel">${SIMS.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
         <label class="f">Version A<select id="va"></select></label><label class="f">Version B<select id="vb"></select></label>
         <label class="f">Scope<select id="scope"><option value="model">Whole model</option><option value="level">One level</option><option value="sim">One simulation</option></select></label>
-        <label class="f" id="lvW">Level<select id="lvSel"></select></label><label class="f" id="simW">Simulation<select id="simSel">${SIMS.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label class="f" id="lvW">Level<select id="lvSel"></select></label>
         <div class="f" id="modeW"><span>Display</span><div class="seg" role="group" aria-label="Display"><button type="button" data-mode="solid">Solid colour</button><button type="button" data-mode="ghost">Ghosted overlay</button><button type="button" data-mode="hl">Highlight only</button></div></div>
         <label class="ck" id="syncW"><input type="checkbox" id="sync"> Sync cameras</label>
       </div>
-      <div class="cw-main">
-        <div class="cw-views"><div class="cw-v"><span class="lab" id="la"></span><div class="vp" id="vpa"></div><div class="cw-miss" id="ma" hidden></div></div><div class="cw-v"><span class="lab" id="lb"></span><div class="vp" id="vpb"></div><div class="cw-miss" id="mb" hidden></div></div></div>
-        <aside class="cw-side" id="side"></aside>
+      <div class="cw-views"><div class="cw-v"><span class="lab" id="la"></span><div class="vp" id="vpa"></div><div class="cw-miss" id="ma" hidden></div></div><div class="cw-v"><span class="lab" id="lb"></span><div class="vp" id="vpb"></div><div class="cw-miss" id="mb" hidden></div></div></div>
+      <div class="cw-cards">
+        <section class="card cw-card" aria-labelledby="simH"><div class="cw-ch"><button type="button" class="btn sm cw-copy" data-copy="sim" title="Copy this text">Copy</button><h3 id="simH">Simulation</h3></div><div id="simTxt" class="cw-txt"></div><div id="simCtl"></div></section>
+        <section class="card cw-card" aria-labelledby="modH"><div class="cw-ch"><button type="button" class="btn sm cw-copy" data-copy="model" title="Copy this text">Copy</button><h3 id="modH">Model changes</h3></div><div id="side" class="cw-side"></div></section>
       </div>
       <p class="note" id="cwNote"></p>
     </div>
@@ -160,18 +162,18 @@ export async function render(app, [pid], params) {
     $('#la', app).textContent = `A · v${A.n}`; $('#lb', app).textContent = `B · v${B.n}`;
     $('#scope', app).value = C.scope; $('#simSel', app).value = C.sim || SIMS[0].id; $('#sync', app).checked = !!C.sync;
     $$('[data-mode]', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === C.mode)));
-    $('#lvW', app).hidden = C.scope !== 'level'; $('#simW', app).hidden = C.scope !== 'sim'; $('#modeW', app).hidden = C.scope === 'sim'; $('#syncW', app).hidden = C.scope === 'sim';
+    $('#lvW', app).hidden = C.scope !== 'level'; $('#simW', app).hidden = false; $('#modeW', app).hidden = C.scope === 'sim'; $('#syncW', app).hidden = C.scope === 'sim';
     cmpEl.dataset.scope = C.scope;
-    if (C.scope === 'sim') { simCompare(); trend(); return; }
-    $('#ma', app).hidden = true; $('#mb', app).hidden = true; $('#cwNote', app).textContent = '';
-    views(); $('#side', app).innerHTML = '<p class="note">Preparing both versions in Plan Studio…</p>';
+    simCompare();
+    if (C.scope !== 'sim') { $('#ma', app).hidden = true; $('#mb', app).hidden = true; $('#cwNote', app).textContent = ''; views(); }
+    $('#side', app).innerHTML = '<p class="note">Preparing both versions in Plan Studio…</p>'; $('#modH', app).textContent = `Model changes v${A.n} → v${B.n}`;
     let a, b; try { [a, b] = await Promise.all([versionScene(A, site, p.name), versionScene(B, site, p.name)]); } catch (e) { if (my === token) $('#side', app).innerHTML = `<p class="notice warn">${esc(e.message || 'The versions could not be prepared.')}</p>`; return; }
     if (my !== token || dead) return; SC = { a, b };
     ITEMS = diffOf(a, b);
     const lv = [...new Map([...levelsOf(a.model), ...levelsOf(b.model)].map((l) => [l.n, l])).values()].sort((x, y) => x.n - y.n);
     if (!lv.some((l) => l.n === C.level)) C.level = lv[0]?.n || 1;
     $('#lvSel', app).innerHTML = lv.map((l) => `<option value="${l.n}" ${l.n === C.level ? 'selected' : ''}>Level ${l.n} · ${l.z.toFixed(2)} m</option>`).join('');
-    paintViews(true); sideList(); trend();
+    if (C.scope !== 'sim') paintViews(true); sideList(); trend();
   }
   // the colours: in A, modified (yellow) and removed (red); in B, modified and added (green), and what was removed as a red outline where it stood
   function paintViews(refit) {
@@ -194,12 +196,14 @@ export async function render(app, [pid], params) {
     if (refit) { vpa.fit(); if (C.sync) vpb.setCam(vpa.getCam()); else vpb.fit(); }
     const sel = picked ? [picked, 'ghost:' + picked] : []; vpa.select(sel); vpb.select(sel);
   }
+  let PLAIN = { sim: '', model: '' };
   function sideList() {
-    const by = (k) => ITEMS.filter((x) => x.change === k), lab = { modified: 'Modified', added: 'Added', removed: 'Removed' };
-    $('#side', app).innerHTML = `<div class="cw-legend">${['modified', 'added', 'removed'].map((k) => `<span><i style="background:${hex(COLORS[k])}"></i>${lab[k]} ${by(k).length}</span>`).join('')}</div>
+    const by = (k) => ITEMS.filter((x) => x.change === k), lab = { modified: 'Modified', added: 'Added', removed: 'Removed' }, head = { modified: 'Changed', added: 'Added', removed: 'Removed' };
+    const sentence = (it) => it.change === 'modified' ? `${it.name} (${it.layer}): ${it.what.map((w) => w.t).join(', ')}.` : `${it.name} (${it.layer}) ${it.change === 'added' ? `added in v${B.n}` : `removed in v${B.n}`}.`;
+    PLAIN.model = [`Model changes v${A.n} → v${B.n}`, ...(ITEMS.length ? ['modified', 'added', 'removed'].filter((k) => by(k).length).flatMap((k) => [`${head[k]} (${by(k).length})`, ...by(k).map((it) => '- ' + sentence(it))]) : ['No changes between these versions.'])].join('\n');
+    $('#side', app).innerHTML = `${ITEMS.length ? ['modified', 'added', 'removed'].filter((k) => by(k).length).map((k) => `<h4 class="cw-gh">${head[k]} (${by(k).length})</h4><ul class="cw-words">${by(k).map((it) => `<li><button type="button" data-item="${esc(it.id)}" aria-current="${picked === it.id}"><i style="background:${hex(COLORS[k])}"></i>${esc(sentence(it))}</button></li>`).join('')}</ul>`).join('') : `<p>No changes between v${A.n} and v${B.n}.</p>`}
       <p class="cw-count" id="cwCount" data-items="${ITEMS.length}" data-lit="${ITEMS.lit}">${ITEMS.length} change${ITEMS.length === 1 ? '' : 's'} · ${ITEMS.lit} highlighted${ITEMS.length !== ITEMS.lit ? ` · ${ITEMS.length - ITEMS.lit} have no geometry in either view` : ''}</p>
-      ${ITEMS.length ? `<ol class="cw-list" id="cwList">${ITEMS.map((it) => `<li><button type="button" data-item="${esc(it.id)}" class="ch-${it.change}" aria-current="${picked === it.id}"><i style="background:${hex(COLORS[it.change])}"></i><b>${esc(it.name)}</b><small>${lab[it.change]} · ${esc(it.layer || '')}</small>${it.what.length ? `<span>${it.what.slice(0, 3).map((w) => esc(w.t)).join(' · ')}${it.what.length > 3 ? ` · +${it.what.length - 3}` : ''}</span>` : ''}</button></li>`).join('')}</ol>` : '<p class="note">No changes between these versions.</p>'}
-      <p class="note">Compared by object: position, size, kind, layer and parameters. Rooms, automatic floors and the roof follow the walls and are not listed. Click a change to find it; click a coloured part to find its line.</p>`;
+      <p class="note">Compared object by object: position, size, kind, layer and parameters. Rooms, automatic floors and the roof follow the walls and are not listed. Click a line to find it in the views; click a coloured part to find its line.</p>`;
     $$('[data-item]', app).forEach((b) => b.onclick = () => pickItem(b.dataset.item, true));
   }
   function pickItem(id, focus) {
@@ -215,11 +219,13 @@ export async function render(app, [pid], params) {
 
   // ---- one simulation: both versions' results side by side, the figures with B − A, and the result field point by point
   function simCompare() {
-    const sim = SIMS.find((s) => s.id === C.sim) || SIMS[0]; C.sim = sim.id;
+    const sim = SIMS.find((s) => s.id === C.sim) || SIMS.find((s) => p.runs.some((r) => r.simId === s.id && (r.versionId === A.id || r.versionId === B.id))) || SIMS[0]; C.sim = sim.id; $('#simSel', app).value = sim.id;
     const ra = S.lastRun(p, A.id, sim.id), rb = S.lastRun(p, B.id, sim.id), fa = ra?.results?.field, fb = rb?.results?.field, both = fa && fb;
     const thr = C.thr[sim.id + (C.pct ? '%' : '')] ?? (C.pct ? 10 : sim.id === 'sunhours' ? 0.5 : both ? defThr(fa, fb) : 0);
     const D = both ? fieldDiff(fa, fb, { threshold: thr, pct: C.pct }) : null;
     const running = (v) => batch.items().find((x) => x.simId === sim.id && x.versionId === v.id && (x.status === 'queued' || x.status === 'running'));
+    simWords(sim, ra, rb, D, thr, fa || fb);
+    if (C.scope !== 'sim') { $('#simCtl', app).innerHTML = ''; return; }
     for (const [v, r, f, el, side] of [[A, ra, fa, $('#ma', app), 'a'], [B, rb, fb, $('#mb', app), 'b']]) {
       el.hidden = false; const it = batch.items().find((x) => x.simId === sim.id && x.versionId === v.id), run = running(v);
       if (!r) { el.innerHTML = `<div class="miss" data-miss="${v.id}"><b>Not run on v${v.n}</b><p class="note">${HANDS[sim.id] ? `This study ${HANDS[sim.id]}, so it runs on its own page.` : 'Run it now: it uses the same inputs as the batch above.'}</p>${HANDS[sim.id] ? `<a class="btn sm" href="#/simulations/${sim.id}?project=${p.id}&version=${v.id}">Open it</a>` : `<button class="btn sm primary" data-runnow="${v.id}" ${run ? 'disabled' : ''}>${run ? STATUS[run.status] + '…' : 'Run it now'}</button>`}${it?.status === 'failed' ? `<p class="bt-why">${esc(it.why)}</p>` : ''}</div>`; continue; }
@@ -232,7 +238,7 @@ export async function render(app, [pid], params) {
     const rows = figureRows(sim, ra, rb), cell = (v, d) => Number.isFinite(v) ? fmt(v, d) : '—';
     const unitOf = fa?.unit || fb?.unit || '', mx = both ? maxDelta(fa, fb) : 1, fl = both ? fb.label.toLowerCase() : '';
     const cnt = (n, of, t) => `${n} of ${of} points of ${esc(fl)} changed${C.pct ? ` by ≥ ${t} %` : ` by ≥ ${t} ${esc(unitOf)}`}`;
-    $('#side', app).innerHTML = `${both ? `<div class="cw-ctl"><label class="f">Highlight when the change is at least <output id="thrO">${C.pct ? `${thr} %` : `${thr} ${esc(unitOf)}`}</output>
+    $('#simCtl', app).innerHTML = `${both ? `<div class="cw-ctl"><label class="f">Highlight when the change is at least <output id="thrO">${C.pct ? `${thr} %` : `${thr} ${esc(unitOf)}`}</output>
         <input type="range" id="thr" min="0" max="${C.pct ? 100 : +(mx || 1).toPrecision(3)}" step="${C.pct ? 1 : +((mx || 1) / 100).toPrecision(2)}" value="${thr}"></label>
         <label class="ck"><input type="checkbox" id="only" ${C.only ? 'checked' : ''}> Only changed areas</label>
         <div class="seg" role="group" aria-label="Difference as"><button type="button" data-pct="0" aria-pressed="${!C.pct}">Absolute</button><button type="button" data-pct="1" aria-pressed="${!!C.pct}">Percent</button></div>
@@ -243,13 +249,29 @@ export async function render(app, [pid], params) {
         return `<tr><td>${esc(r.label)}${r.unit ? ` <span class="note">${esc(r.unit)}</span>` : ''}</td><td class="n">${ra ? cell(r.a, r.d) : '<span class="note">not run</span>'}</td><td class="n">${rb ? cell(r.b, r.d) : '<span class="note">not run</span>'}</td><td class="n${ch ? ' chg' : ''}" ${ch ? 'data-chg="1"' : ''}>${!Number.isFinite(d) ? '—' : C.pct ? (Number.isFinite(pc) ? (pc > 0 ? '+' : '') + fmt(pc, 1) + ' %' : '—') : (d > 0 ? '+' : '') + fmt(d, r.d)}</td></tr>`; }).join('')}</tbody></table>
       ${ra && rb && JSON.stringify({ ...ra.settings, room: undefined }) !== JSON.stringify({ ...rb.settings, room: undefined }) ? `<p class="notice warn">Settings differ (${Object.keys({ ...ra.settings, ...rb.settings }).filter((k) => k !== 'room' && String(ra.settings[k]) !== String(rb.settings[k])).map((k) => `${esc(k)}: ${esc(ra.settings[k] ?? '—')} → ${esc(rb.settings[k] ?? '—')}`).join(', ')}): part of the difference comes from them.</p>` : ''}`;
     if (both) {
-      $('#thr', app).oninput = (e) => { const t = +e.target.value; C.thr[sim.id + (C.pct ? '%' : '')] = t; saveC(); const D2 = fieldDiff(fa, fb, { threshold: t, pct: C.pct }); if (!C.pic) drawFields(fa, fb, D2); $('#thrO', app).textContent = C.pct ? `${t} %` : `${t} ${unitOf}`; const fc = $('#fCount', app); fc.dataset.changed = D2.changed; fc.innerHTML = cnt(D2.changed, D2.cells.length, t); };
+      $('#thr', app).oninput = (e) => { const t = +e.target.value; C.thr[sim.id + (C.pct ? '%' : '')] = t; saveC(); const D2 = fieldDiff(fa, fb, { threshold: t, pct: C.pct }); if (!C.pic) drawFields(fa, fb, D2); $('#thrO', app).textContent = C.pct ? `${t} %` : `${t} ${unitOf}`; const fc = $('#fCount', app); fc.dataset.changed = D2.changed; fc.innerHTML = cnt(D2.changed, D2.cells.length, t); simWords(sim, ra, rb, D2, t, fa || fb); };
       $('#only', app).onchange = (e) => { C.only = e.target.checked; saveC(); if (!C.pic) drawFields(fa, fb, fieldDiff(fa, fb, { threshold: +$('#thr', app).value, pct: C.pct })); };
       $('#pic', app).onchange = (e) => { C.pic = e.target.checked; saveC(); simCompare(); };
       if (!C.pic) drawFields(fa, fb, D);
     }
     $$('[data-pct]', app).forEach((b) => b.onclick = () => { C.pct = b.dataset.pct === '1'; saveC(); simCompare(); });
     $('#cwNote', app).textContent = both ? `Both maps use one colour scale; a yellow outline marks each point whose ${fl} changed at least as much as the threshold. The threshold works on the saved values: nothing is run again.` : '';
+  }
+  // the comparison of one simulation, in words (the same text the Copy button gives)
+  function simWords(sim, ra, rb, D, thr, field) {
+    $('#simH', app).textContent = `${sim.name} · v${A.n} → v${B.n}`;
+    const L = [];
+    if (!ra && !rb) L.push(`${sim.name} has not been run on v${A.n} or v${B.n} yet. Run it in Run simulations above, or choose One simulation and Run it now.`);
+    else if (!ra || !rb) L.push(`${sim.name} has been run on v${(ra ? A : B).n} but not on v${(ra ? B : A).n}, so there is nothing to compare yet. Choose One simulation and Run it now on v${(ra ? B : A).n}.`);
+    else {
+      for (const r of figureRows(sim, ra, rb)) { if (!Number.isFinite(r.a) || !Number.isFinite(r.b)) continue; const d = r.b - r.a, u = r.unit ? (r.unit === '%' ? ' %' : ' ' + r.unit) : '', pc = Math.abs(r.a) > 1e-9 ? d / Math.abs(r.a) * 100 : NaN;
+        L.push(Math.abs(d) < 1e-9 ? `${r.label} stayed at ${fmt(r.a, r.d)}${u}.` : `${r.label} ${d > 0 ? 'rose' : 'fell'} from ${fmt(r.a, r.d)}${u} to ${fmt(r.b, r.d)}${u} (${d > 0 ? '+' : '−'}${fmt(Math.abs(d), r.d)}${Number.isFinite(pc) ? `, ${pc > 0 ? '+' : '−'}${fmt(Math.abs(pc), 0)} %` : ''}).`); }
+      if (D) L.push(`Point by point, ${D.changed} of ${D.cells.length} points of ${field.label.toLowerCase()} changed by at least ${thr}${C.pct ? ' %' : field.unit ? ' ' + field.unit : ''} (including areas analysed in one version only).`);
+      const diffK = Object.keys({ ...ra.settings, ...rb.settings }).filter((k) => k !== 'room' && String(ra.settings[k]) !== String(rb.settings[k]));
+      L.push(diffK.length ? `The settings differ (${diffK.map((k) => `${k}: ${ra.settings[k] ?? '—'} → ${rb.settings[k] ?? '—'}`).join('; ')}), so part of the difference comes from them.` : 'Both runs used the same settings, so the difference comes from the model.');
+    }
+    PLAIN.sim = [`${sim.name} · v${A.n} → v${B.n}`, ...L].join('\n');
+    $('#simTxt', app).innerHTML = L.map((x) => `<p>${esc(x)}</p>`).join('');
   }
   const maxDelta = (fa, fb) => { const D = fieldDiff(fa, fb, { threshold: 0 }); let m = 0; for (const c of D.cells) if (Number.isFinite(c.d)) m = Math.max(m, Math.abs(c.d)); return m || 1; };
   const defThr = (fa, fb) => +(maxDelta(fa, fb) * 0.1).toPrecision(2);
@@ -281,6 +303,9 @@ export async function render(app, [pid], params) {
     el.innerHTML = `<h3 style="font-size:15px;margin-bottom:10px">${esc(sim.name)} · ${esc(label)} across versions</h3><div class="bars">${rows.map(([v, x]) => `<div class="b ${v === B ? 'v2' : ''}"><span>v${v.n}</span>${Number.isFinite(x) ? `<i style="width:${Math.abs(x) / max * 100}%"></i>` : '<span class="note">not run</span>'}<span style="text-align:right">${Number.isFinite(x) ? fmt(x, dd) + (u ? ' ' + u : '') : ''}</span></div>`).join('')}</div>`;
   }
   if (cmpEl) {
+    $$('[data-copy]', app).forEach((b) => b.onclick = async () => { const t = PLAIN[b.dataset.copy] || ''; let ok2 = false;
+      try { await navigator.clipboard.writeText(t); ok2 = true; } catch (e) { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select(); try { ok2 = document.execCommand('copy'); } catch (er) { } ta.remove(); }
+      window.__copied = t; toast(ok2 ? 'Copied' : 'Could not copy: select the text instead'); b.textContent = ok2 ? 'Copied' : 'Copy'; setTimeout(() => { b.textContent = 'Copy'; }, 1500); });
     $('#va', app).onchange = (e) => { A = S.version(p, e.target.value); picked = null; compare(); };
     $('#vb', app).onchange = (e) => { B = S.version(p, e.target.value); picked = null; compare(); };
     $('#scope', app).onchange = (e) => { C.scope = e.target.value; saveC(); compare(); };
