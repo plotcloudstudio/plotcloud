@@ -364,11 +364,10 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .simmini p { font-size: 13px; color: var(--mut); margin: 0; }
 .simmini a:hover b { color: var(--red); }
 /* Live Toronto maquette replaces only the homepage hero image. */
-.hero .home-hero-study{height:clamp(600px,59vw,820px);margin:20px -60px 0;background:transparent;border:0;border-radius:0;overflow:visible}
+.hero .home-hero-study{height:clamp(680px,68vw,1000px);width:calc(100vw - 48px);max-width:none;margin:20px 0 0 calc(50% - 50vw + 24px);background:transparent;border:0;border-radius:0;overflow:visible}
 .home-hero-study iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}
 .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-@media(max-width:1400px){.hero .home-hero-study{margin-left:0;margin-right:0}}
-@media(max-width:640px){.hero .home-hero-study{height:540px;margin:16px -12px 0;border-radius:0}}
+@media(max-width:640px){.hero .home-hero-study{width:calc(100vw - 24px);height:560px;margin:16px 0 0 calc(50% - 50vw + 12px);border-radius:0}}
 .nav a[hidden] { display: none !important; }
 /* simulation pages that run a PlotCloud engine: a slim bar over the engine */
 .shx { display: grid; grid-template-rows: auto minmax(0, 1fr); height: calc(100vh - 64px); }

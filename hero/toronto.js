@@ -290,6 +290,8 @@ try {
     if(animate){const follow=1-Math.exp(-dt*5);leanX+=(pointerX*.13-leanX)*follow;leanY+=(pointerY*.05-leanY)*follow;}
     camera.position.set(Math.sin(azimuth+orbit+leanX)*23,Math.sin(elevation+leanY)*23+3,Math.cos(azimuth+orbit+leanX)*23);
     camera.lookAt(0,2.75,0);
+    // Fit the complete maquette and effect envelope, including while orbiting.
+    if(embedded){camera.updateMatrixWorld(true);const aspect=(camera.right-camera.left)/(camera.top-camera.bottom);let half=6.7;for(const x of [-6.5,6.5])for(const y of [-1,10])for(const z of [-5.2,5.2]){const p=new T.Vector3(x,y,z).applyMatrix4(camera.matrixWorldInverse);half=Math.max(half,Math.abs(p.x)/aspect*1.12,Math.abs(p.y)*1.12);}camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();}
     const tint=new T.Color(mode==='sun'?0xffdfa7:mode==='rain'?0xdbe8f8:0xf4f3ea);
     key.color.lerp(tint,dt?Math.min(1,dt*3):1);
     const night=visualTheme==='night';ambient.intensity=night?.32:1.7;fill.intensity=night?.5:1;nightGroups.forEach(g=>g.visible=night);effects.sun.visible=mode==='sun'&&!night;solarSurfaces.forEach(s=>s.visible=mode==='sun'&&!night);
