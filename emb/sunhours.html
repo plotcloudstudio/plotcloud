@@ -144,7 +144,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     <div class="brand"><b>PlotCloud <span>Sun Hours</span></b><small>Drop in your model and map sunlight hours on the ground, roofs and facades. Your model is processed in this browser and never uploaded.</small></div>
 
     <section class="sec" aria-labelledby="h-model">
-      <h2 id="h-model"><i>1</i>Model</h2>
+      <h2 id="h-model">Model</h2>
       <div class="drop" id="drop">
         <div class="two openrow"><button type="button" class="btn" id="pick">Choose a model file</button><button type="button" class="btn" id="resetAnalysis">Reset</button></div>
         <p>Or drop it on the view. Accepts .3dm, .dae, .obj, .stl and .glb up to 20 MB / 350,000 triangles. Simplify larger models before importing.</p>
@@ -163,7 +163,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     </section>
 
     <section class="sec" aria-labelledby="h-site">
-      <h2 id="h-site"><i>2</i>Site &amp; north</h2>
+      <h2 id="h-site">Site &amp; north</h2>
       <div class="row"><label for="city">City</label>
         <select id="city"></select></div>
       <div class="two" id="customLoc" hidden>
@@ -179,14 +179,18 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     </section>
 
     <section class="sec" aria-labelledby="h-an">
-      <h2 id="h-an"><i>3</i>Analysis</h2>
-      <div class="row"><span class="lab" id="dayl">Date</span>
+      <h2 id="h-an">Analysis</h2>
+      <div class="row"><label for="period">Analysis period</label><select id="period"><option value="single">Single day</option><option value="range">Date range · cumulative hours</option></select></div>
+      <div class="row"><span class="lab" id="dayl">Date presets</span>
         <div class="seg" id="daySeg" role="group" aria-labelledby="dayl"><button type="button" data-d="12-21" aria-pressed="true">Dec 21</button><button type="button" data-d="03-20" aria-pressed="false">Mar 20</button><button type="button" data-d="06-21" aria-pressed="false">Jun 21</button><button type="button" data-d="custom" aria-pressed="false">Other</button></div>
-        <input type="date" id="date" value="2026-12-21" hidden aria-label="Custom date"></div>
+        <label for="date">Start date</label><input type="date" id="date" value="2026-12-21" aria-label="Start date"></div>
+      <div class="row" id="endDateRow" hidden><label for="dateEnd">End date · inclusive</label><input type="date" id="dateEnd" value="2026-12-21"></div>
+      <label class="note"><input type="checkbox" id="allDay" checked> Sunrise to sunset on each day</label>
       <div class="two">
-        <div class="row"><label for="t0">From</label><select id="t0"></select></div>
-        <div class="row"><label for="t1">To</label><select id="t1"></select></div>
+        <div class="row"><label for="t0">Daily start · local time</label><input type="time" id="t0" value="08:00" disabled></div>
+        <div class="row"><label for="t1">Daily end · local time</label><input type="time" id="t1" value="18:00" disabled></div>
       </div>
+      <p class="note">Presets only fill the date. A date range evaluates every day, including both endpoints, and sums direct-sun hours. Times use the site's configured UTC offset and DST setting. Maximum 366 days per run.</p>
       <div class="row"><span class="lab">Detail</span><div class="seg" id="lvlSeg" role="group" aria-label="Detail"><button type="button" data-l="draft" aria-pressed="false">Draft</button><button type="button" data-l="standard" aria-pressed="true">Standard</button><button type="button" data-l="fine" aria-pressed="false">Fine</button><button type="button" data-l="custom" aria-pressed="false">Custom</button></div></div>
       <div class="two" id="customRow" hidden>
         <div class="row"><label for="grid">Grid spacing</label><select id="grid"><option value="0.01">0.01 m · very slow</option><option value="0.02">0.02 m · very slow</option><option value="0.05">0.05 m · slow</option><option value="0.1">0.1 m</option><option value="0.25">0.25 m</option><option value="0.5">0.5 m</option><option value="1" selected>1 m</option><option value="2">2 m</option><option value="4">4 m</option></select></div>
@@ -205,7 +209,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     </section>
 
     <section class="sec" aria-labelledby="h-res" id="resSec" hidden>
-      <h2 id="h-res"><i>4</i>Results</h2>
+      <h2 id="h-res">Results</h2>
       <dl class="istats" id="infl" aria-label="Surroundings and their influence" hidden></dl>
       <dl class="stats" id="stats"></dl>
       <div class="two"><button type="button" class="btn" id="export">Save this view (PNG)</button><button type="button" class="btn" id="clear">Back to shadows</button></div>
@@ -213,7 +217,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     </section>
 
     <section class="sec" aria-labelledby="h-set">
-      <h2 id="h-set"><i>5</i>Export a set</h2>
+      <h2 id="h-set">Export</h2>
       <div class="presets" id="presets" role="radiogroup" aria-labelledby="h-set"></div>
       <div class="two">
         <div class="row"><label for="imgSize">Image size</label><select id="imgSize"><option value="1920x1200" selected>1920 × 1200</option><option value="2400x1500">2400 × 1500</option><option value="1600x1600">1600 × 1600 square</option><option value="1200x1600">1200 × 1600 portrait</option></select></div>
@@ -730,7 +734,7 @@ const CITIES = [["Vancouver", 49.28, -123.12, -8, 1, "Canada"], ["Victoria", 48.
 const S = {
   raw: null, unit: 1, up: 'z', north: 0, modelVer: 0,
   loc: { lat: 49.28, lon: -123.12, tz: -8, dst: 1 },
-  date: '2026-12-21', t0: 'rise', t1: 'set', grid: 1, step: 15, ground: true, margin: 'auto',
+  date: '2026-12-21', dateEnd: '2026-12-21', period: 'single', t0: 'rise', t1: 'set', grid: 1, step: 15, ground: true, margin: 'auto',
   model: null, result: null, lastR: null, busy: false, view: 'split', level: 'standard', hl: null,
 };
 
@@ -1002,9 +1006,31 @@ function sunsFor(ds) {
   const { rise, set } = riseSet(ds);
   if (rise === null) return null;
   const t0 = S.t0 === 'rise' ? rise : Math.max(rise, +S.t0 * 60), t1 = S.t1 === 'set' ? set : Math.min(set, +S.t1 * 60);
-  const suns = [];
-  for (let t = t0 + S.step / 2; t < t1; t += S.step) { const p = sunAt(t, ds); if (p.alt > 0.25) suns.push(sunVec(p.alt, p.az)); }
-  return { suns, stepH: S.step / 60, win: suns.length * S.step / 60, t0, t1 };
+  const suns = [], weights = [];
+  // Midpoint integration, including a shorter final interval for exact minute inputs.
+  for (let start = t0; start < t1; start += S.step) { const end = Math.min(start + S.step, t1), p = sunAt((start + end) / 2, ds); if (p.alt > 0.25) { suns.push(sunVec(p.alt, p.az)); weights.push((end - start) / 60); } }
+  return { suns, weights, stepH: S.step / 60, win: weights.reduce((a,b)=>a+b,0), t0, t1 };
+}
+function periodDates(){
+  const parse=ds=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(ds||''))throw Error('Choose valid start and end dates.');const t=Date.parse(ds+'T12:00:00Z');if(!Number.isFinite(t)||new Date(t).toISOString().slice(0,10)!==ds)throw Error('Choose valid dates.');return t;};
+  const start=parse(S.date),end=parse(S.period==='range'?S.dateEnd:S.date);if(end<start)throw Error('End date must be on or after start date.');const count=Math.round((end-start)/86400000)+1;if(count>366)throw Error('Choose at most 366 days per run.');
+  if(S.t0!=='rise'&&S.t1!=='set'&&!(Number(S.t1)>Number(S.t0)))throw Error('Daily end time must be later than start time.');
+  return Array.from({length:count},(_,i)=>new Date(start+i*86400000).toISOString().slice(0,10));
+}
+const resultPeriod=R=>R.period?`${R.period.start} to ${R.period.end} · ${R.period.days} days · cumulative hours`:dayLabel(R.ds);
+async function computePeriod(dates,token,onProg){
+  if(dates.length===1){const R=await computeDay(dates[0],token,onProg);if(R&&S.period==='range')R.period={start:dates[0],end:dates[0],days:1,t0:S.t0,t1:S.t1};return R;}
+  let total=null;
+  for(let i=0;i<dates.length;i++){
+    if(token!==runToken)return null;
+    const day=sunsFor(dates[i]);if(!day||!day.suns.length){onProg((i+1)/dates.length);continue;}
+    const R=await computeDay(dates[i],token,p=>onProg((i+p)/dates.length));if(!R)return null;
+    if(!total)total={...R,ds:dates[0],hours:new Float32Array(R.hours.length),win:0,rays:0,secs:0,litT:null,blk:R.blk?{ctx:new Float64Array(R.blk.ctx.length),self:0}:null};
+    for(let j=0;j<R.hours.length;j++)total.hours[j]+=R.hours[j];total.win+=R.win;total.rays+=R.rays;total.secs+=R.secs;
+    if(total.blk&&R.blk){total.blk.self+=R.blk.self;for(let j=0;j<R.blk.ctx.length;j++)total.blk.ctx[j]+=R.blk.ctx[j];}
+  }
+  if(!total)throw Error('No sun above the horizon in the selected dates and daily time window.');
+  total.period={start:dates[0],end:dates.at(-1),days:dates.length,t0:S.t0,t1:S.t1};return total;
 }
 
 // Fine grids: up to SAFE_PTS sample points run without asking; beyond that the tool says how long it will take and asks.
@@ -1024,8 +1050,8 @@ const fmtN = (n) => (n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + ' million'
 function finestFor(cap) { let a = 0.01, b = 8; if (estimateAt(a) <= cap) return a; for (let k = 0; k < 30; k++) { const m = Math.sqrt(a * b); if (estimateAt(m) > cap) a = m; else b = m; } return Math.ceil(b * 100) / 100; }
 function costOf(sp, nSun) { const pts = estimateAt(sp), rate = S.rate || 2e5; return { pts, rays: pts * nSun, sec: (pts * nSun * 0.6) / rate + pts / 250000 }; }   // about 60% of points face any one sun
 function checkGrid() {   // true when the run can go ahead now
-  const box = $('#gwarn'); if (!S.model) return true; const day = sunsFor(S.date), nSun = day && day.suns ? day.suns.length : 40;
-  if (S.grid >= 1 && S.step >= 5) { box.hidden = true; return true; }   // the usual settings: a big model just gets a wider grid, as before
+  const box = $('#gwarn'); if (!S.model) return true;let nSun;try{nSun=periodDates().reduce((sum,ds)=>sum+(sunsFor(ds)?.suns.length||0),0)||1;}catch{nSun=40;}
+  if (S.grid >= 1 && S.step >= 5 && S.period!=='range') { box.hidden = true; return true; }
   const pts = estimateAt(S.grid); if (pts <= SAFE_PTS && costOf(S.grid, nSun).sec < 15) { box.hidden = true; return true; }
   if (S.fineOK === S.grid && S.fineStep === S.step && pts <= HARD_PTS) { box.hidden = true; return true; }
   const c = costOf(S.grid, nSun), alt = finestFor(SAFE_PTS), cAlt = costOf(alt, nSun), cap = pts > HARD_PTS ? finestFor(HARD_PTS) : null;
@@ -1102,7 +1128,7 @@ async function prepare(token, onProg) {
 }
 
 // One ray per sample point per sun position
-async function rayPass(prep, suns, stepH, token, onProg) {
+async function rayPass(prep, suns, weights, token, onProg) {
   const { bvh } = S.model, N = prep.smpA.length, hours = new Float32Array(N), litA = new Float64Array(suns.length); let totA = 0;
   const ray = new THREE.Ray(), o = new THREE.Vector3(), nn = new THREE.Vector3();
   const OWN = S.model.own, ROLE = S.model.role, BIX = bvh.geometry.index.array, BLK = OWN ? new Float64Array(S.raw.geoms.length) : null; let blkSelf = 0;
@@ -1111,8 +1137,8 @@ async function rayPass(prep, suns, stepH, token, onProg) {
     o.set(prep.smpP[k * 3], prep.smpP[k * 3 + 1], prep.smpP[k * 3 + 2]); nn.set(prep.smpN[k * 3], prep.smpN[k * 3 + 1], prep.smpN[k * 3 + 2]);
     let lit = 0;
     const kk = prep.smpK[k], aa = prep.smpA[k]; if (kk !== 3) totA += aa;
-    for (let j = 0; j < suns.length; j++) { const d = suns[j]; if (nn.dot(d) <= 0) continue; ray.set(o, d); const hh = bvh.raycastFirst(ray, THREE.DoubleSide); if (!hh) { lit++; if (kk !== 3) litA[j] += aa; } else if (OWN && kk !== 3) { const tri = (BIX[hh.faceIndex * 3] / 3) | 0; if (ROLE[tri] === 1) BLK[OWN[tri]] += aa * stepH; else blkSelf += aa * stepH; } }
-    hours[k] = lit * stepH;
+    for (let j = 0; j < suns.length; j++) { const d = suns[j], stepH = weights[j]; if (nn.dot(d) <= 0) continue; ray.set(o, d); const hh = bvh.raycastFirst(ray, THREE.DoubleSide); if (!hh) { lit+=stepH; if (kk !== 3) litA[j] += aa; } else if (OWN && kk !== 3) { const tri = (BIX[hh.faceIndex * 3] / 3) | 0; if (ROLE[tri] === 1) BLK[OWN[tri]] += aa * stepH; else blkSelf += aa * stepH; } }
+    hours[k] = lit;
     if (performance.now() - last > 30) { onProg(k / N); await frame(); if (token !== runToken) return null; last = performance.now(); }
   }
   hours.blk = OWN ? { ctx: BLK, self: blkSelf } : null; hours.litT = Array.from(litA, (v) => (totA ? v / totA : 0)); return hours;
@@ -1124,19 +1150,20 @@ async function computeDay(ds, token, onProg) {
   if (!day.suns.length) throw new Error('No sun inside this time window. "To" must be later than "From", and both between sunrise and sunset.');
   const prep = await prepare(token, (x) => onProg(0.25 * x)); if (!prep) return null;
   const t = performance.now();
-  const hours = await rayPass(prep, day.suns, day.stepH, token, (x) => onProg(0.25 + 0.75 * x)); if (!hours) return null;
+  const hours = await rayPass(prep, day.suns, day.weights, token, (x) => onProg(0.25 + 0.75 * x)); if (!hours) return null;
   return { ds, hours, prep, litT: hours.litT, blk: hours.blk, ...day, rays: hours.length * day.suns.length, secs: (performance.now() - t) / 1000 };
 }
 
 async function runAnalysis(opt = {}) {
+  let dates;try{dates=periodDates();}catch(e){msg('#runmsg',e.message,'warn');return;}
   if (!S.model || S.busy) return; const lvl = opt.level || S.level; if (lvl !== 'custom') { const p = levelPlan(lvl); if (p.est > 60 && !opt.confirmed && !opt.level) { $('#longT').textContent = `${LVL[lvl].name} takes about ${fmtT(p.est)} on this computer (${p.grid} m grid, ${p.step} min steps).`; $('#longBox').hidden = false; return; } applyLevel(lvl); } else if (!checkGrid()) { msg('#runmsg', ''); return; }
   S.hl = null; const autoV = !opt.stay && (S.view === 'plan' || S.view === 'split'); if (autoV && S.view !== 'split') setView('split');
   const token = ++runToken; S.busy = true; lockUI(true);
   $('#prog').hidden = false; setBar('#prog', 0); msg('#runmsg', '');
   try {
-    const R = await computeDay(S.date, token, (x) => setBar('#prog', x));
+    const R = await computePeriod(dates, token, (x) => setBar('#prog', x));
     if (!R) return;
-    if (R.rays > 2e5 && R.secs > 0.3) { S.rate = R.rays * 0.6 / R.secs; try { localStorage.setItem('pc-sun-rate', String(Math.round(S.rate))); } catch (e) {} } showResult(R); setBar('#prog', 1); DAYS.set(dayKey(R.ds), { R }); lvlUI();
+    if (R.rays > 2e5 && R.secs > 0.3) { S.rate = R.rays * 0.6 / R.secs; try { localStorage.setItem('pc-sun-rate', String(Math.round(S.rate))); } catch (e) {} } showResult(R); setBar('#prog', 1); if(!R.period)DAYS.set(dayKey(R.ds), { R }); lvlUI();
     if (autoV && S.view === 'split') setView('plan');
     const notes = [];
     if (R.prep.s > S.grid * 1.01) notes.push(`Large model: grid spacing widened to ${R.prep.s.toFixed(R.prep.s < 0.1 ? 3 : R.prep.s < 1 ? 2 : 1)} m.`);
@@ -1147,7 +1174,8 @@ async function runAnalysis(opt = {}) {
 }
 function setBar(sel, x) { $(sel + ' i').style.width = (Math.min(1, x) * 100).toFixed(1) + '%'; }
 function msg(sel, text, cls = '') { const e = $(sel); e.textContent = text; e.className = 'msg' + (cls ? ' ' + cls : ''); }
-function lockUI(on) { for (const id of ['run', 'runSet', 'export']) $('#' + id).disabled = on; }
+const lockedInputs=new Map();
+function lockUI(on) { for (const id of ['run', 'runSet', 'export']) $('#' + id).disabled = on;for(const el of $$('.sec input,.sec select,#daySeg button,#lvlSeg button')){if(on){lockedInputs.set(el,el.disabled);el.disabled=true;}else if(lockedInputs.has(el)){el.disabled=lockedInputs.get(el);lockedInputs.delete(el);}} }
 
 function statsOf(R) {
   const agg = [0, 1, 2].map(() => ({ a: 0, h: 0, two: 0 }));
@@ -1170,7 +1198,7 @@ function showResult(R, maxOverride) {
   const bvh = new MeshBVH(g);
   S.result = { R, max, mesh, bvh }; S.lastR = R;
   const st = statsOf(R), row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
-  $('#stats').innerHTML = row('Window', `${fmt(R.t0)}–${fmt(R.t1)} · max ${R.win.toFixed(1)} h`)
+  $('#stats').innerHTML = (R.period?row('Period',resultPeriod(R))+row('Daily window',R.period.t0==='rise'?'Sunrise to sunset':`${fmt(Number(R.period.t0)*60)}–${fmt(Number(R.period.t1)*60)}`):'')+row('Window', `${fmt(R.t0)}–${fmt(R.t1)} · max ${R.win.toFixed(1)} h${R.period?' cumulative':''}`)
     + (S.ground ? row('Ground, average', st.ground) + row('Ground with ≥ 2 h', st.ground2) + row('Ground extent', `model + ${Math.round(R.prep.margin)} m`) : '')
     + row('Roofs, average', st.roof) + row('Facades, average', st.facade)
     + row('Sample points', `${R.hours.length.toLocaleString('en-CA')} · ${R.prep.s.toFixed(R.prep.s < 1 ? 2 : 1)} m grid`)
@@ -1179,7 +1207,7 @@ function showResult(R, maxOverride) {
   $('#resSec').hidden = false;
   $('#ramp').style.background = `linear-gradient(90deg, ${RAMP.map(([x, cc]) => `rgb(${cc.join(',')}) ${x * 100}%`).join(',')})`;
   $('#ticks').innerHTML = [0, 0.25, 0.5, 0.75, 1].map((p) => `<span>${+(max * p).toFixed(1)}</span>`).join('');
-  $('#legT').textContent = `Sunlight hours · ${dayLabel(R.ds)}`;
+  $('#legT').textContent = `Sunlight hours · ${resultPeriod(R)}`;
   $('#legend').hidden = false;
 }
 function clearResult(resetUI = true) {
@@ -1271,27 +1299,26 @@ citySel.addEventListener('change', () => {
 for (const id of ['lat', 'lon', 'tz', 'dst']) $('#' + id).addEventListener('change', () => { S.loc = { lat: Math.max(-89, Math.min(89, +$('#lat').value)), lon: +$('#lon').value, tz: +$('#tz').value, dst: +$('#dst').value }; locChanged(); });
 function locChanged() { fillTimes(); drawPaths(); updateSun(); stale(); setNote(); }
 function fillTimes() {
-  const { rise, set } = riseSet();
-  const opt = (v, l, sel) => `<option value="${v}"${sel ? ' selected' : ''}>${l}</option>`;
-  let a = opt('rise', `Sunrise ${rise === null ? '—' : fmt(rise)}`, S.t0 === 'rise'), b = '';
-  for (let h = 5; h <= 21; h++) { a += opt(h, `${String(h).padStart(2, '0')}:00`, String(S.t0) === String(h)); b += opt(h, `${String(h).padStart(2, '0')}:00`, String(S.t1) === String(h)); }
-  b += opt('set', `Sunset ${set === null ? '—' : fmt(set)}`, S.t1 === 'set');
-  $('#t0').innerHTML = a; $('#t1').innerHTML = b;
+  const all=S.t0==='rise'&&S.t1==='set';$('#allDay').checked=all;$('#t0').disabled=$('#t1').disabled=all;
+  if(!all){if(Number.isFinite(S.t0))$('#t0').value=fmt(S.t0*60);if(Number.isFinite(S.t1))$('#t1').value=fmt(S.t1*60);}
 }
-$('#t0').addEventListener('change', (e) => { S.t0 = e.target.value; stale(); setNote(); });
-$('#t1').addEventListener('change', (e) => { S.t1 = e.target.value; stale(); setNote(); });
+const clockHours=value=>{const [h,m]=value.split(':').map(Number);return h+m/60;};
+const timeChanged=()=>{S.t0=$('#allDay').checked?'rise':clockHours($('#t0').value);S.t1=$('#allDay').checked?'set':clockHours($('#t1').value);S.fineOK=null;fillTimes();stale();setNote();lvlUI();};
+$('#allDay').addEventListener('change',timeChanged);$('#t0').addEventListener('change',timeChanged);$('#t1').addEventListener('change',timeChanged);
+$('#period').addEventListener('change',e=>{S.period=e.target.value;S.fineOK=null;$('#endDateRow').hidden=S.period!=='range';stale();lvlUI();});
+$('#dateEnd').addEventListener('change',e=>{S.dateEnd=e.target.value;S.fineOK=null;stale();lvlUI();});
 function setDate(ds) {
-  S.date = ds; fillTimes(); drawPaths();
+  S.date = ds;$('#date').value=ds;if(S.period!=='range'){S.dateEnd=ds;$('#dateEnd').value=ds;}const preset=[...document.querySelectorAll('#daySeg button')].some(b=>b.dataset.d===ds.slice(5))?ds.slice(5):'custom';document.querySelectorAll('#daySeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.d===preset)));fillTimes(); drawPaths();
   const { rise, set } = riseSet(); const t = +$('#time').value;
   if (rise !== null && (t < rise || t > set)) $('#time').value = Math.round((rise + set) / 2 / 5) * 5;
-  updateSun(); stale(); setNote();
+  updateSun();S.fineOK=null;stale();setNote();lvlUI();
 }
 document.querySelectorAll('#daySeg button').forEach((b) => b.addEventListener('click', () => {
   document.querySelectorAll('#daySeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-  const custom = b.dataset.d === 'custom'; $('#date').hidden = !custom;
+  const custom = b.dataset.d === 'custom'; $('#date').hidden = false;
   setDate(custom ? $('#date').value : `${ymd()[0]}-${b.dataset.d}`);
 }));
-$('#date').addEventListener('change', (e) => { if (e.target.value) setDate(e.target.value); });
+$('#date').addEventListener('change', (e) => { if (e.target.value) setDate(e.target.value);else{S.date='';stale();} });
 $('#time').addEventListener('input', () => { updateSun(); panelUI(); });
 const invalidate = () => { PREP = null; stale(); setNote(); };
 $('#grid').addEventListener('change', (e) => { S.grid = +e.target.value; invalidate(); if (S.model) checkGrid(); });
@@ -1481,8 +1508,8 @@ async function offer(name, data, statusSel, previewCanvas) {
 $('#export').addEventListener('click', async () => {
   if (!S.result) return;
   const { w, h } = imgSize(), R = S.result.R;
-  const cv = compose(snapshot(w, h), { title: `Sunlight hours · ${dayLabel(R.ds)}`, sub: `${fmt(R.t0)}–${fmt(R.t1)} · ${sub()}`, legendMax: S.result.max });
-  await offer(`sun-hours-${R.ds}.png`, await toPNG(cv), '#expmsg', cv);
+  const cv = compose(snapshot(w, h), { title: `Sunlight hours · ${resultPeriod(R)}`, sub: `${fmt(R.t0)}–${fmt(R.t1)} · ${sub()}`, legendMax: S.result.max });
+  await offer(`sun-hours-${R.ds}${R.period?'-to-'+R.period.end:''}.png`, await toPNG(cv), '#expmsg', cv);
 });
 
 // ---------- export sets ----------
@@ -1630,12 +1657,12 @@ var DAYS = new Map(); const DAYSET = [['12-21', 'Dec 21'], ['03-20', 'Mar 20'], 
 let HIST_HITS = [], DAY_HITS = [], TIME_HIT = null;
 const dayKey = (ds) => [ds, S.grid, S.step, S.t0, S.t1, S.ground, S.margin, S.modelVer].join('|');
 function surfAvg(R, kinds) { let a = 0, h = 0; for (let k = 0; k < R.hours.length; k++) { if (!kinds.includes(R.prep.smpK[k])) continue; a += R.prep.smpA[k]; h += R.hours[k] * R.prep.smpA[k]; } return a ? h / a : 0; }
-function binsFor(R) { const top = Math.max(1, Math.ceil(R.win)), st = top > 8 ? 2 : 1, B = []; for (let x = 0; x < top; x += st) B.push([x, Math.min(top, x + st)]); return B; }
+function binsFor(R) { const top = Math.max(1, Math.ceil(R.win)), st = Math.max(top > 8 ? 2 : 1,Math.ceil(top/12)), B = []; for (let x = 0; x < top; x += st) B.push([x, Math.min(top, x + st)]); return B; }
 function sizeCv(c, h) { const d = devicePixelRatio || 1, w = c.getBoundingClientRect().width || 300; c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
 const rgbS = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
 function panelUI() {
   if (S.view !== 'split') return; const R = S.result && S.result.R, st = R ? statsOf(R) : null;
-  $('#cpLvl').textContent = R ? `${dayLabel(R.ds)} · ${fmt(R.t0)}–${fmt(R.t1)}` : '';
+  $('#cpLvl').textContent = R ? `${resultPeriod(R)} · ${fmt(R.t0)}–${fmt(R.t1)}` : '';
   $('#kp4').innerHTML = [['Ground', st && S.ground ? st.ground : '—'], ['Ground ≥ 2 h', st && S.ground ? st.ground2 : '—'], ['Roofs', st ? st.roof : '—'], ['Facades', st ? st.facade : '—']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
   // dates side by side: click one to see it (solved at Draft the first time)
   { const c = $('#days'), { x, w, h, k } = sizeCv(c, 120); x.clearRect(0, 0, w, h); DAY_HITS = []; const items = DAYSET.map(([md, lab]) => { const ds = `${ymd()[0]}-${md}`, e = [...DAYS.values()].find((q) => q.R.ds === ds); return { ds, lab, v: e ? surfAvg(e.R, S.ground ? [0] : [1, 2]) : null }; });
@@ -1664,9 +1691,9 @@ function panelUI() {
       x.textAlign = 'center'; x.fillStyle = '#5a5853'; x.fillText(fmt(R.t0), L, h - 8 * k); x.fillText(fmt(R.t1), L + pw, h - 8 * k); x.fillText(fmt(Math.round((R.t0 + R.t1) / 2)), L + pw / 2, h - 8 * k);
       TIME_HIT = { L, pw, t0: R.t0, t1: R.t1 }; } }
 }
-function capUI() { const on = S.view === 'plan' && S.result; $('#capbox').hidden = !on; if (!on) return; const R = S.result.R, st = statsOf(R); $('#capT').textContent = (S.raw && S.raw.name && S.raw.name !== 'sample' ? S.raw.name : 'Sun hours'); $('#capS').textContent = `${dayLabel(R.ds)} · ${fmt(R.t0)}–${fmt(R.t1)} · ground ${st.ground}, roofs ${st.roof}, facades ${st.facade}`; }
+function capUI() { const on = S.view === 'plan' && S.result; $('#capbox').hidden = !on; if (!on) return; const R = S.result.R, st = statsOf(R); $('#capT').textContent = (S.raw && S.raw.name && S.raw.name !== 'sample' ? S.raw.name : 'Sun hours'); $('#capS').textContent = `${resultPeriod(R)} · ${fmt(R.t0)}–${fmt(R.t1)} · ground ${st.ground}, roofs ${st.roof}, facades ${st.facade}`; }
 $('#days').addEventListener('click', (e) => { const d = devicePixelRatio || 1, mx = e.offsetX * d, hit = DAY_HITS.find((q) => mx >= q.x0 && mx < q.x1); if (!hit || S.busy) return;
-  const md = hit.ds.slice(5); $$('#daySeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.d === md))); $('#date').hidden = true;
+  const md = hit.ds.slice(5); $$('#daySeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.d === md))); $('#date').hidden = false;$('#date').value=hit.ds;S.period='single';$('#period').value='single';$('#endDateRow').hidden=true;
   const cached = [...DAYS.values()].find((q) => q.R.ds === hit.ds); S.date = hit.ds; fillTimes(); drawPaths(); updateSun(); setNote();
   if (cached) { S.hl = null; showResult(cached.R); panelUI(); capUI(); } else runAnalysis({ stay: true, level: 'draft' }); });
 $('#hist').addEventListener('click', (e) => { const d = devicePixelRatio || 1, mx = e.offsetX * d, hit = HIST_HITS.find((q) => mx >= q.x0 && mx < q.x1); if (!hit || !S.result) return; S.hl = S.hl === hit.i ? null : hit.i; showResult(S.result.R); panelUI(); });
@@ -1676,7 +1703,7 @@ new ResizeObserver(() => panelUI()).observe($('#chartp'));
 const LVL = { draft: { t: 15, step: 15, name: 'Draft' }, standard: { t: 180, step: 10, name: 'Standard' }, fine: { t: 480, step: 5, name: 'Fine' } };
 try { const r = +localStorage.getItem('pc-sun-rate'); if (r > 1e3) S.rate = r; } catch (e) {}
 function levelPlan(level) {
-  const L = LVL[level], keep = S.step; S.step = L.step; const day = sunsFor(S.date); S.step = keep; const nSun = day && day.suns ? day.suns.length : 40;
+  const L = LVL[level], keep = S.step; S.step = L.step;let nSun;try{nSun=periodDates().reduce((sum,ds)=>sum+(sunsFor(ds)?.suns.length||0),0)||1;}catch{nSun=40;} S.step = keep;
   let lo = 0.01, hi = 8; for (let i = 0; i < 40; i++) { const m = Math.sqrt(lo * hi); if (estimateAt(m) > HARD_PTS || costOf(m, nSun).sec > L.t) lo = m; else hi = m; }
   const sp = hi < 0.1 ? Math.round(hi * 1000) / 1000 : hi < 1 ? Math.round(hi * 100) / 100 : Math.round(hi * 10) / 10; return { grid: Math.max(0.01, sp), step: L.step, est: costOf(sp, nSun).sec };
 }
@@ -1686,7 +1713,7 @@ function applyLevel(level) { if (level === 'custom' || !S.model) return; const p
 $('#lvlSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-l]'); if (!b) return; S.level = b.dataset.l; $$('#lvlSeg button').forEach((q) => q.setAttribute('aria-pressed', String(q === b))); stale(); lvlUI(); });
 $('#longGo').addEventListener('click', () => { $('#longBox').hidden = true; runAnalysis({ confirmed: true }); }); $('#longNo').addEventListener('click', () => { $('#longBox').hidden = true; });
 
-window.__sun = { get S() { return S; }, reset: resetAnalysis, readableFileError, limits: MODEL_LIMITS, checkFileSize, checkMeshSize };
+window.__sun = { get S() { return S; }, dates: periodDates, reset: resetAnalysis, readableFileError, limits: MODEL_LIMITS, checkFileSize, checkMeshSize };
 // ---------- start ----------
 if (window.PC_EMBED) { document.querySelector('.brand').hidden = true; }
 applyTheme();
@@ -2009,6 +2036,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   // ---- columns
   L.id = 'panelL'; L.classList.add('col');
   const inL = document.createElement('div'); inL.className = 'colIn'; while (L.firstChild) inL.appendChild(L.firstChild); L.appendChild(inL);
+  for(const marker of inL.querySelectorAll('h2 > i'))marker.remove();
   const R = document.createElement('aside'); R.className = 'panel col'; R.id = 'panelR'; R.setAttribute('aria-label', 'Results');
   const inR = document.createElement('div'); inR.className = 'colIn'; R.appendChild(inR); stage.after(R);
   const lg = stage.querySelector('.lgd, .legend'); if (lg) { const s = document.createElement('section'); s.className = 'sec lgdsec'; s.setAttribute('aria-label', 'Legend'); s.appendChild(lg); inR.appendChild(s); }
@@ -2016,7 +2044,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   const RIGHT = { 'Facade Studio': ['h-gh'] }[name] || [];
   for (const s of $$(':scope > .sec', inL)) { const hh = s.querySelector('h2'), h = txt(hh || s); if (/report|results|layers\s*(&|and)/i.test(h) || (hh && RIGHT.includes(hh.id))) { inR.appendChild(s); if (!rep && /report|results/i.test(h)) rep = s; } }
   if (!rep) rep = $$(':scope > .sec:not(.lgdsec)', inR)[0];
-  if (rep) rep.classList.add('grow');
+  if (rep) { rep.classList.add('grow'); inR.prepend(rep); }
   for (const x of $$(':scope > .sec', inL)) if (!x.querySelector('h2') && !x.querySelector('input, select, button:not(.lnk)') ) { const t = rep || $$(':scope > .sec', inR).pop(); if (t) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = x.innerHTML.replace(/<\/?p[^>]*>/g, ' '); t.appendChild(p); x.remove(); } }
   const ft = app.querySelector(':scope > footer.fine'); if (ft && rep) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = ft.innerHTML; rep.appendChild(p); }
   // Export belongs with inputs; keep result inspection and its legend on the right.
@@ -2065,13 +2093,13 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   // ---- rail: in Plan and 3D the steps fold into numbered buttons; Plan + chart keeps them open
   const nav = document.createElement('nav'); nav.className = 'rail'; nav.setAttribute('aria-label', 'Settings');
   const railHTML = () => `<button type="button" class="rbtn open" data-rail="0" title="Show the settings" aria-label="Show the settings"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>` +
-    shown().map((s, i) => { const h = s.querySelector('h2'), n = h && h.querySelector('i') ? txt(h.querySelector('i')) : String(i + 1); return `<button type="button" class="rbtn" data-rail="${i + 1}" title="${n} · ${txt(h || s).replace(/^\d+\s*/, '').replace(/"/g, '')}">${n}</button>`; }).join('');
+    shown().map((s, i) => { const title=txt(s.querySelector('h2')||s).replace(/"/g,'');return `<button type="button" class="rbtn" data-rail="${i + 1}" title="${title}" aria-label="${title}">${title.slice(0,2)}</button>`; }).join('');
   nav.innerHTML = railHTML();
   const px = document.createElement('button'); px.type = 'button'; px.className = 'peekX'; px.title = 'Hide the settings (Esc)'; px.setAttribute('aria-label', 'Hide the settings'); px.textContent = '×';
   L.prepend(px); L.prepend(nav);
   let peekFrom = null;
   const kick = () => { window.dispatchEvent(new Event('resize')); try { if (typeof resize === 'function') resize(); if (typeof fit === 'function' && !(typeof T3 !== 'undefined' && T3 && T3.on)) fit(); if (typeof draw === 'function') draw(); if (typeof panelUI === 'function') panelUI(); } catch (e) { } };
-  function railUI(on) { if (app.classList.contains('railL') === on) return; if (on) nav.innerHTML = railHTML(); app.classList.toggle('railL', on); app.classList.remove('peek'); fitCols(); requestAnimationFrame(kick); }
+  function railUI(on) { on = false; if (app.classList.contains('railL') === on) return; app.classList.toggle('railL', on); app.classList.remove('peek'); fitCols(); requestAnimationFrame(kick); }
   function peek(n) { peekFrom = document.activeElement; app.classList.add('peek'); fitCols(); const sec = shown()[(n || 1) - 1]; if (sec) { sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash'); setTimeout(() => { const f = [...sec.querySelectorAll('button:not([disabled]), select, input, summary, [tabindex]')].find((e) => e.offsetParent !== null); if (f) f.focus({ preventScroll: true }); }, 30); } }
   function unpeek(back) { if (!app.classList.contains('peek')) return; app.classList.remove('peek'); if (back && peekFrom && peekFrom.isConnected && peekFrom.offsetParent) peekFrom.focus(); }
   nav.addEventListener('click', (e) => { const b = e.target.closest('[data-rail]'); if (b) peek(+b.dataset.rail); });
@@ -2096,11 +2124,9 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   function fitCols() { if (fitRaf) return; fitRaf = requestAnimationFrame(() => { fitRaf = 0; if (FITMO) FITMO.disconnect();
     for (const col of $$('.col', app)) { const inner = col.querySelector('.colIn'); if (!inner) continue; inner.style.transform = ''; inner.style.width = ''; inner.style.minHeight = '0px';
       if (inner.offsetParent === null) continue;
-      for (const e of inner.querySelectorAll('p, .note')) e.classList.toggle('xlong', !e.classList.contains('fine2') && !e.querySelector('input, select, button') && (e.textContent || '').length > 150);
-      const have = col.clientHeight; let lv = 0; col.dataset.fit = '0';
-      if (col === L) { col.classList.remove('acc'); for (const x of lefts) x.classList.remove('shut'); const full = inner.scrollHeight; if (full > have / 0.7) col.classList.add('acc'); accUI(); }
-      while (inner.scrollHeight > have + 1 && lv < 3) { lv++; col.dataset.fit = String(lv); }
-      const need = inner.scrollHeight; let z = 1; if (need > have + 1) { z = Math.max(0.5, have / need); inner.style.transform = `scale(${z})`; inner.style.width = (100 / z) + '%'; } inner.style.minHeight = (have / z) + 'px'; }
+      // Keep parameters readable and discoverable: scroll panels, never shrink or hide them.
+      col.classList.remove('acc'); for (const x of lefts) x.classList.remove('shut');
+      col.dataset.fit = '0'; }
     setTimeout(observe, 0); }); }
   function observe() { if (!FITMO) FITMO = new MutationObserver(fitCols); for (const c of $$('.colIn', app)) FITMO.observe(c, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'open'] }); }
   { const ro = new ResizeObserver(fitCols); ro.observe(app); for (const c of $$('.colIn', app)) ro.observe(c); } addEventListener('resize', fitCols); setInterval(() => { for (const col of $$('.col', app)) { const i = col.querySelector('.colIn'); if (i && i.offsetParent && Math.abs(i.scrollHeight - i.offsetHeight) > 2) { fitCols(); break; } } }, 1500);
@@ -2114,7 +2140,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   if (!document.querySelector('main, [role="main"]')) app.setAttribute('role', 'main');
   if (!document.querySelector('h1')) { const h1 = document.createElement('h1'); h1.className = 'sr'; h1.textContent = name; app.prepend(h1); }
   const cpx = $('#chartp'); if (cpx) { cpx.setAttribute('role', 'region'); cpx.tabIndex = 0; }
-  app.classList.add('fitapp'); if (hasSplit && camNow() !== 'split') app.classList.add('railL');
+  app.classList.add('fitapp');
   fitCols(); requestAnimationFrame(() => { kick(); fitCols(); }); setTimeout(() => { kick(); fitCols(); }, 400);
   window.__pcShell = { fitCols, railUI, peek };
 })();
@@ -2196,6 +2222,9 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 <!-- Sun Hours settings expansion: explicit panel selector, in-flow column, no canvas overlap. -->
 <style>
 @media (min-width: 901px) {
+.app.fitapp { grid-template-columns: clamp(272px, 24vw, 318px) minmax(0, 1fr) clamp(250px, 22vw, 300px); }
+#panelL, #panelR { overflow-y: auto !important; overflow-x: hidden !important; }
+.col > .colIn { transform: none !important; width: auto !important; }
 .app.fitapp.railL.peek { grid-template-columns: clamp(272px, 24vw, 318px) minmax(0, 1fr) clamp(250px, 22vw, 300px); }
 .app.fitapp.railL.peek > #panelL { position: relative !important; inset: auto !important; width: auto !important; min-width: 0; z-index: 10; box-shadow: none; animation: none; overflow-y: auto !important; overflow-x: hidden !important; }
 .app.fitapp.railL.peek > #panelL > .colIn { display: flex !important; }
