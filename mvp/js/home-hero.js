@@ -28,7 +28,7 @@ export function mountHomeHero(figure) {
   window.addEventListener('pc-theme', onTheme);
   frame.addEventListener('load', send);
   // Bundled scene has no external CSS, engine or module requests.
-  frame.src = `../hero/toronto-standalone.html?embed=1&mode=${mode}&theme=${theme()}`;
+  frame.src = `../hero/toronto-standalone.html?v=20261024-click2&embed=1&mode=${mode}&theme=${theme()}`;
   return () => {
     window.removeEventListener('message', onMessage);
     window.removeEventListener('pc-theme', onTheme);

@@ -26,7 +26,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   const before=await current();const bounds=await frame().locator('canvas').boundingBox();
   await page.mouse.move(bounds.x+bounds.width*.82,bounds.y+bounds.height*.35);
   await page.waitForFunction(()=>Math.abs(document.querySelector('[data-home-hero]').contentWindow.PlotCloudHero.state.leanX)>.01);
-  assert(await frame().locator('.bird-cursor.visible').isVisible(),'Bird cursor follows the pointer in the homepage model');
+  assert.equal(await frame().locator('.bird-cursor').count(),0,'No animated bird cursor');
   assert.notEqual((await current()).leanX,before.leanX,'Pointer must influence the view without dragging');
   // Headless browsers do not reliably expose tab visibility. Dispatch the same browser event
   // after overriding visibility to verify the handler, with a separate real-page return check above.

@@ -1,5 +1,5 @@
 import * as S from '../store.js';
-import { mountHomeHero } from '../home-hero.js';
+import { mountHomeHero } from '../home-hero.js?v=20261024-click2';
 import { SIMS, simImg } from '../data.js';
 import { esc, img, setCurrent } from '../app.js';
 
@@ -17,7 +17,7 @@ export function render(app) {
     <p class="eyebrow" style="margin-top:18px;color:var(--mut2)">Sample project included · runs in the browser</p>
     <figure class="shot home-hero-study" aria-label="Interactive Toronto environmental study">
       <iframe title="Toronto CN Tower — interactive Sun, Wind, Rain, Sound and Snow study" data-home-hero loading="eager"></iframe>
-      <figcaption style="padding:8px 12px;font-size:12px;color:var(--mut2)">Click to switch Sun · Wind · Rain · Sound · Snow. Drag to rotate.</figcaption></figure>
+      <figcaption class="sr-only">Illustrative Toronto model. Click to change weather; drag to rotate.</figcaption></figure>
   </section>
 
   <section class="section">

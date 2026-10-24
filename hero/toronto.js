@@ -34,9 +34,6 @@ function syncPause() {
 }
 syncPause();
 if(embedded){
-  const bird=document.createElement('span');bird.className='bird-cursor';bird.setAttribute('aria-hidden','true');bird.innerHTML='<svg viewBox="0 0 48 36"><g class="bird-wings"><path d="M24 21Q10 0 2 9Q12 12 21 25M24 21Q36 0 46 9Q35 12 27 25"/></g><path d="M20 23Q24 15 29 22L33 24 29 26Q25 31 21 26L14 30Z"/><circle cx="28" cy="22" r="1" fill="#17263d"/></svg>';viewport.append(bird);
-  canvas.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const r=viewport.getBoundingClientRect();bird.style.left=`${e.clientX-r.left}px`;bird.style.top=`${e.clientY-r.top}px`;bird.classList.add('visible');});
-  canvas.addEventListener('pointerleave',()=>bird.classList.remove('visible'));
   canvas.tabIndex=0;canvas.removeAttribute('aria-hidden');canvas.setAttribute('role','img');
   canvas.setAttribute('aria-label','Illustrative Toronto architectural model. Click or press Enter to cycle Sun, Wind, Rain, Sound and Snow. Drag to rotate. Press Space to pause or resume motion.');
   canvas.addEventListener('keydown',event=>{if(event.code==='Space'){event.preventDefault();paused=!paused;syncPause();}});
@@ -114,11 +111,12 @@ try {
         const h=.45+rand()*1.45+(ix===3&&iz===1?1:0),w=.42+rand()*.26,d=.38+rand()*.28;
         box(tile,x,h/2+.065,z,w,h,d,white);
         box(tile,x,h+.085,z,w+.035,.05,d+.035,roof);
-        const windows=new T.Group();tile.add(windows);nightGroups.push(windows);
+        const windowMatrices=[];
         for(let y=.25;y<h-.1;y+=.28)for(let col=0;col<3;col++)if(rand()>.24){
-          box(windows,x-w*.32+col*w*.32,y,z+d/2+.003,.055,.09,.008,windowMaterial);
-          box(windows,x+w/2+.003,y,z-d*.32+col*d*.32,.008,.09,.055,windowMaterial);
+          windowMatrices.push(new T.Matrix4().makeScale(.055,.09,.008).setPosition(x-w*.32+col*w*.32,y,z+d/2+.003));
+          windowMatrices.push(new T.Matrix4().makeScale(.008,.09,.055).setPosition(x+w/2+.003,y,z-d*.32+col*d*.32));
         }
+        const windows=new T.InstancedMesh(boxGeo,windowMaterial,windowMatrices.length);windowMatrices.forEach((matrix,i)=>windows.setMatrixAt(i,matrix));tile.add(windows);nightGroups.push(windows);
         if(h>1.1){box(tile,x+.03,h+.2,z,w*.65,.2,d*.65,chalk);}
         // Quiet horizontal facade joints give massing a crafted scale.
         for(let floor=.28;floor<h-.08;floor+=.24){
@@ -176,6 +174,10 @@ try {
   for(let n=0;n<4;n++)line(world,[[-5.4,.07,2.1+n*.09],[5.4,.07,2.1+n*.09]],0x9ba498,.5);
   box(world,3.85,.055,3.0,2.35,.025,1.25,new T.MeshStandardMaterial({color:0xc8d4cf,roughness:.72}));
   for(let j=0;j<8;j++)line(world,[[2.8,.073,2.5+j*.13],[4.9,.073,2.5+j*.13]],0xecf0e9,.5);
+  // Fit the actual architecture instead of the much larger particle envelope.
+  const modelFrame=[];world.updateMatrixWorld(true);
+  world.traverse(mesh=>{if(!mesh.isMesh||!mesh.geometry)return;mesh.geometry.computeBoundingBox();const b=mesh.geometry.boundingBox;if(!b)return;for(const x of [b.min.x,b.max.x])for(const y of [b.min.y,b.max.y])for(const z of [b.min.z,b.max.z])modelFrame.push(new T.Vector3(x,y,z).applyMatrix4(mesh.matrixWorld));});
+  const framePoint=new T.Vector3();
   // All environmental effects are schematic, with one visible layer at a time.
   const effects={sun:new T.Group(),wind:new T.Group(),rain:new T.Group(),sound:new T.Group(),snow:new T.Group()};
   const neon=new T.Group();world.add(neon);nightGroups.push(neon);
@@ -291,7 +293,7 @@ try {
     camera.position.set(Math.sin(azimuth+orbit+leanX)*23,Math.sin(elevation+leanY)*23+3,Math.cos(azimuth+orbit+leanX)*23);
     camera.lookAt(0,2.75,0);
     // Fit the complete maquette and effect envelope, including while orbiting.
-    if(embedded){camera.updateMatrixWorld(true);const aspect=(camera.right-camera.left)/(camera.top-camera.bottom);let half=6.7;for(const x of [-6.5,6.5])for(const y of [-1,10])for(const z of [-5.2,5.2]){const p=new T.Vector3(x,y,z).applyMatrix4(camera.matrixWorldInverse);half=Math.max(half,Math.abs(p.x)/aspect*1.12,Math.abs(p.y)*1.12);}camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();}
+    if(embedded){camera.updateMatrixWorld(true);const aspect=(camera.right-camera.left)/(camera.top-camera.bottom);let half=0;for(const point of modelFrame){const p=framePoint.copy(point).applyMatrix4(camera.matrixWorldInverse);half=Math.max(half,Math.abs(p.x)/aspect,Math.abs(p.y));}half*=1.065;camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();}
     const tint=new T.Color(mode==='sun'?0xffdfa7:mode==='rain'?0xdbe8f8:0xf4f3ea);
     key.color.lerp(tint,dt?Math.min(1,dt*3):1);
     const night=visualTheme==='night';ambient.intensity=night?.32:1.7;fill.intensity=night?.5:1;nightGroups.forEach(g=>g.visible=night);effects.sun.visible=mode==='sun'&&!night;solarSurfaces.forEach(s=>s.visible=mode==='sun'&&!night);
