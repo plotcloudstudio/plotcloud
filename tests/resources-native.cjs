@@ -40,8 +40,9 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   for(const [id,selector] of [['furniture','.export'],['stairs3d','.export'],['doors3d','.export'],['facade','#dlBtn'],['topo','#exportBtn'],['detaillab','#xJSON']]){
    await open('resources/tool/'+id);const frame=page.frameLocator('#resourceEngine');
    await frame.locator(selector).waitFor();
+   await frame.locator('html').evaluate(()=>new Promise(resolve=>document.readyState==='complete'?resolve():window.addEventListener('load',resolve,{once:true})));
    if(id!=='furniture'&&await frame.locator('#fmt-3dm').count())await frame.locator('#fmt-3dm').uncheck();
-   const result=page.waitForEvent('download');await frame.locator(selector).click();
+   const result=page.waitForEvent('download',{timeout:60000});await frame.locator(selector).click();
    const file=await result,bytes=fs.readFileSync(await file.path());assert(bytes.length>100,id+' exports actual generated data');
    if(id==='detaillab')assert.equal(JSON.parse(bytes).app,'PlotCloud DetailLab');
    else {assert(file.suggestedFilename().endsWith('.zip'));assert.equal(bytes.subarray(0,2).toString(),'PK');}

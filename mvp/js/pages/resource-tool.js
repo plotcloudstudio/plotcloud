@@ -8,6 +8,8 @@ export async function render(app,id){
  if(engines[id]){
   app.innerHTML=`<section class="resource-engine"><header><a href="#/resources">← Resources</a><h1>${engines[id]}</h1><a href="#/workspace">Workspace →</a></header><iframe id="resourceEngine" title="${engines[id]}" src="../emb/${id}.html?v=resources-native-20261024-1" allow="clipboard-write"></iframe></section>`;
   const frame=app.querySelector('iframe');
+  // Static buttons must not be clickable before the engine modules attach their handlers.
+  frame.style.visibility='hidden';frame.addEventListener('load',()=>{frame.style.visibility='';},{once:true});
   const receive=e=>{if(e.source!==frame.contentWindow||e.origin!==location.origin||e.data?.pc!==1)return;const d=e.data;if(d.t==='go')location.hash=d.to==='studio'||d.to==='project'?'#/workspace':'#/resources';if(d.t==='handoff'){toast('Export the model from this tool, then import it in Workspace.');}if(d.t==='save')toast('Export this resource from its tool. Project editing lives in Workspace.');};
   addEventListener('message',receive);return()=>removeEventListener('message',receive);
  }
