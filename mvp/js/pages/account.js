@@ -13,11 +13,12 @@ const FIELDS = [
   ['elev', 'Ground elevation', (s) => `${s.elev} m`, () => 'Copernicus DEM · Open-Meteo'],
   ['buildings', 'Buildings mapped around', (s) => `${s.buildings} within ${S.account().defaults.radius} m`, () => 'OpenStreetMap · Overpass'],
 ];
+// each default and the simulation inputs it fills in (sim-engine.js applies them; a run records what it used)
 const DEF = [
-  ['units', 'Units', 'text', 'all tools'], ['radius', 'Study radius (m)', 'number', 'Sun · Wind · Views'], ['plane', 'Work plane height (m)', 'number', 'Daylight'],
-  ['occStart', 'Occupied from (h)', 'number', 'Daylight · Ventilation'], ['occEnd', 'Occupied until (h)', 'number', 'Daylight · Ventilation'], ['period', 'Sun study period', 'text', 'Sun hours'],
-  ['rain', 'Design storm (mm/h)', 'number', 'Stormwater'], ['duration', 'Storm duration (min)', 'number', 'Stormwater'], ['band', 'Acoustic band', 'text', 'Indoor acoustics'],
-  ['eye', 'Eye height (m)', 'number', 'Isovist · Views'], ['code', 'Structural code', 'text', 'Structural analysis'],
+  ['units', 'Units', ['Metric'], 'every simulation (all engines work in metres)'], ['radius', 'Study radius (m)', 'number', 'the building count above'], ['plane', 'Work plane height (m)', 'number', 'Daylight'],
+  ['occStart', 'Occupied from (h)', 'number', 'Daylight'], ['occEnd', 'Occupied until (h)', 'number', 'Daylight'], ['period', 'Sun study period', ['Equinox', 'Summer solstice', 'Winter solstice'], 'Sun hours (Mar 20, Jun 21 or Dec 21)'],
+  ['rain', 'Design storm (mm/h)', 'number', 'Stormwater'], ['duration', 'Storm duration (min)', 'number', 'Stormwater'], ['band', 'Acoustic band', ['125 Hz', '250 Hz', '500 Hz', '1 kHz', '2 kHz', '4 kHz'], 'Indoor acoustics'],
+  ['eye', 'Eye height (m)', 'number', 'Isovist'], ['code', 'Structural code', ['NBC 2020'], 'Structural analysis (the code it checks)'],
 ];
 
 export function render(app) {
@@ -48,7 +49,7 @@ export function render(app) {
     <section id="defaults">
       <div class="kicker"><b>02</b>Simulation defaults</div>
       <h2 class="display sm" style="margin-top:16px">Set once, used everywhere.</h2>
-      <p class="lede" style="margin-top:14px">Each simulation opens with these values. Change them inside a run when a study needs something different; the run records what it used.</p>
+      <p class="lede" style="margin-top:14px">Each simulation opens with these values, linked: change one here and every simulation picks it up the next time it opens. Change a value inside a run when one study needs something different; the run records what it used and what differed from here.</p>
       <div class="grid g3" id="defs" style="margin-top:24px"></div>
       <button class="btn primary" id="saveDefs" style="margin-top:18px">Save defaults</button>
     </section>
@@ -99,14 +100,19 @@ export function render(app) {
     catch (err) { $('#findMsg', app).textContent = err.message || 'Address search failed. Try “lat, lon”.'; }
   };
   $('#north', app).onchange = (e) => { const v = +e.target.value; if (Number.isFinite(v)) { site.north = Math.max(-180, Math.min(180, v)); facts(); } };
-  $('#saveSite', app).onclick = () => { A.site = S.clone(site); S.save(); facts(); toast('Default site saved'); };
-  $('#defs', app).innerHTML = DEF.map(([k, label, type, used]) => `<label class="f card" style="padding:14px">${label}<input type="${type}" data-k="${k}" value="${esc(A.defaults[k])}" ${type === 'number' ? 'step="any"' : ''}><span class="note">Used by ${used}</span></label>`).join('');
+  $('#saveSite', app).onclick = () => { A.site = S.clone(site); S.save(); facts(); plist(); const n = S.projects().filter((p) => p.siteLinked !== false).length; toast(`Default site saved · ${n} project${n === 1 ? '' : 's'} follow it`); };
+  $('#defs', app).innerHTML = DEF.map(([k, label, type, used]) => `<label class="f card" style="padding:14px">${label}${Array.isArray(type)
+    ? `<select data-k="${k}">${type.map((o) => `<option ${String(A.defaults[k]).toLowerCase() === o.toLowerCase() ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+    : `<input type="${type}" data-k="${k}" value="${esc(A.defaults[k])}" ${type === 'number' ? 'step="any"' : ''}>`}<span class="note">Used by ${used}</span></label>`).join('');
   $('#saveDefs', app).onclick = () => { for (const i of $$('[data-k]', app)) { const v = i.type === 'number' ? +i.value : i.value.trim(); if (i.type === 'number' && !Number.isFinite(v)) continue; A.defaults[i.dataset.k] = v; } S.save(); toast('Defaults saved'); };
   const plist = () => {
     $('#plist', app).innerHTML = S.projects().map((p) => `<article class="card pcard"><div class="thumb"><img data-holo="${p.sample ? 'hero' : 'heroA'}" src="${img(p.sample ? 'hero' : 'heroA')}" alt=""></div><h3>${esc(p.name)}</h3>
-      <p class="meta">${esc((p.site?.label || '').split(',')[0])} · ${p.versions.length} versions · ${p.runs.length} results</p>
+      <p class="meta">${esc((S.siteOf(p)?.label || '').split(',')[0])} · ${p.versions.length} versions · ${p.runs.length} results</p>
+      <label class="note" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" data-link="${p.id}" ${p.siteLinked === false ? '' : 'checked'}> Follows my default site</label>
       <div class="acts"><a class="btn sm primary" href="#/workspace/${p.id}" data-p="${p.id}">Open</a><a class="btn sm" href="#/results/${p.id}" data-p="${p.id}">Results</a></div></article>`).join('');
     $$('[data-p]', app).forEach((a) => a.addEventListener('click', () => setCurrent(S.project(a.dataset.p))));
+    // a project follows the Account site (a new address reaches all its simulations) or keeps its own copy of it
+    $$('[data-link]', app).forEach((c) => c.onchange = () => { const p = S.project(c.dataset.link); S.linkSite(p, c.checked); toast(c.checked ? `${p.name} follows your default site` : `${p.name} keeps its own site: ${(p.site.label || '').split(',')[0]}`); plist(); });
   };
   $('#newP', app).onclick = () => { const name = prompt('Project name', 'New project'); if (name === null) return; const p = S.createProject(name.trim() || 'New project', { units: 'm', north: A.site.north || 0, layers: [{ name: 'Imported', color: '#d5d2cb', visible: true, locked: false }], components: [] }); setCurrent(p); location.hash = '#/workspace/' + p.id; };
   $('#logout', app).onclick = (e) => { e.preventDefault(); A.user = null; S.save(); refreshWho(); location.hash = '#/'; };

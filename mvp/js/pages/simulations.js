@@ -17,7 +17,7 @@ function catalog(app, params) {
     <span class="eyebrow">Simulations</span>
     <div class="split" style="margin-top:16px"><h1 class="display">Choose a study.<br><span>Run it on a version.</span></h1>
       <p class="lede">All ${SIMS.length} analysis tools PlotCloud has today. Each runs its PlotCloud engine on a version of your model, with site and climate from Account; save a result to the version and Results compares them.</p></div>
-    ${p ? `<p class="badge-pill" style="margin-top:32px;text-transform:none;letter-spacing:0;font:500 14px var(--sans)">Running on&nbsp;<b>${esc(p.name)}</b>&nbsp;· ${v ? `v${v.n}` : 'no saved version yet'} · ${esc((p.site?.label || '').split(',')[0])}</p>` : ''}
+    ${p ? `<p class="badge-pill" style="margin-top:32px;text-transform:none;letter-spacing:0;font:500 14px var(--sans)">Running on&nbsp;<b>${esc(p.name)}</b>&nbsp;· ${v ? `v${v.n}` : 'no saved version yet'} · ${esc((S.siteOf(p)?.label || '').split(',')[0])}</p>` : ''}
     <div class="pills" role="group" aria-label="Filter" style="margin-top:36px" id="filters">${groups.map((x) => `<button type="button" data-g="${x}" aria-pressed="${x === g}">${x}</button>`).join('')}</div>
     <div class="simgrid" id="grid"></div>
     <p class="note" style="margin-top:28px">${LIVE} every study runs the PlotCloud simulation engine itself. All studies are for design screening, not code compliance.</p>

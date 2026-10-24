@@ -17,6 +17,21 @@ import { levelsOf } from '../viewport2.js';
 const PLAN_EDIT = '.sec:has(#h-draw) :is([data-tool="wall"], [data-tool="glass"], [data-tool="win"], [data-tool="door"], [data-tool="furn"], #clear)';
 const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : NaN; };
 const r1 = (v) => Math.round(v * 10) / 10;
+// the engine inputs Account fills in, with their names and units (other prefilled inputs come from the model)
+const ACCT = { lat: ['Latitude', '°'], lon: ['Longitude', '°'], tz: ['UTC offset', 'h'], north: ['North', '°'], dir: ['Wind from', '°'], wdir: ['Wind from', '°'],
+  speed: ['Wind speed', 'm/s'], wspd: ['Wind speed', 'm/s'], wp: ['Work plane', 'm'], occ0: ['Occupied from', ':00'], occ1: ['Occupied until', ':00'], eye: ['Eye height', 'm'],
+  rain: ['Design storm', 'mm/h'], duration: ['Storm duration', 'min'], band: ['Band', ''], 'q-loc': ['Location', ''], '@day': ['Sun study date', ''] };
+const BANDS = ['125 Hz', '250 Hz', '500 Hz', '1 kHz', '2 kHz', '4 kHz'];
+const DAY = { equinox: '03-20', 'summer solstice': '06-21', 'winter solstice': '12-21' };
+// Structural analysis climate locations (NBC 2020 table values in the engine): the nearest within 25 km of the site, else "anywhere else"
+const QLOC = [['vancouver-ch', 49.2609, -123.1139], ['vancouver-41', 49.2337, -123.1162], ['surrey', 49.1645, -122.7735], ['victoria', 48.4284, -123.3656],
+  ['kelowna', 49.888, -119.496], ['prince-george', 53.9171, -122.7497], ['whistler', 50.1163, -122.9574]];
+const QNAME = { 'vancouver-ch': 'Vancouver (City Hall)', 'vancouver-41': 'Vancouver (Granville & 41 Ave)', surrey: 'Surrey', victoria: 'Victoria', kelowna: 'Kelowna', 'prince-george': 'Prince George', whistler: 'Whistler', custom: 'Anywhere else (enter site values)' };
+// an Account value as people read it
+const shown = (id, v) => id === 'band' ? BANDS[v] : id === '@day' ? ({ '03-20': 'Mar 20', '06-21': 'Jun 21', '12-21': 'Dec 21' })[v] || v : id === 'q-loc' ? QNAME[v] || v
+  : `${v}${ACCT[id]?.[1] ? (ACCT[id][1].startsWith(':') ? ACCT[id][1] : ' ' + ACCT[id][1]) : ''}`;
+function qloc(site) { if (!Number.isFinite(site?.lat)) return 'custom'; const km = (a, b) => Math.hypot((a[0] - b[0]) * 111, (a[1] - b[1]) * 111 * Math.cos(a[0] * Math.PI / 180));
+  const best = QLOC.map(([id, la, lo]) => [id, km([site.lat, site.lon], [la, lo])]).sort((a, b) => a[1] - b[1])[0]; return best[1] <= 25 ? best[0] : 'custom'; }
 // Workspace finishes → the acoustics engine's own materials (Plaster has no match there, so the engine keeps its default)
 const ACOUSTIC = { Concrete: 'concrete', Gypsum: 'gypsum', Glass: 'glass', Timber: 'wood', Carpet: 'carpet', 'Acoustic panel': 'panel' };
 
@@ -31,7 +46,7 @@ function extent(model) {
 
 // per engine: file, what it reads, what it hides, what Account fills in
 const CFG = {
-  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)'] },
+  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)'], prefill: ({ A }) => ({ '@day': DAY[String(A.period || '').toLowerCase()] || '03-20' }) },
   wind: { input: 'masses', hide: ['.sec:has(#h-model)'],
     prefill: ({ site }) => ({ dir: windFrom(site), dirR: windFrom(site), speed: Number.isFinite(site?.wind) ? site.wind : null }) },
   daylight: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT],
@@ -44,11 +59,11 @@ const CFG = {
   views: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT] },
   cameras: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT] },
   acoustics: { input: 'room', hide: [], save: '#add',
-    prefill: ({ room }) => room?.room && ({ floorMat: ACOUSTIC[room.room.floor], ceilingMat: ACOUSTIC[room.room.ceiling] }) },
+    prefill: ({ room, A }) => ({ band: Math.max(0, BANDS.indexOf(A.band)), ...(room?.room ? { floorMat: ACOUSTIC[room.room.floor], ceilingMat: ACOUSTIC[room.room.ceiling] } : {}) }) },
   evac: { input: 'dxf', hide: ['.sec:has(#h-plan) :is(#drop, #pick, #sample, #sampleFlat, div:has(> #pick), div:has(> #sample))'] },
   structure: { input: 'none', hide: [],
-    prefill: ({ x }) => x && ({ 'q-storeys': x.storeys, 'q-h': r1(x.h), 'q-nx': Math.max(1, Math.min(8, Math.round(x.w / 6))), 'q-sx': r1(x.w / Math.max(1, Math.min(8, Math.round(x.w / 6)))), 'q-ny': Math.max(1, Math.min(8, Math.round(x.d / 6))), 'q-sy': r1(x.d / Math.max(1, Math.min(8, Math.round(x.d / 6)))) }) },
-  stormwater: { input: 'obj', hide: [] },
+    prefill: ({ x, site }) => x && ({ 'q-loc': qloc(site), 'q-storeys': x.storeys, 'q-h': r1(x.h), 'q-nx': Math.max(1, Math.min(8, Math.round(x.w / 6))), 'q-sx': r1(x.w / Math.max(1, Math.min(8, Math.round(x.w / 6)))), 'q-ny': Math.max(1, Math.min(8, Math.round(x.d / 6))), 'q-sy': r1(x.d / Math.max(1, Math.min(8, Math.round(x.d / 6)))) }) },
+  stormwater: { input: 'obj', hide: [], prefill: ({ A }) => ({ rain: A.rain, duration: A.duration }) },   // applied in its Imported model tab (feedFile)
   span: { input: 'none', hide: [], prefill: ({ x }) => x && ({ span: r1(x.span), spanR: r1(x.span), storeys: x.storeys }) },
 };
 
@@ -56,7 +71,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   const p = currentProject(), cfg = CFG[sim.id];
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; return; }
   setCurrent(p);
-  const v = currentVersion(p), site = p.site || S.account().site, A = S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
+  const v = currentVersion(p), site = S.siteOf(p), A = S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
   const perLevel = cfg.input === 'studio' || cfg.input === 'dxf';
@@ -71,7 +86,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       <label class="shsel">Version<select id="ver">${p.versions.slice().reverse().map((x) => `<option value="${x.id}" ${x === v ? 'selected' : ''}>v${x.n} — ${esc(x.note)}</option>`).join('') || '<option>No saved versions</option>'}</select></label>
       ${perLevel && levels.length > 1 ? `<label class="shsel">Level<select id="lvl">${levels.map((L, i) => `<option value="L${L.n}" ${i === lvIx ? 'selected' : ''}>Level ${L.n}</option>`).join('')}</select></label>` : ''}
       ${rooms.length ? `<label class="shsel">Room<select id="room">${rooms.map((c) => `<option value="${c.id}" ${c === room ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
-      <a class="shsite" href="#/account" title="Site, north, time zone and climate come from Account">${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}</a>
+      <a class="shsite" href="#/account">${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}</a>
       <span class="sp"></span>
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
@@ -86,6 +101,12 @@ export function render(app, sim, params = new URLSearchParams()) {
 
   const fr = $('#eng', app), msg = $('#shmsg', app), saveBtn = $('#save', app), name = `${p.name} · v${v.n}`, x = extent(v.model);
   const ctx = { site, A, t, level, x, room }, filled = {};
+  // what this simulation takes from Account, shown in the bar (site, north and time zone are always there)
+  const linked = Object.entries(cfg.prefill?.(ctx) || {}).filter(([id, val]) => ACCT[id] && val != null && val !== '' && !(typeof val === 'number' && !Number.isFinite(val)));
+  { const chip = $('.shsite', app), more = linked.filter(([id]) => !['lat', 'lon', 'tz', 'north'].includes(id) && !(id === 'wdir' && linked.some(([k]) => k === 'dir')));
+    if (more.length) chip.insertAdjacentHTML('beforeend', more.map(([id, val]) => ` · ${esc(ACCT[id][0])} ${esc(shown(id, val))}`).join(''));
+    chip.title = `Linked to Account${p.siteLinked === false ? ' (this project keeps its own site)' : ''}: change a value there and this simulation uses it the next time it opens. Values changed here are recorded with the result.\n`
+      + [`Site ${site?.label || '—'}`, ...linked.map(([id, val]) => `${ACCT[id][0]} ${shown(id, val)}`)].join('\n'); }
   let alive = true, loaded = false;
   const doc = () => { try { return fr.contentDocument; } catch (e) { return null; } };
   const say = (h, warn) => { msg.innerHTML = h; msg.classList.toggle('warn', !!warn); };
@@ -122,7 +143,8 @@ export function render(app, sim, params = new URLSearchParams()) {
   // Account values into the engine's own inputs (each stays editable there)
   function prefill() {
     const D = doc(), vals = cfg.prefill?.(ctx); if (!D || !vals) return;
-    for (const [id, val] of Object.entries(vals)) { const el = D.getElementById(id); if (!el || val == null || (typeof val === 'number' && !Number.isFinite(val))) continue;
+    for (const [id, val] of Object.entries(vals)) { if (id === '@day') { const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) { b.click(); filled[id] = val; } continue; }
+      const el = D.getElementById(id); if (!el || val == null || (typeof val === 'number' && !Number.isFinite(val))) continue;
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
   }
   // file-based inputs (DXF plan, OBJ site) go into the engine's own file picker, as if the person had opened the file
@@ -163,7 +185,14 @@ export function render(app, sim, params = new URLSearchParams()) {
     const results = { kpis: K };
     if (sim.id === 'acoustics' && analysis?.engine === 'deterministic-ray-accumulation-v2') results.analysis = analysis;
     for (const [k, , , , re] of sim.metrics) { const hit = re && K.find(([l]) => re.test(l)); if (hit) results[k] = num(hit[1]); }
-    const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...filled };
+    // the Account values this run used, and any changed in the engine before it ran
+    const cur = (id) => { if (id === '@day') return D?.querySelector('#daySeg [aria-pressed="true"]')?.dataset.d;
+      const W = sim.id === 'stormwater' ? D?.getElementById('modelWorkspace')?.contentDocument : D, el = W?.getElementById(id); return el ? el.value : undefined; };
+    const fromAccount = {}, changed = [], model = {};
+    for (const [id, val] of Object.entries(filled)) { if (!ACCT[id]) { model[id] = val; continue; }
+      const k = ACCT[id][0], now = cur(id); fromAccount[k] = shown(id, val);
+      if (now != null && String(now) !== String(val) && !(now !== '' && Number(now) === Number(val))) changed.push(`${k} ${shown(id, now)} (Account ${shown(id, val)})`); }
+    const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
     try { fr.contentWindow.postMessage({ pc: 1, t: 'saved', count: p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).length }, '*'); } catch (e) { }
     toast(`Saved to v${v.n}`); say(`Saved to v${v.n} · <a href="#/results/${p.id}?sim=${sim.id}">Compare versions →</a>`);

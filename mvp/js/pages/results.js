@@ -13,7 +13,7 @@ export function render(app, [pid], params) {
   const vps = [];
 
   app.innerHTML = `<div class="wrap">
-    <div class="sec-h" style="margin-top:0;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:end"><div><span class="eyebrow">Results · ${esc(p.name)} · ${esc((p.site?.label || "").split(",")[0])}</span><h1 class="display" style="margin-top:16px">Change the design.<br><span>See what it did.</span></h1></div>
+    <div class="sec-h" style="margin-top:0;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:end"><div><span class="eyebrow">Results · ${esc(p.name)} · ${esc((S.siteOf(p)?.label || "").split(",")[0])}</span><h1 class="display" style="margin-top:16px">Change the design.<br><span>See what it did.</span></h1></div>
       <select class="inp" id="proj" style="max-width:280px" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
     <p class="muted">Every saved result is tied to the model version it ran on, with its settings.</p>
     <div class="sec-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:56px 0 16px"><h2 class="display sm">Versions × simulations</h2><span class="note">latest saved result per cell</span></div>

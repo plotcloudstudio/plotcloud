@@ -1,6 +1,8 @@
 // Projects, model versions and simulation runs, kept in this browser (localStorage).
 // Shape (ready to move to a backend later):
-//   project { id, name, created, updated, draft (working model), versions[], runs[] }
+//   project { id, name, created, updated, draft (working model), versions[], runs[], site, siteLinked }
+//     siteLinked (default true): the project follows the Account site, so a new address in Account reaches every
+//     simulation of the project; false: the project keeps its own site (p.site)
 //   version { id, n, note, created, model }            — immutable snapshot
 //   run     { id, versionId, simId, settings, results { kpis: [[label, value]], <metric>: number }, created, source: 'full-tool' }
 //   account { user, site, defaults }                  — site and defaults every new project and run starts from
@@ -30,7 +32,7 @@ export function load() {
   if (DB) return DB;
   try { const raw = localStorage.getItem(KEY); DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; }
   if (!DB.account) DB.account = { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } };
-  for (const p of DB.projects) if (!p.site) p.site = clone(DB.account.site);
+  for (const p of DB.projects) { if (!p.site) p.site = clone(DB.account.site); if (p.siteLinked == null) p.siteLinked = true; }
   // estimates from the old prototype preview are retired: every result now comes from a PlotCloud engine
   for (const p of DB.projects) p.runs = p.runs.filter((r) => r.source !== 'prototype-mock');
   return DB;
@@ -42,8 +44,11 @@ export function reset() { DB = seed(); save(); }
 export const account = () => load().account;
 export const projects = () => load().projects;
 export const project = (id) => projects().find((p) => p.id === id);
+// the site a project's simulations use: the Account site while the project follows it, else the project's own
+export const siteOf = (p) => (p && p.siteLinked === false ? p.site : account().site) || account().site;
+export function linkSite(p, on) { if (!on) p.site = clone(account().site); p.siteLinked = !!on; p.updated = now(); save(); }
 export function createProject(name, model) {
-  const p = { id: uid('p'), name: name || 'Untitled project', created: now(), updated: now(), versions: [], runs: [], draft: model, site: clone(account().site) };
+  const p = { id: uid('p'), name: name || 'Untitled project', created: now(), updated: now(), versions: [], runs: [], draft: model, site: clone(account().site), siteLinked: true };
   load().projects.unshift(p); save(); return p;
 }
 export function saveVersion(p, note) {
