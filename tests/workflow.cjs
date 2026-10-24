@@ -34,6 +34,8 @@ try{
   await page.goto(base+'/#/tool/'+tool);
   await page.locator('#eng[data-pc-settings-ready="true"]').waitFor();
   work=await (await page.locator('iframe[data-emb="'+tool+'"]').elementHandle()).contentFrame();
+  await work.waitForFunction(()=>!document.querySelector('#run').disabled,{},{timeout:90000});
+  await work.evaluate(async name=>{await (name==='views'?window.__views:window.__day).runLevel('draft',true,true);},tool);
   await work.waitForFunction(()=>window.__pcAnalysisState?.().ready,{},{timeout:90000});
   const state=await work.evaluate(()=>window.__pcAnalysisState());assert.equal(state.conditions.tool,tool);assert(state.conditions.parameters);
   if(tool==='views'){await work.evaluate(()=>window.__views.setEye(1.15));await work.waitForFunction(()=>window.__pcAnalysisState().stale);assert.equal(await work.evaluate(()=>window.__pcAnalysisState().ready),false);}
