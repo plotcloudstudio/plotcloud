@@ -71,16 +71,22 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
     await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');
     await f.locator('#run').click();
     await page.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;});
-    assert.equal(await f.locator('#chartp').isVisible(),false,'Remove the redundant chart panel');
     assert.equal(await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Legend',exact:true}).count(),0);
     assert.equal(await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Charts',exact:true}).count(),1);
     await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Charts',exact:true}).click();
     await page.waitForTimeout(100);
     assert.equal(await f.locator('#legend #ramp').isVisible(),true,'Charts keeps the actual engine colour legend');
+    assert.equal(await f.locator('#chartp').isVisible(),true,'Restore the original numerical charts');
+    assert.equal(await f.locator('#chartp').evaluate(e=>e.closest('.lgdsec')===document.querySelector('#legend').closest('.lgdsec')),true,'Legend and charts share one group');
+    assert(await f.locator('#kp4 b').evaluateAll(es=>es.some(e=>/\d/.test(e.textContent))),'Chart metrics use the actual calculated result');
+    for(const id of ['days','hist','tday'])assert(await f.locator('#'+id).evaluate(e=>e.width>0&&e.height>0),'Restore '+id+' canvas');
     const before=await f.locator('#panelR').evaluate(e=>e.scrollTop),box=await f.locator('#panelR').boundingBox();
     await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.wheel(0,600);
     assert.equal(await f.locator('#panelR').evaluate(e=>e.scrollTop),before,'Wheel does not scroll the result panel');
     await page.screenshot({path:require('node:os').tmpdir()+'/plotcloud-sun-singlepage.png'});
+    const next=f.locator('#panelR .pc-fit-pages').getByRole('button',{name:'Next →',exact:true});
+    for(let i=0;i<10&&await next.isVisible()&&await next.isEnabled();i++){await next.click();await page.waitForTimeout(40);}
+    assert(await f.locator('#tday').evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return r.bottom<=v.bottom+3&&r.bottom>v.top;}),'The final restored chart is reachable without scrolling');
    }
    assert.deepEqual(errors,[],sim+' JS errors');
    report.push({sim,panels:rows.filter(r=>r.type==='panel').map(r=>r.tabs)});

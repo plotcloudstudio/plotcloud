@@ -2043,6 +2043,9 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   for (const s of $$(':scope > .sec', inL)) { const hh = s.querySelector('h2'), h = txt(hh || s); if (/report|results|layers\s*(&|and)/i.test(h) || (hh && RIGHT.includes(hh.id))) { inR.appendChild(s); if (!rep && /report|results/i.test(h)) rep = s; } }
   if (!rep) rep = $$(':scope > .sec:not(.lgdsec)', inR)[0];
   if (rep) { rep.classList.add('grow'); inR.prepend(rep); }
+  // One Charts group: retain the colour legend and restore its numerical charts together.
+  const charts=$('#chartp'),chartSection=lg?.closest('.lgdsec');
+  if(charts&&chartSection){const heading=document.createElement('h2');heading.textContent='Charts';chartSection.prepend(heading);charts.hidden=false;chartSection.append(charts);}
   for (const x of $$(':scope > .sec', inL)) if (!x.querySelector('h2') && !x.querySelector('input, select, button:not(.lnk)') ) { const t = rep || $$(':scope > .sec', inR).pop(); if (t) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = x.innerHTML.replace(/<\/?p[^>]*>/g, ' '); t.appendChild(p); x.remove(); } }
   const ft = app.querySelector(':scope > footer.fine'); if (ft && rep) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = ft.innerHTML; rep.appendChild(p); }
   // Export belongs with inputs; keep result inspection and its legend on the right.
