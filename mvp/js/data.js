@@ -2,7 +2,7 @@
 // (../index.html#/tool/<id>). Nothing here replaces those engines; the prototype only adds a project layer around them.
 
 export const FULL = (id) => `../index.html#/tool/${id}`;
-// holographic picture for each simulation: img/sim-<id>-day|night.jpg, rendered with holo-render.html
+// Consistent interior / exterior illustration plates, rendered with analysis-art.html.
 export const simImg = (id) => 'analysis-' + id;
 export const PAGE = (route) => `../index.html#/${route}`;
 
@@ -44,6 +44,9 @@ export const SIMS = [
   { id: 'span', group: 'Structure', name: 'Structure sizer', tool: 'span', view: 'wire',
     blurb: 'First-guess depths for joists, beams and slabs from a span.', inputs: ['Span'], metrics: [['depth', 'Member depth', 'mm', 0, /^depth/i]] },
 ];
+
+// Spatial scope is independent of discipline: Climate contains both indoor and outdoor studies.
+for(const sim of SIMS) sim.scope=['sunhours','wind','stormwater'].includes(sim.id)?'Exterior':['structure','span'].includes(sim.id)?'Building':'Interior';
 
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [

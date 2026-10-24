@@ -1,0 +1,56 @@
+{
+  "engine": "emb/sunhours.html",
+  "generatedAt": "2026-10-24T18:05:02.775Z",
+  "inputs": {
+    "project": "demo-courtyard",
+    "versions": [
+      "vz0rp1xu",
+      "vw8ih9qt"
+    ],
+    "change": {
+      "id": "c2",
+      "before": 9,
+      "after": 3.6
+    }
+  },
+  "records": [
+    {
+      "version": 1,
+      "stats": "Window\n07:16–19:24 · max 12.0 h\nGround, average\n8.5 h\nGround with ≥ 2 h\n90%\nGround extent\nmodel + 10 m\nRoofs, average\n10.0 h\nFacades, average\n4.5 h\nSample points\n21,449 · 0.50 m grid\nComputed\n1.03 M rays · 0.2 s",
+      "settings": {
+        "location": {
+          "lat": 49.2827,
+          "lon": -123.1207,
+          "tz": -8,
+          "dst": 1
+        },
+        "north": 0,
+        "date": "2026-03-20",
+        "grid": 0.5,
+        "step": 15,
+        "margin": "10",
+        "view": "plan",
+        "samplePoints": 21449
+      }
+    },
+    {
+      "version": 2,
+      "stats": "Window\n07:16–19:24 · max 12.0 h\nGround, average\n8.7 h\nGround with ≥ 2 h\n92%\nGround extent\nmodel + 10 m\nRoofs, average\n12.0 h\nFacades, average\n4.9 h\nSample points\n21,449 · 0.50 m grid\nComputed\n1.03 M rays · 0.2 s",
+      "settings": {
+        "location": {
+          "lat": 49.2827,
+          "lon": -123.1207,
+          "tz": -8,
+          "dst": 1
+        },
+        "north": 0,
+        "date": "2026-03-20",
+        "grid": 0.5,
+        "step": 15,
+        "margin": "10",
+        "view": "plan",
+        "samplePoints": 21449
+      }
+    }
+  ]
+}
