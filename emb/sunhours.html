@@ -238,7 +238,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       <button type="button" data-view="sun" aria-pressed="false">Sun's view</button>
     </div>
     <div class="capbox" id="capbox" hidden><b id="capT"></b><span id="capS"></span></div>
-    <aside class="chartp" id="chartp" aria-label="Sunlight charts">
+    <aside class="chartp" id="chartp" aria-label="Sunlight charts" hidden>
       <div class="cph"><b>Sunlight hours</b><span class="note" id="cpLvl"></span></div>
       <div class="kp4" id="kp4"></div>
       <div class="cph"><b>Dates</b><span class="note">average on the ground · click a date</span></div>
@@ -2037,13 +2037,12 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   for(const marker of inL.querySelectorAll('h2 > i'))marker.remove();
   const R = document.createElement('aside'); R.className = 'panel col'; R.id = 'panelR'; R.setAttribute('aria-label', 'Results');
   const inR = document.createElement('div'); inR.className = 'colIn'; R.appendChild(inR); stage.after(R);
-  const lg = stage.querySelector('.lgd, .legend'); if (lg) { const s = document.createElement('section'); s.className = 'sec lgdsec'; s.setAttribute('aria-label', 'Legend'); s.appendChild(lg); inR.appendChild(s); }
+  const lg = stage.querySelector('.lgd, .legend'); if (lg) { const s = document.createElement('section'); s.className = 'sec lgdsec'; s.setAttribute('aria-label', 'Charts'); s.appendChild(lg); inR.appendChild(s); }
   let rep = null;
   const RIGHT = { 'Facade Studio': ['h-gh'] }[name] || [];
   for (const s of $$(':scope > .sec', inL)) { const hh = s.querySelector('h2'), h = txt(hh || s); if (/report|results|layers\s*(&|and)/i.test(h) || (hh && RIGHT.includes(hh.id))) { inR.appendChild(s); if (!rep && /report|results/i.test(h)) rep = s; } }
   if (!rep) rep = $$(':scope > .sec:not(.lgdsec)', inR)[0];
   if (rep) { rep.classList.add('grow'); inR.prepend(rep); }
-  const charts=$('#chartp');if(charts){charts.classList.add('sec');charts.setAttribute('aria-label','Charts');inR.append(charts);}
   for (const x of $$(':scope > .sec', inL)) if (!x.querySelector('h2') && !x.querySelector('input, select, button:not(.lnk)') ) { const t = rep || $$(':scope > .sec', inR).pop(); if (t) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = x.innerHTML.replace(/<\/?p[^>]*>/g, ' '); t.appendChild(p); x.remove(); } }
   const ft = app.querySelector(':scope > footer.fine'); if (ft && rep) { const p = document.createElement('p'); p.className = 'note fine2'; p.innerHTML = ft.innerHTML; rep.appendChild(p); }
   // Export belongs with inputs; keep result inspection and its legend on the right.
@@ -2220,6 +2219,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
 <!-- Sun Hours settings expansion: explicit panel selector, in-flow column, no canvas overlap. -->
 <style>
+#chartp[hidden] { display: none !important; }
 @media (min-width: 901px) {
 .app.fitapp { grid-template-columns: clamp(272px, 24vw, 318px) minmax(0, 1fr) clamp(250px, 22vw, 300px); }
 #panelL, #panelR { overflow: hidden !important; }

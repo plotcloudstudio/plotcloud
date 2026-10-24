@@ -6,7 +6,7 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
  const report=[];
  try{
-  for(const sim of sims){
+  for(const sim of sims.filter(sim=>!process.env.TEST_SIM||process.env.TEST_SIM===sim)){
    const page=await browser.newPage({viewport:{width:1366,height:768}}),errors=[];
    page.on('pageerror',e=>errors.push(e.message));
    await page.goto(base+'/mvp/#/simulations/'+sim);
@@ -36,7 +36,7 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
    let rows=await inspect();
    for(const r of rows){
     if(r.type==='host'||r.type==='document')assert(r.scrollHeight<=r.height+2,sim+' document must fit one screen: '+JSON.stringify(r));
-    if(r.type==='panel'){assert.equal(r.overflow,'hidden',sim+' has no panel scrollbar');assert(r.viewportHeight>(r.chart?60:150),sim+' leaves a useful panel body: '+JSON.stringify(r));assert(r.tabs.length>0,sim+' keeps controls reachable through tabs');}
+    if(r.type==='panel'){assert.equal(r.overflow,'hidden',sim+' has no panel scrollbar');assert(r.viewportHeight>(r.chart?60:150),sim+' leaves a useful panel body: '+JSON.stringify(r));assert(r.tabs.length>0||(sim==='sunhours'&&r.name==='panelR'),sim+' keeps controls reachable through tabs');}
    }
    for(const size of [{width:1280,height:720},{width:1920,height:1080},{width:1366,height:768}]){
     await page.setViewportSize(size);
@@ -67,10 +67,16 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
    if(sim==='sunhours'){
     const f=page.frameLocator('#eng');
     assert.equal(await f.getByRole('button',{name:'Plan + chart',exact:true}).count(),0);
-    assert.equal(await f.locator('#chartp').evaluate(e=>e.closest('#panelR')?.id),'panelR');
+    await f.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Analysis',exact:true}).click();
+    await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');
+    await f.locator('#run').click();
+    await page.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;});
+    assert.equal(await f.locator('#chartp').isVisible(),false,'Remove the redundant chart panel');
+    assert.equal(await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Legend',exact:true}).count(),0);
+    assert.equal(await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Charts',exact:true}).count(),1);
     await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Charts',exact:true}).click();
     await page.waitForTimeout(100);
-    assert.equal(await f.locator('#hist').isVisible(),true);
+    assert.equal(await f.locator('#legend #ramp').isVisible(),true,'Charts keeps the actual engine colour legend');
     const before=await f.locator('#panelR').evaluate(e=>e.scrollTop),box=await f.locator('#panelR').boundingBox();
     await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.wheel(0,600);
     assert.equal(await f.locator('#panelR').evaluate(e=>e.scrollTop),before,'Wheel does not scroll the result panel');
@@ -81,6 +87,6 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
    console.log(JSON.stringify(report.at(-1)));
    await page.close();
   }
-  console.log('PASS: all 14 simulation screens fit 1366 × 768 without document or panel scrolling');
+  console.log(`PASS: ${report.length} simulation screens fit desktop viewports without document or panel scrolling`);
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
