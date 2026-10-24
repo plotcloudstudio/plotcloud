@@ -16,6 +16,7 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
     return [...d.querySelectorAll('iframe')].some(f=>f.contentDocument?.querySelector('.pc-fit-panel'));
    },null,{timeout:60000});
    await page.waitForTimeout(1200);
+   if(sim==='stormwater')await page.waitForFunction(()=>{const d=document.querySelector('#eng')?.contentDocument,f=d?.querySelector('#modelWorkspace');return f&&!f.hidden&&f.contentDocument?.querySelector('.pc-fit-panel');},null,{timeout:60000});
    const inspect=()=>page.evaluate(()=>{
     const rows=[];
     function check(d){
@@ -36,7 +37,7 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
    let rows=await inspect();
    for(const r of rows){
     if(r.type==='host'||r.type==='document')assert(r.scrollHeight<=r.height+2,sim+' document must fit one screen: '+JSON.stringify(r));
-    if(r.type==='panel'){assert.equal(r.overflow,'hidden',sim+' has no panel scrollbar');assert(r.viewportHeight>(r.chart?60:150),sim+' leaves a useful panel body: '+JSON.stringify(r));assert(r.tabs.length>0||(sim==='sunhours'&&r.name==='panelR'),sim+' keeps controls reachable through tabs');}
+    if(r.type==='panel'){assert.equal(r.overflow,'hidden',sim+' has no panel scrollbar');assert(r.viewportHeight>(r.chart?60:150),sim+' leaves a useful panel body: '+JSON.stringify(r));assert(r.tabs.length>0||(['sunhours','wind'].includes(sim)&&r.name==='panelR'),sim+' keeps controls reachable through tabs');}
    }
    for(const size of [{width:1280,height:720},{width:1920,height:1080},{width:1366,height:768}]){
     await page.setViewportSize(size);

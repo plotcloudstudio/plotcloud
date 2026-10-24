@@ -1,6 +1,43 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
+function prepareExteriorLayout(doc){
+  if(!/Wind Flow|Stormwater/i.test(doc.title))return true;
+  const app=doc.querySelector('.app');if(app?.dataset.pcExteriorLayout)return true;
+  const left=doc.querySelector('#panelL > .colIn'),right=doc.querySelector('#panelR > .colIn');
+  if(!left||!right||!doc.defaultView.__pcShell)return false;
+  app.dataset.pcExteriorLayout='1';
+  const heading=(el,text)=>{if(!el)return;const target=el.querySelector('.acch')||el;target.textContent=text;};
+  for(const i of doc.querySelectorAll('.sec h2 i'))i.remove();
+  const resultHeading=doc.getElementById('h-res'),result=resultHeading?.closest('.sec');
+  heading(resultHeading,'Results');if(result)right.prepend(result);
+  const exportHeading=doc.getElementById('h-set')||doc.getElementById('h-lay');
+  let exports=exportHeading?.closest('.sec');
+  if(!exports){exports=doc.createElement('section');exports.className='sec';const h=doc.createElement('h2');h.textContent='Export';exports.append(h);}
+  else heading(exportHeading,'Export');
+  left.append(exports);
+  for(const id of ['export','exportPng','exportJson']){
+    const button=doc.getElementById(id);if(!button||exports.contains(button))continue;
+    const row=button.closest('.two,.row');
+    if(row&&row!==result&&row.querySelectorAll('button').length<=2)exports.append(row);else exports.append(button);
+  }
+  for(const id of ['expmsg','saveMsg']){const message=doc.getElementById(id);if(message&&!exports.contains(message))exports.append(message);}
+  const legend=doc.getElementById('legend'),charts=doc.getElementById('chartp');
+  let group=legend?.closest('.lgdsec');
+  if(!group){group=doc.createElement('section');group.className='sec lgdsec';if(legend)group.append(legend);right.append(group);}
+  group.setAttribute('aria-label','Charts');
+  const h=doc.createElement('h2');h.textContent='Charts';group.prepend(h);
+  if(charts){charts.hidden=false;group.append(charts);}
+  if(result&&/Stormwater/i.test(doc.title)){const metrics=charts?.querySelector('.kp4');const block=metrics?.closest('.cpg');if(block)resultHeading.after(block);else if(metrics)resultHeading.after(metrics);}
+  if(result)for(const section of [...right.children])if(section!==result&&section!==group&&section.matches('.sec')&&!section.querySelector('h2')){while(section.firstChild)result.append(section.firstChild);section.remove();}
+  const plan=doc.querySelector('[data-view="plan"]');if(plan)plan.click();
+  for(const split of doc.querySelectorAll('[data-view="split"]'))split.remove();
+  doc.querySelector('#stage')?.classList.remove('split');
+  doc.querySelector('#panelR')?.setAttribute('aria-label','Results and Charts');
+  const analysis=doc.getElementById('h-sim')||doc.getElementById('h-storm')||doc.getElementById('h-rain');
+  if(analysis){if(analysis.id==='h-sim')heading(analysis,'Analysis');const note=doc.createElement('p');note.className='note';note.dataset.pcWorkflowHint='';note.textContent=analysis.id==='h-sim'?'Set wind direction and reference speed, choose the analysis detail, then run. Inspect Results and Charts on the right; save images from Export. This is an early-design study, not a wind-comfort certification.':'Set rainfall intensity, storm duration and surface or detention parameters, then run. Inspect Results and Charts on the right; save images and analysis data from Export. This is an early-design screening, not a drainage compliance assessment.';analysis.after(note);}
+  return true;
+}
 export function installSimulationFit(doc = document) {
   // Host and iframe runtimes may load this module in different JS realms.
   if (installed.has(doc) || doc.documentElement.hasAttribute('data-pc-fit-installed') || !doc.body) return;
@@ -27,6 +64,8 @@ export function installSimulationFit(doc = document) {
       .pc-simulation-fit .pc-fit-pages{display:flex;align-items:center;justify-content:space-between;gap:6px;flex:none;font-size:11px}
       .pc-simulation-fit .pc-fit-pages[hidden]{display:none!important}
       .pc-simulation-fit .pc-fit-content .chartp{position:static!important;display:grid!important;width:auto!important;height:auto!important;padding:8px!important;overflow:visible!important;border:0!important}
+      .pc-simulation-fit .pc-fit-content .chartp canvas{display:block!important;position:static!important;inset:auto!important;width:100%!important}
+      .pc-simulation-fit .pc-fit-content .chartp :is(#runoffChart,#pondChart){height:150px!important}
       .pc-simulation-fit .pc-fit-content .cpg{min-width:0!important;max-width:none!important;overflow:visible!important;flex:none!important}
       .pc-simulation-fit .pc-fit-content .cpg .note{white-space:normal!important}
       .pc-simulation-fit .pc-fit-content #expmsg img{display:block;max-height:140px;object-fit:contain}
@@ -91,6 +130,7 @@ export function installSimulationFit(doc = document) {
   function refresh() {
     pending = false;
     const app = doc.querySelector('.app'); if (!app) return;
+    if(!prepareExteriorLayout(doc))return;
     doc.documentElement.classList.add('pc-simulation-fit');
     for (const panel of app.querySelectorAll(':scope > aside.panel,:scope > .col')) enhance(panel);
     for(const strip of app.querySelectorAll('.stage > .chartp')){
@@ -107,7 +147,7 @@ export function installSimulationFit(doc = document) {
       for (const el of [...inner.children]) {
         if (!el.matches('.sec,.card,.chartp,.cpg') || state.buttons.has(el)) continue;
         const b = doc.createElement('button'); b.type = 'button'; b.textContent = titleOf(el); b.setAttribute('role','tab');
-        b.onclick = () => { state.active = el; state.page = 0; schedule(); };
+        b.onclick = () => { state.active = el; state.page = 0; schedule();if(el.querySelector('#chartp')&&typeof win.drawCharts==='function')win.requestAnimationFrame(()=>win.drawCharts()); };
         el.classList.add('pc-fit-item'); state.tabs.append(b); state.items.push(el); state.buttons.set(el, b);
         const h=el.querySelector(':scope > h2.pc-tog');if(h){h.classList.remove('pc-tog');h.removeAttribute('role');h.removeAttribute('aria-expanded');h.tabIndex=-1;h.addEventListener('click',e=>e.stopImmediatePropagation(),true);}
       }

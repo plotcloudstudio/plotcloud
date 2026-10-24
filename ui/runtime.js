@@ -54,7 +54,7 @@
  }
  function boot(){
   frames();controls();layout();publish();
-  if(surface==='tool'&&/Sun Hours|Wind Flow|Daylight|Natural Ventilation|Spatial|Space Syntax|Movement|Isovist|Camera Coverage|Indoor Acoustics|Evacuation|Circulation|View Analysis|Structural Analysis|Structure Sizer|Stormwater/i.test(document.title))import(new URL('simulation-fit.js?v=singlepage-20261024-1',base)).then(m=>m.installSimulationFit(document)).catch(e=>console.warn('Simulation layout unavailable',e));
+  if(surface==='tool'&&/Sun Hours|Wind Flow|Daylight|Natural Ventilation|Spatial|Space Syntax|Movement|Isovist|Camera Coverage|Indoor Acoustics|Evacuation|Circulation|View Analysis|Structural Analysis|Structure Sizer|Stormwater/i.test(document.title))import(new URL('simulation-fit.js?v=exterior-20261024-1',base)).then(m=>m.installSimulationFit(document)).catch(e=>console.warn('Simulation layout unavailable',e));
   addEventListener('resize',layout);
   new MutationObserver(records=>{if(records.some(r=>r.addedNodes.length||r.removedNodes.length)){frames();if(controls())publish();layout()}}).observe(document.body,{childList:true,subtree:true});
  }

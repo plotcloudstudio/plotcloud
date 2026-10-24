@@ -25,7 +25,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=singlepage-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=exterior-20261024-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Wind Flow</title>
@@ -222,7 +222,6 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
   <section class="stage" id="stage" aria-label="3D view">
     <div class="views" role="group" aria-label="Camera">
-      <button type="button" data-view="split" aria-pressed="true">Plan + chart</button>
       <button type="button" data-view="plan" aria-pressed="false">Plan</button>
       <button type="button" data-view="persp" aria-pressed="false">3D</button>
     </div>
@@ -1481,13 +1480,13 @@ function fit() {
   }
 }
 function setView(v) {
-  S.view = v; stage.classList.toggle('split', v === 'split'); resize(); capUI(); if (v === 'split') panelUI();
+  if(v==='split')v='plan';S.view = v; stage.classList.remove('split'); resize(); capUI(); panelUI();
   document.querySelectorAll('.views button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
   camera = v === 'persp' ? persp : ortho; ctlP.enabled = v === 'persp'; ctlO.enabled = v !== 'persp';
   fit();
 }
 document.querySelectorAll('.views button').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
-function viewRect() { const r = stage.getBoundingClientRect(); if (S.view !== 'split') return { width: r.width, height: r.height }; return innerWidth > 0 ? { width: r.width, height: Math.round(r.height * 0.7) } : { width: r.width, height: r.height * 0.54 }; }
+function viewRect() { const r = stage.getBoundingClientRect();return {width:r.width,height:r.height}; }
 function resize() { const r = viewRect(); renderer.setSize(r.width, r.height, false); renderer.domElement.style.width = r.width + 'px'; renderer.domElement.style.height = r.height + 'px'; persp.aspect = r.width / Math.max(1, r.height); persp.updateProjectionMatrix(); if (S.view !== 'persp') fit(); }
 new ResizeObserver(resize).observe(stage);
 const tmp = new THREE.Vector3();
@@ -1770,7 +1769,7 @@ function bandAreas(sim) {
 function sizeCv(c, h) { const d = devicePixelRatio || 1, w = c.getBoundingClientRect().width || 300; c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
 const rgbS = (c) => `rgb(${c.map(Math.round).join(',')})`;
 function panelUI() {
-  if (S.view !== 'split') return; facChart(); const cur = S.sim && S.sim.done ? S.sim : null, st = cur ? statsOf(cur) : null, m2 = (a) => Math.round(a).toLocaleString('en-CA');
+  facChart(); const cur = S.sim && S.sim.done ? S.sim : null, st = cur ? statsOf(cur) : null, m2 = (a) => Math.round(a).toLocaleString('en-CA');
   $('#cpLvl').textContent = cur ? `${compassName(S.dir)} · ${S.speed} m/s at 10 m` : '';
   $('#kp4').innerHTML = [['From', `${compassName(S.dir)}`], ['Highest', st ? st.max.toFixed(2) + '×' : '—'], ['Windy m²', st ? m2(st.up) : '—'], ['Sheltered m²', st ? m2(st.calm) : '—']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
   { const c = $('#rose'), { x, w, h, k } = sizeCv(c, 250), cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 22 * k; x.clearRect(0, 0, w, h);
@@ -1831,7 +1830,7 @@ new ResizeObserver(() => panelUI()).observe($('#chartp'));
 
 // ---------- start ----------
 if (window.PC_EMBED) document.querySelector('.brand').hidden = true;
-applyTheme(); modeNote(); setDir(S.dir); resize(); sample(); setNote(); getDL(); gridNote(); setView('split');
+applyTheme(); modeNote(); setDir(S.dir); resize(); sample(); setNote(); getDL(); gridNote(); setView('plan');
 runOne('draft');   // the first look is quick; Standard and Fine run when asked
 </script>
 

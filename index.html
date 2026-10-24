@@ -701,6 +701,7 @@ const EMBV = {"acoustics":"wire-20261023-1","furniture": "0e1019cc", "stairs3d":
 const EMBFILE = {movementdepth:"spacesyntax"};
 for(const id of ['sunhours','wind','daylight','vent','spacesyntax','movementdepth','isovist','cameras','views','acoustics','evac','structure','stormwater','span'])EMBV[id]='singlepage-20261024-1';
 EMBV.sunhours='charts-20261024-2';
+EMBV.wind=EMBV.stormwater='exterior-20261024-1';
 function pcEmbNote(fr, html) { fr.srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;height:100vh;font:15px system-ui,sans-serif;color:#555;background:#fafaf8">${html}</body>`; }
 function pcFetchEmb(id) { if (!EMBCACHE[id]) EMBCACHE[id] = fetch(`emb/${EMBFILE[id] || id}.html?v=${EMBV[id] || 1}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).catch((e) => { delete EMBCACHE[id]; throw e; }); return EMBCACHE[id]; }
 function pcLoadEmb(fr) { const id = fr.dataset.emb; pcEmbNote(fr, 'Loading the tool…');
