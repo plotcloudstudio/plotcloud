@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="en">
-<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
+<script src="../ui/downloads.js?v=1"></script>
 <script src="../ui/runtime.js?v=1" data-surface="tool" defer></script>
 </head>
 <body>
@@ -876,9 +877,9 @@ if (typeof module !== 'undefined') module.exports = ASSEMBLE;
 </script>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-  "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"
+  "three": "../furniture/three.module.min.js",
+  "three/addons/": "../furniture/addons/",
+  "fflate": "../furniture/fflate.js"
 } }
 </script>
 <script type="module">
@@ -1409,14 +1410,14 @@ document.querySelectorAll('#ovTabs button').forEach((b) => b.addEventListener('c
 }));
 
 let dlP = null;
-const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use === 'function') ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null));
+const getDL = () => dlP || (dlP = Promise.resolve(window.PlotCloudDownloads));
 async function download(msgEl) {
   const m = (t, c = '') => { msgEl.textContent = t; msgEl.className = (msgEl.id === 'ovNote' ? 'note' : 'msg') + (c ? ' ' + c : ''); };
   try { F.build(S.kind, P()); } catch (e) { m(e.message, 'warn'); return; }
   const p = pkg && $('#overlay').hidden === false ? pkg : packageFiles();
   const zip = zipSync(p.files, { level: 0 }), name = p.base + '.zip';
   const dl = await getDL();
-  if (!dl) { m('This view cannot download files. Open the page on claude.ai to save the package.', 'warn'); return; }
+  if (!dl) { m('This view cannot download files. Please reload this page and retry the export.', 'warn'); return; }
   try { await dl.save({ filename: name, data: zip }); m(`Saved ${name}.`, 'ok'); }
   catch (e) { m(e && e.code === 'declined' ? 'Save canceled.' : e && e.code === 'rate_limited' ? 'Another save prompt is still open. Close it first.' : 'Could not save: ' + ((e && e.message) || e), 'warn'); }
 }

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en",base:"./furniture/",key:"doors"};</script>
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -13,6 +13,7 @@
 </style><!--/PCSKIN-->
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
+<script src="../ui/downloads.js?v=1"></script>
 <script src="../ui/runtime.js?v=1" data-surface="tool" defer></script>
 </head>
 <body><!--PCSKIN--><div class="pcdesk" role="note"><span>PlotCloud · tools</span><b>door & window generator works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
@@ -209,7 +210,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 </div>
 
 <script type="importmap">
-{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "fflate": "./furniture/fflate.js", "pc/models.js": "./doors/models.js", "pc/blocks2d.js": "./doors/blocks2d.js", "pc-base/": "./furniture/", "pc/": "./furniture/" } }
+{ "imports": { "three": "../furniture/three.module.min.js", "three/addons/": "../furniture/addons/", "fflate": "../furniture/fflate.js", "pc/models.js": "../doors/models.js", "pc/blocks2d.js": "../doors/blocks2d.js", "pc-base/": "../furniture/", "pc/": "../furniture/" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -628,7 +629,7 @@ function paramRow(q) {
 let rhinoPromise = null;
 function loadRhino() {
   if (!rhinoPromise) {
-    const base = (window.PC_EMBED && window.PC_EMBED.base) || './';
+    const base = (window.PC_EMBED && window.PC_EMBED.base) || '../furniture/';
     rhinoPromise = import(new URL(base + 'rhino3dm.module.min.js', document.baseURI).href)
       .then((mod) => mod.default({ locateFile: (f) => new URL(base + f, document.baseURI).href }))
       .catch((e) => { console.warn('rhino3dm failed to load', e); return null; });
@@ -637,7 +638,7 @@ function loadRhino() {
 }
 let downloadsP = null;
 function getDownloads() {
-  if (!downloadsP) downloadsP = window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+  if (!downloadsP) downloadsP = Promise.resolve(window.PlotCloudDownloads);
   return downloadsP;
 }
 

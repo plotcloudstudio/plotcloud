@@ -37,6 +37,16 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
    }else await page.locator('#utilityBody').waitFor();
   }
   assert.deepEqual(oldRequests,[],'Resources must never load the retired index page');
+  for(const [id,selector] of [['furniture','.export'],['stairs3d','.export'],['doors3d','.export'],['facade','#dlBtn'],['topo','#exportBtn'],['detaillab','#xJSON']]){
+   await open('resources/tool/'+id);const frame=page.frameLocator('#resourceEngine');
+   await frame.locator(selector).waitFor();
+   if(id!=='furniture'&&await frame.locator('#fmt-3dm').count())await frame.locator('#fmt-3dm').uncheck();
+   const result=page.waitForEvent('download');await frame.locator(selector).click();
+   const file=await result,bytes=fs.readFileSync(await file.path());assert(bytes.length>100,id+' exports actual generated data');
+   if(id==='detaillab')assert.equal(JSON.parse(bytes).app,'PlotCloud DetailLab');
+   else {assert(file.suggestedFilename().endsWith('.zip'));assert.equal(bytes.subarray(0,2).toString(),'PK');}
+   if(id==='furniture'){const {unzipSync}=await import('../furniture/fflate.js');const files=Object.keys(unzipSync(bytes));for(const ext of ['.obj','.stl','.3dm'])assert(files.some(f=>f.endsWith(ext)),'Furniture package includes '+ext);}
+  }
   await open('resources/tool/scale');assert.match(await page.locator('#scaleResult').innerText(),/100.00 mm/);
   await page.locator('#realLength').fill('5');assert.match(await page.locator('#scaleResult').innerText(),/50.00 mm/);
   await open('resources/tool/ergo');await page.locator('#ergoSearch').fill('counter');assert.match(await page.locator('#ergoResults').innerText(),/Counter height/);

@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="en">
-<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
+<script src="../ui/downloads.js?v=1"></script>
 <script src="../ui/runtime.js?v=1" data-surface="tool" defer></script>
 </head>
 <body>
@@ -876,8 +877,8 @@ G.DL = { MAT, ROLES, ROLE, BATTS, ZONES, LEARN, DEFAULT_NOTES, defaultState, lay
 </script>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  "three": "../furniture/three.module.min.js",
+  "three/addons/": "../furniture/addons/"
 } }
 </script>
 <script type="module">
@@ -1168,12 +1169,12 @@ $('#fsBtn').addEventListener('click', () => { const el = window.PC_EMBED ? stage
 
 // ---------- export ----------
 let dlP = null;
-const getDL = () => dlP || (dlP = (window.claude && typeof window.claude.use === 'function') ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null));
+const getDL = () => dlP || (dlP = Promise.resolve(window.PlotCloudDownloads));
 async function offer(name, data) {
   const dl = await getDL();
   if (dl) { try { await dl.save({ filename: name, data }); msg('#xmsg', `Saved ${name}.`, 'ok'); return true; } catch (e) { if (e && e.code === 'declined') { msg('#xmsg', 'Save canceled.'); return false; } if (e && e.code === 'rate_limited') { msg('#xmsg', 'Another save prompt is still open. Close it first.', 'warn'); return false; } } }
   try { const blob = data instanceof Blob ? data : new Blob([data]); const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); msg('#xmsg', `Downloaded ${name}.`, 'ok'); return true; } catch (e) {}
-  msg('#xmsg', 'This view cannot download files. Open the page on claude.ai to save.', 'warn'); return false;
+  msg('#xmsg', 'This view cannot download files. Please reload this page and retry the export.', 'warn'); return false;
 }
 const baseName = () => `${(S.sheet.number || 'detail').replace(/[^\w-]+/g, '-')}_${(S.sheet.title || 'detail').replace(/[^\w]+/g, '-').slice(0, 40)}_1-${S.sheet.scale}`.replace(/-+/g, '-');
 const drawSheet = () => DL.sheet(S, { mode: 'draw' });
@@ -1228,7 +1229,7 @@ $('#x3D').addEventListener('click', async () => {
     off += pos.count; g.dispose();
   });
   out.splice(2, 0, `mtllib ${baseName()}.mtl`);
-  const { zipSync, strToU8 } = await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');
+  const { zipSync, strToU8 } = await import('../furniture/fflate.js');
   await offer(baseName() + '_3d.zip', zipSync({ [baseName() + '.obj']: strToU8(out.join('\n')), [baseName() + '.mtl']: strToU8(mtl.join('\n')) }));
 });
 
