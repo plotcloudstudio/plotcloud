@@ -4,6 +4,36 @@
 
 New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` block at the end of `css/mvp.css`. Edited: `js/app.js` (one route) and `index.html` (one nav link).
 
+## Three panes: Plan Studio inside the Workspace (repair patch, 2026-10-24)
+
+This supersedes the single viewport described further down (its view pill, plan / elevation / walkthrough cameras and
+box-model editing are gone). The centre is now three panes side by side, left to right, with draggable splitters whose
+shares are kept in this browser (`pc-mvp-ws2` → `split`):
+
+* **Plan** = Plan Studio's own 2D (`emb/modeler.html?ws=plan`), with a level bar (Plan Studio's levels, floor and ceiling height) and Plan / Ceiling / Elevation.
+* **Perspective** = Plan Studio's own 3D (`?ws=persp`): Bird / Walkthrough / Explode, and a Shaded / Ghosted / Wireframe switch.
+* **Shaded** = `viewport2.js`, view only (click or box to select): Plan Studio's geometry plus imported meshes and the site.
+* The left parameter area shows Plan Studio's own Properties panel for a Plan Studio object (`?ws=props`), or the Workspace's fields for an imported mesh.
+
+One model. The draft keeps Plan Studio's model (`draft.studio`); next to it, one component per Plan Studio object (`ps:<kind>:<id>`,
+with its box) so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
+A draft or version made before the panes is converted once with `toStudio` (walls, windows, doors, slabs, rooms, furniture; Plan Studio makes its own roof).
+Every change in a pane goes to the page (live while dragging, then on release) and on to the other panes; the Plan pane keeps the one undo history.
+`studio-bridge.js` sends a version's own `draft.studio` to the simulations (north and wind from Account), and converts only older versions.
+
+| § | Original (Plan Studio) | Now in the Workspace | Reused / new |
+|---|---|---|---|
+| 1 Clearance | `clearanceOf` + `drawClearance`, drawn from the piece's live size and turn on every frame; `#clrBtn` toggles | Same drawing in the Plan pane, switched by the status bar's Clearance; also outlined (turned with the piece) in Shaded. Each piece can set its own front / back / left / right (`f.clr`, shown under its Properties) | Drawing reused. Per-piece clearance is new: Plan Studio's clearance is fixed per kind, and the acceptance asks for "change the front clearance" |
+| 2 Walls block furniture | Plan Studio only docks a piece against a wall (`placeFurn`) and lists overlaps; nothing is blocked | Moving (drag, gumball, typed), placing, duplicating, resizing and turning are checked against the wall bodies (centre line ± half thickness, openings included); the whole path is checked, so a piece slides along a wall and stops flush, never jumps across. A size that would reach a wall stops at the largest that fits, with a message. Clearance is not part of the check | New (Workspace mode only): there was no blocking to move. It uses Plan Studio's own outlines (`STC.furnCorners`, wall centre lines and thickness) |
+| 3 Walls, doors, windows | Wall / Rectangle room / Arc / Floor / Fence tools; door and window tools that need a wall click ("Click on a wall to place it."), openings hosted on the wall | The Workspace's Draw room / Door / Window tiles start those same tools in the Plan pane; every result is Plan Studio's (holes, hosting, moving and deleting with the wall), on Walls and Glazing in the layer tree, with parameters in the left panel | Reused |
+| 4 Gumball, toolbars | 3D gumball (yellow X, green Y, blue turn) with a distance or angle tip; `#toolBar` (2D Edit / Delete / Text / Undo / Redo / Clear, 3D Orbit / Explode); dark `#ftb` with a drag handle and remembered position | Unchanged in the panes. The status bar's Gumball shows or hides it; its arrows snap to the status bar's End / Mid / Near / Cen and stop at walls (§2). Hide in `#ftb` shows as an eye in the layer tree | Reused; arrow snapping and Cen are new (Plan Studio's snaps had no Cen and did not act on the gumball) |
+| 5 Three panes | One Plan Studio page shows either 2D or 3D | Three panes, shared model and selection, layer eyes and locks act in all three | New layout (asked for) |
+
+Not carried over, on purpose: Plan Studio's own top bar, left library, right panel, files, drafts and send-to-tool stay in the full Plan Studio
+(`workspace.html`). Plan Studio's 2D has no cut height, so the Plan pane shows the level's floor and ceiling height instead.
+`#toolBar` keeps Plan Studio's white style and position; the dark, draggable bar with a remembered position is `#ftb`, as in Plan Studio.
+Checks: `tests/mvp-workspace-panes.cjs`.
+
 ## Top bar
 
 | Control | Placement |

@@ -20,10 +20,17 @@ function studio() {
   return ready;
 }
 
+// a version made in the three-pane Workspace keeps its Plan Studio model (model.studio): that model is used as it is, with north and
+// the prevailing wind from the site (Account); an older version (Workspace boxes) is converted
+function studioModel(version, site, name) {
+  const st = version.model.studio; if (!st || st.v !== 2) return toStudio(version.model, site, { name, id: 'ws-' + version.id });
+  const N = JSON.parse(JSON.stringify(st)), c = toStudio({ layers: [], components: [] }, site, { name }).climate;
+  return Object.assign(N, { id: 'ws-' + version.id, name, north: site?.north || 0, climate: Object.assign({}, N.climate || {}, { from: c.from, U10: c.U10 }) });
+}
 // run fn with this version open in Plan Studio; Plan Studio's own "last project" is put back afterwards
 async function withModel(version, site, name, fn) {
   const W = await studio(), keep = (() => { try { return localStorage.getItem('pc-studio-last'); } catch (e) { return null; } })();
-  try { W.use(toStudio(version.model, site, { name, id: 'ws-' + version.id })); return fn(W); }
+  try { W.use(studioModel(version, site, name)); return fn(W); }
   finally { try { if (keep == null) localStorage.removeItem('pc-studio-last'); else localStorage.setItem('pc-studio-last', keep); } catch (e) { } }
 }
 const cache = (k, make) => { try { const v = sessionStorage.getItem(k); if (v) return Promise.resolve(JSON.parse(v)); } catch (e) { }

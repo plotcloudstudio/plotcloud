@@ -87,10 +87,10 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
   function geometryOf(c) {
     const k = c.furn && furnMesh(c);
     if (k) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(k.pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(k.col, 3)); g.computeVertexNormals(); return g; }   // Plan Studio furniture, part colours
-    if (c.mesh) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(c.mesh, 3)); g.computeVertexNormals(); return g; }
+    if (c.mesh) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(c.mesh, 3)); if (c.meshCol) g.setAttribute('color', new THREE.Float32BufferAttribute(c.meshCol, 3)); g.computeVertexNormals(); return g; }   // meshCol: Plan Studio's own part colours (Workspace panes)
     const g = new THREE.BoxGeometry(c.g.w, c.g.d, c.g.h); g.translate(c.g.w / 2, c.g.d / 2, c.g.h / 2); return g;
   }
-  const kindOf = (c) => (c.type === 'room' ? 'room' : c.type === 'window' ? 'glass' : c.type === 'mass' || c.type === 'terrain' ? 'ctx' : 'solid');
+  const kindOf = (c) => (c.type === 'room' ? 'room' : c.type === 'window' || c.glass ? 'glass' : c.type === 'mass' || c.type === 'terrain' ? 'ctx' : 'solid');
   // display modes: only material properties change, the scene is not rebuilt
   function paint(grp) {
     const k = grp.userData.kind, face = grp.userData.face, edges = grp.userData.edges, L = look(), fm = face.material, em = edges.material;
@@ -105,11 +105,14 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     for (const nm of ['sel', 'hov']) { const o = grp.getObjectByName(nm); if (o) { o.material.clippingPlanes = clip; o.material.needsUpdate = true; } }
   }
   function build() {
-    for (const o of [...root.children]) { root.remove(o); o.traverse((m) => { m.geometry?.dispose(); m.material?.dispose?.(); }); }
-    objects.clear(); bounds.makeEmpty(); if (!model) return;
-    const vis = new Map(model.layers.map((l) => [l.name, l.visible])), L = look();
+    const keep = new Map(); for (const [id, g] of objects) if (g.userData.c?.sig) keep.set(id, g);
+    for (const o of [...root.children]) { root.remove(o); if (!keep.has(o.userData.id) || keep.get(o.userData.id) !== o) o.traverse((m) => { m.geometry?.dispose(); m.material?.dispose?.(); }); }
+    objects.clear(); bounds.makeEmpty(); if (!model) { for (const g of keep.values()) g.traverse((m) => { m.geometry?.dispose(); m.material?.dispose?.(); }); return; }
+    const vis = new Map(model.layers.map((l) => [l.name, l.visible])), L = look(), used = new Set();
     for (const c of model.components) {
       if (vis.get(c.layer) === false) continue;
+      const old = c.sig && keep.get(c.id);
+      if (old && old.userData.c.sig === c.sig) { used.add(c.id); old.position.set(c.g.x, c.g.y, c.g.z); old.userData.c = c; root.add(old); objects.set(c.id, old); paint(old); if (old.userData.kind !== 'ctx') bounds.expandByObject(old); continue; }
       const geo = geometryOf(c), grp = new THREE.Group(); grp.position.set(c.g.x, c.g.y, c.g.z); grp.userData.id = c.id;
       const k = kindOf(c);
       const face = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: k === 'glass' ? 0xcfe0f2 : k === 'room' ? 0xe8b04a : k === 'ctx' ? L.ctx : L.solid, roughness: 0.5 }));
@@ -119,6 +122,7 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
       root.add(grp); objects.set(c.id, grp); paint(grp);
       if (k !== 'ctx') bounds.expandByObject(grp);
     }
+    for (const [id, g] of keep) if (!used.has(id)) g.traverse((m) => { m.geometry?.dispose(); m.material?.dispose?.(); });
     if (bounds.isEmpty()) for (const g of objects.values()) bounds.expandByObject(g);
     applyExplode(); highlight();
   }
@@ -127,6 +131,13 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     for (const o of [...clrGroup.children]) { clrGroup.remove(o); o.geometry.dispose(); o.material.dispose(); }
     if (xpl.on) return;
     for (const r of clrRects) {
+      if (r.pts) {   // a turned piece: its outline as it stands (Workspace panes)
+        const z = r.z + 0.02, P = [...r.pts, r.pts[0]].map(([x, y]) => new THREE.Vector3(x, y, z));
+        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(P), new THREE.LineDashedMaterial({ color: 0xd8402a, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.95, clippingPlanes: clip }));
+        line.computeLineDistances(); line.renderOrder = 11; clrGroup.add(line);
+        const sh = new THREE.Shape(r.pts.map(([x, y]) => new THREE.Vector2(x, y))), fill = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0xd8402a, transparent: true, opacity: 0.08, depthWrite: false, clippingPlanes: clip, side: THREE.DoubleSide }));
+        fill.position.z = z; clrGroup.add(fill); continue;
+      }
       const z = r.z + 0.02, pts = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1], [r.x0, r.y0]].map(([x, y]) => new THREE.Vector3(x, y, z));
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0xd8402a, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.95, clippingPlanes: clip }));
       line.computeLineDistances(); line.renderOrder = 11; clrGroup.add(line);
@@ -149,7 +160,8 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
   const box = () => (bounds.isEmpty() ? new THREE.Box3(new THREE.Vector3(-5, -5, 0), new THREE.Vector3(5, 5, 3)) : bounds);
   function fit() {
     const b = box(), c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
-    const k = Math.hypot(s.x, s.y, s.z + (xpl.on ? xpl.d * (xpl.bands.length - 1) : 0)) * 1.6 / Math.hypot(0.55, 0.62, 1);
+    const hr = host.getBoundingClientRect(), asp = hr.width > 2 && hr.height > 2 ? hr.width / hr.height : 1.5;   // a narrow view (a Workspace pane) stands further back
+    const k = Math.hypot(s.x, s.y, s.z + (xpl.on ? xpl.d * (xpl.bands.length - 1) : 0)) * 1.6 / Math.hypot(0.55, 0.62, 1) * Math.max(1, 1.25 / asp);
     persp.position.set(c.x - 0.55 * k, c.y - 1 * k, c.z + 0.62 * k); controls.target.set(c.x, c.y, c.z * 0.5 + (xpl.on ? xpl.d * (xpl.bands.length - 1) / 2 : 0)); persp.far = k * 50; persp.updateProjectionMatrix(); controls.update();
     plan.position.set(c.x, c.y, 200); plan.lookAt(c.x, c.y, 0); plan.userData.span = Math.max(s.x, s.y, 4) * 0.62;
     elev.position.set(c.x, b.min.y - 100, c.z); elev.lookAt(c.x, b.min.y, c.z); elev.userData.span = Math.max(s.z, s.x * 0.6, 3);

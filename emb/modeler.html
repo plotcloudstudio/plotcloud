@@ -3,6 +3,31 @@
 <head><script>if(location.pathname.endsWith('/emb/modeler.html')){const base=document.createElement('base');base.href=new URL('../',location.href).href;document.head.appendChild(base);}</script><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* Workspace mode (2026-10-24): ?ws=plan|persp|props puts this Plan Studio in a pane of the PlotCloud Workspace. It keeps no drafts,
+   does not become "the last project" and shows no first-run guide in this browser; the Workspace keeps the model. */
+(function(){var r=new URLSearchParams(location.search).get('ws');if(!/^(plan|persp|props)$/.test(r||''))return;window.__WSROLE=r;document.documentElement.classList.add('ws','ws-'+r);
+try{var g=Storage.prototype.getItem,st=Storage.prototype.setItem;Storage.prototype.getItem=function(k){if(this===localStorage){if(k==='pc-studio-last')return null;if(k==='pc-wb-tour')return '1';}return g.call(this,k);};
+Storage.prototype.setItem=function(k,v){if(this===localStorage&&(k==='pc-studio-last'||k==='pc-wb-tour'))return;return st.call(this,k,v);};}catch(e){}})();</script>
+<style>
+html.ws,html.ws body{height:100%;overflow:hidden}
+html.ws .deskonly{display:none!important}
+html.ws .kj{display:grid!important;height:100vh;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+html.ws .kj-top,html.ws .kl-left,html.ws .kj-status,html.ws .kbl,html.ws #draftBar,html.ws #empty,html.ws .wbtour,html.ws #selBar,html.ws #snapBtn{display:none!important}
+html.ws:not(.ws-props) .kj-right{display:none!important}
+html.ws .kj{position:relative}
+html.ws:not(.ws-props) .stage{position:absolute!important;inset:0!important;grid-area:auto!important;width:auto!important;height:auto!important;min-height:0!important}
+html.ws .thint{bottom:12px}
+html.ws-props .stage{position:fixed!important;left:-4000px;top:0;width:640px;height:420px;visibility:hidden}
+html.ws-props .kj-right{display:flex!important;flex-direction:column;grid-column:1!important;grid-row:1!important;border:0!important;width:auto!important;min-width:0}
+html.ws-props .kj-right>*{display:none!important}
+html.ws-props .kj-right>.kr-scroll{display:block!important;flex:1;overflow:auto;padding:0!important}
+html.ws-props .kr-scroll>*:not(#secProps){display:none!important}
+html.ws-props #secProps{margin:0!important;border:0!important;box-shadow:none!important}
+.wsclr{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--kj-line,#e5e6eb)}
+.wsclr b{grid-column:1/-1;font-size:12.5px}.wsclr label{display:grid;gap:3px;font-size:12px;color:var(--kj-sub,#4e5969)}.wsclr input{width:100%;box-sizing:border-box}
+.wsclr p{grid-column:1/-1;margin:0;font-size:11.5px;color:var(--kj-mut,#86909c)}
+</style>
+
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
@@ -2471,7 +2496,7 @@ function drawPreview() {
     g.strokeStyle = drawing.op === 'door' ? C.door : C.glass; g.lineWidth = Math.max(4 * d, (w.t || 0.2) * V.s + 2 * d); g.globalAlpha = 0.55; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); g.globalAlpha = 1; }
   if (SNAPI && (drawing || TOOL === 'wall' || TOOL==='fence'||TOOL==='floor'|| (drag && (drag.k === 'end' || drag.k === 'wall')))) { const q = SNAPI.p, s = W2S(q);
     if (SNAPI.w) { g.strokeStyle = 'rgba(108,108,224,.55)'; g.lineWidth = Math.max(3 * d, (SNAPI.w.t || 0.2) * V.s); g.lineCap = 'butt'; g.beginPath(); g.moveTo(...W2S(SNAPI.w.a)); g.lineTo(...W2S(SNAPI.w.b)); g.stroke(); }
-    g.lineWidth = 2 * d; g.strokeStyle = C.accent; g.fillStyle = 'rgba(216,64,42,.18)'; g.beginPath(); if (SNAPI.k === 'end') g.arc(s[0], s[1], 8 * d, 0, 7); else g.rect(s[0] - 6 * d, s[1] - 6 * d, 12 * d, 12 * d); g.fill();g.stroke();if(SNAPI.k==='end'||SNAPI.k==='mid')tag(s[0]+35*d,s[1]-16*d,(SNAPI.k==='mid'?'MIDPOINT':'ENDPOINT')+(SNAPI.below?' · below':''),{force:true,fs:10,col:C.accent}); }
+    g.lineWidth = 2 * d; g.strokeStyle = C.accent; g.fillStyle = 'rgba(216,64,42,.18)'; g.beginPath(); if (SNAPI.k === 'end') g.arc(s[0], s[1], 8 * d, 0, 7); else g.rect(s[0] - 6 * d, s[1] - 6 * d, 12 * d, 12 * d); g.fill();g.stroke();if(SNAPI.k==='end'||SNAPI.k==='mid'||SNAPI.k==='cen')tag(s[0]+35*d,s[1]-16*d,(SNAPI.k==='mid'?'MIDPOINT':SNAPI.k==='cen'?'CENTER':'ENDPOINT')+(SNAPI.below?' · below':''),{force:true,fs:10,col:C.accent}); }
   if (fdrag && fdrag.f) { drawFurn(fdrag.f, true); }
   if (PREV && TOOL === 'place') { g.globalAlpha = 0.7; drawFurn(PREV, true); g.globalAlpha = 1; }
 }
@@ -2589,16 +2614,20 @@ function selObj(s = SEL) { if (!s) return null; if(s.k==='fence')return (M.fence
 // ---------- snapping ----------
 const sg = (v, st = 0.05) => Math.round(v / st) * st;
 let SNAPI = null;   // what the pointer is stuck to right now: { p, k: 'end' | 'wall', w }
+const WSNAP = { end: true, mid: true, near: true, cen: false };   // which snaps are on (the Workspace status bar sets them; Cen is off by default)
+let wsCenPts = () => [];   // centre points for Cen (set in Workspace mode)
+let wsAxisSnap = (G, dir, k) => k;   // the gumball's move along an axis, snapped (Workspace mode)
 const wallLine = (w, t) => { const d = STC.wallDir(w); return [w.a[0] + d[0] * t, w.a[1] + d[1] * t]; };
 function snapPt(p, from, free) {
   guides = []; SNAPI = null; const tol = 11 * VP.d / V.s;
   // 1. the end of another wall (or a point of the wall being drawn)
-  const candidates=snapWalls();let best=null, bestKind='end',bestBelow=false,bd=tol; for(const w of candidates)for(const [q,kind] of [[w.a,'end'],[w.b,'end'],[[(w.a[0]+w.b[0])/2,(w.a[1]+w.b[1])/2],'mid']]){ const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if(dd<bd){bd=dd;best=q.slice();bestKind=kind;bestBelow=w.lv!==LV;} }
-  if (drawing && drawing.kind === 'wall') for (const q of drawing.pts) { const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd) { bd = dd; best = q.slice(); } }
+  const candidates=snapWalls();let best=null, bestKind='end',bestBelow=false,bd=tol; for(const w of candidates)for(const [q,kind] of [[w.a,'end'],[w.b,'end'],[[(w.a[0]+w.b[0])/2,(w.a[1]+w.b[1])/2],'mid']]){ if(!WSNAP[kind])continue; const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if(dd<bd){bd=dd;best=q.slice();bestKind=kind;bestBelow=w.lv!==LV;} }
+  if (drawing && drawing.kind === 'wall' && WSNAP.end) for (const q of drawing.pts) { const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd) { bd = dd; best = q.slice(); bestKind = 'end'; } }
+  if (WSNAP.cen) for (const q of wsCenPts(LV)) { const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd) { bd = dd; best = q.slice(); bestKind = 'cen'; bestBelow = false; } }
   if (best) { SNAPI={p:best,k:bestKind,below:bestBelow}; return best; }
   // 2. the body of another wall: the point is pulled onto its center line, so the new wall joins it
   let hit = null, hd = Infinity;
-  for (const w of candidates) { const L = STC.wallLen(w), dir = STC.wallDir(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1]; if (t < -0.05 || t > L + 0.05) continue; const q = wallLine(w, STC.clamp(t, 0, L)), dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < (w.t || 0.2) / 2 + tol * 0.7 && dd < hd) { hd = dd; hit = { w, q, dir, L }; } }
+  for (const w of WSNAP.near ? candidates : []) { const L = STC.wallLen(w), dir = STC.wallDir(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1]; if (t < -0.05 || t > L + 0.05) continue; const q = wallLine(w, STC.clamp(t, 0, L)), dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < (w.t || 0.2) / 2 + tol * 0.7 && dd < hd) { hd = dd; hit = { w, q, dir, L }; } }
   if (hit) {
     let q = hit.q; const { w, dir } = hit;
     if (from && !free) {   // keep a drawn wall square: use where the horizontal or vertical line from the last point meets this wall
@@ -3860,7 +3889,7 @@ cv.addEventListener('pointermove', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); if (WLK) { S3.walk.look(e.clientX - WLK.x, e.clientY - WLK.y); WLK = { x: e.clientX, y: e.clientY }; } return; }
   if (GZD) { e.stopImmediatePropagation(); const p = S3.plane(e.clientX, e.clientY, GZD.z); if (!p) return; const f = GZD.f;
     if (GZD.ax === 'r') { const a = Math.atan2(p[1] - f.y, p[0] - f.x); f.rot = (((GZD.r0 + a - GZD.a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(e, `${Math.round(f.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(f.rot) * 180 / Math.PI) % 360}°`); }
-    else { const dir = GZD.ax === 'x' ? [Math.cos(GZD.r0), Math.sin(GZD.r0)] : [-Math.sin(GZD.r0), Math.cos(GZD.r0)], k = (p[0] - GZD.p0[0]) * dir[0] + (p[1] - GZD.p0[1]) * dir[1]; f.x = +(GZD.x0 + dir[0] * k).toFixed(4); f.y = +(GZD.y0 + dir[1] * k).toFixed(4); tipAt(e, `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${GZD.ax === 'x' ? 'its width (X)' : 'its depth (Y)'}`); }
+    else { const dir = GZD.ax === 'x' ? [Math.cos(GZD.r0), Math.sin(GZD.r0)] : [-Math.sin(GZD.r0), Math.cos(GZD.r0)], k = wsAxisSnap(GZD, dir, (p[0] - GZD.p0[0]) * dir[0] + (p[1] - GZD.p0[1]) * dir[1]); f.x = +(GZD.x0 + dir[0] * k).toFixed(4); f.y = +(GZD.y0 + dir[1] * k).toFixed(4); tipAt(e, `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${GZD.ax === 'x' ? 'its width (X)' : 'its depth (Y)'}`); }
     S = STC.build(M); upd3D(); return; }
   if (CAM !== 'plan') return;
   if (NDRAG) { e.stopImmediatePropagation(); const p = evPt(e); NDRAG.n.x = +sg(p[0] + NDRAG.dx).toFixed(3); NDRAG.n.y = +sg(p[1] + NDRAG.dy).toFixed(3); NDRAG.moved = true; draw(); return; }
@@ -5238,6 +5267,35 @@ window.S3 = (() => {
     try{if(background==='white')scene.background=new T.Color('#ffffff');viewRenderer.render(scene,c);return {imageData:viewRenderer.domElement.toDataURL('image/png'),camera:api.cameraPose(),width,height};}
     finally{scene.background=previousBackground;hidden.forEach(o=>o.visible=true);}
   };
+
+  // ---- Workspace (2026-10-24): Ghosted and Wireframe change only the materials of what update() built; Shaded is Plan Studio's own look
+  let DISP = 'shaded'; const DMAT = new Map();
+  function dispApply(G) {
+    if (DISP === 'shaded' || !G) return; const em = new T.LineBasicMaterial({ color: 0x3a3d42, transparent: true, opacity: DISP === 'wire' ? 0.85 : 0.55 });
+    const list = []; G.traverse((m) => { if (m.isMesh && !m.userData.__disp && m.visible) list.push(m); });
+    for (const m of list) { const k0 = Array.isArray(m.material) ? m.material[0] : m.material; if (!k0) continue; const key = k0.uuid + '|' + DISP;
+      let nm = DMAT.get(key); if (!nm) { nm = k0.clone(); nm.transparent = true; nm.depthWrite = false; nm.opacity = DISP === 'wire' ? 0 : Math.min(k0.opacity ?? 1, 0.28); if (DISP === 'wire') nm.colorWrite = false; DMAT.set(key, nm); }
+      m.material = nm; m.userData.__disp = 1; if ((m.geometry.attributes.position?.count || 0) > 60000) continue;
+      const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, 30), em); e.raycast = () => {}; e.userData.__disp = 1; m.add(e); }
+  }
+  api.display = (mode) => { const next = mode === 'ghosted' || mode === 'wire' ? mode : 'shaded'; if (next === DISP) return; DISP = next; if (window.upd3DNow) window.upd3DNow(); };
+  api.displayMode = () => DISP;
+  { const _u2 = api.update; api.update = (M, S, o) => { _u2(M, S, o); if (DISP !== 'shaded' && grp) { dispApply(grp); render(); } }; }
+  // the model's meshes, grouped by object, in plan coordinates with z up (x, y, height): what the Workspace's Shaded pane draws
+  api.wsMeshes = async (M, S, o) => {
+    await lib(); const G = buildGroup(M, S, Object.assign({ all: true, furn: true, walls: true, floors: true, openings: true, flows: false, colOf: () => '#f0e5d2', ceil: { light: 1, panel: 1, vent: 1, smoke: 1 }, lights: true }, o || {}));
+    G.updateMatrixWorld(true); const by = new Map(), v = new T.Vector3();
+    G.traverse((m) => { if (!m.isMesh || m.name === 'wallcut' || m.name === 'beam') return; let vis = true; for (let q = m; q; q = q.parent) if (q.visible === false) { vis = false; break; } if (!vis) return;
+      const mat = Array.isArray(m.material) ? m.material[0] : m.material; if (!mat || (mat.opacity != null && mat.opacity < 0.05) || mat.colorWrite === false) return;
+      const ud = tagOf(m), key = ud ? ud.k + ':' + ud.id : 'misc:' + (m.name || 'mesh'); let e = by.get(key);
+      if (!e) { e = { k: ud ? ud.k : 'misc', id: ud ? String(ud.id) : (m.name || 'mesh'), pos: [], col: [] }; by.set(key, e); }
+      const g = m.geometry, pos = g.attributes.position, idx = g.index, n = idx ? idx.count : pos.count, flip = m.matrixWorld.determinant() < 0, c = mat.color || new T.Color(0xdddddd), a = mat.opacity ?? 1;
+      for (let i = 0; i + 2 < n; i += 3) { const tri = [0, 1, 2].map((j) => idx ? idx.getX(i + j) : i + j); if (flip) tri.reverse();
+        for (const t of tri) { v.fromBufferAttribute(pos, t).applyMatrix4(m.matrixWorld); e.pos.push(v.x, -v.z, v.y); e.col.push(c.r, c.g, c.b); } }
+      e.glass = e.glass || a < 0.9; });
+    G.traverse((m) => { if (m.geometry) m.geometry.dispose(); });
+    return [...by.values()].map((e) => ({ k: e.k, id: e.id, glass: !!e.glass, pos: new Float32Array(e.pos), col: new Float32Array(e.col) }));
+  };
   return api;
 })();
 
@@ -5359,11 +5417,212 @@ Object.assign(window.__pcWorkflow,{use:N=>useModel(STC.migrate(N),{saved:true}),
   ready().catch(e=>message(e.message,true));
   window.__pcViews={open:openPanel,save:saveView,restore:restoreView,capture,send:sendToRenderer,refresh,get records(){return records;},get selected(){return selectedView;},fingerprint};
 }
+
+// ---------- Workspace mode (2026-10-24): this Plan Studio is one pane of the PlotCloud Workspace ----------
+// ?ws=plan is the Plan pane (2D), ?ws=persp the Perspective pane (3D), ?ws=props the parameter panel on the Workspace's left.
+// All three are this same Plan Studio with its own tools, handles, gumball and toolbars. The Workspace page (the parent) holds the
+// one model: every change here goes to it (live while dragging, then on release), and it hands the change to the other panes.
+// Undo history lives in the Plan pane, so Ctrl+Z means the same thing in every pane. Nothing here runs without ?ws=.
+if (window.__WSROLE) {
+  const WS = { role: window.__WSROLE, rx: false, last: null, sel: '', lv: null, gb: true, disp: 'shaded', locks: new Set(), down: false, msgT: 0 };
+  const hub = () => { try { return window.parent !== window ? window.parent.__wsHub || null : null; } catch (e) { return null; } };
+  const KEY = (s) => s ? (s.k === 'end' ? 'wall' : s.k) + ':' + s.id : '';
+  const say = (t) => { if (Date.now() - WS.msgT < 1400) return; WS.msgT = Date.now(); if (WS.role === 'plan') { flash(t); return; } const h = hub(); if (h && h.say) h.say(WS.role, t); else flash(t); };   // messages show in the Plan pane, whichever pane made them
+  queueDraft = function () {};   // no drafts: the Workspace keeps the model and its versions
+  window.upd3DNow = () => { if (window.S3 && S3.on) upd3D(); };
+
+  // ---- §2 · furniture never goes into the body of a wall: moving, placing, resizing and turning are all checked (new code:
+  // Plan Studio only docks a piece against a wall and reports overlaps; it never blocks). The clearance is not part of the check.
+  // Door and window openings are part of the wall body here: a piece can stand in front of a door, never inside the wall.
+  const C2 = { m: null, ok: new Map() };   // the last state of each piece that was clear of the walls
+  const pc = (f) => JSON.parse(JSON.stringify(f));
+  const pst = (f) => JSON.stringify([f.lv, f.x, f.y, f.rot || 0, f.w, f.d, f.gen ? f.gen.vals : null]);
+  function wallPolys(lv) {   // each wall as its body: the centre line, half the thickness each side; an end that meets another wall runs on to close the corner
+    const ws = lvWalls(lv), ends = ws.flatMap((w) => [w.a, w.b]);
+    return ws.map((w) => { const d = STC.wallDir(w), n = [-d[1], d[0]], t = (w.t || 0.2) / 2, joined = (P) => ends.some((q) => q !== P && Math.hypot(q[0] - P[0], q[1] - P[1]) < t * 2 + 1e-3);
+      const ea = joined(w.a) ? t : 0, eb = joined(w.b) ? t : 0, a = [w.a[0] - d[0] * ea, w.a[1] - d[1] * ea], b = [w.b[0] + d[0] * eb, w.b[1] + d[1] * eb];
+      return [[a[0] + n[0] * t, a[1] + n[1] * t], [b[0] + n[0] * t, b[1] + n[1] * t], [b[0] - n[0] * t, b[1] - n[1] * t], [a[0] - n[0] * t, a[1] - n[1] * t]]; });
+  }
+  function sat(A, B) {   // the overlap of two convex outlines: how deep, and the direction that frees A with the least push; null when they only touch
+    let best = null;
+    for (const P of [A, B]) for (let i = 0; i < P.length; i++) { const q = P[(i + 1) % P.length], v = P[i]; let nx = q[1] - v[1], ny = v[0] - q[0]; const L = Math.hypot(nx, ny); if (L < 1e-9) continue; nx /= L; ny /= L;
+      let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+      for (const p of A) { const s = p[0] * nx + p[1] * ny; if (s < a0) a0 = s; if (s > a1) a1 = s; }
+      for (const p of B) { const s = p[0] * nx + p[1] * ny; if (s < b0) b0 = s; if (s > b1) b1 = s; }
+      const o = Math.min(a1, b1) - Math.max(a0, b0); if (o <= 0.001) return null;
+      if (!best || o < best.o) best = { o, n: (a0 + a1) / 2 < (b0 + b1) / 2 ? [-nx, -ny] : [nx, ny] }; }
+    return best;
+  }
+  const hits = (f, W) => { const A = STC.furnCorners(f); return W.map((B) => sat(A, B)).filter(Boolean); };
+  const hit = (f, W) => { const A = STC.furnCorners(f); return W.some((B) => sat(A, B)); };
+  function pushOut(f, W, n = 6) { for (let i = 0; i < n; i++) { const hs = hits(f, W); if (!hs.length) return true; const h = hs.sort((a, b) => b.o - a.o)[0]; f.x += h.n[0] * (h.o + 0.0002); f.y += h.n[1] * (h.o + 0.0002); } return !hit(f, W); }
+  function slide(f, from, W) {   // from the last clear spot towards where the piece was taken, in short steps: at a wall it slides along it and stops flush
+    const dx = f.x - from.x, dy = f.y - from.y, n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 0.03)); f.x = from.x; f.y = from.y; let stopped = false;
+    for (let i = 0; i < n; i++) { const px = f.x, py = f.y; f.x = px + dx / n; f.y = py + dy / n; if (!hit(f, W)) continue; stopped = true;
+      if (!pushOut(f, W, 4) || Math.hypot(f.x - px, f.y - py) > 0.06) { f.x = px; f.y = py; break; } }
+    f.x = +f.x.toFixed(4); f.y = +f.y.toFixed(4); return stopped;
+  }
+  function between(p, f, t) {   // a piece part way from its last clear size to the asked one (numbers in between, the rest as asked)
+    const r = pc(f); r.x = p.x + (f.x - p.x) * t; r.y = p.y + (f.y - p.y) * t;
+    if (f.gen && p.gen && p.gen.id === f.gen.id) { for (const k of Object.keys(f.gen.vals)) { const a = p.gen.vals[k], b = f.gen.vals[k]; if (typeof a === 'number' && typeof b === 'number') r.gen.vals[k] = Math.round(a + (b - a) * t); } genFit(r); }
+    else { r.w = p.w + (f.w - p.w) * t; r.d = p.d + (f.d - p.d) * t; }
+    return r;
+  }
+  function resolve(f, p, W) {   // the whole way from the last clear state is checked, not only where the piece ends up (it must not jump across a wall)
+    const sized = p.w !== f.w || p.d !== f.d || JSON.stringify(p.gen ? p.gen.vals : null) !== JSON.stringify(f.gen ? f.gen.vals : null);
+    if (sized && hit(f, W)) {   // a size that would reach into a wall stops at the largest size that fits
+      let lo = 0, hi = 1; for (let i = 0; i < 14; i++) { const m = (lo + hi) / 2; if (hit(between(p, f, m), W)) hi = m; else lo = m; }
+      const r = between(p, f, lo); Object.assign(f, { x: +r.x.toFixed(4), y: +r.y.toFixed(4), w: r.w, d: r.d, h: r.h }); if (r.gen) f.gen = r.gen;
+      return `Stopped at ${Math.round(f.w * 1000)} × ${Math.round(f.d * 1000)} mm: a wall is in the way.`;
+    }
+    let msg = null;
+    if (sized) return null;
+    if ((p.rot || 0) !== (f.rot || 0)) {   // turning: checked where the piece stands; a single turn may step clear of the wall, a drag stops at the last clear angle
+      const t = pc(f); t.x = p.x; t.y = p.y;
+      if (hit(t, W)) { const free = !HDRAG && !GZD && pushOut(t, W, 8) && Math.hypot(t.x - p.x, t.y - p.y) < 0.6;
+        if (free) { f.x = +t.x.toFixed(4); f.y = +t.y.toFixed(4); return 'Turned, and moved clear of the wall.'; }
+        f.rot = p.rot || 0; if (f.x === p.x && f.y === p.y) return 'It cannot turn here: it would go into a wall.'; msg = 'It cannot turn here: it would go into a wall.'; }
+    }
+    if (f.x !== p.x || f.y !== p.y) slide(f, p, W);
+    return msg;
+  }
+  function guard() {
+    if (C2.m !== M) { C2.m = M; C2.ok = new Map(M.furn.map((f) => [f.id, pc(f)])); return false; }   // a model handed in (opened, undone, from another pane) is taken as it is
+    const WP = new Map(), polys = (lv) => { if (!WP.has(lv)) WP.set(lv, wallPolys(lv)); return WP.get(lv); };
+    let msg = null, moved = false; const seen = new Set();
+    for (const f of M.furn.slice()) {
+      seen.add(f.id); const p = C2.ok.get(f.id); if (p && pst(p) === pst(f)) continue;
+      const W = polys(f.lv); const before = pst(f);
+      if (!p || p.lv !== f.lv) {   // a new piece (placed, pasted, duplicated): stepped clear of a wall if it is close, else not placed
+        if (hit(f, W)) { const t = pc(f); if (pushOut(t, W, 8) && Math.hypot(t.x - f.x, t.y - f.y) < 1) { f.x = +t.x.toFixed(4); f.y = +t.y.toFixed(4); msg = 'Placed clear of the wall.'; }
+          else { M.furn = M.furn.filter((q) => q !== f); if (SEL && SEL.id === f.id) SEL = null; msg = 'There is no room for it there: it would go into a wall.'; moved = true; continue; } }
+      } else if (!hit(p, W)) { const m2 = resolve(f, p, W); if (m2) msg = m2; }
+      if (pst(f) !== before) moved = true;
+      C2.ok.set(f.id, pc(f));
+    }
+    for (const id of [...C2.ok.keys()]) if (!seen.has(id)) C2.ok.delete(id);
+    if (msg) say(msg);
+    return moved;
+  }
+  WS.guard = guard;
+
+  // ---- sync with the Workspace: every change goes up, coalesced to one per frame (live while a drag is going on)
+  let nT = 0, nLive = true;
+  function notify(live) {
+    if (WS.rx) return; nLive = nLive && !!live; if (nT) return;
+    nT = requestAnimationFrame(() => { nT = 0; const lv = nLive; nLive = true; const s = snapM(); if (s === WS.last && (lv || !WS.sentLive)) return; WS.last = s; WS.sentLive = lv; const h = hub(); if (h) h.change(WS.role, s, lv); });   // the release after a drag goes up even when the last live frame already had it
+  }
+  { const _c = changed; changed = function (live, kp) { if (!WS.rx) guard(); _c(live, kp); if (!live) SAVEDSNAP = snapM(); histUI(); notify(live); }; }
+  { const _u = upd3D; upd3D = function (fit) {
+    if (GZD && !WS.rx && guard()) { S = STC.build(M); const D = GZD, dir = D.ax === 'x' ? [Math.cos(D.r0), Math.sin(D.r0)] : [-Math.sin(D.r0), Math.cos(D.r0)], k = (D.f.x - D.x0) * dir[0] + (D.f.y - D.y0) * dir[1];
+      if (D.ax !== 'r') { tipEl.textContent = `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${D.ax === 'x' ? 'its width (X)' : 'its depth (Y)'} · stopped at the wall`; } }
+    _u(fit); if (GZD) notify(true); }; }
+  // history: the Plan pane keeps it; the other panes hand their "before" to it and ask it to undo / redo
+  { const _cm = commit; commit = function (before) { if (WS.role !== 'plan' && before !== snapM()) { const h = hub(); if (h) h.pushUndo(before); } return _cm(before); }; }
+  function histUI() { const u = $('#undo'), r = $('#redo'); if (!u || XPL.on) return; if (WS.role === 'plan') { u.disabled = !UNDO.length; r.disabled = !REDO.length; return; } const h = hub(), st = h ? h.hist() : null; if (st) { u.disabled = !st.u; r.disabled = !st.r; } }
+  if (WS.role !== 'plan') {
+    undo = function () { const h = hub(); if (h) h.undo(); }; redo = function () { const h = hub(); if (h) h.redo(); };
+    $('#undo').addEventListener('click', (e) => { e.stopImmediatePropagation(); undo(); }, true); $('#redo').addEventListener('click', (e) => { e.stopImmediatePropagation(); redo(); }, true);
+  }
+  // selection and level: watched every frame (Plan Studio sets SEL and LV in many places)
+  (function poll() {
+    const k = KEY(SEL); if (k !== WS.sel) { WS.sel = k; if (!WS.rx) { const h = hub(); if (h) h.select(WS.role, SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k, id: SEL.id } : null); } }
+    if (LV !== WS.lv) { WS.lv = LV; if (!WS.rx) { const h = hub(); if (h) h.level(WS.role, LV); } }
+    requestAnimationFrame(poll); })();
+
+  // ---- layer locks from the Workspace: a locked layer's objects cannot be picked, and its tools do not start
+  const LOCKK = { wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
+  const TOOLK = { wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
+  cv.addEventListener('pointerdown', () => { WS.down = true; setTimeout(() => { WS.down = false; }, 0); }, true);
+  { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && LOCKK[h.k]; if (L && WS.locks.has(L)) { if (WS.down) say(`The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
+  { const _t = setTool; setTool = function (t) { const L = TOOLK[t] || (t === 'place' && PICK && REG[PICK] && REG[PICK].kind === 'stair' ? 'Furniture' : null); if (L && WS.locks.has(L)) { say(`The ${L} layer is locked. Unlock it in Layers to draw on it.`); return; } return _t(t); }; }
+  // ---- the gumball can be switched off from the Workspace status bar
+  { const _g = gizmoSync; gizmoSync = function () { if (!WS.gb) { if (window.S3 && S3.gizmo) S3.gizmo.set(null); return; } _g(); }; }
+  // ---- per-piece clearance (new: Plan Studio's clearance is fixed per kind; the Workspace lets each piece set its own four sides)
+  { const _co = clearanceOf; clearanceOf = function (f) { const c = _co(f); if (!c || !f.clr) return c; const o = Object.assign({}, c); for (const k of ['front', 'back', 'left', 'right']) if (Number.isFinite(f.clr[k])) o[k] = Math.max(0, f.clr[k]); return o; }; }
+  { const _p = propsUI; propsUI = function () { _p(); const o = SEL && SEL.k === 'furn' ? selObj() : null, c = o && clearanceOf(o), box = $('#props'); if (!c || !box) return;
+    const fld = (k, n) => `<label>${n}<input type="number" min="0" max="3000" step="50" data-clr="${k}" value="${Math.round(c[k] * 1000)}"${o.locked ? ' disabled' : ''}></label>`;
+    box.insertAdjacentHTML('beforeend', `<div class="wsclr" role="group" aria-label="Clearance"><b>Clearance (mm)</b>${fld('front', 'Front')}${fld('back', 'Back')}${fld('left', 'Left')}${fld('right', 'Right')}<p>The free space this piece wants round it, drawn when Clearance is on. A hint: walls block the piece, not its clearance.</p></div>`);
+    for (const el of box.querySelectorAll('[data-clr]')) el.addEventListener('change', () => { const v = +el.value; if (!Number.isFinite(v) || v < 0) { el.value = Math.round(c[el.dataset.clr] * 1000); return; } const b = snapM(); o.clr = Object.assign({}, o.clr || {}, { [el.dataset.clr]: Math.min(3, v / 1000) }); commit(b); }); }; }
+  // ---- Cen snap: arc wall centres, furniture centres, room centres; and the gumball's arrows snap to End / Mid / Near / Cen
+  wsCenPts = (lv, except) => {
+    const out = [], groups = new Map(); for (const w of lvWalls(lv)) if (w.grp) { if (!groups.has(w.grp)) groups.set(w.grp, []); groups.get(w.grp).push(w); }
+    for (const ws of groups.values()) { if (ws.length < 2) continue; const A = ws[0].a, B = ws[Math.floor(ws.length / 2)].a, C = ws[ws.length - 1].b, d = 2 * (A[0] * (B[1] - C[1]) + B[0] * (C[1] - A[1]) + C[0] * (A[1] - B[1])); if (Math.abs(d) < 1e-9) continue;
+      const a2 = A[0] * A[0] + A[1] * A[1], b2 = B[0] * B[0] + B[1] * B[1], c2 = C[0] * C[0] + C[1] * C[1]; out.push([(a2 * (B[1] - C[1]) + b2 * (C[1] - A[1]) + c2 * (A[1] - B[1])) / d, (a2 * (C[0] - B[0]) + b2 * (A[0] - C[0]) + c2 * (B[0] - A[0])) / d]); }
+    for (const f of M.furn) if (f.lv === lv && f.id !== except) out.push([f.x, f.y]);
+    if (S) for (const r of S.rooms) if (r.lv === lv) out.push([r.lx, r.ly]);
+    return out; };
+  wsAxisSnap = (G, dir, k) => {
+    const f = G.f, tol = 0.12, along = (q) => (q[0] - G.x0) * dir[0] + (q[1] - G.y0) * dir[1]; let best = k, bd = tol; WS.snapKind = null;
+    const pts = []; for (const w of lvWalls(f.lv)) { if (WSNAP.end) pts.push([w.a, 'end'], [w.b, 'end']); if (WSNAP.mid) pts.push([[(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2], 'mid']); }
+    if (WSNAP.cen) for (const q of wsCenPts(f.lv, f.id)) pts.push([q, 'cen']);
+    for (const [q, kd] of pts) { const a = along(q); if (Math.abs(a - k) < bd) { bd = Math.abs(a - k); best = a; WS.snapKind = kd; } }
+    if (WSNAP.near) {   // the leading face of the piece onto the nearest wall face along the arrow
+      const half = G.ax === 'x' ? f.w / 2 : f.d / 2, side = G.ax === 'x' ? f.d / 2 : f.w / 2, pr = [-dir[1], dir[0]], c0 = (G.x0) * pr[0] + (G.y0) * pr[1];
+      for (const B of wallPolys(f.lv)) { let b0 = Infinity, b1 = -Infinity, l0 = Infinity, l1 = -Infinity; for (const q of B) { const a = along(q), l = q[0] * pr[0] + q[1] * pr[1] - c0; b0 = Math.min(b0, a); b1 = Math.max(b1, a); l0 = Math.min(l0, l); l1 = Math.max(l1, l); }
+        if (l1 <= -side || l0 >= side) continue; for (const cand of [b0 - half, b1 + half]) if (Math.abs(cand - k) < bd) { bd = Math.abs(cand - k); best = cand; WS.snapKind = 'near'; } }
+    }
+    return best; };
+
+  // ---- what the Workspace calls
+  Object.assign(WS, {
+    load(snap) { WS.rx = true; try { useModel(STC.migrate(JSON.parse(snap)), { saved: true }); } finally { WS.rx = false; } C2.m = null; guard(); WS.last = snapM(); WS.lv = LV; WS.sel = KEY(SEL); if (window.S3 && S3.on) { upd3D(true); aspectFit(); } histUI(); return WS.last; },
+    apply(snap, live) { if (snap === snapM()) { WS.last = snap; if (!live) { WS.rx = true; try { changed(false); } finally { WS.rx = false; } } return; } WS.rx = true; try { M = JSON.parse(snap); guard(); if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !selObj()) SEL = null; changed(!!live, !!live); if (!live) syncInputs(); if (window.S3 && S3.on) upd3D(); } finally { WS.rx = false; } WS.last = snapM(); WS.sel = KEY(SEL); },
+    select(s) { WS.rx = true; try { const o = s ? selObj(s) : null; if (o && o.lv && o.lv !== LV && M.levels.some((l) => l.id === o.lv)) { LV = o.lv; WS.lv = LV; changed(); } SEL = o ? s : null; WS.sel = KEY(SEL); if (SEL && LAYER_OF[SEL.k] && LAYER_OF[SEL.k] !== LAYER) setLayer(LAYER_OF[SEL.k], true); changedSel(); } finally { WS.rx = false; } },
+    level(id) { if (!M.levels.some((l) => l.id === id) || id === LV) return; WS.rx = true; try { WS.lv = id; gotoLevel(id); WS.sel = KEY(SEL); } finally { WS.rx = false; } },
+    pushUndo(b) { UNDO.push(b); if (UNDO.length > 120) UNDO.shift(); REDO.length = 0; histUI(); },
+    flash(t) { flash(t); },
+    undo() { undo(); }, redo() { redo(); }, hist: () => ({ u: UNDO.length, r: REDO.length }), histUI,
+    layers(map) { for (const [id, on] of Object.entries(map)) { const n = LYR.get(id); if (n) n.visible = !!on; } setLayerVis('parts', LYR.get('parts').visible); lyChanged(); },
+    setLocks(list) { WS.locks = new Set(list); if (SEL && WS.locks.has(LOCKK[SEL.k])) { SEL = null; changedSel(); } },
+    snaps(o) { WSNAP.end = !!o.End; WSNAP.mid = !!o.Mid; WSNAP.near = !!o.Near; WSNAP.cen = !!o.Cen; },
+    clearance(on) { CLR.on = !!on; clrUI(); draw(); },
+    gumball(on) { WS.gb = !!on; if (window.S3 && S3.on) gizmoSync(); if (window.S3 && S3.on) upd3D(); },
+    display(m) { WS.disp = m; if (window.S3 && S3.display) S3.display(m); },
+    async view(v) { if (v === 'walk') await walkEnter(); else if (v === 'bird') await birdView(); else if (v === 'explode') { if (XPL.on) explodeExit(); else await explodeEnter(); } else if (v === 'plan' || v === 'ceiling' || v === 'elev') setView2D(v); return WS.state(); },
+    state: () => ({ cam: CAM, view2d: VIEW2D, walking: WALKING, walkpick: WMARK.on, explode: XPL.on, tool: TOOL, pick: PICK, opm: OPM[TOOL] || null, light: LTOOL, lv: LV, clr: CLR.on, gumball: WS.gb, disp: window.S3 && S3.displayMode ? S3.displayMode() : 'shaded', snaps: Object.assign({}, WSNAP) }),
+    tool(o) {   // a tool chosen in the Workspace's left panel: the same tile or tool Plan Studio's own panel would use
+      if (CAM !== 'plan' && WS.role === 'plan') setCam('plan');
+      if (o.furn) { if (WS.locks.has('Furniture')) { say('The Furniture layer is locked. Unlock it in Layers to place furniture.'); return false; } if (!genModel(o.furn)) return false; setLayer('Furniture'); PICK = o.furn; setTool('place'); libUI(); return TOOL === 'place'; }
+      if (o.stair) { const b = document.querySelector(`[data-stair="${o.stair}"]`); if (!b) return false; if (WS.locks.has('Furniture')) { say('The Furniture layer is locked. Unlock it in Layers to place it.'); return false; } b.click(); return TOOL === 'place'; }
+      if (o.light) { if (WS.locks.has('Lighting')) { say('The Lighting layer is locked. Unlock it in Layers to place lights.'); return false; } const t = document.querySelector('[data-lt="light"]'); if (t) t.click(); const b = document.querySelector(`[data-fx="${o.light}"]`); if (!b) return false; if (LTOOL !== o.light) b.click(); return LTOOL === o.light; }
+      LTOOL = null; const b = document.querySelector(`[data-tool="${o.tool}"]${o.opm ? `[data-opm="${o.opm}"]` : ''}`); if (!b) return false; b.click(); return TOOL === o.tool; },
+    hide(id, on) { return commands.execute(on ? new HideCommand(id) : new ShowCommand([id])); },
+    del(s) { const o = selObj(s); if (!o) return false; if (o.locked) { say('This piece is locked. Unlock it in the toolbar to delete it.'); return false; } SEL = s; if (s.k === 'furn' || s.k === 'ceil' || s.k === 'note') return commands.execute(new DeleteCommand(s)); delSel(); return true; },
+    dup(s) { if (!['wall', 'furn', 'floor', 'void', 'ceil', 'note', 'light'].includes(s.k)) return false; return commands.execute(new DuplicateCommand(s.k, s.id)); },
+    objects() {   // every object, with the name the Workspace's layer tree shows
+      const out = [], L = (id) => (lvObj(id) || {}).name || '';
+      for (const w of M.walls) out.push({ k: 'wall', id: w.id, lv: w.lv, name: `Wall ${(STC.wallLen(w)).toFixed(2)} m`, level: L(w.lv) });
+      for (const f of M.fences || []) out.push({ k: 'fence', id: f.id, lv: f.lv, name: 'Fence', level: L(f.lv) });
+      for (const o of M.ops) { const w = wallById(o.wall), m = o.gen ? genModel(o.gen.id) : null; out.push({ k: 'op', id: o.id, lv: w ? w.lv : null, name: o.hole ? 'Wall opening' : m ? m.en : o.kind === 'door' ? 'Door' : 'Window', level: w ? L(w.lv) : '', kind: o.hole ? 'hole' : o.kind }); }
+      for (const f of M.floors) out.push({ k: 'floor', id: f.id, lv: f.lv, name: f.auto ? 'Floor (follows the walls)' : 'Floor slab', level: L(f.lv) });
+      for (const v of M.voids) out.push({ k: 'void', id: v.id, lv: v.lv, name: v.fromStair ? 'Stair opening' : 'Floor opening', level: L(v.lv) });
+      for (const f of M.furn) out.push({ k: 'furn', id: f.id, lv: f.lv, name: furnName(f), level: L(f.lv), stair: !!(f.gen && REG[f.gen.id] && REG[f.gen.id].kind === 'stair') });
+      for (const l of M.lights || []) out.push({ k: 'light', id: l.id, lv: l.lv, name: (WBF.TYPES[l.type] || { name: 'Light' }).name, level: L(l.lv) });
+      for (const c of M.ceil || []) out.push({ k: 'ceil', id: c.id, lv: c.lv, name: (CEIL_NAME && CEIL_NAME[c.kind]) || 'Ceiling item', level: L(c.lv) });
+      if (S) for (const r of S.rooms) out.push({ k: 'room', id: r.key, lv: r.lv, name: r.name, level: L(r.lv), area: r.area, lx: r.lx, ly: r.ly, bb: [r.bx0, r.by0, r.bx1, r.by1], z0: r.z0, h: r.h });
+      return out; },
+    clearances() { return M.furn.filter((f) => !isHidden(f.id)).map((f) => { const c = clearanceOf(f); if (!c) return null; const hw = f.w / 2, hd = f.d / 2, cs = Math.cos(f.rot || 0), sn = Math.sin(f.rot || 0);
+      return { id: f.id, z: (lvObj(f.lv) || { z: 0 }).z, pts: [[-hw - c.left, -hd - c.back], [hw + c.right, -hd - c.back], [hw + c.right, hd + c.front], [-hw - c.left, hd + c.front]].map(([u, v]) => [f.x + u * cs - v * sn, f.y + u * sn + v * cs]) }; }).filter(Boolean); },
+    lights: () => WBF.KEYS.map((k) => [k, WBF.TYPES[k].name]),
+    levels: () => ({ list: lvSorted().map((l) => ({ id: l.id, name: l.name, short: lvShort(l), z: l.z, h: l.h })), lv: LV }),
+    hidden: () => (M.hiddenIds || []).slice(),
+    meshes: async () => (window.S3 && S3.wsMeshes ? S3.wsMeshes(M, S, { hidden: new Set(M.hiddenIds || []) }) : []),
+    model: () => snapM(),
+  });
+  // a narrow pane: Plan Studio's 3D fit is made for a wide view, so it steps back by the pane's shape (display only)
+  const aspectFit = () => { if (!window.S3 || !S3.on || !S3.zoom) return; const r = cv3.getBoundingClientRect(), a = r.width / Math.max(1, r.height); if (a < 1.3) S3.zoom(Math.max(0.3, a / 1.4)); };
+  { const _b = birdView; birdView = async function () { await _b(); aspectFit(); }; }
+  WS.aspectFit = aspectFit;
+  window.__ws = WS;
+  const boot = async () => { const h = hub(); if (!h) { setTimeout(boot, 120); return; } if (WS.role === 'persp') { await setCam('3d'); } h.ready(WS.role, window); };
+  if (document.readyState === 'complete') setTimeout(boot, 30); else addEventListener('load', () => setTimeout(boot, 30));
+}
 </script>
 <script>
 // ===== PlotCloud bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
 (function () {
-  if (window.__pcBridge || window.parent === window) return; window.__pcBridge = 1;
+  if (window.__pcBridge || window.parent === window || window.__WSROLE) return; window.__pcBridge = 1;
   const boot = () => setTimeout(start, 300); if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
   function start() {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];

@@ -44,7 +44,7 @@ export function toStudio(model, site, { name = 'Project', id = 'ws' } = {}) {
   const floors = C.filter((c) => c.type === 'slab').map((c) => { const L = levels[levelOf(c.g.z + c.g.h)]; return { id: c.id, lv: L.id, x: r3(c.g.x), y: r3(c.g.y), w: r3(c.g.w), d: r3(c.g.d), object_type: 'floor', layer: 'Floor' }; });
   const names = C.filter((c) => c.type === 'room').map((c) => ({ lv: levels[levelOf(c.g.z)].id, x: r3(c.g.x + c.g.w / 2), y: r3(c.g.y + c.g.d / 2), name: c.name }));
   const furn = C.filter((c) => c.type === 'furniture').map((c) => { const L = levels[levelOf(c.g.z)];
-    return { id: c.id, lv: L.id, type: c.furn || 'box', x: r3(c.g.x + c.g.w / 2), y: r3(c.g.y + c.g.d / 2), w: r3(c.g.w), d: r3(c.g.d), h: r3(c.g.h), rot: 0, object_type: 'furniture', layer: 'Furniture', name: c.name, ...(c.furn ? { gen: { id: c.furn, vals: c.params || {} } } : {}) }; });
+    return { id: c.id, lv: L.id, type: c.furn || 'box', x: r3(c.g.x + c.g.w / 2), y: r3(c.g.y + c.g.d / 2), w: r3(c.g.w), d: r3(c.g.d), h: r3(c.g.h), rot: 0, object_type: 'furniture', layer: 'Furniture', name: c.name, ...(c.furn ? { gen: { id: c.furn, vals: c.params || {} } } : { label: c.name }) }; });
   return { v: 2, units: 'm', version: 0, id, name, north: site?.north || 0,
     climate: { from: windFrom(site), U10: Number.isFinite(site?.wind) ? site.wind : 3.5, terrain: 'suburban', Tout: 18, Tin: 24 }, targets: { ach: 5, df: 2, view: 0.75 },
     levels, walls, fences: [], ops, floors, voids: [], furn, names, ceil: [], notes: [], hiddenIds: [], lights: [] };
