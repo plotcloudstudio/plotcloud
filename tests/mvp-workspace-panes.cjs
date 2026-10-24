@@ -17,6 +17,7 @@ L.W=(p,role,fn,arg)=>p.evaluate(([role,fn,arg])=>{const w=document.getElementByI
 L.ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};
 
 const {ok,P,W}=L;
+const view=async(p,v)=>{await p.click('#vBtn');await p.click(`#vMenu [data-view="${v}"]`);await p.waitForTimeout(700);};
 (async()=>{
 // ---- §3 walls, doors and windows
 { const {b,p,errs,B}=await L.open();await L.ws(p,B);
@@ -167,6 +168,7 @@ ok(live[1].x===live[0].x,'Perspective has the same position during the drag');
 ok(Math.abs(live[2]-live[0].x)<0.06,'Shaded has it there too during the drag');
 const after=await bed('props');ok(after.x===live[0].x,'the parameter pane has it after the drag');
 ok(await p.evaluate(x=>Math.abs(__ws2.model().studio.furn.find(f=>f.gen&&f.gen.id==='bed').x-x)<1e-6,live[0].x),'and the project draft keeps it');
+await view(p,'persp');
 // §4 · gumball in Perspective: yellow arrow (width, X) with a numeric tip, stopped by the wall
 await p.evaluate(id=>__ws2.hub.select('test',{k:'furn',id}),B0.id);await p.waitForTimeout(800);
 const gz=await W(p,'persp',w=>{const st=w.S3.gizmo.state();return st?{handles:st.handles,parts:(st.parts||[]).length}:null;});ok(gz&&gz.handles,'Perspective shows Plan Studio\'s gumball on the selected bed');
@@ -185,6 +187,7 @@ await p.click('[data-snap="Cen"]');ok(await W(p,'persp',w=>w.__ws.state().snaps.
 await p.click('[data-snap="Cen"]');
 // gumball switch off
 await p.click('[data-sw="gumball"]');await p.waitForTimeout(500);ok(!(await W(p,'persp',w=>!!w.S3.gizmo.state())),'Gumball off in the status bar hides it');await p.click('[data-sw="gumball"]');await p.waitForTimeout(500);ok(await W(p,'persp',w=>!!w.S3.gizmo.state()),'and on shows it again');
+await view(p,'plan');
 // floating selection toolbar (Plan): Duplicate, Hide (linked to the layer eye), Lock, expand / collapse, Delete
 const ft=(k)=>W(p,'plan',(w,k)=>{const b=w.document.querySelector(`#ftb [data-ft="${k}"]`);if(!b||b.hidden||b.disabled)return false;b.click();return true;},k);
 await p.evaluate(id=>__ws2.hub.select('test',{k:'furn',id}),B0.id);await p.waitForTimeout(600);
@@ -209,18 +212,18 @@ await W(p,'plan',w=>w.document.querySelector('[data-tool="note"]').click());ok(a
 a=await P(p,7,9);await p.mouse.click(...a);await p.waitForTimeout(300);await p.keyboard.type('Reading corner');await p.keyboard.press('Enter');await p.waitForTimeout(900);
 ok(await W(p,'plan',w=>w.__st.M.notes.some(n=>n.text==='Reading corner')),'…adds a text label on the plan');
 await W(p,'plan',w=>w.document.querySelector('[data-tool="del"]').click());ok(await W(p,'plan',w=>w.__ws.state().tool)==='del','Delete tool');
-await W(p,'persp',w=>w.document.getElementById('xBtn').click());await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().explode),'Explode in the 3D toolbar');
-await p.waitForTimeout(800);ok(await p.evaluate(()=>document.querySelector('[data-pv="explode"]').getAttribute('aria-pressed'))==='true','…and the pane header follows');
+await view(p,'persp');await W(p,'persp',w=>w.document.getElementById('xBtn').click());await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().explode),'Explode in the 3D toolbar');
+await p.waitForTimeout(900);ok(/Exploded view/.test(await p.textContent('#vBtn')),'…and the view pill at the top left follows');
 await W(p,'persp',w=>w.document.getElementById('xBtn').click());await p.waitForTimeout(600);
 await W(p,'persp',w=>w.document.querySelector('[data-tool="orbit"]').click());ok(await W(p,'persp',w=>w.__ws.state().tool)==='orbit','Orbit');
 // Perspective header: Walkthrough, Bird, Ghosted / Wireframe
-await p.click('[data-pv="walk"]');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().walkpick),'Walkthrough: Plan Studio first asks where to start (the figure on the plan)');await W(p,'persp',w=>w.document.getElementById('wmGo').click());await p.waitForTimeout(1200);ok(await W(p,'persp',w=>w.__ws.state().walking),'Start walking: first person in the Perspective pane');await p.screenshot({path:L.SP+'t45walk.png'});
-await p.click('[data-pv="bird"]');await p.waitForTimeout(900);ok(!(await W(p,'persp',w=>w.__ws.state().walking)),'Bird');
-await p.selectOption('#dispSel','ghosted');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='ghosted','Ghosted');
+await view(p,'walk');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().walkpick),'Walkthrough: Plan Studio first asks where to start (the figure on the plan)');await W(p,'persp',w=>w.document.getElementById('wmGo').click());await p.waitForTimeout(1200);ok(await W(p,'persp',w=>w.__ws.state().walking),'Start walking: first person in the Perspective pane');await p.screenshot({path:L.SP+'t45walk.png'});
+await view(p,'persp');await p.waitForTimeout(900);ok(!(await W(p,'persp',w=>w.__ws.state().walking)),'Bird');
+await p.click('#dBtn');await p.click('#dMenu [data-disp="ghosted"]');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='ghosted','Ghosted');
 await p.screenshot({path:L.SP+'t45g.png'});
-await p.selectOption('#dispSel','wire');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='wire','Wireframe');
+await p.click('#dBtn');await p.click('#dMenu [data-disp="wire"]');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='wire','Wireframe');
 await p.screenshot({path:L.SP+'t45w.png'});
-await p.selectOption('#dispSel','shaded');await p.waitForTimeout(500);
+await p.click('#dBtn');await p.click('#dMenu [data-disp="shaded"]');await p.waitForTimeout(500);
 // §5 · Walls eye off: walls go in all three panes
 const wallsIdx=await p.evaluate(()=>[...document.querySelectorAll('.w2-layer')].findIndex(l=>/Walls/.test(l.querySelector('.nm').textContent)));
 await p.evaluate(i=>document.querySelectorAll('[data-vis]')[i].click(),wallsIdx);await p.waitForTimeout(900);
@@ -229,20 +232,19 @@ console.log('  Walls off → plan VIS.Wall',vis[0],'· perspective',vis[1],'· s
 ok(vis[0]===false&&vis[1]===false&&vis[2]===0,'turning off the Walls eye hides walls in all three panes');
 await p.screenshot({path:L.SP+'t45v.png'});
 await p.evaluate(i=>document.querySelectorAll('[data-vis]')[i].click(),wallsIdx);await p.waitForTimeout(700);
+await view(p,'plan');
 // locking Walls: walls cannot be picked in the panes, and the wall tool does not start
 await p.evaluate(i=>document.querySelectorAll('[data-lock]')[i].click(),wallsIdx);await p.waitForTimeout(500);
 await W(p,'plan',w=>w.document.querySelector('[data-tool="select"]').click());a=await P(p,0.125,6);await p.mouse.click(...a);await p.waitForTimeout(500);
 ok(await W(p,'plan',w=>!w.__st.SEL||w.__st.SEL.k!=='wall'),'a locked Walls layer: a wall cannot be picked in the Plan');
 await p.click('[data-panel="draw"]');await p.click('[data-tool="Straight wall"]');ok(await W(p,'plan',w=>w.__ws.state().tool)!=='wall','…and the wall tool does not start');
 await p.evaluate(i=>document.querySelectorAll('[data-lock]')[i].click(),wallsIdx);await p.waitForTimeout(400);
-// §5 · splitter: drag it, reload, the widths stay
-const sp=await p.evaluate(()=>{const r=document.querySelector('.w3-split[data-split="0"]').getBoundingClientRect();return [r.left+3,r.top+r.height/2];});
-const w0=await p.evaluate(()=>document.querySelector('[data-pane="plan"]').getBoundingClientRect().width);
-await p.mouse.move(...sp);await p.mouse.down();await p.mouse.move(sp[0]+120,sp[1],{steps:6});await p.mouse.up();await p.waitForTimeout(300);
-const w1=await p.evaluate(()=>document.querySelector('[data-pane="plan"]').getBoundingClientRect().width);ok(Math.abs(w1-w0-120)<4,`the splitter widens Plan by 120 px (${w0.toFixed(0)} → ${w1.toFixed(0)})`);
+// one view at a time, chosen at the top left, and kept after a reload
+ok(await p.evaluate(()=>document.querySelectorAll('.w3-pane.on').length===1&&!document.querySelector('.w3-split')),'one view at a time, no splitters');
+await view(p,'shaded');ok(await p.evaluate(()=>document.querySelector('.w3-pane.on').dataset.pane)==='shaded','the Shaded model (imports and site) is one of the views');
 await p.reload();for(let i=0;i<60;i++){await p.waitForTimeout(400);if(await p.evaluate(()=>window.__ws2&&window.__ws2.ready()))break;}
-const w2=await p.evaluate(()=>document.querySelector('[data-pane="plan"]').getBoundingClientRect().width);ok(Math.abs(w2-w1)<3,`after a reload the widths are kept (${w2.toFixed(0)} px)`);
-ok(await p.evaluate(()=>!document.querySelector('.w2-cap')),'the old view pill is gone');
+ok(await p.evaluate(()=>document.querySelector('.w3-pane.on').dataset.pane)==='shaded'&&/Shaded model/.test(await p.textContent('#vBtn')),'the chosen view is kept after a reload');
+ok(await p.evaluate(()=>!!document.querySelector('#cap #vBtn')),'the view pill is back at the top left');
 ok(!!(await bed()),'the bed is still there after the reload (the draft keeps Plan Studio\'s model)');
 
 if(errs.length){console.log('page errors:',errs);process.exitCode=1;}

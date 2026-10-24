@@ -66,7 +66,7 @@ const CLASSES = [
 function classify(c) { const k = CLASSES.find(([re]) => re.test(c.name)); if (k) Object.assign(c, { type: k[1], layer: k[2], mat: k[3] }); return c; }
 
 const UKEY = 'pc-mvp-ws2';
-const DEF_UI = { panel: 'project', snap: { End: true, Near: true, Mid: true, Cen: false }, gumball: true, clearance: false, sels: [], selProject: null, open: ['Walls', 'Glazing', 'Rooms', 'Imported'], split: [1, 1, 1], disp: 'shaded' };
+const DEF_UI = { panel: 'project', snap: { End: true, Near: true, Mid: true, Cen: false }, gumball: true, clearance: false, sels: [], selProject: null, open: ['Walls', 'Glazing', 'Rooms', 'Imported'], split: [1, 1, 1], disp: 'shaded', view: 'plan' };
 function readUI() {
   try { const u = JSON.parse(localStorage.getItem(UKEY) || 'null'); if (!u) return { ...DEF_UI };
     if (!u.sels) u.sels = u.sel ? [u.sel] : []; if (!u.ws3) { u.gumball = true; u.ws3 = 1; }   // the gumball works now: on once, then as the person leaves it
@@ -128,20 +128,16 @@ export function render(app, [pid]) {
     <div class="w3-props" id="propsWrap" data-off="true"><div class="pane w3-ph2"><h2>Parameters <button class="btn sm" id="pDone">Done</button></h2><p class="note" id="pWhat"></p></div>
       <iframe id="fProps" title="Parameters of the selection (Plan Studio)" src="${fsrc('props')}"></iframe></div>
   </aside>
-  <section class="stage w2-stage w3-stage" aria-label="Plan, Perspective and Shaded views">
-    <div class="w3-pane" data-pane="plan" style="flex:${UI.split[0]}">
-      <div class="w3-hd"><b>Plan</b><label class="w3-lv">Level <select id="lvSel" aria-label="Level"></select></label><span class="w3-meta" id="lvMeta"></span>
-        <span class="w3-seg" role="group" aria-label="2D view"><button type="button" data-v2="plan" aria-pressed="true">Plan</button><button type="button" data-v2="ceiling" aria-pressed="false">Ceiling</button><button type="button" data-v2="elev" aria-pressed="false" title="Interior elevation: pick a wall">Elevation</button></span></div>
-      <iframe id="fPlan" title="Plan (Plan Studio 2D)" src="${fsrc('plan')}"></iframe></div>
-    <div class="w3-split" data-split="0" role="separator" aria-orientation="vertical" aria-label="Resize Plan and Perspective" tabindex="0"></div>
-    <div class="w3-pane" data-pane="persp" style="flex:${UI.split[1]}">
-      <div class="w3-hd"><b>Perspective</b><span class="w3-seg" role="group" aria-label="3D view"><button type="button" data-pv="bird" aria-pressed="true">Bird</button><button type="button" data-pv="walk" aria-pressed="false">Walkthrough</button><button type="button" data-pv="explode" aria-pressed="false">Explode</button></span>
-        <label class="w3-lv">Display <select id="dispSel" aria-label="Display"><option value="shaded">Shaded</option><option value="ghosted">Ghosted</option><option value="wire">Wireframe</option></select></label></div>
-      <iframe id="fPersp" title="Perspective (Plan Studio 3D)" src="${fsrc('persp')}"></iframe></div>
-    <div class="w3-split" data-split="1" role="separator" aria-orientation="vertical" aria-label="Resize Perspective and Shaded" tabindex="0"></div>
-    <div class="w3-pane" data-pane="shaded" style="flex:${UI.split[2]}">
-      <div class="w3-hd"><b>Shaded</b><span class="w3-meta">view only · click to select</span><span class="sp"></span><button class="btn sm" id="fit">Fit</button></div>
-      <div class="w3-body"><div class="vp" id="vp"></div><div class="hint" id="hint"></div></div></div>
+  <section class="stage w2-stage w3-stage" aria-label="Model view">
+    <div class="w3-pane" data-pane="plan"><iframe id="fPlan" title="Plan (Plan Studio 2D)" src="${fsrc('plan')}"></iframe></div>
+    <div class="w3-pane" data-pane="persp"><iframe id="fPersp" title="Perspective (Plan Studio 3D)" src="${fsrc('persp')}"></iframe></div>
+    <div class="w3-pane" data-pane="shaded"><div class="w3-body"><div class="vp" id="vp"></div><div class="hint" id="hint"></div></div></div>
+    <div class="w2-cap" id="cap">
+      <div><button type="button" id="vBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="vMenu" role="menu" hidden></div></div>
+      <span class="w2-sep" aria-hidden="true"></span>
+      <div><button type="button" id="dBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="dMenu" role="menu" hidden></div></div>
+    </div>
+    <div class="w2-tr"><button class="btn sm" id="fit">Fit</button></div>
   </section>
   <aside class="w2-right" aria-label="Layers, selection and versions">
     <div class="pane"><h2>Layers <button class="btn sm" id="addLayer">+ Layer</button></h2>
@@ -177,7 +173,7 @@ export function render(app, [pid]) {
       if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true;
       const back = I2.ws.load(SNAP); if (role === 'plan' && back !== SNAP) hub.change('plan', back, false);   // Plan Studio tidies a model it opens: that is the one model from now on
       tell(I2); if (role === 'plan' || !OBJ.length) derive(false);
-      paneUI(); if (role === 'plan') { levelUI(); if (converted) toast('This project now uses Plan Studio’s model in all three panes. Imported meshes and the site are kept as they were.'); }
+      paneUI(); if (role === 'plan') { levelUI(); if (converted) toast('This project now uses Plan Studio’s model in every view. Imported meshes and the site are kept as they were.'); }
     },
     change(role, snap, live) {
       if (dead || (snap === SNAP && live)) return; SNAP = snap;   // the same model again, not live: a drag was let go, so it is kept now
@@ -249,37 +245,46 @@ export function render(app, [pid]) {
   const persist = () => { S.save(); state(); };
   const SELHELP = 'Click to select · drag a box: left→right inside, right→left touching · Shift adds, Ctrl removes · Tab cycles what is under the cursor';
   function hint() { const h = $('#hint', app); h.title = SELHELP; h.textContent = tabInfo ? `${tabInfo.name} — ${tabInfo.index + 1} of ${tabInfo.count} under the cursor${tabInfo.count > 1 ? ' · Tab for the next one' : ''} · click to select` : 'View only · right-drag orbits · Shift+right-drag pans · scroll zooms · click or box to select'; }
-  $('#fit', app).onclick = () => vp.fit();
+  $('#fit', app).onclick = () => { if (UI.view === 'shaded') vp.fit(); else if (UI.view === 'plan' && INST.plan.ready) INST.plan.win.document.getElementById('fitBtn')?.click(); else if (INST.persp.ready) INST.persp.win.document.getElementById('fitBtn')?.click(); };
   hint();
 
-  // ---- pane headers: level, 2D view, 3D view and display
-  function levelUI() {
-    const w = INST.plan.ready ? INST.plan.ws : any(); if (!w) return; const L = w.levels(), sel = $('#lvSel', app), cur = L.list.find((l) => l.id === L.lv);
-    sel.innerHTML = L.list.slice().reverse().map((l) => `<option value="${esc(l.id)}" ${l.id === L.lv ? 'selected' : ''}>${esc(l.short)} · ${esc(l.name)}</option>`).join('');
-    $('#lvMeta', app).textContent = cur ? `floor ${cur.z.toFixed(2)} m · ceiling ${(cur.h || 0).toFixed(2)} m` : '';
+  // ---- one view, chosen at the top left (as before): Plan (Plan Studio 2D) per level, its ceiling plan and interior
+  // elevation; Perspective (Plan Studio 3D) with Walkthrough and Explode; and the Shaded model with imports and the site.
+  // The three stay loaded on top of each other, so switching is instant and every edit reaches all of them.
+  const DISPLAYS = [['shaded', 'Shaded'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe']];
+  if (!['plan', 'persp', 'shaded'].includes(UI.view)) UI.view = 'plan';
+  function showView(v) { UI.view = v; saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
+  function viewName() {
+    const a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null, L = (INST.plan.ready ? INST.plan.ws : any())?.levels();
+    const lv = L ? L.list.find((l) => l.id === L.lv) : null;
+    if (UI.view === 'plan') return a?.view2d === 'ceiling' ? `Ceiling plan · ${lv?.short || ''}` : a?.view2d === 'elev' ? 'Interior elevation' : `Plan · ${lv ? `${lv.short} ${lv.name}` : 'Level 1'}`;
+    if (UI.view === 'persp') return b?.walking || b?.walkpick ? 'Walkthrough' : b?.explode ? 'Exploded view' : 'Perspective';
+    return 'Shaded model · imports & site';
   }
-  $('#lvSel', app).onchange = (e) => { for (const I2 of ready()) I2.ws.level(e.target.value); levelUI(); };
-  function paneUI() {
-    const a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null;
-    if (a) $$('[data-v2]', app).forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.v2 === a.view2d)));
-    if (b) { $$('[data-pv]', app).forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.pv === 'walk' ? b.walking || b.walkpick : x.dataset.pv === 'explode' ? b.explode : !b.walking && !b.walkpick && !b.explode))); $('#dispSel', app).value = b.disp || UI.disp; }
+  function menus() {
+    const L = (INST.plan.ready ? INST.plan.ws : any())?.levels(), a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null;
+    const it = (attrs, on, label, small = '') => `<button role="menuitemradio" ${attrs} aria-checked="${on}">${label}${small ? `<small>${small}</small>` : ''}</button>`;
+    $('#vBtn', app).textContent = viewName() + ' ▾';
+    $('#vMenu', app).innerHTML = (L ? L.list.slice().reverse().map((l) => it(`data-view="plan" data-level="${esc(l.id)}"`, UI.view === 'plan' && a?.view2d === 'plan' && l.id === L.lv, `Plan · ${esc(l.short)} ${esc(l.name)}`, `${l.z.toFixed(2)} m`)).join('') : it('data-view="plan"', UI.view === 'plan', 'Plan'))
+      + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan') + it('data-view="elev"', UI.view === 'plan' && a?.view2d === 'elev', 'Interior elevation', 'pick a wall')
+      + it('data-view="persp"', UI.view === 'persp' && !b?.walking && !b?.walkpick && !b?.explode, 'Perspective', 'Plan Studio 3D') + it('data-view="walk"', UI.view === 'persp' && !!(b?.walking || b?.walkpick), 'Walkthrough') + it('data-view="explode"', UI.view === 'persp' && !!b?.explode, 'Explode')
+      + it('data-view="shaded"', UI.view === 'shaded', 'Shaded model', 'with imports & site') + '<p class="w2-mnote">Every view shows the same model; an edit in one is in all of them.</p>';
+    const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
+    $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;
+    $('#dMenu', app).innerHTML = DISPLAYS.map(([k, n]) => it(`data-disp="${k}"`, cur === k, n)).join('');
+    $$('#vMenu [data-view]', app).forEach((x) => x.onclick = async () => { closeMenus(); const v = x.dataset.view;
+      if (v === 'plan' || v === 'ceiling' || v === 'elev') { showView('plan'); if (x.dataset.level) for (const I2 of ready()) I2.ws.level(x.dataset.level); if (INST.plan.ready) await INST.plan.ws.view(v === 'ceiling' ? 'ceiling' : v === 'elev' ? 'elev' : 'plan'); }
+      else if (v === 'persp' || v === 'walk' || v === 'explode') { showView('persp'); if (INST.persp.ready) { const st = INST.persp.ws.state(); if (v === 'persp') await INST.persp.ws.view('bird'); else if (v === 'walk' && !st.walking && !st.walkpick) await INST.persp.ws.view('walk'); else if (v === 'explode' && !st.explode) await INST.persp.ws.view('explode'); } }
+      else showView('shaded');
+      menus(); });
+    $$('#dMenu [data-disp]', app).forEach((x) => x.onclick = () => { closeMenus(); const d = x.dataset.disp; if (UI.view === 'shaded') vp.setDisplay(d); else { UI.disp = d; saveUI(); if (INST.persp.ready) INST.persp.ws.display(d); } menus(); });
   }
-  $$('[data-v2]', app).forEach((x) => x.onclick = async () => { if (!INST.plan.ready) return; await INST.plan.ws.view(x.dataset.v2); paneUI(); });
-  $$('[data-pv]', app).forEach((x) => x.onclick = async () => { if (!INST.persp.ready) return; await INST.persp.ws.view(x.dataset.pv); paneUI(); });
-  $('#dispSel', app).onchange = (e) => { UI.disp = e.target.value; saveUI(); if (INST.persp.ready) INST.persp.ws.display(UI.disp); };
-  const paneT = setInterval(paneUI, 700);   // the panes' own buttons (Explode in the toolbar, Esc out of a walkthrough) change these too
-
-  // ---- splitters: drag to share the width; the shares are kept in this browser
-  const panes = $$('.w3-pane', app);
-  $$('.w3-split', app).forEach((sp) => {
-    const i = +sp.dataset.split;
-    sp.addEventListener('pointerdown', (e) => { e.preventDefault(); sp.setPointerCapture(e.pointerId); sp.classList.add('on'); app.querySelector('.w3-stage').classList.add('dragging');
-      const A = panes[i], B = panes[i + 1], wa = A.getBoundingClientRect().width, wb = B.getBoundingClientRect().width, x0 = e.clientX, fa = UI.split[i], fb = UI.split[i + 1], tot = fa + fb, min = 160;
-      const mv = (ev) => { const dx = ev.clientX - x0, na = Math.max(min, Math.min(wa + wb - min, wa + dx)), k = na / (wa + wb); UI.split[i] = +(tot * k).toFixed(4); UI.split[i + 1] = +(tot * (1 - k)).toFixed(4); A.style.flex = UI.split[i]; B.style.flex = UI.split[i + 1]; };
-      const up = () => { sp.removeEventListener('pointermove', mv); sp.removeEventListener('pointerup', up); sp.classList.remove('on'); app.querySelector('.w3-stage').classList.remove('dragging'); saveUI(); };
-      sp.addEventListener('pointermove', mv); sp.addEventListener('pointerup', up); });
-    sp.addEventListener('keydown', (e) => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; e.preventDefault(); const d = (e.key === 'ArrowLeft' ? -1 : 1) * 0.05, a = UI.split[i] + d, b = UI.split[i + 1] - d; if (a < 0.15 || b < 0.15) return; UI.split[i] = +a.toFixed(4); UI.split[i + 1] = +b.toFixed(4); panes[i].style.flex = UI.split[i]; panes[i + 1].style.flex = UI.split[i + 1]; saveUI(); });
-  });
+  const closeMenus = () => { for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) { $('#' + m, app).hidden = true; $('#' + b, app).setAttribute('aria-expanded', 'false'); } };
+  for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) $('#' + b, app).onclick = (e) => { e.stopPropagation(); const was = !$('#' + m, app).hidden; closeMenus(); if (!was) { menus(); $('#' + m, app).hidden = false; $('#' + b, app).setAttribute('aria-expanded', 'true'); } };
+  const outside = (e) => { if (!e.target.closest('#cap')) closeMenus(); }; document.addEventListener('click', outside);
+  // the panes' own buttons (Explode in the toolbar, Esc out of a walkthrough, the level) change the name in the pill too
+  const levelUI = () => menus(), paneUI = () => { if ($('#vMenu', app).hidden) menus(); };
+  const paneT = setInterval(paneUI, 700);
 
   // ---- left: rail + panel (project / tool group / parameters of the selection)
   let LIGHTS = null;
@@ -308,6 +313,7 @@ export function render(app, [pid]) {
     let spec = b.dataset.furn ? { furn: b.dataset.furn } : TMAP[n] || null;
     if (!spec && UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); spec = k ? { light: k[0] } : null; }
     if (!spec) return; void st;
+    if (UI.view !== 'plan') showView('plan');
     const okk = w.tool(spec); INST.plan.el.focus(); try { INST.plan.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
     if (msg) msg.textContent = !okk ? 'This tool could not start: see the message in the Plan pane.' : spec.furn ? `Click in the Plan to place the ${n}. Esc to stop.` : ON_WALL.has(spec.tool) ? `Click on a wall in the Plan to place the ${n.toLowerCase()}. It cuts its own opening and moves with the wall.` : spec.stair ? `Click in the Plan to place the ${n.toLowerCase()}.` : spec.light ? `Click in the Plan to place the ${n.toLowerCase()}.` : `${n}: draw in the Plan. ${spec.tool === 'wall' ? 'Click corner to corner, double-click to finish.' : spec.tool === 'room' || spec.tool === 'floor' || spec.tool === 'void' ? 'Drag a rectangle.' : spec.tool === 'arc' ? 'Click the start, the end, then the bend.' : 'Click the points, double-click to finish.'}`;
     toolUI();
@@ -324,14 +330,14 @@ export function render(app, [pid]) {
     host.innerHTML = `<div class="pane"><h2>Project</h2>
       <select class="inp" id="proj" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
       <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p><div class="pc-ui-workspace-links"><a class="btn sm" href="#/workspace/${p.id}">Standard workspace</a><a class="btn sm" href="workspace.html">Plan Studio</a></div>
-      <p class="note">The three panes are Plan Studio. The full Plan Studio, with its own files and send-to-tool, still opens on its own: <a href="${PAGE('studio')}" target="_blank" rel="noopener">Plan Studio ↗</a></p></div>
+      <p class="note">Every view is Plan Studio (or the Shaded model). The full Plan Studio, with its own files and send-to-tool, still opens on its own: <a href="${PAGE('studio')}" target="_blank" rel="noopener">Plan Studio ↗</a></p></div>
     <div class="pane"><h2>Import model</h2>
       <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf" hidden>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
-      <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes show in the Shaded pane.</p></div>
+      <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes show in the Shaded model view.</p></div>
     <div class="pane"><h2>Import site</h2>
       <button class="btn sm" id="siteBtn">Import site</button>
       <p class="note">Site geometry always goes on the Site layer, locked. Unlock it in Layers to edit.</p>
@@ -465,11 +471,11 @@ export function render(app, [pid]) {
   function refresh(refit) { drawShaded(refit); layers(); selPane(); state(); }
 
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
-  drawShaded(true);
+  drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel();
   setSel(UI.selProject === p.id ? UI.sels.filter((id) => comp(id)) : [], { params: false });
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; document.removeEventListener('click', outside); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

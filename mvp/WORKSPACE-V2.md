@@ -4,6 +4,13 @@
 
 New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` block at the end of `css/mvp.css`. Edited: `js/app.js` (one route) and `index.html` (one nav link).
 
+## One view again (2026-10-24, later the same day)
+The three side-by-side panes were replaced by one view, chosen in the pill at the top left as before: Plan · each level,
+Ceiling plan, Interior elevation (Plan Studio 2D); Perspective, Walkthrough, Explode (Plan Studio 3D); Shaded model (with
+imports and the site). The second button sets the display (Shaded / Ghosted / Wireframe) for the 3D views. The three views stay
+loaded on top of each other, so switching is instant and an edit made in one is in all of them; the chosen view is kept in this
+browser. Drawing tools switch to the Plan view. Everything else below (one model, sync, collisions, clearance, gumball) is unchanged.
+
 ## Three panes: Plan Studio inside the Workspace (repair patch, 2026-10-24)
 
 This supersedes the single viewport described further down (its view pill, plan / elevation / walkthrough cameras and
