@@ -1,0 +1,1107 @@
+{
+  "categories": [
+    [
+      "portfolio",
+      "Portfolio & Job Application",
+      "Resume · CV · Cover letter"
+    ],
+    [
+      "cad",
+      "CAD Resources",
+      "Blocks · Details"
+    ],
+    [
+      "rhino",
+      "Rhino Resources",
+      "Components · Models"
+    ],
+    [
+      "revit",
+      "Revit Resources",
+      "Families · Details"
+    ],
+    [
+      "gh",
+      "Grasshopper & Parametric",
+      "Scripts"
+    ],
+    [
+      "models",
+      "3D & Case Study Models",
+      "Study models"
+    ],
+    [
+      "diagrams",
+      "Diagrams & Graphics",
+      "Diagram kits"
+    ],
+    [
+      "site",
+      "Site & Urban Design",
+      "Site tools"
+    ],
+    [
+      "pres",
+      "Presentation Templates",
+      "Layouts"
+    ]
+  ],
+  "items": [
+    {
+      "id": "lounge-chair-set",
+      "name": "Lounge Chair Set",
+      "category": "rhino",
+      "formats": [
+        "3dm",
+        "skp"
+      ],
+      "compatibility": "Rhino 7+ / SketchUp 2021+",
+      "size": 42.5,
+      "art": 0,
+      "added": "2026-09-21"
+    },
+    {
+      "id": "a3-portfolio-template",
+      "name": "A3 Portfolio Template",
+      "category": "portfolio",
+      "formats": [
+        "indd",
+        "pdf"
+      ],
+      "compatibility": "InDesign 2022+",
+      "size": 18.2,
+      "art": 2,
+      "added": "2026-09-22"
+    },
+    {
+      "id": "stair-railing-cad-blocks",
+      "name": "Stair & Railing CAD Blocks",
+      "category": "cad",
+      "formats": [
+        "dwg"
+      ],
+      "compatibility": "AutoCAD 2018+",
+      "size": 3.4,
+      "art": 5,
+      "added": "2026-09-25"
+    },
+    {
+      "id": "oak-dining-table-family",
+      "name": "Oak Dining Table Family",
+      "category": "revit",
+      "formats": [
+        "rfa"
+      ],
+      "compatibility": "Revit 2023+",
+      "size": 2.4,
+      "art": 6,
+      "added": "2026-09-28"
+    },
+    {
+      "id": "attractor-facade-script",
+      "name": "Attractor Facade Script",
+      "category": "gh",
+      "formats": [
+        "gh",
+        "3dm"
+      ],
+      "compatibility": "Rhino 7+ / Grasshopper",
+      "size": 0.8,
+      "art": 4,
+      "added": "2026-09-29"
+    },
+    {
+      "id": "villa-savoye-case-study",
+      "name": "Villa Savoye Case Study Model",
+      "category": "models",
+      "formats": [
+        "3dm",
+        "skp"
+      ],
+      "compatibility": "Rhino 7+ / SketchUp 2021+",
+      "size": 36,
+      "art": 7,
+      "added": "2026-09-24"
+    },
+    {
+      "id": "axonometric-diagram-kit",
+      "name": "Axonometric Diagram Kit",
+      "category": "diagrams",
+      "formats": [
+        "ai",
+        "pdf"
+      ],
+      "compatibility": "Illustrator 2022+",
+      "size": 9.8,
+      "art": 4,
+      "added": "2026-09-18"
+    },
+    {
+      "id": "vancouver-site-context-kit",
+      "name": "Vancouver Site Context Kit",
+      "category": "site",
+      "formats": [
+        "dwg",
+        "3dm",
+        "pdf"
+      ],
+      "compatibility": "AutoCAD 2018+ / Rhino 7+",
+      "size": 88,
+      "art": 1,
+      "added": "2026-09-30"
+    },
+    {
+      "id": "crit-board-template-24x36",
+      "name": "Crit Board Template 24×36",
+      "category": "pres",
+      "formats": [
+        "indd",
+        "ai"
+      ],
+      "compatibility": "InDesign 2022+",
+      "size": 22,
+      "art": 2,
+      "added": "2026-09-27"
+    },
+    {
+      "id": "residential-furniture-plan-blocks",
+      "name": "Residential Furniture Plan Blocks",
+      "category": "cad",
+      "formats": [
+        "dwg",
+        "pdf"
+      ],
+      "compatibility": "AutoCAD 2018+",
+      "size": 6.7,
+      "art": 5,
+      "added": "2026-09-15"
+    },
+    {
+      "id": "scale-figures-winter",
+      "name": "Scale Figures — Winter",
+      "category": "diagrams",
+      "formats": [
+        "png",
+        "psd"
+      ],
+      "compatibility": "Any",
+      "size": 64,
+      "art": 3,
+      "added": "2026-09-12"
+    },
+    {
+      "id": "terrazzo-material-pack",
+      "name": "Terrazzo Material Pack",
+      "category": "diagrams",
+      "formats": [
+        "png",
+        "jpg"
+      ],
+      "compatibility": "Any",
+      "size": 120,
+      "art": 1,
+      "added": "2026-09-08"
+    },
+    {
+      "id": "pendant-lamp-collection",
+      "name": "Pendant Lamp Collection",
+      "category": "rhino",
+      "formats": [
+        "3dm",
+        "skp",
+        "fbx"
+      ],
+      "compatibility": "Rhino 7+ / SketchUp 2021+",
+      "size": 28,
+      "art": 0,
+      "added": "2026-08-28"
+    },
+    {
+      "id": "indoor-plants-pack",
+      "name": "Indoor Plants Pack",
+      "category": "models",
+      "formats": [
+        "3dm",
+        "skp",
+        "png"
+      ],
+      "compatibility": "Rhino 7+ / SketchUp 2021+",
+      "size": 96,
+      "art": 7,
+      "added": "2026-08-26"
+    },
+    {
+      "id": "scale-figures-interior",
+      "name": "Scale Figures — Interior",
+      "category": "diagrams",
+      "formats": [
+        "png",
+        "psd"
+      ],
+      "compatibility": "Any",
+      "size": 58,
+      "art": 3,
+      "added": "2026-08-24"
+    },
+    {
+      "id": "oak-herringbone-material",
+      "name": "Oak Herringbone Floor Material",
+      "category": "diagrams",
+      "formats": [
+        "png",
+        "jpg"
+      ],
+      "compatibility": "Any · 4K seamless",
+      "size": 64,
+      "art": 1,
+      "added": "2026-08-22"
+    },
+    {
+      "id": "winter-trees-pack",
+      "name": "Winter Trees Pack",
+      "category": "models",
+      "formats": [
+        "3dm",
+        "skp",
+        "png"
+      ],
+      "compatibility": "Rhino 7+ / SketchUp 2021+",
+      "size": 140,
+      "art": 7,
+      "added": "2026-08-20"
+    },
+    {
+      "id": "concrete-bench-set",
+      "name": "Concrete Bench Set",
+      "category": "rhino",
+      "formats": [
+        "3dm",
+        "skp"
+      ],
+      "compatibility": "Rhino 7+ / SketchUp 2021+",
+      "size": 12,
+      "art": 6,
+      "added": "2026-08-18"
+    },
+    {
+      "id": "snow-ground-material",
+      "name": "Snow & Slush Ground Material",
+      "category": "diagrams",
+      "formats": [
+        "png",
+        "jpg"
+      ],
+      "compatibility": "Any · 4K seamless",
+      "size": 48,
+      "art": 1,
+      "added": "2026-08-16"
+    }
+  ],
+  "art": [
+    "<rect x=\"560\" y=\"420\" width=\"480\" height=\"300\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"6\"/><line x1=\"560\" y1=\"510\" x2=\"1040\" y2=\"510\" stroke=\"#26241f\" stroke-width=\"3\"/><rect x=\"620\" y=\"720\" width=\"30\" height=\"120\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"6\"/><rect x=\"950\" y=\"720\" width=\"30\" height=\"120\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"6\"/>",
+    "<rect x=\"380\" y=\"320\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"380\" y=\"460\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"380\" y=\"600\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"380\" y=\"740\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"520\" y=\"320\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"520\" y=\"460\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"520\" y=\"600\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"520\" y=\"740\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"660\" y=\"320\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"660\" y=\"460\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"660\" y=\"600\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"660\" y=\"740\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"800\" y=\"320\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"800\" y=\"460\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"800\" y=\"600\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"800\" y=\"740\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"940\" y=\"320\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"940\" y=\"460\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"940\" y=\"600\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"940\" y=\"740\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"1080\" y=\"320\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"1080\" y=\"460\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"1080\" y=\"600\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"1080\" y=\"740\" width=\"130\" height=\"130\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/>",
+    "<rect x=\"420\" y=\"260\" width=\"760\" height=\"680\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"6\"/><rect x=\"480\" y=\"320\" width=\"300\" height=\"400\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><line x1=\"820\" y1=\"340\" x2=\"1120\" y2=\"340\" stroke=\"#26241f\" stroke-width=\"4\"/><line x1=\"820\" y1=\"385\" x2=\"1080\" y2=\"385\" stroke=\"#26241f\" stroke-width=\"3\"/><line x1=\"820\" y1=\"430\" x2=\"1100\" y2=\"430\" stroke=\"#26241f\" stroke-width=\"3\"/>",
+    "<circle cx=\"480\" cy=\"520\" r=\"36\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><rect x=\"452\" y=\"565\" width=\"56\" height=\"200\" rx=\"26\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><circle cx=\"640\" cy=\"520\" r=\"36\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><rect x=\"612\" y=\"565\" width=\"56\" height=\"200\" rx=\"26\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><circle cx=\"800\" cy=\"520\" r=\"36\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><rect x=\"772\" y=\"565\" width=\"56\" height=\"200\" rx=\"26\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><circle cx=\"960\" cy=\"520\" r=\"36\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><rect x=\"932\" y=\"565\" width=\"56\" height=\"200\" rx=\"26\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><circle cx=\"1120\" cy=\"520\" r=\"36\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><rect x=\"1092\" y=\"565\" width=\"56\" height=\"200\" rx=\"26\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/>",
+    "<polygon points=\"800,300 1100,470 800,640 500,470\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><polygon points=\"500,470 800,640 800,900 500,730\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><polygon points=\"1100,470 800,640 800,900 1100,730\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/>",
+    "<rect x=\"500\" y=\"820\" width=\"60\" height=\"60\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"560\" y=\"760\" width=\"60\" height=\"120\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"620\" y=\"700\" width=\"60\" height=\"180\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"680\" y=\"640\" width=\"60\" height=\"240\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"740\" y=\"580\" width=\"60\" height=\"300\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"800\" y=\"520\" width=\"60\" height=\"360\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"860\" y=\"460\" width=\"60\" height=\"420\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/><rect x=\"920\" y=\"400\" width=\"60\" height=\"480\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"4\"/>",
+    "<rect x=\"480\" y=\"520\" width=\"640\" height=\"30\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"6\"/><rect x=\"520\" y=\"550\" width=\"24\" height=\"220\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/><rect x=\"1056\" y=\"550\" width=\"24\" height=\"220\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"5\"/>",
+    "<circle cx=\"800\" cy=\"600\" r=\"70\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"3\"/><circle cx=\"800\" cy=\"600\" r=\"145\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"3\"/><circle cx=\"800\" cy=\"600\" r=\"220\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"3\"/><circle cx=\"800\" cy=\"600\" r=\"295\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"3\"/><circle cx=\"800\" cy=\"600\" r=\"370\" fill=\"none\" stroke=\"#26241f\" stroke-width=\"3\"/>"
+  ],
+  "scenes": [
+    {
+      "id": "winter-courtyard",
+      "no": "02",
+      "date": "Oct 2026",
+      "title": "Winter courtyard",
+      "kind": "Exterior · Rhino + Enscape",
+      "lede": "A campus courtyard in January: facade fins tuned with an attractor script, figures dressed for the cold, slush on the paths.",
+      "spots": [
+        [
+          "attractor-facade-script",
+          28,
+          40
+        ],
+        [
+          "vancouver-site-context-kit",
+          76,
+          40
+        ],
+        [
+          "winter-trees-pack",
+          55,
+          52
+        ],
+        [
+          "concrete-bench-set",
+          26,
+          82
+        ],
+        [
+          "scale-figures-winter",
+          42,
+          64
+        ],
+        [
+          "snow-ground-material",
+          62,
+          92
+        ]
+      ],
+      "also": []
+    },
+    {
+      "id": "reading-room",
+      "no": "01",
+      "date": "Sep 2026",
+      "title": "Reading room",
+      "kind": "Interior · SketchUp + V-Ray",
+      "lede": "A small reading room with a lounge chair by the window, an oak table under two pendants, and herringbone oak underfoot.",
+      "spots": [
+        [
+          "lounge-chair-set",
+          34,
+          61
+        ],
+        [
+          "oak-dining-table-family",
+          71,
+          67
+        ],
+        [
+          "pendant-lamp-collection",
+          62.5,
+          40
+        ],
+        [
+          "indoor-plants-pack",
+          88,
+          68
+        ],
+        [
+          "scale-figures-interior",
+          52.6,
+          52
+        ],
+        [
+          "oak-herringbone-material",
+          64,
+          90
+        ]
+      ],
+      "also": [
+        "residential-furniture-plan-blocks"
+      ]
+    }
+  ],
+  "references": {
+    "code": {
+      "TOPICS": [
+        {
+          "id": "stair-rise-run",
+          "group": "Stairs, guards & ramps",
+          "title": "Stair rise and run",
+          "ref": "Part 9: 9.8.4.1–9.8.4.2 (Tables) · Part 3: 3.4.6.8",
+          "summary": "Rise and run are measured nosing to nosing and must be uniform within a flight. Private stairs (inside a dwelling unit, or exterior stairs serving one dwelling unit) allow a steeper stair than public stairs.",
+          "values": [
+            "Private: rise 125–200 mm, run 255–355 mm",
+            "Public: rise 125–180 mm, run ≥ 280 mm",
+            "Max vertical rise of one flight: 3.7 m (then a landing)"
+          ],
+          "on": "OBC 2024 adopted the NBC 2020 values — the old OBC 2012 minimum private run of 210 mm no longer applies.",
+          "tags": "stairs step riser tread going nosing landing flight"
+        },
+        {
+          "id": "stair-width-headroom",
+          "group": "Stairs, guards & ramps",
+          "title": "Stair width and headroom",
+          "ref": "9.8.2.1 (width) · 9.8.2.2 (headroom)",
+          "summary": "Minimum clear width between wall faces or guards, and minimum clear headroom measured vertically from the stair nosing line.",
+          "values": [
+            "Stairs serving a single dwelling unit: width ≥ 860 mm",
+            "Other residential exit and public stairs: width ≥ 900 mm",
+            "Headroom: typically 1950 mm in dwelling units, 2050 mm elsewhere"
+          ],
+          "tags": "stair width headroom clearance"
+        },
+        {
+          "id": "handrails",
+          "group": "Stairs, guards & ramps",
+          "title": "Handrails",
+          "ref": "9.8.7 · Part 3: 3.4.6.5",
+          "summary": "Where handrails are required, how many sides, their height, graspability and extensions at the top and bottom of a flight.",
+          "values": [
+            "Height: 865–965 mm measured above the nosing line",
+            "Wider stairs need handrails on both sides — check the width threshold in 9.8.7.1"
+          ],
+          "tags": "handrail rail grab stairs ramp"
+        },
+        {
+          "id": "guards",
+          "group": "Stairs, guards & ramps",
+          "title": "Guards (railings)",
+          "ref": "9.8.8 · Part 3: 3.3.1.18 / 4.1.5.14 (loads)",
+          "summary": "Guards are required where the difference in level is more than 600 mm. Height depends on location; openings must stop a small sphere passing through, and guards in dwellings must not be easily climbable.",
+          "values": [
+            "Required where drop > 600 mm",
+            "Height ≥ 900 mm inside a dwelling unit (and some exterior guards ≤ 1.8 m above grade)",
+            "Height ≥ 1070 mm elsewhere",
+            "Openings must not let a 100 mm sphere pass"
+          ],
+          "tags": "guard railing balcony deck baluster fall"
+        },
+        {
+          "id": "ramps",
+          "group": "Stairs, guards & ramps",
+          "title": "Ramps",
+          "ref": "9.8.5 · Part 3: 3.4.6.7 · barrier-free ramps 3.8.3",
+          "summary": "Slope, width, landings and handrails for ramps. Barrier-free ramps in Section 3.8 are stricter than ordinary ramps.",
+          "values": [
+            "Barrier-free ramp slope: not steeper than 1 in 12",
+            "Level landings at the top, bottom, at intervals of not more than 9 m and where the ramp turns",
+            "Handrails on both sides, 865–965 mm high",
+            "A walk steeper than 1 in 20 in a barrier-free path is a ramp"
+          ],
+          "tags": "ramp slope accessible wheelchair",
+          "refBc": "9.8.5 · Part 3: 3.4.6.7 · barrier-free ramps 3.8.3.5",
+          "refOn": "9.8.5 · Part 3: 3.4.6.7 · barrier-free ramps 3.8.3.4",
+          "on": "Ontario's barrier-free ramp article is 3.8.3.4; landings must be at least 1 670 mm long. Use the Accessible ramp calculator to size runs and landings.",
+          "bc": "Barrier-free ramps are in Article 3.8.3.5. Use the Accessible ramp calculator to size runs and landings."
+        },
+        {
+          "id": "egress-windows",
+          "group": "Egress & fire",
+          "title": "Bedroom egress windows",
+          "ref": "9.9.10.1",
+          "summary": "Each bedroom (or a combined bedroom) in a dwelling unit without a sprinkler system needs a window or door that opens to the outside for escape.",
+          "values": [
+            "Unobstructed opening ≥ 0.35 m²",
+            "No opening dimension less than 380 mm"
+          ],
+          "tags": "egress window bedroom escape basement"
+        },
+        {
+          "id": "smoke-alarms",
+          "group": "Egress & fire",
+          "title": "Smoke alarms",
+          "ref": "9.10.19 · Part 3: 3.2.4.20",
+          "summary": "Where smoke alarms go in dwelling units, how they are powered and interconnected.",
+          "values": [
+            "Required on every storey and in (or near) sleeping rooms — check exact locations",
+            "Interconnected within a dwelling unit"
+          ],
+          "tags": "smoke alarm detector fire safety"
+        },
+        {
+          "id": "spatial-separation",
+          "group": "Egress & fire",
+          "title": "Spatial separation & limiting distance",
+          "ref": "Part 9: 9.10.14 (buildings) · 9.10.15 (houses) · Part 3: 3.2.3",
+          "summary": "Limits the area of unprotected openings (windows, doors) in an exposing building face based on its limiting distance to the property line — the closer you are, the fewer windows you can have and the more fire-resistance the wall needs.",
+          "tags": "limiting distance unprotected openings windows property line fire"
+        },
+        {
+          "id": "fire-separations",
+          "group": "Egress & fire",
+          "title": "Fire separations between suites",
+          "ref": "9.10.9 · Part 3: 3.3.1.1",
+          "summary": "Fire separations and fire-resistance ratings required between dwelling units, and between dwelling units and other occupancies or common areas.",
+          "tags": "fire separation rating suite party wall"
+        },
+        {
+          "id": "travel-distance",
+          "group": "Egress & fire",
+          "title": "Exits & travel distance (Part 3)",
+          "ref": "3.4.2 (number of exits, travel distance 3.4.2.5) · 3.4.3 (exit width)",
+          "summary": "How many exits a floor area needs, maximum travel distance to an exit, and exit widths based on occupant load.",
+          "tags": "exit travel distance egress occupant load corridor"
+        },
+        {
+          "id": "ceiling-heights",
+          "group": "Rooms & spaces",
+          "title": "Ceiling heights & room sizes",
+          "ref": "9.5.3 (ceiling heights) · 9.5.4–9.5.8 (room areas)",
+          "summary": "Minimum ceiling heights and minimum room areas for living spaces, bedrooms, kitchens and bathrooms in dwelling units are set out in tables in Section 9.5.",
+          "tags": "ceiling height room size area bedroom minimum"
+        },
+        {
+          "id": "windows-light",
+          "group": "Rooms & spaces",
+          "title": "Natural light & ventilation",
+          "ref": "9.7.2 (glazing for natural light) · 9.32 (ventilation)",
+          "summary": "Minimum glazed area for natural light in rooms, and mechanical / natural ventilation requirements for houses.",
+          "tags": "window glazing daylight natural light ventilation"
+        },
+        {
+          "id": "energy",
+          "group": "Energy",
+          "title": "Energy efficiency",
+          "ref": "Part 9 houses: Section 9.36 · larger buildings: referenced energy codes",
+          "refOn": "Part 9 houses: SB-12 (Supplementary Standard) via Section 12.2 · larger buildings: SB-10",
+          "summary": "Energy performance requirements for the building envelope, HVAC and hot water, via prescriptive, trade-off or performance paths.",
+          "bc": "BC adds the Energy Step Code (performance tiers local governments can require) and the Zero Carbon Step Code for greenhouse-gas emissions.",
+          "on": "Ontario Part 9 housing uses Supplementary Standard SB-12; larger buildings use SB-10.",
+          "tags": "energy insulation envelope step code sb-12 sb-10 9.36 carbon"
+        },
+        {
+          "id": "barrier-free",
+          "group": "Accessibility",
+          "title": "Barrier-free / accessible design",
+          "ref": "Section 3.8",
+          "summary": "Where barrier-free paths of travel, entrances, washrooms, parking and suites are required, and the design requirements for each. For entrances, doors, ramps, washrooms, adaptable units and the key dimensions, open the <a class=\"tlink\" data-go=\"tool/access-bc\">accessibility finder</a>.",
+          "bc": "BCBC 2024 adds adaptable dwelling unit requirements (Subsection 3.8.5) for some multi-unit residential buildings.",
+          "on": "Ontario Section 3.8 barrier-free design — houses are generally exempt; check the application clauses.",
+          "tags": "accessible barrier-free wheelchair adaptable universal design washroom"
+        },
+        {
+          "id": "occupancy",
+          "group": "Classification & structure",
+          "title": "Occupancy classification",
+          "ref": "3.1.2 (Table 3.1.2.1)",
+          "summary": "Classifies buildings by major occupancy — Group A (assembly), B (care / detention), C (residential), D (business), E (mercantile), F (industrial) — which drives most other requirements.",
+          "tags": "occupancy classification group a b c d e f assembly residential"
+        },
+        {
+          "id": "part3-part9",
+          "group": "Classification & structure",
+          "title": "Part 3 or Part 9?",
+          "ref": "Division A: 1.3.3 (application of Parts 3 and 9)",
+          "summary": "Part 9 (Housing and Small Buildings) covers smaller residential, business, mercantile and low / medium-hazard industrial buildings; everything else is Part 3.",
+          "values": [
+            "Part 9: typically ≤ 3 storeys in building height and ≤ 600 m² building area (for the listed occupancies)"
+          ],
+          "tags": "part 9 part 3 small buildings housing application"
+        },
+        {
+          "id": "construction-type",
+          "group": "Classification & structure",
+          "title": "Building size & construction type",
+          "ref": "3.2.2 (Articles 3.2.2.20 and following)",
+          "summary": "Maximum building height and area by occupancy and sprinklering, and whether construction must be combustible, noncombustible or encapsulated mass timber.",
+          "tags": "building height area storeys combustible noncombustible mass timber"
+        },
+        {
+          "id": "climate",
+          "group": "Classification & structure",
+          "title": "Climatic & seismic data",
+          "ref": "Division B, Appendix C (climatic and seismic information)",
+          "summary": "Design snow, wind, rain, temperature and seismic values by location — you need these for structure and envelope design.",
+          "tags": "snow load wind load climate seismic design data location"
+        }
+      ],
+      "CODES": {
+        "bc": {
+          "name": "BC Building Code 2024",
+          "short": "BCBC 2024",
+          "note": "In force since March 8, 2024. It does not apply in the City of Vancouver, which has its own Vancouver Building By-law (VBBL) — check the VBBL for Vancouver sites.",
+          "links": [
+            {
+              "label": "BC Codes 2024 (free online) — gov.bc.ca",
+              "href": "https://www2.gov.bc.ca/gov/content/industry/construction-industry/building-codes-standards/bc-codes/2024-bc-codes"
+            },
+            {
+              "label": "bccodes.ca",
+              "href": "https://bccodes.ca"
+            }
+          ]
+        },
+        "on": {
+          "name": "Ontario Building Code 2024 (O. Reg. 163/24)",
+          "short": "OBC 2024",
+          "note": "In force since January 1, 2025, and harmonized more closely with the National Building Code 2020. Older OBC 2012 values you find online may be out of date.",
+          "links": [
+            {
+              "label": "O. Reg. 163/24 on Ontario e-Laws",
+              "href": "https://www.ontario.ca/laws/regulation/240163"
+            }
+          ]
+        }
+      },
+      "GROUPS": [
+        "Stairs, guards & ramps",
+        "Egress & fire",
+        "Rooms & spaces",
+        "Energy",
+        "Accessibility",
+        "Classification & structure"
+      ]
+    },
+    "access": {
+      "GROUPS": [
+        "Where it applies",
+        "Entrances & doors",
+        "Paths & ramps",
+        "Washrooms",
+        "Housing & seating",
+        "Parking & controls"
+      ],
+      "CODES": {
+        "bc": {
+          "name": "BC Building Code 2024 — Section 3.8 Accessibility",
+          "short": "BCBC 2024",
+          "note": "Based on NBC 2020, with BC additions: power-operated doors, elevators in larger low-rise buildings, adult changing spaces, and adaptable dwelling units from March 10, 2025. Not used in the City of Vancouver, which has its own by-law (VBBL).",
+          "links": [
+            {
+              "label": "Accessibility requirements in the BC Building Code — gov.bc.ca",
+              "href": "https://www2.gov.bc.ca/gov/content/industry/construction-industry/building-codes-standards/bc-codes/2024-bc-codes/accessibility"
+            },
+            {
+              "label": "Adaptable Dwelling Unit Illustrative Design Guide (PDF) — gov.bc.ca",
+              "href": "https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/construction-industry/building-codes-and-standards/guides/adaptable_dwelling_unit_design_guide.pdf"
+            },
+            {
+              "label": "BC Codes 2024 (free online) — gov.bc.ca",
+              "href": "https://www2.gov.bc.ca/gov/content/industry/construction-industry/building-codes-standards/bc-codes/2024-bc-codes"
+            }
+          ]
+        },
+        "on": {
+          "name": "Ontario Building Code 2024 — Section 3.8 Barrier-Free Design",
+          "short": "OBC 2024",
+          "note": "Ontario keeps its own barrier-free Section 3.8, so several numbers differ from BC and the National Building Code. Accessible parking and some public spaces are also governed by the AODA standards.",
+          "links": [
+            {
+              "label": "Accessibility in Ontario's Building Code — ontario.ca",
+              "href": "https://www.ontario.ca/page/accessibility-ontarios-building-code"
+            },
+            {
+              "label": "O. Reg. 163/24 on Ontario e-Laws",
+              "href": "https://www.ontario.ca/laws/regulation/240163"
+            }
+          ]
+        }
+      },
+      "TOPICS": [
+        {
+          "id": "applies",
+          "group": "Where it applies",
+          "title": "Which buildings need accessible design",
+          "summary": "Section 3.8 applies to most new buildings. Small residential buildings are the main exception, so read the application article before you design.",
+          "tags": "application exemption exempt house duplex townhouse row house scope",
+          "bc": {
+            "ref": "3.8.2.1",
+            "values": [
+              "Exempt: detached and semi-detached houses, houses with a secondary suite, duplexes, triplexes, townhouses and row houses",
+              "Some high-hazard industrial buildings are also exempt"
+            ],
+            "note": "Several dimensions grew from BCBC 2018 to 2024. Details and guides based on the 2018 code may be out of date."
+          },
+          "on": {
+            "ref": "3.8.1.1",
+            "values": [
+              "Houses and similar small residential buildings are generally exempt — read the application clauses"
+            ],
+            "note": "Hotels: 10% of suites, to a maximum of 20, need a barrier-free path of travel to the suite entrance (3.8.2.4)."
+          }
+        },
+        {
+          "id": "entrances",
+          "group": "Entrances & doors",
+          "title": "Accessible entrances and power doors",
+          "summary": "How many entrances must be accessible, and which doors need power operators.",
+          "tags": "entrance principal entrance power door operator automatic door vestibule",
+          "bc": {
+            "ref": "3.8.2.2 · 3.8.2.7",
+            "values": [
+              "New in 2024: power-operated doors at building entrances and at accessible washroom entrances in new commercial and public buildings"
+            ],
+            "note": "Check 3.8.2.2 for how many pedestrian entrances must be accessible."
+          },
+          "on": {
+            "ref": "3.8.1.2 · 3.8.3.3",
+            "values": [
+              "Number of barrier-free entrances from Table 3.8.1.2; one of them must be the principal entrance",
+              "Power door operator on doors through a barrier-free entrance in Group A, B (Divisions 2 and 3), C, D and E occupancies",
+              "Power door operator on the door from a vestibule into the floor area"
+            ]
+          }
+        },
+        {
+          "id": "doors",
+          "group": "Entrances & doors",
+          "title": "Door clear width and hardware",
+          "summary": "Doors on an accessible path need enough clear width, space beside the latch, and hardware within reach.",
+          "tags": "door doorway clear width opening latch side hardware vision panel threshold",
+          "bc": {
+            "ref": "3.8.3.6",
+            "values": [
+              "Clear opening ≥ 850 mm with the door open"
+            ]
+          },
+          "on": {
+            "ref": "3.8.3.3",
+            "values": [
+              "Clear opening ≥ 850 mm with the door open at 90°",
+              "Clear space beside the latch: 600 mm when the door swings toward you, 300 mm when it swings away",
+              "Opening hardware 900–1100 mm above the floor",
+              "Vision panels at least 75 mm wide, bottom edge ≤ 900 mm above the floor"
+            ]
+          }
+        },
+        {
+          "id": "path",
+          "group": "Paths & ramps",
+          "title": "Accessible path of travel and turning space",
+          "summary": "The route from the entrance to the spaces people use must be wide enough for a wheelchair, with room to turn.",
+          "tags": "path of travel corridor width turning space circle wheelchair walk",
+          "bc": {
+            "ref": "3.8.3.2",
+            "values": [
+              "Clear width ≥ 1000 mm",
+              "May narrow to 850 mm for a length of up to 600 mm",
+              "Turning space ≥ 1700 mm diameter, or the T-shaped alternative"
+            ],
+            "note": "BCBC 2018 allowed a 920 mm path. Update older corridor and door details."
+          },
+          "on": {
+            "ref": "3.8.3.2",
+            "values": [
+              "Exterior walks ≥ 1100 mm wide, slope ≤ 1 in 20",
+              "Headroom ≥ 1980 mm over the full width of a walk",
+              "Curb ramps ≥ 1500 mm wide, not counting the flared sides",
+              "Tactile attention indicators where required (3.8.3.18)"
+            ],
+            "note": "Check Subsection 3.8.3 for interior path of travel widths."
+          }
+        },
+        {
+          "id": "ramps",
+          "group": "Paths & ramps",
+          "title": "Ramps",
+          "summary": "Slope, width, landings and handrails for ramps on an accessible path.",
+          "tags": "ramp slope gradient landing handrail curb guard",
+          "bc": {
+            "ref": "3.8.3.5",
+            "values": [
+              "Slope ≤ 1 in 12",
+              "Clear width ≥ 1000 mm",
+              "Landings at the top and bottom ≥ 1700 × 1700 mm",
+              "Intermediate landings at intervals ≤ 9 m",
+              "Handrails 865–965 mm high"
+            ]
+          },
+          "on": {
+            "ref": "3.8.3.4",
+            "values": [
+              "Slope ≤ 1 in 12",
+              "≥ 900 mm between handrails",
+              "Landings at the top and bottom ≥ 1670 × 1670 mm",
+              "Intermediate landings at intervals ≤ 9 m",
+              "Handrails 865–965 mm high, extending ≥ 300 mm past the top and bottom",
+              "Guards ≥ 1070 mm high where required; curb ≥ 50 mm high at open edges"
+            ]
+          }
+        },
+        {
+          "id": "washrooms",
+          "group": "Washrooms",
+          "title": "Universal washrooms and accessible stalls",
+          "summary": "Where accessible washrooms are needed, and the clear spaces, fixtures and grab bars inside them.",
+          "tags": "washroom toilet universal stall water closet grab bar lavatory sink mirror changing table",
+          "bc": {
+            "ref": "Subsection 3.8.3",
+            "values": [
+              "New in 2024: universal washrooms in new commercial and public buildings include a full-size adult changing space",
+              "Power-operated door at accessible washroom entrances"
+            ],
+            "note": "Stall, water closet and grab bar dimensions changed with NBC 2020. Read Subsection 3.8.3 before reusing an older washroom layout."
+          },
+          "on": {
+            "ref": "3.8.3.8 · 3.8.3.9 · 3.8.3.11 · 3.8.3.12",
+            "values": [
+              "Universal toilet room: open turning space ≥ 1700 mm diameter",
+              "Accessible stall: turning space ≥ 1500 mm diameter; door clear opening ≥ 860 mm",
+              "Water closet seat 430–485 mm above the floor; centerline 460–480 mm from the side wall",
+              "L-shaped side grab bar with 750 mm horizontal and vertical legs; rear grab bar ≥ 600 mm long",
+              "Lavatory rim ≤ 865 mm above the floor",
+              "Mirror with its bottom edge ≤ 1000 mm above the floor",
+              "Power door operator on a universal toilet room door that has a self-closer"
+            ]
+          }
+        },
+        {
+          "id": "vertical",
+          "group": "Paths & ramps",
+          "title": "Elevators and access between floors",
+          "summary": "Which storeys must be reached by an accessible path, and when an elevator is required.",
+          "tags": "elevator lift platform lift storey floor vertical access",
+          "bc": {
+            "ref": "Subsection 3.8.2",
+            "values": [
+              "New in 2024: an elevator is required in large two- and three-storey commercial and public buildings"
+            ],
+            "note": "Check Subsection 3.8.2 for the size and occupancy thresholds."
+          },
+          "on": {
+            "ref": "Subsection 3.8.2",
+            "values": [],
+            "note": "Check Subsection 3.8.2 for which floor areas need a barrier-free path of travel."
+          }
+        },
+        {
+          "id": "adaptable",
+          "group": "Housing & seating",
+          "title": "Adaptable dwelling units",
+          "summary": "Apartment units designed so they can be adapted later for people with disabilities.",
+          "tags": "adaptable dwelling unit apartment condominium residential suite housing",
+          "bc": {
+            "ref": "Subsection 3.8.5",
+            "values": [
+              "In force from March 10, 2025",
+              "At least 1 in 5 units must be adaptable in large condominium and apartment buildings, and on the first floor of smaller ones",
+              "Not required for units over two storeys, units with their own entrance from outside, or units not reached by an interior accessible corridor",
+              "Includes accessible clearances through doors and along the path to the living space, clear space in a bedroom, bathroom and kitchen, controls at accessible heights, and bathroom walls reinforced for future grab bars"
+            ],
+            "note": "The province publishes a free illustrated design guide (linked below)."
+          },
+          "on": {
+            "ref": "Section 3.8",
+            "values": [],
+            "note": "Ontario has no adaptable dwelling unit rule like BC's Subsection 3.8.5."
+          }
+        },
+        {
+          "id": "seating",
+          "group": "Housing & seating",
+          "title": "Wheelchair spaces in assembly seating",
+          "summary": "Theatres, lecture halls and other fixed-seat venues need designated wheelchair spaces.",
+          "tags": "assembly seating theatre auditorium lecture hall wheelchair space",
+          "bc": {
+            "ref": "3.8.2.3 · Table 3.8.2.3",
+            "values": [
+              "2 to 99 fixed seats: at least 2 wheelchair spaces",
+              "Larger venues: more spaces, per the table"
+            ]
+          },
+          "on": {
+            "ref": "Subsection 3.8.2",
+            "values": [],
+            "note": "Check the Ontario table for the number of wheelchair spaces."
+          }
+        },
+        {
+          "id": "parking",
+          "group": "Parking & controls",
+          "title": "Accessible parking",
+          "summary": "How many accessible parking stalls a building needs.",
+          "tags": "parking stall accessible parking garage",
+          "bc": {
+            "ref": "3.8.2.5 · Table 3.8.2.5",
+            "values": [
+              "2–10 stalls: 1 accessible stall",
+              "11–25 stalls: 2 accessible stalls",
+              "More stalls: see the table"
+            ],
+            "note": "Municipal zoning by-laws may ask for more."
+          },
+          "on": {
+            "ref": "AODA · O. Reg. 191/11",
+            "values": [],
+            "note": "Accessible parking in Ontario is set mainly by the AODA Design of Public Spaces standard (O. Reg. 191/11) and municipal by-laws, not the Building Code."
+          }
+        },
+        {
+          "id": "controls",
+          "group": "Parking & controls",
+          "title": "Controls and switches",
+          "summary": "Switches, buttons and other controls on an accessible path must be within reach from a wheelchair.",
+          "tags": "controls switch button outlet thermostat reach height",
+          "bc": {
+            "ref": "3.8.3.8",
+            "values": [
+              "Operable controls 900–1200 mm above the floor"
+            ]
+          },
+          "on": {
+            "ref": "Subsection 3.8.3",
+            "values": [],
+            "note": "Check Subsection 3.8.3 for control and push-plate heights."
+          }
+        }
+      ]
+    },
+    "ergo": {
+      "Kitchen": [
+        [
+          "Counter height",
+          "900–915 mm"
+        ],
+        [
+          "Upper cabinets above counter",
+          "450–500 mm"
+        ],
+        [
+          "Aisle between counters (1 cook)",
+          "1000–1100 mm"
+        ],
+        [
+          "Aisle between counters (2 cooks)",
+          "1200 mm+"
+        ],
+        [
+          "Work triangle, total of 3 legs",
+          "4.0–7.9 m"
+        ],
+        [
+          "Island clearance all round",
+          "1000 mm+"
+        ]
+      ],
+      "Bathroom": [
+        [
+          "Vanity height",
+          "800–900 mm"
+        ],
+        [
+          "Toilet centerline to side wall",
+          "≥ 400 mm (typ. 450)"
+        ],
+        [
+          "Clear space in front of toilet",
+          "≥ 600 mm (typ. 750)"
+        ],
+        [
+          "Shower (comfortable)",
+          "900 × 900 mm+"
+        ],
+        [
+          "Grab bar height (accessible)",
+          "840–920 mm — check 3.8"
+        ]
+      ],
+      "Bedroom": [
+        [
+          "Walk space beside bed",
+          "600–750 mm"
+        ],
+        [
+          "Space at foot of bed",
+          "750–900 mm"
+        ],
+        [
+          "In front of wardrobe",
+          "900 mm"
+        ],
+        [
+          "Wardrobe depth",
+          "600 mm"
+        ],
+        [
+          "Queen bed",
+          "1520 × 2030 mm"
+        ]
+      ],
+      "Living & dining": [
+        [
+          "Sofa to coffee table",
+          "400–450 mm"
+        ],
+        [
+          "Main walkway",
+          "900 mm+"
+        ],
+        [
+          "Dining: width per person",
+          "600 mm"
+        ],
+        [
+          "Chair pull-out behind table",
+          "750–900 mm"
+        ],
+        [
+          "Desk height",
+          "720–760 mm"
+        ],
+        [
+          "Seat height",
+          "430–460 mm"
+        ]
+      ],
+      "Circulation & doors": [
+        [
+          "Interior door leaf",
+          "760–810 mm"
+        ],
+        [
+          "Hallway in a dwelling",
+          "≥ 860 mm typical"
+        ],
+        [
+          "Stair width in a dwelling",
+          "≥ 860 mm (9.8.2.1)"
+        ],
+        [
+          "Handrail height",
+          "865–965 mm (9.8.7)"
+        ],
+        [
+          "Guard height in a dwelling",
+          "≥ 900 mm (9.8.8)"
+        ]
+      ],
+      "Accessibility": [
+        [
+          "Wheelchair turning circle",
+          "1500 mm diameter"
+        ],
+        [
+          "Door clear width",
+          "≥ 800 mm — check 3.8"
+        ],
+        [
+          "Clear floor space at fixtures",
+          "750 × 1200 mm typical"
+        ],
+        [
+          "Accessible counter height",
+          "≤ 865 mm typical"
+        ],
+        [
+          "Ramp slope",
+          "≤ 1 in 12 (3.8)"
+        ]
+      ]
+    },
+    "leed": [
+      [
+        "IP",
+        "Integrative Process, Planning & Assessments",
+        1
+      ],
+      [
+        "LT",
+        "Location & Transportation",
+        15
+      ],
+      [
+        "SS",
+        "Sustainable Sites",
+        11
+      ],
+      [
+        "WE",
+        "Water Efficiency",
+        9
+      ],
+      [
+        "EA",
+        "Energy & Atmosphere",
+        33
+      ],
+      [
+        "MR",
+        "Materials & Resources",
+        18
+      ],
+      [
+        "EQ",
+        "Indoor Environmental Quality",
+        13
+      ],
+      [
+        "PR",
+        "Project Priorities (incl. LEED AP)",
+        10
+      ]
+    ]
+  }
+}

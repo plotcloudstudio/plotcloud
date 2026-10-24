@@ -39,13 +39,17 @@ function who() {
 }
 
 const PAGES = {
-  '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), 'workspace-archive': () => import('./pages/workspace.js'), simulations: () => import('./pages/simulations.js'),
+  '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { '': 'Home', workspace: 'Workspace', 'workspace-archive': 'Workspace (archive)', simulations: 'Simulations', results: 'Results', resources: 'Resources', pricing: 'Pricing', login: 'Log in', account: 'Account', 'batch-run': 'Batch run' };
+const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', 'batch-run': 'Batch run' };
 let cleanup = null, prevHash = '';
 export async function route() {
+  if(/^#\/(?:studio|workspace-archive)(?:\/|$|\?)/.test(location.hash))history.replaceState(null,'',location.hash.replace(/^#\/(?:studio|workspace-archive)/,'#/workspace'));
+  if(/^#\/library(?:\?|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/library','#/resources/files'));
+  if(/^#\/res\//.test(location.hash))history.replaceState(null,'',location.hash.replace('#/res/','#/resources/item/'));
+  if(/^#\/showroom(?:\/|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/showroom','#/resources/showroom'));
   // one route per simulation, one state: old links that carry ?project=&version= set the current project and version, then the address is cleaned
   // the merged Workspace is now the Workspace; old Workspace v2 links land on it
   if (/^#\/workspace-v2(\/|$|\?)/.test(location.hash)) history.replaceState(null, '', location.hash.replace('#/workspace-v2', '#/workspace'));
@@ -56,8 +60,7 @@ export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
-  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === (key === 'workspace-archive' ? 'workspace' : key)) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  $$('[data-archive-only]').forEach((a) => { a.hidden = key !== a.dataset.archiveOnly; });   // All tools stays only in the archived Workspace's top bar
+  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
   document.querySelector('.pc-ui-context')?.remove();
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
@@ -65,7 +68,7 @@ export async function route() {
   const app = $('#app'); app.innerHTML = '';
   const mod = await PAGES[key]();
   cleanup = (await mod.render(app, rest.map((x) => decodeURIComponent(x.split('?')[0])), params)) || null;
-  if (['workspace','workspace-archive','simulations','results'].includes(key)) {
+  if (['workspace','simulations','results'].includes(key)) {
     const requested=params.get('project')||rest[0]?.split('?')[0];
     const project=S.project(requested)||currentProject();
     if(project){

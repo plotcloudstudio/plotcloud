@@ -1,18 +1,38 @@
-import { RESOURCES, MODEL_TOOLS, FULL, PAGE } from '../data.js';
+import { RESOURCES, MODEL_TOOLS } from '../data.js';
 import { esc } from '../app.js';
-
-const link = (t) => (t.tool ? FULL(t.tool) : t.route ? PAGE(t.route) : PAGE('library'));
-const list = (n, title, items, more = '') => `<section class="section" style="margin-top:72px"><div class="kicker"><b>${n}</b>${title}</div>${more}
-  <ol class="numlist cols" style="margin-top:18px">${items.map((t) => `<li style="grid-template-columns:1fr auto"><a href="${link(t)}" target="_blank" rel="noopener" style="text-decoration:none"><b>${esc(t.name)}</b><p>${esc(t.blurb)}</p></a><span aria-hidden="true" class="muted">↗</span></li>`).join('')}</ol></section>`;
-
-export function render(app) {
-  app.innerHTML = `<div class="wrap">
-    <span class="eyebrow">Resources</span>
-    <div class="split" style="margin-top:16px"><h1 class="display">Tools and files,<br><span>free to use.</span></h1>
-      <p class="lede">Useful on their own, and a way into the platform. Every link opens what PlotCloud already offers.</p></div>
-    ${list('01', 'Presentation tools', RESOURCES.ai)}
-    ${list('02', 'CAD blocks and 3D files', RESOURCES.files.map(([name, blurb]) => ({ name, blurb })))}
-    ${list('03', 'Model-building tools', MODEL_TOOLS)}
-    ${list('04', 'References', RESOURCES.refs)}
-  </div>`;
+let catalogPromise;
+export const catalog=()=>catalogPromise||=(fetch('resource-catalog.json').then(r=>{if(!r.ok)throw Error('The resource catalog could not load.');return r.json();}));
+const safeURL=v=>{if(!v)return null;try{const u=new URL(v,location.href);return /^(https?:|data:image\/)/.test(u.protocol==='data:'?u.href:u.protocol)?u.href:null;}catch{return null;}};
+const resourceURL=id=>'#/resources/item/'+encodeURIComponent(id);
+export const toolURL=id=>'#/resources/tool/'+encodeURIComponent(id);
+export function records(data){
+ let old={};try{old=JSON.parse(localStorage.getItem('pc-proto')||'{}');}catch{}
+ const items=data.items.map(r=>({...r})),overlays=old.cms?.res||{};
+ for(const c of old.custom||[])if(!items.some(r=>r.id===c.slug))items.push({id:c.slug,name:c.title,category:c.cat,formats:c.fmts||[],compatibility:c.ver,size:c.size,art:c.art,added:c.date,status:c.status});
+ for(const [id,o]of Object.entries(overlays)){let r=items.find(r=>r.id===id);if(!r){r={id};items.push(r);}Object.assign(r,{name:o.title??r.name,category:o.cat??r.category,formats:o.fmts??r.formats??[],compatibility:o.ver??r.compatibility,size:o.size??r.size,art:o.art??r.art,added:o.date??r.added,status:o.deleted?'draft':o.status??r.status,description:o.desc||'',image:safeURL(o.img),download:safeURL(o.downloadUrl||o.fileUrl),license:o.license||''});}
+ return items.filter(r=>r.status!=='draft'&&r.name);
+}
+const catName=(d,id)=>d.categories.find(c=>c[0]===id)?.[1]||id;
+function art(d,r){return r.image?`<img src="${esc(r.image)}" alt="${esc(r.name)}" loading="lazy">`:`<svg viewBox="0 0 1600 1100" aria-label="${esc(r.formats.join(' / '))} file illustration" role="img">${d.art[r.art%d.art.length]||d.art[0]}</svg>`;}
+function card(d,r){return `<a class="resource-card" href="${resourceURL(r.id)}"><figure>${art(d,r)}</figure><span class="eyebrow">${esc(catName(d,r.category))}</span><h3>${esc(r.name)}</h3><p>${r.formats.map(f=>'.'+esc(f)).join(' · ')}${r.size?' · '+esc(r.size)+' MB':''}</p><span class="resource-state">${r.download?'Source file linked':'Catalog record · source file not attached'}</span></a>`;}
+const tools=(title,list)=>`<section class="resource-section"><h2>${title}</h2><div class="resource-tools">${list.map(t=>`<a href="${toolURL(t.tool)}"><h3>${esc(t.name)}</h3><p>${esc(t.blurb)}</p><span>Open tool →</span></a>`).join('')}</div></section>`;
+export async function render(app,rest=[],params=new URLSearchParams()){
+ if(rest[0]==='tool')return(await import('./resource-tool.js')).render(app,rest[1]);
+ const data=await catalog(),items=records(data);let dead=false;
+ if(rest[0]==='item'){
+  const r=items.find(r=>r.id===rest[1]);
+  if(!r){app.innerHTML='<div class="wrap"><h1>Resource not found</h1><a href="#/resources/files">Browse resources →</a></div>';return;}
+  app.innerHTML=`<div class="wrap resource-page"><a class="text-link" href="#/resources/files?category=${esc(r.category)}">← ${esc(catName(data,r.category))}</a><div class="resource-detail"><figure>${art(data,r)}</figure><section><span class="eyebrow">Resource files</span><h1>${esc(r.name)}</h1><p>${esc(r.description||'Resource catalog record. Check the listed file types and application version before using a supplied source file.')}</p><dl><dt>File types</dt><dd>${r.formats.map(f=>'.'+esc(f)).join(' · ')}</dd><dt>Compatibility</dt><dd>${esc(r.compatibility||'Not specified')}</dd><dt>Catalog size</dt><dd>${r.size?esc(r.size)+' MB':'Not specified'}</dd><dt>License</dt><dd>${esc(r.license||'Not verified for this record; confirm with the provider before reuse.')}</dd></dl>${r.download?`<a class="btn primary" href="${esc(r.download)}" rel="noopener">Open source file ↗</a>`:'<p class="resource-notice" role="status">No source file is attached to this catalog record. Download is unavailable; registration is not required to discover this.</p>'}<button class="btn" id="resourceMeta">Export catalog metadata (JSON)</button><p class="note">Metadata export is not the CAD/model source file.</p></section></div><section class="resource-section"><h2>Related resources</h2><div class="resource-grid">${items.filter(x=>x.category===r.category&&x!==r).slice(0,3).map(x=>card(data,x)).join('')}</div></section></div>`;
+  app.querySelector('#resourceMeta').onclick=()=>{const u=URL.createObjectURL(new Blob([JSON.stringify(r,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download=r.id+'-metadata.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};return;
+ }
+ if(rest[0]==='showroom'){
+  const scenes=rest[1]?data.scenes.filter(s=>s.id===rest[1]):data.scenes;
+  app.innerHTML=`<div class="wrap resource-page"><a href="#/resources">← Resources</a><h1>Resource collections</h1><p class="lede">Browse the existing curated resource relationships. Collection descriptions do not certify that source files are available.</p>${scenes.map(s=>`<section class="resource-section" id="${esc(s.id)}"><h2>${esc(s.title)}</h2><p>${esc(s.lede)}</p><div class="resource-grid">${[...s.spots.map(x=>x[0]),...s.also].map(id=>items.find(r=>r.id===id)).filter(Boolean).map(r=>card(data,r)).join('')}</div></section>`).join('')}</div>`;return;
+ }
+ const home=rest[0]!=='files';
+ app.innerHTML=`<div class="wrap resource-page"><span class="eyebrow">Resources</span><div class="split"><h1 class="display">Tools and files.<br><span>One workspace.</span></h1><p class="lede">Open tools and browse resources here, without leaving PlotCloud. Building modelling now lives in <a href="#/workspace">Workspace</a>.</p></div><nav class="resource-nav" aria-label="Resource sections"><a class="btn" href="#/resources">Tools & references</a><a class="btn" href="#/resources/files">All files</a><a class="btn" href="#/resources/showroom">Collections</a></nav>${home?tools('Model-building tools',MODEL_TOOLS)+tools('Design utilities',RESOURCES.utilities)+tools('References',RESOURCES.refs):''}<section class="resource-section"><h2>${home?'Resource files':'Browse resource files'}</h2><p class="note">Existing catalog records are retained. File availability and licensing are shown on each detail page.</p><div class="resource-filter"><label>Category<select id="resourceCategory"><option value="all">All categories</option>${data.categories.map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')}</select></label><label>Search<input type="search" id="resourceSearch" placeholder="Name, file type or application"></label><label>Sort<select id="resourceSort"><option value="new">Newest first</option><option value="az">Name A–Z</option><option value="old">Oldest first</option></select></label></div><p id="resourceCount" role="status"></p><div class="resource-grid" id="resourceGrid"></div></section></div>`;
+ const category=app.querySelector('#resourceCategory'),search=app.querySelector('#resourceSearch'),sort=app.querySelector('#resourceSort');
+ category.value=data.categories.some(c=>c[0]===params.get('category'))?params.get('category'):'all';search.value=params.get('q')||'';sort.value=['new','old','az'].includes(params.get('sort'))?params.get('sort'):'new';
+ function update(){if(dead)return;let list=items.filter(r=>(category.value==='all'||r.category===category.value)&&(!search.value||[r.name,...r.formats,r.compatibility].join(' ').toLowerCase().includes(search.value.trim().toLowerCase())));list.sort((a,b)=>sort.value==='az'?a.name.localeCompare(b.name):sort.value==='old'?String(a.added||'').localeCompare(b.added||''):String(b.added||'').localeCompare(a.added||''));app.querySelector('#resourceGrid').innerHTML=list.length?list.map(r=>card(data,r)).join(''):'<p class="resource-notice">No resources match these filters.</p>';app.querySelector('#resourceCount').textContent=`${list.length} catalog record${list.length===1?'':'s'}`;const q=new URLSearchParams();if(category.value!=='all')q.set('category',category.value);if(search.value)q.set('q',search.value);if(sort.value!=='new')q.set('sort',sort.value);history.replaceState(null,'',`#/resources${home?'':'/files'}${q.size?'?'+q:''}`);}
+ category.onchange=sort.onchange=update;search.oninput=update;update();return()=>{dead=true;};
 }

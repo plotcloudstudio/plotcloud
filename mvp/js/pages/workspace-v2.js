@@ -8,7 +8,7 @@
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
-import { LAYER_COLORS, PAGE } from '../data.js';
+import { LAYER_COLORS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject, setCurrent, setCurrentVersion } from '../app.js';
 import { importModel } from '../viewport.js';
 import { createViewport2 } from '../viewport2.js';
@@ -436,8 +436,8 @@ export function render(app, [pid]) {
   function projectPanel(host) {
     host.innerHTML = `<div class="pane w3-accp${UI.pacc === 'project' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="project" aria-expanded="${UI.pacc === 'project'}"><span>${UI.pacc === 'project' ? '▾' : '▸'} Project</span></button></h2><div class="w3-accb">
       <select class="inp" id="proj" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-      <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p><div class="pc-ui-workspace-links"><a class="btn sm" href="#/workspace/${p.id}">Standard workspace</a><a class="btn sm" href="workspace.html">Plan Studio</a></div>
-      <p class="note">Every view is Plan Studio (or the Shaded model). The full Plan Studio, with its own files and send-to-tool, still opens on its own: <a href="${PAGE('studio')}" target="_blank" rel="noopener">Plan Studio ↗</a></p></div></div>
+      <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
+      <p class="note">Plan, Perspective and Shaded views share this Workspace model. Edit here, then run simulations on a saved version.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
       <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf" hidden>

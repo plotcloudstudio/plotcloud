@@ -4,7 +4,7 @@ const inventory=require('../ui/inventory.json');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 let currentTarget='browser startup';
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
  const results=[];
  try{
   const context=await browser.newContext({viewport:{width:1440,height:900}});
@@ -53,10 +53,10 @@ let currentTarget='browser startup';
   await p.locator('#themeSeg [data-theme=night]').click();
   await p.waitForFunction(()=>PlotCloudUI.theme==='night');
   await p.goto(base+'/index.html#/studio');
-  await p.frameLocator('iframe[data-emb=modeler]').locator('[data-pc-theme=night]').waitFor();
-  const frame=await p.locator('iframe[data-emb=modeler]').elementHandle();
+  await p.frameLocator('#fPlan').locator('[data-pc-theme=night]').waitFor();
+  const frame=await p.locator('#fPlan').elementHandle();
   assert.equal(await (await frame.contentFrame()).evaluate(()=>document.documentElement.dataset.pcTheme),'night');
-  assert.equal(await p.frameLocator('iframe[data-emb=modeler]').locator('.pc-ui-theme').count(),0,'Embedded tool must not duplicate host theme control');
+  assert.equal(await p.frameLocator('#fPlan').locator('.pc-ui-theme').count(),0,'Embedded tool must not duplicate host theme control');
   await p.close();
   fs.mkdirSync('/tmp/plotcloud-ui',{recursive:true});fs.writeFileSync('/tmp/plotcloud-ui/inventory-results.json',JSON.stringify({hosts:results,routes:routeChecks},null,2));
   results.forEach(r=>console.log(r.status.toUpperCase(),r.file,r.reason||'',r.pageErrors.length?'PAGE ERRORS: '+r.pageErrors.join(' | '):''));

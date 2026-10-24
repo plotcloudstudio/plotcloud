@@ -2,11 +2,6 @@
   "version": 1,
   "hosts": [
     {
-      "file": "index.html",
-      "surface": "classic",
-      "url": "/index.html"
-    },
-    {
       "file": "mvp/index.html",
       "surface": "site",
       "url": "/mvp/index.html"
@@ -22,19 +17,9 @@
       "url": "/emb/acoustics.html"
     },
     {
-      "file": "emb/atlas.html",
-      "surface": "tool",
-      "url": "/emb/atlas.html"
-    },
-    {
       "file": "emb/cameras.html",
       "surface": "tool",
       "url": "/emb/cameras.html"
-    },
-    {
-      "file": "emb/composer.html",
-      "surface": "tool",
-      "url": "/emb/composer.html"
     },
     {
       "file": "emb/daylight.html",
@@ -77,11 +62,6 @@
       "url": "/emb/modeler.html"
     },
     {
-      "file": "emb/render.html",
-      "surface": "tool",
-      "url": "/emb/render.html"
-    },
-    {
       "file": "emb/spacesyntax.html",
       "surface": "tool",
       "url": "/emb/spacesyntax.html"
@@ -105,11 +85,6 @@
       "file": "emb/structure.html",
       "surface": "tool",
       "url": "/emb/structure.html"
-    },
-    {
-      "file": "emb/studio.html",
-      "surface": "tool",
-      "url": "/emb/studio.html"
     },
     {
       "file": "emb/sunhours.html",
@@ -146,7 +121,11 @@
     "/mvp/#/resources",
     "/mvp/#/pricing",
     "/mvp/#/login",
-    "/mvp/#/account"
+    "/mvp/#/account",
+    "/mvp/#/resources/files",
+    "/mvp/#/resources/item/lounge-chair-set",
+    "/mvp/#/resources/showroom",
+    "/mvp/#/resources/tool/scale"
   ],
   "classicRoutes": [
     "/index.html#/home",

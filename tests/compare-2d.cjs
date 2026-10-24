@@ -2,10 +2,10 @@ const assert=require('node:assert/strict'),{chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 const near=(a,b,t=.02)=>Math.abs(a-b)<=t;
 (async()=>{
-  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
+  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
   const errors=[],page=await browser.newPage({viewport:{width:1400,height:900}}); page.on('pageerror',e=>errors.push(e.message));
   try{
-    await page.goto(base+'/#/studio'); const work=await (await page.locator('iframe[data-emb="modeler"]').elementHandle()).contentFrame(); await work.waitForFunction(()=>window.__wb&&window.__wb.cmp,{},{timeout:60000});
+    await page.goto(base+'/tests/fixtures/engine-host.html'); const work=await (await page.locator('iframe[data-emb="modeler"]').elementHandle()).contentFrame(); await work.waitForFunction(()=>window.__wb&&window.__wb.cmp,{},{timeout:60000});
     await work.evaluate(()=>window.__wbTour?.close());
     const model={v:2,id:'compare-2d-test',name:'Compare 2D',version:1,units:'m',north:0,targets:{ach:5,df:2,view:.75},climate:{from:225,U10:3.5,terrain:'suburban',Tout:18,Tin:24},levels:[{id:'L1',name:'Ground',z:0,h:3}],walls:[{id:'w1',lv:'L1',a:[0,0],b:[10,0],t:.2},{id:'w2',lv:'L1',a:[10,0],b:[10,10],t:.2},{id:'w3',lv:'L1',a:[10,10],b:[0,10],t:.2},{id:'w4',lv:'L1',a:[0,10],b:[0,0],t:.2}],ops:[],floors:[{id:'fl1',lv:'L1',x:0,y:0,w:10,d:10}],voids:[],names:[],furn:[{id:'f1',lv:'L1',type:'table',x:4,y:4,w:2,d:2,h:.75,rot:0}]};
     const modelB=structuredClone(model); modelB.version=2; modelB.furn[0].x=4.5;

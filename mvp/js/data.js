@@ -1,10 +1,6 @@
-// Catalog of what PlotCloud already has. Every `tool` id opens the working tool in the production site
-// (../index.html#/tool/<id>). Nothing here replaces those engines; the prototype only adds a project layer around them.
-
-export const FULL = (id) => `../index.html#/tool/${id}`;
+// Native resource routes wrap the existing tool engines.
 // Consistent interior / exterior illustration plates, rendered with analysis-art.html.
 export const simImg = (id) => 'analysis-' + id;
-export const PAGE = (route) => `../index.html#/${route}`;
 
 // Analysis tools that exist today, grouped for the Simulations page.
 // inputs: what the model must contain · metrics: what Results compares, read from the engine's own saved figures
@@ -59,7 +55,6 @@ for(const sim of SIMS) sim.scope=['sunhours','wind','stormwater','noise'].includ
 
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [
-  { name: 'Plan Studio', route: 'studio', blurb: 'Draw walls, rooms, doors, windows and furniture across levels.' },
   { name: '3D model generator', tool: 'furniture', blurb: 'Parametric furniture and fittings.' },
   { name: 'Facade studio', tool: 'facade', blurb: 'Parametric facade studies.' },
   { name: 'DetailLab', tool: 'detaillab', blurb: 'Construction details in 3D.' },
@@ -67,18 +62,10 @@ export const MODEL_TOOLS = [
 
 // Resources: free tools and files that bring people in.
 export const RESOURCES = {
-  ai: [
+  utilities: [
     { name: 'Color palettes', tool: 'palette', blurb: 'Palettes for boards, renders and materials.' },
-    { name: 'Pin-up composer', tool: 'composer', blurb: 'Lay out renders, plans and diagrams on crit boards.' },
-    { name: 'Board studio', tool: 'studio', blurb: 'Presentation boards from your project images.' },
     { name: 'Exploded site axon', tool: 'axon', blurb: 'Layered site axonometric diagrams.' },
     { name: 'Physical model', tool: 'topo', blurb: 'Contour models ready for laser cutting.' },
-  ],
-  files: [
-    ['CAD Resources', 'Stair & railing blocks, residential furniture plan blocks'], ['Rhino Resources', 'Furniture, lamps, benches'],
-    ['Revit Resources', 'Families'], ['Grasshopper & Parametric', 'Scripts'], ['3D & Case Study Models', 'Villa Savoye, plants, trees'],
-    ['Diagrams & Graphics', 'Scale figures, materials, axon kits'], ['Site & Urban Design', 'City context kits'],
-    ['Presentation Templates', 'Crit boards'], ['Portfolio & Job Application', 'Portfolio templates'],
   ],
   refs: [
     { name: 'Building code finder', tool: 'code-bc', blurb: 'BC and Ontario code sections by topic.' },

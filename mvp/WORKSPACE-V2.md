@@ -1,6 +1,6 @@
 # Workspace (merged, formerly Workspace v2): reconciliation
 
-`#/workspace` is now the merged Workspace (it was `#/workspace-v2`; old links redirect). It is laid out, laid out like Rhino: tool rail and panel on the left, a large viewport, layers on the right and a status bar at the bottom. The earlier Workspace (`js/pages/workspace.js`, `js/viewport.js`) is unchanged and kept as an archive at `#/workspace-archive` for rollback. The TEMP nav entry is gone.
+`#/workspace` is the merged Workspace (formerly `#/workspace-v2`). Legacy `#/studio` and `#/workspace-archive` bookmarks redirect here. The old public Workspace/Plan Studio page is removed; the shared `emb/modeler.html` modelling engine remains in use. There is no archived public editor entry.
 
 New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` block at the end of `css/mvp.css`. Edited: `js/app.js` (one route) and `index.html` (one nav link).
 

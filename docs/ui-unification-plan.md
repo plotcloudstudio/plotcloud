@@ -19,7 +19,7 @@
 | 区域 | 当前范围 | 统一重点 |
 |---|---|---|
 | 新版页面 | `mvp/js/pages/` 的 home、workspace、workspace-v2、simulations、results、resources、pricing、login、account，及 `mvp/workspace.html` | 站点导航、标题层级、公共组件、项目状态与入口 |
-| 旧站与过渡路由 | `index.html`、`site-shell.css/js` 生成的公开页面、项目和工具入口 | 保留现有地址及链接；让过渡路径保持品牌与返回位置一致 |
+| 旧地址兼容 | `index.html` + `legacy-redirect.js` | 仅跳转至新版原生路由；旧站壳与公开页面已删除 |
 | 建模/场地工具 | `emb/modeler.html`、furniture、facade、detaillab、doors3d、stairs3d、topo | 模型主视口、对象/楼层/图层组织、属性面板与公共工具栏 |
 | 分析 | SIMS 目录中的 14 个入口，逐一映射到实际工具；相关 HTML 包括 sunhours、daylight、wind、vent、stormwater、acoustics、spacesyntax、evac、isovist、views、cameras、structure、span | 输入、运行、结果、图例、导出位置与状态规则 |
 | 渲染与展示 | render、composer、studio、atlas 的实际路由和用途 | 输入/预览/历史/导出以及通用控件，不覆盖作品本身的排版与字体 |

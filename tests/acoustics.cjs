@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
- await page.goto(base+'/index.html#/tools');await page.locator('[data-catalog-tool="acoustics"]').waitFor();
+ await page.goto(base+'/mvp/#/simulations');await page.locator('a[href="#/simulations/acoustics"]').first().waitFor();
  await page.goto(base+'/index.html#/tool/acoustics');const work=await(await page.locator('iframe[data-emb="acoustics"]').elementHandle()).contentFrame();
  await work.waitForFunction(()=>!!window.AcousticStudy?.stats);
  let report=await work.evaluate(()=>AcousticStudy.report());

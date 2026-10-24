@@ -1,7 +1,7 @@
 # PlotCloud simulation-first MVP prototype
 
 A runnable prototype of PlotCloud reorganised around simulations: **Home → Workspace → Simulations → Results**, with **Resources** as the free entry point.
-It lives in `/mvp/` next to the production site and does not change it. Open `mvp/index.html` through any static server (the production site's server is enough), e.g. `python3 -m http.server` at the repo root, then visit `/mvp/`.
+The current public site lives in `/mvp/`. The root entry is only a compatibility redirect; the former public application and standalone Render/Boards pages have been removed. Open `mvp/index.html` through any static server at the repository root, then visit `/mvp/`. The historical prototype matrix below describes the original milestone, not current engine capability.
 
 ## User journey
 
