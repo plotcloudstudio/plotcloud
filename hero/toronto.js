@@ -7,13 +7,13 @@ const pauseButton = document.querySelector('[data-action=pause]');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const options = new URLSearchParams(location.search);
 const embedded = options.get('embed') === '1';
-const initialMode = ['sun','wind','rain','sound'].includes(options.get('mode')) ? options.get('mode') : 'sun';
+const initialMode = ['sun','wind','rain','sound','snow'].includes(options.get('mode')) ? options.get('mode') : 'sun';
 let visualTheme = options.get('theme') === 'night' ? 'night' : 'day';
 if (embedded) document.documentElement.dataset.embedded = 'true';
 document.documentElement.dataset.theme = visualTheme;
 let mode = 'sun', paused = reduced.matches, visible = true, failed = false;
 let renderer, scene, camera, frame, observer, resizeObserver;
-const names = {sun:'Sun / light & shadow',wind:'Wind / airflow paths',rain:'Rain / surface water',sound:'Sound / wave propagation'};
+const names = {sun:'Sun / light & shadow',wind:'Wind / airflow paths',rain:'Rain / surface water',sound:'Sound / wave propagation',snow:'Snow / winter drift'};
 function showFallback(error) {
   failed = true;
   cancelAnimationFrame(frame);
@@ -34,8 +34,11 @@ function syncPause() {
 }
 syncPause();
 if(embedded){
+  const bird=document.createElement('span');bird.className='bird-cursor';bird.setAttribute('aria-hidden','true');bird.innerHTML='<svg viewBox="0 0 48 36"><g class="bird-wings"><path d="M24 21Q10 0 2 9Q12 12 21 25M24 21Q36 0 46 9Q35 12 27 25"/></g><path d="M20 23Q24 15 29 22L33 24 29 26Q25 31 21 26L14 30Z"/><circle cx="28" cy="22" r="1" fill="#17263d"/></svg>';viewport.append(bird);
+  canvas.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const r=viewport.getBoundingClientRect();bird.style.left=`${e.clientX-r.left}px`;bird.style.top=`${e.clientY-r.top}px`;bird.classList.add('visible');});
+  canvas.addEventListener('pointerleave',()=>bird.classList.remove('visible'));
   canvas.tabIndex=0;canvas.removeAttribute('aria-hidden');canvas.setAttribute('role','img');
-  canvas.setAttribute('aria-label','Illustrative Toronto architectural model. Drag to rotate. Press Space to pause or resume motion.');
+  canvas.setAttribute('aria-label','Illustrative Toronto architectural model. Click or press Enter to cycle Sun, Wind, Rain, Sound and Snow. Drag to rotate. Press Space to pause or resume motion.');
   canvas.addEventListener('keydown',event=>{if(event.code==='Space'){event.preventDefault();paused=!paused;syncPause();}});
 }
 try {
@@ -60,7 +63,7 @@ try {
   camera = new T.OrthographicCamera(-10,10,10,-10,.1,90);
   const world = new T.Group();
   scene.add(world);
-  scene.add(new T.HemisphereLight(0xffffff,0xb5b7ac,1.7));
+  const ambient=new T.HemisphereLight(0xffffff,0xb5b7ac,1.7);scene.add(ambient);
   const key = new T.DirectionalLight(0xffdfa7,4.2);
   key.position.set(-9,14,6); key.castShadow = true;
   key.shadow.mapSize.set(1024,1024);
@@ -89,6 +92,8 @@ try {
   box(world,0,-.67,0,10.55,.15,8.4,baseMaterial);
   box(world,0,-.48,0,10.8,.18,8.65,chalk);
   const tiles=[];
+  const nightGroups=[];
+  const windowMaterial=new T.MeshBasicMaterial({color:0xffd890,toneMapped:false});
   let seed=2026;
   const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   for(let ix=0;ix<5;ix++)for(let iz=0;iz<4;iz++){
@@ -109,6 +114,11 @@ try {
         const h=.45+rand()*1.45+(ix===3&&iz===1?1:0),w=.42+rand()*.26,d=.38+rand()*.28;
         box(tile,x,h/2+.065,z,w,h,d,white);
         box(tile,x,h+.085,z,w+.035,.05,d+.035,roof);
+        const windows=new T.Group();tile.add(windows);nightGroups.push(windows);
+        for(let y=.25;y<h-.1;y+=.28)for(let col=0;col<3;col++)if(rand()>.24){
+          box(windows,x-w*.32+col*w*.32,y,z+d/2+.003,.055,.09,.008,windowMaterial);
+          box(windows,x+w/2+.003,y,z-d*.32+col*d*.32,.008,.09,.055,windowMaterial);
+        }
         if(h>1.1){box(tile,x+.03,h+.2,z,w*.65,.2,d*.65,chalk);}
         // Quiet horizontal facade joints give massing a crafted scale.
         for(let floor=.28;floor<h-.08;floor+=.24){
@@ -167,7 +177,14 @@ try {
   box(world,3.85,.055,3.0,2.35,.025,1.25,new T.MeshStandardMaterial({color:0xc8d4cf,roughness:.72}));
   for(let j=0;j<8;j++)line(world,[[2.8,.073,2.5+j*.13],[4.9,.073,2.5+j*.13]],0xecf0e9,.5);
   // All environmental effects are schematic, with one visible layer at a time.
-  const effects={sun:new T.Group(),wind:new T.Group(),rain:new T.Group(),sound:new T.Group()};
+  const effects={sun:new T.Group(),wind:new T.Group(),rain:new T.Group(),sound:new T.Group(),snow:new T.Group()};
+  const neon=new T.Group();world.add(neon);nightGroups.push(neon);
+  for(const [height,radius,color] of [[5.59,.715,0xff438c],[5.8,.7,0x55ddff],[6.95,.235,0xa774ff]]){
+    const ring=new T.Mesh(new T.TorusGeometry(radius,.022,8,64),new T.MeshBasicMaterial({color,toneMapped:false}));ring.rotation.x=Math.PI/2;ring.position.set(-.3,height+.055,-.1);neon.add(ring);
+  }
+  line(neon,[[-.3,.2,-.1],[-.3,5.3,-.1]],0x64cfff,1);
+  for(let n=0;n<3;n++)line(neon,[[-5.2,.09,2.12+n*.09],[5.2,.09,2.12+n*.09]],n===1?0xff4c99:0x69dfff,.85);
+  for(const [x,z] of [[-2.65,.8],[-.3,-.1],[3,-2]]){const light=new T.PointLight(0x6e9fff,4,5,2);light.position.set(x,1,z);neon.add(light);}
   Object.values(effects).forEach(group=>world.add(group));
   // A softly tinted sun/shadow field lives on the tiles, preserving the modular seams.
   const solarSurfaces=[];
@@ -222,6 +239,10 @@ try {
   const pointCanvas=document.createElement('canvas');pointCanvas.width=32;pointCanvas.height=32;
   const ctx=pointCanvas.getContext('2d');ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(16,16,12,0,Math.PI*2);ctx.fill();
   const pointTexture=new T.CanvasTexture(pointCanvas);
+  const snowSeeds=Array.from({length:550},()=>[rand()*13-6.5,rand()*10,rand()*10-5,rand()*Math.PI*2]);
+  const snowGeo=new T.BufferGeometry();snowGeo.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(snowSeeds.length*3),3));
+  effects.snow.add(new T.Points(snowGeo,new T.PointsMaterial({color:0xffffff,size:3.2,sizeAttenuation:false,map:pointTexture,transparent:true,opacity:.95,depthWrite:false,toneMapped:false})));
+  for(const tile of tiles){const cap=box(effects.snow,tile.position.x,.065+tile.position.y,tile.position.z,2.02,.025,2.02,new T.MeshStandardMaterial({color:0xf5faff,roughness:1}));cap.receiveShadow=true;}
   const soundBase=[],soundPositions=[];
   for(let ix=0;ix<66;ix++)for(let iz=0;iz<52;iz++){
     const x=-5.35+ix*.165,z=-4.25+iz*.165;const r=Math.hypot(x+.3,z+.1);
@@ -255,10 +276,14 @@ try {
   pauseButton.addEventListener('click',()=>{paused=!paused;syncPause();});
   reduced.addEventListener('change',e=>{paused=e.matches;syncPause();});
   document.querySelector('[data-action=reset]').addEventListener('click',()=>{azimuth=.63;elevation=.46;orbit=0;pointerX=pointerY=leanX=leanY=0;render(0);});
-  canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);});
+  const cycleMode=()=>{const modes=Object.keys(names);setMode(modes[(modes.indexOf(mode)+1)%modes.length]);};
+  if(embedded)canvas.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.repeat){e.preventDefault();cycleMode();}});
+  let press=null;
+  canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragging=true;press={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointermove',e=>{if(press&&press.id===e.pointerId&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>6)press.moved=true;});
   canvas.addEventListener('pointermove',e=>{if(!dragging){if(!paused&&e.pointerType!=='touch'){const rect=canvas.getBoundingClientRect();pointerX=(e.clientX-rect.left)/rect.width-.5;pointerY=(e.clientY-rect.top)/rect.height-.5;}return;}azimuth-=(e.clientX-lastX)*.004;elevation=T.MathUtils.clamp(elevation+(e.clientY-lastY)*.003,.2,.85);lastX=e.clientX;lastY=e.clientY;render(0);});
   canvas.addEventListener('pointerleave',()=>{pointerX=pointerY=0;});
-  const endDrag=()=>{dragging=false;};canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+  const endDrag=e=>{if(!press||e.pointerId!==press.id)return;const click=e.type==='pointerup'&&!press.moved&&Math.hypot(e.clientX-press.x,e.clientY-press.y)<=6;press=null;dragging=false;if(embedded&&click)cycleMode();};canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
   function render(dt){
     const animate=!paused&&!dragging;
     if(animate){clock+=dt;orbit=Math.sin(clock*.055)*.16;}
@@ -267,7 +292,9 @@ try {
     camera.lookAt(0,2.75,0);
     const tint=new T.Color(mode==='sun'?0xffdfa7:mode==='rain'?0xdbe8f8:0xf4f3ea);
     key.color.lerp(tint,dt?Math.min(1,dt*3):1);
-    key.intensity=T.MathUtils.lerp(key.intensity,mode==='sun'?4.2:3,dt?Math.min(1,dt*3):1);
+    const night=visualTheme==='night';ambient.intensity=night?.32:1.7;fill.intensity=night?.5:1;nightGroups.forEach(g=>g.visible=night);effects.sun.visible=mode==='sun'&&!night;solarSurfaces.forEach(s=>s.visible=mode==='sun'&&!night);
+    white.color.set(night?0x3d506b:0xf1f0e8);chalk.color.set(night?0x2d3b50:0xe3e3db);roof.color.set(night?0x7188a0:0xf8f7f1);baseMaterial.color.set(night?0x17263d:0xe2e1d7);roadMaterial.color.set(night?0x162034:0xc9cdc4);
+    key.intensity=T.MathUtils.lerp(key.intensity,night?.65:mode==='sun'?4.2:3,dt?Math.min(1,dt*3):1);
     key.position.x=-9+(mode==='sun'?Math.sin(clock*.09)*4:0);
     const solarPhase=.85+Math.sin(clock*.09)*.35;
     sunOrb.position.set(Math.cos(solarPhase)*6.25,Math.sin(solarPhase)*7.2+.08,-1.5);
@@ -283,6 +310,7 @@ try {
       }
       rainGround.attributes.position.needsUpdate=true;
     }
+    if(mode==='snow'){const a=snowGeo.attributes.position;snowSeeds.forEach(([x,y,z,phase],i)=>a.setXYZ(i,x+Math.sin(clock*.65+phase)*.32,((y-clock*.7)%10+10)%10,z+Math.cos(clock*.4+phase)*.2));a.needsUpdate=true;}
     if(mode==='sound'){
       rings.forEach((ring,i)=>{const phase=(clock*.15+i*.25)%1;const scale=.5+phase*5.4;ring.scale.set(scale,1,scale);ring.material.opacity=(1-phase)*.25;});
       const a=soundGeo.attributes.position;

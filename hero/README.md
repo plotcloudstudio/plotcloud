@@ -10,6 +10,9 @@ For source development, serve the repository root with any static HTTP server (f
 - Wind: cyan directional marks, curved streamlines and moving tracers.
 - Rain: falling particles and dotted surface runoff.
 - Sound: violet point field forming an animated wave surface.
+- Snow: drifting white flakes and snow-covered site tiles.
+
+On the homepage, click the model (or press Enter while focused) to cycle Sun → Wind → Rain → Sound → Snow. Refresh and returning to the homepage retain the current session choice. Dragging only rotates the model. The bird cursor follows the pointer with flapping wings. Night mode adds illuminated windows, CN Tower neon rings and site lighting; reduced-motion settings stop wing animation.
 
 Drag to orbit. Use reset and pause controls. Reduced-motion users start with motion paused. A schematic SVG appears if WebGL is unavailable.
 

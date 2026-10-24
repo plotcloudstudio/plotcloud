@@ -16,8 +16,8 @@ export function render(app) {
     <div class="cta"><a class="btn accent lg" href="#/${A.user ? 'account' : 'login?signup=1'}">${A.user ? 'Set your site →' : 'Start free →'}</a><a class="btn lg" href="#/workspace">Open the workspace</a></div>
     <p class="eyebrow" style="margin-top:18px;color:var(--mut2)">Sample project included · runs in the browser</p>
     <figure class="shot home-hero-study" aria-label="Interactive Toronto environmental study">
-      <iframe title="Toronto CN Tower — interactive Sun, Wind, Rain and Sound study" data-home-hero loading="eager"></iframe>
-      <figcaption class="sr-only">Illustrative Toronto maquette, not your project's simulation results. Move the pointer or drag to explore. The scene advances Sun, Wind, Rain, Sound on refresh and return.</figcaption></figure>
+      <iframe title="Toronto CN Tower — interactive Sun, Wind, Rain, Sound and Snow study" data-home-hero loading="eager"></iframe>
+      <figcaption style="padding:8px 12px;font-size:12px;color:var(--mut2)">Click to switch Sun · Wind · Rain · Sound · Snow. Drag to rotate.</figcaption></figure>
   </section>
 
   <section class="section">
