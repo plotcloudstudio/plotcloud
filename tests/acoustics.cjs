@@ -1,6 +1,7 @@
 // Acceptance checks for the current finite-facet acoustic study, replacing its retired v1 API.
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
+const reveal=require('./reveal-simulation-control.cjs');
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.goto(base+'/mvp/#/simulations');await page.locator('a[href="#/simulations/acoustics"]').first().waitFor();
@@ -17,7 +18,7 @@ try{
  const before=report.statistics.rt[2];
  const unified=await work.locator('.app[data-pc-unified=true]').count()>0;
  await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:unified?'Settings':'Surfaces',exact:true}).click();
- await work.locator('#allWalls').click();await work.locator('#wallMat').selectOption('panel');
+ await reveal(work,'#allWalls');await work.locator('#allWalls').click();await work.locator('#wallMat').selectOption('panel');
  const after=await work.evaluate(()=>AcousticStudy.stats.rt[2]);assert(after<before,'Absorptive wall material should lower RT60');
  for(const view of ['section','three','plan']){await work.locator(`[data-view="${view}"]`).click();assert.equal(await work.locator(`[data-view="${view}"]`).getAttribute('aria-pressed'),'true');}
  assert(await work.locator('#webgl canvas').count(),'3D view must create its real WebGL canvas');

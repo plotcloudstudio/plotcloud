@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict'),{chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
+const reveal=require('./reveal-simulation-control.cjs');
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--enable-unsafe-swiftshader']});
  try{
@@ -11,7 +12,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
    if(id==='sunhours'){
     await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
    }
-   await f.locator('#run:not([disabled])').click();
+   await reveal(f,'#run:not([disabled])');await f.locator('#run:not([disabled])').click();
    await p.waitForFunction(id=>{const w=document.querySelector('#eng').contentWindow;return id==='sunhours'?w.__sun.S.lastR&&!w.__sun.S.busy:w.__pcAnalysisState?.().ready;},id,{timeout:90000});
    await f.locator('#panelR [role=tab]').getByText('Charts',{exact:true}).click();
    for(const theme of ['light','dark']){

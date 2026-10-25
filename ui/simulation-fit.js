@@ -1,6 +1,6 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
 import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=unified-20261025-1';
-import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=selected-20261025';
+import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=header-20261025';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){
@@ -103,6 +103,7 @@ export function installSimulationFit(doc = document) {
     content.style.transform = ''; content.style.width = '100%';
     pages.hidden = true;
     if(panel.closest('[data-pc-unified]')&&state.active.id!=='unifiedResults'){
+      if(state.active.id==='unifiedSettings'){const overhead=Math.max(0,content.scrollHeight-state.active.getBoundingClientRect().height);panel.closest('[data-pc-unified]').pcFitSettings?.(viewport.clientHeight-overhead);}
       if(state.active.id==='unifiedCharts'){fitSolarCharts(doc,viewport);const key=viewport.clientWidth+':'+viewport.clientHeight;if(state.unifiedChartSize!==key){state.unifiedChartSize=key;win.__pcUnifiedCharts?.();win.__pcWindCharts?.();}}
       if(content.scrollHeight>viewport.clientHeight+2){
         const app=panel.closest('[data-pc-unified]');app.pcRollbackUnified?.([{group:titleOf(state.active),required:content.scrollHeight,available:viewport.clientHeight,plots:[...state.active.querySelectorAll('canvas')].map(c=>({id:c.id,height:c.clientHeight}))}]);

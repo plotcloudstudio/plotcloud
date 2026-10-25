@@ -1,15 +1,16 @@
 const assert=require('node:assert/strict'),{chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
+const reveal=require('./reveal-simulation-control.cjs');
 (async()=>{const b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--enable-unsafe-swiftshader']});try{
  for(const id of ['spacesyntax','movementdepth','isovist','views','wayfinding','privacy','noise'].filter(id=>!process.env.TEST_SIM||process.env.TEST_SIM===id)){
   const p=await b.newPage({viewport:{width:1440,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
   await p.goto(base+'/mvp/#/simulations/'+id);const f=p.frameLocator('#eng');await f.locator('.app[data-pc-unified=true]').waitFor({state:'attached',timeout:60000});
   if(id==='isovist'){
-   await f.locator('#toolBar [data-tool=view]').click();
+   await reveal(f,'#toolBar [data-tool=view]');await f.locator('#toolBar [data-tool=view]').click();
    const pt=await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow,s=w.__iso.SC.bounds,xy=w.__iso.W2S([s.w*.3,s.h*.5]);return{x:xy[0]/w.devicePixelRatio,y:xy[1]/w.devicePixelRatio};});await f.locator('#cv').click({position:pt});
    await p.waitForFunction(()=>{const a=document.querySelector('#eng').contentWindow.__iso.A;return a&&!a.noView;},null,{timeout:30000});
   }else{
-   if(['views','spacesyntax','movementdepth'].includes(id))await f.locator('#lvSeg [data-l=draft]').click();await f.locator('#run').click();
+   if(['views','spacesyntax','movementdepth'].includes(id)){await reveal(f,'#lvSeg [data-l=draft]');await f.locator('#lvSeg [data-l=draft]').click();}await reveal(f,'#run');await f.locator('#run').click();
    await p.waitForFunction(()=>{const d=document.querySelector('#eng').contentDocument,w=d.defaultView,s=w.__pcAnalysisState?.();return s?s.ready:!d.getElementById('run').disabled&&[...d.querySelectorAll('#kpis b,#kp4 b')].some(e=>/\d/.test(e.textContent));},null,{timeout:90000});
   }
   if(id==='isovist'&&await f.locator('.app').getAttribute('data-pc-unified-blocked')){
