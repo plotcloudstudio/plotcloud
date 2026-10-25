@@ -3,7 +3,7 @@ import { $, $$, refreshWho, toast } from '../app.js';
 
 export function render(app, _, params) {
   let mode = params.get('signup') ? 'signup' : 'login';
-  const next = params.get('next') || 'account';
+  const next = params.get('next') || 'home';   // the Dashboard, unless the person was on their way somewhere
   const draw = () => {
     const up = mode === 'signup';
     app.innerHTML = `<div class="auth">

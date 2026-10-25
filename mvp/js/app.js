@@ -32,18 +32,27 @@ export function setCurrentVersion(p, vId) { try { localStorage.setItem('pc-mvp-v
 // where "Back" on a simulation goes: the page it was entered from
 export const simBack = () => { try { return sessionStorage.getItem('pc-sim-back') || '#/simulations'; } catch (e) { return '#/simulations'; } };
 
+// signed in: Dashboard in the main menu and the avatar menu (Dashboard, Account settings, Log out); signed out: Log in, Start free
 function who() {
-  const u = S.account().user;
-  $('#who').innerHTML = u ? `<a class="btn sm" href="#/account" style="padding-left:4px"><span class="avatar">${esc(u.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span>Account</a>`
+  const u = S.account().user, nav = $('#nav');
+  nav.querySelector('[data-nav="home"]')?.remove();
+  if (u) nav.insertAdjacentHTML('afterbegin', `<a href="#/home" data-nav="home"${/^#\/home/.test(location.hash) ? ' aria-current="page"' : ''}>Dashboard</a>`);
+  $('#who').innerHTML = u ? `<span class="who-w"><button type="button" class="btn sm who-b" id="whoBtn" aria-haspopup="true" aria-expanded="false" style="padding-left:4px"><span class="avatar">${esc(u.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span>${esc(u.name.split(/\s+/)[0].replace(/^./, (c) => c.toUpperCase()))} ▾</button>
+      <span class="who-m" id="whoMenu" role="menu" hidden><span class="who-id"><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></span><a role="menuitem" href="#/home">Dashboard</a><a role="menuitem" href="#/account?tab=profile">Account settings</a><a role="menuitem" href="#/account?tab=data">Backup &amp; data</a><button role="menuitem" type="button" id="whoOut">Log out</button></span></span>`
     : '<a class="btn sm" href="#/login">Log in</a> <a class="btn sm accent" href="#/login?signup=1">Start free</a>';
+  if (!u) return;
+  const b = $('#whoBtn'), m = $('#whoMenu'), shut = () => { m.hidden = true; b.setAttribute('aria-expanded', 'false'); };
+  b.onclick = (e) => { e.stopPropagation(); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); };
+  m.onclick = () => shut(); $('#whoOut').onclick = () => { S.account().user = null; S.save(); who(); location.hash = '#/'; toast('Logged out'); };
 }
+document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e.target.closest('.who-w')) { m.hidden = true; $('#whoBtn')?.setAttribute('aria-expanded', 'false'); } });
 
 const PAGES = {
   '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
-  login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), 'batch-run': () => import('./pages/batch-run.js'),
+  login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/dashboard.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
+const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Dashboard', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
   const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;
@@ -73,6 +82,8 @@ export async function route() {
   try{nextCleanup=await mod.render(app,rest.map(x=>decodeURIComponent(x.split('?')[0])),params,{isCurrent});}catch(error){if(!isCurrent())return;throw error;}
   if(!isCurrent()){if(typeof nextCleanup==='function')nextCleanup();return;}
   cleanup=nextCleanup||null;
+  // where the person was, for the Dashboard's “pick up where you left off”
+  { const cp = currentProject(); if (cp && key === 'workspace') S.touchRecent('workspace', { project: cp.id }); if (cp && key === 'results') S.touchRecent('results', { project: cp.id }); if (cp && key === 'simulations' && rest[0] && rest[0] !== '') S.touchRecent('sim', { id: rest[0].split('?')[0], project: cp.id }); }
   if (['workspace','simulations','results'].includes(key)) {
     const requested=params.get('project')||rest[0]?.split('?')[0];
     const project=S.project(requested)||currentProject();

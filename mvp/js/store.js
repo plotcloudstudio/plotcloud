@@ -97,6 +97,39 @@ export function runConditionsStatus(p,r){
   const used=r.settings?.sharedConditions;
   return !used?'Legacy result · verify conditions':used.signature!==conditionsSignature(p,r.simId)?'Shared conditions changed · rerun required':'';
 }
+// ---- the user's side (Dashboard, Account): managing projects, backups, how much room is left
+export function renameProject(p, name) { p.name = String(name || '').trim() || p.name; p.updated = now(); save(); }
+export function duplicateProject(p) {
+  const q = clone(p); Object.assign(q, { id: uid('p'), name: `${p.name.replace(/ \(sample\)$/, '')} copy`, sample: false, archived: false, created: now(), updated: now() }); delete q.batch;
+  load().projects.unshift(q); save(); return q;
+}
+export function archiveProject(p, on) { p.archived = !!on; p.updated = now(); save(); }
+export function deleteProject(p) { load().projects = load().projects.filter((x) => x !== p); save(); }
+export const dirtyDraft = (p) => !p.versions.length || JSON.stringify(p.versions.at(-1).model) !== JSON.stringify(p.draft);
+// bytes this prototype keeps in the browser (localStorage holds about 5 MB per site in most browsers)
+export const QUOTA = 5 * 1024 * 1024;
+export function storageUse() { try { return (localStorage.getItem(KEY) || '').length * 2; } catch (e) { return 0; } }
+// pictures and per-point fields of results that are not on a project's latest version (their figures stay)
+export function pruneOldMedia() {
+  let n = 0; for (const p of load().projects) { const last = p.versions.at(-1)?.id; for (const r of p.runs) if (r.versionId !== last && r.results && (r.results.thumb || r.results.field)) { delete r.results.thumb; delete r.results.field; r.results.mediaDropped = true; n++; } }
+  save(); return n;
+}
+export function exportAll() { const D = load(); D.account.lastBackup = now(); save(); return JSON.stringify({ format: 'plotcloud-backup', v: 1, exported: now(), account: D.account, projects: D.projects }, null, 1); }
+// a backup file back in: 'merge' adds its projects (a project already here with the same id is replaced), 'replace' takes the whole file
+export function importAll(text, mode = 'merge') {
+  let o; try { o = JSON.parse(text); } catch (e) { throw new Error('This is not a PlotCloud backup (not JSON).'); }
+  if (o?.format !== 'plotcloud-backup' || !Array.isArray(o.projects)) throw new Error('This is not a PlotCloud backup file.');
+  for (const p of o.projects) if (!p.id || !Array.isArray(p.versions) || !Array.isArray(p.runs)) throw new Error('A project in this file is incomplete.');
+  const D = load();
+  if (mode === 'replace') { DB = { projects: o.projects, account: { ...o.account, user: D.account.user } }; }
+  else { for (const p of o.projects) { D.projects = D.projects.filter((x) => x.id !== p.id); D.projects.unshift(p); } }
+  save(); reload(); return o.projects.length;
+}
+export function deleteAccount() { try { localStorage.removeItem(KEY); for (const k of Object.keys(localStorage)) if (k.startsWith('pc-mvp') || k.startsWith('pc-psim') || k.startsWith('pc-sim')) localStorage.removeItem(k); } catch (e) { } DB = null; }
+// where the person last was (Workspace, a simulation, Results), for "pick up where you left off"
+const RKEY = 'pc-mvp-recent';
+export function recent() { try { return JSON.parse(localStorage.getItem(RKEY) || '{}'); } catch (e) { return {}; } }
+export function touchRecent(kind, data) { try { const r = recent(); r[kind] = { ...data, at: now() }; localStorage.setItem(RKEY, JSON.stringify(r)); } catch (e) { } }
 export const version = (p, id) => p.versions.find((v) => v.id === id);
 export function lastRun(p, versionId, simId) { return p.runs.filter((r) => r.versionId === versionId && r.simId === simId).sort((a, b) => b.created.localeCompare(a.created))[0]; }
 

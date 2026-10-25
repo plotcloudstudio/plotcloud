@@ -75,7 +75,9 @@ export async function render(app, [pid], params) {
   $('#proj', app).onchange = (e) => { location.hash = '#/results/' + e.target.value; };
 
   // ================= §1 · batch =================
-  const batch = createBatch($('#btFrames', app), { onChange: () => { if (!dead) { batchUI(); afterRuns(); } } });
+  const told = new Set();   // Account › Notifications: a message when a batch item finishes or fails
+  const batch = createBatch($('#btFrames', app), { onChange: (its) => { if (dead) return; batchUI(); afterRuns();
+    if (S.account().notify?.batch !== false) for (const it of its || []) { const k = it.key + it.status + (it.t1 || ''); if ((it.status === 'done' || it.status === 'failed') && !told.has(k)) { told.add(k); toast(`${SIMS.find((s) => s.id === it.simId)?.name || it.simId}: ${it.status === 'done' ? 'result saved' : 'failed · ' + (it.why || '')}`); } } } });
   const open = new Set();
   const runVersion = () => last();
   function batchList() {
