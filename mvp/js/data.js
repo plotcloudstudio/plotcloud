@@ -76,7 +76,7 @@ export const RESOURCES = {
 
 // ---------------------------------------------------------------- sample project (mock)
 // Model units: metres. z is up. Box components: x,y = min corner in plan, z = base; w (x), d (y), h (z).
-export const LAYER_COLORS = { Site: '#c9c6bf', Context: '#bdb9b0', Structure: '#8f8b84', Walls: '#ecebe6', Glazing: '#8fb4d1', Roof: '#d9d6cf', Rooms: '#e8b04a', Furniture: '#cfc8bb', Imported: '#d5d2cb' };
+export const LAYER_COLORS = { Site: '#c9c6bf', Masses: '#e9c39e', Context: '#bdb9b0', Structure: '#8f8b84', Walls: '#ecebe6', Glazing: '#8fb4d1', Roof: '#d9d6cf', Rooms: '#e8b04a', Furniture: '#cfc8bb', Imported: '#d5d2cb' };
 
 function wallsAround(x, y, w, d, h, t, layer, prefix) {
   return [

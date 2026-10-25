@@ -289,6 +289,8 @@ html,body{height:100%;overflow:hidden;background:var(--kj-bg);color:var(--kj-ink
 .off .mcard{opacity:.5}
 /* stage */
 .stage{grid-column:2;grid-row:2;background:#f5f6f8;position:relative;min-width:0;min-height:0;overflow:hidden}
+.mkpi .mk-s{display:flex;gap:3px;align-items:center;margin:-2px 0 3px;justify-content:flex-start !important}.mkpi .mk-s button,.mkpi .mk-sn button{border:1px solid #d9d6cf;background:#f6f5f2;border-radius:5px;font:600 11px system-ui,sans-serif;padding:2px 7px;cursor:pointer;color:#1c1b1a}.mkpi .mk-s button[aria-selected=true]{background:#1c1b1a;color:#fff;border-color:#1c1b1a}.mkpi .mk-s .mk-cmp{margin-left:auto;font-weight:500}.mkpi .mk-sn{font-size:11px;color:#6e6a60;margin-bottom:4px;display:flex !important;justify-content:space-between;align-items:center}.mkpi .mk-sn button{font-weight:500;padding:1px 6px}.mkpi .mk-sun{border-top:1px solid #ecebe6;margin-top:5px;padding-top:5px;display:flex !important;gap:6px;align-items:center;justify-content:flex-start !important}.mkpi .mk-sun select{font:11.5px system-ui,sans-serif;padding:1px 2px}.mkpi .mk-sun label{display:flex;gap:4px;align-items:center;font-weight:600;white-space:nowrap}.mkpi .mk-leg{display:grid !important;grid-template-columns:1fr auto;gap:0 6px;margin-top:4px;font-size:10.5px;color:#6e6a60}.mkpi .mk-leg i{grid-column:1/3;height:7px;border-radius:3px;background:linear-gradient(90deg,rgb(52,64,92),rgb(86,116,160),rgb(150,175,170),rgb(238,206,120),rgb(245,160,60))}.mkpi .mk-leg span:last-child{text-align:right}.mkcmp{position:absolute;right:12px;top:60px;z-index:8;background:#fff;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.18);padding:12px 14px;font:12.5px/1.4 system-ui,sans-serif;max-width:min(720px,calc(100% - 24px));max-height:calc(100% - 80px);overflow:auto}.mkcmp[hidden]{display:none}.mkcmp .mc-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.mkcmp table{border-collapse:collapse;width:100%}.mkcmp th,.mkcmp td{padding:4px 8px;border-bottom:1px solid #ecebe6;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.mkcmp tbody th,.mkcmp thead th:first-child{text-align:left;font-weight:500;color:#6e6a60}.mkcmp em{font-weight:400;color:#6e6a60;font-style:normal}.mkcmp .mc-t{margin:10px 0 6px;padding-left:18px}.mkcmp .mc-t li{margin:3px 0}.mkcmp .mc-b{display:flex;gap:6px;flex-wrap:wrap}.mkcmp .mk-n{color:#6e6a60;font-size:11px;margin:8px 0 0}
+.mkpi{position:absolute;left:10px;top:10px;z-index:5;background:rgba(255,255,255,.96);border-radius:8px;box-shadow:var(--kj-shadow);padding:8px 10px 6px;font:12px/1.35 system-ui,sans-serif;color:#1c1b1a;min-width:168px;max-width:220px;pointer-events:none}.mkpi[hidden]{display:none}.mkpi .mk-h{font-weight:600;font-size:11.5px;color:#6e6a60;margin-bottom:4px}.mkpi div:not(.mk-h){display:flex;justify-content:space-between;gap:10px}.mkpi b{font-variant-numeric:tabular-nums;font-weight:600}.mkpi .mk-w{color:#b3261e;margin:4px 0 0;font-weight:600}.mkpi .mk-n{color:#6e6a60;margin:4px 0 0;font-size:11px}
 .tstrip{left:50%;top:10px;transform:translateX(-50%);display:flex;gap:2px;width:auto;padding:4px;border:0;border-radius:8px;background:#fff;box-shadow:var(--kj-shadow);z-index:6;max-width:calc(100% - 24px)}
 .tstrip button{width:48px;min-height:42px;border:0;background:none;border-radius:6px;padding:4px 2px 3px;display:grid;justify-items:center;align-content:center;gap:3px;font:500 12px/1.1 var(--f-body);color:var(--kj-sub)}
 .tstrip button svg{width:17px;height:17px}
@@ -1133,7 +1135,7 @@ const SITEC = (() => {
       if (!ob.edited) { next.push(nb); continue; }
       if (same(ob, nb)) { const keep = Object.assign({}, nb, { h: ob.h, hSource: ob.hSource, hNote: ob.hNote, excluded: ob.excluded, why: ob.why, edited: true }); kept.push(nb.src.ref); next.push(keep); continue; }
       conflicts.push({ ref: nb.src.ref, mine: ob, theirs: nb }); next.push(ob); }
-    for (const ob of site.buildings) if (!now.has(ob.src.ref)) { removed.push(ob.src.ref); if (ob.edited) next.push(Object.assign({}, ob, { issues: ob.issues.concat('no longer in the source data') })); }
+    for (const ob of site.buildings) if (!now.has(ob.src.ref)) { if (ob.added) { next.push(ob); continue; } removed.push(ob.src.ref); if (ob.edited) next.push(Object.assign({}, ob, { issues: ob.issues.concat('no longer in the source data') })); }
     return { buildings: next, conflicts, added, removed, kept };
   }
   function resolve(site, ref, choice) { const i = site.buildings.findIndex((b) => b.src.ref === ref); if (i < 0 || !site._conflicts) return false; const c = site._conflicts.find((x) => x.ref === ref); if (!c) return false; site.buildings[i] = choice === 'theirs' ? c.theirs : Object.assign({}, c.mine); site._conflicts = site._conflicts.filter((x) => x !== c); site.version++; return true; }
@@ -1210,6 +1212,7 @@ const STC = (() => {
     for (const w of M.walls) for (const p of [w.a, w.b]) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
     for (const f of M.furn) { x0 = Math.min(x0, f.x - f.w); y0 = Math.min(y0, f.y - f.d); x1 = Math.max(x1, f.x + f.w); y1 = Math.max(y1, f.y + f.d); }
     for(const f of M.floors||[])for(const p of (f.points||[[f.x,f.y],[f.x+f.w,f.y+f.d]])){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);}for(const f of M.fences||[])for(const p of f.points){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);}
+    for (const m of M.masses || []) for (const p of m.points) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
     if (!isFinite(x0)) return { x0: 0, y0: 0, x1: 12, y1: 9 };
     return { x0, y0, x1, y1 };
   }
@@ -1487,7 +1490,7 @@ const STC = (() => {
   }
   // older models (v1, or plans from other tools) get layers, object types and a floor under every room; nothing is removed
   function migrate(M) {
-    M.floors = M.floors || []; M.fences=M.fences||[]; M.names = M.names || []; M.voids = M.voids || []; M.furn = M.furn || []; M.ops = M.ops || []; M.walls = M.walls || [];
+    M.floors = M.floors || []; M.fences=M.fences||[]; M.masses = M.masses || []; M.names = M.names || []; M.voids = M.voids || []; M.furn = M.furn || []; M.ops = M.ops || []; M.walls = M.walls || [];
     if (!M.id) M.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     if (!M.units) M.units = 'm';
     if (M.version == null) M.version = 0;
@@ -1522,7 +1525,7 @@ const STC = (() => {
     for (const v of M.voids) if (!fin(v.x, v.y, v.w, v.d) || v.w <= 0 || v.d <= 0) err('geom', `Floor opening ${v.id} has an invalid size.`, { k: 'void', id: v.id });
     for (const f of M.floors || []) if (!fin(f.x, f.y, f.w, f.d) || f.w <= 0 || f.d <= 0) err('geom', `Floor ${f.id} has an invalid size.`, { k: 'floor', id: f.id });
     let S = null; if (!E.length) { S = build(M);
-      if (!S.rooms.length) err('rooms', 'No closed rooms: walls must enclose at least one room.');
+      if (!S.rooms.length) { if ((M.masses || []).length || M.site) warn('rooms', 'No closed rooms yet: only Sun hours (masses and site) can run.'); else err('rooms', 'No closed rooms: walls must enclose at least one room.'); }
       for (const r of S.rooms) { const covered = (M.floors || []).some((f) => f.lv === r.lv && r.lx >= f.x && r.lx <= f.x + f.w && r.ly >= f.y && r.ly <= f.y + f.d); if (!covered) warn('floor', `${r.name} has no floor (Floor layer).`, { k: 'room', id: r.key }); }
       for (const f of M.furn) { const k = roomAtR(S.L[f.lv], f.x, f.y); if (k < 0) warn('furn-out', `A ${f.type} stands outside every room.`, { k: 'furn', id: f.id }); } }
     return { errors: E, warnings: W, S };
@@ -1571,6 +1574,7 @@ const STC = (() => {
     const lvs = M.levels.slice().sort((a, b) => a.z - b.z), masses = [], site = M.site || null;
     lvs.forEach((lv, k) => { const R = S.L[lv.id]; if (!R || !S.rooms.some((r) => r.lv === lv.id)) return; const up = lvs[k + 1], top = up && up.z > lv.z ? up.z : lv.z + lv.h + 0.25;
       outlineLoops(R).forEach((o, i) => { if (SITEC.area(o) < 0) o = o.slice().reverse(); if (SITEC.area(o) < 1) return; masses.push({ id: `${lv.id}_${i}`, role: 'proposed', level: lv.name, base: +lv.z.toFixed(3), h: +top.toFixed(3), outer: o.map((p) => [+p[0].toFixed(3), +p[1].toFixed(3)]), holes: [] }); }); });
+    for (const m of massList(M)) masses.push({ id: 'mass_' + m.id, role: 'proposed', level: m.name || 'Mass', base: m.base, h: m.h, outer: m.outer, holes: [] });
     if (site) masses.push(...SITEC.contextMasses(site, M.north || 0));
     const rd = site ? SITEC.readiness(site, 'sun', true) : null;
     return { format: 'plotcloud-scene', v: 1, kind: 'masses', app: 'plotcloud-studio', name: M.name, loc: site ? { lat: site.origin.lat, lon: site.origin.lon, tz: site.tz, dst: site.dst, label: site.origin.label || site.name || '' } : null,
@@ -1578,7 +1582,7 @@ const STC = (() => {
       source: { app: 'plotcloud-studio', project: M.id, version: M.version || 0, level: 'all', siteVersion: site ? site.version : null, siteHash: site ? SITEC.simHash(site) : null, fixture: !!(site && site.fixture) },
       notes: [site && site.fixture ? 'Site context: test fixture — not real imported data.' : '', site ? '' : 'No site on this project: Sun hours uses the city you pick there, and there are no neighbors.', ...(rd ? rd.warn : [])].filter(Boolean) };
   }
-  function sunCompat(M, S) { const why = []; if (!S.rooms.length && !(M.site && SITEC.simBuildings(M.site).length)) why.push('No closed rooms and no site context to analyze.'); if (M.site) why.push(...SITEC.readiness(M.site, 'sun', true).err); return { ok: !why.length, why, multi: false }; }
+  function sunCompat(M, S) { const why = []; if (!S.rooms.length && !(M.masses || []).length && !(M.site && SITEC.simBuildings(M.site).length)) why.push('No closed rooms, masses or site context to analyze.'); if (M.site) why.push(...SITEC.readiness(M.site, 'sun', true).err); return { ok: !why.length, why, multi: false }; }
   function planScene(M, S, lvId, tool) {
     if (tool === 'sunhours') return sunScene(M, S);
     const lv = M.levels.find((l) => l.id === lvId), B = bounds(M), x0 = B.x0 - 1, y0 = B.y0 - 1, sh = (p) => [+(p[0] - x0).toFixed(3), +(p[1] - y0).toFixed(3)], walls = [], open = [];
@@ -2223,6 +2227,7 @@ function tidy() {   // after edits: no zero walls, joined lines merged, openings
   syncStairHoles();
   M.floors = (M.floors || []).filter((f) => M.levels.some((l) => l.id === f.lv) && f.w > 0.1 && f.d > 0.1);
   M.fences=(M.fences||[]).filter(f=>M.levels.some(l=>l.id===f.lv)&&Array.isArray(f.points)&&f.points.length>=2);
+  M.masses = (M.masses || []).filter((m) => Array.isArray(m.points) && m.points.length >= 3);
   if(window.PCStudioGeometry)PCStudioGeometry.upsertAutoFloors(M,{thickness:newSlabThickness()});
   STC.tagAll(M);
 }
@@ -2340,19 +2345,20 @@ function drawSite() {
   const bd = st.boundary || { kind: 'radius', r: 300 }; g.setLineDash([8 * d, 6 * d]); g.strokeStyle = 'rgba(216,64,42,.45)'; g.lineWidth = 1.2 * d;
   if (bd.kind === 'polygon' && bd.pts) { g.beginPath(); bd.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.stroke(); } else { const o = P(bd.c || [0, 0]); g.beginPath(); g.arc(o[0], o[1], (bd.r || 300) * V.s, 0, Math.PI * 2); g.stroke(); }
   g.setLineDash([]);
-  // the surroundings: roads and buildings are only looked at (nothing here is hit-tested, so nothing can be picked or edited)
-  if (st.areas && st.areas.length) { g.save(); for (const a of st.areas) { g.beginPath(); a.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = a.kind === 'water' ? 'rgba(120,170,215,.35)' : 'rgba(140,190,120,.28)'; g.fill(); } g.restore(); }
-  if (st.trees && st.trees.length && V.s > 1.2 * d) { g.save(); g.fillStyle = 'rgba(90,150,80,.45)'; for (const t of st.trees) { const q = P(t.xy); g.beginPath(); g.arc(q[0], q[1], Math.max(2 * d, 2.5 * V.s), 0, 7); g.fill(); } g.restore(); }
-  if (st.roads && st.roads.length) { g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(215,205,185,.7)'; for (const r of st.roads) { g.strokeStyle = r.cls === 'path' ? 'rgba(225,218,200,.55)' : 'rgba(215,205,185,.75)'; g.lineWidth = Math.max(r.cls === 'path' ? 1 * d : 2 * d, (r.width || (r.cls === 'main' ? 9 : 5)) * V.s); g.beginPath(); r.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); } g.restore(); }
+  // the surroundings, each on its own sub-layer; buildings can be picked and edited (Massing block), the rest is only looked at
+  if (st.areas && st.areas.length && layerOn('ref.site.green')) { g.save(); for (const a of st.areas) { g.beginPath(); a.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = a.kind === 'water' ? 'rgba(120,170,215,.35)' : 'rgba(140,190,120,.28)'; g.fill(); } g.restore(); }
+  if (st.trees && st.trees.length && V.s > 1.2 * d && layerOn('ref.site.trees')) { g.save(); g.fillStyle = 'rgba(90,150,80,.45)'; for (const t of st.trees) { const q = P(t.xy); g.beginPath(); g.arc(q[0], q[1], Math.max(2 * d, 2.5 * V.s), 0, 7); g.fill(); } g.restore(); }
+  if (st.roads && st.roads.length && layerOn('ref.site.roads')) { g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(215,205,185,.7)'; for (const r of st.roads) { g.strokeStyle = r.cls === 'path' ? 'rgba(225,218,200,.55)' : 'rgba(215,205,185,.75)'; g.lineWidth = Math.max(r.cls === 'path' ? 1 * d : 2 * d, (r.width || (r.cls === 'main' ? 9 : 5)) * V.s); g.beginPath(); r.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); } g.restore(); }
   const pp = parcelPlan();
   if (pp) { g.save(); g.beginPath(); pp.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = 'rgba(251,237,232,.55)'; g.fill(); g.clip();
     const xs = pp.map((p) => p[0]), ys = pp.map((p) => p[1]), y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs); g.strokeStyle = 'rgba(216,64,42,.25)'; g.lineWidth = d; g.beginPath();   // a 5 m grid, only inside the boundary
     for (let x = Math.ceil(x0 / 5) * 5; x <= x1; x += 5) { const a = W2S([x, y0]), b = W2S([x, y1]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } for (let y = Math.ceil(y0 / 5) * 5; y <= y1; y += 5) { const a = W2S([x0, y]), b = W2S([x1, y]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); g.restore(); }
-  for (const b of st.buildings) { if (b.excluded || !b.xy || !b.xy.length) continue; const has = b.valid && b.h != null;
+  if (layerOn('ref.site.bld')) for (const b of st.buildings) { if (!b.xy || !b.xy.length) continue; const has = b.valid && b.h != null, on = SEL && SEL.k === 'ctx' && SEL.id === b.id, hv = HOV && HOV.k === 'ctx' && HOV.id === b.id;
     g.beginPath(); b.xy.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath();
+    if (b.excluded) { if (b.auto) continue; g.setLineDash([3 * d, 3 * d]); g.strokeStyle = on ? C.accent : 'rgba(80,76,70,.35)'; g.lineWidth = (on ? 2 : 1) * d; g.stroke(); g.setLineDash([]); continue; }   // left out by the person: a faint outline, so it can be put back
     g.fillStyle = has ? (b.hSource === 'estimate' ? 'rgba(217,164,0,.16)' : 'rgba(120,116,108,.20)') : 'rgba(179,38,30,.05)'; g.fill();
-    g.strokeStyle = has ? 'rgba(80,76,70,.55)' : 'rgba(179,38,30,.6)'; g.lineWidth = 1 * d; g.setLineDash(has ? [] : [4 * d, 3 * d]); g.stroke(); g.setLineDash([]);
-    if (has && V.s > 2.2 * d) { const c = P(SITEC.centroid(b.xy)); g.fillStyle = 'rgba(60,56,50,.75)'; g.font = `${10 * d}px system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(`${Math.round(b.h)} m${b.hSource === 'estimate' ? ' est.' : b.hSource === 'levels' ? ' (floors)' : ''}`, c[0], c[1] + 3 * d); g.textAlign = 'left'; } }
+    g.strokeStyle = on ? C.accent : hv ? C.ink : has ? 'rgba(80,76,70,.55)' : 'rgba(179,38,30,.6)'; g.lineWidth = (on ? 2.4 : hv ? 1.6 : 1) * d; g.setLineDash(has ? [] : [4 * d, 3 * d]); g.stroke(); g.setLineDash([]);
+    if (has && V.s > 2.2 * d) { const c = P(SITEC.centroid(b.xy)); g.fillStyle = 'rgba(60,56,50,.75)'; g.font = `${10 * d}px system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(`${Math.round(b.h)} m${b.hSource === 'estimate' ? ' est.' : b.hSource === 'levels' ? ' (floors)' : b.hSource === 'user' ? ' (yours)' : ''}`, c[0], c[1] + 3 * d); g.textAlign = 'left'; } }
   if (pp) { g.save(); g.beginPath(); pp.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.setLineDash([]); g.strokeStyle = '#D8402A'; g.lineWidth = 2 * d; g.stroke();   // your site: the chosen parcel, locked
     const qs = pp.map((p) => W2S(p)), tx = (Math.min(...qs.map((q) => q[0])) + Math.max(...qs.map((q) => q[0]))) / 2, ty = Math.min(...qs.map((q) => q[1])) - 8 * d, t = `${st.parcelId ? st.parcelId + ' · ' : ''}boundary locked`;
     g.font = `600 ${10.5 * d}px system-ui, sans-serif`; g.textAlign = 'center'; g.lineWidth = 3 * d; g.strokeStyle = 'rgba(255,255,255,.92)'; g.strokeText(t, tx, ty); g.fillStyle = '#B3321F'; g.fillText(t, tx, ty); g.textAlign = 'left'; g.restore(); }
@@ -2371,6 +2377,7 @@ function draw() {
     for (let y = Math.ceil(a[1] / step) * step; y <= b[1]; y += step) { const Y = Math.round(W2S([0, y])[1]) + 0.5; g.moveTo(0, Y); g.lineTo(VP.w, Y); } g.stroke(); }
   // the site context from Site Context: read-only, on no layer, never edited here
   if (M.site && LAY.site !== false && CAM !== '3d'){g.save();g.globalAlpha=siteOpacity();drawSite();g.restore();}
+  drawMasses();
   // the level below, as a guide
   const below = lvBelow();
   const fade = (L) => { g.globalAlpha = L === LAYER ? 1 : 0.55; };
@@ -2756,6 +2763,7 @@ cv.addEventListener('pointerdown', (e) => {
     drag = { k: 'wall', w, n, p0: p, a0: w.a.slice(), b0: w.b.slice(), fol, b }; }
   else if (h.k === 'end') { const w = wallById(h.id), pt = w[h.e].slice(), fol = []; for (const q of lvWalls()) for (const e2 of ['a', 'b']) if ((q !== w || e2 !== h.e) && near(q[e2], pt)) fol.push([q, e2]); drag = { k: 'end', w, e: h.e, fol, b }; }
   else if(h.k==='fence'){const f=selObj();drag={k:'fence',f,p0:p,points:f.points.map(q=>q.slice()),b};}
+  else if (h.k === 'mass') { const m = selObj(); SEL = { k: 'mass', id: m.id }; drag = h.v != null ? { k: 'massv', m, v: h.v, b } : { k: 'mass', m, p0: p, points: m.points.map((q) => q.slice()), b }; }
   else if (h.k === 'op') { drag = { k: 'op', o: selObj(), b }; }
   else if (h.k === 'furn') { const f = selObj(); drag = { k: 'furn', f, dx: f.x - p[0], dy: f.y - p[1], b }; }
   else if (h.k === 'void' || h.k === 'floor') { const v=selObj();if(v.auto){flash('This floor follows its walls. Move the walls to change its outline.');return;}drag={k:'void',v,points:v.points?.map(p=>p.slice()),holes:v.holes?.map(h=>h.map(p=>p.slice())),x0:v.x,y0:v.y, dx: v.x - p[0], dy: v.y - p[1], b }; }
@@ -2769,6 +2777,8 @@ cv.addEventListener('pointermove', (e) => {
     if (drag.k === 'wall') { const k = stickK(drag, sg((p[0] - drag.p0[0]) * drag.n[0] + (p[1] - drag.p0[1]) * drag.n[1])), w = drag.w; w.a = [drag.a0[0] + drag.n[0] * k, drag.a0[1] + drag.n[1] * k]; w.b = [drag.b0[0] + drag.n[0] * k, drag.b0[1] + drag.n[1] * k]; for (const [q, e2, pt] of drag.fol) q[e2] = [pt[0] + drag.n[0] * k, pt[1] + drag.n[1] * k]; tipAt(e, `Moved ${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm`); }
     else if (drag.k === 'end') { const other = drag.w[drag.e === 'a' ? 'b' : 'a'], q = snapPt(p, other, e.shiftKey); drag.w[drag.e] = q; for (const [w2, e2] of drag.fol) w2[e2] = q.slice(); tipAt(e, `${Math.round(STC.wallLen(drag.w) * 1000)} mm`); }
     else if(drag.k==='fence'){const dx=sg(p[0]-drag.p0[0]),dy=sg(p[1]-drag.p0[1]);drag.f.points=drag.points.map(q=>[q[0]+dx,q[1]+dy]);}
+    else if (drag.k === 'mass') { const dx = sg(p[0] - drag.p0[0]), dy = sg(p[1] - drag.p0[1]); drag.m.points = drag.points.map((q) => [+(q[0] + dx).toFixed(3), +(q[1] + dy).toFixed(3)]); tipAt(e, `Moved ${dx.toFixed(2)}, ${dy.toFixed(2)} m`); }
+    else if (drag.k === 'massv') { const q = massSnap(p, null, e.shiftKey, drag.m.id); drag.m.points[drag.v] = [+q[0].toFixed(3), +q[1].toFixed(3)]; tipAt(e, `${fmtA(massArea(drag.m))} m² footprint`); }
     else if (drag.k === 'op') { const o = drag.o; let w = wallById(o.wall); const h = STC.wallAt(M, LV, p); if (h && h.w !== w) { const dir = STC.wallDir(w), t = STC.clamp((p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1], 0, STC.wallLen(w)), dn = Math.hypot(p[0] - (w.a[0] + dir[0] * t), p[1] - (w.a[1] + dir[1] * t)); if (dn > 0.45) { o.wall = h.w.id; w = h.w; } }
       const dir = STC.wallDir(w); o.pos = sg((p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1]); STC.fixOp(M, o); tipAt(e, `${(o.pos - o.w / 2).toFixed(2)} m from the wall's end`); }
     else if (drag.k === 'furn') { placeFurn(drag.f, [p[0] + drag.dx, p[1] + drag.dy], !e.altKey); }
@@ -2788,7 +2798,7 @@ cv.addEventListener('pointermove', (e) => {
   const cyc = TOOL === 'select' ? cycleCurrent() : null, h = cyc || (TOOL === 'select' || TOOL === 'del' ? hitTest(p, { noEnds: TOOL === 'del' }) : null), key = h ? h.k + h.id : '';
   if (key !== (HOV ? HOV.k + HOV.id : '')) { HOV = h && h.k !== 'room' ? h : null; draw(); }
   cv.classList.toggle('sel', TOOL === 'select');
-  if (h && TOOL === 'select') { const o = selObj(h); let t = ''; if (cycleSelection.active) t = `${cycleLabel(h)} · ${cycleSelection.index + 1} of ${cycleSelection.candidates.length} — Tab to cycle`; else if (h.k === 'wall' || h.k === 'end') t = `Wall ${Math.round(STC.wallLen(o) * 1000)} mm · drag to move`; else if (h.k === 'op') t = `${o.kind === 'door' ? 'Door' : 'Window'} ${o.w.toFixed(2)} m · drag along the wall`; else if (h.k === 'furn') t = `${(libOf(o.type) || [, 'Furniture'])[1]} · drag; R turns it`; else if (h.k === 'void') t = `${KINDS[o.kind] || 'Opening'} ${o.w.toFixed(1)} × ${o.d.toFixed(1)} m`; else if (h.k === 'floor') t = `Floor ${o.w.toFixed(2)} × ${o.d.toFixed(2)} m · drag to move`; else if (h.k === 'room') t = roomTip(o); tipAt(e, t); } else tipOff();
+  if (h && TOOL === 'select') { const o = selObj(h); let t = ''; if (cycleSelection.active) t = `${cycleLabel(h)} · ${cycleSelection.index + 1} of ${cycleSelection.candidates.length} — Tab to cycle`; else if (h.k === 'wall' || h.k === 'end') t = `Wall ${Math.round(STC.wallLen(o) * 1000)} mm · drag to move`; else if (h.k === 'op') t = `${o.kind === 'door' ? 'Door' : 'Window'} ${o.w.toFixed(2)} m · drag along the wall`; else if (h.k === 'furn') t = `${(libOf(o.type) || [, 'Furniture'])[1]} · drag; R turns it`; else if (h.k === 'void') t = `${KINDS[o.kind] || 'Opening'} ${o.w.toFixed(1)} × ${o.d.toFixed(1)} m`; else if (h.k === 'floor') t = `Floor ${o.w.toFixed(2)} × ${o.d.toFixed(2)} m · drag to move`; else if (h.k === 'mass') t = `${o.name || 'Mass'} · ${o.storeys} storeys, ${massH(o)} m · drag to move`; else if (h.k === 'ctx') t = `${o.name || 'Neighbouring building'} · ${o.h != null ? Math.round(o.h) + ' m' : 'no height'} · click to edit`; else if (h.k === 'room') t = roomTip(o); tipAt(e, t); } else tipOff();
 });
 cv.addEventListener('pointerup', (e) => {
   cv.classList.remove('grab'); SNAPI = null;
@@ -2995,7 +3005,7 @@ $$('[data-ovl]').forEach((c) => c.addEventListener('change', () => { LAY[c.datas
 addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveProject(); } });
 $('#ghost').addEventListener('change', draw);
 function stripTo() { const cp = $('#chartp'), c = $({ air: '#cAir', day: '#cDay', view: '#cView' }[SHOW]); if (!cp || !c) return; const grp = c.closest('.cpg') || c; const left = SHOW === 'air' ? 0 : grp.offsetLeft - 18; if (cp.scrollWidth > cp.clientWidth + 4) cp.scrollTo({ left, behavior: 'smooth' }); }
-function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k, id: SEL.id } : null, fit }); }
+function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit }); }
 
 // ---------- levels ----------
 const lvShort = (l) => `${lvSorted().findIndex((q) => q.id === l.id) + 1}F`;
@@ -3308,7 +3318,7 @@ function openSend() {
   let h = '';
   if (V.errors.length) h += `<p style="margin:0;font-weight:600">Fix these first:</p><ul class="vlist">${V.errors.map((e) => `<li class="e">${esc(e.msg)}${show(e.ref)}</li>`).join('')}</ul>`;
   else {
-    h += `<p class="note" style="margin:0">Model check passed: ${M.walls.length} walls, ${M.ops.length} windows and doors, ${M.floors.length} floors, ${M.voids.length} floor openings, ${M.furn.length} furniture, in meters. Every object is on its own layer.</p>`;
+    h += `<p class="note" style="margin:0">Model check passed: ${(M.masses || []).length ? `${M.masses.length} mass${M.masses.length > 1 ? 'es' : ''}, ` : ''}${M.walls.length} walls, ${M.ops.length} windows and doors, ${M.floors.length} floors, ${M.voids.length} floor openings, ${M.furn.length} furniture, in meters. Every object is on its own layer.</p>`;
     if (V.warnings.length) h += `<ul class="vlist">${V.warnings.slice(0, 6).map((w) => `<li class="w">${esc(w.msg)}${show(w.ref)}</li>`).join('')}${V.warnings.length > 6 ? `<li class="w">…and ${V.warnings.length - 6} more.</li>` : ''}</ul>`;
     if (M.levels.length > 1) h += `<div class="lvpick"><label for="sendLv">These tools read one level at a time:</label><select id="sendLv">${lvSorted().map((l) => `<option value="${l.id}" ${l.id === SENDLV ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>`;
     h += `<div class="tlist">${Object.entries(STC.TOOLS).map(([k, T]) => { const c = STC.compat(M, V.S, SENDLV, k); return `<div class="trow${c.ok ? '' : ' no'}"><b>${T.name}</b>${c.ok ? `<button type="button" class="${SITE ? 'go' : 'btn'}" data-send="${k}">${SITE ? 'Open in ' + T.name : 'Download for ' + T.name}</button>` : '<span class="note">Not ready</span>'}<p>${c.ok ? esc(T.note) : `<span class="why">${esc(c.why.join(' '))}</span>`}</p></div>`; }).join('')}</div>`;
@@ -3458,11 +3468,12 @@ registerLayer('gaps', '2D distance lines'); for (const [s, l] of [['top', 'Top']
 registerLayer('notes', 'Text labels');
 registerLayer('chain', 'Dimension chains'); registerLayer('chain.walls', 'Wall lengths', 'chain'); registerLayer('chain.sel', 'Selected wall', 'chain');
 registerLayer('legend', 'Legend');
-registerLayer('ref', 'Level reference'); registerLayer('ref.below', 'Level below (underlay)', 'ref'); registerLayer('ref.site', 'Site context', 'ref');
+registerLayer('ref', 'Level reference'); registerLayer('ref.below', 'Level below (underlay)', 'ref'); registerLayer('ref.site', 'Site context', 'ref'); registerLayer('ref.site.bld', 'Buildings', 'ref.site'); registerLayer('ref.site.roads', 'Roads & paths', 'ref.site'); registerLayer('ref.site.green', 'Water & green', 'ref.site'); registerLayer('ref.site.trees', 'Trees', 'ref.site'); registerLayer('ref.site.ground', 'Ground (terrain)', 'ref.site');
+registerLayer('mass', 'Masses');
 const VIEW_MASKS = {
-  plan: ['parts', 'soft', 'custom', 'dims', 'gaps', 'roomNames', 'roomArea', 'notes', 'chain', 'legend', 'ref'],
+  plan: ['mass', 'parts', 'soft', 'custom', 'dims', 'gaps', 'roomNames', 'roomArea', 'notes', 'chain', 'legend', 'ref'],
   ceiling: ['ceiling', 'parts', 'soft', 'custom', 'roomNames', 'notes', 'legend', 'ref'],
-  '3d': ['ceiling', 'parts', 'soft', 'custom', 'ref'],
+  '3d': ['mass', 'ceiling', 'parts', 'soft', 'custom', 'ref'],
   elev: ['parts', 'soft', 'custom'],
 };
 let VIEW2D = 'plan';
@@ -3849,8 +3860,8 @@ $('#xSvg').addEventListener('click', () => { try { const s = S3.xsvg(1920, XPL.l
 // ---------- 3D update: what is shown follows the layer registry, hidden pieces and the modes ----------
 upd3D = function (fit) {
   if (!window.S3 || !S3.on || !S) return;
-  S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && layerOn('ref.site', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f,
-    sel: SEL && !WALKING && !XPL.on ? { k: SEL.k === 'end' ? 'wall' : SEL.k, id: SEL.id } : null, fit, hidden: new Set(M.hiddenIds || []), furnOk: (f) => layerOn(furnGroup(f), '3d'), openings: layerOn('parts.openings', '3d'),
+  S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f,
+    sel: SEL && !WALKING && !XPL.on ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit, hidden: new Set(M.hiddenIds || []), furnOk: (f) => layerOn(furnGroup(f), '3d'), openings: layerOn('parts.openings', '3d'),
     ceil: { light: layerOn('ceiling.lights', '3d'), panel: layerOn('ceiling.panels', '3d'), vent: layerOn('ceiling.vents', '3d'), smoke: layerOn('ceiling.vents', '3d') }, all: WALKING, explode: XPL.on ? { d: XPL.d } : null, lights: layerOn('lighting.fix', '3d'), beams: !!window.__elv3 || layerOn('lighting.beams', '3d') });
   gizmoSync(); if (XPL.on) xplOverlay();
 };
@@ -4895,6 +4906,286 @@ addEventListener('keydown',e=>{if(e.target.matches?.('input,textarea,select'))re
 const originalDrawingPreview=drawPreview;drawPreview=function(){originalDrawingPreview();if(drawing?.kind==='fence'){const f={points:drawing.pts.concat(drawing.cur?[drawing.cur]:[])};g.save();g.strokeStyle=C.accent;g.lineWidth=2*VP.d;g.beginPath();f.points.forEach((p,i)=>{const q=W2S(p);i?g.lineTo(...q):g.moveTo(...q);});g.stroke();g.restore();}if(drawing?.kind==='floor')tag(130*VP.d,100*VP.d,Math.round(newSlabThickness()*1000)+' mm slab · top at '+lvObj().z+' m',{force:true});};
 window.__pcDrawing={get drawing(){return drawing?JSON.parse(JSON.stringify(drawing)):null;},get snap(){return SNAPI?JSON.parse(JSON.stringify(SNAPI)):null;},get slabThickness(){return newSlabThickness();},get viewport(){return {s:V.s,ox:V.ox,oy:V.oy,width:VP.w,height:VP.h,d:VP.d};},get siteOpacity(){return siteOpacity();}};
 
+// ===== Massing (2026-10-25): masses drawn on the site (outline, storeys, floor height) with live site figures; the surroundings can be edited =====
+// A mass stands on the ground (the lowest terrain under its outline), lives on no level and on the Masses layer. Neighbouring buildings come from the
+// site; what the person changes there is marked as theirs (hSource 'user', edited) and kept on a re-import.
+const MASS_USES = ['Residential', 'Office', 'Retail', 'Hotel', 'Community', 'Mixed use', 'Parking'];
+const MASS_COL = { Residential: '#e9c39e', Office: '#b4c9de', Retail: '#e8a898', Hotel: '#d0b4dc', Community: '#b4d6ad', 'Mixed use': '#e6cf8f', Parking: '#c8c5be' };
+const polySigned = (P) => { let a = 0; for (let i = 0, j = P.length - 1; i < P.length; j = i++) a += P[j][0] * P[i][1] - P[i][0] * P[j][1]; return a / 2; };
+const areaOf = (P) => Math.abs(polySigned(P));
+const inPoly = (q, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > q[1]) !== (P[j][1] > q[1]) && q[0] < (P[j][0] - P[i][0]) * (q[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
+const fmtA = (v) => Math.round(v).toLocaleString('en');
+const massH = (m) => +(m.storeys * m.fh).toFixed(2);
+const massArea = (m) => areaOf(m.points);
+// a plan point in the site's own metres (the inverse of SITEC.siteToPlan)
+const siteOfM = (Mx, q) => { const a = (Mx.site && Mx.site.at) || [0, 0], r = -(Mx.north || 0) * Math.PI / 180, x = q[0] - a[0], y = q[1] - a[1]; return [x * Math.cos(r) - y * Math.sin(r), x * Math.sin(r) + y * Math.cos(r)]; };
+const massBase = (m, Mx) => Mx.site && Mx.site.terrain ? Math.min(...m.points.map((q) => { const s = siteOfM(Mx, q); return SITEC.groundAt(Mx.site.terrain, s[0], s[1]); })) : 0;
+function massList(Mx = M) { return (Mx.masses || []).filter((m) => !(Mx.hiddenIds || []).includes(m.id)).map((m) => { const b = massBase(m, Mx); return { id: m.id, name: m.name, use: m.use, outer: m.points.map((q) => q.slice()), holes: [], base: +b.toFixed(2), h: +(b + massH(m)).toFixed(2), fh: m.fh, storeys: m.storeys }; }); }
+// the figures a developer or planner asks first. Overlapping masses (a tower on a podium) are counted once: per 0.25 m cell the tallest mass counts.
+function siteFigures(list) {
+  const ms = (list || M.masses || []).filter((m) => !isHidden(m.id)), pp = parcelPlan(), site = pp ? areaOf(pp) : 0, top = ms.reduce((s, m) => Math.max(s, massH(m)), 0);
+  const bb = (m) => { const xs = m.points.map((q) => q[0]), ys = m.points.map((q) => q[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }, B = ms.map(bb);
+  let overlap = false; for (let i = 0; i < ms.length && !overlap; i++) for (let j = i + 1; j < ms.length; j++) if (B[i][0] < B[j][2] && B[j][0] < B[i][2] && B[i][1] < B[j][3] && B[j][1] < B[i][3] && (ms[i].points.some((q) => inPoly(q, ms[j].points)) || ms[j].points.some((q) => inPoly(q, ms[i].points)))) { overlap = true; break; }
+  let foot = 0, gfa = 0;
+  if (!overlap) { for (const m of ms) { const a = massArea(m); foot += a; gfa += a * m.storeys; } }
+  else { const X0 = Math.min(...B.map((b) => b[0])), Y0 = Math.min(...B.map((b) => b[1])), X1 = Math.max(...B.map((b) => b[2])), Y1 = Math.max(...B.map((b) => b[3])), c = Math.max(0.25, Math.sqrt((X1 - X0) * (Y1 - Y0) / 400000));
+    for (let y = Y0 + c / 2; y < Y1; y += c) for (let x = X0 + c / 2; x < X1; x += c) { let st = 0; for (let i = 0; i < ms.length; i++) if (x >= B[i][0] && x <= B[i][2] && y >= B[i][1] && y <= B[i][3] && ms[i].storeys > st && inPoly([x, y], ms[i].points)) st = ms[i].storeys; if (st) { foot += c * c; gfa += c * c * st; } } }
+  const out = pp ? ms.filter((m) => m.points.some((q) => !inPoly(q, pp))).length : 0;
+  return { n: ms.length, site, foot, gfa, top, cover: site ? foot / site : null, far: site ? gfa / site : null, out, overlap };
+}
+// snapping: the corners of the plot, of other masses and of neighbouring buildings first, then Plan Studio's own snaps
+let MSNAP = null;
+function massSnap(p, last, free, except) {
+  const tol = 10 * VP.d / V.s; let best = null, bd = tol; const pts = [], pp = parcelPlan(); if (pp) pts.push(...pp);
+  for (const m of M.masses || []) if (m.id !== except) pts.push(...m.points);
+  if (M.site && layerOn('ref.site') && layerOn('ref.site.bld')) for (const b of M.site.buildings) if (!b.excluded && b.xy) for (const q of b.xy) pts.push(sToP(q));
+  for (const q of pts) { const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd) { bd = dd; best = q; } }
+  MSNAP = best ? best.slice() : null; if (best) { SNAPI = null; guides = []; return best.slice(); } return snapPt(p, last, free);
+}
+function addMass(pts) {
+  if (polySigned(pts) < 0) pts = pts.slice().reverse(); if (areaOf(pts) < 4) { flash('That outline is too small for a mass (at least 4 m²).'); draw(); return; }
+  const b = snapM(), list = M.masses || (M.masses = []), last = list[list.length - 1], n = list.reduce((k, m) => Math.max(k, +((/^Mass (\d+)$/.exec(m.name || '') || [0, 0])[1])), 0) + 1;
+  const m = { id: STC.uid('mass'), name: `Mass ${n}`, points: pts.map((q) => [+q[0].toFixed(3), +q[1].toFixed(3)]), storeys: last ? last.storeys : 4, fh: last ? last.fh : 3.2, use: last ? last.use : 'Residential', object_type: 'mass', layer: 'Masses' };
+  list.push(m); SEL = { k: 'mass', id: m.id }; commit(b);
+}
+function addCtx(pts) {
+  if (!M.site) { flash('This project has no site yet. Choose one on the map first.'); draw(); return; }
+  let xy = pts.map((q) => siteOfM(M, q)).map((q) => [+q[0].toFixed(2), +q[1].toFixed(2)]); if (polySigned(xy) < 0) xy = xy.reverse(); if (areaOf(xy) < 4) { flash('That outline is too small for a building.'); draw(); return; }
+  const b = snapM(), o = { id: STC.uid('b_you_'), src: { provider: 'You', ref: 'drawn by you', at: new Date().toISOString() }, kind: 'building', name: '', ll: [], llHoles: [], xy, holes: [], area: +areaOf(xy).toFixed(1), h: 12, base: 0, levels: null, hSource: 'user', hNote: 'drawn by you', valid: true, issues: [], excluded: false, why: '', edited: true, added: true };
+  M.site.buildings.push(o); M.site.version++; SEL = { k: 'ctx', id: o.id }; commit(b);
+}
+function drawMasses() {
+  if (!layerOn('mass') || !(M.masses || []).length) return; const d = VP.d, pp = parcelPlan();
+  for (const m of M.masses) { if (isHidden(m.id)) continue; const sel = SEL && SEL.k === 'mass' && SEL.id === m.id, hov = HOV && HOV.k === 'mass' && HOV.id === m.id, out = pp && m.points.some((q) => !inPoly(q, pp));
+    g.save(); g.beginPath(); m.points.forEach((q, i) => { const s = W2S(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); }); g.closePath();
+    g.globalAlpha = 0.6; g.fillStyle = MASS_COL[m.use] || MASS_COL['Mixed use']; g.fill(); g.globalAlpha = 1;
+    g.strokeStyle = sel ? C.accent : out ? '#b3261e' : hov ? C.ink : '#6b5a48'; g.lineWidth = (sel ? 2.4 : 1.5) * d; if (out) g.setLineDash([6 * d, 4 * d]); g.stroke(); g.setLineDash([]);
+    if (sel) for (const q of m.points) { const s = W2S(q); g.fillStyle = '#fff'; g.strokeStyle = C.accent; g.lineWidth = 1.5 * d; g.fillRect(s[0] - 4 * d, s[1] - 4 * d, 8 * d, 8 * d); g.strokeRect(s[0] - 4 * d, s[1] - 4 * d, 8 * d, 8 * d); }
+    if (massArea(m) * V.s * V.s > 2400 * d * d) { const c = W2S(SITEC.centroid(m.points)), t1 = `${m.name ? m.name + ' · ' : ''}${m.storeys} st · ${massH(m)} m`, t2 = `${fmtA(massArea(m) * m.storeys)} m² GFA`;
+      g.textAlign = 'center'; g.lineJoin = 'round'; g.lineWidth = 3 * d; g.strokeStyle = 'rgba(255,255,255,.9)'; g.fillStyle = '#3d3226';
+      g.font = `600 ${11 * d}px system-ui, sans-serif`; g.strokeText(t1, c[0], c[1] - 2 * d); g.fillText(t1, c[0], c[1] - 2 * d);
+      g.font = `${10 * d}px system-ui, sans-serif`; g.strokeText(t2, c[0], c[1] + 11 * d); g.fillText(t2, c[0], c[1] + 11 * d); g.textAlign = 'left'; }
+    g.restore(); }
+}
+// the site figures, on the plan while there is a plot or a mass
+const mkpi = document.createElement('div'); mkpi.className = 'mkpi'; mkpi.id = 'massKpi'; mkpi.hidden = true; mkpi.setAttribute('aria-live', 'polite'); stage.appendChild(mkpi);
+function massKpiUI() {
+  const show = (CAM === 'plan' || CAM === '3d') && VIEW2D === 'plan' && layerOn('mass', CAM === '3d' ? '3d' : 'plan') && ((M.masses || []).length || siteOk()); mkpi.hidden = !show; if (!show) return;
+  const F = siteFigures(), pct = (v) => v == null ? '—' : Math.round(v * 100) + ' %', row = (k, v, t) => `<div${t ? ` title="${t}"` : ''}><span>${k}</span><b>${v}</b></div>`;
+  mkpi.innerHTML = `<div class="mk-h">Site figures${F.n ? ` · ${F.n} mass${F.n > 1 ? 'es' : ''}` : ''}</div>` + row('Plot', F.site ? fmtA(F.site) + ' m²' : 'no plot') + row('Footprint', fmtA(F.foot) + ' m²') + row('Coverage', pct(F.cover), 'Footprint ÷ plot area')
+    + row('GFA', fmtA(F.gfa) + ' m²', 'Gross floor area: footprint × storeys, outer walls included') + row('FAR', F.far == null ? '—' : F.far.toFixed(2), 'Floor area ratio: GFA ÷ plot area') + row('Tallest', F.top ? F.top.toFixed(1) + ' m' : '—')
+    + (F.out ? `<p class="mk-w">${F.out} mass${F.out > 1 ? 'es cross' : ' crosses'} the plot boundary.</p>` : '') + (!F.n ? '<p class="mk-n">Draw a mass: Massing › Mass outline or Rectangle mass.</p>' : '') + (F.overlap ? '<p class="mk-n">Overlapping masses: the tallest counts where they overlap.</p>' : '');
+}
+{ const _c = changed; changed = function (lv, kp) { _c(lv, kp); massKpiUI(); }; }
+{ const _sc = setCam; setCam = async function (c) { const r = await _sc(c); massKpiUI(); return r; }; }
+// tools: two ways to draw a mass, and a missing neighbour
+RECT.add('massrect');
+Object.assign(HINT, { mass: 'Click the corners of the mass. Click the first corner again, press Enter or double-click to close it. Esc cancels.', massrect: 'Drag a rectangle for a mass.', ctxadd: 'Click the corners of a neighbouring building that is missing from the map. Enter or double-click closes it; set its height afterwards.' });
+{ const pane = $('[data-lp="draw"] .kl-scroll'), ic = (d) => `<svg viewBox="0 0 48 48" aria-hidden="true">${d}</svg>`;
+  const T = (t, n, svg, title) => `<button type="button" class="tl" data-tool="${t}" aria-pressed="false" title="${title}">${svg}<span>${n}</span></button>`;
+  if (pane) { pane.insertAdjacentHTML('afterbegin', `<section class="ks" id="ksMass"><button type="button" class="ks-h" aria-expanded="true"><b>Massing</b><i class="chev"></i></button><div class="ks-b"><div class="tls">`
+    + T('mass', 'Mass outline', ic('<path d="M10 30l10-14 18 4v12l-10 8-18-4z" fill="#e9c39e" stroke="#6b5a48" stroke-width="2" stroke-linejoin="round"/><path d="M10 30l18 4 10-8M28 34v6" fill="none" stroke="#6b5a48" stroke-width="1.6"/>'), 'Mass outline: click corner to corner')
+    + T('massrect', 'Rectangle mass', ic('<path d="M10 18l14-7 14 7v16l-14 7-14-7z" fill="#e9c39e" stroke="#6b5a48" stroke-width="2" stroke-linejoin="round"/><path d="M10 18l14 7 14-7M24 25v16M10 26l14 7 14-7" fill="none" stroke="#6b5a48" stroke-width="1.4"/>'), 'Rectangle mass: drag')
+    + T('ctxadd', 'Neighbour building', ic('<path d="M12 36V18l10-6 10 6v18z" fill="#dcd8d0" stroke="#7b818a" stroke-width="2" stroke-linejoin="round"/><path d="M34 10v10M29 15h10" stroke="#D8402A" stroke-width="2.4" stroke-linecap="round"/>'), 'Add a neighbouring building that is missing from the map data')
+    + '</div></div></section>');
+    const h = $('#ksMass .ks-h'); h.addEventListener('click', () => { const s = h.closest('.ks'); s.classList.toggle('shut'); h.setAttribute('aria-expanded', String(!s.classList.contains('shut'))); }); } }
+const POLYT = new Set(['mass', 'ctxadd']);
+function finishPoly() { const D = drawing; drawing = null; typed = ''; MSNAP = null; if (!D || D.pts.length < 3) { draw(); if (D) flash('An outline needs at least three corners.'); return; } if (D.kind === 'mass') addMass(D.pts); else addCtx(D.pts); }
+cv.addEventListener('pointerdown', (e) => { if ((!POLYT.has(TOOL) && TOOL !== 'massrect') || e.button !== 0 || SPACE) return; if (CAM === '3d' && !P3upd(e)) return; e.preventDefault(); e.stopImmediatePropagation(); cv.focus({ preventScroll: true });
+  if (TOOL === 'massrect') { const a = massSnap(S2W(...evP(e))); drawing = { kind: 'massrect', a, b: a }; typed = ''; cv.setPointerCapture(e.pointerId); draw(); return; }   // Plan Studio's pointerup finishes it (finishRect)
+  const p = S2W(...evP(e)), D = drawing && drawing.kind === TOOL ? drawing : null, last = D ? D.pts[D.pts.length - 1] : null, q = massSnap(p, last, e.shiftKey);
+  if (!D) drawing = { kind: TOOL, pts: [q], cur: q }; else if (D.pts.length >= 3 && Math.hypot(q[0] - D.pts[0][0], q[1] - D.pts[0][1]) < 8 * VP.d / V.s) { finishPoly(); return; } else if (!near(q, last, 0.04)) D.pts.push(q); draw(); }, true);
+cv.addEventListener('pointermove', (e) => { if (!POLYT.has(TOOL) && !(TOOL === 'massrect')) return; if (CAM === '3d' && !P3upd(e)) return; const p = S2W(...evP(e));
+  if (TOOL === 'massrect') { e.stopImmediatePropagation(); if (drawing && drawing.kind === 'massrect') drawing.b = massSnap(p); else massSnap(p); draw(); return; }
+  e.stopImmediatePropagation(); if (drawing && drawing.kind === TOOL) drawing.cur = massSnap(p, drawing.pts[drawing.pts.length - 1], e.shiftKey); else massSnap(p); draw(); }, true);
+cv.addEventListener('dblclick', (e) => { if (drawing && POLYT.has(drawing.kind)) { e.stopImmediatePropagation(); finishPoly(); } }, true);
+addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('input,textarea,select')) return; if (drawing && POLYT.has(drawing.kind) && (e.key === 'Enter' || e.key === 'Escape' || e.key === 'Backspace')) { e.stopImmediatePropagation(); e.preventDefault(); if (e.key === 'Enter') finishPoly(); else if (e.key === 'Backspace' && drawing.pts.length > 1) { drawing.pts.pop(); draw(); } else { drawing = null; MSNAP = null; draw(); } } }, true);
+{ const _fr = finishRect; finishRect = function () { if (!drawing || drawing.kind !== 'massrect') return _fr(); const D = drawing; drawing = null; if (!D.b) return draw(); const x0 = Math.min(D.a[0], D.b[0]), y0 = Math.min(D.a[1], D.b[1]), x1 = Math.max(D.a[0], D.b[0]), y1 = Math.max(D.a[1], D.b[1]);
+  if (x1 - x0 < 2 || y1 - y0 < 2) { draw(); flash('Drag a larger rectangle (at least 2 m each way).'); return; } addMass([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]); }; }
+{ const _dp = drawPreview; drawPreview = function () { _dp(); const d = VP.d;
+  if (drawing && POLYT.has(drawing.kind)) { const P = drawing.pts.concat(drawing.cur ? [drawing.cur] : []); g.save(); g.beginPath(); P.forEach((q, i) => { const s = W2S(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); });
+    if (P.length > 2) { g.closePath(); g.fillStyle = drawing.kind === 'mass' ? 'rgba(233,195,158,.35)' : 'rgba(150,145,135,.25)'; g.fill(); } g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke();
+    for (const q of drawing.pts) { const s = W2S(q); g.fillStyle = '#fff'; g.fillRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); g.strokeRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); }
+    if (P.length > 2) { const c = W2S(SITEC.centroid(P)); tag(c[0], c[1], `${fmtA(areaOf(P))} m²`, { force: true, col: C.accent }); } g.restore(); }
+  if (drawing && drawing.kind === 'massrect' && drawing.b) { const w = Math.abs(drawing.b[0] - drawing.a[0]), h = Math.abs(drawing.b[1] - drawing.a[1]), s = W2S([(drawing.a[0] + drawing.b[0]) / 2, Math.max(drawing.a[1], drawing.b[1])]); tag(s[0], s[1] - 12 * d, `${w.toFixed(1)} × ${h.toFixed(1)} m · ${fmtA(w * h)} m²`, { force: true, col: C.accent }); }
+  if (MSNAP && (POLYT.has(TOOL) || TOOL === 'massrect' || (drag && drag.k === 'massv'))) { const s = W2S(MSNAP); g.save(); g.strokeStyle = C.accent; g.lineWidth = 1.6 * d; g.beginPath(); g.arc(s[0], s[1], 6 * d, 0, 7); g.stroke(); g.restore(); } }; }
+// picking, selection, deleting
+{ const _ht = hitTest; hitTest = function (p, opt = {}) {
+  if (CAM === '3d') { const h = _ht(p, opt); if (h && h.k === 'site') return h.id && h.id !== 'terrain' && M.site && M.site.buildings.some((b) => b.id === h.id) ? { k: 'ctx', id: h.id } : null; return h; }
+  if (VIEW2D !== 'plan') return _ht(p, opt);
+  if (SEL && SEL.k === 'mass' && layerOn('mass')) { const m = selObj(); if (m) { const tv = 7 * VP.d / V.s, i = m.points.findIndex((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < tv); if (i >= 0) return { k: 'mass', id: m.id, v: i }; } }
+  const h = _ht(p, opt); if (h && h.k !== 'room') return h;
+  if (layerOn('mass')) for (const m of (M.masses || []).slice().reverse()) if (!isHidden(m.id) && inPoly(p, m.points)) return { k: 'mass', id: m.id };
+  if (h) return h;
+  if (M.site && LAY.site !== false && layerOn('ref.site.bld')) { const s = siteOfM(M, p); for (const b of M.site.buildings) if (b.xy && b.xy.length > 2 && !(b.excluded && b.auto) && inPoly(s, b.xy)) return { k: 'ctx', id: b.id }; }
+  return null; }; }
+{ const _s = selObj; selObj = function (s = SEL) { if (s && s.k === 'mass') return (M.masses || []).find((m) => m.id === s.id) || null; if (s && s.k === 'ctx') return (M.site && M.site.buildings.find((b) => b.id === s.id)) || null; return _s(s); }; }
+{ const _d = delSel; delSel = function () { if (!SEL || (SEL.k !== 'mass' && SEL.k !== 'ctx')) return _d(); const o = selObj(); if (!o) return; const b = snapM();
+  if (SEL.k === 'mass') M.masses = M.masses.filter((m) => m !== o); else if (o.added) { M.site.buildings = M.site.buildings.filter((x) => x !== o); M.site.version++; } else SITEC.setExcluded(M.site, o.id, true);
+  SEL = null; commit(b); }; }
+{ const _p = propsUI; propsUI = function () {
+  if (!SEL || (SEL.k !== 'mass' && SEL.k !== 'ctx')) return _p(); const box = $('#props'), sec = $('#secProps'), o = selObj(); if (!o) { sec.hidden = true; box.innerHTML = ''; return; } sec.hidden = false;
+  const head = (t, sub) => `<div class="ph"><b>${esc(t)}</b><button type="button" class="btn" id="pp_x" aria-label="Close" style="padding:2px 8px">×</button></div><p class="note" style="margin:0">${sub}</p>`;
+  const edit = (fn) => { const b = snapM(); if (fn() === false) { propsUI(); return; } commit(b); };
+  if (SEL.k === 'mass') { const A = massArea(o);
+    box.innerHTML = head(o.name || 'Mass', 'Type <b>mass</b> · layer <b>Masses</b>') + `<div class="kv">
+      <div class="cell full"><label for="pm_name">Name</label><input id="pm_name" value="${esc(o.name || '')}"></div>
+      <div class="cell full"><label for="pm_use">Use</label><select id="pm_use">${MASS_USES.map((u) => `<option${u === o.use ? ' selected' : ''}>${u}</option>`).join('')}</select></div>
+      <div class="cell"><label for="pm_st">Storeys</label><input type="number" id="pm_st" min="1" max="120" step="1" value="${o.storeys}"></div>
+      <div class="cell"><label for="pm_fh">Floor to floor (m)</label><input type="number" id="pm_fh" min="2.4" max="8" step="0.1" value="${o.fh}"></div>
+      <div class="cell"><label for="pm_h">Height (m)</label><input type="number" id="pm_h" min="2.4" max="600" step="0.1" value="${massH(o)}"></div>
+      <div class="cell"><label>Footprint</label><span class="ro">${fmtA(A)} m²</span></div>
+      <div class="cell full"><label>Gross floor area</label><span class="ro" id="pm_gfa">${fmtA(A * o.storeys)} m² (${o.storeys} × footprint)</span></div></div>
+      <div class="two"><button type="button" class="btn" id="pm_dup">Duplicate</button><button type="button" class="btn" id="pp_del">Delete</button></div>
+      <p class="note">Drag the mass to move it; drag a white corner to reshape it. Gross floor area is footprint × storeys with the outer walls included: it is not the area a zoning bylaw or a code counts.</p>`;
+    const v = (id) => $('#' + id, box);
+    v('pm_name').addEventListener('change', (e) => edit(() => { o.name = e.target.value.trim().slice(0, 60); }));
+    v('pm_use').addEventListener('change', (e) => edit(() => { o.use = e.target.value; }));
+    v('pm_st').addEventListener('change', (e) => edit(() => { const n = Math.round(+e.target.value); if (!(n >= 1 && n <= 120)) return false; o.storeys = n; }));
+    v('pm_fh').addEventListener('change', (e) => edit(() => { const n = +e.target.value; if (!(n >= 2.4 && n <= 8)) return false; o.fh = +n.toFixed(2); }));
+    v('pm_h').addEventListener('change', (e) => edit(() => { const n = +e.target.value; if (!(n >= 2.4 && n <= 600)) return false; o.storeys = Math.max(1, Math.round(n / o.fh)); }));
+    v('pm_dup').addEventListener('click', () => edit(() => { const c = JSON.parse(JSON.stringify(o)), xs = o.points.map((q) => q[0]), dx = Math.max(...xs) - Math.min(...xs) + 4; c.id = STC.uid('mass'); c.name = (o.name || 'Mass') + ' copy'; c.points = o.points.map((q) => [+(q[0] + dx).toFixed(3), q[1]]); M.masses.push(c); SEL = { k: 'mass', id: c.id }; }));
+  } else { const site = M.site, src = o.src || {}, ref = src.ref || '', osm = /^(way|relation)\/\d+$/.test(ref) ? `https://www.openstreetmap.org/${ref}` : null;
+    const hs = { source: 'mapped height (OpenStreetMap)', levels: `${o.levels} floors × ${site.storey} m`, estimate: o.hNote || 'estimated', user: o.hNote || 'entered by you' }[o.hSource] || 'no height';
+    box.innerHTML = head(o.name || (o.added ? 'Building drawn by you' : 'Neighbouring building'), `Site context · ${o.added ? 'drawn by you' : `from ${esc(src.provider || 'the map data')}`}${o.edited && !o.added ? ' · <b>changed by you</b>' : ''}`) + `<div class="kv">
+      ${o.excluded ? `<p class="note full">Left out (${esc(o.why || '')}): it casts no shadow and is in no simulation.</p>` : ''}
+      <div class="cell"><label for="pc_h">Height (m)</label><input type="number" id="pc_h" min="1" max="600" step="0.5" value="${o.h != null ? o.h : ''}" placeholder="unknown"></div>
+      <div class="cell"><label>Height from</label><span class="ro sm">${esc(hs)}</span></div>
+      <div class="cell"><label>Footprint</label><span class="ro">${fmtA(o.area || areaOf(o.xy))} m²</span></div>
+      <div class="cell"><label>Source</label><span class="ro sm">${osm ? `<a href="${osm}" target="_blank" rel="noopener">${esc(ref)}</a>` : esc(ref || '—')}</span></div></div>
+      <div class="two">${o.excluded ? '<button type="button" class="btn" id="pc_back">Put it back</button>' : `<button type="button" class="btn" id="pp_del">${o.added ? 'Delete' : 'Leave out'}</button>`}</div>
+      <p class="note">What you change here is marked as yours and kept when the site is loaded again. Leave out a building that has been demolished or is part of your scheme.</p>`;
+    $('#pc_h', box).addEventListener('change', (e) => edit(() => { if (!SITEC.setHeight(site, o.id, +e.target.value)) { flash('Enter a height above the ground, in metres.'); return false; } }));
+    const bk = $('#pc_back', box); if (bk) bk.addEventListener('click', () => edit(() => { SITEC.setExcluded(site, o.id, false); }));
+  }
+  $('#pp_x', box).addEventListener('click', () => { SEL = null; changedSel(); }); const del = $('#pp_del', box); if (del) del.addEventListener('click', delSel);
+}; }
+window.__mass = { hit: (p) => hitTest(p), siteFigures, massList: () => massList(M), addMass, addCtx, get MSNAP() { return MSNAP; }, load: (m) => useModel(STC.migrate(JSON.parse(JSON.stringify(m))), { saved: true }) };
+
+// ===== Sun on the site and schemes (2026-10-25) =====
+// Sun: hours of direct sun on the ground around the masses for one day, as you draw. The sun position is the one Sun hours uses
+// (NOAA, the same code as emb/sunhours.html, checked against NREL SPA in tests/validation); time is split into 15-minute steps and a
+// step counts when the sun is more than 0.25° up, as in Sun hours. Shadows come from the masses and from the site's buildings with
+// a height, standing on the terrain; the ground point is in shade when the ray to the sun enters a prism below its top.
+// It is a preview on a 2–4 m grid: Sun hours itself (Send to Simulation) is the full calculation.
+const D2R_ = Math.PI / 180;
+function julian0_(y, m, d) { if (m <= 2) { y -= 1; m += 12; } const A = Math.floor(y / 100), B = 2 - A + Math.floor(A / 4); return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5; }
+function sunPosN(y, m, d, hourStd, lat, lon, tz) {
+  const D2R = D2R_, T = (julian0_(y, m, d) + (hourStd - tz) / 24 - 2451545) / 36525;
+  const L0 = (280.46646 + T * (36000.76983 + T * 0.0003032)) % 360, M = 357.52911 + T * (35999.05029 - 0.0001537 * T);
+  const e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+  const C = Math.sin(M * D2R) * (1.914602 - T * (0.004817 + 0.000014 * T)) + Math.sin(2 * M * D2R) * (0.019993 - 0.000101 * T) + Math.sin(3 * M * D2R) * 0.000289;
+  const om = 125.04 - 1934.136 * T, lam = L0 + C - 0.00569 - 0.00478 * Math.sin(om * D2R);
+  const eps = 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60 + 0.00256 * Math.cos(om * D2R);
+  const decl = Math.asin(Math.sin(eps * D2R) * Math.sin(lam * D2R)), yv = Math.tan(eps * D2R / 2) ** 2;
+  const eot = 4 / D2R * (yv * Math.sin(2 * L0 * D2R) - 2 * e * Math.sin(M * D2R) + 4 * e * yv * Math.sin(M * D2R) * Math.cos(2 * L0 * D2R) - 0.5 * yv * yv * Math.sin(4 * L0 * D2R) - 1.25 * e * e * Math.sin(2 * M * D2R));
+  let tst = (hourStd * 60 + eot + 4 * lon - 60 * tz) % 1440; if (tst < 0) tst += 1440;
+  const ha = (tst / 4 - 180) * D2R, la = lat * D2R;
+  const cz = Math.min(1, Math.max(-1, Math.sin(la) * Math.sin(decl) + Math.cos(la) * Math.cos(decl) * Math.cos(ha)));
+  return { alt: 90 - Math.acos(cz) / D2R, az: ((Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(decl) * Math.cos(la)) / D2R) + 540) % 360 };
+}
+const SUN_DAYS = { '03-21': '21 March', '06-21': '21 June', '12-21': '21 December' };
+const SUNP = { on: false, day: '03-21', res: null, key: '', t: 0 };
+try { const s = JSON.parse(localStorage.getItem('pcSunPreview') || 'null'); if (s) { SUNP.on = !!s.on; if (SUN_DAYS[s.day]) SUNP.day = s.day; } } catch (e) { }
+const sunSave = () => { try { localStorage.setItem('pcSunPreview', JSON.stringify({ on: SUNP.on, day: SUNP.day })); } catch (e) { } };
+// the sun's directions for a day: plan unit vector towards the sun, tan(altitude), the hours each one stands for
+function sunDirs(loc, day, north, step = 15) { const [mm, dd] = day.split('-').map(Number), y = new Date().getFullYear(), out = [];
+  for (let s = 0; s < 1440; s += step) { const e = Math.min(s + step, 1440), p = sunPosN(y, mm, dd, (s + e) / 120, loc.lat, loc.lon, loc.tz); if (p.alt > 0.25) { const a = (p.az - (north || 0)) * D2R_; out.push({ v: [Math.sin(a), Math.cos(a)], t: Math.tan(p.alt * D2R_), w: (e - s) / 60, alt: p.alt, az: p.az }); } }
+  return out; }
+// prisms: { outer (plan), h (top, m above the site point), bb, c, r }
+function prismOf(outer, h) { const xs = outer.map((q) => q[0]), ys = outer.map((q) => q[1]), bb = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], c = [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2]; return { outer, h, bb, c, r: Math.hypot(bb[2] - c[0], bb[3] - c[1]) }; }
+// the distance along the ray from q in direction v to where it first crosses the outline (Infinity when it never does)
+function rayEnter(q, v, P) { let best = Infinity; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const ax = P[j][0], ay = P[j][1], ex = P[i][0] - ax, ey = P[i][1] - ay, den = v[0] * ey - v[1] * ex; if (Math.abs(den) < 1e-12) continue;
+    const wx = ax - q[0], wy = ay - q[1], d = (wx * ey - wy * ex) / den, u = (wx * v[1] - wy * v[0]) / den; if (d > 1e-9 && u >= 0 && u <= 1 && d < best) best = d; } return best; }
+// the ground looked at: the plot and the masses, plus 25 m all round
+function sunBox(Mx, outers, pad = 25) { const site = Mx.site, pp = site && site.parcel && site.parcel.pts && site.parcel.pts.length > 2 ? site.parcel.pts.map((p) => SITEC.siteToPlan(site, p, Mx.north || 0)) : [], all = pp.concat(...outers); if (!all.length) return null;
+  const X0 = Math.min(...all.map((q) => q[0])) - pad, X1 = Math.max(...all.map((q) => q[0])) + pad, Y0 = Math.min(...all.map((q) => q[1])) - pad, Y1 = Math.max(...all.map((q) => q[1])) + pad;
+  const cell = Math.min(4, Math.max(2, Math.sqrt((X1 - X0) * (Y1 - Y0) / 4500))); return { X0, Y0, cell, nx: Math.max(1, Math.round((X1 - X0) / cell)), ny: Math.max(1, Math.round((Y1 - Y0) / cell)) }; }
+function sunGrid(Mx, masses, opt = {}) {
+  const site = Mx.site, loc = site ? { lat: site.origin.lat, lon: site.origin.lon, tz: site.tz } : null; if (!loc) return null;
+  const dirs = sunDirs(loc, opt.day || SUNP.day, Mx.north || 0), pp = site.parcel && site.parcel.pts && site.parcel.pts.length > 2 ? site.parcel.pts.map((p) => SITEC.siteToPlan(site, p, Mx.north || 0)) : null;
+  const pr = masses.map((m) => Object.assign(prismOf(m.outer, m.h), { mass: true })).concat(SITEC.contextMasses(site, Mx.north || 0).map((m) => prismOf(m.outer, m.h)));
+  const box = opt.box || sunBox(Mx, masses.map((m) => m.outer)); if (!box) return null; const { X0, Y0, cell, nx, ny } = box;
+  const H = new Float32Array(nx * ny).fill(NaN), inPlot = new Uint8Array(nx * ny), total = dirs.reduce((s, d) => s + d.w, 0);
+  const gAt = (q) => { if (!site.terrain) return 0; const s = siteOfM(Mx, q); return SITEC.groundAt(site.terrain, s[0], s[1]); };
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = [X0 + (i + 0.5) * cell, Y0 + (j + 0.5) * cell], k = j * nx + i;
+    if (pr.some((P) => q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer))) continue;   // under a building: no ground
+    const z0 = gAt(q); let hrs = 0; inPlot[k] = pp && inPoly(q, pp) ? 1 : 0;
+    for (const d of dirs) { let shade = false;
+      for (const P of pr) { if (P.h <= z0) continue; const sx = P.c[0] - q[0], sy = P.c[1] - q[1], s = sx * d.v[0] + sy * d.v[1]; if (s < -P.r) continue; const perp = Math.abs(sx * d.v[1] - sy * d.v[0]); if (perp > P.r) continue; if ((s - P.r) * d.t + z0 >= P.h) continue;
+        const din = rayEnter(q, d.v, P.outer); if (din < Infinity && z0 + din * d.t < P.h) { shade = true; break; } }
+      if (!shade) hrs += d.w; }
+    H[k] = hrs; }
+  // the figures: the plot's open ground, and the ground around the plot
+  let pn = 0, p2 = 0, ps = 0, rn = 0, rs = 0; for (let k = 0; k < H.length; k++) { if (Number.isNaN(H[k])) continue; if (inPlot[k]) { pn++; ps += H[k]; if (H[k] >= 2) p2++; } else { rn++; rs += H[k]; } }
+  return { X0, Y0, cell, nx, ny, H, inPlot, day: opt.day || SUNP.day, total, plot: pn ? { avg: ps / pn, two: p2 / pn, n: pn } : null, around: rn ? { avg: rs / rn, n: rn } : null, dirs: dirs.length };
+}
+// the preview with and without the masses: what they take from the ground around the plot
+function sunFigures(Mx, masses, day, box) { box = box || sunBox(Mx, masses.map((m) => m.outer)); const a = sunGrid(Mx, masses, { day, box }); if (!a) return null; const b = masses.length ? sunGrid(Mx, [], { day, box }) : a;
+  return { grid: a, plot: a.plot, around: a.around, aroundWithout: b && b.around, loss: a.around && b && b.around ? b.around.avg - a.around.avg : 0 }; }
+function sunRefresh(force) {
+  if (!SUNP.on || !M.site) { SUNP.res = null; return; } const key = JSON.stringify([massList(M).map((m) => [m.outer, m.h]), M.site.version, M.site.buildings.length, SUNP.day, M.north || 0, M.site.parcel]);
+  if (!force && key === SUNP.key) return; SUNP.key = key; clearTimeout(SUNP.t);
+  SUNP.t = setTimeout(() => { const t0 = performance.now(); SUNP.res = sunFigures(M, massList(M), SUNP.day); if (SUNP.res) SUNP.res.ms = Math.round(performance.now() - t0); draw(); massKpiUI(); }, drag ? 250 : 60);
+}
+const SUN_RAMP = [[0, [52, 64, 92]], [0.25, [86, 116, 160]], [0.5, [150, 175, 170]], [0.75, [238, 206, 120]], [1, [245, 160, 60]]];
+function sunCol(f) { f = Math.max(0, Math.min(1, f)); let i = 0; while (i < SUN_RAMP.length - 2 && f > SUN_RAMP[i + 1][0]) i++; const [fa, a] = SUN_RAMP[i], [fb, b] = SUN_RAMP[i + 1], u = (f - fa) / (fb - fa); return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * u)).join(',')})`; }
+function drawSun() {   // one pixel per cell on a small canvas, drawn scaled: no seams between cells
+  const R = SUNP.on && SUNP.res && SUNP.res.grid; if (!R || CAM === '3d') return; const top = Math.max(1, R.total);
+  if (!R.img) { const c = document.createElement('canvas'); c.width = R.nx; c.height = R.ny; const x = c.getContext('2d'), im = x.createImageData(R.nx, R.ny);
+    for (let j = 0; j < R.ny; j++) for (let i = 0; i < R.nx; i++) { const h = R.H[j * R.nx + i], o = ((R.ny - 1 - j) * R.nx + i) * 4; if (Number.isNaN(h)) continue; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(sunCol(h / top)); im.data[o] = +m[1]; im.data[o + 1] = +m[2]; im.data[o + 2] = +m[3]; im.data[o + 3] = 255; }
+    x.putImageData(im, 0, 0); R.img = c; }
+  const a = W2S([R.X0, R.Y0 + R.ny * R.cell]); g.save(); g.globalAlpha = 0.62; g.imageSmoothingEnabled = false; g.drawImage(R.img, a[0], a[1], R.nx * R.cell * V.s, R.ny * R.cell * V.s); g.restore();
+}
+{ const _dm = drawMasses; drawMasses = function () { drawSun(); _dm(); }; }
+// ---- schemes: the masses in turn; the site, walls and everything else are shared. M.schemes holds the other schemes' masses.
+function schemesOf(Mx = M) { if (!Mx.schemes || !Mx.schemes.length) { Mx.schemes = [{ id: 'A', name: 'Scheme A', masses: null }]; Mx.scheme = 'A'; } if (!Mx.schemes.some((s) => s.id === Mx.scheme)) Mx.scheme = Mx.schemes[0].id; return Mx.schemes; }
+const schemeMasses = (s) => s.id === M.scheme ? (M.masses || []) : (s.masses || []);
+function useScheme(id) { const L = schemesOf(), cur = L.find((s) => s.id === M.scheme), nx = L.find((s) => s.id === id); if (!nx || nx === cur) return; const b = snapM(); cur.masses = JSON.parse(JSON.stringify(M.masses || [])); M.masses = nx.masses || []; nx.masses = null; M.scheme = id; if (SEL && SEL.k === 'mass') SEL = null; commit(b); }
+function newScheme(copy) { const L = schemesOf(), b = snapM(), used = new Set(L.map((s) => s.id)); let id = 'A'; for (let i = 0; i < 26; i++) { id = String.fromCharCode(65 + i); if (!used.has(id)) break; } if (used.has(id)) { flash('That is enough schemes (26).'); return; }
+  const cur = L.find((s) => s.id === M.scheme); cur.masses = JSON.parse(JSON.stringify(M.masses || [])); const ms = copy ? JSON.parse(JSON.stringify(M.masses || [])).map((m) => Object.assign(m, { id: STC.uid('mass') })) : [];
+  L.push({ id, name: 'Scheme ' + id, masses: null }); M.masses = ms; M.scheme = id; SEL = null; commit(b); }
+function delScheme() { const L = schemesOf(); if (L.length < 2) return; const cur = L.find((s) => s.id === M.scheme); if (!confirm(`Delete ${cur.name} and its masses? You can undo this.`)) return; const b = snapM(), rest = L.filter((s) => s !== cur), nx = rest[0]; M.schemes = rest; M.masses = nx.masses || []; nx.masses = null; M.scheme = nx.id; SEL = null; commit(b); }
+function renameScheme() { const cur = schemesOf().find((s) => s.id === M.scheme), n = prompt('Name of this scheme', cur.name); if (n == null || !n.trim()) return; const b = snapM(); cur.name = n.trim().slice(0, 40); commit(b); }
+// the figures of every scheme, and the one-line trade-off between two of them
+function schemeTable(day) { const L = schemesOf(), lists = L.map((s) => massList(Object.assign({}, M, { masses: schemeMasses(s) }))), box = M.site ? sunBox(M, [].concat(...lists.map((l) => l.map((m) => m.outer)))) : null;   // one patch of ground for every scheme, so their sun figures compare
+  return L.map((s, i) => { const F = siteFigures(schemeMasses(s)), sun = box ? sunFigures(M, lists[i], day, box) : null; return { id: s.id, name: s.name, F, sun, cur: s.id === M.scheme }; }); }
+function tradeOff(a, b, day) {   // b compared with a, in one sentence
+  const pc = (x, y) => y ? Math.round((x - y) / y * 100) : null, sign = (v, u, dp = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('en', { maximumFractionDigits: dp })}${u}`;
+  const parts = [], dg = b.F.gfa - a.F.gfa, dh = b.F.top - a.F.top;
+  parts.push(Math.abs(dg) < 1 ? 'the same floor area' : `${sign(Math.round(dg), ' m²')} GFA${pc(b.F.gfa, a.F.gfa) != null ? ` (${sign(pc(b.F.gfa, a.F.gfa), ' %')})` : ''}`);
+  if (Math.abs(dh) >= 0.5) parts.push(`${dh > 0 ? 'a tallest mass ' + dh.toFixed(1) + ' m higher' : 'a tallest mass ' + (-dh).toFixed(1) + ' m lower'}`);
+  if (a.F.cover != null && Math.abs(b.F.cover - a.F.cover) >= 0.01) parts.push(`coverage ${Math.round(a.F.cover * 100)} → ${Math.round(b.F.cover * 100)} %`);
+  let sun = ''; if (a.sun && b.sun && a.sun.around && b.sun.around) { const ds = b.sun.around.avg - a.sun.around.avg; sun = Math.abs(ds) < 0.05 ? `; the ground around the plot gets about the same sun on ${SUN_DAYS[day]}` : `; the ground around the plot gets ${Math.abs(ds).toFixed(1)} h ${ds < 0 ? 'less' : 'more'} sun on ${SUN_DAYS[day]} (${sign(pc(b.sun.around.avg, a.sun.around.avg), ' %')})`;
+    if (a.sun.plot && b.sun.plot) { const d2 = Math.round((b.sun.plot.two - a.sun.plot.two) * 100); if (Math.abs(d2) >= 1) sun += `, and ${Math.abs(d2)} points ${d2 < 0 ? 'less' : 'more'} of the open plot has 2 h or more`; } }
+  return `${b.name} against ${a.name}: ${parts.join(', ')}${sun}.`;
+}
+// the card: schemes, figures, sun
+{ const _k = massKpiUI; massKpiUI = function () { _k(); if (mkpi.hidden) return; const L = schemesOf(), R = SUNP.on ? SUNP.res : null, top = R && R.grid ? R.grid.total : 0;
+  const tabs = `<div class="mk-s" role="tablist" aria-label="Schemes">${L.map((s) => `<button type="button" role="tab" data-sch="${s.id}" aria-selected="${s.id === M.scheme}" title="${esc(s.name)}${s.id === M.scheme ? ' (double-click to rename)' : ''}">${esc(s.id)}</button>`).join('')}<button type="button" data-sch="+" title="New scheme: a copy of this one">+</button>${L.length > 1 ? '<button type="button" data-sch="cmp" class="mk-cmp" title="Compare the schemes">Compare</button>' : ''}</div><div class="mk-sn">${esc(L.find((s) => s.id === M.scheme).name)}${L.length > 1 ? ' <button type="button" data-sch="del" title="Delete this scheme">Delete</button>' : ''}</div>`;
+  const sun = !M.site ? '' : `<div class="mk-sun"><label><input type="checkbox" id="mkSun"${SUNP.on ? ' checked' : ''}> Sun on</label> <select id="mkDay" aria-label="Day">${Object.entries(SUN_DAYS).map(([k, n]) => `<option value="${k}"${k === SUNP.day ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`
+    + (R ? `${R.plot ? `<div title="Share of the plot's open ground with at least 2 hours of direct sun; the BRE guide asks for at least half of a garden or amenity space on 21 March"><span>Plot ≥ 2 h sun</span><b>${Math.round(R.plot.two * 100)} %</b></div><div><span>Plot open ground</span><b>${R.plot.avg.toFixed(1)} h</b></div>` : ''}${R.around ? `<div title="Average direct sun on the ground within 25 m of the plot and the masses"><span>Around the plot</span><b>${R.around.avg.toFixed(1)} h</b></div>` : ''}${R.loss > 0.05 ? `<p class="mk-n">Your masses take ${R.loss.toFixed(1)} h of sun from the ground around the plot (of ${R.aroundWithout.avg.toFixed(1)} h).</p>` : ''}<div class="mk-leg" aria-hidden="true"><i></i><span>0 h</span><span>${top.toFixed(0)} h</span></div><p class="mk-n">A preview (${R.grid.cell.toFixed(1)} m grid). Send to Simulation › Sun hours for the full calculation.</p>` : SUNP.on ? '<p class="mk-n">Working out the sun…</p>' : '');
+  mkpi.insertAdjacentHTML('afterbegin', tabs); mkpi.insertAdjacentHTML('beforeend', sun); }; }
+mkpi.style.pointerEvents = 'auto';
+mkpi.addEventListener('click', (e) => { const b = e.target.closest('[data-sch]'); if (!b) return; const k = b.dataset.sch; if (k === '+') newScheme(true); else if (k === 'cmp') openSchemes(); else if (k === 'del') delScheme(); else useScheme(k); });
+mkpi.addEventListener('dblclick', (e) => { const b = e.target.closest('[data-sch]'); if (b && b.dataset.sch === M.scheme) renameScheme(); });
+mkpi.addEventListener('change', (e) => { if (e.target.id === 'mkSun') { SUNP.on = e.target.checked; sunSave(); SUNP.key = ''; if (!SUNP.on) { SUNP.res = null; draw(); } massKpiUI(); sunRefresh(true); } if (e.target.id === 'mkDay') { SUNP.day = e.target.value; sunSave(); SUNP.res = null; massKpiUI(); sunRefresh(true); } });
+{ const _c = changed; changed = function (lv, kp) { _c(lv, kp); sunRefresh(); }; }
+// the comparison: a table of every scheme and the trade-off of each against the first
+const cmpBox = document.createElement('div'); cmpBox.className = 'mkcmp'; cmpBox.hidden = true; cmpBox.setAttribute('role', 'dialog'); cmpBox.setAttribute('aria-label', 'Compare schemes'); stage.appendChild(cmpBox);
+function openSchemes() {
+  const T = schemeTable(SUNP.day), base = T[0], f = (v, dp = 0, u = '') => v == null ? '—' : v.toLocaleString('en', { maximumFractionDigits: dp, minimumFractionDigits: dp }) + u;
+  const rows = [['Masses', (r) => r.F.n], ['Footprint', (r) => f(r.F.foot, 0, ' m²')], ['Coverage', (r) => r.F.cover == null ? '—' : Math.round(r.F.cover * 100) + ' %'], ['GFA', (r) => f(r.F.gfa, 0, ' m²')], ['FAR', (r) => f(r.F.far, 2)], ['Tallest', (r) => f(r.F.top, 1, ' m')]];
+  if (M.site) rows.push([`Plot ≥ 2 h sun (${SUN_DAYS[SUNP.day]})`, (r) => r.sun && r.sun.plot ? Math.round(r.sun.plot.two * 100) + ' %' : '—'], ['Sun around the plot', (r) => r.sun && r.sun.around ? r.sun.around.avg.toFixed(1) + ' h' : '—']);
+  cmpBox.innerHTML = `<div class="mc-h"><b>Compare schemes</b><button type="button" class="btn" data-mc="x" aria-label="Close">×</button></div><table><thead><tr><th></th>${T.map((r) => `<th>${esc(r.name)}${r.cur ? ' <em>(open)</em>' : ''}</th>`).join('')}</tr></thead><tbody>${rows.map(([n, fn]) => `<tr><th>${n}</th>${T.map((r) => `<td>${fn(r)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+    + `<ul class="mc-t">${T.slice(1).map((r) => `<li>${esc(tradeOff(base, r, SUNP.day))}</li>`).join('')}</ul><div class="mc-b">${T.filter((r) => !r.cur).map((r) => `<button type="button" class="btn" data-mc="${r.id}">Open ${esc(r.name)}</button>`).join('')}</div>`
+    + `<p class="mk-n">Floor areas are footprint × storeys; the sun figures are the preview's (direct sun, ${M.site ? 'the site\'s buildings casting shadows' : 'no site'}). Nothing here checks a bylaw or a code.</p>`;
+  cmpBox.hidden = false; }
+cmpBox.addEventListener('click', (e) => { const b = e.target.closest('[data-mc]'); if (!b) return; if (b.dataset.mc === 'x') { cmpBox.hidden = true; return; } useScheme(b.dataset.mc); cmpBox.hidden = true; });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !cmpBox.hidden) cmpBox.hidden = true; });
+window.__sunp = { sunPos: sunPosN, sunDirs, sunGrid, sunFigures, get state() { return SUNP; }, refresh: () => sunRefresh(true), schemes: () => schemesOf(), useScheme, newScheme, schemeTable, tradeOff, openSchemes };
+sunRefresh(true);
+
 // for tests and the site
 window.__st = { get site() { return M.site || null; }, sunScene: () => STC.planScene(M, S, LV, 'sunhours'), get LAYER() { return LAYER; }, get VIS() { return VIS; }, get TOOL() { return TOOL; }, isDirty: () => isDirty(),  get M() { return M; }, get S() { return S; }, get RES() { return RES; }, get SEL() { return SEL; }, get LV() { return LV; }, toPx: (p) => { const q = W2S(p); return [q[0] / VP.d, q[1] / VP.d]; } };
 // ---------- start ----------
@@ -5004,6 +5295,15 @@ window.S3 = (() => {
     if (o.site && o.site.length) { const SG = new T.Group(); SG.name = 'site'; const alpha=o.siteOpacity??(M.siteOpacity??.5),sm=mat('#cfccc4',{transparent:alpha<1,opacity:alpha,depthWrite:alpha>=1}),em=new T.LineBasicMaterial({color:0x55524c,transparent:true,opacity:alpha*.7});
       for (const m of o.site) { const sh = new T.Shape(m.outer.map((p) => new T.Vector2(p[0], p[1]))); for (const hr of m.holes || []) sh.holes.push(new T.Path(hr.map((p) => new T.Vector2(p[0], p[1])))); const geo = new T.ExtrudeGeometry(sh, { depth: Math.max(0.1, m.h - m.base), bevelEnabled: false }); geo.rotateX(-Math.PI / 2); const me = new T.Mesh(geo, sm); me.position.y=m.base;me.userData={k:'site',id:m.id||'context',opacity:alpha};me.add(new T.LineSegments(new T.EdgesGeometry(geo, 25), em)); SG.add(me); }
       G.add(SG); }
+    // masses (Massing): extruded outlines with a line at every floor; part of the model, so the view fits them
+    const ML = o.masses !== undefined ? o.masses : (o.all ? massList(M) : null);
+    if (ML && ML.length) { const MG = new T.Group(); MG.name = 'masses';
+      for (const m of ML) { if (o.hidden && o.hidden.has(m.id)) continue; const sh = new T.Shape(m.outer.map((p) => new T.Vector2(p[0], p[1]))), H = Math.max(0.5, m.h - m.base), geo = new T.ExtrudeGeometry(sh, { depth: H, bevelEnabled: false }); geo.rotateX(-Math.PI / 2);
+        const me = new T.Mesh(geo, mat(MASS_COL[m.use] || MASS_COL['Mixed use'])); me.name = 'mass'; me.position.y = m.base; me.userData = { k: 'mass', id: m.id }; me.add(new T.LineSegments(new T.EdgesGeometry(geo, 25), new T.LineBasicMaterial({ color: 0x6b5a48 })));
+        if (m.storeys > 1 && m.fh) { const pts = []; for (let k = 1; k < m.storeys; k++) { const y = k * m.fh; for (let i = 0; i < m.outer.length; i++) { const a = m.outer[i], b = m.outer[(i + 1) % m.outer.length]; pts.push(a[0], y, -a[1], b[0], y, -b[1]); } }
+          const lg = new T.BufferGeometry(); lg.setAttribute('position', new T.Float32BufferAttribute(pts, 3)); me.add(new T.LineSegments(lg, new T.LineBasicMaterial({ color: 0x8a7a66, transparent: true, opacity: 0.55 }))); }
+        MG.add(me); }
+      G.add(MG); }
     // the ground of the site (terrain grid, plan metres; z above the site point), so the surroundings stand on it
     if (o.terrain && o.terrain.pts && o.terrain.nx > 1 && o.terrain.ny > 1) { const T0 = o.terrain, pos = new Float32Array(T0.pts.length * 3), idx = [];
       T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - 0.05; pos[3 * i + 2] = -p[1]; });
@@ -5481,8 +5781,8 @@ if (window.__WSROLE) {
     requestAnimationFrame(poll); })();
 
   // ---- layer locks from the Workspace: a locked layer's objects cannot be picked, and its tools do not start
-  const LOCKK = { wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
-  const TOOLK = { wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
+  const LOCKK = { mass: 'Masses', ctx: 'Site', wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
+  const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
   cv.addEventListener('pointerdown', () => { WS.down = true; setTimeout(() => { WS.down = false; }, 0); }, true);
   { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && LOCKK[h.k]; if (L && WS.locks.has(L)) { if (WS.down) say(`The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
   { const _t = setTool; setTool = function (t) { const L = TOOLK[t] || (t === 'place' && PICK && REG[PICK] && REG[PICK].kind === 'stair' ? 'Furniture' : null); if (L && WS.locks.has(L)) { say(`The ${L} layer is locked. Unlock it in Layers to draw on it.`); return; } return _t(t); }; }
@@ -5544,6 +5844,7 @@ if (window.__WSROLE) {
       const out = [], L = (id) => (lvObj(id) || {}).name || '';
       for (const w of M.walls) out.push({ k: 'wall', id: w.id, lv: w.lv, name: `Wall ${(STC.wallLen(w)).toFixed(2)} m`, level: L(w.lv) });
       for (const f of M.fences || []) out.push({ k: 'fence', id: f.id, lv: f.lv, name: 'Fence', level: L(f.lv) });
+      for (const m of M.masses || []) { const xs = m.points.map((q) => q[0]), ys = m.points.map((q) => q[1]); out.push({ k: 'mass', id: m.id, lv: null, name: `${m.name || 'Mass'} · ${m.storeys} st`, level: 'Site', bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], h: massH(m) }); }
       for (const o of M.ops) { const w = wallById(o.wall), m = o.gen ? genModel(o.gen.id) : null; out.push({ k: 'op', id: o.id, lv: w ? w.lv : null, name: o.hole ? 'Wall opening' : m ? m.en : o.kind === 'door' ? 'Door' : 'Window', level: w ? L(w.lv) : '', kind: o.hole ? 'hole' : o.kind }); }
       for (const f of M.floors) out.push({ k: 'floor', id: f.id, lv: f.lv, name: f.auto ? 'Floor (follows the walls)' : 'Floor slab', level: L(f.lv) });
       for (const v of M.voids) out.push({ k: 'void', id: v.id, lv: v.lv, name: v.fromStair ? 'Stair opening' : 'Floor opening', level: L(v.lv) });

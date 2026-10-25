@@ -50,7 +50,9 @@ export function sunScene(model, site, { name = 'Project', project = null, versio
     outlines(parts.map(rectOf)).forEach((o, i) => masses.push({ id: `L${L.n}_${i}`, role: 'proposed', level: `Level ${L.n}`, base: +base.toFixed(3), h: +h.toFixed(3), outer: o, holes: [] }));
   });
   for (const c of comps.filter((x) => x.type === 'roof')) masses.push({ id: c.id, role: 'proposed', level: 'Roof', base: +c.g.z.toFixed(3), h: +(c.g.z + c.g.h).toFixed(3), outer: ring(rectOf(c)), holes: [] });
-  for (const c of comps.filter((x) => x.type === 'mass')) masses.push({ id: c.id, role: 'context', base: +c.g.z.toFixed(3), h: +(c.g.z + c.g.h).toFixed(3), outer: ring(rectOf(c)), holes: [] });
+  // masses drawn in Plan Studio (Massing) are the proposal; other mass components are context blocks
+  if (vis.has('Masses')) for (const m of (model.studio && model.studio.masses) || []) masses.push({ id: 'mass_' + m.id, role: 'proposed', level: m.name || 'Mass', base: 0, h: +(m.storeys * m.fh).toFixed(3), outer: m.points.map((q) => q.map((v) => +v.toFixed(3))), holes: [] });
+  for (const c of comps.filter((x) => x.type === 'mass' && !/^ps:mass:/.test(x.id))) masses.push({ id: c.id, role: 'context', base: +c.g.z.toFixed(3), h: +(c.g.z + c.g.h).toFixed(3), outer: ring(rectOf(c)), holes: [] });
   const skipped = comps.filter((c) => c.type === 'imported').length; if (skipped) notes.push(`${skipped} imported mesh${skipped > 1 ? 'es are' : ' is'} not sent; give them a type to include them.`);
   const t = tzInfo(site);
   return { format: 'plotcloud-scene', v: 1, kind: 'masses', app: 'plotcloud-workspace', name,

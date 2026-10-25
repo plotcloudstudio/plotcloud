@@ -83,6 +83,18 @@ Clear glass now transmits by angle of incidence (Fresnel reflection at both face
 
 After the change every point is within the tolerances: **passed** (before it, the points nearest the window failed in both cases). What remains is one-sided: the reflected part reads **high**, by 0.13–0.29 points at the back of the room.
 
+## 4. Sun preview in Plan Studio (`tests/mvp-massing.cjs`, part 3)
+
+The quick sun-hours preview on the site (Massing › Sun on) is a separate, simpler calculation, so it is checked on its own:
+
+* **Sun position**: the preview's function against Sun hours' own `sunPos`, pulled from `emb/sunhours.html` as it ships: 60 positions
+  (3 cities, 4 dates, 5 times), largest difference 1e-13°. So the NREL SPA result in §1 holds for the preview too.
+* **Shadows**: a wall 200 m long, 10 m high, at Vancouver; sun hours at 16 points 5–20 m north of it against the exact ray–plane answer
+  with the same sun directions: identical on 21 March and 21 December (at 10 m: 1.00 h on 21 March with 15-minute steps; Sun hours gives
+  0.84 h with its own steps, §2).
+
+The preview uses a 2–4 m grid and 15-minute steps; use Sun hours for figures you report.
+
 ## Limits: where not to rely on the result
 
 - **Back of deep rooms (Daylight).** Inter-reflected light is spread evenly over a room, so where little sky is seen the daylight factor reads high by up to about 0.3 points (more than double the Radiance value at the back of a room behind a building). Treat "the back of the room reaches 2 % DF" with caution when the sky component there is under 1 %.

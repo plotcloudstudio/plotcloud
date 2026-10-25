@@ -163,6 +163,9 @@ export function render(app, sim, params = new URLSearchParams()) {
 
   // the engine's own input, made from the version
   const input = (() => {
+    // a project with a site or masses in its Plan Studio model: Sun hours reads Plan Studio's own scene (masses, the site's buildings standing on the terrain, location)
+    if (cfg.input === 'masses' && sim.id === 'sunhours' && v.model.studio && v.model.studio.v === 2 && ((v.model.studio.masses || []).length || v.model.studio.site))
+      return studioScene(v, site, p.name, 'sunhours').then((r) => { if (!r.ok) return r; const sc = JSON.parse(r.scene); return { ...r, info: `${sc.masses.filter((m) => m.role === 'proposed').length} blocks, ${sc.masses.filter((m) => m.role === 'context').length} neighbours${sc.terrain ? ', terrain' : ''}` }; });
     if (cfg.input === 'masses') { const sc = sunScene(v.model, site, { name, project: p.id, version: v.id }); return Promise.resolve({ ok: true, scene: JSON.stringify(sc), info: `${sc.masses.filter((m) => m.role === 'proposed').length} blocks, ${sc.masses.filter((m) => m.role === 'context').length} neighbours` }); }
     if (cfg.input === 'studio') return studioScene(v, site, p.name, sim.id === 'movementdepth' ? 'movementdepth' : sim.id, level?.id);
     if (cfg.input === 'dxf') return studioDXF(v, site, p.name, level?.id);

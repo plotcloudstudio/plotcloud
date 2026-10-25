@@ -24,6 +24,8 @@ const MATS = ['Concrete', 'Plaster', 'Gypsum', 'Glass', 'Timber', 'Carpet', 'Aco
 // Tool lists, names exactly as in Plan Studio (emb/modeler.html). Each one starts Plan Studio's own tool in the Plan pane.
 const I = (d) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const TOOLS = {
+  mass: { label: 'Massing', icon: I('<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>'), sections: [
+    ['Massing', ['Mass outline', 'Rectangle mass']], ['Surroundings', ['Neighbour building']]] },
   draw: { label: 'Draw room', icon: I('<rect x="4" y="4" width="16" height="16"/><path d="M4 12h7v8"/>'), sections: [
     ['Draw rooms', ['Straight wall', 'Rectangle room', 'Arc wall', 'Floor', 'Fence']],
     ['Add structure', ['Straight stair', 'L-shaped stair', 'U-shaped stair', 'Spiral stair', 'Accessible ramp', 'Floor opening']]] },
@@ -37,7 +39,7 @@ const TOOLS = {
     ['Lights', ['Recessed downlight', 'Flush mount', 'Pendant', 'Track spot', 'Wall sconce', 'LED strip']]] },
 };
 // what each tile starts in Plan Studio (its own tool keys, door models and stair models)
-const TMAP = { 'Straight wall': { tool: 'wall', key: 'W' }, 'Rectangle room': { tool: 'room', key: 'R' }, 'Arc wall': { tool: 'arc', key: 'H' }, Floor: { tool: 'floor', key: 'F' }, Fence: { tool: 'fence' },
+const TMAP = { 'Mass outline': { tool: 'mass' }, 'Rectangle mass': { tool: 'massrect' }, 'Neighbour building': { tool: 'ctxadd' }, 'Straight wall': { tool: 'wall', key: 'W' }, 'Rectangle room': { tool: 'room', key: 'R' }, 'Arc wall': { tool: 'arc', key: 'H' }, Floor: { tool: 'floor', key: 'F' }, Fence: { tool: 'fence' },
   'Straight stair': { stair: 'straight' }, 'L-shaped stair': { stair: 'lshape' }, 'U-shaped stair': { stair: 'ushape' }, 'Spiral stair': { stair: 'spiral' }, 'Accessible ramp': { stair: 'ramp' }, 'Floor opening': { tool: 'void', key: 'O' },
   'Exterior door': { tool: 'door', opm: 'ext' }, 'Interior door': { tool: 'door', opm: 'int', key: 'D' }, 'Exit door': { tool: 'door', opm: 'exit' }, 'Accessible door': { tool: 'door', opm: 'acc' },
   Window: { tool: 'win', opm: 'win', key: 'N' }, 'Wall opening': { tool: 'hole', key: 'E' } };
@@ -45,10 +47,10 @@ const ON_WALL = new Set(['door', 'win', 'hole']);
 const FURN_BY_NAME = new Map(MODELS.map((m) => [m.en, m]));
 
 // Plan Studio objects ↔ Workspace layers. A Workspace layer's eye and lock act on these Plan Studio layers in every pane.
-const KLAYER = { wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
-const LMAP = { Walls: ['parts.walls'], Glazing: ['parts.openings'], Structure: ['parts.floors'], Furniture: ['soft', 'custom'], Rooms: ['roomNames', 'roomArea'], Lighting: ['lighting', 'lighting.fix', 'ceiling', 'ceiling.lights', 'ceiling.panels', 'ceiling.vents'], Site: ['ref.site'] };
-const KTYPE = { wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
-const KMAT = { wall: 'Plaster', fence: 'Timber', floor: 'Concrete', void: 'Concrete', stair: 'Concrete', furn: 'Timber', light: 'Imported', ceil: 'Gypsum', roof: 'Concrete' };
+const KLAYER = { mass: 'Masses', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
+const LMAP = { Walls: ['parts.walls'], Glazing: ['parts.openings'], Structure: ['parts.floors'], Furniture: ['soft', 'custom'], Rooms: ['roomNames', 'roomArea'], Lighting: ['lighting', 'lighting.fix', 'ceiling', 'ceiling.lights', 'ceiling.panels', 'ceiling.vents'], Site: ['ref.site'], Masses: ['mass'] };
+const KTYPE = { mass: 'mass', wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
+const KMAT = { mass: 'Concrete', wall: 'Plaster', fence: 'Timber', floor: 'Concrete', void: 'Concrete', stair: 'Concrete', furn: 'Timber', light: 'Imported', ceil: 'Gypsum', roof: 'Concrete' };
 const PS = /^ps:([a-z]+):(.*)$/;
 const psId = (s) => `ps:${s.k === 'end' ? 'wall' : s.k}:${s.id}`;
 const psSel = (id) => { const m = PS.exec(id || ''); return m ? { k: m[1], id: m[2] } : null; };
@@ -92,6 +94,9 @@ export function render(app, [pid]) {
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project yet. <a href="#/">Create one on Home.</a></p></div>'; return; }
   setCurrent(p);
   const converted = ensureStudio(p);
+  if (!p.draft.layers.find((l) => l.name === 'Masses')) {   // massing (2026-10-25): every project has the layer; a saved draft stays saved
+    const lv = p.versions.at(-1), clean = lv && JSON.stringify(lv.model) === JSON.stringify(p.draft), add = (m) => m.layers.splice(Math.max(0, m.layers.findIndex((l) => l.name === 'Site') + 1), 0, { name: 'Masses', color: LAYER_COLORS.Masses, visible: true, locked: false });
+    add(p.draft); if (clean) add(lv.model); }
   const M = () => p.draft, comp = (id) => M().components.find((c) => c.id === id);
   const layerOf = (c) => M().layers.find((l) => l.name === c?.layer);
   const last = () => p.versions.at(-1), dirty = () => !last() || JSON.stringify(last().model) !== JSON.stringify(p.draft);
@@ -120,7 +125,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws3-20261024`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws4-20261025`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -447,7 +452,7 @@ export function render(app, [pid]) {
       <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes show in the Shaded model view.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Site</span></button></h2><div class="w3-accb">
       <p class="note">${M().studio?.site ? `${esc((M().studio.site.origin.label || "").split(",")[0] || "Site")}: ${M().studio.site.buildings.filter((b) => !b.excluded).length} buildings, ${(M().studio.site.roads || []).length} roads${M().studio.site.terrain ? `, ground ${M().studio.site.terrain.relief} m` : ""} · ${esc(M().studio.site.sources?.[0]?.attribution || "")}` : "No site yet."}</p><a class="btn sm" id="siteBtn" href="#/new-site?project=${p.id}">${M().studio?.site ? "Choose another site on the map" : "Choose the site on the map"}</a>
-      <p class="note">The surroundings are on the Site layer, locked; the eye in Layers shows or hides them.</p>
+      <p class="note">The surroundings are on the Site layer, locked; the eye in Layers shows or hides them. Unlock it to change a building’s height, leave one out or draw a missing neighbour (Massing › Neighbour building). Masses go on the Masses layer.</p>
       <p class="note" id="siteMsg" role="status" aria-live="polite"></p></div></div>
     <div class="pane w3-accp${UI.pacc === 'export' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="export" aria-expanded="${UI.pacc === 'export'}"><span>${UI.pacc === 'export' ? '▾' : '▸'} Export</span></button></h2><div class="w3-accb">
       <div class="w2-exp">${FORMATS.map(([k, n, d]) => `<button type="button" class="btn sm" data-exp="${k}" title="${esc(d)}">${esc(n)}</button>`).join('')}</div>

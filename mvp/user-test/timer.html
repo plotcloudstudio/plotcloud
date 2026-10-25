@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usability test timer</title>
+<style>
+:root{--bg:#f7f6f3;--card:#fff;--ink:#1c1b1a;--muted:#6e6a60;--line:#e1dfda;--accent:#D8402A;--ok:#2F7A4F;--warn:#b45309;--fail:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#171716;--card:#21201e;--ink:#eeece8;--muted:#a8a398;--line:#3a3834;--accent:#ef6a52;--ok:#5fb383;--warn:#e0a24a;--fail:#ef7a70}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:0 0 10px}
+.sub{color:var(--muted);margin:0 0 16px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}label{display:grid;gap:3px;font-size:12.5px;color:var(--muted)}
+input,select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}textarea{width:100%;min-height:58px;resize:vertical}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}button:hover{border-color:var(--muted)}
+button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}.go{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tasks{display:flex;flex-wrap:wrap;gap:6px}.tasks button{min-width:54px}.tasks button.done::after{content:" ✓";color:var(--ok)}
+.clock{font:600 44px/1 ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;margin:6px 0}.clock.over{color:var(--fail)}
+.task-text{margin:6px 0 10px}.seg{display:inline-flex;gap:4px;flex-wrap:wrap}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}.clock{font-size:36px}}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}th{color:var(--muted);font-weight:500}
+.S{color:var(--ok);font-weight:600}.P{color:var(--warn);font-weight:600}.F{color:var(--fail);font-weight:600}.note{color:var(--muted);font-size:12.5px}
+.sus li{margin:6px 0}.sus .seg button{min-width:34px}.wrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<main>
+<h1>Usability test timer</h1>
+<p class="sub">For the moderator (PROTOCOL.md). Everything stays in this browser; export the CSV after each session.</p>
+
+<section class="card">
+  <div class="row">
+    <label>Participant<select id="pid"><option>P1</option><option>P2</option><option>P3</option><option>P4</option><option>P5</option></select></label>
+    <label>Profile<input id="profile" placeholder="e.g. architect, 6 years"></label>
+    <label>Moderator<input id="mod" size="10"></label>
+    <label>Date<input id="date" type="date"></label>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Task</h2>
+  <div class="tasks" id="tasks" role="group" aria-label="Tasks"></div>
+  <p class="task-text" id="ttext"></p>
+  <div class="clock" id="clock" aria-live="off">0:00</div>
+  <div class="row"><button class="go" id="start">Start</button><button id="stop" disabled>Stop</button><span class="note" id="limit"></span></div>
+  <div class="grid2" style="margin-top:12px">
+    <div>
+      <p class="note" style="margin:0 0 4px">Outcome</p><div class="seg" id="outcome"><button data-v="S">Success</button><button data-v="P">Partial</button><button data-v="F">Failed</button></div>
+      <p class="note" style="margin:10px 0 4px">Help given (0 none · 1 question · 2 where · 3 pointed · 4 showed)</p><div class="seg" id="help"></div>
+      <p class="note" style="margin:10px 0 4px">Single Ease Question (1 very difficult … 7 very easy)</p><div class="seg" id="seq"></div>
+    </div>
+    <div>
+      <label>Errors (one per line: what happened)<textarea id="errors"></textarea></label>
+      <label style="margin-top:8px">Quotes and notes<textarea id="notes"></textarea></label>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>System Usability Scale (after the tasks)</h2>
+  <p class="note">1 strongly disagree … 5 strongly agree.</p>
+  <ol class="sus" id="sus"></ol>
+  <p>SUS score: <b id="susScore">—</b></p>
+</section>
+
+<section class="card">
+  <h2>Session so far</h2>
+  <div class="wrap"><table><thead><tr><th>Task</th><th>Time</th><th>Outcome</th><th>Help</th><th>SEQ</th><th>Errors</th></tr></thead><tbody id="sum"></tbody></table></div>
+  <div class="row" style="margin-top:10px"><button id="csv">Export CSV (all participants)</button><button id="clear">Clear this participant</button></div>
+</section>
+</main>
+<script>
+const TASKS = [
+  ['T1', 'Start a project for 800 Robson Street, Vancouver, surroundings within 150 m, plot about 40 × 30 m at the nearest block corner.', 6],
+  ['T2', 'Make the neighbouring building you point at 45 m tall.', 4],
+  ['T3', 'Draw a 6-storey building over about half of the plot; read its GFA and FAR.', 5],
+  ['T4', 'Share of the open plot with at least 2 h of sun on 21 March.', 3],
+  ['T5', 'A second option twice as tall; the gain and the loss in one sentence.', 5],
+  ['T6', 'Run the full Sun hours simulation and keep the result.', 5],
+  ['T7', 'Close everything; find the project and open the tall option.', 3]];
+const SUS = ['I think that I would like to use this system frequently.', 'I found the system unnecessarily complex.', 'I thought the system was easy to use.',
+  'I think that I would need the support of a technical person to be able to use this system.', 'I found the various functions in this system were well integrated.',
+  'I thought there was too much inconsistency in this system.', 'I would imagine that most people would learn to use this system very quickly.',
+  'I found the system very cumbersome to use.', 'I felt very confident using the system.', 'I needed to learn a lot of things before I could get going with this system.'];
+const KEY = 'pc-usertest-v1', $ = (s) => document.querySelector(s);
+let DB = {}; try { DB = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { DB = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { } };
+const P = () => { const id = $('#pid').value; return DB[id] || (DB[id] = { profile: '', mod: '', date: new Date().toISOString().slice(0, 10), tasks: {}, sus: [] }); };
+let cur = 'T1', timer = null;
+const T = () => { const p = P(); return p.tasks[cur] || (p.tasks[cur] = { start: null, end: null, time: 0, outcome: '', help: '', seq: '', errors: '', notes: '' }); };
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function seg(el, n0, n1, key) { el.innerHTML = ''; for (let i = n0; i <= n1; i++) { const b = document.createElement('button'); b.textContent = i; b.dataset.v = i; el.appendChild(b); } el.dataset.key = key; }
+seg($('#help'), 0, 4, 'help'); seg($('#seq'), 1, 7, 'seq'); $('#outcome').dataset.key = 'outcome';
+for (const el of [$('#outcome'), $('#help'), $('#seq')]) el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const t = T(); t[el.dataset.key] = t[el.dataset.key] === b.dataset.v ? '' : b.dataset.v; save(); ui(); });
+$('#sus').innerHTML = SUS.map((q, i) => `<li>${q}<br><span class="seg" data-q="${i}">${[1, 2, 3, 4, 5].map((v) => `<button data-v="${v}">${v}</button>`).join('')}</span></li>`).join('');
+$('#sus').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const i = +b.parentElement.dataset.q, p = P(); p.sus[i] = p.sus[i] === +b.dataset.v ? null : +b.dataset.v; save(); ui(); });
+const susScore = (a) => a.length === 10 && a.every((v) => v >= 1) ? a.reduce((s, v, i) => s + (i % 2 === 0 ? v - 1 : 5 - v), 0) * 2.5 : null;
+function ui() {
+  const p = P(), t = T(); $('#profile').value = p.profile; $('#mod').value = p.mod; $('#date').value = p.date;
+  $('#tasks').innerHTML = TASKS.map(([id]) => `<button data-t="${id}" aria-pressed="${id === cur}" class="${p.tasks[id] && p.tasks[id].outcome ? 'done' : ''}">${id}</button>`).join('');
+  const [, text, lim] = TASKS.find((x) => x[0] === cur); $('#ttext').textContent = text; $('#limit').textContent = `Limit ${lim} min`;
+  for (const [sel, k] of [['#outcome', 'outcome'], ['#help', 'help'], ['#seq', 'seq']]) for (const b of document.querySelectorAll(sel + ' button')) b.setAttribute('aria-pressed', String(String(t[k]) === b.dataset.v));
+  $('#errors').value = t.errors; $('#notes').value = t.notes; $('#start').disabled = !!timer; $('#stop').disabled = !timer; tick();
+  for (const s of document.querySelectorAll('#sus [data-q]')) for (const b of s.children) b.setAttribute('aria-pressed', String(p.sus[+s.dataset.q] === +b.dataset.v));
+  const sc = susScore(p.sus); $('#susScore').textContent = sc == null ? `— (${p.sus.filter((v) => v >= 1).length} of 10 answered)` : sc.toFixed(1);
+  sum();
+}
+function sum() { const p = P();
+  $('#sum').innerHTML = TASKS.map(([id]) => { const x = p.tasks[id]; if (!x) return `<tr><td>${id}</td><td colspan="5" class="note">not done</td></tr>`; const n = (x.errors || '').split('\n').filter((l) => l.trim()).length;
+    return `<tr><td>${id}</td><td>${x.time ? fmt(x.time) : '—'}</td><td class="${x.outcome}">${x.outcome || '—'}</td><td>${x.help === '' ? '—' : x.help}</td><td>${x.seq || '—'}</td><td>${n}</td></tr>`; }).join('');
+}
+function tick() { const t = T(), lim = TASKS.find((x) => x[0] === cur)[2] * 60, s = timer && t.start ? (Date.now() - Date.parse(t.start)) / 1000 : t.time || 0; $('#clock').textContent = fmt(s); $('#clock').classList.toggle('over', s > lim); }
+$('#tasks').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b || timer) return; cur = b.dataset.t; ui(); });
+$('#start').addEventListener('click', () => { const t = T(); t.start = new Date().toISOString(); t.end = null; save(); timer = setInterval(tick, 250); ui(); });
+$('#stop').addEventListener('click', () => { const t = T(); clearInterval(timer); timer = null; t.end = new Date().toISOString(); t.time = Math.round((Date.parse(t.end) - Date.parse(t.start)) / 1000); save(); ui(); });
+$('#pid').addEventListener('change', () => { if (timer) { clearInterval(timer); timer = null; } cur = 'T1'; ui(); });
+for (const [id, k] of [['#profile', 'profile'], ['#mod', 'mod'], ['#date', 'date']]) $(id).addEventListener('input', (e) => { P()[k] = e.target.value; save(); });
+for (const [id, k] of [['#errors', 'errors'], ['#notes', 'notes']]) $(id).addEventListener('input', (e) => { T()[k] = e.target.value; save(); sum(); });
+$('#clear').addEventListener('click', () => { if (!confirm(`Clear everything recorded for ${$('#pid').value}?`)) return; delete DB[$('#pid').value]; save(); cur = 'T1'; ui(); });
+$('#csv').addEventListener('click', () => {
+  const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`, cols = ['participant', 'profile', 'date', 'moderator', 'task', 'start_iso', 'end_iso', 'time_s', 'outcome_S_P_F', 'help_level_0_4', 'errors', 'seq_1_7', 'quotes', 'notes', ...Array.from({ length: 10 }, (_, i) => 'sus_' + (i + 1)), 'sus_score'];
+  const rows = [cols.join(',')];
+  for (const [pid, p] of Object.entries(DB).sort()) if (Object.values(p.tasks || {}).some((x) => x.start || x.outcome || x.notes || x.errors) || (p.sus || []).some((v) => v >= 1)) for (const [id] of TASKS) { const x = p.tasks[id] || {}, last = id === 'T7', sc = susScore(p.sus || []);
+    rows.push([pid, p.profile, p.date, p.mod, id, x.start, x.end, x.time, x.outcome, x.help, x.errors, x.seq, '', x.notes, ...Array.from({ length: 10 }, (_, i) => last ? (p.sus || [])[i] : ''), last && sc != null ? sc : ''].map(q).join(',')); }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })); a.download = `plotcloud-usability-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+if (!P().date) P().date = new Date().toISOString().slice(0, 10);
+ui();
+</script>
+</body>
+</html>
