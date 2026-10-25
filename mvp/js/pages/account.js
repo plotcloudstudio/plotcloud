@@ -32,7 +32,7 @@ export function render(app) {
     <section id="site">
       <div class="kicker"><b>01</b>Site</div>
       <h1 class="display md" style="margin-top:16px">Where is the project?</h1>
-      <p class="lede" style="margin-top:14px">Anywhere in the world. New projects start on this site, and every simulation reads the same location, north, climate and surroundings.</p>
+      <p class="lede" style="margin-top:14px">Defaults for new projects. Sun Hours and Daylight keep a project snapshot; edit Shared conditions on a project to change their site. Other studies retain the existing linked-site behaviour during this pilot.</p>
       <form id="find" style="display:flex;gap:8px;margin-top:24px;max-width:720px"><label for="q" class="sr" style="position:absolute;left:-9999px">Address, place or coordinates</label>
         <input id="q" class="inp round" placeholder="An address, a place or “lat, lon” — e.g. Shibuya Station, Tokyo" autocomplete="street-address"><button class="btn accent lg" style="min-height:48px">Find</button></form>
       <div class="results" id="hits"></div>
@@ -48,8 +48,8 @@ export function render(app) {
 
     <section id="defaults">
       <div class="kicker"><b>02</b>Simulation defaults</div>
-      <h2 class="display sm" style="margin-top:16px">Set once, used everywhere.</h2>
-      <p class="lede" style="margin-top:14px">Each simulation opens with these values, linked: change one here and every simulation picks it up the next time it opens. Change a value inside a run when one study needs something different; the run records what it used and what differed from here.</p>
+      <h2 class="display sm" style="margin-top:16px">Defaults for new projects.</h2>
+      <p class="lede" style="margin-top:14px">Sun Hours and Daylight copy these into each project once. Existing projects keep their saved shared conditions. Edit Project shared conditions to update a project, or use study-only overrides for one run. Other simulations retain their existing settings during this pilot.</p>
       <div class="grid g3" id="defs" style="margin-top:24px"></div>
       <button class="btn primary" id="saveDefs" style="margin-top:18px">Save defaults</button>
     </section>
@@ -104,12 +104,12 @@ export function render(app) {
   $('#defs', app).innerHTML = DEF.map(([k, label, type, used]) => `<label class="f card" style="padding:14px">${label}${Array.isArray(type)
     ? `<select data-k="${k}">${type.map((o) => `<option ${String(A.defaults[k]).toLowerCase() === o.toLowerCase() ? 'selected' : ''}>${o}</option>`).join('')}</select>`
     : `<input type="${type}" data-k="${k}" value="${esc(A.defaults[k])}" ${type === 'number' ? 'step="any"' : ''}>`}<span class="note">Used by ${used}</span></label>`).join('');
-  $('#saveDefs', app).onclick = () => { for (const i of $$('[data-k]', app)) { const v = i.type === 'number' ? +i.value : i.value.trim(); if (i.type === 'number' && !Number.isFinite(v)) continue; A.defaults[i.dataset.k] = v; } S.save(); toast('Defaults saved'); };
+  $('#saveDefs', app).onclick = () => { const next={...A.defaults};for (const i of $$('[data-k]', app)) { const v = i.type === 'number' ? +i.value : i.value.trim(); if (i.type === 'number' && !Number.isFinite(v)) continue; next[i.dataset.k] = v; } if(next.plane<0||next.plane>1.5||!Number.isInteger(next.occStart)||!Number.isInteger(next.occEnd)||next.occStart<0||next.occStart>23||next.occEnd<=next.occStart||next.occEnd>24){toast('Use a work plane from 0–1.5 m and whole occupied hours with start earlier than end.');return;}A.defaults=next;S.save();toast('Defaults saved · existing Sun Hours and Daylight projects unchanged'); };
   const plist = () => {
     $('#plist', app).innerHTML = S.projects().map((p) => `<article class="card pcard"><div class="thumb"><img data-holo="${p.sample ? 'hero' : 'heroA'}" src="${img(p.sample ? 'hero' : 'heroA')}" alt=""></div><h3>${esc(p.name)}</h3>
       <p class="meta">${esc((S.siteOf(p)?.label || '').split(',')[0])} · ${p.versions.length} versions · ${p.runs.length} results</p>
-      <label class="note" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" data-link="${p.id}" ${p.siteLinked === false ? '' : 'checked'}> Follows my default site</label>
-      <div class="acts"><a class="btn sm primary" href="#/workspace/${p.id}" data-p="${p.id}">Open</a><a class="btn sm" href="#/results/${p.id}" data-p="${p.id}">Results</a></div></article>`).join('');
+      <label class="note" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" data-link="${p.id}" ${p.siteLinked === false ? '' : 'checked'}> Legacy simulations follow my default site</label>
+      <div class="acts"><a class="btn sm" href="#/project-settings/${p.id}">Shared conditions</a><a class="btn sm primary" href="#/workspace/${p.id}" data-p="${p.id}">Open</a><a class="btn sm" href="#/results/${p.id}" data-p="${p.id}">Results</a></div></article>`).join('');
     $$('[data-p]', app).forEach((a) => a.addEventListener('click', () => setCurrent(S.project(a.dataset.p))));
     // a project follows the Account site (a new address reaches all its simulations) or keeps its own copy of it
     $$('[data-link]', app).forEach((c) => c.onchange = () => { const p = S.project(c.dataset.link); S.linkSite(p, c.checked); toast(c.checked ? `${p.name} follows your default site` : `${p.name} keeps its own site: ${(p.site.label || '').split(',')[0]}`); plist(); });

@@ -40,10 +40,10 @@ function who() {
 
 const PAGES = {
   '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
-  results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'),
+  results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', 'batch-run': 'Batch run' };
+const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '';
 export async function route() {
   if(/^#\/(?:studio|workspace-archive)(?:\/|$|\?)/.test(location.hash))history.replaceState(null,'',location.hash.replace(/^#\/(?:studio|workspace-archive)/,'#/workspace'));
@@ -74,7 +74,7 @@ export async function route() {
     if(project){
       const context=document.createElement('div');context.className='pc-ui-context';context.setAttribute('aria-label','Current project');
       const version=currentVersion(project), latest=version&&version===project.versions.at(-1);   // the version simulations run on (chosen in the Workspace or the version picker)
-      context.innerHTML='<strong>'+esc(project.name)+'</strong><span data-pc-version>'+(version?(latest?'Latest saved v':'Saved v')+version.n:'No saved version')+'</span><span>'+esc((S.siteOf(project)?.label||'Site not set').split(',')[0])+'</span><a href="#/account">Site defaults</a><span class="pc-ui-storage">'+(S.persistent()?'Saved in this browser':'Session only · storage unavailable')+'</span>';
+      context.innerHTML='<strong>'+esc(project.name)+'</strong><span data-pc-version>'+(version?(latest?'Latest saved v':'Saved v')+version.n:'No saved version')+'</span><span>'+esc(((S.isSharedPilot(rest[0])?S.conditionsOf(project).site:S.siteOf(project))?.label||'Site not set').split(',')[0])+'</span><a href="#/project-settings/'+esc(project.id)+'">Shared conditions</a><span class="pc-ui-storage">'+(S.persistent()?'Saved in this browser':'Session only · storage unavailable')+'</span>';
       app.before(context);
     }
   }

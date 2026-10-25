@@ -68,7 +68,8 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
    if(sim==='sunhours'){
     const f=page.frameLocator('#eng');
     assert.equal(await f.getByRole('button',{name:'Plan + chart',exact:true}).count(),0);
-    await f.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Analysis',exact:true}).click();
+    await f.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Settings',exact:true}).click();
+    await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);
     await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');
     await f.locator('#run').click();
     await page.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;});
@@ -86,6 +87,7 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
     assert.equal(await f.locator('#panelR').evaluate(e=>e.scrollTop),before,'Wheel does not scroll the result panel');
     await page.screenshot({path:require('node:os').tmpdir()+'/plotcloud-sun-singlepage.png'});
     const next=f.locator('#panelR .pc-fit-pages').getByRole('button',{name:'Next →',exact:true});
+    await f.locator('#pilotChartSelect').selectOption('3');
     for(let i=0;i<10&&await next.isVisible()&&await next.isEnabled();i++){await next.click();await page.waitForTimeout(40);}
     assert(await f.locator('#tday').evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return r.bottom<=v.bottom+3&&r.bottom>v.top;}),'The final restored chart is reachable without scrolling');
    }

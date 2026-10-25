@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=singlepage-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=shared-20261024-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Daylight</title>
@@ -1263,7 +1263,7 @@ $('#stop').addEventListener('click', () => { STOP = true; });
 async function runLevel(level, confirmed, quiet) {
   if (BUSY) return; const p = lvPlan(level);
   if (p.est > 60 && !confirmed) { PENDING = level; $('#lvLongT').textContent = `${LV[level].name} takes about ${tfmt(p.est)} on this computer (a spot every ${Math.round(p.sp * 100)} cm, ${p.nb} bearings, a year of hours).`; $('#lvLong').hidden = false; return; }
-  BUSY = true; STOP = false; EXPLICIT = !quiet; if (!quiet && CAM !== 'split') await setCam('split');
+  BUSY = true; STOP = false; EXPLICIT = !quiet; if (!quiet && CAM !== 'split' && new URLSearchParams(location.search).get('pilot')!=='shared') await setCam('split');
   $('#run').disabled = true; $('#prog').hidden = false; $('#runBar').hidden = false; $('#runMsg').textContent = ''; const t0 = performance.now(), bar = $('#prog i');
   const res = await compute(p.sp, p.nb, (f) => { bar.style.width = (f * 100).toFixed(1) + '%'; const el = (performance.now() - t0) / 1000; $('#runLeft').textContent = f > 0.03 ? `${Math.round(f * 100)}% · about ${tfmt(Math.max(0, el / f - el))} left` : `${LV[level].name}: starting…`; });
   BUSY = false; $('#run').disabled = false; $('#prog').hidden = true; $('#runBar').hidden = true; bar.style.width = '0';

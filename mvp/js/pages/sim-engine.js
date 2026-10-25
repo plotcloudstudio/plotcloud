@@ -13,7 +13,7 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
-import { installSimulationFit } from '../../../ui/simulation-fit.js?v=exterior-20261024-1';
+import { installSimulationFit } from '../../../ui/simulation-fit.js?v=shared-20261024-1';
 
 const PLAN_EDIT = '.sec:has(#h-draw) :is([data-tool="wall"], [data-tool="glass"], [data-tool="win"], [data-tool="door"], [data-tool="furn"], #clear)';
 const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : NaN; };
@@ -114,11 +114,12 @@ const FIELDS = {
 export function render(app, sim, params = new URLSearchParams()) {
   // batch: Results runs this page in a hidden frame for one simulation of a batch (#/batch-run?…): the project, version,
   // level, room and parameter changes come in the address, the engine runs on its own and the result goes back to Results
-  const batch = params.get('batch'), cfg = CFG[sim.id], p = batch ? S.project(params.get('project')) : currentProject();
+  const batch = params.get('batch'), pilot=S.isSharedPilot(sim.id), cfg = pilot&&sim.id==='sunhours'?{...CFG[sim.id],hide:['.sec:has(#h-model)']}:CFG[sim.id], p = batch ? S.project(params.get('project')) : currentProject();
   const tell = (m) => { if (batch) try { window.parent.postMessage({ pcBatch: batch, sim: sim.id, ...m }, location.origin); } catch (e) { } };
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; tell({ ok: false, why: 'No project.' }); return; }
   if (!batch) setCurrent(p);
-  const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = S.siteOf(p), A = S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
+  const shared=pilot?S.clone(S.conditionsOf(p)):null;
+  const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
   const perLevel = cfg.input === 'studio' || cfg.input === 'dxf';
@@ -133,12 +134,12 @@ export function render(app, sim, params = new URLSearchParams()) {
       <label class="shsel">Version<select id="ver">${p.versions.slice().reverse().map((x) => `<option value="${x.id}" ${x === v ? 'selected' : ''}>v${x.n} — ${esc(x.note)}</option>`).join('') || '<option>No saved versions</option>'}</select></label>
       ${perLevel && levels.length > 1 ? `<label class="shsel">Level<select id="lvl">${levels.map((L, i) => `<option value="L${L.n}" ${i === lvIx ? 'selected' : ''}>Level ${L.n}</option>`).join('')}</select></label>` : ''}
       ${rooms.length ? `<label class="shsel">Room<select id="room">${rooms.map((c) => `<option value="${c.id}" ${c === room ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
-      <a class="shsite" href="#/account">${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}</a>
+      <a class="shsite" href="${pilot?'#/project-settings/'+p.id+'?return='+sim.id:'#/account'}">${pilot?`${esc((site?.label||'Site').split(',')[0])} · Shared r${shared.revision} ↗`:`${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}`}</a>
       <span class="sp"></span>
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
     </div>
-    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${sim.id === 'acoustics' ? '?v=wire-20261023-1' : sim.id === 'sunhours' ? '?v=charts-20261024-2' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
+    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${pilot?'?v=shared-20261024-1&pilot=shared':sim.id === 'acoustics' ? '?v=wire-20261023-1' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); render(app, sim, params); };
   $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); render(app, sim, params); };
@@ -151,10 +152,11 @@ export function render(app, sim, params = new URLSearchParams()) {
   // what this simulation takes from Account, shown in the bar (site, north and time zone are always there)
   const linked = Object.entries(cfg.prefill?.(ctx) || {}).filter(([id, val]) => ACCT[id] && val != null && val !== '' && !(typeof val === 'number' && !Number.isFinite(val)));
   { const chip = $('.shsite', app), more = linked.filter(([id]) => !['lat', 'lon', 'tz', 'north'].includes(id) && !(id === 'wdir' && linked.some(([k]) => k === 'dir')));
-    if (more.length) chip.insertAdjacentHTML('beforeend', more.map(([id, val]) => ` · ${esc(ACCT[id][0])} ${esc(shown(id, val))}`).join(''));
+    if (more.length&&!pilot) chip.insertAdjacentHTML('beforeend', more.map(([id, val]) => ` · ${esc(ACCT[id][0])} ${esc(shown(id, val))}`).join(''));
     chip.title = `Linked to Account${p.siteLinked === false ? ' (this project keeps its own site)' : ''}: change a value there and this simulation uses it the next time it opens. Values changed here are recorded with the result.\n`
       + [`Site ${site?.label || '—'}`, ...linked.map(([id, val]) => `${ACCT[id][0]} ${shown(id, val)}`)].join('\n'); }
-  let alive = true, loaded = false, sentScene = null, done = false, batchNoResult = false; const ovApply = {};
+  if(pilot)$('.shsite',app).title='Frozen project conditions · edit once for Sun Hours and Daylight. Account changes do not update this project.';
+  let alive = true, loaded = false, sentScene = null, done = false, batchNoResult = false, pilotRunSnapshot=null; const ovApply = {};
   const doc = () => { try { return fr.contentDocument; } catch (e) { return null; } };
   const say = (h, warn) => { msg.innerHTML = h; msg.classList.toggle('warn', !!warn); };
 
@@ -190,14 +192,27 @@ export function render(app, sim, params = new URLSearchParams()) {
 
   // Account values into the engine's own inputs (each stays editable there)
   const OV = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })();   // values changed in the batch panel
-  function prefill() {
-    const D = doc(), vals = Object.assign({}, cfg.prefill?.(ctx) || {}); if (!alive || !D) return;
+  function prefill(skipDate=false) {
+    const D = doc(), vals = Object.assign({}, pilot?{city:'custom',lat:site.lat,lon:site.lon,tz:t.tz,north:site.north??0}: {}, cfg.prefill?.(ctx) || {}); if (!alive || !D) return;
     if (batch) for (const [id, val] of Object.entries(OV)) if (val != null && val !== '') { if (!(id in vals)) vals[id] = val; else ovApply[id] = val; }
-    for (const [id, val] of Object.entries(vals)) { if (id === '@day') { const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) { b.click(); filled[id] = val; } continue; }
+    for (const [id, val] of Object.entries(vals)) { if (id === '@day') {if(skipDate)continue; const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) { b.click(); filled[id] = val; } continue; }
       const el = D.getElementById(id); if (!el || val == null || (typeof val === 'number' && !Number.isFinite(val))) continue;
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
     // Distinguish the engine's startup sample from the project's applied model/settings.
-    fr.dataset.pcSettingsReady = 'true';
+    if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
+  }
+  function bindPilot(){
+    const D=doc(),box=D?.getElementById('pilotSharedSummary');if(!box){if(alive)setTimeout(bindPilot,100);return;}
+    box.innerHTML=`<b>From project · revision ${shared.revision}</b><br>${esc((site.label||'Site').split(',')[0])} · north ${site.north??0}° · UTC${t.tz>=0?'+':''}${t.tz}${sim.id==='daylight'?`<br>Work plane ${A.plane} m · occupied ${A.occStart}:00–${A.occEnd}:00`:''}<br><a id="pilotEditProject" href="#">Edit shared conditions ↗</a><p id="pilotOverrideStatus" role="status">Using project values</p>`;
+    D.getElementById('pilotEditProject').onclick=e=>{e.preventDefault();location.hash='#/project-settings/'+p.id+'?return='+sim.id;};
+    fr.dataset.pcSettingsReady='true';if(D.body.dataset.pcPilotBound)return;D.body.dataset.pcPilotBound='1';
+    if(sim.id==='daylight'&&!fr.contentWindow.__pcAnalysisState?.().ready){const note=D.getElementById('runMsg');if(note){note.textContent='Workspace model and project inputs applied. Run this study to calculate current results.';note.className='msg';}}
+    const enabled=D.getElementById('pilotOverrideEnabled'),fields=D.getElementById('pilotSharedFields'),status=()=>{D.getElementById('pilotOverrideStatus').textContent=enabled.checked?'Study-only overrides enabled · project unchanged':'Using project values';};
+    enabled.onchange=()=>{fields.disabled=!enabled.checked;if(!enabled.checked)prefill(true);status();};
+    D.getElementById('pilotResetShared').onclick=()=>{enabled.checked=false;fields.disabled=true;prefill(true);status();};
+    const capture=()=>{pilotRunSnapshot={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},sim.id),site:S.clone(site),defaults:S.clone(A),studyOnlyOverrides:enabled.checked,effective:fr.contentWindow.__pcAnalysisState?.().conditions||{}};};
+    for(const id of ['run','longGo','lvStart'])D.getElementById(id)?.addEventListener('click',capture,true);
+    D.getElementById('epwF')?.addEventListener('change',()=>{enabled.checked=true;fields.disabled=false;status();});
   }
   // file-based inputs (DXF plan, OBJ site) go into the engine's own file picker, as if the person had opened the file
   const giveFile = (input, text, fname, type) => { const dt = new DataTransfer(); dt.items.add(new File([text], fname, { type })); input.files = dt.files; input.dispatchEvent(new Event('change', { bubbles: true })); };
@@ -229,6 +244,8 @@ export function render(app, sim, params = new URLSearchParams()) {
     return [];
   }
   function store(kpis, analysis = null) {
+    if(pilot){const ready=sim.id==='sunhours'?!!fr.contentWindow.__sun?.S.lastR&&!fr.contentWindow.__sun.S.busy:fr.contentWindow.__pcAnalysisState?.().ready;
+      if(!ready||!pilotRunSnapshot){say('Run the current Workspace model and settings before saving.',true);if(batch)batchNoResult=true;return;}}
     let K = kpis.map(([k, s]) => [String(k), String(s ?? '').trim()]).filter(([, s]) => s && !/^[—–-]+(\s|$)/.test(s));
     const D = doc();
     if (sim.id === 'sunhours') { const stats = [...(D?.querySelectorAll('#stats dt') || [])].map((dt) => [dt.textContent.trim(), (dt.nextElementSibling?.textContent || '').trim()]); K = K.concat(stats.filter(([k]) => !/window|extent/i.test(k))); }
@@ -247,6 +264,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       const k = ACCT[id][0], now = cur(id); fromAccount[k] = shown(id, val);
       if (now != null && String(now) !== String(val) && !(now !== '' && Number(now) === Number(val))) changed.push(`${k} ${shown(id, now)} (Account ${shown(id, val)})`); }
     const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };
+    if(pilot){settings.sharedConditions=S.clone(pilotRunSnapshot);settings.sharedConditions.effective=S.clone(sim.id==='sunhours'?{...fr.contentWindow.__sun.S.loc,north:fr.contentWindow.__sun.S.north}:fr.contentWindow.__pcAnalysisState?.().conditions||{});settings.inheritedFrom='Project shared conditions';}
     if(sim.id==='sunhours'){const s=fr.contentWindow.__sun?.S,r=s?.lastR;if(r){settings.analysisPeriod=r.period||{start:r.ds,end:r.ds,days:1,t0:s.t0,t1:s.t1};settings.grid=r.prep.s;settings.timeStep=s.step;settings.timeZone={...s.loc};settings.units=r.period?'cumulative sunlight hours':'sunlight hours';}}
     if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
@@ -322,7 +340,7 @@ export function render(app, sim, params = new URLSearchParams()) {
 // with the value the page would put in them, and how to show them; changes there go to the engine the same way
 const OPTS = { band: BANDS.map((b, i) => [i, b]), '@day': [['03-20', 'Mar 20 (equinox)'], ['06-21', 'Jun 21 (summer solstice)'], ['12-21', 'Dec 21 (winter solstice)']], 'q-loc': Object.entries(QNAME) };
 export function batchInfo(simId, p, v) {
-  const cfg = CFG[simId]; if (!cfg) return null; const site = S.siteOf(p), A = S.account().defaults, t = tzInfo(site), levels = v ? levelsOf(v.model) : [];
+  const cfg = CFG[simId]; if (!cfg) return null; const shared=S.isSharedPilot(simId)?S.conditionsOf(p):null,site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), levels = v ? levelsOf(v.model) : [];
   const rooms = v && cfg.input === 'room' ? v.model.components.filter((c) => c.type === 'room') : [];
   const ctx = { site, A, t, level: levels[0] ? { id: 'L' + levels[0].n, z: levels[0].z } : null, x: v ? extent(v.model) : null, room: rooms[0] || null };
   const fields = Object.entries(cfg.prefill?.(ctx) || {}).filter(([id, val]) => ACCT[id] && val != null && !(typeof val === 'number' && !Number.isFinite(val)) && !(id === 'wdir' && false))

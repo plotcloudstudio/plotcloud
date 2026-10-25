@@ -7,6 +7,8 @@
 //   run     { id, versionId, simId, settings, results { kpis: [[label, value]], <metric>: number, thumb?: jpeg data URL,
 //             field?: { label, unit, step, pts: [x, y, value, …] in plan metres } }, created, source: 'full-tool' | 'batch' }
 //   account { user, site, defaults }                  — site and defaults every new project and run starts from
+//   project.sharedConditions { site, defaults, revision } — frozen Sun Hours/Daylight pilot conditions;
+//     Account seeds them once, while other engines retain the existing siteLinked behaviour during the pilot.
 import { sampleModel } from './data.js';
 
 const KEY = 'pc-mvp-v1';
@@ -26,6 +28,7 @@ function seed() {
   add(sampleModel('A'), 'Baseline massing and glazing');
   const v2 = add(sampleModel('B'), 'Larger south windows, overhang, acoustic ceiling');
   p.draft = clone(v2.model);
+  p.sharedConditions={schema:1,revision:1,updated:now(),site:clone(SAMPLE_SITE),defaults:clone(DEFAULTS)};
   return { projects: [p], account: { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } } };
 }
 
@@ -33,10 +36,15 @@ export function load() {
   if (DB) return DB;
   let fresh = false; try { const raw = localStorage.getItem(KEY); fresh = !raw; DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; }
   if (!DB.account) DB.account = { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } };
-  for (const p of DB.projects) { if (!p.site) p.site = clone(DB.account.site); if (p.siteLinked == null) p.siteLinked = true; }
+  let migrated=false;
+  for (const p of DB.projects) {
+    if (!p.site) p.site = clone(DB.account.site); if (p.siteLinked == null) p.siteLinked = true;
+    // Pilot: freeze the currently effective conditions, without changing legacy engines or past runs.
+    if(!p.sharedConditions){p.sharedConditions={schema:1,revision:1,updated:now(),site:clone(p.siteLinked===false?p.site:DB.account.site),defaults:clone(DB.account.defaults)};migrated=true;}
+  }
   // estimates from the old prototype preview are retired: every result now comes from a PlotCloud engine
   for (const p of DB.projects) p.runs = p.runs.filter((r) => r.source !== 'prototype-mock');
-  if (fresh) save();   // the sample is written at once, so every page of the site (and a batch frame) sees the same versions
+  if (fresh||migrated) save();   // every page and batch frame sees the same frozen project defaults
   return DB;
 }
 // A result keeps a small picture (thumb) and its per-point values (field) for Results; when the browser runs out of room,
@@ -62,7 +70,7 @@ export const project = (id) => projects().find((p) => p.id === id);
 export const siteOf = (p) => (p && p.siteLinked === false ? p.site : account().site) || account().site;
 export function linkSite(p, on) { if (!on) p.site = clone(account().site); p.siteLinked = !!on; p.updated = now(); save(); }
 export function createProject(name, model) {
-  const p = { id: uid('p'), name: name || 'Untitled project', created: now(), updated: now(), versions: [], runs: [], draft: model, site: clone(account().site), siteLinked: true };
+  const p = { id: uid('p'), name: name || 'Untitled project', created: now(), updated: now(), versions: [], runs: [], draft: model, site: clone(account().site), siteLinked: true, sharedConditions:{schema:1,revision:1,updated:now(),site:clone(account().site),defaults:clone(account().defaults)} };
   load().projects.unshift(p); save(); return p;
 }
 export function saveVersion(p, note) {
@@ -75,6 +83,20 @@ export function addRun(p, versionId, simId, settings, results, source = 'full-to
   p.runs.push(r); p.updated = now(); save(); return r;
 }
 export function deleteRun(p, id) { p.runs = p.runs.filter((r) => r.id !== id); save(); }
+export const isSharedPilot = id => ['sunhours','daylight'].includes(id);
+export const conditionsOf = p => p.sharedConditions;
+export function conditionsSignature(p,id){
+  const c=conditionsOf(p),s=c.site,d=c.defaults;
+  return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north??0,tz:s.tz,...(id==='sunhours'?{period:d.period}:{plane:d.plane,occStart:d.occStart,occEnd:d.occEnd})});
+}
+export function updateConditions(p,site,defaults){
+  const c=conditionsOf(p);p.sharedConditions={schema:1,revision:c.revision+1,updated:now(),site:clone(site),defaults:clone(defaults)};p.updated=now();save();return p.sharedConditions;
+}
+export function runConditionsStatus(p,r){
+  if(!isSharedPilot(r.simId))return '';
+  const used=r.settings?.sharedConditions;
+  return !used?'Legacy result · verify conditions':used.signature!==conditionsSignature(p,r.simId)?'Shared conditions changed · rerun required':'';
+}
 export const version = (p, id) => p.versions.find((v) => v.id === id);
 export function lastRun(p, versionId, simId) { return p.runs.filter((r) => r.versionId === versionId && r.simId === simId).sort((a, b) => b.created.localeCompare(a.created))[0]; }
 

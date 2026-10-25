@@ -1,4 +1,5 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
+import {prepareSolarPilotLayout} from './solar-pilot-layout.js?v=shared-20261024-1';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){
@@ -131,6 +132,7 @@ export function installSimulationFit(doc = document) {
     pending = false;
     const app = doc.querySelector('.app'); if (!app) return;
     if(!prepareExteriorLayout(doc))return;
+    if(!prepareSolarPilotLayout(doc))return;
     doc.documentElement.classList.add('pc-simulation-fit');
     for (const panel of app.querySelectorAll(':scope > aside.panel,:scope > .col')) enhance(panel);
     for(const strip of app.querySelectorAll('.stage > .chartp')){
@@ -160,6 +162,7 @@ export function installSimulationFit(doc = document) {
   function schedule() { if (!pending) { pending = true; win.requestAnimationFrame(refresh); } }
   new win.MutationObserver(schedule).observe(doc.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'open'] });
   win.addEventListener('resize', schedule); schedule();
+  win.addEventListener('load',schedule,{once:true});
   doc.addEventListener('click',schedule);
   for (const frame of doc.querySelectorAll('iframe')) {
     const child = () => { try { if (frame.contentDocument?.body) installSimulationFit(frame.contentDocument); } catch {} };
