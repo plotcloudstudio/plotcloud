@@ -92,7 +92,7 @@ export function render(app, _, params = new URLSearchParams()) {
     <section id="data" data-pane="data">
       <div class="kicker"><b>04</b>Backup &amp; data</div>
       <h2 class="display sm" style="margin-top:16px">Your data stays in this browser.</h2>
-      <p class="lede" style="margin-top:14px">A backup file holds every project, version, result and setting. Bring it back here or on another computer.</p>
+      <p class="lede" style="margin-top:14px">A backup file holds every project, version, result and setting. Bring it back here or on another computer.</p><p class="note">Shared EPW contents are browser-local and are not included in this JSON backup. Keep the original EPW file; upload it again under Project shared conditions after restoring on another computer.</p>
       <div class="grid g2" style="margin-top:24px;align-items:start">
         <div class="card"><b>Back up</b><p class="note" style="margin:6px 0 12px" id="lastB"></p><button class="btn primary" id="exp">Download backup (.json)</button></div>
         <div class="card"><b>Restore</b><p class="note" style="margin:6px 0 12px">From a PlotCloud backup file.</p>

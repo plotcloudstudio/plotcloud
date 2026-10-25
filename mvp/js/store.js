@@ -125,7 +125,7 @@ export function importAll(text, mode = 'merge') {
   else { for (const p of o.projects) { D.projects = D.projects.filter((x) => x.id !== p.id); D.projects.unshift(p); } }
   save(); reload(); return o.projects.length;
 }
-export function deleteAccount() { try { localStorage.removeItem(KEY); for (const k of Object.keys(localStorage)) if (k.startsWith('pc-mvp') || k.startsWith('pc-psim') || k.startsWith('pc-sim')) localStorage.removeItem(k); } catch (e) { } DB = null; }
+export function deleteAccount() { try { localStorage.removeItem(KEY); for (const k of Object.keys(localStorage)) if (k.startsWith('pc-mvp') || k.startsWith('pc-psim') || k.startsWith('pc-sim')) localStorage.removeItem(k); indexedDB.deleteDatabase('pc-project-climate'); } catch (e) { } DB = null; }
 // where the person last was (Workspace, a simulation, Results), for "pick up where you left off"
 const RKEY = 'pc-mvp-recent';
 export function recent() { try { return JSON.parse(localStorage.getItem(RKEY) || '{}'); } catch (e) { return {}; } }
