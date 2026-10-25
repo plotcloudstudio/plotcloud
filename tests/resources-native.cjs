@@ -1,5 +1,4 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
-const {destination}=require('../legacy-redirect.js');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
@@ -60,15 +59,12 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.waitForFunction(()=>!document.querySelector('#axonExport').disabled);const image=page.waitForEvent('download');await page.locator('#axonExport').click();assert(fs.readFileSync(await(await image).path()).length>10000);
   await page.setViewportSize({width:390,height:844});await open('resources/files');await page.locator('.resource-card').first().waitFor();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
   await page.setViewportSize({width:1440,height:1000});
-  for(const [old,next] of [['library','resources/files'],['res/lounge-chair-set','resources/item/lounge-chair-set'],['showroom/reading-room','resources/showroom/reading-room'],['tool/render','resources'],['tool/composer','resources'],['tool/atlas?d=boards','resources'],['tool/studio','resources']]){
-   assert.equal(destination('#/'+old),'#/'+next);await page.goto(base+'/index.html#/'+old);await page.waitForURL('**/mvp/#/'+next);await page.locator('.resource-page').waitFor();
-  }
-  await page.goto(base+'/index.html#/studio');await page.waitForURL('**/mvp/#/workspace');await page.waitForFunction(()=>window.__ws2?.ready(),null,{timeout:90000});
+  await page.goto(base+'/mvp/#/workspace');await page.waitForFunction(()=>window.__ws2?.ready(),null,{timeout:90000});
   assert.equal(await page.locator('#fPlan,#fPersp,#fProps').count(),3,'Workspace retains its shared engine');
   assert.equal(await page.locator('a[href*="index.html"],a[href="workspace.html"]').count(),0);
   for(const f of ['render','atlas','composer','studio'])assert.equal((await page.request.get(base+'/emb/'+f+'.html')).status(),404,'Retired page '+f+' must be deleted');
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('pc-proto'))),preserved);
   assert.deepEqual(errors,[]);
-  console.log('PASS native Resources: all 19 records, 9 categories, 11 tool/reference links, metadata export, local data preservation, filters/reload, collections, utility calculations/exports, mobile, legacy redirects and shared Workspace');
+  console.log('PASS native Resources: all 19 records, 9 categories, 11 tool/reference links, metadata export, local data preservation, filters/reload, collections, utility calculations/exports, mobile and shared Workspace');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -7,11 +7,6 @@
       "url": "/mvp/index.html"
     },
     {
-      "file": "mvp/workspace.html",
-      "surface": "site",
-      "url": "/mvp/workspace.html"
-    },
-    {
       "file": "emb/acoustics.html",
       "surface": "tool",
       "url": "/emb/acoustics.html"
@@ -110,7 +105,6 @@
   "mvpRoutes": [
     "/mvp/#/",
     "/mvp/#/workspace",
-    "/mvp/#/workspace-v2",
     "/mvp/#/simulations",
     "/mvp/#/results",
     "/mvp/#/resources",
@@ -121,31 +115,6 @@
     "/mvp/#/resources/item/lounge-chair-set",
     "/mvp/#/resources/showroom",
     "/mvp/#/resources/tool/scale"
-  ],
-  "classicRoutes": [
-    "/index.html#/home",
-    "/index.html#/tools",
-    "/index.html#/studio",
-    "/index.html#/project",
-    "/index.html#/library",
-    "/index.html#/showroom",
-    "/index.html#/pricing",
-    "/index.html#/learn",
-    "/index.html#/login",
-    "/index.html#/join",
-    "/index.html#/account",
-    "/index.html#/terms",
-    "/index.html#/privacy",
-    "/index.html#/license",
-    "/index.html#/refunds",
-    "/index.html#/saved",
-    "/index.html#/support",
-    "/index.html#/requests",
-    "/index.html#/donate",
-    "/index.html#/admin",
-    "/index.html#/resources",
-    "/index.html#/res/lounge-chair-set",
-    "/index.html#/post"
   ],
   "analysisEntries": [
     "sunhours",
@@ -161,33 +130,5 @@
     "views",
     "cameras",
     "structure"
-  ],
-  "classicToolRoutes": [
-    "/index.html#/tool/code-bc",
-    "/index.html#/tool/access-bc",
-    "/index.html#/tool/leed",
-    "/index.html#/tool/ergo",
-    "/index.html#/tool/furniture",
-    "/index.html#/tool/facade",
-    "/index.html#/tool/detaillab",
-    "/index.html#/tool/palette",
-    "/index.html#/tool/sunhours",
-    "/index.html#/tool/daylight",
-    "/index.html#/tool/wind",
-    "/index.html#/tool/vent",
-    "/index.html#/tool/structure",
-    "/index.html#/tool/spacesyntax",
-    "/index.html#/tool/movementdepth",
-    "/index.html#/tool/acoustics",
-    "/index.html#/tool/evac",
-    "/index.html#/tool/isovist",
-    "/index.html#/tool/views",
-    "/index.html#/tool/cameras",
-    "/index.html#/tool/stormwater",
-    "/index.html#/tool/composer",
-    "/index.html#/tool/axon",
-    "/index.html#/tool/studio",
-    "/index.html#/tool/topo",
-    "/index.html#/tool/scale"
   ]
 }

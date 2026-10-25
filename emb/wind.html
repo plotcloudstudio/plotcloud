@@ -142,8 +142,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       <h2 id="h-model"><i>1</i>Model</h2>
       <div class="drop" id="drop">
         <div><button type="button" class="btn" id="pick">Choose a model file</button></div>
-        <p>Or drop it on the view. Accepts .3dm (Rhino), .dae (SketchUp export), .obj, .stl and .glb</p>
-        <input type="file" id="file" accept=".3dm,.obj,.stl,.dae,.glb,.gltf,.json" hidden>
+        <p>Or drop it on the view. Accepts .3dm (including .3dmbak), .dae, .obj, .stl and .glb up to 20 MB / 350,000 triangles. Export only sealed exterior massing that affects wind.</p>
+        <input type="file" id="file" accept=".3dm,.3dmbak,.obj,.stl,.dae,.glb,.gltf,.json" hidden>
       </div>
       <div class="fileinfo" id="fileinfo"><b>Sample: corner courtyard block with tower</b><span>Demo model · meters</span></div>
       <p class="msg" id="loadmsg"></p>
@@ -1029,8 +1029,20 @@ async function read3dm(buf) {
   if (!geoms.length) throw new Error(noMesh ? 'None of the surfaces in this file have a render mesh. Save it from Rhino in a shaded view, or export .obj.' : 'No surfaces were found in this file.');
   return { geoms, unit: unitName ? UNIT_OF_RHINO[unitName] : null, up: 'z', warn, unitKnown: !!unitName };
 }
+const MODEL_LIMITS = Object.freeze({ bytes: 20 * 1024 * 1024, triangles: 350000 });
+const modelExt = (name) => /\.3dmbak$/i.test(name) ? '3dm' : name.toLowerCase().split('.').pop();
+function checkFileSize(file) {
+  const mb = file.size / 1048576;
+  if (file.size > MODEL_LIMITS.bytes) throw new Error(`This model is ${mb.toFixed(1)} MB. For reliable browser analysis, the limit is 20 MB.${/\.3dmbak$/i.test(file.name) ? ' This is a valid Rhino backup, but it still contains the full design model.' : ''} In Rhino, keep the original, select only sealed exterior massing that should block wind, then Export Selected as a new .3dm or .obj. Leave out furniture, fixtures, materials and interior detail.`);
+}
+function checkMeshSize(parsed) {
+  const triangles = parsed.geoms.reduce((n, g) => n + Math.ceil((g.index ? g.index.count : g.attributes.position.count) / 3), 0);
+  if (triangles > MODEL_LIMITS.triangles) { for (const g of parsed.geoms) if (g && g.dispose) g.dispose(); throw new Error(`This model contains about ${triangles.toLocaleString('en-CA')} triangles. The browser limit is ${MODEL_LIMITS.triangles.toLocaleString('en-CA')}. Reduce the export mesh and keep only exterior massing.`); }
+  return triangles;
+}
 async function readFile(file) {
-  const ext = file.name.toLowerCase().split('.').pop();
+  const ext = modelExt(file.name);
+  checkFileSize(file);
   const buf = await file.arrayBuffer();
   if (ext === '3dm') return read3dm(buf);
   if (ext === 'obj') return { geoms: meshesOf(new OBJLoader().parse(new TextDecoder().decode(buf))), up: 'y', unit: null };
@@ -1604,6 +1616,7 @@ async function loadFile(file) {
   try {
     const r = await readFile(file);
     if (!r.geoms.length) throw new Error('No meshes were found in this file.');
+    checkMeshSize(r);
     S.raw = { geoms: r.geoms, name: r.scene && r.scene.name ? r.scene.name : file.name, scene: r.scene || null, wscene: r.wscene || null, wind: r.wind || null }; window.__windScene = r.scene || null;
     setUp(r.up);
     S.unit = r.unit ?? guessUnit(r.geoms);
@@ -1629,6 +1642,7 @@ for (const el of [stage, $('#drop')]) {
   el.addEventListener('dragleave', () => el.classList.remove('over'));
   el.addEventListener('drop', (e) => { e.preventDefault(); el.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
 }
+window.__wind = { get S() { return S; }, limits: MODEL_LIMITS, modelExt, checkFileSize, checkMeshSize };
 
 // ---------- image export ----------
 function snapshot(w, h) {

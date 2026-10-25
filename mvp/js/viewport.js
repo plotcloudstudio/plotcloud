@@ -116,8 +116,12 @@ export function createViewport(host, { onPick } = {}) {
 
 // Read an OBJ / STL / GLB file into components (one per mesh), positioned with their bounding box.
 export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
-  const ext = file.name.toLowerCase().split('.').pop(), buf = await file.arrayBuffer();
-  if (file.size > 25 * 1048576) throw Error('This file is over 25 MB. Export a simplified model for the prototype.');
+  const isRhinoBackup = /\.3dmbak$/i.test(file.name), ext = isRhinoBackup ? '3dm' : file.name.toLowerCase().split('.').pop();
+  if (file.size > 25 * 1048576) {
+    const mb = file.size / 1048576, backup = isRhinoBackup ? ' This is a valid Rhino backup, but it still contains the full design model.' : '';
+    throw Error(`This file is ${mb.toFixed(1)} MB; the browser limit is 25 MB.${backup} In Rhino, keep the original, select only the exterior building geometry needed for site, sun and wind studies, then Export Selected as a new .3dm or .obj. Leave out furniture, fixtures, materials and interior detail.`);
+  }
+  const buf = await file.arrayBuffer();
   let obj, fileUp = 'y';
   if (ext === 'obj') { const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js'); obj = new OBJLoader().parse(new TextDecoder().decode(buf)); }
   else if (ext === 'stl') { const { STLLoader } = await import('three/addons/loaders/STLLoader.js'); obj = new THREE.Mesh(new STLLoader().parse(buf)); fileUp = 'z'; }
@@ -133,7 +137,7 @@ export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
       for (const m of ms) grp.add(new THREE.Mesh(loader.parse(m.toThreejsJSON()))); obj.add(grp); }
     doc.delete(); if (!obj.children.length) throw Error(skipped ? `None of the ${skipped} objects has a render mesh. In Rhino, shade the model once (or use Mesh) and save again.` : 'No objects in this .3dm file.');
   }
-  else throw Error('The prototype reads .obj, .stl, .glb and .3dm. SketchUp and IFC files open in the full tools.');
+  else throw Error('The Workspace reads .obj, .stl, .glb and .3dm (including .3dmbak).');
   const zUp = (up === 'auto' ? fileUp : up) === 'z';
   obj.updateMatrixWorld(true); const out = []; let tris = 0;
   obj.traverse((o) => {

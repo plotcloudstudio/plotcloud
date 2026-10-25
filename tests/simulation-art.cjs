@@ -6,7 +6,7 @@ const palettes=require('../mvp/engine-colours.json'),ids=['wayfinding','privacy'
 for(const [id,key] of [['wayfinding','DEPTH'],['privacy','EXP'],['noise','BANDS']]){
  const text=fs.readFileSync(require.resolve('../emb/'+id+'.html'),'utf8'),literal=text.match(new RegExp('const '+key+' = (\\[.*\\]);'))[1];
  const values=JSON.parse(JSON.stringify(vm.runInNewContext(literal,{}, {timeout:1000})));
- if(id==='noise'){assert.deepEqual(palettes[id].stops.map(s=>s[1]),values.map(s=>s[1]));assert.deepEqual(palettes[id].thresholds,values.slice(0,-1).map(s=>s[0]));}
+ if(id==='noise'){assert.deepEqual(palettes[id].stops.map(s=>s[1]),values.map(s=>s[1]));assert.deepEqual(palettes[id].thresholds,values.slice(0,-1).map(s=>s[0]));assert.deepEqual(palettes[id].range,[35,80]);}
  else assert.deepEqual(palettes[id].stops,values);
 }
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--enable-unsafe-swiftshader']});

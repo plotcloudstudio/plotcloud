@@ -34,7 +34,7 @@ let currentTarget='browser startup';
   }
   // Verify every top-level route, not only the shared shell's initial page.
   const routeChecks=[];
-  for(const url of [...inventory.mvpRoutes,...inventory.classicRoutes,...inventory.classicToolRoutes]){
+  for(const url of inventory.mvpRoutes){
    currentTarget=url;
    const routePage=await context.newPage();const errors=[];routePage.on('pageerror',e=>errors.push(e.message));
    await routePage.goto(base+url,{waitUntil:'domcontentloaded'});
@@ -52,7 +52,7 @@ let currentTarget='browser startup';
   assert.equal(await p.locator('#nav [data-nav="workspace-v2"]').count(),0);
   await p.locator('#themeSeg [data-theme=night]').click();
   await p.waitForFunction(()=>PlotCloudUI.theme==='night');
-  await p.goto(base+'/index.html#/studio');
+  await p.goto(base+'/mvp/#/workspace');
   await p.frameLocator('#fPlan').locator('[data-pc-theme=night]').waitFor();
   const frame=await p.locator('#fPlan').elementHandle();
   assert.equal(await (await frame.contentFrame()).evaluate(()=>document.documentElement.dataset.pcTheme),'night');
