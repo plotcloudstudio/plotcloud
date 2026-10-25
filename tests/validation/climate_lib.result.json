@@ -1,0 +1,80 @@
+{
+ "utci": {
+  "states": 6000,
+  "max_abs_c": 1.3642420526593924e-12,
+  "mean_abs_c": 2.342651991086205e-14
+ },
+ "mrt_shortwave": {
+  "states": 400,
+  "max_abs_k": 0.026591354348624918,
+  "mean_abs_k": 0.006769276190728113
+ },
+ "irradiation": {
+  "site": "Toronto (synthetic year)",
+  "sun_groups": 415,
+  "ghi_kwh": 1111.3,
+  "planes": [
+   {
+    "tilt": 0,
+    "azimuth": 180,
+    "engine_kwh": 1112.7,
+    "perez_kwh": 1111.9,
+    "isotropic_kwh": 1112.0,
+    "vs_perez_pct": 0.07,
+    "vs_isotropic_pct": 0.06,
+    "sun_grouping_pct": -0.0
+   },
+   {
+    "tilt": 90,
+    "azimuth": 180,
+    "engine_kwh": 974.6,
+    "perez_kwh": 974.7,
+    "isotropic_kwh": 879.1,
+    "vs_perez_pct": -0.01,
+    "vs_isotropic_pct": 10.86,
+    "sun_grouping_pct": -0.003
+   },
+   {
+    "tilt": 90,
+    "azimuth": 90,
+    "engine_kwh": 701.9,
+    "perez_kwh": 703.0,
+    "isotropic_kwh": 655.4,
+    "vs_perez_pct": -0.16,
+    "vs_isotropic_pct": 7.09,
+    "sun_grouping_pct": -0.0
+   },
+   {
+    "tilt": 90,
+    "azimuth": 270,
+    "engine_kwh": 700.6,
+    "perez_kwh": 701.8,
+    "isotropic_kwh": 655.5,
+    "vs_perez_pct": -0.18,
+    "vs_isotropic_pct": 6.89,
+    "sun_grouping_pct": -0.0
+   },
+   {
+    "tilt": 90,
+    "azimuth": 0,
+    "engine_kwh": 313.8,
+    "perez_kwh": 314.1,
+    "isotropic_kwh": 344.6,
+    "vs_perez_pct": -0.09,
+    "vs_isotropic_pct": -8.95,
+    "sun_grouping_pct": -0.081
+   },
+   {
+    "tilt": 30,
+    "azimuth": 180,
+    "engine_kwh": 1352.0,
+    "perez_kwh": 1351.6,
+    "isotropic_kwh": 1274.8,
+    "vs_perez_pct": 0.02,
+    "vs_isotropic_pct": 6.06,
+    "sun_grouping_pct": -0.001
+   }
+  ]
+ },
+ "pass": true
+}

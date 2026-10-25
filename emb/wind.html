@@ -189,23 +189,33 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       <p class="msg" id="runmsg"></p>
     </section>
 
+    <section class="sec" aria-labelledby="h-cmf">
+      <h2 id="h-cmf"><i>4</i>Comfort through the year</h2>
+      <p class="note">Weights the 16 wind directions by how often and how hard the wind blows in a climate file, then rates every spot of the slice with the City of London Lawson criteria for sitting, standing and walking, and flags where it is unsafe.</p>
+      <div class="row"><span class="lab">Climate file · a year of hourly weather (.epw)</span><div class="two"><button type="button" class="btn" id="epwB">Load .epw</button><span class="note" id="epwInfo" style="align-self:center">No climate file</span></div><input type="file" id="epwF" accept=".epw" hidden></div>
+      <div class="row"><label for="cmfHours">Hours</label><select id="cmfHours"><option value="all" selected>All hours of the year</option><option value="day">7:00 to 23:00 only</option></select></div>
+      <button type="button" class="go" id="cmfRun">Map wind comfort</button>
+      <p class="msg" id="cmfMsg"></p>
+    </section>
+
     <section class="sec" aria-labelledby="h-res" id="resSec" hidden>
-      <h2 id="h-res"><i>4</i>Results</h2>
+      <h2 id="h-res"><i>5</i>Results</h2>
       <div class="row"><span class="lab" id="showl">Show</span>
-        <div class="seg" id="showSeg" role="group" aria-labelledby="showl"><button type="button" data-show="ratio" aria-pressed="true">Speed-up</button><button type="button" data-show="speed" aria-pressed="false">Wind speed</button><button type="button" data-show="bands" aria-pressed="false">Speed bands</button></div></div>
+        <div class="seg" id="showSeg" role="group" aria-labelledby="showl"><button type="button" data-show="ratio" aria-pressed="true">Speed-up</button><button type="button" data-show="speed" aria-pressed="false">Wind speed</button><button type="button" data-show="bands" aria-pressed="false">Speed bands</button><button type="button" data-show="lawson" aria-pressed="false" id="showLawson" hidden>Comfort</button></div></div>
       <label class="chk"><input type="checkbox" id="arrows" checked> Flow arrows</label>
       <label class="chk" id="secRow"><input type="checkbox" id="section"> Vertical section through the model (speed-up at each height)</label>
       <label class="chk" id="skinRow"><input type="checkbox" id="skin"> Building surfaces: wind on the walls and roofs</label>
       <div class="row" id="skinQRow" hidden><span class="lab">Surfaces show</span><div class="seg" id="skinQ" role="group" aria-label="Surface result"><button type="button" data-q="cp" aria-pressed="true">Pressure (Cp)</button><button type="button" data-q="v" aria-pressed="false">Wind at the wall</button></div></div>
       <p class="note" id="skinNote" hidden></p>
       <dl class="istats" id="infl" aria-label="Surroundings and their influence" hidden></dl>
+      <dl class="stats" id="cmfStats" hidden></dl>
       <dl class="stats" id="stats"></dl>
       <button type="button" class="btn" id="export">Save this view (PNG)</button>
       <p class="msg" id="expmsg"></p>
     </section>
 
     <section class="sec" aria-labelledby="h-set">
-      <h2 id="h-set"><i>5</i>Export a set</h2>
+      <h2 id="h-set"><i>6</i>Export a set</h2>
       <div class="row"><span class="lab" id="setl">Wind directions</span>
         <div class="seg" id="setSeg" role="group" aria-labelledby="setl"><button type="button" data-n="4" aria-pressed="false">4</button><button type="button" data-n="8" aria-pressed="true">8</button><button type="button" data-n="16" aria-pressed="false">16</button></div></div>
       <div class="two">
@@ -227,6 +237,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     </div>
     <div class="capbox" id="capbox" hidden><b id="capT"></b><span id="capS"></span></div>
     <aside class="chartp" id="chartp" aria-label="Wind by direction">
+      <div class="kp4" id="ckp"></div>
       <div class="cph"><b>Wind by direction</b><span class="note" id="cpLvl"></span></div>
       <div class="kp4" id="kp4"></div>
       <div class="cprow"><span class="note">Petals show</span><div class="seg2" id="roseM"><button type="button" data-m="up" aria-pressed="true">Windy area</button><button type="button" data-m="max" aria-pressed="false">Highest speed-up</button></div></div>
@@ -677,6 +688,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MeshBVH } from 'three-mesh-bvh';
 import { zipSync } from 'fflate';
+import * as CL from './lib/climate.js?v=1';
 // GPU lattice-Boltzmann solver for wind around buildings (WebGL2).
 // 2D: D2Q9 on one horizontal slice. 3D: D3Q15 with the z layers tiled into one atlas texture.
 // BGK collision with a Smagorinsky eddy viscosity; populations are stored as deviations from the rest weights.
@@ -929,6 +941,86 @@ const S = {
   show: 'ratio', arrows: true, section: false, view: 'split', hl: null,
   sim: null, busy: false,
 };
+
+// ---------- comfort through the year: the 16 solved directions weighted by a climate file (City of London Lawson criteria) ----------
+// Each spot's speed in an hour is its speed-up for the hour's wind direction times the approaching wind at the slice height
+// (the weather station's 10 m speed carried to the site's exposure). The speed exceeded 5 % of the counted hours sets the comfort
+// class; 15 m/s exceeded more than 0.022 % of them is unsafe. Time-averaged speeds only: gusts (GEM) are not modelled.
+let COMFORT = null; const CLIMW = { E: null };
+const cmfMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, depthWrite: false })); cmfMesh.renderOrder = 2;
+const UNSAFE_RGB = [120, 20, 60];
+function dropComfort() { if (!COMFORT) return; COMFORT = null; resultGroup.remove(cmfMesh); guideGroup.visible = true; const b = $('#showLawson'); if (b) b.hidden = true; if (S.show === 'lawson') { setShow('ratio'); if (S.sim && S.sim.done) showField(S.sim, null, null); } $('#cmfStats').hidden = true; $('#ckp').innerHTML = ''; }
+$('#epwB').addEventListener('click', () => $('#epwF').click());
+$('#epwF').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { const E = CL.parseEPW(await f.text(), f.name); CLIMW.E = E; dropComfort(); let calm = 0; for (let k = 0; k < 8760; k++) if (E.WS[k] < 0.5) calm++;
+    let mean = 0; for (let k = 0; k < 8760; k++) mean += E.WS[k]; $('#epwInfo').textContent = `${E.station} · mean ${(mean / 8760).toFixed(1)} m/s at 10 m · calm ${Math.round(calm / 87.6)}% of hours`; cmfUI();
+  } catch (err) { $('#epwInfo').textContent = 'Could not read it: ' + (err.message || err); } });
+$('#cmfHours').addEventListener('change', () => { dropComfort(); cmfUI(); });
+const dirKey = (i) => Math.round(i * 22.5) % 360;
+function cmfUI() { const left = [...Array(16).keys()].filter((i) => !SIMS.has(dirKey(i))).length, b = $('#cmfRun');
+  b.textContent = !CLIMW.E ? 'Map wind comfort · load a climate file first' : left ? `Solve the other ${left} directions at Draft, then map comfort` : 'Map wind comfort'; b.disabled = !CLIMW.E || S.busy || !S.model; }
+$('#cmfRun').addEventListener('click', async () => {
+  if (!CLIMW.E || S.busy || !S.model) return;
+  if ([...Array(16).keys()].some((i) => !SIMS.has(dirKey(i)))) { $('#cmfMsg').textContent = 'Solving the missing directions at Draft…'; $('#cmfMsg').className = 'msg'; await $('#fillRose').click(); await new Promise((r) => { const w = () => (FILL.on || S.busy ? setTimeout(w, 300) : r()); w(); }); }
+  if ([...Array(16).keys()].some((i) => !SIMS.has(dirKey(i)))) { $('#cmfMsg').textContent = 'All 16 directions are needed. Solve the rest (Wind by direction), then map comfort again.'; $('#cmfMsg').className = 'msg warn'; cmfUI(); return; }
+  try { COMFORT = computeComfort(); setShow('lawson'); $('#showLawson').hidden = false; showComfort(); comfortStats(); $('#cmfMsg').textContent = 'Done. Hover over the map to read a spot.'; $('#cmfMsg').className = 'msg ok'; }
+  catch (err) { COMFORT = null; $('#cmfMsg').textContent = err.message || String(err); $('#cmfMsg').className = 'msg warn'; }
+  cmfUI(); panelUI();
+});
+function computeComfort() {
+  const E = CLIMW.E, sims = [...Array(16).keys()].map((i) => SIMS.get(dirKey(i)).sim), D0 = sims[0].D, h = D0.three ? (D0.level + 0.5) * D0.dx : S.hgt;
+  // the hours of each direction sector, as approaching speeds at the slice height, sorted
+  const U = [...Array(16)].map(() => []); let n = 0;
+  for (let k = 0; k < 8760; k++) { if ($('#cmfHours').value === 'day' && (k % 24 < 7 || k % 24 > 22)) continue; n++; const ws = E.WS[k]; U[Math.round(((E.WD[k] % 360) + 360) % 360 / 22.5) % 16].push(ws > 0 ? CL.siteWind(ws, h, S.alpha) : 0); }
+  const SU = U.map((a) => Float64Array.from(a).sort());
+  // one world grid over the buildings and their surroundings
+  const b = S.model.box, span = Math.max(b.max.x - b.min.x, b.max.y - b.min.y), pad = Math.max(10, 0.25 * span), dx = Math.max(0.5, Math.min(...sims.map((s) => s.D.dx)));
+  let x0 = b.min.x - pad, y0 = b.min.y - pad, nx = Math.ceil((b.max.x - b.min.x + 2 * pad) / dx), ny = Math.ceil((b.max.y - b.min.y + 2 * pad) / dx), c = dx;
+  while (nx * ny > 250000) { c *= 1.25; nx = Math.ceil((b.max.x - b.min.x + 2 * pad) / c); ny = Math.ceil((b.max.y - b.min.y + 2 * pad) / c); }
+  const N = nx * ny, ratio = new Float32Array(N * 16), cls = new Int8Array(N).fill(-1), unsafe = new Uint8Array(N);
+  for (let s = 0; s < 16; s++) { const sim = sims[s], D = sim.D, f = sim.lastSlice;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = j * nx + i, x = x0 + (i + 0.5) * c, y = y0 + (j + 0.5) * c, px = x * D.d.x + y * D.d.y, py = x * D.yv.x + y * D.yv.y, ii = Math.floor((px - D.X0) / D.dx), jj = Math.floor((py - D.Y0) / D.dx);
+      if (ii < 1 || jj < 2 || ii >= D.nx - 3 || jj >= D.ny - 2) { ratio[q * 16 + s] = NaN; continue; } const k = (jj * D.nx + ii) * 4; ratio[q * 16 + s] = f[k + 3] < 0 ? -1 : Math.hypot(f[k], f[k + 1], f[k + 2]) / sim.ref; } }
+  const above = (A, v) => { let lo = 0, hi = A.length; while (lo < hi) { const m = (lo + hi) >> 1; if (A[m] <= v) lo = m + 1; else hi = m; } return A.length - lo; };
+  const exceed = (q, T) => { let e = 0; for (let s = 0; s < 16; s++) { const r = ratio[q * 16 + s]; if (r > 0) e += above(SU[s], T / r); } return e / n; };
+  for (let q = 0; q < N; q++) { let ok = true; for (let s = 0; s < 16; s++) { const r = ratio[q * 16 + s]; if (!(r >= 0)) { ok = false; break; } } if (!ok) continue;
+    let k = 0; while (k < 4 && exceed(q, CL.LAWSON[k][0]) > 0.05) k++; cls[q] = k; if (exceed(q, CL.LAWSON_SAFE.speed) > CL.LAWSON_SAFE.share) unsafe[q] = 1; }
+  return { x0, y0, dx: c, nx, ny, h, n, cls, unsafe, ratio, exceed, file: E.station, hours: $('#cmfHours').value, res: [...new Set(sims.map((s, i) => SIMS.get(dirKey(i)).res))] };
+}
+function showComfort() {
+  const C = COMFORT, data = new Uint8Array(C.nx * C.ny * 4);
+  for (let q = 0; q < C.nx * C.ny; q++) { const k = C.cls[q]; if (k < 0) continue; const col = C.unsafe[q] ? UNSAFE_RGB : CL.LAWSON[k][2]; data[q * 4] = col[0]; data[q * 4 + 1] = col[1]; data[q * 4 + 2] = col[2]; data[q * 4 + 3] = 235; }
+  const t = new THREE.DataTexture(data, C.nx, C.ny, THREE.RGBAFormat); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearFilter; t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true;
+  if (cmfMesh.material.map) cmfMesh.material.map.dispose(); cmfMesh.material.map = t; cmfMesh.material.needsUpdate = true;
+  cmfMesh.geometry.dispose(); cmfMesh.geometry = new THREE.PlaneGeometry(C.nx * C.dx, C.ny * C.dx); cmfMesh.position.set(C.x0 + C.nx * C.dx / 2, C.y0 + C.ny * C.dx / 2, C.h + 0.06);
+  resultGroup.remove(sliceMesh, secMesh, arrowLines, skinMesh); resultGroup.add(cmfMesh); ground.visible = true; if (modelGroup.children[0]) modelGroup.children[0].visible = true;
+  comfortLegend(); $('#resSec').hidden = false; capUI();
+}
+function comfortLegend() {
+  $('#legT').textContent = `Wind comfort at ${COMFORT.h.toFixed(1)} m · City of London Lawson`;
+  const st = [...CL.LAWSON.map((c) => c[2]), UNSAFE_RGB], w = 100 / st.length;
+  $('#ramp').style.background = `linear-gradient(90deg, ${st.map((c, i) => `rgb(${c.join(',')}) ${i * w}% ${(i + 1) * w}%`).join(',')})`;
+  $('#ticks').innerHTML = ['Sit often', 'Sit', 'Stand', 'Walk', 'Uncomf.', 'Unsafe'].map((t) => `<span>${t}</span>`).join(''); $('#legend').hidden = false;
+}
+function comfortAreas() { const C = COMFORT, a = C.dx * C.dx, A = [0, 0, 0, 0, 0]; let tot = 0, uns = 0; for (let q = 0; q < C.nx * C.ny; q++) { const k = C.cls[q]; if (k < 0) continue; A[k] += a; tot += a; if (C.unsafe[q]) uns += a; } return { A, tot, uns }; }
+function comfortStats() {
+  const C = COMFORT, { A, tot, uns } = comfortAreas(), pc = (v) => `${(100 * v / (tot || 1)).toFixed(1)}%`, m2 = (v) => Math.round(v).toLocaleString('en-CA'), row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
+  $('#cmfStats').innerHTML = row('Climate file', C.file) + row('Hours counted', `${C.n.toLocaleString('en-CA')} h · ${C.hours === 'day' ? '7:00 to 23:00' : 'all hours'}`) + row('Directions', `16 solved (${C.res.join(', ')})`)
+    + row('Sitting area', `${pc(A[0] + A[1])} · frequent ${pc(A[0])}, occasional ${pc(A[1])}`) + row('Standing area', pc(A[2])) + row('Walking area', pc(A[3])) + row('Uncomfortable area', pc(A[4]))
+    + row('Unsafe area', `${m2(uns)} m² · 15 m/s exceeded more than 0.022% of the hours`) + row('Area mapped', `${m2(tot)} m² at ${C.h.toFixed(1)} m · ${C.dx.toFixed(2)} m cells`) + row('Criteria', 'City of London Lawson (2019), mean speeds; gusts not modelled');
+  $('#cmfStats').hidden = false;
+  $('#ckp').innerHTML = [['Sitting area', pc(A[0] + A[1])], ['Uncomfortable area', pc(A[4])], ['Unsafe area', `${m2(uns)} m²`]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+}
+function comfortTip(e, tip) {
+  const r = renderer.domElement.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); rc.setFromCamera(mouse, camera);
+  const hit = rc.intersectObject(cmfMesh)[0]; if (!hit) { tip.hidden = true; return; }
+  const C = COMFORT, p = hit.point.clone().applyMatrix4(new THREE.Matrix4().copy(root.matrixWorld).invert()), i = Math.floor((p.x - C.x0) / C.dx), j = Math.floor((p.y - C.y0) / C.dx), q = j * C.nx + i;
+  if (i < 0 || j < 0 || i >= C.nx || j >= C.ny || C.cls[q] < 0) { tip.hidden = true; return; }
+  let lo = 0, hi = 40; for (let it = 0; it < 24; it++) { const m = (lo + hi) / 2; if (C.exceed(q, m) > 0.05) lo = m; else hi = m; }
+  const sr = stage.getBoundingClientRect(); tip.textContent = `${C.unsafe[q] ? 'Unsafe · ' : ''}${CL.LAWSON[C.cls[q]][1]} · ${hi.toFixed(1)} m/s exceeded 5% of the hours`;
+  tip.style.left = (e.clientX - sr.left) + 'px'; tip.style.top = (e.clientY - sr.top) + 'px'; tip.hidden = false;
+}
+window.__windComfort = { get C() { return COMFORT; }, get E() { return CLIMW.E; }, get sims() { return SIMS; }, areas: () => (COMFORT ? comfortAreas() : null) };
 
 // ---------- three setup ----------
 const stage = $('#stage');
@@ -1275,6 +1367,7 @@ function upstreamRef(f, D) {
   return n ? s / n : D.refLat;
 }
 function showField(sim, liveSlice, liveSec) {
+  if (S.show === 'lawson' && COMFORT && !liveSlice) { showComfort(); return; }
   const D = sim.D, sc = scale();
   const f = fieldOf(sim, liveSlice, D.nx, D.ny, sim.sum, sim.solid2);
   if (!f) return;
@@ -1315,6 +1408,7 @@ function drawArrows(f, D, ref) {
   if (!resultGroup.children.includes(arrowLines)) resultGroup.add(arrowLines);
 }
 function updateLegend() {
+  if (S.show === 'lawson' && COMFORT) { comfortLegend(); return; }
   if (skinOn()) { skinLegend(); return; }
   const sc = scale();
   $('#legT').textContent = sc.title;
@@ -1407,7 +1501,7 @@ function skinUI() {
 window.__skin = () => S.sim && S.sim.skin && S.sim.skin.cp ? { groups: facGroups(S.sim.skin).map((g) => [g.key, +g.mean.toFixed(3), +g.min.toFixed(2), +g.max.toFixed(2), g.n]), nF: S.sim.skin.nF, dx: S.sim.skin.dx, Uref: S.sim.skin.Uref, rref: S.sim.skin.rrefM } : null;
 
 function clearResult() {
-  resultGroup.remove(sliceMesh, secMesh, arrowLines, skinMesh); if (modelGroup.children[0]) modelGroup.children[0].visible = true; $('#legend').hidden = true; $('#resSec').hidden = true; $('#tip').hidden = true;
+  resultGroup.remove(sliceMesh, secMesh, arrowLines, skinMesh, cmfMesh); if (modelGroup.children[0]) modelGroup.children[0].visible = true; $('#legend').hidden = true; $('#resSec').hidden = true; $('#tip').hidden = true;
 }
 function redraw() { if (S.sim) showField(S.sim, null, null); }
 
@@ -1444,13 +1538,14 @@ function setBar(sel, x) { $(sel + ' i').style.width = (Math.min(1, x) * 100).toF
 function msg(sel, text, cls = '') { const e = $(sel); e.textContent = text; e.className = 'msg' + (cls ? ' ' + cls : ''); }
 async function runOne(level, opt = {}) {
   if (!S.model || S.busy) return; RUNRES = level || S.res; const lvl = RUNRES; if (!opt.stay && (S.view === 'plan' || S.view === 'split')) { S._autoView = true; if (S.view !== 'split') setView('split'); }
+  if (S.show === 'lawson') setShow('ratio');
   S.busy = true; lockUI(true); $('#stop').hidden = false; $('#prog').hidden = false; setBar('#prog', 0); msg('#runmsg', 'Building the grid…');
   $('#resSec').hidden = true;
   await frame();
   try {
     const sim = await simulate(S.dir, (p, st, tot, sec) => { setBar('#prog', p); status(`${LEVELT[lvl].name} · step ${st.toLocaleString('en-CA')} of ${tot.toLocaleString('en-CA')} · ${p > 0.02 ? 'about ' + fmtT(sec * (1 - p) / p) + ' left' : sec.toFixed(0) + ' s'}${p > (S.mode === '3d' ? 0.54 : 0.54) ? ' · averaging' : ''}`); msg('#runmsg', 'Solving. The flow settles first, then the result is averaged over time.'); });
     if (!sim) { msg('#runmsg', 'Stopped.'); status(''); return; }
-    showStats(sim); status(''); SIMS.set(S.dir, { sim: Object.assign({}, sim, { lbm: { steps: sim.lbm.steps, dispose() {} } }), res: lvl, st: statsOf(sim) });
+    showStats(sim); status(''); dropComfort(); SIMS.set(S.dir, { sim: Object.assign({}, sim, { lbm: { steps: sim.lbm.steps, dispose() {} } }), res: lvl, st: statsOf(sim) });
     { const D = sim.D, cells = D.nx * D.ny * D.nz, r = cells * sim.lbm.steps / Math.max(0.5, sim.secs); RATEW[S.mode] = Math.max(1e5, 0.4 * RATEW[S.mode] + 0.6 * r); try { localStorage.setItem('pc-wind-rate', JSON.stringify(RATEW)); } catch (e) {} gridNote(); }
     msg('#runmsg', `${LEVELT[lvl].name} result (${sim.secs < 60 ? Math.round(sim.secs) + ' s' : (sim.secs / 60).toFixed(1) + ' min'}). Hover over the slice to read speeds.`, 'ok');
   } catch (e) { msg('#runmsg', e.message || String(e), 'warn'); status(''); }
@@ -1503,7 +1598,7 @@ renderer.setAnimationLoop(() => { if (camera === persp) ctlP.update(); renderer.
 // hover read-out on the pedestrian slice
 const rc = new THREE.Raycaster(), mouse = new THREE.Vector2();
 renderer.domElement.addEventListener('pointermove', (e) => {
-  const tip = $('#tip'), sim = S.sim; if (!sim || !sim.lastSlice) { tip.hidden = true; return; }
+  const tip = $('#tip'), sim = S.sim; if (S.show === 'lawson' && COMFORT) { comfortTip(e, tip); return; } if (!sim || !sim.lastSlice) { tip.hidden = true; return; }
   const r = renderer.domElement.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   rc.setFromCamera(mouse, camera);
   const hit = rc.intersectObject(sliceMesh)[0]; if (!hit) { tip.hidden = true; return; }
@@ -1523,7 +1618,7 @@ function drawDial() {
   $('#dial').innerHTML = `<circle cx="32" cy="32" r="29" fill="none" stroke="${t.line}" stroke-width="1"/>`
     + `<g transform="rotate(${S.north} 32 32)"><path d="M32 7 L38 33 L32 29 L26 33 Z" fill="${t.accent}"/><path d="M32 57 L38 33 L32 37 L26 33 Z" fill="none" stroke="${t.ink}" stroke-width="1"/></g>`;
 }
-function invalid(text, keepDirs) { if (!keepDirs) SIMS.clear(); if (!S.busy) panelUI(); if (S.sim && !S.busy) { stopSim(); clearResult(); msg('#runmsg', text || 'Settings changed. Run the simulation again to update the result.'); } }
+function invalid(text, keepDirs) { if (!keepDirs) { SIMS.clear(); dropComfort(); } if (!S.busy) panelUI(); if (S.sim && !S.busy) { stopSim(); clearResult(); msg('#runmsg', text || 'Settings changed. Run the simulation again to update the result.'); } }
 function setNorth(v) { v = Math.max(-180, Math.min(180, Math.round(+v || 0))); S.north = v; $('#north').value = v; $('#northR').value = v; drawDial(); drawGuides(); invalid(); if (S.view === 'plan') fit(); }
 $('#northR').addEventListener('input', (e) => setNorth(e.target.value));
 $('#north').addEventListener('change', (e) => setNorth(e.target.value));
@@ -1542,7 +1637,8 @@ function modeNote() { $('#modeNote').textContent = S.mode === '2d' ? 'Fast. Air 
 document.querySelectorAll('#modeSeg button').forEach((b) => b.addEventListener('click', () => { S.mode = b.dataset.mode; document.querySelectorAll('#modeSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); modeNote(); gridNote(); setNote(); invalid(); }));
 $('#res').addEventListener('change', (e) => { S.res = e.target.value; gridNote(); setNote(); invalid(); });
 $('#hgt').addEventListener('change', (e) => { S.hgt = Math.max(0.5, Math.min(60, +e.target.value || 1.5)); e.target.value = S.hgt; invalid(); });
-document.querySelectorAll('#showSeg button').forEach((b) => b.addEventListener('click', () => { S.show = b.dataset.show; document.querySelectorAll('#showSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); redraw(); }));
+function setShow(v) { S.show = v; document.querySelectorAll('#showSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.show === v))); }
+document.querySelectorAll('#showSeg button').forEach((b) => b.addEventListener('click', () => { setShow(b.dataset.show); if (S.show !== 'lawson') resultGroup.remove(cmfMesh); if (S.show === 'lawson' && COMFORT) showComfort(); else redraw(); capUI(); }));
 $('#arrows').addEventListener('change', (e) => { S.arrows = e.target.checked; redraw(); });
 $('#skin').addEventListener('change', (e) => { S.skin = e.target.checked; S.facHl = null; skinUI(); redraw(); panelUI(); });
 $('#skinQ').addEventListener('click', (e) => { const b = e.target.closest('[data-q]'); if (!b) return; S.skinQ = b.dataset.q; document.querySelectorAll('#skinQ button').forEach((q) => q.setAttribute('aria-pressed', String(q === b))); redraw(); panelUI(); });
@@ -1770,7 +1866,7 @@ function sizeCv(c, h) { if(document.querySelector('[data-pc-exterior-layout]')&&
 const rgbS = (c) => `rgb(${c.map(Math.round).join(',')})`;
 window.__pcWindCharts = () => panelUI();
 function panelUI() {
-  facChart(); const cur = S.sim && S.sim.done ? S.sim : null, st = cur ? statsOf(cur) : null, m2 = (a) => Math.round(a).toLocaleString('en-CA');
+  cmfUI(); facChart(); const cur = S.sim && S.sim.done ? S.sim : null, st = cur ? statsOf(cur) : null, m2 = (a) => Math.round(a).toLocaleString('en-CA');
   $('#cpLvl').textContent = cur ? `${compassName(S.dir)} · ${S.speed} m/s at 10 m` : '';
   $('#kp4').innerHTML = [['From', `${compassName(S.dir)}`], ['Highest', st ? st.max.toFixed(2) + '×' : '—'], ['Windy m²', st ? m2(st.up) : '—'], ['Sheltered m²', st ? m2(st.calm) : '—']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
   { const c = $('#rose'), { x, w, h, k } = sizeCv(c, 250), cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 22 * k; x.clearRect(0, 0, w, h);
@@ -1820,7 +1916,7 @@ function facChart() {
   x.globalAlpha = 1;
 }
 $('#fac').addEventListener('click', (e) => { const d = devicePixelRatio || 1, my = e.offsetY * d, hit = FAC_HITS.find((q) => my >= q.y0 && my < q.y1); if (!hit) return; S.facHl = S.facHl === hit.key ? null : hit.key; redraw(); facChart(); });
-function capUI() { const on = S.view === 'plan' && S.sim && S.sim.done; $('#capbox').hidden = !on; if (!on) return; const st = statsOf(S.sim); $('#capT').textContent = (S.model && S.model.name) || 'Wind flow'; $('#capS').textContent = `Wind from ${compassName(S.dir)} ${S.speed} m/s · highest speed-up ${st.max.toFixed(2)}× · ${Math.round(st.up).toLocaleString('en-CA')} m² windy`; }
+function capUI() { guideGroup.visible = !(S.show === 'lawson' && COMFORT); if (S.view === 'plan' && S.show === 'lawson' && COMFORT) { const { A, tot } = comfortAreas(); $('#capbox').hidden = false; $('#capT').textContent = 'Wind comfort through the year'; $('#capS').textContent = `${COMFORT.file} · sitting ${(100 * (A[0] + A[1]) / (tot || 1)).toFixed(0)}% · uncomfortable ${(100 * A[4] / (tot || 1)).toFixed(0)}% of the area · City of London Lawson`; return; } const on = S.view === 'plan' && S.sim && S.sim.done; $('#capbox').hidden = !on; if (!on) return; const st = statsOf(S.sim); $('#capT').textContent = (S.model && S.model.name) || 'Wind flow'; $('#capS').textContent = `Wind from ${compassName(S.dir)} ${S.speed} m/s · highest speed-up ${st.max.toFixed(2)}× · ${Math.round(st.up).toLocaleString('en-CA')} m² windy`; }
 $('#rose').addEventListener('click', (e) => { const d = devicePixelRatio || 1; let best = null, bd = 1e9; for (const p of ROSE_HITS) { const q = Math.hypot(p.x - e.offsetX * d, p.y - e.offsetY * d); if (q < bd) { bd = q; best = p; } } if (!best || S.busy) return; setDir(best.d); if (!SIMS.has(best.d)) runOne('draft', { stay: true }); });
 $('#hist').addEventListener('click', (e) => { const d = devicePixelRatio || 1, mx = e.offsetX * d, hit = HIST_HITS.find((q) => mx >= q.x0 && mx < q.x1); if (!hit || !S.sim) return; S.hl = S.hl === hit.i ? null : hit.i; showField(S.sim, null, null); panelUI(); });
 $('#roseM').addEventListener('click', (e) => { const b = e.target.closest('[data-m]'); if (!b) return; ROSE_M = b.dataset.m; $$('#roseM button').forEach((q) => q.setAttribute('aria-pressed', String(q === b))); panelUI(); });

@@ -8,12 +8,19 @@ export const simImg = (id) => 'analysis-' + id;
 export const SIMS = [
   { id: 'sunhours', group: 'Climate', name: 'Sun hours', tool: 'sunhours', view: 'shaded',
     blurb: 'Hours of direct sun on ground, roofs and facades through the year.', inputs: ['Model massing', 'Site and north from Account'], metrics: [['ground', 'Ground, mean', 'h', 1, /^ground(, average)?$/i], ['ground2h', 'Ground with ≥ 2 h', '%', 0, /ground (with )?≥/i], ['roofs', 'Roofs, mean', 'h', 1, /roof/i], ['facades', 'Facades, mean', 'h', 1, /fa[cç]ade/i]] },
+  // Solar radiation and Outdoor comfort run in the Sun hours engine with the project's climate file (2026-10-25)
+  { id: 'radiation', group: 'Climate', name: 'Solar radiation', tool: 'radiation', view: 'shaded',
+    blurb: 'Sun and sky energy on ground, roofs and facades in kWh/m² from a climate file, and where roof panels are worth a look.', inputs: ['Model massing', 'Climate file (EPW) in project conditions'],
+    metrics: [['ground', 'Ground, mean', 'kWh/m²', 0, /^ground, mean/i], ['roofs', 'Roofs, mean', 'kWh/m²', 0, /^roofs, mean/i], ['facades', 'Facades, mean', 'kWh/m²', 0, /^facades, mean/i], ['pv', 'PV estimate', 'MWh', 1, /^pv estimate/i]] },
+  { id: 'utci', group: 'Climate', name: 'Outdoor thermal comfort', tool: 'utci', view: 'shaded',
+    blurb: 'How often the ground around the building is comfortable, too hot or too cold to stand on (UTCI), from sun, shade and a climate file.', inputs: ['Model massing and site', 'Climate file (EPW) in project conditions'],
+    metrics: [['comfort', 'No thermal stress', '%', 1, /^no thermal stress/i], ['heat', 'Heat stress', '%', 1, /^heat stress/i], ['cold', 'Cold stress', '%', 1, /^cold stress/i]] },
   { id: 'daylight', group: 'Climate', name: 'Daylight', tool: 'daylight', view: 'shaded',
     blurb: 'sDA, ASE and daylight factor on the work plane, room by room.', inputs: ['Rooms with walls', 'Windows', 'Location'],
     metrics: [['sda', 'sDA 300/50%', '%', 1, /^sda/i], ['ase', 'ASE 1000/250', '%', 1, /^ase/i], ['df', 'Average daylight factor', '%', 1, /avg df|daylight factor/i]] },
   { id: 'wind', group: 'Climate', name: 'Wind flow', tool: 'wind', view: 'shaded',
-    blurb: 'Where wind speeds up, slows and turns around the massing.', inputs: ['Site massing', 'Wind direction and speed'],
-    metrics: [['peak', 'Highest speed-up', '×', 2, /^highest/i], ['windy', 'Windy area', 'm²', 0, /^windy/i]] },
+    blurb: 'Where wind speeds up, slows and turns around the massing; with a climate file, where people can sit, stand or walk comfortably (Lawson).', inputs: ['Site massing', 'Wind direction and speed', 'Climate file (EPW) for comfort'],
+    metrics: [['peak', 'Highest speed-up', '×', 2, /^highest/i], ['windy', 'Windy area', 'm²', 0, /^windy/i], ['sitting', 'Sitting area', '%', 1, /^sitting area/i], ['uncomf', 'Uncomfortable area', '%', 1, /^uncomfortable area/i], ['unsafe', 'Unsafe area', 'm²', 0, /^unsafe area/i]] },
   { id: 'vent', group: 'Climate', name: 'Natural ventilation', tool: 'vent', view: 'shaded',
     blurb: 'Air changes from operable openings, wind and stack effect.', inputs: ['Rooms', 'Operable windows', 'Climate'],
     metrics: [['ach', 'Air changes per hour, first room', 'ACH', 1, /./]] },
@@ -49,7 +56,7 @@ export const SIMS = [
 ];
 
 // Spatial scope is independent of discipline: Climate contains both indoor and outdoor studies.
-for(const sim of SIMS) sim.scope=['sunhours','wind','stormwater','noise'].includes(sim.id)?'Exterior':sim.id==='structure'?'Building':'Interior';
+for(const sim of SIMS) sim.scope=['sunhours','radiation','utci','wind','stormwater','noise'].includes(sim.id)?'Exterior':sim.id==='structure'?'Building':'Interior';
 
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [

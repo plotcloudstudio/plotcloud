@@ -2,7 +2,7 @@ name: PlotCloud engine validation
 on:
   push:
     branches: [main]
-    paths: ['emb/sunhours.html', 'emb/daylight.html', 'emb/noise.html', 'emb/roomacoustics.html', 'emb/lib/plansim.js', 'tests/validation/**', '.github/workflows/engine-validation.yml']
+    paths: ['emb/sunhours.html', 'emb/lib/climate.js', 'emb/daylight.html', 'emb/noise.html', 'emb/roomacoustics.html', 'emb/lib/plansim.js', 'tests/validation/**', '.github/workflows/engine-validation.yml']
   workflow_dispatch:
 jobs:
   validate:
@@ -18,7 +18,7 @@ jobs:
           python-version: '3.12'
       - name: Install references and browser
         run: |
-          pip install numpy pandas pvlib pyradiance
+          pip install numpy pandas pvlib pyradiance pythermalcomfort
           npm install --no-save playwright
           npx playwright install --with-deps chromium
       - name: Serve the site and validate the engines

@@ -14,19 +14,19 @@ export async function saveClimate(file){
 }
 export function mountProjectClimate(app,p){
  const site=S.conditionsOf(p).site,section=document.createElement('section');section.className='card';section.style.cssText='padding:24px;margin-top:18px';
- section.innerHTML='<h2>Shared climate & exposure</h2><p class="note">For Natural Ventilation and Daylight. Stored in this browser, not synced to other devices or bundled in JSON backups. Keep the original EPW file. Upload once per project; existing results are never overwritten.</p><div class="grid g2" style="margin-top:16px"><label class="f">Terrain roughness<select id="projectTerrain"><option value="open">Open country</option><option value="suburban">Suburbs</option><option value="city">City center</option></select></label><label class="f">Neighbour shelter<select id="projectShelter"><option value="exposed">Exposed</option><option value="semi">Half as tall nearby</option><option value="sheltered">As tall nearby</option></select></label></div><p id="projectClimateStatus" class="note" role="status" style="margin:16px 0"></p><label class="btn">Upload EPW<input type="file" id="projectEpw" accept=".epw" hidden></label><p class="note">Uploading does not change project location or north. Review the weather station before running.</p>';
+ section.innerHTML='<h2>Shared climate & exposure</h2><p class="note">For Natural Ventilation, Daylight, Solar radiation, Outdoor thermal comfort and Wind comfort. Stored in this browser, not synced to other devices or bundled in JSON backups. Keep the original EPW file. Upload once per project; existing results are never overwritten.</p><div class="grid g2" style="margin-top:16px"><label class="f">Terrain roughness<select id="projectTerrain"><option value="open">Open country</option><option value="suburban">Suburbs</option><option value="city">City center</option></select></label><label class="f">Neighbour shelter<select id="projectShelter"><option value="exposed">Exposed</option><option value="semi">Half as tall nearby</option><option value="sheltered">As tall nearby</option></select></label></div><p id="projectClimateStatus" class="note" role="status" style="margin:16px 0"></p><label class="btn">Upload EPW<input type="file" id="projectEpw" accept=".epw" hidden></label><p class="note">Uploading does not change project location or north. Review the weather station before running.</p>';
  app.querySelector('#sharedForm').before(section);
  const terrain=section.querySelector('#projectTerrain'),shelter=section.querySelector('#projectShelter'),status=section.querySelector('#projectClimateStatus');terrain.value=site.terrain||'suburban';shelter.value=site.shelter||'semi';
- const describe=()=>{const c=S.conditionsOf(p).site.climate;status.textContent=c?`${c.name} · ${c.station} · ${c.hours} hours`:'No shared EPW. Ventilation uses the explicit wind/temperature scenario; Daylight uses its generic year.';};describe();
+ const describe=()=>{const c=S.conditionsOf(p).site.climate;status.textContent=c?`${c.name} · ${c.station} · ${c.hours} hours`:'No shared EPW. Ventilation uses the explicit wind/temperature scenario; Daylight uses its generic year; Solar radiation, Outdoor thermal comfort and Wind comfort need one.';};describe();
  const update=extra=>{const c=S.conditionsOf(p);S.updateConditions(p,{...c.site,...extra},c.defaults);};
  for(const field of [terrain,shelter])field.onchange=()=>{update({terrain:terrain.value,shelter:shelter.value});status.textContent='Exposure saved for this project. Reopen the study to apply.';};
  section.querySelector('#projectEpw').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;status.textContent='Validating and storing EPW…';try{const climate=await saveClimate(file);update({climate});describe();}catch(error){status.textContent=error.message||'Could not store the EPW. Previous file is unchanged.';}};
 }
 
 export async function applyProjectClimate(frame,site,sim,edit){
- const doc=frame.contentDocument;if(!doc||!['vent','daylight'].includes(sim))return;
+ const doc=frame.contentDocument;if(!doc||!['vent','daylight','radiation','utci','wind'].includes(sim))return;
  const note=doc.createElement('p');note.className='note';note.id='projectClimateSummary';
- const anchor=doc.getElementById(sim==='vent'?'wxMore':'epwInfo');if(!anchor)return;
+ const anchor=doc.getElementById(sim==='vent'?'wxMore':'epwInfo');if(!anchor)return;const fileUse=sim==='vent'?'explicit wind/temperature scenario':sim==='daylight'?'generic year':sim==='wind'?'comfort needs a climate file':'this study needs a climate file';
  anchor.before(note);const link=doc.createElement('a');link.href='#';link.textContent='Edit project conditions ↗';link.onclick=e=>{e.preventDefault();edit();};
  const status=doc.createElement('span');note.append(status,doc.createElement('br'),link);
  if(sim==='daylight')doc.getElementById('epwF').addEventListener('change',()=>{if(!doc.body.dataset.pcSharedWeatherLoading)status.textContent='Study-only climate selected; check the engine weather status below. Project file is unchanged.';});
@@ -36,7 +36,7 @@ export async function applyProjectClimate(frame,site,sim,edit){
   for(const id of ['floorZ','epwOpen']){const el=doc.getElementById(id);if(el)anchor.before(id==='floorZ'?el.closest('.lab'):el);}
   anchor.hidden=true;
  }
- if(!site.climate){status.textContent=`Project north ${site.north??0}° · No shared EPW; ${sim==='vent'?'explicit wind/temperature scenario':'generic year'}.`;return;}
+ if(!site.climate){status.textContent=`Project north ${site.north??0}° · No shared EPW; ${fileUse}.`;return;}
  status.textContent='Loading project EPW…';
  const run=doc.getElementById('run'),wasDisabled=run?.disabled;if(run)run.disabled=true;
  doc.body.dataset.pcSharedWeatherLoading='true';

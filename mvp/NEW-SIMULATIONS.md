@@ -47,3 +47,21 @@ Outdoor noise now reads the site that is already in the project and looks like S
 
 Tests: `tests/mvp-noise.cjs` (engine on its own; Plan Studio's scene from a small labelled OpenStreetMap fixture; Workspace → version →
 Simulations page → save → Results batch). Validation: `tests/validation/noise_engine.cjs` (line source, screening, ground and air).
+
+# Solar radiation, Outdoor thermal comfort and Wind comfort (2026-10-25)
+
+Three climate-file studies, built on engines that already exist so the model, site and neighbours come in exactly as for Sun hours and Wind flow. All three read the project's one EPW from project conditions (`mvp/js/project-climate.js`), and their results are flagged "rerun required" when that file changes.
+
+Shared code: `emb/lib/climate.js` (EPW reading, Tregenza sky, Perez 1990 diffuse sky, sun grouping, UTCI, SolarCal mean radiant temperature, site wind profile, City of London Lawson criteria). Pure functions, also run in Node by the tests.
+
+| Study | Engine | What it works out | Figures kept |
+|---|---|---|---|
+| Solar radiation (`#/simulations/radiation`) | `emb/sunhours.html`, Measure = Solar radiation | kWh/m² on ground, roofs and facades over the year (or June–August, December–February, chosen dates): beam and circumsolar light per sun group (about 3° apart, one sightline each), the Perez dome and horizon band per sky patch (145), ground reflection at 20 % | Ground / Roofs / Facades mean, Open level ground, Roof area ≥ 80 % of open ground, PV estimate (flat panels, 20 % modules, PR 0.8) |
+| Outdoor thermal comfort (`#/simulations/utci`) | `emb/sunhours.html`, Measure = Outdoor thermal comfort | For each spot a person stands on (1.1 m up): sky view and which sun groups reach it; every counted hour's UTCI from air temperature, humidity, the climate file's wind carried to the site exposure, and a mean radiant temperature from sun, sky and shade (SolarCal) | No thermal stress / Heat stress / Cold stress (% of counted hours, area mean), ground comfortable half the time |
+| Wind comfort | `emb/wind.html`, section "Comfort through the year" | The 16 solved directions weighted by the climate file's hourly wind; the speed exceeded 5 % of the hours sets the Lawson class (sitting 2.5, occasional sitting 4, standing 6, walking 8 m/s), 15 m/s exceeded more than 0.022 % of the hours is unsafe | Sitting area, Uncomfortable area, Unsafe area (on the Wind flow result) |
+
+Honest limits (shown in each engine): screening estimates. No reflections from buildings; sunlit paving is not hotter than the air; UTCI uses the climate file's wind, not Wind flow's local speed-ups; wind comfort uses time-averaged speeds without gusts and inherits Wind flow's unvalidated solver. None is an energy, PV-yield, thermal-comfort or wind-microclimate assessment.
+
+Validation: `tests/validation/climate_lib.py` (UTCI and SolarCal against pythermalcomfort, irradiation on open planes against pvlib's Perez), recorded in `mvp/VALIDATION.md` §8. Browser test: `tests/climate-studies.cjs` (library unit checks; both Sun hours studies run from a project EPW, saved with the file and method, then marked stale when the file changes; Wind flow reads the same file). Solving all 16 wind directions is too slow on a software GPU for CI, so the comfort map's run is checked by hand on real hardware.
+
+Catalogue images `mvp/img/analysis-{radiation,utci}-{day,night}.jpg` are illustrative previews from `mvp/analysis-art.html`, like the Sun hours one.

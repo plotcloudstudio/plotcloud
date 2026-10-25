@@ -48,7 +48,10 @@ function extent(model) {
 
 // per engine: file, what it reads, what it hides, what Account fills in
 const CFG = {
-  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)'], prefill: ({ A }) => ({ '@day': DAY[String(A.period || '').toLowerCase()] || '03-20' }) },
+  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ A }) => ({ measure: 'hours', '@day': DAY[String(A.period || '').toLowerCase()] || '03-20' }) },
+  // the same engine measuring with the project's climate file (2026-10-25)
+  radiation: { file: 'sunhours', input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: () => ({ measure: 'radiation' }) },
+  utci: { file: 'sunhours', input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ site }) => ({ measure: 'utci', utciTerrain: { open: '0.14', suburban: '0.22', city: '0.33' }[site?.terrain || 'suburban'] || '0.22' }) },
   wind: { input: 'masses', hide: ['.sec:has(#h-model)'],
     prefill: ({ site }) => ({ dir: windFrom(site), dirR: windFrom(site), speed: Number.isFinite(site?.wind) ? site.wind : null }) },
   daylight: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT],
@@ -97,23 +100,28 @@ const FIELDS = {
   movementdepth: (w, sc) => ptsField(w.__ss?.RES, (i) => w.__ss.RES.integ?.[i], 'Integration', '', sc?.origin),
   // Sun hours: hours on the ground, averaged in square cells; the engine centres the model, so its offset is found from
   // the masses it was given (the scene) and its own copy of them
-  sunhours: (w, sc) => {
+  sunhours: (w, sc) => sunField(w, sc, 'Sun hours on the ground', 'h'),
+  radiation: (w, sc) => sunField(w, sc, 'Solar radiation on the ground', 'kWh/m²'),
+  utci: (w, sc) => sunField(w, sc, 'Hours without thermal stress (UTCI 9–26 °C)', '%'),
+};
+function sunField(w, sc, label, unit) {
     const S0 = w.__sun?.S, R = S0?.lastR || S0?.result?.R, P = R?.prep, pos = S0?.model?.pos; if (!R?.hours || !P?.smpP || !pos || !sc?.masses?.length) return null;
+    const vals = R.mode === 'utci' ? R.vals.comfort : R.hours;
     let ex = Infinity, ey = Infinity; for (let i = 0; i < pos.length; i += 3) { if (pos[i] < ex) ex = pos[i]; if (pos[i + 1] < ey) ey = pos[i + 1]; }
     const mx = Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[0]))), my = Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[1]))), dx = ex - mx, dy = ey - my;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const K = P.smpK, SP = P.smpP;
-    for (let k = 0; k < R.hours.length; k++) if (K[k] === 0) { const x = SP[3 * k] - dx, y = SP[3 * k + 1] - dy; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    for (let k = 0; k < R.hours.length; k++) if (K[k] === 0 && Number.isFinite(vals[k])) { const x = SP[3 * k] - dx, y = SP[3 * k + 1] - dy; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (!Number.isFinite(x0)) return null; const cs = Math.max(0.5, Math.sqrt((x1 - x0) * (y1 - y0) / 2400)), nx = Math.ceil((x1 - x0) / cs) + 1, ny = Math.ceil((y1 - y0) / cs) + 1, sum = new Float64Array(nx * ny), cnt = new Uint32Array(nx * ny);
-    for (let k = 0; k < R.hours.length; k++) if (K[k] === 0) { const i = Math.floor((SP[3 * k] - dx - x0) / cs), j = Math.floor((SP[3 * k + 1] - dy - y0) / cs), q = j * nx + i; sum[q] += R.hours[k]; cnt[q]++; }
+    for (let k = 0; k < R.hours.length; k++) if (K[k] === 0 && Number.isFinite(vals[k])) { const i = Math.floor((SP[3 * k] - dx - x0) / cs), j = Math.floor((SP[3 * k + 1] - dy - y0) / cs), q = j * nx + i; sum[q] += vals[k]; cnt[q]++; }
     const out = []; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = j * nx + i; if (cnt[q]) out.push(r2(x0 + (i + 0.5) * cs), r2(y0 + (j + 0.5) * cs), r2(sum[q] / cnt[q])); }
-    return { label: 'Sun hours on the ground', unit: 'h', step: r2(cs), pts: out };
-  },
-};
+    return { label, unit, step: r2(cs), pts: out };
+}
+const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export function render(app, sim, params = new URLSearchParams()) {
   // batch: Results runs this page in a hidden frame for one simulation of a batch (#/batch-run?…): the project, version,
   // level, room and parameter changes come in the address, the engine runs on its own and the result goes back to Results
-  const batch = params.get('batch'), pilot=S.isSharedPilot(sim.id), cfg = pilot&&sim.id==='sunhours'?{...CFG[sim.id],hide:['.sec:has(#h-model)']}:CFG[sim.id], p = batch ? S.project(params.get('project')) : currentProject();
+  const batch = params.get('batch'), pilot=S.isSharedPilot(sim.id), cfg = pilot&&SUN.includes(sim.id)?{...CFG[sim.id],hide:['.sec:has(#h-model)','#measureRow']}:CFG[sim.id], p = batch ? S.project(params.get('project')) : currentProject();
   const tell = (m) => { if (batch) try { window.parent.postMessage({ pcBatch: batch, sim: sim.id, ...m }, location.origin); } catch (e) { } };
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; tell({ ok: false, why: 'No project.' }); return; }
   if (!batch) setCurrent(p);
@@ -179,8 +187,8 @@ export function render(app, sim, params = new URLSearchParams()) {
   const input = (() => {
     // a project with a site or masses in its Plan Studio model: Sun hours reads Plan Studio's own scene (masses, the site's buildings standing on the terrain, location)
     // Outdoor noise reads the same scene with the site's roads, green and water areas added (2026-10-25)
-    if (cfg.input === 'masses' && (sim.id === 'sunhours' || sim.id === 'noise') && v.model.studio && v.model.studio.v === 2 && ((v.model.studio.masses || []).length || v.model.studio.site))
-      return studioScene(v, site, p.name, sim.id).then((r) => { if (!r.ok) return r; const sc = JSON.parse(r.scene); return { ...r, info: `${sc.masses.filter((m) => m.role === 'proposed').length} blocks, ${sc.masses.filter((m) => m.role === 'context').length} neighbours${sc.roads ? `, ${sc.roads.length} road${sc.roads.length === 1 ? '' : 's'}` : ''}${sc.terrain ? ', terrain' : ''}` }; });
+    if (cfg.input === 'masses' && (SUN.includes(sim.id) || sim.id === 'noise') && v.model.studio && v.model.studio.v === 2 && ((v.model.studio.masses || []).length || v.model.studio.site))
+      return studioScene(v, site, p.name, SUN.includes(sim.id) ? 'sunhours' : sim.id).then((r) => { if (!r.ok) return r; const sc = JSON.parse(r.scene); return { ...r, info: `${sc.masses.filter((m) => m.role === 'proposed').length} blocks, ${sc.masses.filter((m) => m.role === 'context').length} neighbours${sc.roads ? `, ${sc.roads.length} road${sc.roads.length === 1 ? '' : 's'}` : ''}${sc.terrain ? ', terrain' : ''}` }; });
     if (cfg.input === 'masses') { const sc = sunScene(v.model, site, { name, project: p.id, version: v.id }); return Promise.resolve({ ok: true, scene: JSON.stringify(sc), info: `${sc.masses.filter((m) => m.role === 'proposed').length} blocks, ${sc.masses.filter((m) => m.role === 'context').length} neighbours` }); }
     if (cfg.input === 'studio') return studioScene(v, site, p.name, sim.id === 'movementdepth' ? 'movementdepth' : sim.id, level?.id);
     if (cfg.input === 'dxf') return studioDXF(v, site, p.name, level?.id);
@@ -220,7 +228,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
     // Distinguish the engine's startup sample from the project's applied model/settings.
     if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
-    if(['vent','daylight'].includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,site,sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.then(()=>fr.contentWindow.PlotCloudSimulationFit?.refresh()).catch(error=>{weatherFailure=error;say(esc(error.message),true);fr.contentWindow.PlotCloudSimulationFit?.refresh();});}
+    if(WEATHER.includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,shared?site:{...site,climate:S.conditionsOf(p).site.climate},sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.then(()=>fr.contentWindow.PlotCloudSimulationFit?.refresh()).catch(error=>{if(sim.id!=='wind')weatherFailure=error;say(esc(error.message),true);fr.contentWindow.PlotCloudSimulationFit?.refresh();});}
     fr.contentWindow.PlotCloudSimulationFit?.refresh();
     revealEngine();
     for(const child of D.querySelectorAll('iframe'))try{child.contentWindow.PlotCloudSimulationFit?.refresh();}catch{}
@@ -268,12 +276,12 @@ export function render(app, sim, params = new URLSearchParams()) {
     return [];
   }
   function store(kpis, analysis = null) {
-    if((['vent','daylight'].includes(sim.id)&&!weatherTask)||weatherFailure||doc()?.body.dataset.pcSharedWeatherLoading){say('Project weather is not ready. Resolve the shared EPW before saving.',true);return;}
-    if(pilot){const ready=sim.id==='sunhours'?!!fr.contentWindow.__sun?.S.lastR&&!fr.contentWindow.__sun.S.busy:fr.contentWindow.__pcAnalysisState?.().ready;
+    if((WEATHER.includes(sim.id)&&sim.id!=='wind'&&!weatherTask)||weatherFailure||doc()?.body.dataset.pcSharedWeatherLoading){say('Project weather is not ready. Resolve the shared EPW before saving.',true);return;}
+    if(pilot){const ready=SUN.includes(sim.id)?!!fr.contentWindow.__sun?.S.lastR&&!fr.contentWindow.__sun.S.busy:fr.contentWindow.__pcAnalysisState?.().ready;
       if(!ready||!pilotRunSnapshot){say('Run the current Workspace model and settings before saving.',true);if(batch)batchNoResult=true;return;}}
     let K = kpis.map(([k, s]) => [String(k), String(s ?? '').trim()]).filter(([, s]) => s && !/^[—–-]+(\s|$)/.test(s));
     const D = doc();
-    if (sim.id === 'sunhours') { const stats = [...(D?.querySelectorAll('#stats dt') || [])].map((dt) => [dt.textContent.trim(), (dt.nextElementSibling?.textContent || '').trim()]); K = K.concat(stats.filter(([k]) => !/window|extent/i.test(k))); }
+    if (SUN.includes(sim.id)) { const stats = [...(D?.querySelectorAll('#stats dt') || [])].map((dt) => [dt.textContent.trim(), (dt.nextElementSibling?.textContent || '').trim()]); K = K.concat(stats.filter(([k]) => !/window|extent/i.test(k))); }
     if (!K.some(([, s]) => /\d/.test(s))) { say('Run the analysis first; then save its result.', true); if (batch) batchNoResult = true; return; }
     const results = { kpis: K };
     const th = thumbOf(D); if (th) results.thumb = th;
@@ -287,9 +295,10 @@ export function render(app, sim, params = new URLSearchParams()) {
       const k = ACCT[id][0], now = cur(id); fromAccount[k] = shown(id, val);
       if (now != null && String(now) !== String(val) && !(now !== '' && Number(now) === Number(val))) changed.push(`${k} ${shown(id, now)} (Account ${shown(id, val)})`); }
     const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };
-    if(pilot){settings.sharedConditions=S.clone(pilotRunSnapshot);settings.sharedConditions.effective=S.clone(sim.id==='sunhours'?{...fr.contentWindow.__sun.S.loc,north:fr.contentWindow.__sun.S.north}:fr.contentWindow.__pcAnalysisState?.().conditions||{});settings.inheritedFrom='Project shared conditions';}
+    if(pilot){settings.sharedConditions=S.clone(pilotRunSnapshot);settings.sharedConditions.effective=S.clone(SUN.includes(sim.id)?{...fr.contentWindow.__sun.S.loc,north:fr.contentWindow.__sun.S.north}:fr.contentWindow.__pcAnalysisState?.().conditions||{});settings.inheritedFrom='Project shared conditions';}
     if(sim.id==='vent'){settings.sharedConditions={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},'vent'),site:S.clone(site),effective:S.clone(fr.contentWindow.__vent?.S||{})};settings.inheritedFrom='Project shared conditions';}
-    if(sim.id==='sunhours'){const s=fr.contentWindow.__sun?.S,r=s?.lastR;if(r){settings.analysisPeriod=r.period||{start:r.ds,end:r.ds,days:1,t0:s.t0,t1:s.t1};settings.grid=r.prep.s;settings.timeStep=s.step;settings.timeZone={...s.loc};settings.units=r.period?'cumulative sunlight hours':'sunlight hours';}}
+    if(SUN.includes(sim.id)&&fr.contentWindow.__sun?.S?.lastR?.mode){const s=fr.contentWindow.__sun.S,r=s.lastR,c=fr.contentWindow.__sunClimate?.CLIM?.E;settings.analysisPeriod={hours:r.clim.period,count:r.clim.hoursN};settings.climateFile=c?{name:c.name,station:c.station,lat:c.lat,lon:c.lon}:null;settings.grid=r.prep.s;settings.method=r.mode==='radiation'?'Perez sky, 145 patches, sun in 3° groups':'UTCI with SolarCal MRT';if(r.mode==='utci')settings.utci={hoursCounted:r.clim.counted,sunUpOnly:r.clim.day,windExposure:r.clim.alpha};settings.units=r.mode==='radiation'?'kWh/m²':'% of counted hours';}
+    else if(sim.id==='sunhours'){const s=fr.contentWindow.__sun?.S,r=s?.lastR;if(r){settings.analysisPeriod=r.period||{start:r.ds,end:r.ds,days:1,t0:s.t0,t1:s.t1};settings.grid=r.prep.s;settings.timeStep=s.step;settings.timeZone={...s.loc};settings.units=r.period?'cumulative sunlight hours':'sunlight hours';}}
     if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
     try { fr.contentWindow.postMessage({ pc: 1, t: 'saved', count: p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).length }, '*'); } catch (e) { }

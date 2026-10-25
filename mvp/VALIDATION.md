@@ -1,4 +1,4 @@
-# Engine validation: Sun hours, Daylight, Outdoor noise and Indoor acoustics (2026-10-25)
+# Engine validation: Sun hours, Daylight, Outdoor noise, Indoor acoustics and the climate library (2026-10-25)
 
 What was checked, against what, how far off the engines are, what was fixed, and where the results should not be trusted.
 Every number below is produced by the scripts in `tests/validation/` (run `tests/validation/run_all.sh`; the GitHub workflow
@@ -14,6 +14,8 @@ the scripts either pull the engine's own functions out of the page or drive the 
 | Daylight, cross-check | Independent numerical integral of the CIE overcast sky through the opening (600 × 600 elements) | Closed-form physics; written separately from both the engine and Radiance |
 | Sun hours shadows | Exact ray–box intersection (slab test) | Geometry with an exact answer |
 | Air absorption (Indoor acoustics) | ISO 9613-1:1993 table values | The international standard the engine's formula comes from |
+| UTCI, solar gain on a person | pythermalcomfort (`utci`, `solar_gain`), MIT-licensed reference implementation of the UTCI program and ASHRAE 55 SolarCal | Independent code following the published methods |
+| Irradiation on planes | pvlib `get_total_irradiance` (Perez 1990 and isotropic models) | Widely used open-source solar library, Sandia/PVPMC lineage |
 | Reverberation time (Indoor acoustics) | Stochastic ray tracing of the room's energy decay, written for the check (`room_acoustics.cjs`) | Independent of the diffuse-field formulas it checks; seeded, so repeatable |
 
 The two daylight references agree with each other within 0.04 DF points (within 5 %, largest at the back of the room where the values are smallest) at every point, which is the evidence that the Radiance set-up is right.
@@ -149,7 +151,8 @@ entered by the person), not traffic counts. The engine remains a screening tool;
 Wind Flow is a lattice-Boltzmann solver on a coarse grid (BGK with a Smagorinsky eddy viscosity, D2Q9/D3Q15 on the GPU). It has not been
 checked against wind-tunnel data. The next step is a cube in a boundary layer (surface pressure coefficients against the classic
 wind-tunnel measurements, e.g. Castro & Robins 1977) and the AIJ pedestrian-wind benchmark cases. Until then its speeds show where
-the wind speeds up and slows down, not values to report.
+the wind speeds up and slows down, not values to report. The comfort map (§8) inherits this: read its Lawson classes as a screening
+of where to look, not as a wind microclimate assessment.
 
 ## 7. Indoor acoustics (`room_acoustics.cjs`)
 
@@ -185,6 +188,40 @@ with hard, smooth parallel walls and all the absorption on the ceiling, the deca
 between the walls), so a room "on target" with only an absorbent ceiling should be checked by an acoustician. The absorption values
 of finishes, furniture and people are typical published values, not measurements of your products. No sound insulation between rooms,
 no echoes, focusing or room modes (below about 200 Hz in small rooms the 125 Hz value is indicative only), no measured data.
+
+## 8. Climate library: Solar radiation, Outdoor thermal comfort, Wind comfort (`climate_lib.py`)
+
+Code: `emb/lib/climate.js`, shared by the Solar radiation and Outdoor thermal comfort studies (Sun hours engine) and the comfort map
+of Wind Flow. Added 2026-10-25.
+
+**UTCI.** The engine's polynomial against `pythermalcomfort.models.utci` (the same published polynomial of the official UTCI program,
+written separately) on 6,000 random states inside the polynomial's range (air −45 to 48 °C, radiant minus air −25 to 65 K,
+wind 0.5–16 m/s, humidity 5–100 %): largest difference **1.4e-12 °C**. Pass: 0.01 °C.
+
+**Mean radiant temperature, short-wave part.** A sunlit standing person under open sky against `pythermalcomfort.models.solar_gain`
+(SolarCal, ASHRAE 55 Appendix C), averaged over the directions a person may face, as the engine assumes: 400 states,
+largest difference **0.027 K**, mean 0.007 K. Pass: 0.05 K.
+
+**Irradiation on open planes.** A synthetic year at Toronto (Ineichen clear sky with day-to-day cloud) through the engine's sky — Perez
+(1990) diffuse split into an isotropic dome and a horizon band over the 145 Tregenza patches, the circumsolar part travelling with the
+sun, the sun grouped into 415 positions about 3° apart — against pvlib's `get_total_irradiance`, albedo 0.2.
+
+| Plane | Engine kWh/m² | pvlib Perez | Difference | pvlib isotropic | Cost of sun grouping |
+|---|---|---|---|---|---|
+| Horizontal | 1,112.7 | 1,111.9 | +0.07 % | 1,112.0 | -0.000 % |
+| Vertical south | 974.6 | 974.7 | -0.01 % | 879.1 | -0.003 % |
+| Vertical east | 701.9 | 703.0 | -0.16 % | 655.4 | -0.000 % |
+| Vertical west | 700.6 | 701.8 | -0.18 % | 655.5 | -0.000 % |
+| Vertical north | 313.8 | 314.1 | -0.09 % | 344.6 | -0.081 % |
+| 30° tilt south | 1,352.0 | 1,351.6 | +0.02 % | 1,274.8 | -0.001 % |
+
+Pass: every plane within 2 % of Perez. The isotropic column shows why the sky model matters: an even sky puts about 7–11 % less on
+sunny facades and 9 % more on north ones.
+
+**Not covered yet.** Shading by buildings uses the same sightlines as Sun hours (§2) but has no separate reference yet; reflections from
+buildings and warmer sunlit paving are left out (stated in the engine). The Lawson comfort classes use time-averaged speeds from
+Wind Flow, which is itself not validated (§6), and no gusts; the class thresholds and the 5 % / 0.022 % rules are unit-tested in
+`tests/climate-studies.cjs`, not checked against a wind-tunnel study.
 
 ## Limits: where not to rely on the result
 

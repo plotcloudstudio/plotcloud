@@ -23,7 +23,7 @@ function catalog(app, params) {
     <p class="note" style="margin-top:28px">${LIVE} every study runs the PlotCloud simulation engine itself. Catalogue images are illustrative previews using the same model and camera; they are not computed project results. All studies are for design screening, not code compliance.</p>
   </div>`;
   // what each simulation needs from the open project (2026-10-25): a site or masses, or rooms
-  const NEEDS = { sunhours: 'mass', wind: 'mass', noise: 'mass', stormwater: 'any', structure: 'none' }, st = v && v.model && v.model.studio;
+  const NEEDS = { sunhours: 'mass', radiation: 'mass', utci: 'mass', wind: 'mass', noise: 'mass', stormwater: 'any', structure: 'none' }, st = v && v.model && v.model.studio;
   const hasRooms = !!(st ? (st.walls || []).length >= 3 : v && v.model && (v.model.components || []).some((c) => c.type === 'wall')), hasMass = hasRooms || !!(st && ((st.masses || []).length || st.site));
   const ready = (s) => { if (!p || !v) return ''; const n = NEEDS[s.id] || 'rooms', okk = n === 'mass' ? hasMass : n === 'rooms' ? hasRooms : true;
     const t = okk ? 'Ready for this project' : n === 'mass' ? 'Needs a site or masses' : (st && (st.masses || []).length ? 'Needs rooms · Make floors from a mass' : 'Needs rooms');
