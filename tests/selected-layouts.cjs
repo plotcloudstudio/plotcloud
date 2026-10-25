@@ -27,7 +27,7 @@ const reveal=require('./reveal-simulation-control.cjs');
    await reveal(f,'#lvlSeg [data-l=draft]');await f.locator('#lvlSeg [data-l=draft]').click();await f.locator('#run').click();
    await p.waitForFunction(()=>document.querySelector('#eng').contentWindow.__ci.NET?.done,null,{timeout:90000});
    assert(await p.evaluate(()=>document.querySelector('#eng').contentWindow.__ci.NET.pairs.some(p=>p.r)));
-   await reveal(f,'#tripPick');const trip=await f.locator('#tripPick [data-tadd]').all();await trip[0].click();await trip[1].click();await f.locator('#tripGo').click();
+   const firstTrip=await reveal(f,'#tripPick [data-tadd]');const trip=await f.locator('#tripPick [data-tadd]').all();await firstTrip.click();await trip[1].click();await f.locator('#tripGo').click();
   }else{
    await reveal(f,'#toolBar [data-tool=view]');await f.locator('#toolBar [data-tool=view]').click();const point=await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow,s=w.__iso.SC.bounds,q=w.__iso.W2S([s.w*.3,s.h*.5]);return{x:q[0]/w.devicePixelRatio,y:q[1]/w.devicePixelRatio};});await f.locator('#cv').click({position:point});
    await p.waitForFunction(()=>{const a=document.querySelector('#eng').contentWindow.__iso.A;return a&&!a.noView;});
