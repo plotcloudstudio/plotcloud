@@ -12,7 +12,7 @@ export const LIVE = '<span class="tag live" title="Computed by the PlotCloud sim
 
 // ---- theme: night by default, remembered in this browser; pages and the 3D view follow it
 export const theme = () => document.documentElement.dataset.theme || 'night';
-export const img = (name) => `img/${name}-${theme()}.jpg`;
+export const img = (name) => `img/${name}-${theme()}.jpg${['analysis-noise','analysis-wayfinding','analysis-privacy'].includes(name)?'?v=engine-20261024-1':''}`;
 export function setTheme(t) {
   document.documentElement.dataset.theme = t; try { localStorage.setItem('pc-mvp-theme', t); } catch (e) { }
   $$('#themeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === t)));

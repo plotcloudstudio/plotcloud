@@ -1,11 +1,12 @@
 <!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;overflow:hidden;font-family:Arial,sans-serif}canvas{display:block}.head,.foot{position:absolute;left:44px;right:44px;display:flex;justify-content:space-between;z-index:2}.head{top:34px;font-size:17px;font-weight:600}.foot{bottom:28px;font-size:11px;letter-spacing:1px}.bar{width:150px;height:6px;display:inline-block;margin-left:12px;vertical-align:middle;background:linear-gradient(90deg,var(--low),var(--high))}</style></head><body><div class="head"><span id="name"></span><span style="font-size:11px;letter-spacing:1px;opacity:.55">PLOTCLOUD / ANALYSIS</span></div><div class="foot"><span>ILLUSTRATIVE PREVIEW · SAME MODEL / SAME VIEW</span><span id="legend"></span></div><script type="module">
 import * as T from '../furniture/three.module.min.js';
 import {sampleModel,SIMS} from './js/data.js';
+import {SITE_BOXES,studyField} from './js/analysis-study-art.js';
 const q=new URLSearchParams(location.search),id=q.get('mode')||'daylight',night=q.get('t')==='night',sim=SIMS.find(s=>s.id===id),W=1200,H=900;
 const exterior=sim.scope==='Exterior';document.querySelector('.foot>span').textContent=`ILLUSTRATIVE PREVIEW · ${sim.scope.toUpperCase()} STUDY`;
 const colours=await(await fetch('./engine-colours.json')).json(),palette=colours[id];if(!palette)throw Error('Missing engine colours: '+id);
 const css=c=>Array.isArray(c)?`rgb(${c.map(Math.round).join(',')})`:c;
-function engineColour(t){t=Math.max(0,Math.min(1,t));const stops=palette.stops;if(palette.discrete)return css(stops[Math.min(stops.length-1,Math.floor(t*stops.length))][1]);if(id==='structure')t=Math.min(1,(Math.floor(t*12-1e-9)+.5)/12);for(let i=1;i<stops.length;i++)if(t<=stops[i][0]){const[a,ca]=stops[i-1],[b,cb]=stops[i],f=(t-a)/(b-a);return css(ca.map((v,j)=>v+(cb[j]-v)*f));}return css(stops.at(-1)[1]);}
+function engineColour(t){t=Math.max(0,Math.min(1,t));const stops=palette.stops;if(palette.thresholds){const L=palette.range[0]+t*(palette.range[1]-palette.range[0]),k=palette.thresholds.findIndex(v=>L<v);return css(stops[k<0?stops.length-1:k][1]);}if(palette.discrete)return css(stops[Math.min(stops.length-1,Math.floor(t*stops.length))][1]);if(id==='structure')t=Math.min(1,(Math.floor(t*12-1e-9)+.5)/12);for(let i=1;i<stops.length;i++)if(t<=stops[i][0]){const[a,ca]=stops[i-1],[b,cb]=stops[i],f=(t-a)/(b-a);return css(ca.map((v,j)=>v+(cb[j]-v)*f));}return css(stops.at(-1)[1]);}
 const low=engineColour(0),high=engineColour(1);document.body.style.cssText=`color:${night?'#eeeae4':'#333c48'};--low:${low};--high:${high}`;document.querySelector('#name').textContent=sim.name;document.querySelector('#legend').innerHTML='LOW <i class="bar"></i> HIGH';document.querySelector('.bar').style.background=`linear-gradient(90deg,${palette.stops.map(([t,c])=>`${css(c)} ${t*100}%`).join(',')})`;if(['evac','cameras','span','isovist'].includes(id))document.querySelector('#legend').textContent={evac:'MOVEMENT PATHS',cameras:'COVERAGE CONES',span:'SPAN & MEMBER DEPTH',isovist:'VISIBLE / OCCLUDED'}[id];
 const r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(W,H);r.setPixelRatio(1);r.outputColorSpace=T.SRGBColorSpace;document.body.prepend(r.domElement);
 const scene=new T.Scene();scene.background=new T.Color(night?'#161c25':'#f1f2f4');scene.add(new T.HemisphereLight(0xffffff,0x96a3b2,2));const sun=new T.DirectionalLight(0xffffff,2.4);sun.position.set(-8,-12,25);scene.add(sun);
@@ -13,7 +14,7 @@ const model=sampleModel('A'),group=new T.Group();scene.add(group);const gbox=new
 const mesh=(x,y,z,w,d,h,color,opacity=1)=>{const m=new T.Mesh(gbox,new T.MeshStandardMaterial({color,roughness:.95,transparent:opacity<1,opacity,depthWrite:opacity===1}));m.scale.set(w,d,h);m.position.set(x+w/2,y+d/2,z+h/2);group.add(m);return m;};
 const path=(points,color,width=1,opacity=1)=>{const line=new T.Line(new T.BufferGeometry().setFromPoints(points.map(p=>new T.Vector3(...p))),new T.LineBasicMaterial({color,transparent:true,opacity}));group.add(line);return line;};
 mesh(-.65,-.65,-.25,17.3,13.3,.25,night?'#4b5664':'#dfe3e7');
-if(exterior){for(const [x,y,w,d,h] of [[5.5,4,4,3.5,5.2],[1,1,2.3,2.8,2.3],[11.8,1.3,2.5,3.4,3.5],[1.2,8.5,3,2,3],[11.2,8.7,3.6,2,2]]){mesh(x,y,0,w,d,h,'#dfe2e3');mesh(x,y,h+.012,w,d,.035,id==='sunhours'?high:'#b9c5d0');for(let z=.5;z<h-.2;z+=.65){path([[x,y-.008,z],[x+w,y-.008,z]],'#9ca9b3',1,.65);}}path([[-.4,6,.03],[16.3,6,.03]],'#9ca9b3');}
+if(exterior){for(const [x,y,w,d,h] of SITE_BOXES){mesh(x,y,0,w,d,h,'#dfe2e3');mesh(x,y,h+.012,w,d,.035,id==='sunhours'?high:'#b9c5d0');for(let z=.5;z<h-.2;z+=.65){path([[x,y-.008,z],[x+w,y-.008,z]],'#9ca9b3',1,.65);}}path([[-.4,6,.03],[16.3,6,.03]],'#9ca9b3');}
 else for(const c of model.components){if(!['wall','window','door','furniture'].includes(c.type))continue;const a=c.g;if(a.x>17||a.y>13)continue;const wall=c.type==='wall',glass=c.type==='window';const m=mesh(a.x,a.y,a.z,a.w,a.d,wall?Math.min(a.h,1.45):glass?Math.min(a.h,.8):Math.min(a.h,1),glass?'#9ac9de':wall?'#e2e3df':'#aab4bd',glass?.45:1);const edge=new T.LineSegments(new T.EdgesGeometry(gbox),new T.LineBasicMaterial({color:night?'#607080':'#a1a9af',transparent:true,opacity:.5}));edge.scale.copy(m.scale);edge.position.copy(m.position);group.add(edge);}
 const surface=(fn)=>{for(let x=.25;x<15.75;x+=.42)for(let y=.25;y<11.75;y+=.42){const color=engineColour(fn(x,y)),m=mesh(x,y,.025,.4,.4,.025,color);m.material=new T.MeshBasicMaterial({color,toneMapped:false});}};
 if(['sunhours','daylight','spacesyntax','movementdepth','views','isovist','stormwater'].includes(id))surface((x,y)=>id==='daylight'||id==='sunhours'?Math.max(0,1-y/12)*(.7+.3*Math.cos(x*.55)):id==='movementdepth'?Math.floor((x+y)/4)/7:id==='stormwater'?Math.exp(-((x-10)**2+(y-7)**2)/18):id==='isovist'?(Math.atan2(y-3,x-4)>.15&&x>4?1:.08):id==='views'?Math.max(0,1-Math.min(y,12-y,x,16-x)/5):.5+.4*Math.sin(x*.3)*Math.cos(y*.2));
@@ -22,5 +23,25 @@ if(id==='acoustics'){const source=new T.Vector3(4,5,.65);for(let i=0;i<1700;i++)
 if(id==='evac')for(let i=0;i<30;i++){const y=.4+i*.36;path([[.8,y,.12],[5.5,y,.12],[6,5.7,.12],[15.5,5.7+(i%4)*.045,.12]],engineColour(i/30),1,.7);}
 if(id==='cameras')for(const [x,y,a] of [[1,1,.4],[15,11,3.55],[8,1,1.5]]){const points=[[x,y,.12]];for(let i=0;i<=24;i++){const t=a-.65+i/24*1.3;points.push([Math.max(.2,Math.min(15.8,x+Math.cos(t)*7)),Math.max(.2,Math.min(11.8,y+Math.sin(t)*7)),.12]);}points.push([x,y,.12]);path(points,high);for(let i=0;i<9;i++){const t=a-.65+i/8*1.3;path([[x,y,.12],[Math.max(.2,Math.min(15.8,x+Math.cos(t)*7)),Math.max(.2,Math.min(11.8,y+Math.sin(t)*7)),.12]],low,1,.5);}}
 if(['structure','span'].includes(id)){for(const x of [1,5.6,10.2,15]){path([[x,1,.1],[x,1,2.6],[x,11,2.6],[x,11,.1]],high);for(const y of [1,6,11]){mesh(x-.06,y-.06,0,.12,.12,2.6,low);if(id==='structure')path([[1,y,2.7],[5.6,y,2.54],[10.2,y,2.54],[15,y,2.7]],high);}}for(const y of [1,6,11])mesh(1,y-.08,2.5,14,.16,.18,high);}
-const cam=new T.OrthographicCamera(-13.7,13.7,10.275,-10.275,.1,200);cam.up.set(0,0,1);cam.position.set(31,-28,30);cam.lookAt(8,6,.4);r.render(scene,cam);window.__artReady=true;
+if(['wayfinding','privacy','noise'].includes(id)){
+ const result=await studyField(id,model),f=result.field,normal=v=>id==='wayfinding'?Math.min(v,3)/3:id==='privacy'?v/100:(v-35)/45;
+ const coloured=(x,y,z,w,d,h,value)=>{const color=engineColour(normal(value)),m=mesh(x,y,z,w,d,h,color);m.material.dispose();m.material=new T.MeshBasicMaterial({color,toneMapped:false});return m;};
+ let cells=0,min=Infinity,max=-Infinity;
+ for(let i=0;i<f.pts.length;i+=3){const[x,y,v]=f.pts.slice(i,i+3);if(!Number.isFinite(v)||x<0||x>16||y<0||y>12)continue;
+  const x0=Math.max(0,x-f.step/2),y0=Math.max(0,y-f.step/2),w=Math.min(16,x+f.step/2)-x0,d=Math.min(12,y+f.step/2)-y0;
+  coloured(x0,y0,.035,w,d,.025,v);cells++;min=Math.min(min,v);max=Math.max(max,v);
+ }
+ if(id==='noise')for(const f of result.facades){const dx=f.b[0]-f.a[0],dy=f.b[1]-f.a[1],L=Math.hypot(dx,dy),n=f.values.length;for(let i=0;i<n;i++){const v=f.values[i];if(!Number.isFinite(v))continue;
+  const plane=new T.Mesh(new T.PlaneGeometry(L/n,f.h),new T.MeshBasicMaterial({color:engineColour(normal(v)),side:T.DoubleSide,toneMapped:false}));
+  plane.quaternion.setFromEuler(new T.Euler(Math.PI/2,0,Math.atan2(dy,dx),'ZYX'));
+  plane.position.set(f.a[0]+dx*(i+.5)/n+dy/L*.012,f.a[1]+dy*(i+.5)/n-dx/L*.012,f.h/2);group.add(plane);
+ }}
+ const labels={wayfinding:['0 · IN SIGHT','3+ · TURNS'],privacy:['0% · NOT SEEN','100% · SEEN'],noise:['<45 dB(A)','≥75 dB(A)']};
+ const [a,b]=labels[id];document.querySelector('#legend').innerHTML=a+' <i class="bar"></i> '+b;
+ const bar=document.querySelector('.bar');bar.style.background=palette.thresholds?'linear-gradient(90deg,'+palette.stops.flatMap(([t,c],i)=>[css(c)+' '+t*100+'%',css(c)+' '+(palette.stops[i+1]?.[0]??1)*100+'%']).join(',')+')':`linear-gradient(90deg,${palette.stops.map(([t,c])=>`${css(c)} ${t*100}%`).join(',')})`;
+ document.querySelector('.foot>span').textContent='SAMPLE ENGINE RESULT · '+sim.scope.toUpperCase()+' STUDY';
+ if(!cells||!(max>min))throw Error('Catalogue field is empty or has no variation: '+id);
+ window.__artInfo={engine:result.engine,cells,min,max,conditions:result.conditions,model:result.source.version,scope:sim.scope};
+}
+const cam=new T.OrthographicCamera(-13.7,13.7,10.275,-10.275,.1,200);cam.up.set(0,0,1);cam.position.set(31,-28,30);cam.lookAt(8,6,.4);r.render(scene,cam);window.__artCamera={position:cam.position.toArray(),bounds:[cam.left,cam.right,cam.top,cam.bottom],target:[8,6,.4]};window.__artReady=true;
 </script></body></html>

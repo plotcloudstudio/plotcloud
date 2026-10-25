@@ -17,3 +17,9 @@ Kept in this browser: the roads drawn for a project (Outdoor noise) and a room's
 Plan Studio (`emb/modeler.html`) gives the two plan engines their scene through `toolScene('wayfinding' | 'privacy', level)`; these tools are not in Plan Studio's own Send to tool list.
 
 Test: `tests/mvp-new-sims.cjs` (opens each from the Simulations page on the sample project, runs, saves, checks the figures, picture, field and metric, then runs all three as a Results batch).
+
+## Catalogue images
+
+The six day/night images use the existing catalogue's standard interior/site models and orthographic camera. `mvp/js/analysis-study-art.js` feeds those models into the actual three engines; `analysis-art.html` displays their computed fields with RGB values copied from the engines' DEPTH, EXP and BANDS definitions. These are labelled sample engine results, not results for the visitor's project. No simulation engine or project data is changed.
+
+Regenerate only these images: `TEST_SIM=wayfinding,privacy,noise node hero/capture-analysis.cjs` with the local static server running. Verify palettes, engine results, camera, theme parity and catalogue images with `node tests/simulation-art.cjs`.
