@@ -7,6 +7,7 @@
 //   edited only in the Workspace), keeps the engine's views and its results column, makes the left sections collapsible,
 //   and saves the engine's own figures to the version.
 import * as S from '../store.js';
+import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
 import { studioScene, studioDXF } from '../studio-bridge.js';
@@ -118,7 +119,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   const tell = (m) => { if (batch) try { window.parent.postMessage({ pcBatch: batch, sim: sim.id, ...m }, location.origin); } catch (e) { } };
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; tell({ ok: false, why: 'No project.' }); return; }
   if (!batch) setCurrent(p);
-  const shared=pilot?S.clone(S.conditionsOf(p)):null;
+  const shared=pilot||sim.id==='vent'?S.clone(S.conditionsOf(p)):null;
   const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
@@ -142,6 +143,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${pilot?'?v=charts-list-20261024&pilot=shared':sim.id === 'acoustics' ? '?v=wire-20261023-1' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); render(app, sim, params); };
+  if(sim.id==='vent'){$('.shsite',app).href='#/project-settings/'+p.id+'?return=vent';$('.shsite',app).textContent=`${site.label||'Site'} · Shared r${shared.revision} ↗`;}
   $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); render(app, sim, params); };
   const lvSel = $('#lvl', app); if (lvSel) lvSel.onchange = (e) => { try { sessionStorage.setItem(lvKey, e.target.value); } catch (er) { } render(app, sim, params); };
   const rmSel = $('#room', app); if (rmSel) rmSel.onchange = (e) => { try { sessionStorage.setItem(rmKey, e.target.value); } catch (er) { } render(app, sim, params); };
@@ -192,6 +194,7 @@ export function render(app, sim, params = new URLSearchParams()) {
 
   // Account values into the engine's own inputs (each stays editable there)
   const OV = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })();   // values changed in the batch panel
+  let weatherTask=null,weatherFailure=null;
   function prefill(skipDate=false) {
     const D = doc(), vals = Object.assign({}, pilot?{city:'custom',lat:site.lat,lon:site.lon,tz:t.tz,north:site.north??0}: {}, cfg.prefill?.(ctx) || {}); if (!alive || !D) return;
     if (batch) for (const [id, val] of Object.entries(OV)) if (val != null && val !== '') { if (!(id in vals)) vals[id] = val; else ovApply[id] = val; }
@@ -200,6 +203,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
     // Distinguish the engine's startup sample from the project's applied model/settings.
     if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
+    if(['vent','daylight'].includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,site,sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.catch(error=>{weatherFailure=error;say(esc(error.message),true);});}
   }
   function bindPilot(){
     const D=doc(),box=D?.getElementById('pilotSharedSummary');if(!box){if(alive)setTimeout(bindPilot,100);return;}
@@ -212,7 +216,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     D.getElementById('pilotResetShared').onclick=()=>{enabled.checked=false;fields.disabled=true;prefill(true);status();};
     const capture=()=>{pilotRunSnapshot={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},sim.id),site:S.clone(site),defaults:S.clone(A),studyOnlyOverrides:enabled.checked,effective:fr.contentWindow.__pcAnalysisState?.().conditions||{}};};
     for(const id of ['run','longGo','lvStart'])D.getElementById(id)?.addEventListener('click',capture,true);
-    D.getElementById('epwF')?.addEventListener('change',()=>{enabled.checked=true;fields.disabled=false;status();});
+    D.getElementById('epwF')?.addEventListener('change',()=>{if(D.body.dataset.pcSharedWeatherLoading)return;enabled.checked=true;fields.disabled=false;status();});
   }
   // file-based inputs (DXF plan, OBJ site) go into the engine's own file picker, as if the person had opened the file
   const giveFile = (input, text, fname, type) => { const dt = new DataTransfer(); dt.items.add(new File([text], fname, { type })); input.files = dt.files; input.dispatchEvent(new Event('change', { bubbles: true })); };
@@ -244,6 +248,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     return [];
   }
   function store(kpis, analysis = null) {
+    if((['vent','daylight'].includes(sim.id)&&!weatherTask)||weatherFailure||doc()?.body.dataset.pcSharedWeatherLoading){say('Project weather is not ready. Resolve the shared EPW before saving.',true);return;}
     if(pilot){const ready=sim.id==='sunhours'?!!fr.contentWindow.__sun?.S.lastR&&!fr.contentWindow.__sun.S.busy:fr.contentWindow.__pcAnalysisState?.().ready;
       if(!ready||!pilotRunSnapshot){say('Run the current Workspace model and settings before saving.',true);if(batch)batchNoResult=true;return;}}
     let K = kpis.map(([k, s]) => [String(k), String(s ?? '').trim()]).filter(([, s]) => s && !/^[—–-]+(\s|$)/.test(s));
@@ -265,6 +270,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       if (now != null && String(now) !== String(val) && !(now !== '' && Number(now) === Number(val))) changed.push(`${k} ${shown(id, now)} (Account ${shown(id, val)})`); }
     const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };
     if(pilot){settings.sharedConditions=S.clone(pilotRunSnapshot);settings.sharedConditions.effective=S.clone(sim.id==='sunhours'?{...fr.contentWindow.__sun.S.loc,north:fr.contentWindow.__sun.S.north}:fr.contentWindow.__pcAnalysisState?.().conditions||{});settings.inheritedFrom='Project shared conditions';}
+    if(sim.id==='vent'){settings.sharedConditions={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},'vent'),site:S.clone(site),effective:S.clone(fr.contentWindow.__vent?.S||{})};settings.inheritedFrom='Project shared conditions';}
     if(sim.id==='sunhours'){const s=fr.contentWindow.__sun?.S,r=s?.lastR;if(r){settings.analysisPeriod=r.period||{start:r.ds,end:r.ds,days:1,t0:s.t0,t1:s.t1};settings.grid=r.prep.s;settings.timeStep=s.step;settings.timeZone={...s.loc};settings.units=r.period?'cumulative sunlight hours':'sunlight hours';}}
     if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
@@ -276,6 +282,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   const domK = (D) => [...D.querySelectorAll('.kpis > div, .kp4 > div, #stats dt')].map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim()).join('|');
   const busyNow = (D) => { const vis = (el) => el && !el.hidden && el.offsetParent !== null; return vis(D.getElementById('prog')) || vis(D.getElementById('runPill')) || vis(D.getElementById('stopRun')) || !!D.getElementById('run')?.disabled; };
   async function autoRun() {
+    try{await weatherTask;}catch(error){tell({ok:false,why:error.message});return;}
     if (!alive || done) return; const D = doc(); if (!D) { tell({ ok: false, why: 'The engine did not load.' }); return; }
     tell({ stage: 'running' });
     for (const [id, val] of Object.entries(ovApply)) { if (id === '@day') { const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) b.click(); continue; }

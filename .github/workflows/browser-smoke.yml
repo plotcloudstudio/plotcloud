@@ -30,6 +30,7 @@ jobs:
           node tests/run-browser-check.cjs tests/simulation-fit.cjs
           node tests/run-browser-check.cjs tests/simulation-art.cjs
           node tests/run-browser-check.cjs tests/shared-conditions.cjs
+          node tests/run-browser-check.cjs tests/project-climate.cjs
           node tests/run-browser-check.cjs tests/charts-list.cjs
           node tests/run-browser-check.cjs tests/exterior-layout.cjs
           node tests/run-browser-check.cjs hero/toronto.test.cjs

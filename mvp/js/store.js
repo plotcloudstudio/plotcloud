@@ -87,13 +87,13 @@ export const isSharedPilot = id => ['sunhours','daylight'].includes(id);
 export const conditionsOf = p => p.sharedConditions;
 export function conditionsSignature(p,id){
   const c=conditionsOf(p),s=c.site,d=c.defaults;
-  return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north??0,tz:s.tz,...(id==='sunhours'?{period:d.period}:{plane:d.plane,occStart:d.occStart,occEnd:d.occEnd})});
+  return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north??0,tz:s.tz,...(id==='sunhours'?{period:d.period}:id==='vent'?{terrain:s.terrain||'suburban',shelter:s.shelter||'semi',climate:s.climate?.hash}:{plane:d.plane,occStart:d.occStart,occEnd:d.occEnd,climate:s.climate?.hash})});
 }
 export function updateConditions(p,site,defaults){
   const c=conditionsOf(p);p.sharedConditions={schema:1,revision:c.revision+1,updated:now(),site:clone(site),defaults:clone(defaults)};p.updated=now();save();return p.sharedConditions;
 }
 export function runConditionsStatus(p,r){
-  if(!isSharedPilot(r.simId))return '';
+  if(!isSharedPilot(r.simId)&&r.simId!=='vent')return '';
   const used=r.settings?.sharedConditions;
   return !used?'Legacy result · verify conditions':used.signature!==conditionsSignature(p,r.simId)?'Shared conditions changed · rerun required':'';
 }
