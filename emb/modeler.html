@@ -1213,6 +1213,7 @@ const STC = (() => {
     for (const f of M.furn) { x0 = Math.min(x0, f.x - f.w); y0 = Math.min(y0, f.y - f.d); x1 = Math.max(x1, f.x + f.w); y1 = Math.max(y1, f.y + f.d); }
     for(const f of M.floors||[])for(const p of (f.points||[[f.x,f.y],[f.x+f.w,f.y+f.d]])){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);}for(const f of M.fences||[])for(const p of f.points){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);}
     for (const m of M.masses || []) for (const p of m.points) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+    for (const o of M.imports || []) { x0 = Math.min(x0, o.g.x); y0 = Math.min(y0, o.g.y); x1 = Math.max(x1, o.g.x + o.g.w); y1 = Math.max(y1, o.g.y + o.g.d); }
     if (!isFinite(x0)) return { x0: 0, y0: 0, x1: 12, y1: 9 };
     return { x0, y0, x1, y1 };
   }
@@ -1490,7 +1491,7 @@ const STC = (() => {
   }
   // older models (v1, or plans from other tools) get layers, object types and a floor under every room; nothing is removed
   function migrate(M) {
-    M.floors = M.floors || []; M.fences=M.fences||[]; M.masses = M.masses || []; M.names = M.names || []; M.voids = M.voids || []; M.furn = M.furn || []; M.ops = M.ops || []; M.walls = M.walls || [];
+    M.floors = M.floors || []; M.fences=M.fences||[]; M.masses = M.masses || []; M.imports = M.imports || []; M.names = M.names || []; M.voids = M.voids || []; M.furn = M.furn || []; M.ops = M.ops || []; M.walls = M.walls || [];
     if (!M.id) M.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     if (!M.units) M.units = 'm';
     if (M.version == null) M.version = 0;
@@ -1575,6 +1576,7 @@ const STC = (() => {
     lvs.forEach((lv, k) => { const R = S.L[lv.id]; if (!R || !S.rooms.some((r) => r.lv === lv.id)) return; const up = lvs[k + 1], top = up && up.z > lv.z ? up.z : lv.z + lv.h + 0.25;
       outlineLoops(R).forEach((o, i) => { if (SITEC.area(o) < 0) o = o.slice().reverse(); if (SITEC.area(o) < 1) return; masses.push({ id: `${lv.id}_${i}`, role: 'proposed', level: lv.name, base: +lv.z.toFixed(3), h: +top.toFixed(3), outer: o.map((p) => [+p[0].toFixed(3), +p[1].toFixed(3)]), holes: [] }); }); });
     for (const m of massList(M)) masses.push({ id: 'mass_' + m.id, role: 'proposed', level: m.name || 'Mass', base: m.base, h: m.h, outer: m.outer, holes: [] });
+    for (const o of (M.imports || []).filter((q) => q.type === 'mass' && !(M.hiddenIds || []).includes(q.id))) masses.push({ id: o.id, role: 'context', base: o.g.z, h: o.g.z + o.g.h, outer: [[o.g.x, o.g.y], [o.g.x + o.g.w, o.g.y], [o.g.x + o.g.w, o.g.y + o.g.d], [o.g.x, o.g.y + o.g.d]], holes: [] });   // context blocks kept from the earlier Workspace
     if (site) masses.push(...SITEC.contextMasses(site, M.north || 0));
     const rd = site ? SITEC.readiness(site, 'sun', true) : null;
     return { format: 'plotcloud-scene', v: 1, kind: 'masses', app: 'plotcloud-studio', name: M.name, loc: site ? { lat: site.origin.lat, lon: site.origin.lon, tz: site.tz, dst: site.dst, label: site.origin.label || site.name || '' } : null,
@@ -2228,6 +2230,7 @@ function tidy() {   // after edits: no zero walls, joined lines merged, openings
   M.floors = (M.floors || []).filter((f) => M.levels.some((l) => l.id === f.lv) && f.w > 0.1 && f.d > 0.1);
   M.fences=(M.fences||[]).filter(f=>M.levels.some(l=>l.id===f.lv)&&Array.isArray(f.points)&&f.points.length>=2);
   M.masses = (M.masses || []).filter((m) => Array.isArray(m.points) && m.points.length >= 3);
+  M.imports = (M.imports || []).filter((o) => o && o.g && [o.g.x, o.g.y, o.g.z].every(Number.isFinite));
   if(window.PCStudioGeometry)PCStudioGeometry.upsertAutoFloors(M,{thickness:newSlabThickness()});
   STC.tagAll(M);
 }
@@ -3005,7 +3008,7 @@ $$('[data-ovl]').forEach((c) => c.addEventListener('change', () => { LAY[c.datas
 addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveProject(); } });
 $('#ghost').addEventListener('change', draw);
 function stripTo() { const cp = $('#chartp'), c = $({ air: '#cAir', day: '#cDay', view: '#cView' }[SHOW]); if (!cp || !c) return; const grp = c.closest('.cpg') || c; const left = SHOW === 'air' ? 0 : grp.offsetLeft - 18; if (cp.scrollWidth > cp.clientWidth + 4) cp.scrollTo({ left, behavior: 'smooth' }); }
-function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit }); }
+function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, imports: (M.imports || []).filter((o) => impOn(o, '3d')), lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit }); }
 
 // ---------- levels ----------
 const lvShort = (l) => `${lvSorted().findIndex((q) => q.id === l.id) + 1}F`;
@@ -3860,7 +3863,7 @@ $('#xSvg').addEventListener('click', () => { try { const s = S3.xsvg(1920, XPL.l
 // ---------- 3D update: what is shown follows the layer registry, hidden pieces and the modes ----------
 upd3D = function (fit) {
   if (!window.S3 || !S3.on || !S) return;
-  S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f,
+  S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, imports: (M.imports || []).filter((o) => impOn(o, '3d')), lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f,
     sel: SEL && !WALKING && !XPL.on ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit, hidden: new Set(M.hiddenIds || []), furnOk: (f) => layerOn(furnGroup(f), '3d'), openings: layerOn('parts.openings', '3d'),
     ceil: { light: layerOn('ceiling.lights', '3d'), panel: layerOn('ceiling.panels', '3d'), vent: layerOn('ceiling.vents', '3d'), smoke: layerOn('ceiling.vents', '3d') }, all: WALKING, explode: XPL.on ? { d: XPL.d } : null, lights: layerOn('lighting.fix', '3d'), beams: !!window.__elv3 || layerOn('lighting.beams', '3d') });
   gizmoSync(); if (XPL.on) xplOverlay();
@@ -5186,6 +5189,48 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && !cmpBox.hidden) c
 window.__sunp = { sunPos: sunPosN, sunDirs, sunGrid, sunFigures, get state() { return SUNP; }, refresh: () => sunRefresh(true), schemes: () => schemesOf(), useScheme, newScheme, schemeTable, tradeOff, openSchemes };
 sunRefresh(true);
 
+// ===== Imported meshes in Plan Studio's own model (2026-10-25) =====
+// A mesh imported in the Workspace (OBJ, STL, GLB…) is kept in M.imports, so the one model holds everything and every pane draws it:
+// { id, name, layer (the Workspace layer it was sorted to), type, mat, tris, g: { x, y, z, w, d, h } (plan metres, z up) }. The triangles
+// ([x, y, z, …] local to g) are kept beside the model, not in it (the Workspace's draft.meshes, handed in with WS.importMeshes), so
+// undo and the sync between panes stay small; a model opened on its own may carry them inline as o.mesh.
+// It can be picked, moved (its size stays as imported), hidden and deleted; it is not part of rooms or of any simulation.
+registerLayer('imports', 'Imported meshes'); VIEW_MASKS.plan.push('imports'); VIEW_MASKS['3d'].push('imports');
+let IMP_OFF = new Set(); const IMP_MESH = new Map(); const meshOf = (o) => o.mesh || IMP_MESH.get(o.id) || null;   // Workspace layers switched off (imports keep the Workspace layer they were sorted to)
+const impOn = (o, view) => layerOn('imports', view) && !isHidden(o.id) && !IMP_OFF.has(o.layer);
+function drawImports() { if (!(M.imports || []).length || CAM === '3d') return; const d = VP.d;
+  for (const o of M.imports) { if (!impOn(o)) continue; const a = W2S([o.g.x, o.g.y + o.g.d]), sel = SEL && SEL.k === 'imp' && SEL.id === o.id, hov = HOV && HOV.k === 'imp' && HOV.id === o.id;
+    g.save(); g.fillStyle = 'rgba(120,124,132,.10)'; g.fillRect(a[0], a[1], o.g.w * V.s, o.g.d * V.s); g.setLineDash([5 * d, 3 * d]); g.strokeStyle = sel ? C.accent : hov ? C.ink : '#7b818a'; g.lineWidth = (sel ? 2 : 1.2) * d; g.strokeRect(a[0], a[1], o.g.w * V.s, o.g.d * V.s); g.setLineDash([]);
+    const m = meshOf(o); if (m && m.length && o.g.w * o.g.d * V.s * V.s > 900 * d * d && m.length < 60000) { g.strokeStyle = 'rgba(80,84,92,.35)'; g.lineWidth = 0.6 * d; g.beginPath();   // the triangles seen from above, faint
+      for (let i = 0; i + 8 < m.length; i += 9) { const p = (k) => W2S([o.g.x + m[i + k], o.g.y + m[i + k + 1]]), A = p(0), B = p(3), Cc = p(6); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.lineTo(Cc[0], Cc[1]); g.closePath(); } g.stroke(); }
+    if (o.g.w * V.s > 60 * d) { g.font = `${10.5 * d}px system-ui, sans-serif`; g.fillStyle = '#4b5058'; g.fillText(o.name, a[0] + 4 * d, a[1] + 13 * d); }
+    g.restore(); } }
+{ const _dm = drawMasses; drawMasses = function () { _dm(); drawImports(); }; }
+{ const _ht = hitTest; hitTest = function (p, opt = {}) { const h = _ht(p, opt); if (CAM === '3d' || VIEW2D !== 'plan') return h; if (h && !['room', 'ctx', 'floor', 'mass'].includes(h.k)) return h;   // an import sits above floors, rooms and masses
+  for (const o of (M.imports || []).slice().reverse()) if (impOn(o) && p[0] >= o.g.x && p[0] <= o.g.x + o.g.w && p[1] >= o.g.y && p[1] <= o.g.y + o.g.d) return { k: 'imp', id: o.id };
+  return h; }; }
+{ const _s = selObj; selObj = function (s = SEL) { if (s && s.k === 'imp') return (M.imports || []).find((o) => o.id === s.id) || null; return _s(s); }; }
+{ const _d = delSel; delSel = function () { if (!SEL || SEL.k !== 'imp') return _d(); const b = snapM(); M.imports = M.imports.filter((o) => o.id !== SEL.id); SEL = null; commit(b); }; }
+{ const _p = propsUI; propsUI = function () { if (!SEL || SEL.k !== 'imp') return _p(); const box = $('#props'), sec = $('#secProps'), o = selObj(); if (!o) { sec.hidden = true; box.innerHTML = ''; return; } sec.hidden = false;
+  const n = (k, lab) => `<div class="cell"><label for="pi_${k}">${lab}</label><input type="number" id="pi_${k}" step="0.05" value="${o.g[k]}"></div>`;
+  box.innerHTML = `<div class="ph"><b>${esc(o.name)}</b><button type="button" class="btn" id="pp_x" aria-label="Close" style="padding:2px 8px">×</button></div><p class="note" style="margin:0">Imported mesh · layer <b>${esc(o.layer || 'Imported')}</b> · ${(o.tris || Math.round((meshOf(o) || []).length / 9)).toLocaleString('en')} triangles</p>
+    <div class="kv"><div class="cell full"><label for="pi_name">Name</label><input id="pi_name" value="${esc(o.name)}"></div>${n('x', 'X (m)')}${n('y', 'Y (m)')}${n('z', 'Z (m)')}<div class="cell"><label>Size</label><span class="ro sm">${o.g.w} × ${o.g.d} × ${o.g.h} m</span></div></div>
+    <button type="button" class="btn" id="pp_del">Delete</button><p class="note">Drag it to move it; its size stays as imported. Imported meshes are drawn in every view but are not rooms and are not sent to simulations.</p>`;
+  const ed = (fn) => { const b = snapM(); fn(); commit(b); };
+  $('#pi_name', box).addEventListener('change', (e) => ed(() => { o.name = e.target.value.trim() || o.name; }));
+  for (const k of ['x', 'y', 'z']) $('#pi_' + k, box).addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (!Number.isFinite(v)) { e.target.value = o.g[k]; return; } ed(() => { o.g[k] = +v.toFixed(3); }); });
+  $('#pp_x', box).addEventListener('click', () => { SEL = null; changedSel(); }); $('#pp_del', box).addEventListener('click', delSel); }; }
+// dragging one in the plan
+cv.addEventListener('pointerdown', (e) => { if (TOOL !== 'select' || e.button !== 0 || SPACE || CAM === '3d' || VIEW2D !== 'plan') return; const p = S2W(...evP(e)), h = hitTest(p); if (!h || h.k !== 'imp') return;
+  e.preventDefault(); e.stopImmediatePropagation(); const o = selObj(h); SEL = { k: 'imp', id: o.id }; changedSel(); cv.setPointerCapture(e.pointerId);
+  const b = snapM(), x0 = o.g.x, y0 = o.g.y; let moved = false;
+  const mv = (ev) => { const q = S2W(...evP(ev)); o.g.x = +(x0 + sg(q[0] - p[0])).toFixed(3); o.g.y = +(y0 + sg(q[1] - p[1])).toFixed(3); moved = true; changed(true); };
+  const up = () => { cv.removeEventListener('pointermove', mv, true); cv.removeEventListener('pointerup', up, true); if (moved) commit(b); };
+  cv.addEventListener('pointermove', mv, true); cv.addEventListener('pointerup', up, true); }, true);
+function setImportMeshes(obj) { IMP_MESH.clear(); for (const [k, v] of Object.entries(obj || {})) if (Array.isArray(v) && v.length) IMP_MESH.set(k, v); draw(); if (window.S3 && S3.on) upd3D(); }
+function addImports(list) { const b = snapM(); for (const c of list) { if (c.mesh) IMP_MESH.set(c.id, c.mesh); (M.imports || (M.imports = [])).push({ id: c.id, name: c.name, layer: c.layer || 'Imported', type: 'imported', mat: c.mat || 'Imported', tris: c.mesh ? Math.round(c.mesh.length / 9) : c.tris || 0, g: Object.assign({}, c.g) }); } commit(b); return list.length; }
+window.__imp = { get list() { return M.imports || []; }, setOff(names) { IMP_OFF = new Set(names || []); draw(); if (window.S3 && S3.on) upd3D(); }, setMeshes: setImportMeshes, add: addImports, meshOf };
+
 // for tests and the site
 window.__st = { get site() { return M.site || null; }, sunScene: () => STC.planScene(M, S, LV, 'sunhours'), get LAYER() { return LAYER; }, get VIS() { return VIS; }, get TOOL() { return TOOL; }, isDirty: () => isDirty(),  get M() { return M; }, get S() { return S; }, get RES() { return RES; }, get SEL() { return SEL; }, get LV() { return LV; }, toPx: (p) => { const q = W2S(p); return [q[0] / VP.d, q[1] / VP.d]; } };
 // ---------- start ----------
@@ -5304,6 +5349,14 @@ window.S3 = (() => {
           const lg = new T.BufferGeometry(); lg.setAttribute('position', new T.Float32BufferAttribute(pts, 3)); me.add(new T.LineSegments(lg, new T.LineBasicMaterial({ color: 0x8a7a66, transparent: true, opacity: 0.55 }))); }
         MG.add(me); }
       G.add(MG); }
+    // imported meshes (kept beside the model, see the block "Imported meshes in Plan Studio's own model")
+    const IL = o.imports !== undefined ? o.imports : (o.all ? (M.imports || []).filter((q) => !IMP_OFF.has(q.layer)) : null);
+    if (IL && IL.length) { const IG = new T.Group(); IG.name = 'imports';
+      for (const im of IL) { if (o.hidden && o.hidden.has(im.id)) continue; const m = meshOf(im); if (!m || m.length < 9) continue; const pos = new Float32Array(m.length);
+        for (let i = 0; i + 2 < m.length; i += 3) { pos[i] = im.g.x + m[i]; pos[i + 1] = im.g.z + m[i + 2]; pos[i + 2] = -(im.g.y + m[i + 1]); }
+        const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.computeVertexNormals();
+        const me = new T.Mesh(geo, mat('#cdcac3', { side: T.DoubleSide })); me.name = 'import'; me.userData = { k: 'imp', id: im.id }; IG.add(me); }
+      G.add(IG); }
     // the ground of the site (terrain grid, plan metres; z above the site point), so the surroundings stand on it
     if (o.terrain && o.terrain.pts && o.terrain.nx > 1 && o.terrain.ny > 1) { const T0 = o.terrain, pos = new Float32Array(T0.pts.length * 3), idx = [];
       T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - 0.05; pos[3 * i + 2] = -p[1]; });
@@ -5781,10 +5834,10 @@ if (window.__WSROLE) {
     requestAnimationFrame(poll); })();
 
   // ---- layer locks from the Workspace: a locked layer's objects cannot be picked, and its tools do not start
-  const LOCKK = { mass: 'Masses', ctx: 'Site', wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
+  const LOCKK = { imp: 'Imported', mass: 'Masses', ctx: 'Site', wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
   const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
   cv.addEventListener('pointerdown', () => { WS.down = true; setTimeout(() => { WS.down = false; }, 0); }, true);
-  { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && LOCKK[h.k]; if (L && WS.locks.has(L)) { if (WS.down) say(`The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
+  { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && (h.k === 'imp' ? ((M.imports || []).find((o) => o.id === h.id) || {}).layer || 'Imported' : LOCKK[h.k]); if (L && WS.locks.has(L)) { if (WS.down) say(`The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
   { const _t = setTool; setTool = function (t) { const L = TOOLK[t] || (t === 'place' && PICK && REG[PICK] && REG[PICK].kind === 'stair' ? 'Furniture' : null); if (L && WS.locks.has(L)) { say(`The ${L} layer is locked. Unlock it in Layers to draw on it.`); return; } return _t(t); }; }
   // ---- the gumball can be switched off from the Workspace status bar
   { const _g = gizmoSync; gizmoSync = function () { if (!WS.gb) { if (window.S3 && S3.gizmo) S3.gizmo.set(null); return; } _g(); }; }
@@ -5816,6 +5869,7 @@ if (window.__WSROLE) {
 
   // ---- what the Workspace calls
   Object.assign(WS, {
+    importMeshes(obj) { setImportMeshes(obj); }, impOff(names) { window.__imp.setOff(names); }, addImports(list) { return addImports(list); },
     load(snap) { WS.rx = true; try { useModel(STC.migrate(JSON.parse(snap)), { saved: true }); } finally { WS.rx = false; } C2.m = null; guard(); WS.last = snapM(); WS.lv = LV; WS.sel = KEY(SEL); if (window.S3 && S3.on) { upd3D(true); aspectFit(); } histUI(); return WS.last; },
     apply(snap, live) { if (snap === snapM()) { WS.last = snap; if (!live) { WS.rx = true; try { changed(false); } finally { WS.rx = false; } } return; } WS.rx = true; try { M = JSON.parse(snap); guard(); if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !selObj()) SEL = null; changed(!!live, !!live); if (!live) syncInputs(); if (window.S3 && S3.on) upd3D(); } finally { WS.rx = false; } WS.last = snapM(); WS.sel = KEY(SEL); },
     select(s) { WS.rx = true; try { const o = s ? selObj(s) : null; if (o && o.lv && o.lv !== LV && M.levels.some((l) => l.id === o.lv)) { LV = o.lv; WS.lv = LV; changed(); } SEL = o ? s : null; WS.sel = KEY(SEL); if (SEL && LAYER_OF[SEL.k] && LAYER_OF[SEL.k] !== LAYER) setLayer(LAYER_OF[SEL.k], true); changedSel(); } finally { WS.rx = false; } },
@@ -5844,6 +5898,7 @@ if (window.__WSROLE) {
       const out = [], L = (id) => (lvObj(id) || {}).name || '';
       for (const w of M.walls) out.push({ k: 'wall', id: w.id, lv: w.lv, name: `Wall ${(STC.wallLen(w)).toFixed(2)} m`, level: L(w.lv) });
       for (const f of M.fences || []) out.push({ k: 'fence', id: f.id, lv: f.lv, name: 'Fence', level: L(f.lv) });
+      for (const o of M.imports || []) out.push({ k: 'imp', id: o.id, lv: null, name: o.name, level: '', layer: o.layer || 'Imported', mat: o.mat || 'Imported' });
       for (const m of M.masses || []) { const xs = m.points.map((q) => q[0]), ys = m.points.map((q) => q[1]); out.push({ k: 'mass', id: m.id, lv: null, name: `${m.name || 'Mass'} · ${m.storeys} st`, level: 'Site', bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], h: massH(m) }); }
       for (const o of M.ops) { const w = wallById(o.wall), m = o.gen ? genModel(o.gen.id) : null; out.push({ k: 'op', id: o.id, lv: w ? w.lv : null, name: o.hole ? 'Wall opening' : m ? m.en : o.kind === 'door' ? 'Door' : 'Window', level: w ? L(w.lv) : '', kind: o.hole ? 'hole' : o.kind }); }
       for (const f of M.floors) out.push({ k: 'floor', id: f.id, lv: f.lv, name: f.auto ? 'Floor (follows the walls)' : 'Floor slab', level: L(f.lv) });

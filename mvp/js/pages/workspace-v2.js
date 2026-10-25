@@ -3,7 +3,8 @@
 // a list that does not fit is cut into pages.
 //   Plan        = Plan Studio's 2D (emb/modeler.html?ws=plan): its wall, room, door, window and furniture tools, handles, toolbars and clearance.
 //   Perspective = Plan Studio's 3D (?ws=persp): its gumball, Bird / Walkthrough / Explode, plus a Ghosted / Wireframe display switch.
-//   Shaded      = a solid shaded 3D view (viewport2.js), view only: Plan Studio's geometry plus anything imported and the site.
+//   (Shaded     = the earlier solid view (viewport2.js); since 2026-10-25 not shown: imported meshes and the site are in Plan Studio's
+//                 model, so Perspective draws them. It is kept, hidden and not drawn, so the code that still talks to it keeps working.)
 // One model: the project's draft keeps the Plan Studio model (draft.studio) and, next to it, one component per Plan Studio object
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
@@ -47,10 +48,10 @@ const ON_WALL = new Set(['door', 'win', 'hole']);
 const FURN_BY_NAME = new Map(MODELS.map((m) => [m.en, m]));
 
 // Plan Studio objects ↔ Workspace layers. A Workspace layer's eye and lock act on these Plan Studio layers in every pane.
-const KLAYER = { mass: 'Masses', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
+const KLAYER = { imp: 'Imported', mass: 'Masses', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
 const LMAP = { Walls: ['parts.walls'], Glazing: ['parts.openings'], Structure: ['parts.floors'], Furniture: ['soft', 'custom'], Rooms: ['roomNames', 'roomArea'], Lighting: ['lighting', 'lighting.fix', 'ceiling', 'ceiling.lights', 'ceiling.panels', 'ceiling.vents'], Site: ['ref.site'], Masses: ['mass'] };
-const KTYPE = { mass: 'mass', wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
-const KMAT = { mass: 'Concrete', wall: 'Plaster', fence: 'Timber', floor: 'Concrete', void: 'Concrete', stair: 'Concrete', furn: 'Timber', light: 'Imported', ceil: 'Gypsum', roof: 'Concrete' };
+const KTYPE = { imp: 'imported', mass: 'mass', wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
+const KMAT = { imp: 'Imported', mass: 'Concrete', wall: 'Plaster', fence: 'Timber', floor: 'Concrete', void: 'Concrete', stair: 'Concrete', furn: 'Timber', light: 'Imported', ceil: 'Gypsum', roof: 'Concrete' };
 const PS = /^ps:([a-z]+):(.*)$/;
 const psId = (s) => `ps:${s.k === 'end' ? 'wall' : s.k}:${s.id}`;
 const psSel = (id) => { const m = PS.exec(id || ''); return m ? { k: m[1], id: m[2] } : null; };
@@ -68,6 +69,9 @@ const CLASSES = [
   [/furn|chair|table|desk|sofa|couch|bed|cabinet|shelf|stool|bench|wardrobe|家具|椅|桌|床|柜/i, 'furniture', 'Furniture', 'Timber'],
   [/slab|floor|楼板/i, 'slab', 'Structure', 'Concrete'], [/roof|屋顶/i, 'roof', 'Roof', 'Concrete'],
 ];
+// a box as triangles, local to its corner (x, y, z up), for the earlier Workspace's boxes
+function boxMesh(w, d, h) { const P = [[0, 0, 0], [w, 0, 0], [w, d, 0], [0, d, 0], [0, 0, h], [w, 0, h], [w, d, h], [0, d, h]], F = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7]];
+  return F.flatMap((t) => t.flatMap((i) => P[i].map((v) => +v.toFixed(3)))); }
 function classify(c) { const k = CLASSES.find(([re]) => re.test(c.name)); if (k) Object.assign(c, { type: k[1], layer: k[2], mat: k[3] }); return c; }
 
 const UKEY = 'pc-mvp-ws2';
@@ -97,6 +101,15 @@ export function render(app, [pid]) {
   if (!p.draft.layers.find((l) => l.name === 'Masses')) {   // massing (2026-10-25): every project has the layer; a saved draft stays saved
     const lv = p.versions.at(-1), clean = lv && JSON.stringify(lv.model) === JSON.stringify(p.draft), add = (m) => m.layers.splice(Math.max(0, m.layers.findIndex((l) => l.name === 'Site') + 1), 0, { name: 'Masses', color: LAYER_COLORS.Masses, visible: true, locked: false });
     add(p.draft); if (clean) add(lv.model); }
+  // one model (2026-10-25): imported meshes move into Plan Studio's model (studio.imports, what can be moved) with their triangles beside it
+  // (draft.meshes, kept out of undo and the sync between panes); a saved draft stays saved
+  // (the earlier Workspace's boxes, such as the sample's ground and neighbouring blocks, come along as box meshes)
+  { const own = (c) => !PS.test(c.id) && c.g && (c.mesh || ['mass', 'terrain', 'imported'].includes(c.type));
+    const toImp = (m) => { const ims = (m.components || []).filter(own); if (!ims.length || !m.studio) return false; m.meshes = m.meshes || {};
+      m.studio.imports = (m.studio.imports || []).concat(ims.map((c) => { const mesh = c.mesh || boxMesh(c.g.w, c.g.d, c.g.h); m.meshes[c.id] = mesh; return { id: c.id, name: c.name, layer: c.layer || 'Imported', type: c.type || 'imported', mat: c.mat || 'Imported', tris: Math.round(mesh.length / 9), g: { ...c.g } }; }));
+      m.components = m.components.filter((c) => !own(c)); return true; };
+    const lv = p.versions.at(-1), clean = lv && JSON.stringify(lv.model) === JSON.stringify(p.draft); if (toImp(p.draft) && clean) toImp(lv.model);
+    if (p.draft.meshes && p.draft.studio) { const keep = new Set((p.draft.studio.imports || []).map((o) => o.id)); for (const k of Object.keys(p.draft.meshes)) if (!keep.has(k)) delete p.draft.meshes[k]; } }
   const M = () => p.draft, comp = (id) => M().components.find((c) => c.id === id);
   const layerOf = (c) => M().layers.find((l) => l.name === c?.layer);
   const last = () => p.versions.at(-1), dirty = () => !last() || JSON.stringify(last().model) !== JSON.stringify(p.draft);
@@ -125,7 +138,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws4-20261025`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws5-20261025`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -194,7 +207,8 @@ export function render(app, [pid]) {
   const any = () => INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : INST.props.ready ? INST.props.ws : null;
   const layerVis = () => { const map = { parts: true, ref: true }; for (const [L, ids] of Object.entries(LMAP)) { const l = M().layers.find((x) => x.name === L), on = l ? l.visible !== false : true; for (const id of ids) map[id] = on; } return map; };
   const lockList = () => M().layers.filter((l) => l.locked).map((l) => l.name);
-  function tell(I2) { const w = I2.ws; w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.display(UI.disp);
+  const offLayers = () => M().layers.filter((l) => l.visible === false).map((l) => l.name);
+  function tell(I2) { const w = I2.ws; if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.display(UI.disp);
     const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s); }
   const hub = {
     ready(role, win) {
@@ -246,7 +260,7 @@ export function render(app, [pid]) {
       if (!g) return; out.push({ ...base, id, g, ps: 1 }); };
     for (const o of objs) {
       const L = lvZ.get(o.lv), k = o.k === 'furn' && o.stair ? 'stair' : o.k, m = by.get(o.k + ':' + o.id); by.delete(o.k + ':' + o.id);
-      const base = { name: o.name, type: o.k === 'op' ? (o.kind === 'door' ? 'door' : 'window') : KTYPE[k] || 'furniture', layer: KLAYER[k] || 'Imported', mat: o.k === 'op' ? (o.kind === 'door' ? 'Timber' : 'Glass') : KMAT[k] || 'Imported' };
+      const base = { name: o.name, type: o.k === 'op' ? (o.kind === 'door' ? 'door' : 'window') : KTYPE[k] || 'furniture', layer: o.layer || KLAYER[k] || 'Imported', mat: o.mat || (o.k === 'op' ? (o.kind === 'door' ? 'Timber' : 'Glass') : KMAT[k] || 'Imported') };
       if (o.k === 'room') { base.g = { x: +o.bb[0].toFixed(3), y: +o.bb[1].toFixed(3), z: +(o.z0 ?? (L ? L.z : 0)).toFixed(3), w: +(o.bb[2] - o.bb[0]).toFixed(3), d: +(o.bb[3] - o.bb[1]).toFixed(3), h: +(o.h || (L ? L.h : 2.7)).toFixed(3) }; base.room = { floor: 'Timber', ceiling: 'Gypsum' }; put(psId(o), base, null); continue; }
       put(psId(o), base, HIDDEN.has(o.id) ? null : m);
       if (!out.find((c) => c.id === psId(o)) && L) out.push({ ...base, id: psId(o), ps: 1, g: { x: 0, y: 0, z: L.z, w: 0.01, d: 0.01, h: 0.01 } });   // hidden: listed, not drawn
@@ -264,7 +278,7 @@ export function render(app, [pid]) {
   // the Shaded pane draws the project's components; Plan Studio's ones with the meshes made above
   let vpFitted = false;
   const renderModel = () => ({ ...M(), components: M().components.map((c) => { const m = MESH.get(c.id); return m ? { ...c, ...m } : PS.test(c.id) ? null : c; }).filter(Boolean) });
-  function drawShaded(refit) { vp.setModel(renderModel(), { refit }); vp.select(UI.sels); clearance(); }
+  function drawShaded(refit) { if (UI.view !== 'shaded') return; vp.setModel(renderModel(), { refit }); vp.select(UI.sels); clearance(); }   // no longer shown (see the top)
 
   let tabInfo = null;
   const vp = createViewport2($('#vp', app), { onPick: pick, onBox: boxPick, onHover: (h) => { tabInfo = h; hint(); } });
@@ -277,17 +291,18 @@ export function render(app, [pid]) {
   hint();
 
   // ---- one view, chosen at the top left (as before): Plan (Plan Studio 2D) per level, its ceiling plan and interior
-  // elevation; Perspective (Plan Studio 3D) with Walkthrough and Explode; and the Shaded model with imports and the site.
+  // elevation; Perspective (Plan Studio 3D) with Walkthrough and Explode, which also draws the imports and the site.
   // The three stay loaded on top of each other, so switching is instant and every edit reaches all of them.
   const DISPLAYS = [['shaded', 'Shaded'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe']];
-  if (!['plan', 'persp', 'shaded'].includes(UI.view)) UI.view = 'plan';
+  if (UI.view === 'shaded') UI.view = 'persp';   // the Shaded view is gone (2026-10-25): Perspective draws the imports and the site
+  if (!['plan', 'persp'].includes(UI.view)) UI.view = 'plan';
   function showView(v) { UI.view = v; saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
   function viewName() {
     const a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null, L = (INST.plan.ready ? INST.plan.ws : any())?.levels();
     const lv = L ? L.list.find((l) => l.id === L.lv) : null;
     if (UI.view === 'plan') return a?.view2d === 'ceiling' ? `Ceiling plan · ${lv?.short || ''}` : a?.view2d === 'elev' ? 'Interior elevation' : `Plan · ${lv ? `${lv.short} ${lv.name}` : 'Level 1'}`;
     if (UI.view === 'persp') return b?.walking || b?.walkpick ? 'Walkthrough' : b?.explode ? 'Exploded view' : 'Perspective';
-    return 'Shaded model · imports & site';
+    return 'Perspective';
   }
   function menus() {
     const L = (INST.plan.ready ? INST.plan.ws : any())?.levels(), a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null;
@@ -296,7 +311,7 @@ export function render(app, [pid]) {
     $('#vMenu', app).innerHTML = (L ? L.list.slice().reverse().map((l) => it(`data-view="plan" data-level="${esc(l.id)}"`, UI.view === 'plan' && a?.view2d === 'plan' && l.id === L.lv, `Plan · ${esc(l.short)} ${esc(l.name)}`, `${l.z.toFixed(2)} m`)).join('') : it('data-view="plan"', UI.view === 'plan', 'Plan'))
       + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan')
       + it('data-view="persp"', UI.view === 'persp' && !b?.walking && !b?.walkpick && !b?.explode, 'Perspective', 'Plan Studio 3D')
-      + it('data-view="shaded"', UI.view === 'shaded', 'Shaded model', 'with imports & site') + '<p class="w2-mnote">Every view shows the same model; an edit in one is in all of them. Explode, Walkthrough and Interior elevation are panels on the right.</p>';
+      + '<p class="w2-mnote">Every view shows the same model; an edit in one is in all of them. Explode, Walkthrough and Interior elevation are panels on the right.</p>';
     const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
     $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;
     $('#dMenu', app).innerHTML = DISPLAYS.map(([k, n]) => it(`data-disp="${k}"`, cur === k, n)).join('');
@@ -442,14 +457,14 @@ export function render(app, [pid]) {
     host.innerHTML = `<div class="pane w3-accp${UI.pacc === 'project' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="project" aria-expanded="${UI.pacc === 'project'}"><span>${UI.pacc === 'project' ? '▾' : '▸'} Project</span></button></h2><div class="w3-accb">
       <select class="inp" id="proj" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
       <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
-      <p class="note">Plan, Perspective and Shaded views share this Workspace model. Edit here, then run simulations on a saved version.</p></div></div>
+      <p class="note">Plan and Perspective show the one model (Plan Studio’s): walls, masses, the site and imported meshes. Edit here, then run simulations on a saved version.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
       <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf" hidden>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
-      <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes show in the Shaded model view.</p></div></div>
+      <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes become part of the model: an outline in Plan, the mesh in Perspective; drag one to move it.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Site</span></button></h2><div class="w3-accb">
       <p class="note">${M().studio?.site ? `${esc((M().studio.site.origin.label || "").split(",")[0] || "Site")}: ${M().studio.site.buildings.filter((b) => !b.excluded).length} buildings, ${(M().studio.site.roads || []).length} roads${M().studio.site.terrain ? `, ground ${M().studio.site.terrain.relief} m` : ""} · ${esc(M().studio.site.sources?.[0]?.attribution || "")}` : "No site yet."}</p><a class="btn sm" id="siteBtn" href="#/new-site?project=${p.id}">${M().studio?.site ? "Choose another site on the map" : "Choose the site on the map"}</a>
       <p class="note">The surroundings are on the Site layer, locked; the eye in Layers shows or hides them. Unlock it to change a building’s height, leave one out or draw a missing neighbour (Massing › Neighbour building). Masses go on the Masses layer.</p>
@@ -463,7 +478,7 @@ export function render(app, [pid]) {
     $$('[data-exp]', host).forEach((b) => b.onclick = async () => {
       const k = b.dataset.exp, f = FORMATS.find((x) => x[0] === k), msg = $('#expMsg', host), base = p.name.replace(/\W+/g, '-').replace(/^-|-$/g, '');
       const save = (href, name) => { const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
-      if (k === 'png') { save(vp.png(), `${base}.png`); msg.textContent = 'Saved the Shaded view as PNG.'; return; }
+      if (k === 'png') { const w = INST.persp.ready && INST.persp.win; if (!w || !w.S3 || !w.S3.png) { msg.textContent = 'The Perspective view is still opening; try again in a moment.'; return; } save(w.S3.png(), `${base}.png`); msg.textContent = 'Saved the Perspective view as PNG.'; return; }
       msg.textContent = `Writing ${f[1]}…`; b.disabled = true;
       try { const blob = await makeExport(k, renderModel(), p.name), url = URL.createObjectURL(blob); save(url, `${base}.${k}`); setTimeout(() => URL.revokeObjectURL(url), 4000);
         msg.textContent = `Saved ${base}.${k} (${(blob.size / 1024).toFixed(0)} KB).`; }
@@ -471,7 +486,11 @@ export function render(app, [pid]) {
     });
     const doImport = async (f) => { const msg = $('#impMsg', host); msg.textContent = 'Reading ' + f.name + '…';
       try { const r = await importModel(f, { unit: +$('#unit', host).value, up: $('#up', host).value }), by = {};
-        for (const c of r.components) { classify(c); by[c.layer] = (by[c.layer] || 0) + 1; M().components.push({ id: S.uid('c'), ...c }); open.add(c.layer); }
+        if (!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
+        const list = r.components.map((c) => ({ id: S.uid('c'), ...classify(c) })); M().meshes = M().meshes || {};
+        for (const c of list) { by[c.layer] = (by[c.layer] || 0) + 1; M().meshes[c.id] = c.mesh; open.add(c.layer); if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#cfcac0', visible: true, locked: false }); }
+        for (const I2 of ready()) if (I2.ws.importMeshes) I2.ws.importMeshes(M().meshes);
+        INST.plan.ws.addImports(list.map(({ mesh, ...c }) => ({ ...c, tris: Math.round(mesh.length / 9) })));   // Plan Studio keeps it; the sync brings it to the other panes and the project
         UI.open = [...open]; saveUI(); persist(); refresh(true);
         msg.textContent = `${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`; }
       catch (e) { msg.textContent = e.message; } };
@@ -509,7 +528,7 @@ export function render(app, [pid]) {
       <label class="f">Material<select id="pMat">${MATS.map((m) => `<option ${m === c.mat ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
       <span class="note">Position (m)</span><div class="dims">${num('x', 'x')}${num('y', 'y')}${num('z', 'z')}</div>
       <span class="note">Size (m)</span><div class="dims">${num('w', 'Width')}${num('d', 'Depth')}${num('h', 'Height')}</div>
-      <p class="note">${c.mesh ? 'Imported mesh: position can change, size stays as imported. It shows in the Shaded pane; Plan Studio’s panes draw Plan Studio objects.' : 'A component kept from the earlier Workspace: it shows in the Shaded pane.'}</p></div>`;
+      <p class="note">${c.mesh ? 'Imported mesh: position can change, size stays as imported.' : 'A component kept from the earlier Workspace: it is listed and exported; Plan and Perspective draw Plan Studio’s model.'}</p></div>`;
     $('#pBack', host).onclick = () => { showParams = false; rail(); panel(); };
     $('#pName', host).onchange = (e) => { c.name = e.target.value.trim() || c.name; ch(); };
     $('#pLayer', host).onchange = (e) => { c.layer = e.target.value; open.add(c.layer); ch(); };
@@ -530,7 +549,7 @@ export function render(app, [pid]) {
       ${o ? `<div class="comps">${list.map((c) => { const h = hid(c), dis = l.locked || !l.visible || h; return `<div class="w3-crow${h ? ' hid' : ''}"><button data-sel="${c.id}" aria-current="${isSel(c.id)}" ${dis ? `aria-disabled="true" title="${h ? 'Hidden piece: show it with the eye' : l.locked ? 'Locked layer: unlock it to select' : 'Hidden layer: show it to select'}"` : 'title="Shift-click adds, Ctrl-click removes"'}>${esc(c.name)}</button>${psSel(c.id)?.k === 'furn' ? `<button class="ic sm" data-pshide="${esc(c.id)}" aria-pressed="${h}" title="${h ? 'Show this piece again' : 'Hide this piece'}" aria-label="${h ? 'Show' : 'Hide'} ${esc(c.name)}">${h ? EYE_OFF : EYE_ON}</button>` : ''}</div>`; }).join('') || '<span class="note">Empty</span>'}</div>` : ''}</div>`; }).join('');
     fit(host, $$('.w2-lrow, .comps > *', host), 'layers');   // the tree, line by line: layers and the open layer's components
     $$('[data-open]', host).forEach((b) => b.onclick = () => { const n = M().layers[b.dataset.open].name; openOnly(open.has(n) ? null : n); saveUI(); layers(); });
-    $$('[data-vis]', host).forEach((b) => b.onclick = () => { const l = M().layers[b.dataset.vis]; l.visible = !l.visible; persist(); const map = layerVis(); for (const I2 of ready()) I2.ws.layers(map); drawShaded(false);
+    $$('[data-vis]', host).forEach((b) => b.onclick = () => { const l = M().layers[b.dataset.vis]; l.visible = !l.visible; persist(); const map = layerVis(), off = offLayers(); for (const I2 of ready()) { I2.ws.layers(map); if (I2.ws.impOff) I2.ws.impOff(off); } drawShaded(false);
       if (!l.visible && UI.sels.some((id) => comp(id)?.layer === l.name)) setSel(UI.sels.filter((id) => comp(id)?.layer !== l.name)); else { vp.select(UI.sels); layers(); } });
     $$('[data-lock]', host).forEach((b) => b.onclick = () => { const l = M().layers[b.dataset.lock]; l.locked = !l.locked; persist(); const lk = lockList(); for (const I2 of ready()) I2.ws.setLocks(lk);
       if (l.locked && UI.sels.some((id) => comp(id)?.layer === l.name)) setSel(UI.sels.filter((id) => comp(id)?.layer !== l.name)); else layers(); });

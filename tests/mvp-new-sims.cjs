@@ -9,7 +9,7 @@ const B = (process.env.TEST_BASE || 'http://127.0.0.1:8765') + '/mvp/';
   const p = await (await b.newContext({ viewport: { width: 1500, height: 900 } })).newPage(); const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   await p.goto(B); await p.evaluate(() => localStorage.clear()); await p.goto(B + '#/'); await p.waitForTimeout(800); await p.reload(); await p.waitForTimeout(800);
-  await p.goto(B + '#/simulations'); await p.waitForTimeout(800);
+  await p.goto(B + '#/simulations'); await p.waitForFunction(() => document.querySelector('#grid [data-sim="noise"]'), null, { timeout: 15000 }).catch(() => {});
   const names = await p.evaluate(() => [...document.querySelectorAll('a[href^="#/simulations/"]')].map((a) => a.getAttribute('href')));
   for (const id of ['wayfinding', 'privacy', 'noise']) ok(names.includes('#/simulations/' + id), `Simulations page lists ${id}`);
   const fr = () => p.frame({ url: /emb\/(wayfinding|privacy|noise)\.html/ });

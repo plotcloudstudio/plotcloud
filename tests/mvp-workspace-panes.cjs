@@ -1,4 +1,5 @@
-// The Workspace's three panes (Plan Studio 2D | Plan Studio 3D | Shaded): the acceptance checks of the 2026-10-24 repair patch.
+// The Workspace's panes (Plan Studio 2D | Plan Studio 3D | Properties): the acceptance checks of the 2026-10-24 repair patch.
+// Since 2026-10-25 there is one model: imported meshes are in Plan Studio's model and the Shaded view is gone.
 // Run with a static server on 8765 (python3 -m http.server 8765 --bind 127.0.0.1); TEST_BASE overrides it.
 const fs=require('fs');
 const L={};
@@ -52,7 +53,7 @@ const inPersp=await W(p,'persp',async(w,ids)=>{const ms=await w.__ws.meshes();re
 ok(inPersp.every(Boolean),'both have geometry in Perspective (door leaf / glazing)');
 const wallCut=await W(p,'persp',async(w,id)=>{const ms=await w.__ws.meshes();const m=ms.find(m=>m.k==='wall'&&m.id===id);let n=0;for(let i=2;i<m.pos.length;i+=3)if(m.pos[i]>0.05&&m.pos[i]<2.0)n++;return {tri:m.pos.length/9};},nw.id);
 console.log('  wall triangles (with holes):',wallCut.tri);
-const sh=await p.evaluate(ids=>ids.map(id=>!!__ws2.renderModel().components.find(c=>c.id==='ps:op:'+id&&c.mesh)),mine.map(o=>o.id));ok(sh.every(Boolean),'and in the Shaded pane');
+const sh=await p.evaluate(ids=>ids.map(id=>!!__ws2.renderModel().components.find(c=>c.id==='ps:op:'+id&&c.mesh)),mine.map(o=>o.id));ok(sh.every(Boolean),'and in the Workspace’s model (with their meshes, for export)');
 await p.screenshot({path:L.SP+'t3a.png'});
 // parameters in the left panel: select the door in the Plan, change its width in the props pane
 await p.keyboard.press('Escape');await W(p,'plan',w=>{w.document.querySelector('[data-tool="select"]').click();});
@@ -122,7 +123,7 @@ ok(await W(p,'plan',w=>w.__ws.state().clr),'Clearance switch turns Plan Studio\'
 const cl=async()=>W(p,'plan',(w,id)=>w.__ws.clearances().find(c=>c.id===id),B0.id);
 const span=(c)=>{const xs=c.pts.map(q=>q[0]),ys=c.pts.map(q=>q[1]);return {x0:+Math.min(...xs).toFixed(3),x1:+Math.max(...xs).toFixed(3),y0:+Math.min(...ys).toFixed(3),y1:+Math.max(...ys).toFixed(3)};};
 let C0=await cl();console.log('  clearance box:',JSON.stringify(span(C0)));
-ok(await p.evaluate(()=>__ws2.vp.clearanceCount())>0,'and draws it in the Shaded pane');
+ok(await W(p,'persp',w=>w.__ws.state().clr),'and in the Perspective pane');
 // resize: W 1520 → 1800 (room to grow on the right)
 await p.evaluate(id=>__ws2.hub.select('test',{k:'furn',id}),B0.id);await p.waitForTimeout(400);
 const setW=async(v)=>{await W(p,'props',(w,v)=>{const i=w.document.querySelector('#props [data-gp="W"]');i.value=String(v);i.dispatchEvent(new Event('change',{bubbles:true}));},v);await p.waitForTimeout(900);};
@@ -169,7 +170,7 @@ await p.mouse.up();await p.keyboard.up('Alt');await p.waitForTimeout(1000);
 console.log('  during the drag: plan x',live[0].x,'· perspective x',live[1].x,'· shaded centre x',live[2]);
 ok(Math.abs(live[0].x-(B0.x+1))<0.06,'Plan: the bed is 1 m further while still dragging');
 ok(live[1].x===live[0].x,'Perspective has the same position during the drag');
-ok(Math.abs(live[2]-live[0].x)<0.06,'Shaded has it there too during the drag');
+ok(Math.abs(live[2]-live[0].x)<0.06,'the Workspace’s model has it there too during the drag');
 const after=await bed('props');ok(after.x===live[0].x,'the parameter pane has it after the drag');
 ok(await p.evaluate(x=>Math.abs(__ws2.model().studio.furn.find(f=>f.gen&&f.gen.id==='bed').x-x)<1e-6,live[0].x),'and the project draft keeps it');
 await view(p,'persp');
@@ -205,7 +206,7 @@ ok(await ft('hide'),'Hide');await p.waitForTimeout(1200);ok((await bed()).hidden
 const row=await p.evaluate(id=>{const b=document.querySelector(`[data-pshide="ps:furn:${id}"]`);return b?b.getAttribute('aria-pressed'):null;},B0.id);
 const nh=await p.evaluate(()=>document.querySelector('.w3-hidn')?.textContent);
 ok(row==='true'&&/hidden/.test(nh||''),'the layer tree shows it with its eye off ("'+nh+'")');
-ok(await p.evaluate(id=>!__ws2.renderModel().components.find(c=>c.id==='ps:furn:'+id),B0.id),'and Shaded leaves it out');
+ok(await p.evaluate(id=>!__ws2.renderModel().components.find(c=>c.id==='ps:furn:'+id),B0.id),'and the exported model leaves it out');
 await p.evaluate(id=>document.querySelector(`[data-pshide="ps:furn:${id}"]`).click(),B0.id);await p.waitForTimeout(1200);ok(!(await bed()).hidden,'the eye in the layer tree shows it again');
 // 2D toolbar: Edit / Delete / Text / Undo / Redo / Clear; 3D: Orbit / Explode
 const tb=await W(p,'plan',w=>[...w.document.querySelectorAll('#toolBar > button')].filter(b=>getComputedStyle(b).display!=='none').map(b=>b.textContent.trim()));console.log('  Plan toolbar:',tb.join(' / '));
@@ -228,7 +229,7 @@ await p.click('#xGo');await p.waitForTimeout(700);
 await W(p,'persp',w=>w.document.querySelector('[data-tool="orbit"]').click());ok(await W(p,'persp',w=>w.__ws.state().tool)==='orbit','Orbit');
 // Perspective header: Walkthrough, Bird, Ghosted / Wireframe
 const vm=await p.evaluate(()=>{document.getElementById('vBtn').click();const r=[...document.querySelectorAll('#vMenu [data-view]')].map(b=>b.dataset.view);document.getElementById('vBtn').click();return r;});
-ok(!vm.some(v=>['walk','explode','elev'].includes(v))&&vm.includes('persp')&&vm.includes('shaded'),'the top-left pill keeps the views; Explode, Walkthrough and Interior elevation moved to the right ('+vm.join(', ')+')');
+ok(!vm.some(v=>['walk','explode','elev'].includes(v))&&vm.includes('persp')&&!vm.includes('shaded'),'the top-left pill keeps the views (no Shaded: one model); Explode, Walkthrough and Interior elevation moved to the right ('+vm.join(', ')+')');
 await p.click('#tabList [data-tab="walk"]');await p.click('#wBtns [data-act="walk"]');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().walkpick),'Walkthrough: Plan Studio first asks where to start (the figure on the plan)');await p.click('#wBtns [data-act="walkGo"]');await p.waitForTimeout(1200);ok(await W(p,'persp',w=>w.__ws.state().walking),'Start walking (the panel\'s button): first person in the Perspective view');await p.screenshot({path:L.SP+'t45walk.png'});
 await p.click('#wBtns [data-act="walkX"]');await p.waitForTimeout(900);ok(!(await W(p,'persp',w=>w.__ws.state().walking)),'Exit walkthrough from the panel');
 await p.click('#tabList [data-tab="elev"]');await p.click('#eBtns [data-act="elev"]');await p.waitForTimeout(900);
@@ -247,9 +248,9 @@ await p.click('#dBtn');await p.click('#dMenu [data-disp="shaded"]');await p.wait
 // §5 · Walls eye off: walls go in all three panes
 const wallsIdx=await p.evaluate(()=>[...document.querySelectorAll('.w2-layer')].findIndex(l=>/Walls/.test(l.querySelector('.nm').textContent)));
 await p.evaluate(i=>document.querySelectorAll('[data-vis]')[i].click(),wallsIdx);await p.waitForTimeout(900);
-const vis=[await W(p,'plan',w=>w.__st.VIS.Wall),await W(p,'persp',w=>w.__st.VIS.Wall),await p.evaluate(()=>__ws2.vp.probe().filter(o=>o.id.startsWith('ps:wall:')).length)];
-console.log('  Walls off → plan VIS.Wall',vis[0],'· perspective',vis[1],'· shaded wall objects',vis[2]);
-ok(vis[0]===false&&vis[1]===false&&vis[2]===0,'turning off the Walls eye hides walls in all three panes');
+const vis=[await W(p,'plan',w=>w.__st.VIS.Wall),await W(p,'persp',w=>w.__st.VIS.Wall),await W(p,'props',w=>w.__st.VIS.Wall)];
+console.log('  Walls off → plan VIS.Wall',vis[0],'· perspective',vis[1],'· properties',vis[2]);
+ok(vis[0]===false&&vis[1]===false&&vis[2]===false,'turning off the Walls eye hides walls in every pane');
 await p.screenshot({path:L.SP+'t45v.png'});
 await p.evaluate(i=>document.querySelectorAll('[data-vis]')[i].click(),wallsIdx);await p.waitForTimeout(700);
 await view(p,'plan');
@@ -261,9 +262,9 @@ await p.click('[data-panel="draw"]');await p.click('[data-tool="Straight wall"]'
 await p.evaluate(i=>document.querySelectorAll('[data-lock]')[i].click(),wallsIdx);await p.waitForTimeout(400);
 // one view at a time, chosen at the top left, and kept after a reload
 ok(await p.evaluate(()=>document.querySelectorAll('.w3-pane.on').length===1&&!document.querySelector('.w3-split')),'one view at a time, no splitters');
-await view(p,'shaded');ok(await p.evaluate(()=>document.querySelector('.w3-pane.on').dataset.pane)==='shaded','the Shaded model (imports and site) is one of the views');
+await view(p,'persp');ok(await p.evaluate(()=>document.querySelector('.w3-pane.on').dataset.pane)==='persp','Perspective is one of the views');
 await p.reload();for(let i=0;i<60;i++){await p.waitForTimeout(400);if(await p.evaluate(()=>window.__ws2&&window.__ws2.ready()))break;}
-ok(await p.evaluate(()=>document.querySelector('.w3-pane.on').dataset.pane)==='shaded'&&/Shaded model/.test(await p.textContent('#vBtn')),'the chosen view is kept after a reload');
+ok(await p.evaluate(()=>document.querySelector('.w3-pane.on').dataset.pane)==='persp'&&/Perspective/.test(await p.textContent('#vBtn')),'the chosen view is kept after a reload');
 ok(await p.evaluate(()=>!!document.querySelector('#cap #vBtn')),'the view pill is back at the top left');
 ok(!!(await bed()),'the bed is still there after the reload (the draft keeps Plan Studio\'s model)');
 
@@ -299,10 +300,12 @@ fs.writeFileSync(L.SP+'imp.obj',obj);
 await p.click('[data-panel="project"]');await p.click('[data-pacc="import"]');await p.selectOption('#unit','0.001');await p.selectOption('#up','z');
 await p.setInputFiles('#file',L.SP+'imp.obj');await p.waitForTimeout(1500);
 const msg=await p.evaluate(()=>document.getElementById('impMsg').textContent);console.log('  import:',msg);
-const imp=await p.evaluate(()=>__ws2.model().components.filter(c=>c.mesh).map(c=>[c.name,c.layer,+c.g.w.toFixed(2),+c.g.d.toFixed(2),+c.g.h.toFixed(2)]));console.log('  imported:',JSON.stringify(imp));
+const imp=await p.evaluate(()=>(__ws2.model().studio.imports||[]).filter(o=>/north_wall|chair_1/.test(o.name)).map(c=>[c.name,c.layer,+c.g.w.toFixed(2),+c.g.d.toFixed(2),+c.g.h.toFixed(2)]));console.log('  imported:',JSON.stringify(imp));
 ok(imp.some(c=>c[1]==='Walls')&&imp.some(c=>c[1]==='Furniture'),'auto layers by name: the wall on Walls, the chair on Furniture');
 ok(imp.some(c=>Math.abs(Math.max(c[2],c[3])-4)<0.05)&&imp.some(c=>Math.abs(c[4]-0.9)<0.02),'millimetres read as metres (4000 mm → 4 m, 900 mm → 0.9 m)');
-ok(await p.evaluate(()=>__ws2.vp.probe().some(o=>__ws2.model().components.find(c=>c.id===o.id)?.mesh)),'imported meshes show in the Shaded pane');
+ok(await p.evaluate(()=>{const m=__ws2.model();return (m.studio.imports||[]).filter(o=>/north_wall|chair_1/.test(o.name)).every(o=>Array.isArray(m.meshes&&m.meshes[o.id])&&m.meshes[o.id].length>=9);}),'imported meshes are in Plan Studio’s model, their triangles kept beside it (draft.meshes)');
+ok(await W(p,'persp',w=>{const L=w.__imp.list.filter(o=>/north_wall|chair_1/.test(o.name));return L.length===2&&L.every(o=>w.__imp.meshOf(o));}),'…and the Perspective pane has them to draw');
+ok(await p.evaluate(()=>__ws2.model().components.some(c=>/^ps:imp:/.test(c.id)&&c.layer==='Walls')),'…and the layer tree lists them on their layers');
 ok(await p.evaluate(()=>document.getElementById('unit').value==='0.001'&&document.getElementById('up').value==='z'),'Units and Up axis stay as chosen');
 
 if(errs.length){console.log('page errors:',errs);process.exitCode=1;}
