@@ -70,8 +70,10 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
     assert.equal(await f.getByRole('button',{name:'Plan + chart',exact:true}).count(),0);
     await f.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Settings',exact:true}).click();
     await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);
-    await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');
-    await f.locator('#run').click();
+    // Font metrics differ on CI; navigate the panel rather than relying on native scrolling.
+    const reach=async selector=>{for(let n=0;n<20;n++){const direction=await f.locator(selector).evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return r.top<v.top?-1:r.bottom>v.bottom?1:0;});if(!direction)return;await f.locator('#panelL .pc-fit-pages').getByRole('button',{name:direction<0?'← Previous':'Next →',exact:true}).click();await page.waitForTimeout(60);}throw Error('Unreachable input: '+selector);};
+    await page.waitForTimeout(100);await reach('#lvlSeg [data-l=custom]');await f.locator('#lvlSeg [data-l=custom]').click();await reach('#grid');await f.locator('#grid').selectOption('4');await reach('#step');await f.locator('#step').selectOption('30');
+    await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);await page.waitForTimeout(100);await reach('#run');await f.locator('#run').click();
     await page.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;});
     assert.equal(await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Legend',exact:true}).count(),0);
     assert.equal(await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Charts',exact:true}).count(),1);
