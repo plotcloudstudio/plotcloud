@@ -12,5 +12,5 @@ const sims=['sunhours','wind','daylight','vent','spacesyntax','movementdepth','i
   if(['vent','spacesyntax','wayfinding','privacy'].includes(id))await page.screenshot({path:require('os').tmpdir()+'/unified-'+id+'.png'});
   await page.close();
  }
- console.log('PASS unified UI audit: '+rows.length+' tools; overflow groups retained for review, never clipped or scaled');
+ console.log('PASS unified UI audit: '+rows.length+' tools; accepted unified views fit, oversized legacy layouts explicitly flagged for review');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
