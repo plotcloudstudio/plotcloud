@@ -1,0 +1,68 @@
+{
+ "03-20": {
+  "date": "2026-03-20",
+  "samples": 17568,
+  "grid_m": 0.63,
+  "step_min": 10,
+  "suns": 71,
+  "mean_abs_h": 0.0,
+  "max_abs_h": 0.0,
+  "within_one_step": 1.0,
+  "passed": true,
+  "north_of_wall": {
+   "1": {
+    "engine": 0.0,
+    "reference": 0.0
+   },
+   "3": {
+    "engine": 0.14,
+    "reference": 0.14
+   },
+   "5": {
+    "engine": 0.35,
+    "reference": 0.35
+   },
+   "10": {
+    "engine": 0.84,
+    "reference": 0.84
+   },
+   "15": {
+    "engine": 11.83,
+    "reference": 11.83
+   }
+  }
+ },
+ "12-21": {
+  "date": "2026-12-21",
+  "samples": 27118,
+  "grid_m": 0.51,
+  "step_min": 10,
+  "suns": 47,
+  "mean_abs_h": 0.0,
+  "max_abs_h": 0.0,
+  "within_one_step": 1.0,
+  "passed": true,
+  "north_of_wall": {
+   "1": {
+    "engine": 0.0,
+    "reference": 0.0
+   },
+   "3": {
+    "engine": 0.0,
+    "reference": 0.0
+   },
+   "5": {
+    "engine": 0.0,
+    "reference": 0.0
+   },
+   "10": {
+    "engine": 0.0,
+    "reference": 0.0
+   },
+   "15": {
+    "engine": 0.0,
+    "reference": 0.0
+   }
+  }
+ }
+}

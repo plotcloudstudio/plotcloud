@@ -1,0 +1,414 @@
+{
+ "tolerances": {
+  "sky_through_glass": "max(0.2 points, 10 %) against Radiance, black room, same glass",
+  "df": "max(0.5 points, 25 %) against Radiance",
+  "references": "Radiance and the integral within max(0.05 points, 3 %)"
+ },
+ "cases": [
+  {
+   "case": "room, open view",
+   "settings": {
+    "width": 5.0,
+    "depth": 6.0,
+    "ceil": 2.7,
+    "win": [
+     1.0,
+     4.0
+    ],
+    "sill": 0.9,
+    "head": 2.1,
+    "wp": 0.8,
+    "tau": 0.6,
+    "rf": 0.2,
+    "rw": 0.5,
+    "rc": 0.8,
+    "ground": 0.15
+   },
+   "grid": {
+    "spacing": 0.1,
+    "bearings": 720
+   },
+   "rows": [
+    {
+     "depth": 0.5,
+     "engine_point": [
+      2.45,
+      0.45
+     ],
+     "sky_through_glass": {
+      "engine": 14.728,
+      "radiance": 14.149,
+      "error_pct": 4.1,
+      "passed": true
+     },
+     "df": {
+      "engine": 15.357,
+      "radiance": 14.672,
+      "error_points": 0.685,
+      "error_pct": 4.7,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.628,
+      "radiance": 0.523
+     },
+     "references": {
+      "radiance_open": 27.846,
+      "integral_open": 27.823,
+      "agree": true
+     }
+    },
+    {
+     "depth": 1.5,
+     "engine_point": [
+      2.45,
+      1.45
+     ],
+     "sky_through_glass": {
+      "engine": 4.457,
+      "radiance": 4.214,
+      "error_pct": 5.8,
+      "passed": true
+     },
+     "df": {
+      "engine": 5.085,
+      "radiance": 4.785,
+      "error_points": 0.3,
+      "error_pct": 6.3,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.628,
+      "radiance": 0.571
+     },
+     "references": {
+      "radiance_open": 7.331,
+      "integral_open": 7.332,
+      "agree": true
+     }
+    },
+    {
+     "depth": 2.5,
+     "engine_point": [
+      2.45,
+      2.45
+     ],
+     "sky_through_glass": {
+      "engine": 1.417,
+      "radiance": 1.35,
+      "error_pct": 5.0,
+      "passed": true
+     },
+     "df": {
+      "engine": 2.046,
+      "radiance": 1.91,
+      "error_points": 0.136,
+      "error_pct": 7.1,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.628,
+      "radiance": 0.56
+     },
+     "references": {
+      "radiance_open": 2.261,
+      "integral_open": 2.301,
+      "agree": true
+     }
+    },
+    {
+     "depth": 3.5,
+     "engine_point": [
+      2.45,
+      3.45
+     ],
+     "sky_through_glass": {
+      "engine": 0.571,
+      "radiance": 0.536,
+      "error_pct": 6.6,
+      "passed": true
+     },
+     "df": {
+      "engine": 1.2,
+      "radiance": 1.015,
+      "error_points": 0.185,
+      "error_pct": 18.2,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.628,
+      "radiance": 0.479
+     },
+     "references": {
+      "radiance_open": 0.918,
+      "integral_open": 0.923,
+      "agree": true
+     }
+    },
+    {
+     "depth": 4.5,
+     "engine_point": [
+      2.45,
+      4.45
+     ],
+     "sky_through_glass": {
+      "engine": 0.274,
+      "radiance": 0.259,
+      "error_pct": 6.1,
+      "passed": true
+     },
+     "df": {
+      "engine": 0.903,
+      "radiance": 0.654,
+      "error_points": 0.248,
+      "error_pct": 38.0,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.628,
+      "radiance": 0.396
+     },
+     "references": {
+      "radiance_open": 0.442,
+      "integral_open": 0.445,
+      "agree": true
+     }
+    },
+    {
+     "depth": 5.5,
+     "engine_point": [
+      2.45,
+      5.45
+     ],
+     "sky_through_glass": {
+      "engine": 0.147,
+      "radiance": 0.132,
+      "error_pct": 11.8,
+      "passed": true
+     },
+     "df": {
+      "engine": 0.776,
+      "radiance": 0.506,
+      "error_points": 0.269,
+      "error_pct": 53.1,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.628,
+      "radiance": 0.375
+     },
+     "references": {
+      "radiance_open": 0.233,
+      "integral_open": 0.244,
+      "agree": true
+     }
+    }
+   ]
+  },
+  {
+   "case": "room, building 10 m opposite, 8 m high",
+   "settings": {
+    "width": 5.0,
+    "depth": 6.0,
+    "ceil": 2.7,
+    "win": [
+     1.0,
+     4.0
+    ],
+    "sill": 0.9,
+    "head": 2.1,
+    "wp": 0.8,
+    "tau": 0.6,
+    "rf": 0.2,
+    "rw": 0.5,
+    "rc": 0.8,
+    "ground": 0.15,
+    "opposite": {
+     "d": 10.0,
+     "h": 8.0
+    }
+   },
+   "grid": {
+    "spacing": 0.1,
+    "bearings": 720
+   },
+   "rows": [
+    {
+     "depth": 0.5,
+     "engine_point": [
+      2.45,
+      0.45
+     ],
+     "sky_through_glass": {
+      "engine": 11.645,
+      "radiance": 11.003,
+      "error_pct": 5.8,
+      "passed": true
+     },
+     "df": {
+      "engine": 12.726,
+      "radiance": 11.607,
+      "error_points": 1.119,
+      "error_pct": 9.6,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 1.081,
+      "radiance": 0.604
+     },
+     "references": {
+      "radiance_open": 22.214,
+      "integral_open": 22.23,
+      "agree": true
+     }
+    },
+    {
+     "depth": 1.5,
+     "engine_point": [
+      2.45,
+      1.45
+     ],
+     "sky_through_glass": {
+      "engine": 1.948,
+      "radiance": 1.733,
+      "error_pct": 12.4,
+      "passed": false
+     },
+     "df": {
+      "engine": 2.918,
+      "radiance": 2.376,
+      "error_points": 0.542,
+      "error_pct": 22.8,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.97,
+      "radiance": 0.643
+     },
+     "references": {
+      "radiance_open": 3.066,
+      "integral_open": 3.075,
+      "agree": true
+     }
+    },
+    {
+     "depth": 2.5,
+     "engine_point": [
+      2.45,
+      2.45
+     ],
+     "sky_through_glass": {
+      "engine": 0.0,
+      "radiance": 0.0,
+      "error_pct": null,
+      "passed": true
+     },
+     "df": {
+      "engine": 0.741,
+      "radiance": 0.494,
+      "error_points": 0.247,
+      "error_pct": 50.0,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.741,
+      "radiance": 0.494
+     },
+     "references": {
+      "radiance_open": 0.0,
+      "integral_open": 0.0,
+      "agree": true
+     }
+    },
+    {
+     "depth": 3.5,
+     "engine_point": [
+      2.45,
+      3.45
+     ],
+     "sky_through_glass": {
+      "engine": 0,
+      "radiance": 0.0,
+      "error_pct": null,
+      "passed": true
+     },
+     "df": {
+      "engine": 0.562,
+      "radiance": 0.332,
+      "error_points": 0.23,
+      "error_pct": 69.4,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.562,
+      "radiance": 0.332
+     },
+     "references": {
+      "radiance_open": 0.0,
+      "integral_open": 0.0,
+      "agree": true
+     }
+    },
+    {
+     "depth": 4.5,
+     "engine_point": [
+      2.45,
+      4.45
+     ],
+     "sky_through_glass": {
+      "engine": 0,
+      "radiance": 0.0,
+      "error_pct": null,
+      "passed": true
+     },
+     "df": {
+      "engine": 0.494,
+      "radiance": 0.242,
+      "error_points": 0.252,
+      "error_pct": 104.0,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.494,
+      "radiance": 0.242
+     },
+     "references": {
+      "radiance_open": 0.0,
+      "integral_open": 0.0,
+      "agree": true
+     }
+    },
+    {
+     "depth": 5.5,
+     "engine_point": [
+      2.45,
+      5.45
+     ],
+     "sky_through_glass": {
+      "engine": 0,
+      "radiance": 0.0,
+      "error_pct": null,
+      "passed": true
+     },
+     "df": {
+      "engine": 0.465,
+      "radiance": 0.176,
+      "error_points": 0.289,
+      "error_pct": 164.0,
+      "passed": true
+     },
+     "reflected": {
+      "engine": 0.465,
+      "radiance": 0.176
+     },
+     "references": {
+      "radiance_open": 0.0,
+      "integral_open": 0.0,
+      "agree": true
+     }
+    }
+   ]
+  }
+ ],
+ "passed": false
+}
