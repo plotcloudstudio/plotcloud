@@ -26,6 +26,15 @@ Now there is **one model**, Plan Studio's:
   still cast shadows in Sun hours and count as context in wind and noise, as before.
 * Exports (OBJ, GLB, STL, DXF, 3DM, DAE, IFC) take the whole model, imports included.
 
+## My furniture (2026-10-25)
+
+Workspace › Furniture opens with **My furniture**: *Import furniture* reads one piece from an .obj, .glb, .stl or .3dm file (all its
+meshes merged, standing on the floor; units read from the size — a piece is 0.1–8 m — or from the .3dm), makes its picture in the
+same light and view as the library's pictures, and keeps it in your account (this browser) for every project. Click a card, then
+click in the Plan to place it on the current level (R turns the next one, Esc stops). Every piece placed in a project shares one
+mesh (`draft.meshes[<piece id>]`, the import's `ref`), has its own position and quarter turns (Turn 90° in its panel), and is on the
+Furniture layer. Removing a piece from My furniture keeps the ones already placed. Test: `tests/mvp-my-furniture.cjs`.
+
 ## On "a single Plan Studio instance"
 
 The plan said "a single Plan Studio instance". What is single now is the **model**: one source of truth that every pane edits and

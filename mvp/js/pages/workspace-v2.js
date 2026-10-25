@@ -109,7 +109,7 @@ export function render(app, [pid]) {
       m.studio.imports = (m.studio.imports || []).concat(ims.map((c) => { const mesh = c.mesh || boxMesh(c.g.w, c.g.d, c.g.h); m.meshes[c.id] = mesh; return { id: c.id, name: c.name, layer: c.layer || 'Imported', type: c.type || 'imported', mat: c.mat || 'Imported', tris: Math.round(mesh.length / 9), g: { ...c.g } }; }));
       m.components = m.components.filter((c) => !own(c)); return true; };
     const lv = p.versions.at(-1), clean = lv && JSON.stringify(lv.model) === JSON.stringify(p.draft); if (toImp(p.draft) && clean) toImp(lv.model);
-    if (p.draft.meshes && p.draft.studio) { const keep = new Set((p.draft.studio.imports || []).map((o) => o.id)); for (const k of Object.keys(p.draft.meshes)) if (!keep.has(k)) delete p.draft.meshes[k]; } }
+    if (p.draft.meshes && p.draft.studio) { const keep = new Set((p.draft.studio.imports || []).map((o) => o.ref || o.id)); for (const k of Object.keys(p.draft.meshes)) if (!keep.has(k)) delete p.draft.meshes[k]; } }
   const M = () => p.draft, comp = (id) => M().components.find((c) => c.id === id);
   const layerOf = (c) => M().layers.find((l) => l.name === c?.layer);
   const last = () => p.versions.at(-1), dirty = () => !last() || JSON.stringify(last().model) !== JSON.stringify(p.draft);
@@ -426,20 +426,46 @@ export function render(app, [pid]) {
     if (showParams && c && PS.test(c.id)) { propsOn(true); $('#pWhat', app).textContent = `${c.name} · ${c.layer}. Plan Studio’s own parameters; changes show in all three panes.`; return; }
     if (showParams && c) return params(host, c);
     if (UI.panel === 'project') return projectPanel(host);
-    const t = TOOLS[UI.panel];
-    const tile = (n) => { if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the Plan to place it"><span class="im"><img src="img/furniture/${m.id}.png" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
+    const t0 = TOOLS[UI.panel], mine = UI.panel === 'furniture' ? myFurn() : null;
+    const t = mine ? { ...t0, sections: [['My furniture', ['\u0000import', ...mine.map((x) => '\u0000' + x.id)]], ...t0.sections] } : t0;   // your own pieces first (2026-10-25)
+    const tile = (n) => { if (n === '\u0000import') return `<button type="button" class="w2-card w3-impf" data-tool="Import furniture" data-impfurn="1" aria-pressed="false" title="Import a piece of furniture (.obj, .glb, .stl, .3dm): it joins My furniture and can be placed like the others"><span class="im"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 28v-6a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v6"/><path d="M10 30a3 3 0 0 1 6 0v4h16v-4a3 3 0 0 1 6 0v8H10z"/><path d="M24 4v10M19 9l5 5 5-5"/></svg></span><span>Import furniture</span></button>`;
+      if (n[0] === '\u0000') { const x = mine.find((q) => '\u0000' + q.id === n); return `<button type="button" class="w2-card" data-tool="${esc(x.name)}" data-myfurn="${x.id}" aria-pressed="false" title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m: click it, then click in the Plan to place it (R turns it)"><span class="im"><img src="${x.thumb || ''}" alt="" loading="lazy"></span><span>${esc(x.name)}<i class="w3-mfx" data-myfx="${x.id}" role="button" tabindex="0" title="Remove ${esc(x.name)} from My furniture" aria-label="Remove ${esc(x.name)} from My furniture">×</i></span></button>`; } if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the Plan to place it"><span class="im"><img src="img/furniture/${m.id}.png" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
       const ic = TOOL_ICONS[n], k = TMAP[n]?.key; return `<button type="button" class="w2-tile" data-tool="${esc(n)}" aria-pressed="false" title="${esc(n)}${k ? ` (${k})` : ''}"><span class="im">${ic?.img ? `<img src="${ic.img}" alt="">` : ic?.svg || ''}</span><span>${esc(n)}${k ? ` <em>(${k})</em>` : ''}</span></button>`; };
     const many = t.sections.length > 1, oi = Math.min(UI.acc[UI.panel] || 0, t.sections.length - 1);   // several groups: one open at a time
     host.innerHTML = `<div class="pane w2-tools"><h2>${t.label}</h2>${t.sections.map(([h, items], i) => `<div class="w2-sec${i === oi ? ' w3-fit' : ''}">${many ? `<button type="button" class="w3-acc" data-acc="${i}" aria-expanded="${i === oi}"><span>${i === oi ? '▾' : '▸'} ${esc(h)}</span><small>${items.length}</small></button>` : `<h3>${esc(h)}</h3>`}${i === oi ? `<div class="w2-grid">${items.map(tile).join('')}</div>` : ''}</div>`).join('')}
       <p class="note" id="toolMsg" role="status" aria-live="polite"></p></div>`;
-    $$('[data-tool]', host).forEach((b) => b.onclick = () => startTool(b));
+    $$('[data-tool]', host).forEach((b) => b.onclick = (e) => { const fx = e.target.closest('[data-myfx]'); if (fx) { e.stopPropagation(); return dropMyFurn(fx.dataset.myfx); } startTool(b); });
+    if (mine) host.insertAdjacentHTML('beforeend', '<input type="file" id="furnFile" accept=".obj,.glb,.gltf,.stl,.3dm" hidden>');
+    const ff = $('#furnFile', host); if (ff) ff.onchange = (e) => { const f = e.target.files[0]; if (f) importFurn(f); e.target.value = ''; };
     $$('[data-acc]', host).forEach((b) => b.onclick = () => { UI.acc[UI.panel] = +b.dataset.acc; saveUI(); panel(); });
     toolUI(); const box = $('.w3-fit', host); if (box) fit(box, $$('[data-tool]', box), 'tools:' + UI.panel + ':' + oi);
   }
+  // ---- My furniture (2026-10-25): pieces you import, kept in your account (this browser) for every project, with a picture made by Plan Studio
+  // in the same light and view as the library's. One piece = one file, merged into one mesh standing on the floor, front towards −y.
+  function myFurn() { const A = S.account(); return A.furniture || (A.furniture = []); }
+  function dropMyFurn(id) { const x = myFurn().find((q) => q.id === id); if (!x || !confirm(`Remove ${x.name} from My furniture? Pieces already placed in projects stay.`)) return; S.account().furniture = myFurn().filter((q) => q !== x); S.save(); panel(); }
+  async function importFurn(file) { const msg = $('#toolMsg', app); if (msg) msg.textContent = `Reading ${file.name}…`;
+    try { if (!INST.plan.ready) throw Error('The Plan pane is still starting. Try again in a moment.');
+      const r = await importModel(file, { unit: 1, up: 'auto' }), all = []; for (const c of r.components) for (let i = 0; i < c.mesh.length; i += 3) all.push(c.mesh[i] + c.g.x, c.mesh[i + 1] + c.g.y, c.mesh[i + 2] + c.g.z);
+      let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity]; for (let i = 0; i < all.length; i += 3) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], all[i + k]); mx[k] = Math.max(mx[k], all[i + k]); }
+      // furniture files come in metres, centimetres or millimetres: read by the size (a piece is 0.1–8 m); a .3dm says its own units
+      const big = Math.max(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]), k = /\.3dm$/i.test(file.name) ? 1 : big > 80 ? 0.001 : big > 8 ? 0.01 : 1, unit = k === 0.001 ? 'millimetres' : k === 0.01 ? 'centimetres' : 'metres';
+      const mesh = all.map((v, i) => +((v - mn[i % 3]) * k).toFixed(4)), w = +((mx[0] - mn[0]) * k).toFixed(3), d = +((mx[1] - mn[1]) * k).toFixed(3), h = +((mx[2] - mn[2]) * k).toFixed(3);
+      if (Math.max(w, d, h) > 12) throw Error(`That is ${Math.max(w, d, h).toFixed(1)} m across: too big for a piece of furniture. Use Project › Import model for buildings and sites.`);
+      const thumb = await INST.plan.ws.thumbMesh(mesh), name = (file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'My piece').slice(0, 40);
+      const x = { id: S.uid('mf'), name: name[0].toUpperCase() + name.slice(1), w, d, h, tris: Math.round(mesh.length / 9), mesh, thumb, file: file.name, unit, at: new Date().toISOString() };
+      myFurn().unshift(x); S.save(); UI.acc.furniture = 0; saveUI(); panel();
+      const m2 = $('#toolMsg', app); if (m2) m2.textContent = `${x.name}: ${w} × ${d} × ${h} m (read as ${unit}), ${x.tris.toLocaleString('en')} triangles. Click it, then click in the Plan to place it.`; }
+    catch (e) { if (msg) msg.textContent = e.message || 'This file could not be read.'; } }
   function startTool(b) {
     const w = INST.plan.ready ? INST.plan.ws : null, msg = $('#toolMsg', app), n = b.dataset.tool; if (!w) { if (msg) msg.textContent = 'The Plan pane is still starting. Try again in a moment.'; return; }
     const st = w.state(), on = b.getAttribute('aria-pressed') === 'true';
     if (on) { w.tool({ tool: 'select' }); toolUI(); return; }   // a second click puts the tool down
+    if (b.dataset.impfurn) { $('#furnFile', app).click(); return; }
+    if (b.dataset.myfurn) { const x = myFurn().find((q) => q.id === b.dataset.myfurn); if (!x) return; if (UI.view !== 'plan') showView('plan');
+      M().meshes = M().meshes || {}; if (!M().meshes[x.id]) { M().meshes[x.id] = x.mesh; for (const I2 of ready()) if (I2.ws.importMeshes) I2.ws.importMeshes(M().meshes); }   // the project keeps the mesh once; every piece placed shares it
+      w.placeImport({ ref: x.id, name: x.name, w: x.w, d: x.d, h: x.h, tris: x.tris, layer: 'Furniture' }); INST.plan.el.focus(); try { INST.plan.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
+      if (msg) msg.textContent = `Click in the Plan to place the ${x.name}; R turns it, Esc stops.`; toolUI(); return; }
     let spec = b.dataset.furn ? { furn: b.dataset.furn } : TMAP[n] || null;
     if (!spec && UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); spec = k ? { light: k[0] } : null; }
     if (!spec) return; void st;
@@ -451,7 +477,7 @@ export function render(app, [pid]) {
   function toolUI() {   // which tile is on: the Plan pane's own tool
     const w = INST.plan.ready ? INST.plan.ws : null; if (!w) return; const st = w.state();
     $$('#panelBody [data-tool]', app).forEach((b) => { const n = b.dataset.tool, s = b.dataset.furn ? { furn: b.dataset.furn } : TMAP[n]; let on = false;
-      if (b.dataset.furn) on = st.tool === 'place' && st.pick === b.dataset.furn; else if (s?.stair) on = st.tool === 'place' && st.pick === s.stair; else if (s?.tool) on = st.tool === s.tool && (!s.opm || st.opm == null || st.opm === s.opm); else if (UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); on = !!k && st.light === k[0]; }
+      if (b.dataset.myfurn) on = st.impPend === b.dataset.myfurn; else if (b.dataset.furn) on = st.tool === 'place' && st.pick === b.dataset.furn; else if (s?.stair) on = st.tool === 'place' && st.pick === s.stair; else if (s?.tool) on = st.tool === s.tool && (!s.opm || st.opm == null || st.opm === s.opm); else if (UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); on = !!k && st.light === k[0]; }
       b.setAttribute('aria-pressed', String(on)); });
   }
   const toolT = setInterval(() => { if (!document.hidden) toolUI(); }, 500);
