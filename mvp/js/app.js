@@ -44,8 +44,9 @@ const PAGES = {
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
 const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
-let cleanup = null, prevHash = '';
+let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
+  const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;
   if(/^#\/(?:studio|workspace-archive)(?:\/|$|\?)/.test(location.hash))history.replaceState(null,'',location.hash.replace(/^#\/(?:studio|workspace-archive)/,'#/workspace'));
   if(/^#\/library(?:\?|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/library','#/resources/files'));
   if(/^#\/res\//.test(location.hash))history.replaceState(null,'',location.hash.replace('#/res/','#/resources/item/'));
@@ -67,7 +68,11 @@ export async function route() {
   who();
   const app = $('#app'); app.innerHTML = '';
   const mod = await PAGES[key]();
-  cleanup = (await mod.render(app, rest.map((x) => decodeURIComponent(x.split('?')[0])), params)) || null;
+  if(!isCurrent())return;
+  let nextCleanup;
+  try{nextCleanup=await mod.render(app,rest.map(x=>decodeURIComponent(x.split('?')[0])),params,{isCurrent});}catch(error){if(!isCurrent())return;throw error;}
+  if(!isCurrent()){if(typeof nextCleanup==='function')nextCleanup();return;}
+  cleanup=nextCleanup||null;
   if (['workspace','simulations','results'].includes(key)) {
     const requested=params.get('project')||rest[0]?.split('?')[0];
     const project=S.project(requested)||currentProject();

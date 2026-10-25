@@ -2,12 +2,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--enable-unsafe-swiftshader']});
 try{
- const p=await browser.newPage({viewport:{width:1500,height:1000},acceptDownloads:true}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await browser.newPage({viewport:{width:1500,height:1000},acceptDownloads:true}),errors=[];p.on('pageerror',e=>{errors.push(e.message);console.error(e.stack||e.message);});
  await p.goto(base+'/mvp/');await p.waitForFunction(()=>!!document.querySelector('#app h1'));
  const state=await p.evaluate(async()=>{const S=await import('./js/store.js');S.reset();const pr=S.projects()[0];return {id:pr.id,shared:S.clone(S.conditionsOf(pr)),model:JSON.stringify(pr.versions.at(-1).model)};});
  // Exercise Account UI rather than changing the existing project's fields by hand.
  await p.evaluate(async()=>{const S=await import('./js/store.js');S.account().user={name:'Pilot QA',email:'qa@example.test'};S.save();});
- await p.goto(base+'/mvp/#/account');await p.locator('[data-k="plane"]').fill('2');await p.locator('#saveDefs').click();assert.equal(await p.evaluate(async()=>(await import('./js/store.js')).account().defaults.plane),.8,'Invalid Account defaults must not be saved');await p.locator('[data-k="plane"]').fill('1.2');await p.locator('#saveDefs').click();
+ let releaseHome;const gate=new Promise(r=>releaseHome=r);await p.route('**/sun-example.json',async route=>{await gate;await route.continue();});
+ await p.goto(base+'/mvp/#/');await p.locator('.scene').waitFor();
+ await p.goto(base+'/mvp/#/account');await p.locator('[data-k="plane"]').waitFor();releaseHome();await p.waitForTimeout(150);await p.unroute('**/sun-example.json');
+ await p.locator('[data-k="plane"]').fill('2');await p.locator('#saveDefs').click();assert.equal(await p.evaluate(async()=>(await import('./js/store.js')).account().defaults.plane),.8,'Invalid Account defaults must not be saved');await p.locator('[data-k="plane"]').fill('1.2');await p.locator('#saveDefs').click();
  const inherited=await p.evaluate(async()=>{const S=await import('./js/store.js'),old=S.projects()[0],fresh=S.createProject('New defaults test',{units:'m',components:[],layers:[]});return{old:S.clone(S.conditionsOf(old)),fresh:S.clone(S.conditionsOf(fresh))};});
  assert.deepEqual(inherited.old,state.shared);assert.equal(inherited.fresh.defaults.plane,1.2);
  await p.goto(base+'/mvp/#/project-settings/'+state.id+'?return=sunhours');
