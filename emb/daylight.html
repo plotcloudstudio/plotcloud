@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=shared-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=charts-list-20261024" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Daylight</title>
@@ -820,11 +820,12 @@ function results() {
 }
 
 // ================= Plan + chart =================
-function sizeCv(c, hCss) { const d = devicePixelRatio || 1, w = Math.max(50, c.clientWidth || c.parentNode.clientWidth - 36); c.style.height = hCss + 'px'; c.width = Math.round(w * d); c.height = Math.round(hCss * d); const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); return { x, w: c.width, h: c.height, k: d }; }
+function sizeCv(c, hCss) { hCss = +(c.dataset.chartHeight || hCss); const d = devicePixelRatio || 1, w = Math.max(50, c.clientWidth || c.parentNode.clientWidth - 36); c.style.height = hCss + 'px'; c.width = Math.round(w * d); c.height = Math.round(hCss * d); const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); return { x, w: c.width, h: c.height, k: d }; }
+window.__pcRedrawCharts = () => panelUI();
 const FF = () => getComputedStyle(document.body).fontFamily, HITS = { crit: [], rooms: [], year: null };
 function msgCv(c, t) { const { x, k } = sizeCv(c, 40); x.fillStyle = '#8a8780'; x.font = `${11.5 * k}px ${FF()}`; x.textBaseline = 'middle'; x.fillText(t, 2 * k, 20 * k); }
 function bars(c, rows, sel, valTxt, marks) {
-  const RH = 24, { x, w, k } = sizeCv(c, rows.length * RH + 8), lw = Math.min(w * 0.46, 210 * k), pw = w - lw - 64 * k, out = [];
+  const RH = document.querySelector('#pilotCharts') && innerHeight <= 850 ? 20 : 24, { x, w, k } = sizeCv(c, rows.length * RH + 8), lw = Math.min(w * 0.46, 210 * k), pw = w - lw - 64 * k, out = [];
   x.textBaseline = 'middle';
   rows.forEach((r, i) => { const y = (2 + i * RH) * k, cy = y + RH * k / 2, on = sel == null || sel === r.key;
     x.globalAlpha = on ? 1 : 0.4; x.fillStyle = r.dim ? '#8a8780' : '#111'; x.font = `${sel === r.key ? 600 : 400} ${11.5 * k}px ${FF()}`; x.textAlign = 'left'; let lab = r.label; while (x.measureText(lab).width > lw - 8 * k && lab.length > 3) lab = lab.slice(0, -2); x.fillText(lab, 0, cy);
@@ -846,7 +847,7 @@ function yearChart(c, vals, nPts, pick) {   // 365 days across, 24 hours down
   return { L: L / k, T: T / k, pw: pw / k, ph: ph / k };
 }
 function panelUI() {
-  if (CAM !== 'split') return; const sm = summary();
+  if (CAM !== 'split' && new URLSearchParams(location.search).get('pilot') !== 'shared') return; const sm = summary();
   $('#cpSub').textContent = RES ? `${LV[RES.level || 'draft'].name} · ${LOC.name}` : '';
   $('#kp4').innerHTML = `<div><small>sDA</small><b>${sm ? pct(sm.sda) : '—'}</b></div><div><small>ASE</small><b style="color:${sm && sm.ase > 0.1 ? '#b3261e' : 'inherit'}">${sm ? pct(sm.ase) : '—'}</b></div><div><small>LEED opt. 1</small><b style="color:${sm ? (sm.pts1 ? '#1f7a3d' : '#b3261e') : 'inherit'}">${sm ? (sm.pts1 ? sm.pts1 + ' pts' : '0 pts') : '—'}</b></div><div><small>Avg DF</small><b>${sm ? sm.df.toFixed(1) + '%' : '—'}</b></div>`;
   if (!sm) { for (const id of ['cCrit', 'cRooms', 'cYear']) msgCv($('#' + id), 'Analyze the daylight to see this chart.'); $('#roomBox').hidden = true; spotUI(); return; }

@@ -31,8 +31,23 @@ export function prepareSolarPilotLayout(doc){
  for(const i of doc.querySelectorAll('.sec h2 i'))i.remove();
  const plan=doc.querySelector(day?'[data-cam="plan"]':'[data-view="plan"]');plan?.click();
  for(const b of doc.querySelectorAll('[data-cam="split"],[data-view="split"]'))b.remove();doc.getElementById('stage')?.classList.remove('split');
- if(plot){const groups=[...plot.querySelectorAll(':scope>.cpg')];if(groups.length>1){const select=doc.createElement('select');select.id='pilotChartSelect';select.setAttribute('aria-label','Chart');groups.forEach((g,i)=>{const o=doc.createElement('option');o.value=i;o.textContent=(g.querySelector('h3,.cph b,b')?.textContent||'Chart '+(i+1)).trim();select.append(o);});plot.prepend(select);
-   const choose=()=>{groups.forEach((g,i)=>g.dataset.pilotChartActive=String(i===+select.value));doc.defaultView.dispatchEvent(new Event('resize'));doc.defaultView.PlotCloudSimulationFit?.refresh();};select.onchange=choose;choose();}}
- const style=doc.createElement('style');style.textContent='#pilotCharts:not([data-pc-fit-active=false]){display:block!important}#pilotCharts[data-pc-fit-active=false]{display:none!important}#pilotSharedFields{border:0;padding:0;margin:12px 0}#pilotSharedFields:disabled{opacity:.6}#pilotSharedSummary{padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:12px;line-height:1.6}#pilotAdvanced,#pilotOverrides{margin:12px 0}#pilotAdvanced summary,#pilotOverrides summary{cursor:pointer;font-weight:600;margin-bottom:10px}#pilotCharts #chartp{display:block!important}#pilotCharts [data-pilot-chart-active=false]{display:none!important}#pilotCharts #chartp canvas{height:150px!important}#pilotCharts .lgd,#pilotCharts .legend{position:static!important;width:auto!important}';doc.head.append(style);
+ // Detailed readouts stay available in Results; every actual chart remains in the list.
+ if(day)for(const [id,title]of [['roomBox','Selected room'],['spot','Selected spot']]){const node=doc.getElementById(id);if(node){const detail=doc.createElement('section');const h=doc.createElement('h3');h.textContent=title;detail.append(h,node);results.append(detail);}}
+ const style=doc.createElement('style');style.textContent='#pilotCharts:not([data-pc-fit-active=false]){display:block!important}#pilotCharts[data-pc-fit-active=false]{display:none!important}#pilotSharedFields{border:0;padding:0;margin:12px 0}#pilotSharedFields:disabled{opacity:.6}#pilotSharedSummary{padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:12px;line-height:1.6}#pilotAdvanced,#pilotOverrides{margin:12px 0}#pilotAdvanced summary,#pilotOverrides summary{cursor:pointer;font-weight:600;margin-bottom:10px}#pilotCharts #chartp{display:block!important}#pilotCharts .lgd,#pilotCharts .legend{position:static!important;width:auto!important}'+
+ '@media(min-width:901px){#pilotCharts{padding:8px!important}#pilotCharts>h2{display:none}#pilotCharts #chartp{padding:0!important}#pilotCharts .cpg{padding:5px 0!important;margin:0!important;border:0!important;border-top:1px solid var(--line)!important;gap:3px!important}#pilotCharts .cph{margin:0!important;gap:4px!important;line-height:1.2}#pilotCharts .cph b{font-size:11px}#pilotCharts .cph .note{font-size:9px;line-height:1.2}#pilotCharts .kp4{gap:4px!important;margin:3px 0!important}#pilotCharts .kp4>div{padding:4px 7px!important}#pilotCharts .kp4 b{font-size:17px!important}#pilotCharts .kp4 small{font-size:9px!important}#pilotCharts #legend{margin:0 0 5px!important;padding:0!important;font-size:10px;line-height:1.2}#pilotCharts #legend h2{font-size:10px;letter-spacing:.08em;margin:0 0 4px}}';doc.head.append(style);
+ const compact=doc.createElement('style');compact.textContent='@media(min-width:901px) and (max-height:850px){#pilotCharts .kp4{grid-template-columns:repeat(4,minmax(0,1fr))!important}#pilotCharts .kp4>div{padding:4px!important}#pilotCharts .kp4 b{font-size:14px!important}#pilotCharts .kp4 small{font-size:8px!important;letter-spacing:0!important}#pilotCharts #legend .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px;line-height:12px}#pilotCharts .cph .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}#pilotCharts .cph b{flex-shrink:0}}';doc.head.append(compact);
+ for(const note of charts.querySelectorAll('.note'))note.title=note.textContent.trim();
  return true;
+}
+
+// Allocate real drawing heights instead of CSS-compressing a bitmap and its hit targets.
+export function fitSolarCharts(doc,viewport){
+ const charts=doc.getElementById('pilotCharts');if(!charts||charts.dataset.pcFitActive!=='true')return;
+ const flexible=[...charts.querySelectorAll('canvas')].filter(c=>!['cCrit','cRooms'].includes(c.id));
+ if(!flexible.length)return;
+ const fixed=charts.getBoundingClientRect().height-flexible.reduce((n,c)=>n+c.getBoundingClientRect().height,0);
+ const room=Math.max(0,viewport.clientHeight-fixed-4),each=Math.max(58,Math.min(150,Math.floor(room/flexible.length)));
+ let changed=false;
+ for(const c of flexible)if(c.dataset.chartHeight!==String(each)){c.dataset.chartHeight=each;changed=true;}
+ if(changed)doc.defaultView.__pcRedrawCharts?.();
 }

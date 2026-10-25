@@ -48,8 +48,9 @@ try{
   assert(run,'Real result must be saved');assert.equal(run.settings.sharedConditions.site.north,15);assert.equal(run.settings.sharedConditions.effective.north??run.settings.sharedConditions.effective.parameters?.[3],20);
   assert.equal(run.settings.sharedConditions.studyOnlyOverrides,true);assert(run.results.kpis.some(([,v])=>/\d/.test(v)));
   await tab(f,'R','Charts');assert(await f.locator('#legend').isVisible());assert.equal(await f.locator('#pilotResults').isVisible(),false);
-  const choices=await f.locator('#pilotChartSelect option').count();assert(choices>=4);
-  for(let i=0;i<choices;i++){await f.locator('#pilotChartSelect').selectOption(String(i));await p.waitForTimeout(50);assert(await f.locator('#chartp [data-pilot-chart-active="true"]').isVisible());}
+  assert.equal(await f.locator('#pilotChartSelect').count(),0,'Charts has no per-chart selector');
+  assert(await f.locator('#chartp .cpg').count()>=4);
+  for(const chart of await f.locator('#chartp .cpg').all())assert(await chart.isVisible(),'All charts appear in the same list');
   await tab(f,'L','Export');
   if(id==='daylight'){const download=p.waitForEvent('download');await f.locator('[data-ex=csv]').click();assert(fs.readFileSync(await(await download).path()).length>20);}
   await p.screenshot({path:require('os').tmpdir()+'/shared-'+id+'.png'});

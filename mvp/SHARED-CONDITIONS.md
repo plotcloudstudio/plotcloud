@@ -10,3 +10,5 @@ For an architect iterating a Workspace design, the goal is to enter common condi
 - Other simulations intentionally retain their current layout, Account defaults and legacy `siteLinked` behaviour until the two examples are reviewed. No global migration changes their inputs. The Account UI labels that distinction.
 
 Validation: `tests/shared-conditions.cjs` exercises actual runs and batch jobs, Account/new-project isolation, validated project edits, overrides/reset, chart access/CSV export, immutable history/stale warnings and legacy migration. `tests/simulation-fit.cjs` checks desktop fit; standalone Sun/other-engine workflows remain covered separately.
+
+Charts in both pilot studies are a single vertical list, not a chart selector. The existing canvases are redrawn at allocated logical heights; their DPR-scaled bitmaps and hit coordinates remain aligned. Selected-room and selected-spot detailed readouts remain in Results. `tests/charts-list.cjs` checks actual runs, simultaneous chart visibility at three desktop sizes, high DPI and Daylight chart selection.

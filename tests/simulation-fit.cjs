@@ -86,10 +86,9 @@ const sims = ['sunhours','wind','daylight','vent','spacesyntax','movementdepth',
     await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.wheel(0,600);
     assert.equal(await f.locator('#panelR').evaluate(e=>e.scrollTop),before,'Wheel does not scroll the result panel');
     await page.screenshot({path:require('node:os').tmpdir()+'/plotcloud-sun-singlepage.png'});
-    const next=f.locator('#panelR .pc-fit-pages').getByRole('button',{name:'Next →',exact:true});
-    await f.locator('#pilotChartSelect').selectOption('3');
-    for(let i=0;i<10&&await next.isVisible()&&await next.isEnabled();i++){await next.click();await page.waitForTimeout(40);}
-    assert(await f.locator('#tday').evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return r.bottom<=v.bottom+3&&r.bottom>v.top;}),'The final restored chart is reachable without scrolling');
+    assert.equal(await f.locator('#pilotChartSelect').count(),0);
+    assert.equal(await f.locator('#panelR .pc-fit-pages').isVisible(),false,'All charts fit together without paging');
+    for(const id of ['days','hist','tday'])assert(await f.locator('#'+id).evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return r.bottom<=v.bottom+3&&r.top>=v.top;}),'Chart '+id+' is visible without switching');
    }
    assert.deepEqual(errors,[],sim+' JS errors');
    report.push({sim,panels:rows.filter(r=>r.type==='panel').map(r=>r.tabs)});

@@ -13,7 +13,7 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
-import { installSimulationFit } from '../../../ui/simulation-fit.js?v=shared-20261024-1';
+import { installSimulationFit } from '../../../ui/simulation-fit.js?v=charts-list-20261024';
 
 const PLAN_EDIT = '.sec:has(#h-draw) :is([data-tool="wall"], [data-tool="glass"], [data-tool="win"], [data-tool="door"], [data-tool="furn"], #clear)';
 const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : NaN; };
@@ -139,7 +139,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
     </div>
-    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${pilot?'?v=shared-20261024-1&pilot=shared':sim.id === 'acoustics' ? '?v=wire-20261023-1' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
+    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${pilot?'?v=charts-list-20261024&pilot=shared':sim.id === 'acoustics' ? '?v=wire-20261023-1' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); render(app, sim, params); };
   $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); render(app, sim, params); };

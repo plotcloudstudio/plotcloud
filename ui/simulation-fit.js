@@ -1,5 +1,5 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
-import {prepareSolarPilotLayout} from './solar-pilot-layout.js?v=shared-20261024-1';
+import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=charts-list-20261024';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){
@@ -92,6 +92,7 @@ export function installSimulationFit(doc = document) {
     if (!state.active) return;
     content.style.transform = ''; content.style.width = '100%';
     pages.hidden = true;
+    fitSolarCharts(doc,viewport);
     const natural = Math.max(1, content.scrollHeight), have = viewport.clientHeight;
     let scale = Math.min(1, Math.max(.85, have / natural));
     content.style.width = `${100 / scale}%`;

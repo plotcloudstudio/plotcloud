@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=shared-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=charts-list-20261024" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Sun Hours</title>
@@ -1656,7 +1656,8 @@ let HIST_HITS = [], DAY_HITS = [], TIME_HIT = null;
 const dayKey = (ds) => [ds, S.grid, S.step, S.t0, S.t1, S.ground, S.margin, S.modelVer].join('|');
 function surfAvg(R, kinds) { let a = 0, h = 0; for (let k = 0; k < R.hours.length; k++) { if (!kinds.includes(R.prep.smpK[k])) continue; a += R.prep.smpA[k]; h += R.hours[k] * R.prep.smpA[k]; } return a ? h / a : 0; }
 function binsFor(R) { const top = Math.max(1, Math.ceil(R.win)), st = Math.max(top > 8 ? 2 : 1,Math.ceil(top/12)), B = []; for (let x = 0; x < top; x += st) B.push([x, Math.min(top, x + st)]); return B; }
-function sizeCv(c, h) { const d = devicePixelRatio || 1, w = c.getBoundingClientRect().width || 300; c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
+function sizeCv(c, h) { h = +(c.dataset.chartHeight || h); const d = devicePixelRatio || 1, w = c.clientWidth || 300; c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
+window.__pcRedrawCharts = () => panelUI();
 const rgbS = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
 function panelUI() {
   const R = S.result && S.result.R, st = R ? statsOf(R) : null;
