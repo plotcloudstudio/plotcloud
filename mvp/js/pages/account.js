@@ -1,6 +1,7 @@
 import * as S from '../store.js';
 import { geocode, enrich, mapEmbed } from '../site.js';
 import { $, $$, esc, when, toast, refreshWho } from '../app.js';
+import * as C from '../cloud.js';
 
 const FIELDS = [
   ['label', 'Site', (s) => s.label, () => 'From address search'],
@@ -44,7 +45,7 @@ export function render(app, _, params = new URLSearchParams()) {
         <label class="f">Time zone of this computer<input disabled value="${esc(Intl.DateTimeFormat().resolvedOptions().timeZone || '—')}"></label>
         <div style="align-self:end"><button class="btn primary">Save profile</button></div>
       </form>
-      <p class="note" style="margin-top:10px">Member since ${A.user.since ? when(A.user.since) : 'today'}. Prototype: no server yet, so your account lives in this browser and no password is stored.</p>
+      <p class="note" style="margin-top:10px">Member since ${A.user.since ? when(A.user.since) : 'today'}. ${A.user.cloud ? 'Signed in with your PlotCloud cloud account: your projects are kept in this browser and copied to your account (Backup &amp; data shows the sync).' : C.configured() ? 'This account lives in this browser only. Log out and log in with a cloud account to keep your projects on your other devices too.' : 'Prototype: cloud accounts are not switched on yet, so your account lives in this browser and no password is stored.'}</p>
       <div class="card" style="margin-top:36px;max-width:720px;border-color:var(--red)"><b>Delete account</b><p class="note" style="margin:6px 0 12px">Removes your account, every project, version and result, and your settings from this browser. Download a backup first if you may want them back.</p><button class="btn sm danger" id="delAcct">Delete my account…</button></div>
     </section>
 
@@ -93,6 +94,8 @@ export function render(app, _, params = new URLSearchParams()) {
       <div class="kicker"><b>04</b>Backup &amp; data</div>
       <h2 class="display sm" style="margin-top:16px">Your data stays in this browser.</h2>
       <p class="lede" style="margin-top:14px">A backup file holds every project, version, result and setting. Bring it back here or on another computer.</p><p class="note">Shared EPW contents are browser-local and are not included in this JSON backup. Keep the original EPW file; upload it again under Project shared conditions after restoring on another computer.</p>
+      ${A.user.cloud ? `<div class="card" id="cloudCard" style="margin-top:24px"><b>Cloud copy</b><p class="note" style="margin:6px 0 10px" id="cloudSt" role="status" aria-live="polite"></p>
+        <p class="note" style="margin:0 0 12px">Every project except the sample, with its versions, results and pictures, and your site and defaults, are copied to your account and brought back on your other devices. If the same project changed on two devices, both are kept (the other one as “… (from another device)”).</p><button class="btn" id="syncNow">Sync now</button></div>` : ''}
       <div class="grid g2" style="margin-top:24px;align-items:start">
         <div class="card"><b>Back up</b><p class="note" style="margin:6px 0 12px" id="lastB"></p><button class="btn primary" id="exp">Download backup (.json)</button></div>
         <div class="card"><b>Restore</b><p class="note" style="margin:6px 0 12px">From a PlotCloud backup file.</p>
@@ -160,9 +163,13 @@ export function render(app, _, params = new URLSearchParams()) {
   const show = (k) => { tab = k; $$('[data-pane]', app).forEach((el) => el.hidden = el.dataset.pane !== k); $$('[data-tab]', app).forEach((a) => a.setAttribute('aria-selected', String(a.dataset.tab === k)));
     history.replaceState(null, '', '#/account?tab=' + k); if (k === 'data') dataUI(); window.scrollTo(0, 0); };
   $$('[data-tab]', app).forEach((a) => a.onclick = (e) => { e.preventDefault(); show(a.dataset.tab); });
-  $('#logout', app).onclick = (e) => { e.preventDefault(); A.user = null; S.save(); refreshWho(); location.hash = '#/'; toast('Logged out'); };
+  $('#logout', app).onclick = async (e) => { e.preventDefault(); if (A.user?.cloud) await C.signOut(); else { A.user = null; S.save(); } refreshWho(); location.hash = '#/'; toast('Logged out'); };
+  if ($('#cloudCard', app)) { const st = () => { const i = C.info(), el = $('#cloudSt', app); if (!el) return; el.textContent = `${i.user?.email || ''} · ${i.phase === 'syncing' ? 'syncing…' : i.phase === 'error' ? 'not synced: ' + i.error : i.last ? 'synced ' + when(i.last) : 'not synced yet'}${i.cloud ? ` · ${i.cloud.projects} project${i.cloud.projects === 1 ? '' : 's'}, ${(i.cloud.bytes / 1e6).toFixed(1)} MB in the cloud` : ''}${i.skipped?.length ? ` · too large to send: ${i.skipped.join(', ')}` : ''}`; };
+    st(); addEventListener('pc-cloud', st); $('#syncNow', app).onclick = () => C.sync(); }
   $('#prof', app).onsubmit = (e) => { e.preventDefault(); const fd = new FormData(e.target); A.user.name = String(fd.get('name')).trim() || A.user.name; A.user.email = String(fd.get('email')).trim(); S.save(); refreshWho(); toast('Profile saved'); };
-  $('#delAcct', app).onclick = () => { if (prompt('Delete your account and everything in this browser? Type DELETE to confirm.') !== 'DELETE') return; S.deleteAccount(); location.hash = '#/'; location.reload(); };
+  $('#delAcct', app).onclick = async () => { if (prompt(A.user?.cloud ? 'Delete everything: your projects in this browser and in your cloud account? Type DELETE to confirm.' : 'Delete your account and everything in this browser? Type DELETE to confirm.') !== 'DELETE') return;
+    if (A.user?.cloud) { try { await C.wipe(); await C.signOut(); } catch (er) { toast('Could not remove the cloud copy: ' + er.message); return; } toast('Your projects were removed from the cloud. To close the login itself, write to us.'); }
+    S.deleteAccount(); location.hash = '#/'; location.reload(); };
   { const since = A.user.since ? new Date(A.user.since) : new Date(), left = Math.max(0, 7 - Math.floor((Date.now() - since) / 86400000)); $('#trialLeft', app).textContent = left ? `${left} day${left > 1 ? 's' : ''} left of the 7-day trial.` : 'The 7-day trial has ended (prototype: everything stays open).'; }
   function dataUI() {
     const use = S.storageUse(), pc = Math.min(100, 100 * use / S.QUOTA);

@@ -1,5 +1,6 @@
 // Hash router, theme, sign-in state and small helpers shared by the pages.
 import * as S from './store.js';
+import * as C from './cloud.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -33,17 +34,20 @@ export function setCurrentVersion(p, vId) { try { localStorage.setItem('pc-mvp-v
 export const simBack = () => { try { return sessionStorage.getItem('pc-sim-back') || '#/simulations'; } catch (e) { return '#/simulations'; } };
 
 // signed in: Dashboard in the main menu and the avatar menu (Dashboard, Account settings, Log out); signed out: Log in, Start free
+// the cloud copy's state, in a few words (signed-in people only)
+function syncText() { const i = C.info(); return i.phase === 'syncing' ? 'Syncing…' : i.phase === 'error' ? `Not synced: ${i.error}` : i.last ? `Synced ${when(i.last)}` : 'Not synced yet'; }
 function who() {
   const u = S.account().user, nav = $('#nav');
   nav.querySelector('[data-nav="home"]')?.remove();
   if (u) nav.insertAdjacentHTML('afterbegin', `<a href="#/home" data-nav="home"${/^#\/home/.test(location.hash) ? ' aria-current="page"' : ''}>Dashboard</a>`);
   $('#who').innerHTML = u ? `<span class="who-w"><button type="button" class="btn sm who-b" id="whoBtn" aria-haspopup="true" aria-expanded="false" style="padding-left:4px"><span class="avatar">${esc(u.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span>${esc(u.name.split(/\s+/)[0].replace(/^./, (c) => c.toUpperCase()))} ▾</button>
-      <span class="who-m" id="whoMenu" role="menu" hidden><span class="who-id"><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></span><a role="menuitem" href="#/home">Dashboard</a><a role="menuitem" href="#/account?tab=profile">Account settings</a><a role="menuitem" href="#/account?tab=data">Backup &amp; data</a><button role="menuitem" type="button" id="whoOut">Log out</button></span></span>`
+      <span class="who-m" id="whoMenu" role="menu" hidden><span class="who-id"><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></span><a role="menuitem" href="#/home">Dashboard</a><a role="menuitem" href="#/account?tab=profile">Account settings</a><a role="menuitem" href="#/account?tab=data">Backup &amp; data</a>${u.cloud ? `<span class="who-sync" id="whoSync" aria-live="polite">${esc(syncText())}</span><button role="menuitem" type="button" id="whoSyncNow">Sync now</button>` : ''}<button role="menuitem" type="button" id="whoOut">Log out</button></span></span>`
     : '<a class="btn sm" href="#/login">Log in</a> <a class="btn sm accent" href="#/login?signup=1">Start free</a>';
   if (!u) return;
   const b = $('#whoBtn'), m = $('#whoMenu'), shut = () => { m.hidden = true; b.setAttribute('aria-expanded', 'false'); };
   b.onclick = (e) => { e.stopPropagation(); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); };
-  m.onclick = () => shut(); $('#whoOut').onclick = () => { S.account().user = null; S.save(); who(); location.hash = '#/'; toast('Logged out'); };
+  m.onclick = () => shut(); $('#whoOut').onclick = async () => { if (u.cloud) await C.signOut(); else { S.account().user = null; S.save(); } who(); location.hash = '#/'; toast('Logged out'); };
+  const sn = $('#whoSyncNow'); if (sn) sn.onclick = () => C.sync();
 }
 document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e.target.closest('.who-w')) { m.hidden = true; $('#whoBtn')?.setAttribute('aria-expanded', 'false'); } });
 
@@ -55,6 +59,7 @@ const PAGES = {
 const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Dashboard', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
+  if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab
   const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;
   if(/^#\/(?:studio|workspace-archive)(?:\/|$|\?)/.test(location.hash))history.replaceState(null,'',location.hash.replace(/^#\/(?:studio|workspace-archive)/,'#/workspace'));
   if(/^#\/library(?:\?|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/library','#/resources/files'));
@@ -107,4 +112,8 @@ document.addEventListener('change',event=>{
 addEventListener('hashchange', route);
 $('#menuBtn').addEventListener('click', () => { const o = $('#nav').classList.toggle('open'); $('#menuBtn').setAttribute('aria-expanded', String(o)); });
 $$('#themeSeg button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));
-setTheme(theme()); S.init().then(route, route);   // the store comes from IndexedDB first (see store.js)
+// accounts and the cloud copy (cloud.js): an emailed sign-in link comes back in the address; read it before the first page
+const fromLink = C.captureRedirect();
+addEventListener('pc-cloud', (e) => { const el = $('#whoSync'); if (el) el.textContent = syncText(); if (e.detail.user && !S.account().user) who();
+  const d = e.detail; if ((d.changed || d.copies || d.removed) && /^#\/(home|account|results)?(\?|$)|^#?$/.test(location.hash)) route(); else if (d.changed || d.copies) toast('Projects updated from your other devices'); });
+setTheme(theme()); S.init().then(() => { C.start(); if (fromLink?.error) toast(fromLink.error); return route(); }, route);   // the store comes from IndexedDB first (see store.js)

@@ -73,7 +73,12 @@ function pruneMedia(keep = 0) {
   const all = DB.projects.flatMap((p) => p.runs).filter((r) => r.results && (r.results.thumb || r.results.field)).sort((a, b) => a.created.localeCompare(b.created));
   const n = Math.max(1, Math.ceil((all.length - keep) / 2)); for (const r of all.slice(0, n)) { delete r.results.thumb; delete r.results.field; r.results.mediaDropped = true; } return n > 0 && all.length > 0;
 }
-export function save() {
+// after every save (the cloud sync in cloud.js listens, to send changes when someone is signed in)
+const saveHooks = [];
+export const onSave = (fn) => { saveHooks.push(fn); };
+const saved = (ok) => { for (const f of saveHooks) try { f(); } catch (e) { } return ok; };
+export function save() { return saved(saveRaw()); }
+function saveRaw() {
   if (memoryOnly) return false;
   const txt = JSON.stringify(DB); lastSize = txt.length;
   if (idbOK) idbPut(KEY, txt).catch(() => { idbOK = false; });
@@ -90,6 +95,10 @@ export function save() {
 export function reload() { const keep = DB; DB = null; try { if (!localStorage.getItem(KEY) && localStorage.getItem(MODE) === 'idb') DB = keep; } catch (e) { } return load(); }
 export const persistent = () => !memoryOnly;
 export function reset() { DB = seed(); save(); }
+// a project as it came from the cloud: replaced in place (pages that hold the object keep seeing it), or added
+export function putProject(fresh) { const P = load().projects, old = P.find((x) => x.id === fresh.id);
+  if (old) { for (const k of Object.keys(old)) delete old[k]; Object.assign(old, fresh); } else P.unshift(fresh); save(); return old || fresh; }
+export function dropProject(id) { load().projects = load().projects.filter((x) => x.id !== id); save(); }
 
 export const account = () => load().account;
 export const projects = () => load().projects;
