@@ -32,6 +32,8 @@ jobs:
           node tests/run-browser-check.cjs tests/unified-results.cjs
           node tests/run-browser-check.cjs tests/selected-layouts.cjs
           node tests/run-browser-check.cjs tests/simulation-header.cjs
+          node tests/run-browser-check.cjs tests/short-simulation-window.cjs
+          node tests/run-browser-check.cjs tests/simulation-startup.cjs
           node tests/run-browser-check.cjs tests/simulation-art.cjs
           node tests/run-browser-check.cjs tests/shared-conditions.cjs
           node tests/run-browser-check.cjs tests/project-climate.cjs

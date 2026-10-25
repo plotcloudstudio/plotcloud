@@ -1,6 +1,6 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
 import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=unified-20261025-1';
-import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=header-20261025';
+import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=header-20261025-fix';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){
@@ -105,12 +105,8 @@ export function installSimulationFit(doc = document) {
     if(panel.closest('[data-pc-unified]')&&state.active.id!=='unifiedResults'){
       if(state.active.id==='unifiedSettings'){const overhead=Math.max(0,content.scrollHeight-state.active.getBoundingClientRect().height);panel.closest('[data-pc-unified]').pcFitSettings?.(viewport.clientHeight-overhead);}
       if(state.active.id==='unifiedCharts'){fitSolarCharts(doc,viewport);const key=viewport.clientWidth+':'+viewport.clientHeight;if(state.unifiedChartSize!==key){state.unifiedChartSize=key;win.__pcUnifiedCharts?.();win.__pcWindCharts?.();}}
-      if(content.scrollHeight>viewport.clientHeight+2){
-        const app=panel.closest('[data-pc-unified]');app.pcRollbackUnified?.([{group:titleOf(state.active),required:content.scrollHeight,available:viewport.clientHeight,plots:[...state.active.querySelectorAll('canvas')].map(c=>({id:c.id,height:c.clientHeight}))}]);
-        for(const [oldPanel,old]of panels){if(old.active)oldPanel.dataset.pcPreferredTab=titleOf(old.active);old.tabs.remove();old.pages.remove();old.viewport.remove();oldPanel.classList.remove('pc-fit-panel');}
-        panels.clear();schedule();return;
-      }
-      state.page=0;state.scale=1;content.style.transform='none';return;
+      if(content.scrollHeight<=viewport.clientHeight+2){state.page=0;state.scale=1;content.style.transform='none';return;}
+      // Constrain only this panel. Never silently resurrect the legacy toolbar.
     }
     fitSolarCharts(doc,viewport);
     if(state.active.contains(doc.getElementById('rose'))){const key=viewport.clientWidth+':'+win.innerHeight;if(state.windChartSize!==key){state.windChartSize=key;win.__pcWindCharts?.();}}
@@ -128,7 +124,7 @@ export function installSimulationFit(doc = document) {
     state.page = Math.max(0,Math.min(state.page, last));
     content.style.transform = `translateY(${-state.page * state.step}px) scale(${scale})`;
     viewport.scrollTop=0;panel.scrollTop=0;
-    label.textContent = `${titleOf(state.active)} · ${state.page + 1} / ${last + 1}`;
+    label.textContent = `${panel.closest('[data-pc-unified]')&&paging?'Window too short · ':''}${titleOf(state.active)} · ${state.page + 1} / ${last + 1}`;
     prev.disabled = state.page === 0; next.disabled = state.page >= last;
   }
   function enhance(panel) {

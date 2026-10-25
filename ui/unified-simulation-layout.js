@@ -190,28 +190,16 @@ export function prepareUnifiedSimulation(doc){
  }
  for(const [node,style]of columnStyles)if(style===null)node.removeAttribute('style');else node.setAttribute('style',style);
  app.dataset.pcUnifiedMeasurements=JSON.stringify(measured);
- if(measured.some(x=>x.required>x.available)){
-  const over=measured.filter(x=>x.required>x.available);
-  for(const {node,parent,next,cls,open,hidden}of original.reverse()){
-   if(node.parentNode!==parent||node.nextSibling!==next){if(next?.parentNode===parent)parent.insertBefore(node,next);else parent.appendChild(node);}
-   if(cls===null)node.removeAttribute('class');else node.setAttribute('class',cls);
-   node.toggleAttribute('open',open);
-   node.hidden=hidden;
-  }
-  for(const node of [settings,exports,results,charts,parked,css,help,viewControls,display,workspaceInfo,...extraNodes])node?.remove();
-  delete app.pcShowScaleNotes;delete app.pcUpdateUnifiedContext;delete app.pcFitSettings;
-  delete app.dataset.pcUnified;app.dataset.pcUnifiedBlocked=JSON.stringify(over);
-  const notice=doc.createElement('p');notice.className='note pc-layout-review';notice.setAttribute('role','status');notice.style.cssText='padding:6px;margin:0;border:1px solid var(--line);border-radius:4px';notice.textContent='Fixed layout needs review: '+over.map(x=>`${x.group} ${x.required}px / ${x.available}px available`).join('; ')+'. Existing controls are preserved.';doc.getElementById('panelL').prepend(notice);
-  return false;
- }
+ // A short chart/export panel must never replace the whole interface with the old shell.
+ // Keep the new header and Settings; the fit controller reports any local overflow.
+ app.dataset.pcLayoutConstrained=JSON.stringify(measured.filter(x=>x.required>x.available));
  const stopCollapse=e=>e.stopImmediatePropagation(),headings=[...settings.querySelectorAll('.sec>h2')];
  detentionControl?.addEventListener('change',updateDetention);
  for(const h of headings){for(const i of h.querySelectorAll('i'))i.remove();h.classList.remove('pc-tog');h.addEventListener('click',stopCollapse,true);}
  for(const i of doc.querySelectorAll('.sec>h2 i'))i.remove();
  const plan=doc.querySelector('[data-cam=plan],[data-view=plan]');plan?.click();
  for(const split of doc.querySelectorAll('[data-cam=split],[data-view=split]')){const record=original.find(r=>r.node===split);if(record&&!moved.includes(record))moved.push(record);split.remove();}doc.getElementById('stage')?.classList.remove('split');
- // Resize, a larger model or more result rows can exceed the initial budget. Restore the
- // existing usable layout, without resurrecting old result DOM or changing input values.
+ // Explicit recovery hook only. Ordinary viewport resizing must never invoke it.
  app.pcRollbackUnified=over=>{
   for(const h of headings)h.removeEventListener('click',stopCollapse,true);
   detentionControl?.removeEventListener('change',updateDetention);

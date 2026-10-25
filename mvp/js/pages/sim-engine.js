@@ -14,7 +14,9 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
-import { installSimulationFit } from '../../../ui/simulation-fit.js?v=unified-20261025-4';
+import { installSimulationFit } from '../../../ui/simulation-fit.js?v=unified-20261025-5';
+// Engine HTML must change cache keys with the host module, not just its nested JS.
+const ENGINE_RELEASE=new URL(import.meta.url).searchParams.get('v')||'unified-20261025-5';
 
 const PLAN_EDIT = '.sec:has(#h-draw) :is([data-tool="wall"], [data-tool="glass"], [data-tool="win"], [data-tool="door"], [data-tool="furn"], #clear)';
 const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : NaN; };
@@ -126,7 +128,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   // Indoor acoustics studies one closed room: the room picked here goes in as its own wall loop
   const rooms = v && cfg.input === 'room' ? v.model.components.filter((c) => c.type === 'room') : [], rmKey = `pc-sim-room:${p.id}`, rmPick = (() => { try { return sessionStorage.getItem(rmKey); } catch (e) { return null; } })();
   const room = rooms.find((c) => c.id === (batch ? params.get('room') : rmPick)) || rooms[0] || null;
-  app.innerHTML = `<div class="shx">
+  app.innerHTML = `<div class="shx" style="position:relative">
     <div class="shbar" role="region" aria-label="Simulation">
       <a class="btn sm ghost" href="${simBack()}">← Back</a>
       <b class="shname">${esc(sim.name)}</b>${LIVE}
@@ -139,7 +141,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
     </div>
-    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${pilot?'?layout=unified&v=charts-list-20261024&pilot=shared':sim.id === 'acoustics' ? '?layout=unified&v=wire-20261023-1' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?layout=unified&v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?layout=unified&v=exterior-20261024-1' : '?layout=unified'}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
+    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" style="visibility:hidden" src="../emb/${file}.html?layout=unified&v=${encodeURIComponent(ENGINE_RELEASE)}${pilot?'&pilot=shared':''}"></iframe><div id="engineLoading" role="status" style="position:absolute;inset:80px 0 0;display:grid;place-items:center;background:var(--bg);z-index:2">Loading saved model and current Settings…</div>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); render(app, sim, params); };
   if(sim.id==='vent'){$('.shsite',app).href='#/project-settings/'+p.id+'?return=vent';$('.shsite',app).textContent=`${site.label||'Site'} · Shared r${shared.revision} ↗`;}
@@ -149,6 +151,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   if (!v) { tell({ ok: false, why: 'No saved version.' }); return; }
 
   const fr = $('#eng', app), msg = $('#shmsg', app), saveBtn = $('#save', app), name = `${p.name} · v${v.n}`, x = extent(v.model);
+  $('#engineLoading',app).style.top=$('.shbar',app).offsetHeight+'px';
   const ctx = { site, A, t, level, x, room }, filled = {};
   // what this simulation takes from Account, shown in the bar (site, north and time zone are always there)
   const linked = Object.entries(cfg.prefill?.(ctx) || {}).filter(([id, val]) => ACCT[id] && val != null && val !== '' && !(typeof val === 'number' && !Number.isFinite(val)));
@@ -160,6 +163,20 @@ export function render(app, sim, params = new URLSearchParams()) {
   let alive = true, loaded = false, sentScene = null, done = false, batchNoResult = false, pilotRunSnapshot=null; const ovApply = {};
   const doc = () => { try { return fr.contentDocument; } catch (e) { return null; } };
   const say = (h, warn) => { msg.innerHTML = h; msg.classList.toggle('warn', !!warn); };
+  let revealing=false;
+  function revealEngine(){
+    if(revealing||fr.dataset.pcVisibleReady==='true')return;revealing=true;
+    const loading=$('#engineLoading',app),started=Date.now();
+    const probe=()=>{
+      if(!alive||!fr.isConnected)return;
+      const D=doc(),documents=D?[D,...[...D.querySelectorAll('iframe')].filter(f=>!f.hidden&&f.getBoundingClientRect().width).map(f=>{try{return f.contentDocument;}catch{return null;}}).filter(Boolean)]:[];
+      if(fr.dataset.pcSettingsReady==='true'&&documents.some(d=>d.querySelector('.app[data-pc-unified=true]'))&&!documents.some(d=>d.body?.dataset.pcSharedWeatherLoading)){
+        fr.style.visibility='visible';fr.dataset.pcVisibleReady='true';loading?.remove();return;
+      }
+      if(loading){loading.style.top=$('.shbar',app).offsetHeight+'px';if(Date.now()-started>15000)loading.textContent='Still preparing the selected model and Settings. Please wait…';}
+      setTimeout(probe,50);
+    };requestAnimationFrame(probe);
+  }
 
   // the engine's own input, made from the version
   const input = (() => {
@@ -175,8 +192,8 @@ export function render(app, sim, params = new URLSearchParams()) {
     return Promise.resolve({ ok: true });
   })();
   input.catch(() => null).then((r) => { if (!alive || !r) return; if (!r.ok && /no closed rooms/i.test((r.why || []).join(' ')) && ((v.model.studio && v.model.studio.masses) || []).length) r.why = [...(r.why || []), 'This version has masses but no rooms yet: in the Workspace, select a mass and use Make floors in its panel.'];
-    if (!r.ok) { say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); tell({ ok: false, why: `This version can't run here yet: ${(r.why || []).join(' ')}` }); } });
-  input.catch((e) => { if (alive) { say(esc(e.message || 'The model could not be prepared.'), true); tell({ ok: false, why: e.message || 'The model could not be prepared.' }); } });
+    if (!r.ok) { const loading=$('#engineLoading',app);if(loading)loading.textContent=`This version can't run here yet: ${(r.why||[]).join(' ')} Open the Workspace to adjust the model.`;say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); tell({ ok: false, why: `This version can't run here yet: ${(r.why || []).join(' ')}` }); } });
+  input.catch((e) => { if (alive) { const loading=$('#engineLoading',app);if(loading)loading.textContent=e.message||'The model could not be prepared.';say(esc(e.message || 'The model could not be prepared.'), true); tell({ ok: false, why: e.message || 'The model could not be prepared.' }); } });
 
   // the engine asks for the model at once (it is waiting for this page) instead of after its demo analysis
   window.__pcHO = { tool: sim.id };
@@ -208,6 +225,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
     if(['vent','daylight'].includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,site,sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.then(()=>fr.contentWindow.PlotCloudSimulationFit?.refresh()).catch(error=>{weatherFailure=error;say(esc(error.message),true);fr.contentWindow.PlotCloudSimulationFit?.refresh();});}
     fr.contentWindow.PlotCloudSimulationFit?.refresh();
+    revealEngine();
     for(const child of D.querySelectorAll('iframe'))try{child.contentWindow.PlotCloudSimulationFit?.refresh();}catch{}
   }
   function bindPilot(){
