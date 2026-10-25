@@ -1,8 +1,8 @@
 # Workspace (merged, formerly Workspace v2): reconciliation
 
-`#/workspace` is the merged Workspace (formerly `#/workspace-v2`). Legacy `#/studio` and `#/workspace-archive` bookmarks redirect here. The old public Workspace/Plan Studio page is removed; the shared `emb/modeler.html` modelling engine remains in use. There is no archived public editor entry.
+`#/workspace` is the single public Workspace. Retired public Workspace and Plan Studio pages are removed; the shared `emb/modeler.html` modelling engine remains in use only inside this Workspace.
 
-New files: `js/pages/workspace-v2.js`, `js/viewport2.js`, plus a `Workspace v2` block at the end of `css/mvp.css`. Edited: `js/app.js` (one route) and `index.html` (one nav link).
+Implementation files: `js/pages/workspace-v2.js`, `js/viewport2.js`, the Workspace block in `css/mvp.css`, `js/app.js` (one route) and `index.html` (one nav link).
 
 ## Panels on the right, like Rhino; nothing scrolls (2026-10-24, evening)
 
@@ -124,7 +124,7 @@ The page keeps one store in this browser (`pc-mvp-ws2`): view and level, display
 
 On a local server, from a clean browser profile:
 - The archived Workspace opens as before.
-- The nav entry opens `#/workspace-v2` with all five areas.
+- The nav entry opens `#/workspace` with all five areas.
 - The sample shows 8 layers and 19 components (Site 1, Context 2, Structure 1, Walls 5, Glazing 4, Roof 2, Rooms 2, Furniture 2). Site starts locked.
 - Selecting from the tree opens Parameters, and edits reach the project data.
 - Each display mode sets the expected material opacity, and the selection survives the switch.

@@ -147,8 +147,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       <h2 id="h-model">Model</h2>
       <div class="drop" id="drop">
         <div class="two openrow"><button type="button" class="btn" id="pick">Choose a model file</button><button type="button" class="btn" id="resetAnalysis">Reset</button></div>
-        <p>Or drop it on the view. Accepts .3dm, .dae, .obj, .stl and .glb up to 20 MB / 350,000 triangles. Simplify larger models before importing.</p>
-        <input type="file" id="file" accept=".3dm,.obj,.stl,.dae,.glb,.gltf,.json" hidden>
+        <p>Or drop it on the view. Accepts .3dm (including .3dmbak), .dae, .obj, .stl and .glb up to 20 MB / 350,000 triangles. Export only exterior analysis geometry from a larger design model.</p>
+        <input type="file" id="file" accept=".3dm,.3dmbak,.obj,.stl,.dae,.glb,.gltf,.json" hidden>
       </div>
       <div class="fileinfo" id="fileinfo"><b>Sample: corner courtyard block with tower</b><span>Demo model · meters</span></div>
       <p class="msg" id="loadmsg"></p>
@@ -859,9 +859,10 @@ async function read3dm(buf) {
   return { geoms, unit: unitName ? UNIT_OF_RHINO[unitName] : null, up: 'z', warn, unitKnown: !!unitName };
 }
 const MODEL_LIMITS = Object.freeze({ bytes: 20 * 1024 * 1024, triangles: 350000 });
+const modelExt = (name) => /\.3dmbak$/i.test(name) ? '3dm' : name.toLowerCase().split('.').pop();
 function checkFileSize(file) {
   const mb = file.size / 1048576;
-  if (file.size > MODEL_LIMITS.bytes) throw new Error(`This model is ${mb.toFixed(1)} MB. For reliable browser analysis, the limit is 20 MB. Simplify the model, purge unused objects and textures, then export only the geometry needed for the sun study.`);
+  if (file.size > MODEL_LIMITS.bytes) throw new Error(`This model is ${mb.toFixed(1)} MB. For reliable browser analysis, the limit is 20 MB.${/\.3dmbak$/i.test(file.name) ? ' This is a valid Rhino backup, but it still contains the full design model.' : ''} In Rhino, keep the original, select only roofs, facades and major shade elements, then Export Selected as a new .3dm or .obj. Leave out furniture, fixtures, materials and interior detail.`);
 }
 function checkMeshSize(parsed) {
   const triangles = parsed.geoms.reduce((n, g) => n + Math.ceil((g.index ? g.index.count : g.attributes.position.count) / 3), 0);
@@ -872,7 +873,7 @@ function checkMeshSize(parsed) {
   return triangles;
 }
 async function readFile(file) {
-  const ext = file.name.toLowerCase().split('.').pop();
+  const ext = modelExt(file.name);
   checkFileSize(file);
   const buf = await file.arrayBuffer();
   if (ext === '3dm') return read3dm(buf);
@@ -1712,7 +1713,7 @@ function applyLevel(level) { if (level === 'custom' || !S.model) return; const p
 $('#lvlSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-l]'); if (!b) return; S.level = b.dataset.l; $$('#lvlSeg button').forEach((q) => q.setAttribute('aria-pressed', String(q === b))); stale(); lvlUI(); });
 $('#longGo').addEventListener('click', () => { $('#longBox').hidden = true; runAnalysis({ confirmed: true }); }); $('#longNo').addEventListener('click', () => { $('#longBox').hidden = true; });
 
-window.__sun = { get S() { return S; }, dates: periodDates, reset: resetAnalysis, readableFileError, limits: MODEL_LIMITS, checkFileSize, checkMeshSize };
+window.__sun = { get S() { return S; }, dates: periodDates, reset: resetAnalysis, readableFileError, limits: MODEL_LIMITS, modelExt, checkFileSize, checkMeshSize };
 // ---------- start ----------
 if (window.PC_EMBED) { document.querySelector('.brand').hidden = true; }
 applyTheme();

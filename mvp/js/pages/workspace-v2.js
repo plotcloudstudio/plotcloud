@@ -7,7 +7,7 @@
 //                 model, so Perspective draws them. It is kept, hidden and not drawn, so the code that still talks to it keeps working.)
 // One model: the project's draft keeps the Plan Studio model (draft.studio) and, next to it, one component per Plan Studio object
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
-// The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
+// This is the only public Workspace. Retired Workspace and Plan Studio pages are not kept as parallel entry points.
 import * as S from '../store.js';
 import { LAYER_COLORS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject, setCurrent, setCurrentVersion } from '../app.js';
@@ -488,8 +488,8 @@ export function render(app, [pid]) {
       <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
       <p class="note">Plan and Perspective show the one model (Plan Studio’s): walls, masses, the site and imported meshes. Edit here, then run simulations on a saved version.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
-      <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb · .3dm</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
-      <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm" hidden>
+      <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb · .3dm</button><div style="margin-top:6px">Rhino .3dmbak backups also work · 25 MB maximum · read locally</div></div>
+      <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm,.3dmbak" hidden>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>

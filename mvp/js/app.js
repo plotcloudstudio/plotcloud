@@ -56,13 +56,10 @@ const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations',
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
   const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;
-  if(/^#\/(?:studio|workspace-archive)(?:\/|$|\?)/.test(location.hash))history.replaceState(null,'',location.hash.replace(/^#\/(?:studio|workspace-archive)/,'#/workspace'));
   if(/^#\/library(?:\?|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/library','#/resources/files'));
   if(/^#\/res\//.test(location.hash))history.replaceState(null,'',location.hash.replace('#/res/','#/resources/item/'));
   if(/^#\/showroom(?:\/|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/showroom','#/resources/showroom'));
   // one route per simulation, one state: old links that carry ?project=&version= set the current project and version, then the address is cleaned
-  // the merged Workspace is now the Workspace; old Workspace v2 links land on it
-  if (/^#\/workspace-v2(\/|$|\?)/.test(location.hash)) history.replaceState(null, '', location.hash.replace('#/workspace-v2', '#/workspace'));
   const h0 = location.hash, m0 = h0.match(/^#\/simulations(\/[\w-]+)?\?(.*)$/);
   if (m0) { const q0 = new URLSearchParams(m0[2]), pr = q0.get('project') && S.project(q0.get('project')); if (pr) { setCurrent(pr); if (q0.get('version') && S.version(pr, q0.get('version'))) setCurrentVersion(pr, q0.get('version')); } history.replaceState(null, '', '#/simulations' + (m0[1] || '')); }
   if (/^#\/simulations\/[\w-]+$/.test(location.hash) && !/^#\/simulations\/[\w-]+/.test(prevHash)) { try { sessionStorage.setItem('pc-sim-back', prevHash || '#/simulations'); } catch (e) { } }

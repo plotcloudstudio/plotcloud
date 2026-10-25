@@ -20,14 +20,17 @@ const B = (process.env.TEST_BASE || 'http://127.0.0.1:8765') + '/mvp/';
     const rh = await X.loadRhino(), doc = new rh.File3dm(); doc.settings().modelUnitSystem = rh.UnitSystem.Millimeters; const ly = new rh.Layer(); ly.name = 'Walls'; const li = doc.layers().add(ly);
     const m = new rh.Mesh(), P = [[0, 0, 0], [1000, 0, 0], [1000, 1000, 0], [0, 1000, 0], [0, 0, 1000], [1000, 0, 1000], [1000, 1000, 1000], [0, 1000, 1000]]; for (const q of P) m.vertices().add(...q);
     for (const [a, c, d, e] of [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]) m.faces().addQuadFace(a, c, d, e); m.normals().computeNormals();
-    const at = new rh.ObjectAttributes(); at.name = 'Test cube'; at.layerIndex = li; doc.objects().add(m, at); const mm = await V.importModel(new File([doc.toByteArray()], 'cube_mm.3dm')); doc.delete();
-    return { n: S.length, tris: S.reduce((a, s) => a + s.tris, 0), backN: back.components.length, backTris: back.triangles, named, layered, worst, cube: mm.components[0] && { name: mm.components[0].name, layer: mm.components[0].srcLayer, g: mm.components[0].g } };
+    const at = new rh.ObjectAttributes(); at.name = 'Test cube'; at.layerIndex = li; doc.objects().add(m, at); const bytes = doc.toByteArray(), mm = await V.importModel(new File([bytes], 'cube_mm.3dm')), backup = await V.importModel(new File([bytes], 'cube_mm.3dmbak')); doc.delete();
+    let large = '', readLarge = false; try { await V.importModel({ name: 'interior design.3dmbak', size: 816805302, arrayBuffer: async () => { readLarge = true; throw Error('unsafe read'); } }); } catch (e) { large = e.message; }
+    return { n: S.length, tris: S.reduce((a, s) => a + s.tris, 0), backN: back.components.length, backTris: back.triangles, named, layered, worst, cube: mm.components[0] && { name: mm.components[0].name, layer: mm.components[0].srcLayer, g: mm.components[0].g }, backup: backup.components[0]?.name, large, readLarge };
   });
   console.log('  ' + JSON.stringify(r).slice(0, 300));
   ok(r.backN === r.n && r.backTris === r.tris, `every object comes back: ${r.backN} of ${r.n} objects, ${r.backTris} of ${r.tris} triangles`);
   ok(r.named === r.n && r.layered === r.n, `with its name and its layer (${r.named} named, ${r.layered} on their layer)`);
   ok(r.worst < 0.002, `and where it was (largest difference ${(r.worst * 1000).toFixed(2)} mm)`);
   ok(r.cube && r.cube.name === 'Test cube' && r.cube.layer === 'Walls' && Math.abs(r.cube.g.w - 1) < 1e-6 && Math.abs(r.cube.g.h - 1) < 1e-6, 'a .3dm in millimetres comes in in metres, with its object name and Rhino layer');
+  ok(r.backup === 'Test cube', 'a Rhino .3dmbak backup is read as a .3dm without renaming the original');
+  ok(!r.readLarge && /779\.0 MB/.test(r.large) && /Export Selected/.test(r.large), 'the real 816,805,302-byte backup is stopped before reading, with an actionable Rhino workflow');
   // the Workspace's own import keeps the Rhino layer when the project has it
   const fs = require('fs'), os = require('os'); const bytes = await p.evaluate(async () => { const X = await import('./js/export3d.js'), rh = await X.loadRhino(), doc = new rh.File3dm(); doc.settings().modelUnitSystem = rh.UnitSystem.Meters; const ly = new rh.Layer(); ly.name = 'Furniture'; const li = doc.layers().add(ly);
     const m = new rh.Mesh(); for (const q of [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]) m.vertices().add(...q); m.faces().addQuadFace(0, 1, 2, 3); const at = new rh.ObjectAttributes(); at.name = 'zz_panel'; at.layerIndex = li; doc.objects().add(m, at); return Array.from(doc.toByteArray()); });
