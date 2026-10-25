@@ -62,6 +62,28 @@ all on one patch of ground so they compare) and one sentence per scheme against 
 Save points are the project's versions (Workspace › Save version), which keep every scheme.
 Send to Simulation › Sun hours reads the open scheme, with the site's buildings and the terrain.
 
+## From a mass to floors
+
+Select a mass and press **Make floors** in its panel (with *Windows along the walls* on or off):
+
+* one Plan Studio level per storey, floor to floor = the mass's height per storey, ceilings 0.3 m below the next floor;
+* the outline becomes the outer walls on every level, so each level is a room (R1, R2, …) ready to be divided;
+* windows 1.5 m wide, one per 3 m bay, sill 0.9 m, if asked;
+* on a model with no walls the levels are replaced; otherwise the walls go onto the levels at the same heights (made where missing);
+* the mass keeps its place in the site figures and the schemes, drawn as a dashed outline; in 3D and in Sun hours the walls stand for it
+  (the sun preview keeps its volume); Undo takes the floors back.
+
+Then the room simulations (Daylight, Ventilation, Views, Isovist, Space syntax, Wayfinding, Privacy, Camera coverage, Circulation,
+Indoor acoustics) can run.
+
+**Where you are**: a breadcrumb at the top left of the plan, *Site › Mass 1 · 4 fl. › level*: Site shows the whole site, the mass
+selects it, the level picker changes level.
+
+**What to do next**: the Workspace rail marks the next step with a dot — Massing on an empty model, Draw room (Make floors) when
+there are masses and no walls. The Simulations page says for each simulation whether the open project is ready ("Ready for this
+project", "Needs a site or masses", "Needs rooms · Make floors from a mass"), and a room simulation opened on a version with only
+masses says how to get rooms.
+
 ## Editing the surroundings
 
 Unlock the *Site* layer in the Workspace (it is locked by default), then click a building:
@@ -76,6 +98,8 @@ Unlock the *Site* layer in the Workspace (it is locked by default), then click a
 ## Tests
 
 * `tests/mvp-new-site.cjs` — the map flow with real OpenStreetMap and terrain (needs the network).
+* `tests/mvp-floors.cjs` — Make floors (levels, walls, rooms, windows, figures kept, Sun hours from the walls, Daylight runs, Undo),
+  the breadcrumb, the rail's next step, the Simulations page's readiness and the message for a room simulation on masses only.
 * `tests/mvp-massing.cjs` — massing in the Workspace (tool, model, layer, Properties pane, 3D pane, site figures, Sun hours) and in
   Plan Studio with a small labelled OpenStreetMap fixture (snapping, overlap, FAR, corner drag, boundary flag, delete, editing,
   leave out, put back, a drawn neighbour, re-import, sub-layers, undo, 3D), the sun preview and schemes, and the preview's sun
@@ -83,5 +107,5 @@ Unlock the *Site* layer in the Workspace (it is locked by default), then click a
 
 ## Not done yet
 
-Setbacks, height limits and zoning envelopes; masses on top of other masses (a raised base); turning a mass into floors and
-rooms (Step 5); sun on facades in the preview; comparing schemes in Results with full simulation runs.
+Setbacks, height limits and zoning envelopes; masses on top of other masses (a raised base); cores, stairs and internal walls from
+a mass (Make floors gives the shell and the windows); sun on facades in the preview; comparing schemes in Results with full simulation runs.

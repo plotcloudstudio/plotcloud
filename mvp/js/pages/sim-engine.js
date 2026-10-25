@@ -174,7 +174,8 @@ export function render(app, sim, params = new URLSearchParams()) {
       return Promise.resolve({ ok: true, info: room.name, scene: JSON.stringify({ name: room.name, walls: q.map((a, i) => ({ a, b: q[(i + 1) % 4], h: +g.h.toFixed(3) })), source: { app: 'plotcloud-workspace', project: p.id, version: v.id, room: room.id } }) }); }
     return Promise.resolve({ ok: true });
   })();
-  input.catch(() => null).then((r) => { if (!alive || !r) return; if (!r.ok) { say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); tell({ ok: false, why: `This version can't run here yet: ${(r.why || []).join(' ')}` }); } });
+  input.catch(() => null).then((r) => { if (!alive || !r) return; if (!r.ok && /no closed rooms/i.test((r.why || []).join(' ')) && ((v.model.studio && v.model.studio.masses) || []).length) r.why = [...(r.why || []), 'This version has masses but no rooms yet: in the Workspace, select a mass and use Make floors in its panel.'];
+    if (!r.ok) { say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); tell({ ok: false, why: `This version can't run here yet: ${(r.why || []).join(' ')}` }); } });
   input.catch((e) => { if (alive) { say(esc(e.message || 'The model could not be prepared.'), true); tell({ ok: false, why: e.message || 'The model could not be prepared.' }); } });
 
   // the engine asks for the model at once (it is waiting for this page) instead of after its demo analysis

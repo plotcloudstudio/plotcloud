@@ -290,6 +290,7 @@ html,body{height:100%;overflow:hidden;background:var(--kj-bg);color:var(--kj-ink
 /* stage */
 .stage{grid-column:2;grid-row:2;background:#f5f6f8;position:relative;min-width:0;min-height:0;overflow:hidden}
 .mkpi .mk-s{display:flex;gap:3px;align-items:center;margin:-2px 0 3px;justify-content:flex-start !important}.mkpi .mk-s button,.mkpi .mk-sn button{border:1px solid #d9d6cf;background:#f6f5f2;border-radius:5px;font:600 11px system-ui,sans-serif;padding:2px 7px;cursor:pointer;color:#1c1b1a}.mkpi .mk-s button[aria-selected=true]{background:#1c1b1a;color:#fff;border-color:#1c1b1a}.mkpi .mk-s .mk-cmp{margin-left:auto;font-weight:500}.mkpi .mk-sn{font-size:11px;color:#6e6a60;margin-bottom:4px;display:flex !important;justify-content:space-between;align-items:center}.mkpi .mk-sn button{font-weight:500;padding:1px 6px}.mkpi .mk-sun{border-top:1px solid #ecebe6;margin-top:5px;padding-top:5px;display:flex !important;gap:6px;align-items:center;justify-content:flex-start !important}.mkpi .mk-sun select{font:11.5px system-ui,sans-serif;padding:1px 2px}.mkpi .mk-sun label{display:flex;gap:4px;align-items:center;font-weight:600;white-space:nowrap}.mkpi .mk-leg{display:grid !important;grid-template-columns:1fr auto;gap:0 6px;margin-top:4px;font-size:10.5px;color:#6e6a60}.mkpi .mk-leg i{grid-column:1/3;height:7px;border-radius:3px;background:linear-gradient(90deg,rgb(52,64,92),rgb(86,116,160),rgb(150,175,170),rgb(238,206,120),rgb(245,160,60))}.mkpi .mk-leg span:last-child{text-align:right}.mkcmp{position:absolute;right:12px;top:60px;z-index:8;background:#fff;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.18);padding:12px 14px;font:12.5px/1.4 system-ui,sans-serif;max-width:min(720px,calc(100% - 24px));max-height:calc(100% - 80px);overflow:auto}.mkcmp[hidden]{display:none}.mkcmp .mc-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.mkcmp table{border-collapse:collapse;width:100%}.mkcmp th,.mkcmp td{padding:4px 8px;border-bottom:1px solid #ecebe6;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.mkcmp tbody th,.mkcmp thead th:first-child{text-align:left;font-weight:500;color:#6e6a60}.mkcmp em{font-weight:400;color:#6e6a60;font-style:normal}.mkcmp .mc-t{margin:10px 0 6px;padding-left:18px}.mkcmp .mc-t li{margin:3px 0}.mkcmp .mc-b{display:flex;gap:6px;flex-wrap:wrap}.mkcmp .mk-n{color:#6e6a60;font-size:11px;margin:8px 0 0}
+.crumbs{position:absolute;left:10px;top:10px;z-index:5;display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.96);border-radius:8px;box-shadow:var(--kj-shadow);padding:4px 6px;font:12px system-ui,sans-serif;max-width:max(220px,calc(50% - 175px))}.crumbs[hidden]{display:none}.crumbs button{border:0;background:none;font:600 12px system-ui,sans-serif;color:#1c1b1a;padding:3px 4px;border-radius:5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}.crumbs button:hover{background:#f1efea}.crumbs span{color:#9a958a}.crumbs select{font:12px system-ui,sans-serif;border:1px solid #e1dfda;border-radius:5px;padding:2px 2px;background:#fff;flex:0 0 auto;max-width:96px}.stage.has-crumbs .mkpi{top:48px}.mkfl{margin-top:8px}.mkfl .go{width:100%}.mkfl-w{display:flex;gap:6px;align-items:center;font-size:12.5px;margin-bottom:6px}
 .mkpi{position:absolute;left:10px;top:10px;z-index:5;background:rgba(255,255,255,.96);border-radius:8px;box-shadow:var(--kj-shadow);padding:8px 10px 6px;font:12px/1.35 system-ui,sans-serif;color:#1c1b1a;min-width:168px;max-width:220px;pointer-events:none}.mkpi[hidden]{display:none}.mkpi .mk-h{font-weight:600;font-size:11.5px;color:#6e6a60;margin-bottom:4px}.mkpi div:not(.mk-h){display:flex;justify-content:space-between;gap:10px}.mkpi b{font-variant-numeric:tabular-nums;font-weight:600}.mkpi .mk-w{color:#b3261e;margin:4px 0 0;font-weight:600}.mkpi .mk-n{color:#6e6a60;margin:4px 0 0;font-size:11px}
 .tstrip{left:50%;top:10px;transform:translateX(-50%);display:flex;gap:2px;width:auto;padding:4px;border:0;border-radius:8px;background:#fff;box-shadow:var(--kj-shadow);z-index:6;max-width:calc(100% - 24px)}
 .tstrip button{width:48px;min-height:42px;border:0;background:none;border-radius:6px;padding:4px 2px 3px;display:grid;justify-items:center;align-content:center;gap:3px;font:500 12px/1.1 var(--f-body);color:var(--kj-sub)}
@@ -5127,9 +5128,9 @@ function sunGrid(Mx, masses, opt = {}) {
 function sunFigures(Mx, masses, day, box) { box = box || sunBox(Mx, masses.map((m) => m.outer)); const a = sunGrid(Mx, masses, { day, box }); if (!a) return null; const b = masses.length ? sunGrid(Mx, [], { day, box }) : a;
   return { grid: a, plot: a.plot, around: a.around, aroundWithout: b && b.around, loss: a.around && b && b.around ? b.around.avg - a.around.avg : 0 }; }
 function sunRefresh(force) {
-  if (!SUNP.on || !M.site) { SUNP.res = null; return; } const key = JSON.stringify([massList(M).map((m) => [m.outer, m.h]), M.site.version, M.site.buildings.length, SUNP.day, M.north || 0, M.site.parcel]);
+  if (!SUNP.on || !M.site) { SUNP.res = null; return; } const key = JSON.stringify([massList(M, true).map((m) => [m.outer, m.h]), M.site.version, M.site.buildings.length, SUNP.day, M.north || 0, M.site.parcel]);
   if (!force && key === SUNP.key) return; SUNP.key = key; clearTimeout(SUNP.t);
-  SUNP.t = setTimeout(() => { const t0 = performance.now(); SUNP.res = sunFigures(M, massList(M), SUNP.day); if (SUNP.res) SUNP.res.ms = Math.round(performance.now() - t0); draw(); massKpiUI(); }, drag ? 250 : 60);
+  SUNP.t = setTimeout(() => { const t0 = performance.now(); SUNP.res = sunFigures(M, massList(M, true), SUNP.day); if (SUNP.res) SUNP.res.ms = Math.round(performance.now() - t0); draw(); massKpiUI(); }, drag ? 250 : 60);
 }
 const SUN_RAMP = [[0, [52, 64, 92]], [0.25, [86, 116, 160]], [0.5, [150, 175, 170]], [0.75, [238, 206, 120]], [1, [245, 160, 60]]];
 function sunCol(f) { f = Math.max(0, Math.min(1, f)); let i = 0; while (i < SUN_RAMP.length - 2 && f > SUN_RAMP[i + 1][0]) i++; const [fa, a] = SUN_RAMP[i], [fb, b] = SUN_RAMP[i + 1], u = (f - fa) / (fb - fa); return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * u)).join(',')})`; }
@@ -5151,7 +5152,7 @@ function newScheme(copy) { const L = schemesOf(), b = snapM(), used = new Set(L.
 function delScheme() { const L = schemesOf(); if (L.length < 2) return; const cur = L.find((s) => s.id === M.scheme); if (!confirm(`Delete ${cur.name} and its masses? You can undo this.`)) return; const b = snapM(), rest = L.filter((s) => s !== cur), nx = rest[0]; M.schemes = rest; M.masses = nx.masses || []; nx.masses = null; M.scheme = nx.id; SEL = null; commit(b); }
 function renameScheme() { const cur = schemesOf().find((s) => s.id === M.scheme), n = prompt('Name of this scheme', cur.name); if (n == null || !n.trim()) return; const b = snapM(); cur.name = n.trim().slice(0, 40); commit(b); }
 // the figures of every scheme, and the one-line trade-off between two of them
-function schemeTable(day) { const L = schemesOf(), lists = L.map((s) => massList(Object.assign({}, M, { masses: schemeMasses(s) }))), box = M.site ? sunBox(M, [].concat(...lists.map((l) => l.map((m) => m.outer)))) : null;   // one patch of ground for every scheme, so their sun figures compare
+function schemeTable(day) { const L = schemesOf(), lists = L.map((s) => massList(Object.assign({}, M, { masses: schemeMasses(s) }), true)), box = M.site ? sunBox(M, [].concat(...lists.map((l) => l.map((m) => m.outer)))) : null;   // one patch of ground for every scheme, so their sun figures compare
   return L.map((s, i) => { const F = siteFigures(schemeMasses(s)), sun = box ? sunFigures(M, lists[i], day, box) : null; return { id: s.id, name: s.name, F, sun, cur: s.id === M.scheme }; }); }
 function tradeOff(a, b, day) {   // b compared with a, in one sentence
   const pc = (x, y) => y ? Math.round((x - y) / y * 100) : null, sign = (v, u, dp = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('en', { maximumFractionDigits: dp })}${u}`;
@@ -5230,6 +5231,61 @@ cv.addEventListener('pointerdown', (e) => { if (TOOL !== 'select' || e.button !=
 function setImportMeshes(obj) { IMP_MESH.clear(); for (const [k, v] of Object.entries(obj || {})) if (Array.isArray(v) && v.length) IMP_MESH.set(k, v); draw(); if (window.S3 && S3.on) upd3D(); }
 function addImports(list) { const b = snapM(); for (const c of list) { if (c.mesh) IMP_MESH.set(c.id, c.mesh); (M.imports || (M.imports = [])).push({ id: c.id, name: c.name, layer: c.layer || 'Imported', type: 'imported', mat: c.mat || 'Imported', tris: c.mesh ? Math.round(c.mesh.length / 9) : c.tris || 0, g: Object.assign({}, c.g) }); } commit(b); return list.length; }
 window.__imp = { get list() { return M.imports || []; }, setOff(names) { IMP_OFF = new Set(names || []); draw(); if (window.S3 && S3.on) upd3D(); }, setMeshes: setImportMeshes, add: addImports, meshOf };
+
+// ===== From a mass to floors (2026-10-25) =====
+// "Make floors" turns a mass into a building Plan Studio can analyse inside: one level per storey (floor to floor = the mass's
+// floor-to-floor height, the ceiling 0.3 m below the next floor, as Plan Studio's levels), the outline as outer walls on each level
+// (a room each), and windows along every wall if asked (1.5 m wide, one per 3 m bay, sill 0.9 m). The mass stays as the record of the
+// scheme (its figures still count) but is drawn as an outline: the walls now stand for it in 3D and in Sun hours.
+// On a model with no walls the levels are replaced; otherwise the walls go onto the levels at the same heights (made where missing).
+function makeFloors(m, { windows = true } = {}) {
+  if (!m || m.floors) return false; const b = snapM(), fh = m.fh, n = m.storeys, empty = !M.walls.length, made = [];
+  if (empty) M.levels = [];
+  for (let i = 0; i < n; i++) { const z = +(i * fh).toFixed(2); let lv = M.levels.find((l) => Math.abs(l.z - z) < 0.05);
+    if (!lv) { let id = 'L' + (M.levels.length + 1); while (M.levels.some((l) => l.id === id)) id += 'x'; lv = { id, name: i === 0 ? 'Ground' : `Level ${i + 1}`, z, h: +Math.max(2.2, fh - 0.3).toFixed(2) }; M.levels.push(lv); }
+    made.push(lv.id); const keep = LV; LV = lv.id; polyRoom(m.points.map((q) => q.slice())); LV = keep; }
+  tidy();
+  if (windows) for (const id of made) for (const w of M.walls.filter((q) => q.lv === id && m.points.some((p, k) => { const a = m.points[k], c = m.points[(k + 1) % m.points.length]; return segOn(q, a, c); }))) {
+    const L = STC.wallLen(w), bays = Math.floor(L / 3); if (bays < 1 || L < 2) continue; const dir = STC.wallDir(w);
+    for (let k = 0; k < bays; k++) { const t = (k + 0.5) * L / bays, p = [w.a[0] + dir[0] * t, w.a[1] + dir[1] * t]; const o = STC.addOp(M, id, p, 'win', 1.5, { gen: { id: 'win', vals: dDefaults(genModel('win')) } }); if (o) { if (o.gen) opFit(o, w.t || 0.2); STC.fixOp(M, o); } } }
+  m.floors = { levels: made, at: new Date().toISOString(), windows: !!windows };
+  if (!made.includes(LV)) LV = made[0]; SEL = null; tidy(); commit(b); V.user = false; fitView(); draw(); if (window.S3 && S3.on) upd3D(true); return made.length;
+}
+// a wall lies along the segment a–c (same line, inside it)
+function segOn(w, a, c) { const dx = c[0] - a[0], dy = c[1] - a[1], L = Math.hypot(dx, dy) || 1, n = [-dy / L, dx / L], off = (p) => Math.abs((p[0] - a[0]) * n[0] + (p[1] - a[1]) * n[1]), t = (p) => ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (L * L);
+  return off(w.a) < 0.05 && off(w.b) < 0.05 && t(w.a) > -0.01 && t(w.a) < 1.01 && t(w.b) > -0.01 && t(w.b) < 1.01; }
+// a mass with floors is drawn as a dashed outline; Sun hours and 3D take its walls instead
+{ const _ml = massList; massList = function (Mx = M, all = false) { return all ? _ml(Mx) : _ml(Object.assign({}, Mx, { masses: (Mx.masses || []).filter((m) => !m.floors) })); }; }   // all: with the masses that have floors (the sun preview keeps their volume)
+{ const _dm = drawMasses; drawMasses = function () { const keep = M.masses; M.masses = (keep || []).filter((m) => !m.floors); try { _dm(); } finally { M.masses = keep; }
+  if (!layerOn('mass')) return; const d = VP.d;
+  for (const m of (M.masses || []).filter((q) => q.floors && !isHidden(q.id))) { const sel = SEL && SEL.k === 'mass' && SEL.id === m.id; g.save(); g.beginPath(); m.points.forEach((q, i) => { const s = W2S(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); }); g.closePath();
+    g.setLineDash([7 * d, 4 * d]); g.strokeStyle = sel ? C.accent : 'rgba(107,90,72,.75)'; g.lineWidth = (sel ? 2.2 : 1.3) * d; g.stroke(); g.setLineDash([]);
+    const xs = m.points.map((q) => q[0]), ys = m.points.map((q) => q[1]), t = W2S([Math.min(...xs), Math.max(...ys)]); g.font = `600 ${10.5 * d}px system-ui, sans-serif`; g.fillStyle = '#6b5a48'; g.fillText(`${m.name || 'Mass'} · ${m.storeys} floors`, t[0] + 3 * d, t[1] - 5 * d); g.restore(); } }; }
+// the mass panel gets the button
+{ const _p = propsUI; propsUI = function () { _p(); if (!SEL || SEL.k !== 'mass') return; const o = selObj(), box = $('#props'); if (!o) return;
+  const el = document.createElement('div'); el.className = 'mkfl';
+  el.innerHTML = o.floors ? `<p class="note"><b>Floors made</b> (${o.floors.levels.length} levels${o.floors.windows ? ', with windows' : ''}). The walls stand for this mass now: change them level by level. Undo takes the floors back.</p>`
+    : `<label class="mkfl-w"><input type="checkbox" id="pm_win" checked> Windows along the walls</label><button type="button" class="btn go" id="pm_floors">Make floors</button><p class="note">One level per storey (${o.storeys} × ${o.fh} m), the outline as outer walls on each, so the inside can be designed and Daylight, Ventilation, Views and the other room simulations can run.</p>`;
+  const del = $('#pp_del', box); (del ? del.closest('.two') : box.lastChild).insertAdjacentElement('afterend', el);
+  const go = $('#pm_floors', el); if (go) go.addEventListener('click', () => { const n = makeFloors(o, { windows: $('#pm_win', el).checked }); if (n) flash(`${n} level${n > 1 ? 's' : ''} made from ${o.name || 'the mass'}. Pick a level at the bottom to draw inside.`); }); }; }
+// where you are: Site › Mass › Level, top left of the plan
+const crumbs = document.createElement('nav'); crumbs.className = 'crumbs'; crumbs.setAttribute('aria-label', 'Where you are'); crumbs.hidden = true; stage.appendChild(crumbs);
+function crumbsUI() {
+  const show = CAM === 'plan' && VIEW2D === 'plan' && !!(M.site || (M.masses || []).length); crumbs.hidden = !show; stage.classList.toggle('has-crumbs', show); if (!show) return;
+  const site = M.site ? (String(M.site.origin.label || M.site.name || 'Site').split(',')[0].slice(0, 24) || 'Site') : 'Site';
+  const mass = (M.masses || []).find((m) => m.floors && m.floors.levels.includes(LV)) || (SEL && SEL.k === 'mass' ? selObj() : null);
+  const lv = lvObj(), multi = M.levels.length > 1;
+  crumbs.innerHTML = `<button type="button" data-cr="site" title="${esc(site)}: show the whole site">${esc(site)}</button>${mass ? `<span aria-hidden="true">›</span><button type="button" data-cr="mass" title="${esc(mass.name || 'Mass')}${mass.floors ? ` · ${mass.storeys} floors` : ''}: select it">${esc(mass.name || 'Mass')}${mass.floors ? ` · ${mass.storeys} fl.` : ''}</button>` : ''}`
+    + (multi || (mass && mass.floors) ? `<span aria-hidden="true">›</span><select data-cr="lv" aria-label="Level">${lvSorted().slice().reverse().map((l) => `<option value="${l.id}"${l.id === LV ? ' selected' : ''}>${lvShort(l)} ${esc(l.name)}</option>`).join('')}</select>` : '');
+  crumbs.dataset.mass = mass ? mass.id : '';
+}
+crumbs.addEventListener('click', (e) => { const b = e.target.closest('button[data-cr]'); if (!b) return; if (b.dataset.cr === 'site') { SEL = null; V.user = false; fitView(); changedSel(); } else if (b.dataset.cr === 'mass' && crumbs.dataset.mass) { SEL = { k: 'mass', id: crumbs.dataset.mass }; changedSel(); } });
+crumbs.addEventListener('change', (e) => { if (e.target.dataset.cr === 'lv') gotoLevel(e.target.value); });
+{ const _c = changed; changed = function (lv, kp) { _c(lv, kp); crumbsUI(); }; }
+{ const _cs = changedSel; changedSel = function () { _cs(); crumbsUI(); }; }
+{ const _sc = setCam; setCam = async function (c) { const r = await _sc(c); crumbsUI(); return r; }; }
+window.__floors = { makeFloors, crumbsUI };
+crumbsUI();
 
 // for tests and the site
 window.__st = { get site() { return M.site || null; }, sunScene: () => STC.planScene(M, S, LV, 'sunhours'), get LAYER() { return LAYER; }, get VIS() { return VIS; }, get TOOL() { return TOOL; }, isDirty: () => isDirty(),  get M() { return M; }, get S() { return S; }, get RES() { return RES; }, get SEL() { return SEL; }, get LV() { return LV; }, toPx: (p) => { const q = W2S(p); return [q[0] / VP.d, q[1] / VP.d]; } };

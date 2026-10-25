@@ -273,7 +273,7 @@ export function render(app, [pid]) {
     if (UI.sels.some((id) => !comp(id))) { UI.sels = UI.sels.filter((id) => comp(id)); saveUI(); }
     drawShaded(!vpFitted); vpFitted = true;
     if (pendSel && comp(pendSel.id)) { const q = pendSel; pendSel = null; setSel([q.id], { from: q.role }); }
-    if (!live) { S.save(); state(); layers(); selPane(); toolUI(); }
+    if (!live) { S.save(); state(); layers(); selPane(); toolUI(); rail(); }
   }
   // the Shaded pane draws the project's components; Plan Studio's ones with the meshes made above
   let vpFitted = false;
@@ -413,7 +413,10 @@ export function render(app, [pid]) {
 
   // ---- left: rail + panel (project / tool group / parameters of the selection)
   let LIGHTS = null;
-  function rail() { const k = showParams && UI.sels.length ? null : UI.panel; $$('[data-panel]', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.panel === k))); }
+  function rail() { const k = showParams && UI.sels.length ? null : UI.panel; $$('[data-panel]', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.panel === k)));
+    // the next step, from what the model has (2026-10-25): an empty model starts with Massing; masses and no walls go on to Make floors
+    const st = M().studio || {}, walls = (st.walls || []).length, ms = (st.masses || []).length, next = !walls && !ms ? 'mass' : !walls ? 'draw' : null;
+    $$('.w2-rail [data-panel]', app).forEach((b) => { const t = TOOLS[b.dataset.panel]; b.classList.toggle('w2-next', b.dataset.panel === next); if (t) b.title = b.dataset.panel === next ? (next === 'mass' ? `${t.label} · start here: draw masses on the site` : `${t.label} · next: select a mass and use Make floors in its panel, or draw rooms`) : t.label; }); }
   $$('[data-panel]', app).forEach((b) => b.onclick = () => { UI.panel = b.dataset.panel; saveUI(); showParams = false; rail(); panel(); });
   const propsOn = (on) => { $('#propsWrap', app).dataset.off = String(!on); $('#panelBody', app).hidden = on; };
   function panel() {
