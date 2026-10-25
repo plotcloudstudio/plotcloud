@@ -2,6 +2,7 @@
 // Same visual language as the PlotCloud simulation tools: grey ground, off-white solids, soft light, z up.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { loadRhino } from './export3d.js';
 
 const MAT = {
   wall: 0xf1f0ec, slab: 0xe6e3dc, roof: 0xdedbd4, mass: 0xd2cec6, terrain: 0xe9e7e1, furniture: 0xd9d3c7, imported: 0xe6e3dc, window: 0x9cc3e0, room: 0xe8b04a,
@@ -121,7 +122,18 @@ export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
   if (ext === 'obj') { const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js'); obj = new OBJLoader().parse(new TextDecoder().decode(buf)); }
   else if (ext === 'stl') { const { STLLoader } = await import('three/addons/loaders/STLLoader.js'); obj = new THREE.Mesh(new STLLoader().parse(buf)); fileUp = 'z'; }
   else if (ext === 'glb' || ext === 'gltf') { const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js'); obj = (await new GLTFLoader().parseAsync(buf, '')).scene; }
-  else throw Error('The prototype reads .obj, .stl and .glb. Rhino, SketchUp and IFC files open in the full tools.');
+  else if (ext === '3dm') {   // Rhino: meshes, and the render meshes of surfaces, polysurfaces and extrusions; the file's units and layers are kept
+    const rh = await loadRhino(), doc = rh.File3dm.fromByteArray(new Uint8Array(buf)); if (!doc) throw Error('This .3dm file could not be read.');
+    const U = rh.UnitSystem, us = doc.settings().modelUnitSystem, k = us === U.Millimeters ? 0.001 : us === U.Centimeters ? 0.01 : us === U.Inches ? 0.0254 : us === U.Feet ? 0.3048 : us === U.Kilometers ? 1000 : 1;
+    unit = k; fileUp = 'z'; obj = new THREE.Group(); const L = doc.layers(), names = []; for (let i = 0; i < L.count; i++) names.push(L.get(i).name);
+    const loader = new THREE.BufferGeometryLoader(), O = doc.objects(); let skipped = 0;
+    for (let i = 0; i < O.count; i++) { const ro = O.get(i), g = ro.geometry(), at = ro.attributes(), ms = [];
+      if (g instanceof rh.Mesh) ms.push(g); else if (g instanceof rh.Brep) { for (let f = 0; f < g.faces().count; f++) { const m = g.faces().get(f).getMesh(rh.MeshType.Any); if (m) ms.push(m); } } else if (g instanceof rh.Extrusion) { const m = g.getMesh(rh.MeshType.Any); if (m) ms.push(m); }
+      if (!ms.length) { skipped++; continue; } const grp = new THREE.Group(); grp.name = at.name || names[at.layerIndex] || `Object ${i + 1}`; grp.userData.layer = names[at.layerIndex] || '';
+      for (const m of ms) grp.add(new THREE.Mesh(loader.parse(m.toThreejsJSON()))); obj.add(grp); }
+    doc.delete(); if (!obj.children.length) throw Error(skipped ? `None of the ${skipped} objects has a render mesh. In Rhino, shade the model once (or use Mesh) and save again.` : 'No objects in this .3dm file.');
+  }
+  else throw Error('The prototype reads .obj, .stl, .glb and .3dm. SketchUp and IFC files open in the full tools.');
   const zUp = (up === 'auto' ? fileUp : up) === 'z';
   obj.updateMatrixWorld(true); const out = []; let tris = 0;
   obj.traverse((o) => {
@@ -133,7 +145,8 @@ export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
     let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], pos[i + k]); mx[k] = Math.max(mx[k], pos[i + k]); }
     for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) pos[i + k] = +(pos[i + k] - mn[k]).toFixed(3);
-    out.push({ name: o.name || `Mesh ${out.length + 1}`, type: 'imported', layer: 'Imported', g: { x: +mn[0].toFixed(3), y: +mn[1].toFixed(3), z: +mn[2].toFixed(3), w: +(mx[0] - mn[0]).toFixed(3), d: +(mx[1] - mn[1]).toFixed(3), h: +(mx[2] - mn[2]).toFixed(3) }, mat: 'Imported', mesh: Array.from(pos) });
+    const rg = ext === '3dm' && o.parent && o.parent.userData.layer != null ? o.parent : null;   // a Rhino object: its name and layer
+    out.push({ name: (rg && rg.name) || o.name || `Mesh ${out.length + 1}`, srcLayer: rg ? rg.userData.layer : undefined, type: 'imported', layer: 'Imported', g: { x: +mn[0].toFixed(3), y: +mn[1].toFixed(3), z: +mn[2].toFixed(3), w: +(mx[0] - mn[0]).toFixed(3), d: +(mx[1] - mn[1]).toFixed(3), h: +(mx[2] - mn[2]).toFixed(3) }, mat: 'Imported', mesh: Array.from(pos) });
     g.dispose();
   });
   if (!out.length) throw Error('No meshes found in this file.');

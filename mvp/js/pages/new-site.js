@@ -85,7 +85,7 @@ export async function render(app, _, params = new URLSearchParams()) {
     try {
       const osm = await fetchOSM(c.lat, c.lng, R, (t) => { msg.textContent = t; });
       msg.textContent = 'Reading the terrain…'; const SC = await sitec(), origin = { lat: c.lat, lon: c.lng, label };
-      let terrain = null, tErr = ''; try { terrain = await fetchTerrain(SC.frame(origin), R, R > 250 ? 15 : 10); } catch (er) { tErr = er.message; }
+      let terrain = null, tErr = ''; try { terrain = await fetchTerrain(SC.frame(origin), R, R > 250 ? 15 : R > 150 ? 10 : 5); } catch (er) { tErr = er.message; }
       msg.textContent = 'Reading the buildings…';
       const site = SC.siteFromOSM(osm.text, origin, { kind: 'radius', r: R }, { provider: osm.provider, at: osm.at });
       data = { osm, terrain, tErr, origin, R, site }; drawPreview(site, SC.frame(origin)); facts(site, terrain, tErr, osm);
@@ -126,7 +126,7 @@ export async function render(app, _, params = new URLSearchParams()) {
       const env = await enrich(origin.lat, origin.lon, data.R).catch(() => ({}));
       const tz = tzInfo({ tz: env.tz, lat: origin.lat, lon: origin.lon });
       const site = SC.siteFromOSM(data.osm.text, origin, { kind: 'radius', r: Math.max(50, data.R - far) }, { provider: data.osm.provider, at: data.osm.at, tz: tz.tz, dst: tz.dst });
-      if (data.terrain) { try { site.terrain = await fetchTerrain(F, data.R, data.terrain.res); } catch (er) { site.terrain = null; } }
+      if (data.terrain) { try { site.terrain = await fetchTerrain(F, data.R, data.terrain.res); SC.groundFromOpen(site); } catch (er) { site.terrain = null; } }   // ground under buildings from the open ground around
       if (plot.length > 2) { site.parcel = { pts: plot.map(([la, lo]) => F.fwd(la, lo).map((v) => +v.toFixed(2))), source: 'drawn on the map' }; site.parcelId = 'Your plot';
         if ($('#dropOwn', app).checked) for (const b of site.buildings) if (!b.excluded && b.xy.length && SC.inside(SC.centroid(b.xy), site.parcel.pts)) SC.setExcluded(site, b.id, true, 'on your plot'); }
       const nEst = Math.max(1, Math.min(60, +$('#estN', app).value || 3)); SC.estimateMissing(site, nEst);

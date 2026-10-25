@@ -82,7 +82,7 @@ export function dae(model) {   // Collada 1.4.1, Z up, metres: SketchUp, Rhino, 
 }
 
 let rhinoP = null;
-function loadRhino() {
+export function loadRhino() {   // rhino3dm (McNeel's openNURBS for the web), loaded once; also used to read .3dm (viewport.js)
   return rhinoP ||= new Promise((res, rej) => { if (window.rhino3dm) return res(window.rhino3dm()); const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.min.js'; s.onload = () => res(window.rhino3dm()); s.onerror = () => { rhinoP = null; rej(Error('The Rhino library could not load. Check the connection and try again.')); }; document.head.appendChild(s); });
 }
 export async function rhino(model) {   // Rhino .3dm: one mesh per component, named, on its layer, metres

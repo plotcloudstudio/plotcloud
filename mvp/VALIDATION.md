@@ -1,4 +1,4 @@
-# Engine validation: Sun hours and Daylight (2026-10-25)
+# Engine validation: Sun hours, Daylight and Outdoor noise (2026-10-25)
 
 What was checked, against what, how far off the engines are, what was fixed, and where the results should not be trusted.
 Every number below is produced by the scripts in `tests/validation/` (run `tests/validation/run_all.sh`; the GitHub workflow
@@ -94,6 +94,40 @@ The quick sun-hours preview on the site (Massing › Sun on) is a separate, simp
   0.84 h with its own steps, §2).
 
 The preview uses a 2–4 m grid and 15-minute steps; use Sun hours for figures you report.
+
+## 5. Outdoor noise (`noise_engine.cjs`)
+
+Engine: `level`, `elements` and `shield` in `emb/noise.html`, pulled out of the page as they ship. References: the exact integral of an
+incoherent finite line source, and ISO 9613-2:1996 eq. 14 for screening (Dz = 10 lg(3 + C2·C3·N), N = 2δ/λ, C2 = 20; C3 for two
+edges e apart; at most 20 dB for one edge, 25 dB for two), at the engine's single wavelength (λ = 0.68 m, 500 Hz). Tolerance fixed
+before running: 0.1 dB.
+
+| Case | Engine | Reference | Difference |
+|---|---|---|---|
+| Road (line source, 70 dB at 10 m), 5 / 10 / 20 / 50 / 100 / 200 m | 72.92 / 69.96 / 66.96 / 62.94 / 59.86 / 56.70 | the same | 0.000 dB |
+| Thin wall 3 m, receiver 15 m (δ 0.67 m) | 16.29 | 16.29 | 0.00 |
+| Thin wall 5 m, receiver 30 m (δ 1.96 m) | 20.00 | 20.00 (limit) | 0.00 — before: **+0.72** |
+| Thin wall 10 m (δ 8.88 m) | 20.00 | 20.00 (limit) | 0.00 — before: **+5.00** |
+| Building 12 m deep, 9 m high, receiver 40 m | 25.00 | 25.00 (limit) | 0.00 — before: −0.63 |
+| Building 8 m deep, 6 m high, receiver 30 m | 24.79 | 24.80 | −0.01 — before: **−3.56** |
+| Building 15 m deep, 4 m high, receiver 45 m | 20.38 | 20.39 | 0.00 — before: **−4.17** |
+
+**What was found and changed.** Spreading from a road was already exact. Screening had two errors: a thin wall could screen up to
+25 dB where ISO 9613-2 allows 20 dB for one edge (the engine read up to 5 dB too quiet behind tall walls), and a building was treated
+as a thin edge, without the C3 term for its depth (up to about 4 dB too loud behind deep, low buildings). The path over the roof now
+uses C3 with the building's depth along the path, and the limit is 20 dB for one edge, 25 dB for a building.
+
+**What this does and does not show.** It checks that the engine computes what ISO 9613-2's screening formula says, on the paths it
+takes. It does not check the model against measurements: no ground effect, no reflections (up to +3 dB in narrow streets), no
+meteorological correction, one frequency instead of octave bands, road levels as entered by the person. The engine remains a
+screening tool; it is not an ISO 9613 or CNOSSOS-EU assessment.
+
+## 6. Wind (not validated yet)
+
+Wind Flow is a lattice-Boltzmann solver on a coarse grid (BGK with a Smagorinsky eddy viscosity, D2Q9/D3Q15 on the GPU). It has not been
+checked against wind-tunnel data. The next step is a cube in a boundary layer (surface pressure coefficients against the classic
+wind-tunnel measurements, e.g. Castro & Robins 1977) and the AIJ pedestrian-wind benchmark cases. Until then its speeds show where
+the wind speeds up and slows down, not values to report.
 
 ## Limits: where not to rely on the result
 

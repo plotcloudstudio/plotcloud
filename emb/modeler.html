@@ -1180,6 +1180,19 @@ const SITEC = (() => {
     return { roads, areas, trees };
   }
   // a whole site from one OpenStreetMap download: buildings (with where each height comes from), roads, water, green, trees
+  // the elevation data is a surface model in many places (SRTM measures roofs and tree tops): ground samples that fall inside a
+  // building are filled from the open ground around them (inverse distance, nearest open samples), so buildings do not raise the ground
+  function groundFromOpen(site) {
+    const T = site.terrain; if (!T || !T.grid || T.filled != null) return 0; const G = T.grid, n = G.nx * G.ny, inB = new Uint8Array(n);
+    const B = site.buildings.filter((b) => b.valid && b.xy && b.xy.length > 2 && b.why !== 'replaced by its building parts').map((b) => { const xs = b.xy.map((p) => p[0]), ys = b.xy.map((p) => p[1]); return { P: b.xy, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) }; });
+    for (let j = 0; j < G.ny; j++) for (let i = 0; i < G.nx; i++) { const p = [G.x0 + i * G.step, G.y0 + j * G.step]; if (B.some((b) => p[0] >= b.x0 && p[0] <= b.x1 && p[1] >= b.y0 && p[1] <= b.y1 && inside(p, b.P))) inB[j * G.nx + i] = 1; }
+    let filled = 0; const z = G.z.slice(), before = Math.max(...G.z) - Math.min(...G.z);
+    for (let j = 0; j < G.ny; j++) for (let i = 0; i < G.nx; i++) { const k = j * G.nx + i; if (!inB[k]) continue; let sw = 0, sz = 0;
+      for (let R = 1; R <= Math.max(G.nx, G.ny) && sw === 0; R++) for (let jj = Math.max(0, j - R); jj <= Math.min(G.ny - 1, j + R); jj++) for (let ii = Math.max(0, i - R); ii <= Math.min(G.nx - 1, i + R); ii++) { const q = jj * G.nx + ii; if (inB[q]) continue; const w = 1 / ((ii - i) ** 2 + (jj - j) ** 2); sw += w; sz += w * G.z[q]; }
+      if (sw) { z[k] = Math.round(sz / sw * 100) / 100; filled++; } }
+    G.z = z; T.filled = filled; T.reliefRaw = Math.round(before * 10) / 10; T.relief = Math.round((Math.max(...z) - Math.min(...z)) * 10) / 10;
+    T.note = filled ? `${filled} of ${n} ground samples fell inside buildings and were filled from the open ground around (the elevation data measures roofs in places)` : ''; site.version++; return filled;
+  }
   function siteFromOSM(text, origin, boundary, opts = {}) {
     const site = newSite(origin, boundary, opts), parsed = parseAny(text), ctx = buildContext(parsed, origin, boundary, { at: opts.at });
     site.buildings = ctx.buildings; Object.assign(site, extrasFromOSM(text, origin, boundary));
@@ -1187,7 +1200,7 @@ const SITEC = (() => {
     return site;
   }
 
-  return { frame, tmFwd, tmInv, vincenty, area, centroid, inside, cleanRing, checkFootprint, selfCrossing, parseLength, heightFrom, H_LABEL, STOREY, osmRaw, extrasFromOSM, siteFromOSM,
+  return { frame, tmFwd, tmInv, vincenty, area, centroid, inside, cleanRing, checkFootprint, selfCrossing, parseLength, heightFrom, H_LABEL, STOREY, osmRaw, extrasFromOSM, siteFromOSM, groundFromOpen,
     parseOSMXML, parseOSMJSON, parseGeoJSON, parseAny, inBoundary, buildContext, newSite, addSource, setHeight, setExcluded, estimateMissing, simBuildings,
     review, readiness, simHash, isStale, reimport, resolve, toPlan, siteToPlan, contextMasses, groundAt, groundUnder, terrainForPlan, guessDST };
 })();

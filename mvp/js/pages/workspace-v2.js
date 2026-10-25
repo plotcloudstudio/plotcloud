@@ -462,8 +462,8 @@ export function render(app, [pid]) {
       <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
       <p class="note">Plan and Perspective show the one model (Plan Studio’s): walls, masses, the site and imported meshes. Edit here, then run simulations on a saved version.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
-      <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
-      <input type="file" id="file" accept=".obj,.stl,.glb,.gltf" hidden>
+      <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb · .3dm</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
+      <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm" hidden>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
@@ -490,7 +490,7 @@ export function render(app, [pid]) {
     const doImport = async (f) => { const msg = $('#impMsg', host); msg.textContent = 'Reading ' + f.name + '…';
       try { const r = await importModel(f, { unit: +$('#unit', host).value, up: $('#up', host).value }), by = {};
         if (!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
-        const list = r.components.map((c) => ({ id: S.uid('c'), ...classify(c) })); M().meshes = M().meshes || {};
+        const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...(srcLayer && M().layers.some((l) => l.name === srcLayer) ? { ...c, layer: srcLayer } : classify(c)) })); M().meshes = M().meshes || {};   // a Rhino layer that the project has keeps its objects
         for (const c of list) { by[c.layer] = (by[c.layer] || 0) + 1; M().meshes[c.id] = c.mesh; open.add(c.layer); if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#cfcac0', visible: true, locked: false }); }
         for (const I2 of ready()) if (I2.ws.importMeshes) I2.ws.importMeshes(M().meshes);
         INST.plan.ws.addImports(list.map(({ mesh, ...c }) => ({ ...c, tris: Math.round(mesh.length / 9) })));   // Plan Studio keeps it; the sync brings it to the other panes and the project

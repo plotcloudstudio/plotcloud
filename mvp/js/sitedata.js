@@ -1,7 +1,8 @@
 // The site of a new project, from open data, in the browser (no key, nothing invented):
 //   OpenStreetMap   buildings (with heights where mapped), roads, water, green areas, trees
 //                   Overpass first (three public servers in turn); the OpenStreetMap API itself as a last resort for small sites
-//   AWS Terrain Tiles (Terrarium, zoom 15, about 3 m a pixel; SRTM, NED and others)   the ground
+//   AWS Terrain Tiles (Terrarium, zoom 15, about 4.8 m a pixel at the equator, 3.1 m at 49°; SRTM, NED and others)   the ground,
+//                   read between pixel centres (bilinear, across tile edges too), so a sample is not snapped to the nearest pixel
 // The data is turned into Plan Studio's site format by Plan Studio itself (window.__SITEC in emb/modeler.html).
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
 const D = Math.PI / 180;
@@ -36,14 +37,20 @@ function tile(z, x, y) {
   const p = new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0); res(g.getImageData(0, 0, 256, 256).data); }; im.onerror = () => rej(Error('terrain tile ' + k)); im.src = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${k}.png`; });
   tiles.set(k, p); p.catch(() => tiles.delete(k)); return p;
 }
+// the height at a point given in tile units (zoom-level tile x, y as decimals): bilinear between the four nearest pixel centres;
+// px(gx, gy) gives the height of a pixel by its whole-world pixel index, so tile edges are crossed without a seam
+export function sampleAt(px, tx, ty) { const X = tx * 256 - 0.5, Y = ty * 256 - 0.5, i = Math.floor(X), j = Math.floor(Y), u = X - i, v = Y - j;
+  return px(i, j) * (1 - u) * (1 - v) + px(i + 1, j) * u * (1 - v) + px(i, j + 1) * (1 - u) * v + px(i + 1, j + 1) * u * v; }
+// the tiles sampleAt reads for a point
+const tilesFor = (tx, ty) => { const X = tx * 256 - 0.5, Y = ty * 256 - 0.5, out = []; for (const gx of [Math.floor(X), Math.floor(X) + 1]) for (const gy of [Math.floor(Y), Math.floor(Y) + 1]) out.push(`${Math.floor(gx / 256)}/${Math.floor(gy / 256)}`); return out; };
 // a grid of ground heights over a square of half-size r around the frame's origin, every `step` metres, heights relative to the origin
 export async function fetchTerrain(F, r, step = 10) {
   const z = 15, N = 2 ** z, nx = Math.round(2 * r / step) + 1, ny = nx, x0 = -(nx - 1) * step / 2, y0 = x0, want = [];
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const [lat, lon] = F.inv(x0 + i * step, y0 + j * step), tx = (lon + 180) / 360 * N, la = lat * D, ty = (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * N; want.push([tx, ty]); }
-  const need = [...new Set(want.map(([tx, ty]) => `${Math.floor(tx)}/${Math.floor(ty)}`))]; if (need.length > 64) throw Error('The area is too large for the terrain tiles.');
+  const need = [...new Set(want.flatMap(([tx, ty]) => tilesFor(tx, ty)))]; if (need.length > 81) throw Error('The area is too large for the terrain tiles.');
   const data = new Map(await Promise.all(need.map(async (k) => [k, await tile(z, ...k.split('/').map(Number))])));
-  const at = (tx, ty) => { const ix = Math.floor(tx), iy = Math.floor(ty), d = data.get(`${ix}/${iy}`), px = Math.min(255, Math.floor((tx - ix) * 256)), py = Math.min(255, Math.floor((ty - iy) * 256)), o = (py * 256 + px) * 4; return d[o] * 256 + d[o + 1] + d[o + 2] / 256 - 32768; };
-  const abs = want.map(([tx, ty]) => at(tx, ty)), c = (ny >> 1) * nx + (nx >> 1), e0 = abs[c];
+  const px = (gx, gy) => { const tx = Math.floor(gx / 256), ty = Math.floor(gy / 256), d = data.get(`${tx}/${ty}`), o = ((gy - ty * 256) * 256 + (gx - tx * 256)) * 4; return d[o] * 256 + d[o + 1] + d[o + 2] / 256 - 32768; };
+  const abs = want.map(([tx, ty]) => sampleAt(px, tx, ty)), c = (ny >> 1) * nx + (nx >> 1), e0 = abs[c];
   const zz = abs.map((v) => Math.round((v - e0) * 100) / 100), lo = Math.min(...zz), hi = Math.max(...zz);
-  return { provider: 'AWS Terrain Tiles (Terrarium, zoom 15; SRTM, NED and other public elevation data)', res: step, elev0: Math.round(e0 * 10) / 10, relief: Math.round((hi - lo) * 10) / 10, grid: { x0, y0, step, nx, ny, z: zz } };
+  return { provider: 'AWS Terrain Tiles (Terrarium, zoom 15, bilinear; SRTM, NED and other public elevation data)', res: step, elev0: Math.round(e0 * 10) / 10, relief: Math.round((hi - lo) * 10) / 10, grid: { x0, y0, step, nx, ny, z: zz } };
 }
