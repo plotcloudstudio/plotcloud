@@ -106,7 +106,7 @@ export function installSimulationFit(doc = document) {
       if(state.active.id==='unifiedCharts'){fitSolarCharts(doc,viewport);const key=viewport.clientWidth+':'+viewport.clientHeight;if(state.unifiedChartSize!==key){state.unifiedChartSize=key;win.__pcUnifiedCharts?.();win.__pcWindCharts?.();}}
       if(content.scrollHeight>viewport.clientHeight+2){
         const app=panel.closest('[data-pc-unified]');app.pcRollbackUnified?.([{group:titleOf(state.active),required:content.scrollHeight,available:viewport.clientHeight,plots:[...state.active.querySelectorAll('canvas')].map(c=>({id:c.id,height:c.clientHeight}))}]);
-        for(const [oldPanel,old]of panels){old.tabs.remove();old.pages.remove();old.viewport.remove();oldPanel.classList.remove('pc-fit-panel');}
+        for(const [oldPanel,old]of panels){if(old.active)oldPanel.dataset.pcPreferredTab=titleOf(old.active);old.tabs.remove();old.pages.remove();old.viewport.remove();oldPanel.classList.remove('pc-fit-panel');}
         panels.clear();schedule();return;
       }
       state.page=0;state.scale=1;content.style.transform='none';return;
@@ -180,7 +180,7 @@ export function installSimulationFit(doc = document) {
         const h=el.querySelector(':scope > h2.pc-tog');if(h){h.classList.remove('pc-tog');h.removeAttribute('role');h.removeAttribute('aria-expanded');h.tabIndex=-1;h.addEventListener('click',e=>e.stopImmediatePropagation(),true);}
       }
       // Prefer Analysis on the left, Results on the right; retain an explicit user's tab thereafter.
-      if (!state.active) state.active = state.items.find(el => /^(Analysis|Results|Simulation)$/i.test(titleOf(el)) && !el.hidden) || state.items.find(el => !el.hidden);
+      if (!state.active) state.active = state.items.find(el=>titleOf(el)===panel.dataset.pcPreferredTab&&!el.hidden) || state.items.find(el => /^(Analysis|Results|Simulation)$/i.test(titleOf(el)) && !el.hidden) || state.items.find(el => !el.hidden);
       state.tabs.hidden=state.items.length===1;
       fitPanel(panel, state);
     }
