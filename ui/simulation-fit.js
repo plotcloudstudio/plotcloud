@@ -37,6 +37,15 @@ function prepareExteriorLayout(doc){
   doc.querySelector('#panelR')?.setAttribute('aria-label','Results and Charts');
   const analysis=doc.getElementById('h-sim')||doc.getElementById('h-storm')||doc.getElementById('h-rain');
   if(analysis){if(analysis.id==='h-sim')heading(analysis,'Analysis');const note=doc.createElement('p');note.className='note';note.dataset.pcWorkflowHint='';note.textContent=analysis.id==='h-sim'?'Set wind direction and reference speed, choose the analysis detail, then run. Inspect Results and Charts on the right; save images from Export. This is an early-design study, not a wind-comfort certification.':'Set rainfall intensity, storm duration and surface or detention parameters, then run. Inspect Results and Charts on the right; save images and analysis data from Export. This is an early-design screening, not a drainage compliance assessment.';analysis.after(note);}
+  const settings=doc.createElement('section');settings.className='sec';settings.id='exteriorSettings';
+  const settingsTitle=doc.createElement('h2');settingsTitle.textContent='Settings';settings.append(settingsTitle);
+  for(const section of [...left.children])if(section!==exports&&!section.querySelector('#h-model,#h-scene')){section.classList.remove('shut');settings.append(section);}
+  left.prepend(settings);
+  const facade=doc.getElementById('facBox');if(facade&&result)result.append(facade);
+  const roseNote=doc.getElementById('roseNote');if(roseNote){doc.getElementById('rose').title=roseNote.textContent;roseNote.hidden=true;}
+  const chartSpacing=doc.createElement('style');chartSpacing.textContent='[data-pc-exterior-layout] #panelR .lgdsec{padding:8px!important;gap:4px!important}[data-pc-exterior-layout] #chartp{padding:0!important;gap:3px!important}[data-pc-exterior-layout] #chartp>.cpg{gap:3px!important}[data-pc-exterior-layout] #chartp .cph{margin:0!important}[data-pc-exterior-layout] #chartp .kp4{margin:0!important}';doc.head.append(chartSpacing);
+  const compactCharts=doc.createElement('style');compactCharts.textContent='[data-pc-exterior-layout] #chartp .kp4{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important}[data-pc-exterior-layout] #chartp .kp4>div{padding:4px!important}[data-pc-exterior-layout] #chartp .kp4 b{font-size:15px!important}[data-pc-exterior-layout] #chartp .kp4 small{font-size:8px!important}';doc.head.append(compactCharts);
+  const listStyle=doc.createElement('style');listStyle.textContent='#exteriorSettings>.sec{border:0;padding:8px 0}#exteriorSettings .sec>h2{pointer-events:none}#panelR .lgdsec #chartp{display:block!important;position:static!important;width:auto!important;height:auto!important}#panelR .lgdsec #chartp>.cpg{display:grid!important;min-width:0!important;padding:6px 0!important;margin:0!important}';doc.head.append(listStyle);
   return true;
 }
 export function installSimulationFit(doc = document) {
@@ -93,6 +102,7 @@ export function installSimulationFit(doc = document) {
     content.style.transform = ''; content.style.width = '100%';
     pages.hidden = true;
     fitSolarCharts(doc,viewport);
+    if(state.active.contains(doc.getElementById('rose'))){const key=viewport.clientWidth+':'+win.innerHeight;if(state.windChartSize!==key){state.windChartSize=key;win.__pcWindCharts?.();}}
     const natural = Math.max(1, content.scrollHeight), have = viewport.clientHeight;
     let scale = Math.min(1, Math.max(.85, have / natural));
     content.style.width = `${100 / scale}%`;

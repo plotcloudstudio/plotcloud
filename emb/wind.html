@@ -1766,8 +1766,9 @@ function bandAreas(sim) {
   for (let j = 0; j < D.ny; j++) for (let i = 0; i < D.nx; i++) { const px = D.X0 + (i + 0.5) * D.dx, py = D.Y0 + (j + 0.5) * D.dx; if (px < D.x0 - pad || px > D.x1 + pad || py < D.y0 - pad || py > D.y1 + pad) continue; const k = (j * D.nx + i) * 4; if (f[k + 3] < 0) continue; const r = Math.hypot(f[k], f[k + 1], f[k + 2]) / sim.ref; out[HBANDS.findIndex((q) => r < q[1])] += area; }
   return out;
 }
-function sizeCv(c, h) { const d = devicePixelRatio || 1, w = c.getBoundingClientRect().width || 300; c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
+function sizeCv(c, h) { if(document.querySelector('[data-pc-exterior-layout]')&&['rose','hist'].includes(c.id))h=c.id==='rose'?Math.max(130,Math.min(190,innerHeight*.26)):85; const d = devicePixelRatio || 1, w = c.clientWidth || 300; c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
 const rgbS = (c) => `rgb(${c.map(Math.round).join(',')})`;
+window.__pcWindCharts = () => panelUI();
 function panelUI() {
   facChart(); const cur = S.sim && S.sim.done ? S.sim : null, st = cur ? statsOf(cur) : null, m2 = (a) => Math.round(a).toLocaleString('en-CA');
   $('#cpLvl').textContent = cur ? `${compassName(S.dir)} · ${S.speed} m/s at 10 m` : '';
