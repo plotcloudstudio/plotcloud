@@ -11,11 +11,13 @@ const reveal=require('./reveal-simulation-control.cjs');
    await p.waitForFunction(()=>{const c=document.querySelector('#eng').contentWindow.__cam;return !c.QS.busy&&c.OPT&&Number.isFinite(c.COV.frac);},null,{timeout:90000});
    assert(await f.locator('#covPct').textContent());
   }else if(id==='acoustics'){
-   await reveal(f,'#allWalls');await f.locator('#allWalls').click();const before=await p.evaluate(()=>document.querySelector('#eng').contentWindow.AcousticStudy.stats.rt[2]);
-   await f.locator('#wallMat').selectOption('panel');await reveal(f,'#run');await f.locator('#run').click();
-   assert(await p.evaluate(()=>document.querySelector('#eng').contentWindow.AcousticStudy.stats.rt[2])<before);
-   await reveal(f,'#quality');await f.locator('#quality').selectOption('512');await f.locator('#band').selectOption('3');await f.locator('#run').click();
-   assert.equal(await p.evaluate(()=>document.querySelector('#eng').contentWindow.AcousticStudy.report().statistics.band),1000);
+   // Indoor acoustics (emb/roomacoustics.html, 2026-10-25): every room of the level; Eyring, then Sabine (never shorter), then another band
+   await p.waitForFunction(()=>document.querySelector('#eng').contentWindow.__psim?.SC?.rooms?.length>0,null,{timeout:60000});
+   await reveal(f,'#run');await f.locator('#run').click();await p.waitForFunction(()=>{const w=document.querySelector('#eng').contentWindow;return w.__psim.RES&&!w.document.getElementById('run').disabled;},null,{timeout:60000});
+   const ey=await p.evaluate(()=>document.querySelector('#eng').contentWindow.__psim.RES.rooms.map(x=>x.mid));
+   await reveal(f,'#formula [data-f=sabine]');await f.locator('#formula [data-f=sabine]').click();await p.waitForFunction(()=>{const w=document.querySelector('#eng').contentWindow;return w.__psim.RES?.o.formula==='sabine'&&!w.document.getElementById('run').disabled;},null,{timeout:60000});
+   const sa=await p.evaluate(()=>document.querySelector('#eng').contentWindow.__psim.RES.rooms.map(x=>x.mid));assert(sa.every((t,i)=>t>=ey[i]-1e-9));
+   await reveal(f,'#band');await f.locator('#band').selectOption('3');assert.equal(await f.locator('#band').inputValue(),'3');
   }else if(id==='evac'){
    // Actual pointer placement on the imported Workspace grid; never substitute sample geometry.
    await reveal(f,'#toolBar [data-tool=point]');await f.locator('#toolBar [data-tool=point]').click();

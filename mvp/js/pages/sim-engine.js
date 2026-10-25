@@ -36,8 +36,6 @@ const shown = (id, v) => id === 'band' ? BANDS[v] : id === '@day' ? ({ '03-20': 
   : `${v}${ACCT[id]?.[1] ? (ACCT[id][1].startsWith(':') ? ACCT[id][1] : ' ' + ACCT[id][1]) : ''}`;
 function qloc(site) { if (!Number.isFinite(site?.lat)) return 'custom'; const km = (a, b) => Math.hypot((a[0] - b[0]) * 111, (a[1] - b[1]) * 111 * Math.cos(a[0] * Math.PI / 180));
   const best = QLOC.map(([id, la, lo]) => [id, km([site.lat, site.lon], [la, lo])]).sort((a, b) => a[1] - b[1])[0]; return best[1] <= 25 ? best[0] : 'custom'; }
-// Workspace finishes → the acoustics engine's own materials (Plaster has no match there, so the engine keeps its default)
-const ACOUSTIC = { Concrete: 'concrete', Gypsum: 'gypsum', Glass: 'glass', Timber: 'wood', Carpet: 'carpet', 'Acoustic panel': 'panel' };
 
 // the building's plan extent and the clear spans of its rooms, from the version's model
 function extent(model) {
@@ -65,8 +63,7 @@ const CFG = {
   wayfinding: { input: 'studio', hide: ['.sec:has(#h-scene)'] },
   privacy: { input: 'studio', hide: ['.sec:has(#h-scene)'] },
   noise: { input: 'masses', hide: ['.sec:has(#h-scene)'] },
-  acoustics: { input: 'room', hide: [], save: '#add',
-    prefill: ({ room, A }) => ({ band: Math.max(0, BANDS.indexOf(A.band)), ...(room?.room ? { floorMat: ACOUSTIC[room.room.floor], ceilingMat: ACOUSTIC[room.room.ceiling] } : {}) }) },
+  acoustics: { file: 'roomacoustics', input: 'studio', hide: ['.sec:has(#h-scene)'], prefill: ({ A }) => ({ band: Math.max(0, BANDS.indexOf(A.band)) }) },
   evac: { input: 'dxf', hide: ['.sec:has(#h-plan) :is(#drop, #pick, #sample, #sampleFlat, div:has(> #pick), div:has(> #sample))'] },
   structure: { input: 'none', hide: [],
     prefill: ({ x, site }) => x && ({ 'q-loc': qloc(site), 'q-storeys': x.storeys, 'q-h': r1(x.h), 'q-nx': Math.max(1, Math.min(8, Math.round(x.w / 6))), 'q-sx': r1(x.w / Math.max(1, Math.min(8, Math.round(x.w / 6)))), 'q-ny': Math.max(1, Math.min(8, Math.round(x.d / 6))), 'q-sy': r1(x.d / Math.max(1, Math.min(8, Math.round(x.d / 6)))) }) },
@@ -93,7 +90,7 @@ function ptsField(R, val, label, unit, origin, n) {
 }
 const PSIM = (w) => w.__psim?.field?.() || null;   // the plan engines built on emb/lib/plansim.js give their field in model metres
 const FIELDS = {
-  wayfinding: PSIM, privacy: PSIM, noise: PSIM,
+  wayfinding: PSIM, privacy: PSIM, noise: PSIM, acoustics: PSIM,
   daylight: (w, sc) => ptsField(w.__day?.RES, (i) => w.__day.RES.ev[i]?.df, 'Daylight factor', '%', sc?.origin),
   views: (w, sc) => ptsField(w.__views?.RES, (i) => (w.__views.RES.ev[i]?.F ?? NaN) * 100, 'Outward view (share of a 90° cone)', '%', sc?.origin),
   spacesyntax: (w, sc) => ptsField(w.__ss?.RES, (i) => w.__ss.RES.integ?.[i], 'Integration', '', sc?.origin),
@@ -125,7 +122,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
   const perLevel = cfg.input === 'studio' || cfg.input === 'dxf';
-  // Indoor acoustics studies one closed room: the room picked here goes in as its own wall loop
+  // an engine with input 'room' studies one closed room, which goes in as its own wall loop (none does at the moment: Indoor acoustics takes the whole level)
   const rooms = v && cfg.input === 'room' ? v.model.components.filter((c) => c.type === 'room') : [], rmKey = `pc-sim-room:${p.id}`, rmPick = (() => { try { return sessionStorage.getItem(rmKey); } catch (e) { return null; } })();
   const room = rooms.find((c) => c.id === (batch ? params.get('room') : rmPick)) || rooms[0] || null;
   app.innerHTML = `<div class="shx" style="position:relative">
@@ -206,7 +203,6 @@ export function render(app, sim, params = new URLSearchParams()) {
       loaded = true; say(`Model: ${esc(name)}${r.info ? ' · ' + esc(r.info) : level && levels.length > 1 ? ' · Level ' + level.id.slice(1) : ''}`); setTimeout(prefill, 900); if (batch) setTimeout(autoRun, 1500);
     }
     if (d.t === 'save') {
-      if (sim.id === 'acoustics' && (d.source?.project !== p.id || d.source?.version !== v.id || d.source?.room !== room?.id)) { say('This result belongs to another project version or room. Run the current room before saving.', true); return; }
       store(Array.isArray(d.kpis) ? d.kpis : [], d.analysis);
     }
   };
@@ -277,12 +273,10 @@ export function render(app, sim, params = new URLSearchParams()) {
     let K = kpis.map(([k, s]) => [String(k), String(s ?? '').trim()]).filter(([, s]) => s && !/^[—–-]+(\s|$)/.test(s));
     const D = doc();
     if (sim.id === 'sunhours') { const stats = [...(D?.querySelectorAll('#stats dt') || [])].map((dt) => [dt.textContent.trim(), (dt.nextElementSibling?.textContent || '').trim()]); K = K.concat(stats.filter(([k]) => !/window|extent/i.test(k))); }
-    if (sim.id === 'acoustics' && !fr.contentWindow.AcousticStudy?.canSaveFor?.({ project: p.id, version: v.id, room: room?.id })) { say('The engine is showing its sample room, not this room. Reload the page to send the room again.', true); if (batch) batchNoResult = true; return; }
     if (!K.some(([, s]) => /\d/.test(s))) { say('Run the analysis first; then save its result.', true); if (batch) batchNoResult = true; return; }
     const results = { kpis: K };
     const th = thumbOf(D); if (th) results.thumb = th;
     try { const f = FIELDS[sim.id]?.(fr.contentWindow, sentScene); if (f && f.pts.length) results.field = f; } catch (e) { }
-    if (sim.id === 'acoustics' && analysis?.engine === 'deterministic-ray-accumulation-v2') results.analysis = analysis;
     for (const [k, , , , re] of sim.metrics) { const hit = re && K.find(([l]) => re.test(l)); if (hit) results[k] = num(hit[1]); }
     // the Account values this run used, and any changed in the engine before it ran
     const cur = (id) => { if (id === '@day') return D?.querySelector('#daySeg [aria-pressed="true"]')?.dataset.d;

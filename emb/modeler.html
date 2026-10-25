@@ -291,6 +291,7 @@ html,body{height:100%;overflow:hidden;background:var(--kj-bg);color:var(--kj-ink
 .stage{grid-column:2;grid-row:2;background:#f5f6f8;position:relative;min-width:0;min-height:0;overflow:hidden}
 .mkpi .mk-s{display:flex;gap:3px;align-items:center;margin:-2px 0 3px;justify-content:flex-start !important}.mkpi .mk-s button,.mkpi .mk-sn button{border:1px solid #d9d6cf;background:#f6f5f2;border-radius:5px;font:600 11px system-ui,sans-serif;padding:2px 7px;cursor:pointer;color:#1c1b1a}.mkpi .mk-s button[aria-selected=true]{background:#1c1b1a;color:#fff;border-color:#1c1b1a}.mkpi .mk-s .mk-cmp{margin-left:auto;font-weight:500}.mkpi .mk-sn{font-size:11px;color:#6e6a60;margin-bottom:4px;display:flex !important;justify-content:space-between;align-items:center}.mkpi .mk-sn button{font-weight:500;padding:1px 6px}.mkpi .mk-sun{border-top:1px solid #ecebe6;margin-top:5px;padding-top:5px;display:flex !important;gap:6px;align-items:center;justify-content:flex-start !important}.mkpi .mk-sun select{font:11.5px system-ui,sans-serif;padding:1px 2px}.mkpi .mk-sun label{display:flex;gap:4px;align-items:center;font-weight:600;white-space:nowrap}.mkpi .mk-leg{display:grid !important;grid-template-columns:1fr auto;gap:0 6px;margin-top:4px;font-size:10.5px;color:#6e6a60}.mkpi .mk-leg i{grid-column:1/3;height:7px;border-radius:3px;background:linear-gradient(90deg,rgb(52,64,92),rgb(86,116,160),rgb(150,175,170),rgb(238,206,120),rgb(245,160,60))}.mkpi .mk-leg span:last-child{text-align:right}.mkcmp{position:absolute;right:12px;top:60px;z-index:8;background:#fff;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.18);padding:12px 14px;font:12.5px/1.4 system-ui,sans-serif;max-width:min(720px,calc(100% - 24px));max-height:calc(100% - 80px);overflow:auto}.mkcmp[hidden]{display:none}.mkcmp .mc-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.mkcmp table{border-collapse:collapse;width:100%}.mkcmp th,.mkcmp td{padding:4px 8px;border-bottom:1px solid #ecebe6;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.mkcmp tbody th,.mkcmp thead th:first-child{text-align:left;font-weight:500;color:#6e6a60}.mkcmp em{font-weight:400;color:#6e6a60;font-style:normal}.mkcmp .mc-t{margin:10px 0 6px;padding-left:18px}.mkcmp .mc-t li{margin:3px 0}.mkcmp .mc-b{display:flex;gap:6px;flex-wrap:wrap}.mkcmp .mk-n{color:#6e6a60;font-size:11px;margin:8px 0 0}
 .crumbs{position:absolute;left:10px;top:10px;z-index:5;display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.96);border-radius:8px;box-shadow:var(--kj-shadow);padding:4px 6px;font:12px system-ui,sans-serif;max-width:max(220px,calc(50% - 175px))}.crumbs[hidden]{display:none}.crumbs button{border:0;background:none;font:600 12px system-ui,sans-serif;color:#1c1b1a;padding:3px 4px;border-radius:5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}.crumbs button:hover{background:#f1efea}.crumbs span{color:#9a958a}.crumbs select{font:12px system-ui,sans-serif;border:1px solid #e1dfda;border-radius:5px;padding:2px 2px;background:#fff;flex:0 0 auto;max-width:96px}.stage.has-crumbs .mkpi{top:48px}.mkfl{margin-top:8px}.mkfl .go{width:100%}.mkfl-w{display:flex;gap:6px;align-items:center;font-size:12.5px;margin-bottom:6px}
+.pmx{margin-top:10px;padding-top:8px;border-top:1px solid #ecebe6;display:grid;gap:6px}.pmx-h{font:600 11.5px system-ui,sans-serif;color:#6e6a60;letter-spacing:.02em}.pmx select{width:100%}.pmx-kv{grid-template-columns:1fr 1fr}.pmx .note{margin:0}
 .mkpi{position:absolute;left:10px;top:10px;z-index:5;background:rgba(255,255,255,.96);border-radius:8px;box-shadow:var(--kj-shadow);padding:8px 10px 6px;font:12px/1.35 system-ui,sans-serif;color:#1c1b1a;min-width:168px;max-width:220px;pointer-events:none}.mkpi[hidden]{display:none}.mkpi .mk-h{font-weight:600;font-size:11.5px;color:#6e6a60;margin-bottom:4px}.mkpi div:not(.mk-h){display:flex;justify-content:space-between;gap:10px}.mkpi b{font-variant-numeric:tabular-nums;font-weight:600}.mkpi .mk-w{color:#b3261e;margin:4px 0 0;font-weight:600}.mkpi .mk-n{color:#6e6a60;margin:4px 0 0;font-size:11px}
 .tstrip{left:50%;top:10px;transform:translateX(-50%);display:flex;gap:2px;width:auto;padding:4px;border:0;border-radius:8px;background:#fff;box-shadow:var(--kj-shadow);z-index:6;max-width:calc(100% - 24px)}
 .tstrip button{width:48px;min-height:42px;border:0;background:none;border-radius:6px;padding:4px 2px 3px;display:grid;justify-items:center;align-content:center;gap:3px;font:500 12px/1.1 var(--f-body);color:var(--kj-sub)}
@@ -1563,6 +1564,7 @@ const STC = (() => {
   const XTOOLS = {
     wayfinding: { name: 'Wayfinding', needs: ['rooms', 'doors'] },
     privacy:    { name: 'Privacy', needs: ['rooms', 'windows'] },
+    acoustics:  { name: 'Indoor acoustics', needs: ['rooms'] },
   };
   // ---------- Sun hours: the building envelope as closed masses per level, plus the site context (shadows only) ----------
   // the outline of a level: the edge between outside and everything else on the room raster, traced into loops
@@ -1619,6 +1621,33 @@ const STC = (() => {
           o.open.push({ id: op.id, a: sh(at(op.pos - op.w / 2)), b: sh(at(op.pos + op.w / 2)), kind: door ? 'door' : op.object_type === 'window' ? 'win' : 'hole', ext: !!(so && so.ext), sill: door ? 0 : (op.sill ?? 0.9), head: op.head ?? (door ? 2.1 : 2.1), w: op.w }); } }
       o.rooms = S.rooms.filter((r) => r.lv === lvId).map((r) => ({ id: r.id, name: r.name.replace(/^.*· /, ''), label: sh([r.lx, r.ly]), rects: roomRects(S.L[lvId], r.id).map(([x, y, w, d]) => [+(x - x0).toFixed(3), +(y - y0).toFixed(3), +w.toFixed(3), +d.toFixed(3)]) }));
       o.names = names; o.settings = { floorZ: lv.z, ceil: lv.h, north: M.north || 0 }; o.tool = tool;
+    }
+    if (tool === 'acoustics') {   // every room of the level with its surfaces and their finishes (Indoor acoustics, 2026-10-25); walls, openings and rooms to draw, as the plan engines
+      o.walls = []; o.open = [];
+      for (const w of M.walls) { if (w.lv !== lvId) continue; const d = wallDir(w), at = (t) => [w.a[0] + d[0] * t, w.a[1] + d[1] * t]; o.walls.push({ a: sh(w.a), b: sh(w.b), h: w.h || lv.h, t: w.t || 0.2, mat: w.mat || null });
+        for (const op of M.ops.filter((q) => q.wall === w.id)) { const door = op.object_type === 'door'; o.open.push({ id: op.id, a: sh(at(op.pos - op.w / 2)), b: sh(at(op.pos + op.w / 2)), kind: op.hole ? 'hole' : door ? 'door' : 'win', sill: door ? 0 : (op.sill ?? 0.9), head: op.head ?? 2.1, w: op.w, glaz: op.glaz || null }); } }
+      const R = S.L[lvId], RM = new Map();
+      o.rooms = S.rooms.filter((r) => r.lv === lvId).map((r) => { const x = { id: r.id, name: r.name.replace(/^.*· /, ''), label: sh([r.lx, r.ly]), area: +r.area.toFixed(2), h: +r.h.toFixed(2), vol: +(r.vol || r.area * r.h).toFixed(2),
+        rects: roomRects(R, r.id).map(([x0r, y0r, w, d]) => [+(x0r - x0).toFixed(3), +(y0r - y0).toFixed(3), +w.toFixed(3), +d.toFixed(3)]), floor: floorMatAt(lvId, [r.lx, r.ly]), ceil: lv.ceilMat || null, surf: {}, furn: [] }; RM.set(r.id, x); return x; });
+      const add = (rid, kind, mat, area) => { const x = RM.get(rid); if (!x || !(area > 0)) return; const k = kind + ':' + (mat || ''); x.surf[k] = (x.surf[k] || 0) + area; };
+      // the faces of the walls, sampled every 5 cm on both sides: which room each side faces, less its doors, windows and openings
+      for (const w of M.walls) { if (w.lv !== lvId) continue; const d = wallDir(w), n = [-d[1], d[0]], L = wallLen(w), off = (w.t || 0.2) / 2 + 0.12, ops = M.ops.filter((q) => q.wall === w.id), st = 0.05;
+        for (let t = st / 2; t < L; t += st) { const p = [w.a[0] + d[0] * t, w.a[1] + d[1] * t];
+          for (const sg of [1, -1]) { const rid = roomAtR(R, p[0] + n[0] * off * sg, p[1] + n[1] * off * sg); if (rid < 0 || !RM.has(rid)) continue; const hh = Math.min(w.h || lv.h, RM.get(rid).h); let cut = 0;
+            for (const op of ops) if (Math.abs(t - op.pos) <= op.w / 2) { const kind = op.hole ? 'opening' : op.object_type === 'door' ? 'door' : 'window', bot = op.object_type === 'door' && !op.hole ? 0 : (op.sill ?? (op.hole ? 0 : 0.9)), top = Math.min(op.head ?? 2.1, hh), oh = Math.max(0, top - bot); cut += oh; add(rid, kind, kind === 'window' ? (op.glaz || null) : null, oh * st); }
+            add(rid, 'wall', w.mat || null, Math.max(0, hh - cut) * st); } } }
+      for (const f of M.furn) { if (f.lv !== lvId) continue; const rid = roomAtR(R, f.x, f.y); if (RM.has(rid)) RM.get(rid).furn.push({ name: f.name || f.label || (f.gen && f.gen.id) || f.type, type: (f.gen && f.gen.id) || f.type, w: +f.w.toFixed(2), d: +f.d.toFixed(2), h: +(f.h || 0).toFixed(2), c: sh([f.x, f.y]), rot: +(f.rot || 0).toFixed(4) }); }
+      for (const im of M.imports || []) { if (im.type !== 'furniture' || (im.lv && im.lv !== lvId)) continue; const rid = roomAtR(R, im.g.x + im.g.w / 2, im.g.y + im.g.d / 2); if (RM.has(rid)) RM.get(rid).furn.push({ name: im.name, type: 'imported', w: im.g.w, d: im.g.d, h: im.g.h, c: sh([im.g.x + im.g.w / 2, im.g.y + im.g.d / 2]), rot: 0 }); }
+      for (const x of o.rooms) { x.surf = Object.entries(x.surf).map(([k, area]) => { const [kind, mat] = k.split(':'); return { kind, mat: mat || null, area: +area.toFixed(2) }; }).concat([{ kind: 'floor', mat: x.floor, area: x.area }, { kind: 'ceiling', mat: x.ceil, area: x.area }]); }
+      o.materials = MATLIB; o.glazing = GLAZING; o.defaults = MAT_DEFAULT; o.names = names; o.settings = { floorZ: lv.z, ceil: lv.h, north: M.north || 0 }; o.tool = tool;
+    }
+    if (tool === 'daylight') {   // the finishes that were set give Daylight its reflectances and glass transmittance (area-weighted); unset surfaces keep its defaults
+      const W = M.walls.filter((w) => w.lv === lvId), wa = W.map((w) => wallLen(w) * (w.h || lv.h) * 2), rr = S.rooms.filter((r) => r.lv === lvId), wins = M.ops.filter((q) => q.object_type === 'window' && W.some((w) => w.id === q.wall));
+      const avg = (items, val, dflt) => { const T = items.reduce((s2, [a]) => s2 + a, 0); return T ? +(items.reduce((s2, [a, v]) => s2 + a * (v ?? dflt), 0) / T).toFixed(2) : dflt; };
+      if (W.some((w) => w.mat && MATLIB[w.mat])) o.rw = avg(W.map((w, i) => [wa[i], MATLIB[w.mat] ? MATLIB[w.mat].r : null]), null, 0.5);
+      if (rr.some((r) => MATLIB[floorMatAt(lvId, [r.lx, r.ly])])) o.rf = avg(rr.map((r) => [r.area, (MATLIB[floorMatAt(lvId, [r.lx, r.ly])] || {}).r]), null, 0.2);
+      if (MATLIB[lv.ceilMat]) o.rc = MATLIB[lv.ceilMat].r;
+      if (wins.some((q) => GLAZING[q.glaz])) o.tau = avg(wins.map((q) => [q.w * Math.max(0.1, (q.head ?? 2.2) - (q.sill ?? 0.9)), (GLAZING[q.glaz] || {}).vt]), null, 0.6);
     }
     if (tool === 'vent') { const C = M.climate || {}; Object.assign(o, { open, names, settings: { from: C.from, U10: C.U10, terrain: C.terrain, Tout: C.Tout, Tin: C.Tin, north: M.north || 0, floorZ: lv.z, ceil: lv.h, target: (M.targets || {}).ach || 5 } }); }
     return o;
@@ -5267,7 +5296,7 @@ async function thumbMesh(mesh, col = '#ddd6ca') {
 }
 // dragging one in the plan
 cv.addEventListener('pointerdown', (e) => { if (TOOL !== 'select' || e.button !== 0 || SPACE || CAM === '3d' || VIEW2D !== 'plan') return; const p = S2W(...evP(e)), h = hitTest(p); if (!h || h.k !== 'imp') return;
-  e.preventDefault(); e.stopImmediatePropagation(); const o = selObj(h); SEL = { k: 'imp', id: o.id }; changedSel(); cv.setPointerCapture(e.pointerId);
+  e.preventDefault(); e.stopImmediatePropagation(); const o = selObj(h); SEL = { k: 'imp', id: o.id }; changedSel(); if (o.arrOf) { flash('A copy in an array follows the first piece: move that one.'); return; } cv.setPointerCapture(e.pointerId);
   const b = snapM(), x0 = o.g.x, y0 = o.g.y; let moved = false;
   const mv = (ev) => { const q = S2W(...evP(ev)); o.g.x = +(x0 + sg(q[0] - p[0])).toFixed(3); o.g.y = +(y0 + sg(q[1] - p[1])).toFixed(3); moved = true; changed(true); };
   const up = () => { cv.removeEventListener('pointermove', mv, true); cv.removeEventListener('pointerup', up, true); if (moved) commit(b); };
@@ -5330,6 +5359,92 @@ crumbs.addEventListener('change', (e) => { if (e.target.dataset.cr === 'lv') got
 { const _sc = setCam; setCam = async function (c) { const r = await _sc(c); crumbsUI(); return r; }; }
 window.__floors = { makeFloors, crumbsUI };
 crumbsUI();
+
+// ===== Parameter types (2026-10-25): materials with physical properties, arrays, linked parameters =====
+// 1 · Materials. A finish carries what the simulations need: sound absorption α in the six octave bands 125 Hz–4 kHz (typical published
+//     random-incidence values, as in acoustics handbooks), visible reflectance ρ; glazing carries its visible transmittance. Walls (both
+//     faces), floor slabs, a level's floor and ceiling, and windows can be given one. Indoor acoustics reads them per room; Daylight takes
+//     the area-weighted reflectances of the finishes that were set (unset surfaces keep Daylight's own defaults, so nothing changes until
+//     a finish is chosen).
+const MATLIB = {
+  plaster: { n: 'Plaster on masonry, painted', a: [0.01, 0.02, 0.02, 0.03, 0.04, 0.05], r: 0.70, on: 'wall ceiling' },
+  gypsum: { n: 'Gypsum board on studs', a: [0.29, 0.10, 0.05, 0.04, 0.07, 0.09], r: 0.75, on: 'wall ceiling' },
+  concrete: { n: 'Concrete, painted', a: [0.01, 0.01, 0.02, 0.02, 0.02, 0.02], r: 0.50, on: 'wall floor ceiling' },
+  brick: { n: 'Brick, bare', a: [0.03, 0.03, 0.03, 0.04, 0.05, 0.07], r: 0.30, on: 'wall' },
+  timberpanel: { n: 'Timber panelling', a: [0.42, 0.21, 0.10, 0.08, 0.06, 0.06], r: 0.40, on: 'wall ceiling' },
+  absorber: { n: 'Acoustic panel, 50 mm mineral wool', a: [0.20, 0.55, 0.95, 1.00, 0.95, 0.90], r: 0.70, on: 'wall ceiling' },
+  tileceiling: { n: 'Suspended mineral-fibre ceiling', a: [0.50, 0.55, 0.65, 0.80, 0.85, 0.80], r: 0.80, on: 'ceiling' },
+  curtain: { n: 'Heavy curtain, draped', a: [0.07, 0.31, 0.49, 0.75, 0.70, 0.60], r: 0.40, on: 'wall' },
+  timberfloor: { n: 'Timber floor on joists', a: [0.15, 0.11, 0.10, 0.07, 0.06, 0.07], r: 0.30, on: 'floor' },
+  parquet: { n: 'Parquet on concrete', a: [0.04, 0.04, 0.07, 0.06, 0.06, 0.07], r: 0.35, on: 'floor' },
+  vinyl: { n: 'Vinyl or linoleum on concrete', a: [0.02, 0.03, 0.03, 0.03, 0.03, 0.02], r: 0.35, on: 'floor' },
+  carpet: { n: 'Carpet on concrete', a: [0.02, 0.06, 0.14, 0.37, 0.60, 0.65], r: 0.20, on: 'floor' },
+  tile: { n: 'Ceramic tile', a: [0.01, 0.01, 0.01, 0.02, 0.02, 0.02], r: 0.50, on: 'floor wall' },
+};
+const GLAZING = { single: { n: 'Single glazing', a: [0.18, 0.06, 0.04, 0.03, 0.02, 0.02], vt: 0.88 }, double: { n: 'Double glazing', a: [0.10, 0.07, 0.05, 0.03, 0.02, 0.02], vt: 0.78 },
+  lowe: { n: 'Double glazing, low-e', a: [0.10, 0.07, 0.05, 0.03, 0.02, 0.02], vt: 0.70 }, triple: { n: 'Triple glazing', a: [0.08, 0.05, 0.04, 0.03, 0.02, 0.02], vt: 0.60 } };
+const MAT_DEFAULT = { wall: 'plaster', floor: 'timberfloor', ceiling: 'plaster', glazing: 'double' };   // what an unset surface is taken as in Indoor acoustics
+const matOpts = (on, cur, dflt) => `<option value=""${cur ? '' : ' selected'}>Not set${dflt ? ` (${esc(MATLIB[dflt] ? MATLIB[dflt].n : GLAZING[dflt].n)})` : ''}</option>` + Object.entries(on === 'glazing' ? GLAZING : MATLIB).filter(([, m]) => on === 'glazing' || m.on.includes(on)).map(([k, m]) => `<option value="${k}"${k === cur ? ' selected' : ''}>${esc(m.n)}</option>`).join('');
+const matNote = (k, glaz) => { const m = glaz ? GLAZING[k] : MATLIB[k]; if (!m) return ''; return `α ${m.a.map((v) => v.toFixed(2)).join(' · ')} (125–4k Hz) · ${glaz ? `light through ${Math.round(m.vt * 100)} %` : `reflects ${Math.round(m.r * 100)} % of light`}`; };
+// the floor finish under a point of a level: the slab's own, else the level's, else none
+const floorMatAt = (lvId, p) => { const f = (M.floors || []).find((q) => q.lv === lvId && q.mat && floorContains(q, p)); return f ? f.mat : (lvObj(lvId) || {}).floorMat || null; };
+// 2 · Arrays. A piece of furniture or an imported piece repeats: count, centre-to-centre spacing, along its width or its depth; or "fill a
+//     length" (a linked count, see 3). The copies follow the first piece and are kept in step on every change (ids "<first>~k").
+// 3 · Linked parameters. A value worked out from others instead of typed: a mass's storeys from a target FAR (with the other masses' floor
+//     area) or from a height limit; an array's count from the length to fill.
+const arrAxis = (o, kind) => { if (kind === 'imports') return o.arr.dir === 'd' ? [0, 1] : [1, 0]; const r = o.rot || 0; return o.arr.dir === 'd' ? [-Math.sin(r), Math.cos(r)] : [Math.cos(r), Math.sin(r)]; };
+const arrSize = (o, kind) => kind === 'imports' ? (o.arr.dir === 'd' ? o.g.d : o.g.w) : (o.arr.dir === 'd' ? o.d : o.w);
+const arrCount = (o, kind) => { const a = o.arr; if (a.fill > 0) return Math.max(1, Math.min(200, Math.floor((a.fill - arrSize(o, kind)) / Math.max(0.05, a.s) + 1e-6) + 1)); return Math.max(1, Math.min(200, Math.round(a.n || 1))); };
+function syncArrays() {
+  for (const kind of ['furn', 'imports']) { const L = M[kind]; if (!L) continue; const out = L.filter((o) => !o.arrOf || L.some((s) => s.id === o.arrOf && s.arr));
+    const copies = []; for (const s of out.filter((o) => o.arr && !o.arrOf)) { const n = arrCount(s, kind), v = arrAxis(s, kind); s.arr.count = n;
+      for (let k = 1; k < n; k++) { const c = JSON.parse(JSON.stringify(s)); delete c.arr; c.id = s.id + '~' + k; c.arrOf = s.id; c.locked = true; const dx = v[0] * k * s.arr.s, dy = v[1] * k * s.arr.s;
+        if (kind === 'imports') { c.g.x = +(s.g.x + dx).toFixed(4); c.g.y = +(s.g.y + dy).toFixed(4); } else { c.x = +(s.x + dx).toFixed(4); c.y = +(s.y + dy).toFixed(4); } copies.push(c); } }
+    M[kind] = out.filter((o) => !o.arrOf).concat(copies); }
+}
+function syncLinks() {
+  const pp = siteOk() ? parcelPlan() : null, plot = pp ? Math.abs(polyArea(pp)) : 0;
+  for (const m of M.masses || []) { const L = m.link; if (!L || !(L.v > 0)) continue; const A = massArea(m);
+    if (L.by === 'height') m.storeys = Math.max(1, Math.floor(L.v / m.fh + 1e-6));
+    else if (L.by === 'far' && plot && A > 0) { const others = (M.masses || []).filter((q) => q !== m && !(q.link && q.link.by === 'far')).reduce((s, q) => s + massArea(q) * q.storeys, 0); m.storeys = Math.max(1, Math.min(120, Math.round((L.v * plot - others) / A))); } }
+}
+{ const _t = tidy; tidy = function () { _t(); syncArrays(); syncLinks(); }; }
+{ const _cm = commit; commit = function (before) { syncArrays(); syncLinks(); return _cm(before); }; }
+// the panels
+{ const _p = propsUI; propsUI = function () { _p(); if (!SEL) return; const o = selObj(), box = $('#props'); if (!o || !box) return; const k = SEL.k === 'end' ? 'wall' : SEL.k;
+  const sec = (h) => { const el = document.createElement('div'); el.className = 'pmx'; el.innerHTML = h; box.appendChild(el); return el; };
+  const ed = (fn) => { const b = snapM(); if (fn() === false) { propsUI(); return; } commit(b); propsUI(); if (window.S3 && S3.on) upd3D(); };
+  if (k === 'wall' || k === 'floor' || (k === 'op' && o.object_type === 'window')) {   // 1 · the finish
+    const on = k === 'wall' ? 'wall' : k === 'floor' ? 'floor' : 'glazing', key = on === 'glazing' ? 'glaz' : 'mat', cur = o[key] || '', dflt = on === 'floor' ? null : MAT_DEFAULT[on];
+    const el = sec(`<div class="pmx-h">${on === 'glazing' ? 'Glazing' : on === 'wall' ? 'Finish (both faces)' : 'Floor finish'}</div><select id="pmx_mat" aria-label="${on === 'glazing' ? 'Glazing' : 'Finish'}">${matOpts(on, cur, on === 'floor' ? null : dflt)}</select><p class="note" id="pmx_matn">${cur ? matNote(cur, on === 'glazing') : on === 'floor' ? 'Not set: the level’s floor finish is used.' : 'Not set: Indoor acoustics takes the default above; Daylight its own value.'}</p>`);
+    $('#pmx_mat', el).addEventListener('change', (e) => ed(() => { if (e.target.value) o[key] = e.target.value; else delete o[key]; })); }
+  if ((k === 'furn' || k === 'imp') && !o.arrOf) {   // 2 · the array (with 3 · fill a length)
+    const kind = k === 'imp' ? 'imports' : 'furn', a = o.arr || { n: 1, s: +(((kind === 'imports' ? o.g.w : o.w) || 1) + 0.1).toFixed(2), dir: 'w', fill: 0 };
+    const el = sec(`<div class="pmx-h">Array</div><div class="kv pmx-kv"><div class="cell"><label for="pmx_n">Count</label><input type="number" id="pmx_n" min="1" max="200" step="1" value="${o.arr ? arrCount(o, kind) : 1}"${a.fill > 0 ? ' disabled title="Worked out from the length to fill"' : ''}></div>
+      <div class="cell"><label for="pmx_s">Spacing (m)</label><input type="number" id="pmx_s" min="0.05" max="50" step="0.05" value="${a.s}"></div>
+      <div class="cell"><label for="pmx_dir">Direction</label><select id="pmx_dir"><option value="w"${a.dir !== 'd' ? ' selected' : ''}>Along its width</option><option value="d"${a.dir === 'd' ? ' selected' : ''}>Along its depth</option></select></div>
+      <div class="cell"><label for="pmx_fill">Fill a length (m)</label><input type="number" id="pmx_fill" min="0" max="500" step="0.1" value="${a.fill || ''}" placeholder="off"></div></div>
+      <p class="note">${o.arr && arrCount(o, kind) > 1 ? `${arrCount(o, kind)} pieces, ${a.s} m centre to centre${a.fill > 0 ? `, as many as fit in ${a.fill} m` : ''}. The copies follow this piece.` : 'Set a count above 1, or a length to fill, to repeat this piece.'}</p>`);
+    const set = (fn) => ed(() => { const n = o.arr ? Object.assign({}, o.arr) : Object.assign({}, a); fn(n); o.arr = n; });   // kept at count 1 too (no copies), so a spacing set first is not lost
+    $('#pmx_n', el).addEventListener('change', (e) => set((n) => { n.n = Math.max(1, Math.min(200, Math.round(+e.target.value || 1))); }));
+    $('#pmx_s', el).addEventListener('change', (e) => set((n) => { const v = +e.target.value; if (v > 0) n.s = +v.toFixed(3); }));
+    $('#pmx_dir', el).addEventListener('change', (e) => set((n) => { n.dir = e.target.value; }));
+    $('#pmx_fill', el).addEventListener('change', (e) => set((n) => { const v = +e.target.value; n.fill = v > 0 ? +v.toFixed(2) : 0; if (n.fill > 0 && (n.n || 1) < 2) n.n = 2; })); }
+  if (o.arrOf) { const el = sec(`<p class="note">A copy in an array: it follows the first piece. <button type="button" class="btn" id="pmx_src">Select the first piece</button></p>`); $('#pmx_src', el).addEventListener('click', () => { SEL = { k, id: o.arrOf }; changedSel(); }); }
+  if (k === 'mass') {   // 3 · storeys worked out from a target
+    const L = o.link || { by: '', v: '' }, el = sec(`<div class="pmx-h">Storeys from</div><div class="kv pmx-kv"><div class="cell"><label for="pmx_by">Rule</label><select id="pmx_by"><option value="">Typed in (above)</option><option value="far"${L.by === 'far' ? ' selected' : ''}>A target FAR</option><option value="height"${L.by === 'height' ? ' selected' : ''}>A height limit</option></select></div>
+      <div class="cell"><label for="pmx_v">${L.by === 'height' ? 'Height limit (m)' : 'Target FAR'}</label><input type="number" id="pmx_v" min="0" step="${L.by === 'height' ? 0.5 : 0.05}" value="${L.v || ''}"${L.by ? '' : ' disabled'}></div></div>
+      <p class="note">${L.by === 'far' ? (siteOk() ? `${o.storeys} storeys give this mass its share of FAR ${L.v} on the ${Math.round(Math.abs(polyArea(parcelPlan())))} m² plot (the other masses count as they are).` : 'A target FAR needs the plot: choose a site with a plot first.') : L.by === 'height' ? `${o.storeys} storeys of ${o.fh} m fit under ${L.v} m.` : 'Or let the storeys follow a target FAR or a height limit: they update when the outline, the plot or the floor height changes.'}</p>`);
+    if (L.by) { const st = $('#pm_st', box), h = $('#pm_h', box); for (const x of [st, h]) if (x) { x.disabled = true; x.title = 'Worked out from the rule below'; } }
+    $('#pmx_by', el).addEventListener('change', (e) => ed(() => { if (!e.target.value) delete o.link; else o.link = { by: e.target.value, v: e.target.value === 'height' ? +(massH(o)).toFixed(1) : (siteOk() ? +(siteFigures().far || 1).toFixed(2) : 1) }; }));
+    $('#pmx_v', el).addEventListener('change', (e) => ed(() => { const v = +e.target.value; if (!(v > 0) || !o.link) return false; o.link.v = +v.toFixed(2); })); }
+}; }
+// a level's own floor and ceiling finishes, in Level properties
+{ const host = $('#lvSlab') && $('#lvSlab').closest('.kr-g2'); if (host) { host.insertAdjacentHTML('afterend', `<div class="kr-sub"><span>Finishes</span></div><div class="kr-g2 pmx-lv"><div class="cell"><label for="lvFM">Floor</label><select id="lvFM"></select></div><div class="cell"><label for="lvCM">Ceiling</label><select id="lvCM"></select></div></div>`);
+  const fill = () => { const l = lvObj(); if (!l) return; $('#lvFM').innerHTML = matOpts('floor', l.floorMat || '', MAT_DEFAULT.floor); $('#lvCM').innerHTML = matOpts('ceiling', l.ceilMat || '', MAT_DEFAULT.ceiling); };
+  for (const [id, key] of [['#lvFM', 'floorMat'], ['#lvCM', 'ceilMat']]) $(id).addEventListener('change', (e) => { const b = snapM(), l = lvObj(); if (e.target.value) l[key] = e.target.value; else delete l[key]; commit(b); });
+  { const _c = changed; changed = function (lv, kp) { _c(lv, kp); if (!lv) fill(); }; } fill(); } }
+window.__params = { MATLIB, GLAZING, MAT_DEFAULT, syncArrays, syncLinks, floorMatAt, select: (k, id) => { SEL = k ? { k, id } : null; changedSel(); } };
 
 // for tests and the site
 window.__st = { get site() { return M.site || null; }, sunScene: () => STC.planScene(M, S, LV, 'sunhours'), get LAYER() { return LAYER; }, get VIS() { return VIS; }, get TOOL() { return TOOL; }, isDirty: () => isDirty(),  get M() { return M; }, get S() { return S; }, get RES() { return RES; }, get SEL() { return SEL; }, get LV() { return LV; }, toPx: (p) => { const q = W2S(p); return [q[0] / VP.d, q[1] / VP.d]; } };
