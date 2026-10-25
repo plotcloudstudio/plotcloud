@@ -7,7 +7,7 @@ export function render(app) {
     <div style="text-align:center"><span class="eyebrow">Pricing</span>
       <h1 class="display" style="margin-top:18px">Free tools.<br><span>Pro projects.</span></h1>
       <p class="lede" style="margin:22px auto 0;font-size:18px">Every analysis and design tool is free. PlotCloud Pro keeps one project together: your site, model versions, simulation results and comparisons.</p>
-      <div class="seg" role="group" aria-label="Billing period" style="margin-top:30px"><button type="button" data-y="0">Monthly</button><button type="button" data-y="1">Yearly · save 27%</button></div></div>
+      <div class="seg" role="group" aria-label="Billing period" style="margin-top:30px"><button type="button" data-y="0">Monthly</button><button type="button" data-y="1">Yearly · save 61%</button></div></div>
     <div class="plans">
       <article class="pplan"><div><span class="eyebrow">Free</span><p style="margin-top:10px"><span class="price">CAD 0</span> <span class="muted">forever</span></p><p class="muted">For trying an idea on any site.</p></div>
         <ul><li>✓ Every analysis and design tool</li><li>✓ PNG export from each tool</li><li>✓ Free starter resource sets</li><li>✓ Save sets and vote on requests</li></ul>
@@ -28,6 +28,6 @@ export function render(app) {
       .map(([q, a]) => `<div style="padding:22px 0;border-top:1px solid var(--line)"><b style="font-size:17px">${q}</b><p class="muted" style="margin-top:8px">${a}</p></div>`).join('')}</div>
     <p class="note" style="margin-top:36px">Prices in Canadian dollars, plus GST/HST/PST where it applies.</p>
   </div>`;
-  const set = () => { $('#price', app).textContent = yearly ? 'CAD 79' : 'CAD 9'; $('#per', app).textContent = yearly ? '/ year' : '/ month'; $('#pnote', app).textContent = yearly ? 'CAD 6.58 a month, billed yearly' : 'Billed monthly · cancel anytime'; $$('[data-y]', app).forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.y === '1') === yearly))); };
+  const set = () => { $('#price', app).textContent = yearly ? 'CAD 79' : 'CAD 16.99'; $('#per', app).textContent = yearly ? '/ year' : '/ month'; $('#pnote', app).textContent = yearly ? 'CAD 6.58 a month, billed yearly' : 'Billed monthly · cancel anytime'; $$('[data-y]', app).forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.y === '1') === yearly))); };
   $$('[data-y]', app).forEach((b) => b.onclick = () => { yearly = b.dataset.y === '1'; set(); }); set();
 }

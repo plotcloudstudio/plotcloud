@@ -15,17 +15,18 @@ try{
  await work.evaluate(s=>AcousticStudy.loadPlan(s,s.source),studio);report=await work.evaluate(()=>AcousticStudy.report());
  assert.equal(report.model.name,studio.name);assert.equal(report.statistics.volume,288);assert(report.model.record.includes('"version":7'),'Imported source record must retain version');
  const before=report.statistics.rt[2];
- await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Surfaces',exact:true}).click();
+ const unified=await work.locator('.app[data-pc-unified=true]').count()>0;
+ await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:unified?'Settings':'Surfaces',exact:true}).click();
  await work.locator('#allWalls').click();await work.locator('#wallMat').selectOption('panel');
  const after=await work.evaluate(()=>AcousticStudy.stats.rt[2]);assert(after<before,'Absorptive wall material should lower RT60');
  for(const view of ['section','three','plan']){await work.locator(`[data-view="${view}"]`).click();assert.equal(await work.locator(`[data-view="${view}"]`).getAttribute('aria-pressed'),'true');}
  assert(await work.locator('#webgl canvas').count(),'3D view must create its real WebGL canvas');
- await work.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Export',exact:true}).click();
+ await work.locator((unified?'#panelL':'#panelR')+' .pc-fit-tabs').getByRole('tab',{name:'Export',exact:true}).click();
  const download=page.waitForEvent('download');await work.locator('#json').click();const file=await download;
  assert.equal(file.suggestedFilename(),'plotcloud-indoor-acoustics-report.json');
  const exported=JSON.parse(fs.readFileSync(await file.path(),'utf8'));assert.equal(exported.schema,'plotcloud-acoustics-prototype-v2');assert.equal(exported.model.name,studio.name);assert.equal(exported.statistics.rt[2],after);
  assert(/no diffraction/i.test(exported.assumptions),'Report must preserve method limitations');
- await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Room & source',exact:true}).click();
+ await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:unified?'Settings':'Room & source',exact:true}).click();
  await work.locator('#reset').click();assert.equal(await work.locator('#time').inputValue(),'0','Reset returns animation to the start');
  await page.setViewportSize({width:390,height:844});assert(await work.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Acoustic tool overflows mobile width');
  assert.deepEqual(errors,[],'Browser errors: '+errors.join(' | '));

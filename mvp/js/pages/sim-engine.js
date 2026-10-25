@@ -14,7 +14,7 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
-import { installSimulationFit } from '../../../ui/simulation-fit.js?v=unified-20261025-2';
+import { installSimulationFit } from '../../../ui/simulation-fit.js?v=unified-20261025-3';
 
 const PLAN_EDIT = '.sec:has(#h-draw) :is([data-tool="wall"], [data-tool="glass"], [data-tool="win"], [data-tool="door"], [data-tool="furn"], #clear)';
 const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : NaN; };
@@ -224,7 +224,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   async function feedFile() {
     const D = doc(); if (!D) return;
     if (cfg.input === 'dxf') { const r = await input.catch(() => null); if (!alive || !r?.ok) return; const f = D.getElementById('file'); if (!f) return;
-      giveFile(f, r.text, `${p.name}-v${v.n}-${level?.id || 'L1'}.dxf`.replace(/[^\w.-]+/g, '-'), 'application/dxf'); loaded = true; say(`Model: ${esc(name)} · ${level ? 'Level ' + level.id.slice(1) : 'plan'} as DXF`); }
+      giveFile(f, r.text, `${p.name}-v${v.n}-${level?.id || 'L1'}.dxf`.replace(/[^\w.-]+/g, '-'), 'application/dxf'); await D.defaultView.__pcInputReady;if(!alive)return;loaded = true; say(`Model: ${esc(name)} · ${level ? 'Level ' + level.id.slice(1) : 'plan'} as DXF`); }
     if (cfg.input === 'obj') {
       const g = D.getElementById('gridWorkspace'), gw = g?.contentDocument; const imp = [...(gw?.querySelectorAll('button') || [])].find((b) => b.textContent.trim() === 'Imported model'); if (!imp) return;
       imp.click(); let m = null; for (let i = 0; i < 60 && alive; i++) { m = D.getElementById('modelWorkspace')?.contentDocument; if (m?.getElementById('file') && m.getElementById('rain')) break; await new Promise((r) => setTimeout(r, 150)); }

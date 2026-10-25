@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=unified-20261025-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=unified-20261025-3" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Camera Coverage</title>
@@ -1416,7 +1416,7 @@ async function camRun(level, confirmed, quiet) {
 }
 { const old = $('#run'), nb = old.cloneNode(true); old.replaceWith(nb); nb.addEventListener('click', () => camRun(QS.level)); }
 { const _es = endSearch; endSearch = function (quiet) { _es(quiet); if (!quiet && QS.explicit) { QS.explicit = false; setTimeout(() => { if (QS.cam === 'split' && !SEARCH.on) setCam('plan'); }, 900); } }; }
-{ const _sc = setCam; setCam = async function (c) { QS.cam = c; await _sc(c); capUI(); }; }
+{ const _sc = setCam; setCam = async function (c) { if(document.querySelector('.app')?.dataset.pcUnified&&c==='split')c='plan';QS.cam = c; await _sc(c); capUI(); }; }
 $('#camBar').addEventListener('click', () => { QS.explicit = false; });
 { const _cc = camsChanged; camsChanged = function () { _cc(); capUI(); qUI(); }; }
 function capUI() {

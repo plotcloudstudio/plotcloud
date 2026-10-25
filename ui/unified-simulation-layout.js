@@ -11,7 +11,8 @@ export function prepareUnifiedSimulation(doc){
  app.dataset.pcUnified='true';
  const group=(id,title)=>{const el=doc.createElement('section');el.className='card pc-unified-group';el.id=id;const h=doc.createElement('h2');h.textContent=title;el.append(h);return el;};
  const settings=group('unifiedSettings','Settings'),exports=group('unifiedExport','Export'),results=group('unifiedResults','Results'),charts=group('unifiedCharts','Charts');charts.classList.add('lgdsec');
- const parked=doc.createElement('div');parked.hidden=true;
+ const parked=doc.createElement('div');parked.hidden=true;const extraNodes=[];
+ const acoustic=/Indoor Acoustics/.test(doc.title),circulation=/Circulation/.test(doc.title),camera=/Camera Coverage/.test(doc.title),isovist=/Isovist/.test(doc.title);
  // Keep every engine ID connected throughout reparenting; engine helpers use getElementById.
  left.append(settings,exports,parked);right.append(results,charts);
  let workspaceImported=false;try{workspaceImported=win.frameElement?.id==='modelWorkspace'&&win.parent.parent.document.getElementById('eng')?.contentWindow===win.parent;}catch{}
@@ -36,13 +37,14 @@ export function prepareUnifiedSimulation(doc){
  // Preserve the project model controls outside the Settings ancestor: host hide selectors use :has().
  for(const child of [...left.children]){
   if(child===settings||child===exports||child===parked)continue;
-  if(child.hidden||child.querySelector('#h-model,#h-scene')){parked.append(child);continue;}
+  if(child.hidden||child.querySelector('#h-model,#h-scene')||circulation&&child.querySelector('#h-plan')){parked.append(child);continue;}
   if(child.id==='pilotExport'||child.querySelector('#h-lay,#h-set')&&/export/i.test(child.querySelector('h2')?.textContent||''))exports.append(child);
   else settings.append(child);
  }
  for(const child of [...right.children]){
   if(child===results||child===charts)continue;
-  if(child.querySelector('#h-lay')){
+  if(child.querySelector('#h-ex'))exports.append(child);
+  else if(child.querySelector('#h-lay')){
    const exportButtons=[...child.querySelectorAll('[data-ex],#exPng,#exCsv,#exportPng,#exportJson')];
    for(const button of exportButtons)exports.append(button);
    const message=child.querySelector('#exMsg');if(message)exports.append(message);
@@ -60,10 +62,28 @@ export function prepareUnifiedSimulation(doc){
  if(spotGroup&&!spotGroup.querySelector('canvas'))results.append(spotGroup);
  else if(spot){const detail=doc.createElement('section'),h=doc.createElement('h3');h.textContent='Selected spot';detail.append(h,spot);results.append(detail);}
  const roomDetail=plot?.querySelector('#roomBox');if(roomDetail)results.append(roomDetail);
+ // Geometry belongs to the Workspace; playback controls belong to the viewport.
+ // Keep editable calculation and trip inputs together in Settings.
+ if(acoustic){
+  const preset=doc.getElementById('preset');if(preset?.value==='project')parked.append(preset.parentElement);
+  const project=doc.getElementById('projectline');if(project)results.prepend(project);
+  const materialNote=doc.getElementById('materialNote');if(materialNote)results.append(materialNote);
+  const band=doc.getElementById('band')?.parentElement,quality=doc.getElementById('quality')?.parentElement;
+  if(band&&quality){const row=doc.createElement('div');row.className='two';quality.before(row);row.append(band,quality);extraNodes.push(row);}
+  for(const id of ['motion','pulse']){const input=doc.getElementById(id);if(input&&bar)viewControls.append(id==='motion'?input.closest('label'):input.parentElement);}
+ }
+ if(circulation){
+  const anim=doc.getElementById('anim');if(anim&&bar)viewControls.append(anim);
+  const brush=doc.getElementById('brushRow');if(brush&&bar)viewControls.append(brush);
+  for(const id of ['ckp','cpSub','cpNote','walkEst','tripRes']){const node=doc.getElementById(id);if(node)results.append(node);}
+ }
+ if(camera){const note=doc.getElementById('lvlNote');if(note)charts.append(note);}
+ if(isovist){const readout=doc.getElementById('wRes');if(readout)results.append(readout);}
  const summary=doc.getElementById('projectClimateSummary');if(summary)settings.children[0].after(summary);
  // Long methodological paragraphs are help, not input parameters. Keep full text in an accessible dialog.
  const help=doc.createElement('dialog');help.className='pc-unified-help';help.innerHTML='<h2>Analysis notes</h2><button type="button">Close</button>';
- const notes=[...settings.querySelectorAll('p.note:not([id])')].filter(n=>!n.querySelector('input,select,button,a')&&n.textContent.trim().length>90);
+ const notes=[...settings.querySelectorAll('p.note:not([id]),#lvlNote,#qNote,#pmNote')].filter(n=>!n.querySelector('input,select,button,a')&&n.textContent.trim().length>70);
+ if(circulation){const usage=doc.getElementById('wUse')?.closest('label')?.querySelector('span.note');if(usage)notes.push(usage);}
  if(notes.length){for(const note of notes)help.append(note);const button=doc.createElement('button');button.type='button';button.className='btn';button.textContent='Analysis notes ⓘ';button.onclick=()=>help.showModal();settings.append(button);help.querySelector('button').onclick=()=>help.close();doc.body.append(help);}
  const scaleNotes=doc.createElement('p');help.append(scaleNotes);help.querySelector('button').onclick=()=>help.close();
  app.pcShowScaleNotes=text=>{scaleNotes.textContent=text;if(!help.isConnected)doc.body.append(help);help.showModal();};
@@ -71,6 +91,7 @@ export function prepareUnifiedSimulation(doc){
  left.append(settings,exports,parked);right.append(results,charts);
  const css=doc.createElement('style');css.textContent=`
  @media(min-width:901px){
+ .pc-simulation-fit .app[data-pc-unified]:has(#ptList){grid-template-columns:380px minmax(0,1fr) 300px!important}
  [data-pc-unified] .pc-unified-group{padding:8px!important;border:1px solid var(--line);border-radius:6px;display:grid;gap:6px;background:var(--surface)}
  [data-pc-unified] .pc-unified-group>h2{margin:0;font-size:12px;line-height:1.4}
  [data-pc-unified] #unifiedSettings{padding:6px!important}
@@ -83,12 +104,18 @@ export function prepareUnifiedSimulation(doc){
  [data-pc-unified] #unifiedSettings .sec.shut>:not(h2):not([hidden]),[data-pc-unified] #unifiedSettings .sec.pc-col>:not(h2):not([hidden]){display:revert!important}
  [data-pc-unified] #unifiedSettings .sec>h2:after{display:none!important}
  [data-pc-unified] #unifiedSettings .ctl{gap:4px!important;margin:0!important}
+ [data-pc-unified] #unifiedSettings .props{padding:6px!important;margin:0!important}
+ [data-pc-unified] #unifiedSettings details.more{margin:0!important;padding:0!important;display:grid;gap:6px}
+ [data-pc-unified] .pc-unified-view-controls #anim{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;margin:0}
+ [data-pc-unified] .pc-unified-view-controls #anim .two{display:flex;gap:6px;align-items:center}
+ [data-pc-unified] .pc-unified-view-controls #anim :is(.aprog,#aMsg){margin:0;flex-basis:100%}
+ [data-pc-unified] .pc-unified-view-controls:has(#motion){display:grid;grid-template-columns:1fr 1fr;max-width:440px}
  [data-pc-unified] #pilotSharedSummary{padding:4px 6px!important;margin-bottom:4px!important;line-height:1.3!important}
  [data-pc-unified] #pilotSharedSummary p{margin:4px 0!important}
  [data-pc-unified] #pilotSettings>h2,[data-pc-unified] #pilotCharts>h2{display:none}
  [data-pc-unified] #unifiedSettings .sw2{gap:4px!important}
- [data-pc-unified] #unifiedSettings :is(#longBox,#lvLong,#longRow){position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(480px,70vw);box-sizing:border-box;z-index:100;background:var(--surface);box-shadow:0 12px 48px #0003}
- [data-pc-unified] .pc-unified-view-controls{display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:100%}
+ [data-pc-unified] #unifiedSettings :is(#longBox,#lvLong,#longRow,#qLong){position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(480px,70vw);box-sizing:border-box;z-index:100;background:var(--surface);box-shadow:0 12px 48px #0003}
+ [data-pc-unified] .pc-unified-view-controls{display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:100%;background:var(--surface);color:var(--ink);border-radius:5px;padding:4px}
  [data-pc-unified] .pc-unified-view-controls .tools{display:flex!important;gap:4px;flex-wrap:wrap}
  [data-pc-unified] .pc-unified-view-controls #toolHint{flex-basis:100%;margin:0}
  [data-pc-unified] .pc-unified-display{position:relative;background:var(--surface);padding:4px 8px;border:1px solid var(--line);border-radius:5px}
@@ -98,7 +125,9 @@ export function prepareUnifiedSimulation(doc){
  [data-pc-unified] #unifiedCharts{padding:4px!important;gap:2px!important}
  [data-pc-unified] #unifiedCharts .cpg{padding:0!important;margin:0!important;gap:4px!important;min-width:0!important;max-width:none!important}
  [data-pc-unified] #unifiedCharts .sec{padding:2px 0!important;gap:4px!important;border:0!important}
- [data-pc-unified] #unifiedCharts canvas{background:#fff;border-radius:3px}
+ [data-pc-unified] #unifiedCharts canvas{background:#fff;border-radius:3px;position:static!important;inset:auto!important;width:100%!important;display:block}
+ [data-pc-unified] #unifiedCharts :is(#decay,#bands){height:120px!important}
+ [data-pc-unified] #unifiedCharts .cpg{overflow:visible!important}
  [data-pc-unified] #unifiedCharts:has(#cScat) .kp4{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important}
  [data-pc-unified] #unifiedCharts:has(#cScat) .kp4>div{padding:4px!important}
  [data-pc-unified] #unifiedCharts .lgd,[data-pc-unified] #unifiedCharts .legend{position:static!important;width:auto!important;margin:0!important}
@@ -113,9 +142,14 @@ export function prepareUnifiedSimulation(doc){
  }`;
  doc.head.append(css);
  for(const details of settings.querySelectorAll('details'))details.open=true;
+ const context=doc.getElementById('props'),contextHome=context?.parentElement;
+ const updateContext=()=>{if(!app.dataset.pcUnified||!context||!isovist)return;const target=!context.hidden&&!context.querySelector('input,select,textarea')?results:contextHome;if(context.parentElement!==target)target.append(context);};
+ app.pcUpdateUnifiedContext=updateContext;updateContext();
  const moved=original.filter(({node,parent,next})=>node.parentNode!==parent||node.nextSibling!==next);
+ if(isovist&&context){const record=original.find(r=>r.node===context);if(record&&!moved.includes(record))moved.push(record);}
  const hiddenChanges=original.filter(({node,hidden})=>node.hidden!==hidden);
  win.__pcUnifiedCharts?.();
+ if(acoustic)win.dispatchEvent(new win.Event('resize'));
  // Preflight at the real panel width. If it does not fit, preserve the old usable UI for review.
  const measured=[];
  const columnStyles=[left,right].map(node=>[node,node.getAttribute('style')]);
@@ -138,8 +172,8 @@ export function prepareUnifiedSimulation(doc){
    node.toggleAttribute('open',open);
    node.hidden=hidden;
   }
-  for(const node of [settings,exports,results,charts,parked,css,help,viewControls,display,workspaceInfo])node?.remove();
-  delete app.pcShowScaleNotes;
+  for(const node of [settings,exports,results,charts,parked,css,help,viewControls,display,workspaceInfo,...extraNodes])node?.remove();
+  delete app.pcShowScaleNotes;delete app.pcUpdateUnifiedContext;
   delete app.dataset.pcUnified;app.dataset.pcUnifiedBlocked=JSON.stringify(over);
   const notice=doc.createElement('p');notice.className='note pc-layout-review';notice.setAttribute('role','status');notice.style.cssText='padding:6px;margin:0;border:1px solid var(--line);border-radius:4px';notice.textContent='Fixed layout needs review: '+over.map(x=>`${x.group} ${x.required}px / ${x.available}px available`).join('; ')+'. Existing controls are preserved.';doc.getElementById('panelL').prepend(notice);
   return false;
@@ -159,10 +193,10 @@ export function prepareUnifiedSimulation(doc){
   for(const {node,hidden}of hiddenChanges)node.hidden=hidden;
   for(const {node,cls,open}of original)if(node.matches('.sec,h2,details')){if(cls===null)node.removeAttribute('class');else node.setAttribute('class',cls);node.toggleAttribute('open',open);}
   doc.getElementById('panelL').append(left);doc.getElementById('panelR').append(right);
-  for(const node of [settings,exports,results,charts,parked,css,help,viewControls,display,workspaceInfo])node?.remove();
+  for(const node of [settings,exports,results,charts,parked,css,help,viewControls,display,workspaceInfo,...extraNodes])node?.remove();
   delete app.dataset.pcUnified;app.dataset.pcUnifiedBlocked=JSON.stringify(over);delete app.pcRollbackUnified;
   win.__pcUnifiedCharts?.();
-  delete app.pcShowScaleNotes;
+  delete app.pcShowScaleNotes;delete app.pcUpdateUnifiedContext;
   const notice=doc.createElement('p');notice.className='note pc-layout-review';notice.setAttribute('role','status');notice.style.cssText='padding:6px;margin:0;border:1px solid var(--line)';notice.textContent='Fixed layout needs review: '+over.map(x=>`${x.group} ${x.required}px / ${x.available}px available`).join('; ')+'. Existing controls and current results are preserved.';doc.getElementById('panelL').prepend(notice);
  };
  return true;

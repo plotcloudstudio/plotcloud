@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=unified-20261025-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=unified-20261025-3" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Circulation</title>
@@ -747,7 +747,7 @@ function sampleApartment() {
 }
 
 // ================= importers =================
-$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) await importFile(f); });
+$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) {window.__pcInputReady=importFile(f);await window.__pcInputReady;} });
 const msg = (t, c = '') => { $('#impMsg').textContent = t; $('#impMsg').className = 'msg' + (c ? ' ' + c : ''); };
 // ---- 3D models (Rhino, IFC, OBJ, STL, glTF, SketchUp Collada), read as in Isovist Safety and Sun Hours: units and up axis,
 // floors from where the tall elements stand, and the floor of the chosen level rasterised from 0.05 m up to 2 m. Anything in
@@ -1554,6 +1554,7 @@ async function explicitRun() { EXPLICIT = true; await setCam('split'); await run
 
 // ================= Plan + chart =================
 { const _setCam = setCam; setCam = async function (c) {
+  if(document.querySelector('.app')?.dataset.pcUnified&&c==='split')c='plan';
   const split = c === 'split'; S.cam = c; stage.classList.toggle('split', split);
   await _setCam(split ? 'plan' : c);
   $$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === c)));
@@ -1575,7 +1576,7 @@ function capUI() {
   $('#capS').textContent = `${ok.length} pairs · average walk ${ok.length ? (tot / ok.length).toFixed(1) : '—'} m${lg ? ` · longest ${ptName(lg.P.i)} ⇄ ${ptName(lg.P.j)} ${lg.P.r.len.toFixed(1)} m (${fmtT(lg.P.r.len / v)})` : ''} · ${NET.ants.length} walks, ${NET.iters} rounds`;
 }
 function panelUI() {
-  if (S.cam !== 'split') return; const ok = okPairs();
+  if (S.cam !== 'split'&&!document.querySelector('.app')?.dataset.pcUnified) return; const ok = okPairs();
   if (!ok.length) { $('#ckp').innerHTML = ''; $('#cpSub').textContent = running ? 'working…' : 'release the ants'; $('#cpNote').textContent = ''; for (const id of ['cPairs', 'cPlaces', 'cRounds']) { const c = $('#' + id), { x, w, h, k } = sizeCv(c, 60); x.fillStyle = '#8a8780'; x.font = `${11 * k}px ${FF()}`; x.fillText('Release the ants to see this chart.', 4 * k, 30 * k); } return; }
   const v = NET.v, tot = ok.reduce((s, o) => s + o.P.r.len, 0), lg = ok.reduce((m, o) => (o.P.r.len > m.P.r.len ? o : m), ok[0]);
   $('#cpSub').textContent = `${CLV[S.level] ? CLV[S.level].name : 'Custom'} · ${NET.iters} rounds · walker ${v} m/s`;
@@ -1599,6 +1600,22 @@ function bars(c, rows, sel, fmtV, colOf) {   // rows: [{label, v, share, key}]
 }
 function drawPairs() {
   const ok = okPairs(); if (!ok.length) return; const v = NET.v, smax = Math.max(1e-9, ...ok.map((o) => o.P.share));
+  if(document.querySelector('.app')?.dataset.pcUnified){
+    // All valid pairs remain available, not a screenshot or truncated top-N list.
+    const ids=[...new Set(ok.flatMap(o=>[o.P.i,o.P.j]))].sort((a,b)=>a-b),c=$('#cPairs'),left=24,top=24;
+    const {x,w,k}=sizeCv(c,Math.max(96,top+ids.length*24)),cell=Math.min(32,(w/k-left-4)/Math.max(1,ids.length));
+    x.font=`${11*k}px ${FF()}`;x.textAlign='center';x.textBaseline='middle';CH.pairs=[];
+    ids.forEach((id,i)=>{x.fillStyle='#333';x.fillText(PTS[id].id,(left+(i+.5)*cell)*k,10*k);x.fillText(PTS[id].id,10*k,(top+(i+.5)*24)*k);});
+    for(const o of ok){const a=ids.indexOf(o.P.i),b=ids.indexOf(o.P.j),xx=left+b*cell,yy=top+a*24,seconds=o.P.r.len/v;
+      x.fillStyle=rampV(.25+.75*o.P.share/smax);x.fillRect(xx*k,yy*k,(cell-1)*k,23*k);
+      x.fillStyle=o.P.share/smax>.45?'#fff':'#222';x.fillText(Math.round(seconds)+'s',(xx+cell/2)*k,(yy+12)*k);
+      if(S.hp===o.k){x.strokeStyle='#d8402a';x.lineWidth=2*k;x.strokeRect(xx*k,yy*k,(cell-1)*k,23*k);}
+      CH.pairs.push({key:o.k,x0:xx,x1:xx+cell,y0:yy,y1:yy+24});
+    }
+    c.tabIndex=0;c.title='Walk time in seconds; colour shows trip share. Letters identify the places on the plan. Click, or use arrow keys, to inspect a route.';
+    const key=c.closest('.cpg')?.querySelector('.cph .note');if(key&&key.textContent!=='Seconds · colour = trip share')key.textContent='Seconds · colour = trip share';
+    const selected=ok.find(o=>o.k===S.hp);c.setAttribute('aria-label',selected?`${ptName(selected.P.i)} to ${ptName(selected.P.j)}: ${fmtT(selected.P.r.len/v)}. Arrow keys select another route.`:`${ok.length} routes. Times in seconds; colour shows trip share. Arrow keys select routes.`);return;
+  }
   const rows = [...ok].sort((a, b) => b.P.share - a.P.share || b.P.r.len - a.P.r.len).slice(0, 14).map((o) => ({ key: o.k, label: `${ptName(o.P.i)} ⇄ ${ptName(o.P.j)}`, v: o.P.r.len / v, share: o.P.share }));
   CH.pairs = bars($('#cPairs'), rows, S.hp, (r) => `${fmtT(r.v)} · ${(r.share * 100).toFixed(0)}%`, (r) => rampV(0.25 + 0.75 * r.share / smax));
 }
@@ -1612,7 +1629,7 @@ function drawRounds() {
   const c = $('#cRounds'); if (!NET || !NET.done || !c.offsetParent) return; const it = NET.iters, sum = new Float64Array(it + 1), cnt = new Float64Array(it + 1);
   for (const a of NET.ants) { sum[a.it] += a.w.len; cnt[a.it]++; }
   const pts = []; for (let r = 1; r <= it; r++) if (cnt[r]) pts.push([r, sum[r] / cnt[r]]); if (!pts.length) return;
-  const { x, w, h, k } = sizeCv(c, 130), L = 40 * k, R = w - 8 * k, T = 10 * k, B = h - 22 * k, ymin = Math.min(...pts.map((p) => p[1])) * 0.95, ymax = Math.max(...pts.map((p) => p[1])) * 1.03;
+  const { x, w, h, k } = sizeCv(c, document.querySelector('.app')?.dataset.pcUnified?90:130), L = 40 * k, R = w - 8 * k, T = 10 * k, B = h - 22 * k, ymin = Math.min(...pts.map((p) => p[1])) * 0.95, ymax = Math.max(...pts.map((p) => p[1])) * 1.03;
   const X = (r) => L + (R - L) * (it > 1 ? (r - 1) / (it - 1) : 0.5), Y = (y) => B - (B - T) * (y - ymin) / Math.max(1e-9, ymax - ymin);
   x.strokeStyle = '#e1dfda'; x.lineWidth = 1; x.font = `${10 * k}px IBM Plex Mono, monospace`; x.fillStyle = '#8a8780'; x.textBaseline = 'middle';
   for (let q = 0; q <= 2; q++) { const yv = ymin + (ymax - ymin) * q / 2, yy = Y(yv); x.beginPath(); x.moveTo(L, yy); x.lineTo(R, yy); x.stroke(); x.textAlign = 'right'; x.fillText(yv.toFixed(0) + ' m', L - 5 * k, yy); }
@@ -1623,11 +1640,13 @@ function drawRounds() {
   for (const p of pts) { x.beginPath(); x.arc(X(p[0]), Y(p[1]), (p[0] === cur ? 4.5 : 2.4) * k, 0, 7); x.fillStyle = p[0] === cur ? '#d8402a' : rampV((p[0] - 1) / Math.max(1, it - 1)); x.fill(); }
   CH.rounds = { L: L / k, R: R / k, it };
 }
-function rowAt(list, e) { const y = e.offsetY; const r = list.find((o) => y >= o.y0 && y < o.y1); return r ? r.key : undefined; }
+function rowAt(list, e) { const y = e.offsetY; const r = list.find((o) => y >= o.y0 && y < o.y1&&(o.x0==null||e.offsetX>=o.x0&&e.offsetX<o.x1)); return r ? r.key : undefined; }
 $('#cPairs').addEventListener('click', (e) => { const key = rowAt(CH.pairs, e); if (key === undefined) return; S.hp = S.hp === key ? null : key; S.hpl = null; drawPairs(); drawPlacesChart(); draw(); });
+$('#cPairs').addEventListener('keydown',e=>{if(!document.querySelector('.app')?.dataset.pcUnified||!['ArrowRight','ArrowLeft','ArrowDown','ArrowUp','Escape'].includes(e.key))return;e.preventDefault();if(e.key==='Escape')S.hp=null;else{const index=CH.pairs.findIndex(p=>p.key===S.hp),step=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;S.hp=CH.pairs[(index+step+CH.pairs.length)%CH.pairs.length]?.key??null;}S.hpl=null;drawPairs();drawPlacesChart();draw();});
 $('#cPlaces').addEventListener('click', (e) => { const key = rowAt(CH.places, e); if (key === undefined) return; S.hpl = S.hpl === key ? null : key; S.hp = null; drawPairs(); drawPlacesChart(); draw(); });
 $('#cRounds').addEventListener('click', (e) => { const R = CH.rounds; if (!R || !NET || !NET.done) return; const f = Math.max(0, Math.min(1, (e.offsetX - R.L) / Math.max(1, R.R - R.L))), r = Math.round(1 + f * (R.it - 1)); EXPLICIT = false; if (S.view !== 'live') setView('live'); ANIM.seek((r - 1) * NET.wave); ANIM.play(); });
-addEventListener('resize', () => { if (S.cam === 'split') panelUI(); });
+window.__pcUnifiedCharts=()=>panelUI();
+addEventListener('resize', () => { if (S.cam === 'split'||document.querySelector('.app')?.dataset.pcUnified) panelUI(); });
 // highlight on the plan: the chosen pair's shortest route, or every route from the chosen place, over a pale veil
 function drawHL(ctx) {
   const d = PXR(), list = S.hp != null ? okPairs().filter((o) => o.k === S.hp) : okPairs().filter((o) => o.P.i === S.hpl || o.P.j === S.hpl); if (!list.length) return;

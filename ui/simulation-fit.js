@@ -1,6 +1,6 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
 import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=unified-20261025-1';
-import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=1';
+import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=selected-20261025';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){
@@ -161,6 +161,7 @@ export function installSimulationFit(doc = document) {
     if(doc.body.dataset.pcSharedWeatherLoading)return;
     doc.documentElement.classList.add('pc-simulation-fit');
     prepareUnifiedSimulation(doc);
+    app.pcUpdateUnifiedContext?.();
     for(const label of doc.querySelectorAll('#unifiedCharts .cph .note,#unifiedCharts small')){const text=label.textContent.trim();if(label.title!==text)label.title=text;}
     for (const panel of app.querySelectorAll(':scope > aside.panel,:scope > .col')) enhance(panel);
     for(const strip of app.querySelectorAll('.stage > .chartp')){
