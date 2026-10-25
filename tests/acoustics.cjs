@@ -5,8 +5,10 @@ const reveal=require('./reveal-simulation-control.cjs');
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.goto(base+'/mvp/#/simulations');await page.locator('a[href="#/simulations/acoustics"]').first().waitFor();
- await page.goto(base+'/index.html#/tool/acoustics');const work=await(await page.locator('iframe[data-emb="acoustics"]').elementHandle()).contentFrame();
- await page.locator('#eng[data-pc-settings-ready="true"]').waitFor();
+ // since 2026-10-25 the acoustics route opens the level-wide engine (emb/roomacoustics.html, tests/mvp-room-acoustics.cjs); this
+ // single-room ray study is kept as a page of its own and checked here directly
+ await page.goto(base+'/index.html#/tool/acoustics');await page.waitForFunction(()=>/emb\/roomacoustics\.html/.test(document.querySelector('#eng')?.src||''),null,{timeout:30000});
+ await page.goto(base+'/emb/acoustics.html?layout=unified');const work=page.mainFrame();
  await work.waitForFunction(()=>!!window.AcousticStudy?.stats);
  let report=await work.evaluate(()=>AcousticStudy.report());
  for(const value of report.statistics.rt)assert(Number.isFinite(value)&&value>0,'RT60 bands must be finite and positive');
@@ -31,5 +33,5 @@ try{
  await work.locator('#reset').click();assert.equal(await work.locator('#time').inputValue(),'0','Reset returns animation to the start');
  await page.setViewportSize({width:390,height:844});assert(await work.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Acoustic tool overflows mobile width');
  assert.deepEqual(errors,[],'Browser errors: '+errors.join(' | '));
- console.log('PASS acoustic route, finite band results, imported provenance, material comparison, actual 3D view, report download, animation reset and narrow layout');
+ console.log('PASS acoustic route (to the new engine), single-room study on its own page: finite band results, imported provenance, material comparison, actual 3D view, report download, animation reset and narrow layout');
 }finally{await browser.close()}})().catch(e=>{console.error(e.stack||e);process.exit(1)});

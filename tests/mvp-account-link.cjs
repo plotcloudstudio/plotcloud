@@ -29,7 +29,7 @@ ok(st&&st['Work plane']==='0.75 m'&&/Work plane 0.9 m \(Account 0.75 m\)/.test(s
 await p.goto(B+'#/simulations/sunhours');await p.waitForTimeout(10000);
 ok(await p.evaluate(()=>document.getElementById('eng').contentDocument.querySelector('#daySeg [aria-pressed="true"]')?.dataset.d)==='06-21','Sun study period (Summer solstice) → Sun hours Jun 21');
 await p.goto(B+'#/simulations/acoustics');await p.waitForTimeout(9000);
-ok(await p.evaluate(()=>document.getElementById('eng').contentDocument.getElementById('band').selectedOptions[0].textContent)==='1000 Hz','Acoustic band (1 kHz) → Indoor acoustics');
+ok(await p.evaluate(()=>document.getElementById('eng').contentDocument.getElementById('band').selectedOptions[0].textContent)==='1 kHz','Acoustic band (1 kHz) → Indoor acoustics');
 await p.goto(B+'#/simulations/structure');await p.waitForTimeout(6000);
 ok(await p.evaluate(()=>document.getElementById('eng').contentDocument.getElementById('q-loc').value)==='custom','Tokyo is far from the NBC locations → "anywhere else"');
 // a project that keeps its own site does not follow

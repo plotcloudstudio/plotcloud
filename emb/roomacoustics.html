@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlotCloud Indoor acoustics</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="lib/plansim.css?v=1">
+<script type="importmap">{ "imports": { "three": "../furniture/three.module.min.js", "three/addons/": "../furniture/addons/" } }</script>
+<style>
+.rbars { width: 100%; height: 170px; display: block; }
+.surf { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+.surf th, .surf td { text-align: left; padding: 3px 4px; border-bottom: 1px solid var(--line); } .surf td.n, .surf th.n { text-align: right; font-family: var(--f-mono); }
+.fix { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); font-size: 12.5px; }
+#v3 { position: absolute; inset: 0; z-index: 2; background: #0a0e16; } #v3 canvas { position: absolute; inset: 0; }
+#v3 .v3hud { left: auto; right: 12px; top: 12px; bottom: auto; width: min(340px, calc(100% - 24px)); height: 150px; pointer-events: none; border-radius: 8px; }
+.v3bar { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: rgba(10,14,22,.86); color: #dce6f5; border: 1px solid rgba(111,147,201,.35); border-radius: 8px; padding: 6px 8px; font-size: 12px; max-width: calc(100% - 24px); }
+.v3bar button, .v3bar select { font: inherit; color: #e8eef8; background: #18223a; border: 1px solid rgba(111,147,201,.45); border-radius: 6px; padding: 4px 8px; }
+.v3bar button[aria-pressed="true"] { background: #e8eef8; color: #0a0e16; } .v3bar small { color: #9fb3d1; } .v3bar label { display: flex; gap: 4px; align-items: center; }
+.v3key { position: absolute; left: 12px; top: 56px; z-index: 3; background: rgba(10,14,22,.8); color: #c8d4e6; border: 1px solid rgba(111,147,201,.3); border-radius: 8px; padding: 6px 9px; font-size: 11px; line-height: 1.5; max-width: 260px; pointer-events: none; }
+.v3key i { display: inline-block; width: 22px; height: 7px; border-radius: 4px; vertical-align: middle; margin-right: 5px; }
+tr.cur td { background: #f6f5f2; } tr[data-k] { cursor: pointer; }
+.st-ok { color: var(--ok); font-weight: 600; } .st-hi { color: var(--accent); font-weight: 600; } .st-lo { color: #2f6fa8; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="col" id="panelL" aria-label="Indoor acoustics settings"><div class="colIn">
+    <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
+      <div class="minfo"><b id="mName">Sample flat</b></div>
+      <p class="note" id="mInfo">Opened on its own: a sample flat. From the Simulations page, every room of the version and level you pick comes in, with the finishes set in Plan Studio.</p>
+    </section>
+    <section class="sec" aria-labelledby="h-set"><h2 id="h-set"><i>2</i>Rooms in use</h2>
+      <div class="ctl"><label for="target">Target for every room</label><select id="target">
+        <option value="auto">By the room’s name</option><option value="A3">Teaching, meetings (DIN 18041 A3)</option><option value="A4">Inclusive teaching (DIN 18041 A4)</option><option value="A2">Talks, presentations (DIN 18041 A2)</option><option value="A1">Music (DIN 18041 A1)</option><option value="home">Home and office (0.4–0.6 s, rule of thumb)</option></select></div>
+      <div class="ctl"><label for="people">People in each room</label><select id="people"><option value="0">None (finished, unoccupied)</option><option value="10">1 per 10 m² (home, office)</option><option value="5">1 per 5 m² (meeting room)</option><option value="2">1 per 2 m² (classroom, hall)</option></select></div>
+      <div class="two"><div class="ctl"><label for="temp">Air</label><div class="num"><input type="number" id="temp" min="0" max="35" step="1" value="20"><span>°C</span></div></div>
+        <div class="ctl"><label for="rh">Humidity</label><div class="num"><input type="number" id="rh" min="10" max="95" step="5" value="50"><span>%</span></div></div></div>
+      <p class="note">The finishes come from Plan Studio (walls, floors, ceilings, glazing); unset surfaces are taken as plaster walls and ceilings, a timber floor and double glazing. Upholstered furniture and people absorb too.</p>
+    </section>
+    <section class="sec" aria-labelledby="h-run"><h2 id="h-run"><i>3</i>Analysis</h2>
+      <div class="ctl"><label>Reverberation formula</label><div class="seg" id="formula"><button type="button" data-f="eyring" aria-pressed="true">Eyring</button><button type="button" data-f="sabine" aria-pressed="false">Sabine</button></div></div>
+      <div class="ctl"><label for="show">The map shows</label><select id="show"><option value="ratio">Each room against its target</option><option value="rt">Reverberation time in one band</option></select></div>
+      <div class="ctl"><label for="band">Band</label><select id="band"><option value="0">125 Hz</option><option value="1">250 Hz</option><option value="2" selected>500 Hz</option><option value="3">1 kHz</option><option value="4">2 kHz</option><option value="5">4 kHz</option></select></div>
+      <button type="button" class="go" id="run">Calculate</button>
+      <div class="prog" id="prog" hidden><i></i></div>
+      <p class="msg" id="runMsg"></p>
+      <p class="note">Each room's reverberation time in six octave bands from its volume and the sound absorbed by every surface, piece of furniture, person and the air; compared with a target for its use.</p>
+    </section>
+    <section class="sec" aria-labelledby="h-lay"><h2 id="h-lay"><i>4</i>Export</h2>
+      <div class="two"><button type="button" class="btn" id="exPng">Plan PNG</button><button type="button" class="btn" id="exCsv">Rooms CSV</button></div>
+    </section>
+  </div></aside>
+
+  <section class="stage" id="stage" aria-label="Plan">
+    <div class="vbar"><div class="views" id="camBar" role="group" aria-label="View"><button type="button" data-view="plan" aria-pressed="true">Plan</button><button type="button" data-view="3d" aria-pressed="false">3D sound particles</button></div></div>
+    <canvas id="cv" aria-label="Plan coloured by each room's reverberation time"></canvas>
+    <div class="lgd" id="legend"></div>
+    <div class="hint" id="hint">Click a room to see it by frequency and what absorbs its sound.</div>
+    <div class="tip" id="tip"></div>
+    <div id="v3" hidden></div>
+    <div class="v3key" id="v3key" hidden><b>A burst of sound, slowed down</b><br><i style="background:linear-gradient(90deg,#fff5d1,#ffb847,#ff5c5c,#8c61ff,#1f3899)"></i>loud → faded (each bounce loses what the surface absorbs)<br><i style="background:#2b3b5c"></i>hard surface <i style="background:#2fb7a8;margin-left:6px"></i>absorbent<br>Flashes: warm where sound bounces back, teal where it is soaked up.<br><span style="color:#8ea3c4">A picture of the decay (bounces mostly mirror-like, some scattered); the figures come from the formula.</span></div>
+    <div class="v3bar" id="v3bar" hidden>
+      <button type="button" id="v3play" aria-pressed="true">Pause</button><button type="button" id="v3again">Again</button>
+      <label>Room <select id="v3room" aria-label="Room in 3D"></select></label>
+      <label>Start <select id="v3slow" aria-label="Slow motion at the start"><option value="100">100× slower</option><option value="40" selected>40× slower</option><option value="15">15× slower</option></select></label>
+      <label>Particles <select id="v3n" aria-label="Particles"><option>300</option><option selected>600</option><option>1500</option></select></label>
+      <small id="v3stats" aria-live="off"></small><small>· Double-click the floor to move the source.</small>
+    </div>
+  </section>
+
+  <aside class="col" id="panelR" aria-label="Results"><div class="colIn">
+    <section class="sec" aria-labelledby="h-res"><h2 id="h-res">Results</h2>
+      <div class="pcproj"><button type="button" class="btn" id="pcAdd">Add to project</button><span class="note" id="pcProjN" aria-live="polite"></span></div>
+      <div class="kpis" id="kpis"><div><small>Rooms on target</small><b>—</b></div><div><small>Longest T 500–1k</small><b>—</b></div><div><small>Mean T 500–1k</small><b>—</b></div><div><small>Lowest STI (estimate)</small><b>—</b></div></div>
+      <div id="res"><p class="note">Calculate to see each room.</p></div>
+      <div id="room"></div>
+    </section>
+  </div></aside>
+  <footer class="fine">Statistical room acoustics for early design: Sabine and Eyring reverberation time per octave band from volume and absorption (diffuse field), air absorption from ISO 9613-1, targets from DIN 18041; typical published absorption values. No sound insulation, no echoes or focusing, no measured data. Checked: mvp/VALIDATION.md §7.</footer>
+</div>
+
+<script type="module">
+import { $, $$, clamp, r1, r2, esc, planView, ramp, rampCSS, fieldImage, drawField, raster, centre, runUI, bridge, keep, seg, ROOM_SKIP, sampleFlat, drawPlanScene, wallBox, dist } from './lib/plansim.js?v=1';
+
+const BANDS = [125, 250, 500, 1000, 2000, 4000], BN = ['125', '250', '500', '1k', '2k', '4k'];
+// the finishes, as in Plan Studio (a scene from Plan Studio brings its own copy, which wins)
+let MATS = {
+  plaster: { n: 'Plaster on masonry, painted', a: [0.01, 0.02, 0.02, 0.03, 0.04, 0.05] }, gypsum: { n: 'Gypsum board on studs', a: [0.29, 0.10, 0.05, 0.04, 0.07, 0.09] },
+  concrete: { n: 'Concrete, painted', a: [0.01, 0.01, 0.02, 0.02, 0.02, 0.02] }, brick: { n: 'Brick, bare', a: [0.03, 0.03, 0.03, 0.04, 0.05, 0.07] },
+  timberpanel: { n: 'Timber panelling', a: [0.42, 0.21, 0.10, 0.08, 0.06, 0.06] }, absorber: { n: 'Acoustic panel, 50 mm mineral wool', a: [0.20, 0.55, 0.95, 1.00, 0.95, 0.90] },
+  tileceiling: { n: 'Suspended mineral-fibre ceiling', a: [0.50, 0.55, 0.65, 0.80, 0.85, 0.80] }, curtain: { n: 'Heavy curtain, draped', a: [0.07, 0.31, 0.49, 0.75, 0.70, 0.60] },
+  timberfloor: { n: 'Timber floor on joists', a: [0.15, 0.11, 0.10, 0.07, 0.06, 0.07] }, parquet: { n: 'Parquet on concrete', a: [0.04, 0.04, 0.07, 0.06, 0.06, 0.07] },
+  vinyl: { n: 'Vinyl or linoleum on concrete', a: [0.02, 0.03, 0.03, 0.03, 0.03, 0.02] }, carpet: { n: 'Carpet on concrete', a: [0.02, 0.06, 0.14, 0.37, 0.60, 0.65] },
+  tile: { n: 'Ceramic tile', a: [0.01, 0.01, 0.01, 0.02, 0.02, 0.02] } };
+let GLAZ = { single: { n: 'Single glazing', a: [0.18, 0.06, 0.04, 0.03, 0.02, 0.02] }, double: { n: 'Double glazing', a: [0.10, 0.07, 0.05, 0.03, 0.02, 0.02] }, lowe: { n: 'Double glazing, low-e', a: [0.10, 0.07, 0.05, 0.03, 0.02, 0.02] }, triple: { n: 'Triple glazing', a: [0.08, 0.05, 0.04, 0.03, 0.02, 0.02] } };
+let DEF = { wall: 'plaster', floor: 'timberfloor', ceiling: 'plaster', glazing: 'double' };
+const DOOR = { n: 'Door, timber, closed', a: [0.14, 0.10, 0.06, 0.08, 0.10, 0.10] }, OPENING = { n: 'Opening to the next space', a: [1, 1, 1, 1, 1, 1] };
+// equivalent absorption area of a piece of furniture or a person (m², per band): typical values for early design
+const FURN_A = [[/sofa|couch|settee/i, 'Upholstered sofa', [0.40, 0.70, 0.95, 1.10, 1.15, 1.15]], [/armchair|lounge chair|recliner/i, 'Armchair', [0.15, 0.25, 0.35, 0.40, 0.40, 0.40]],
+  [/bed\b|bed[_ ]|mattress|bunk|crib/i, 'Bed with bedding', [0.30, 0.55, 0.80, 0.90, 0.90, 0.90]], [/office chair|desk chair|task chair/i, 'Upholstered chair', [0.05, 0.10, 0.15, 0.20, 0.20, 0.20]],
+  [/book|shelf|shelves/i, 'Filled bookshelf', [0.10, 0.15, 0.20, 0.25, 0.25, 0.25]], [/rug|carpet/i, 'Rug', [0.02, 0.08, 0.20, 0.40, 0.55, 0.60]]];
+const HARD_A = [0.03, 0.03, 0.04, 0.04, 0.05, 0.05], PERSON_A = [0.15, 0.25, 0.35, 0.42, 0.45, 0.45];
+const STI_W = [0.13, 0.14, 0.11, 0.12, 0.19, 0.17, 0.14];   // octave weights 125 Hz–8 kHz (Houtgast & Steeneken), 8 kHz taken as 4 kHz here
+const TARGET_SHORT = { A1: 'Music', A2: 'Talks', A3: 'Teaching', A4: 'Inclusive', home: 'Home, office', none: 'None' };
+const TARGET_NAME = { A1: 'Music (DIN 18041 A1)', A2: 'Talks (DIN 18041 A2)', A3: 'Teaching, meetings (DIN 18041 A3)', A4: 'Inclusive teaching (DIN 18041 A4)', home: 'Home and office (rule of thumb)', none: 'No target (circulation, storage)' };
+
+// ---- the physics: pure functions (tests/validation/room_acoustics.cjs pulls them out of this page)
+// the sound power attenuation of air (1/m) at frequency f, temperature tC (°C), relative humidity rh (%), sea-level pressure: ISO 9613-1:1993 eqs. 3–5
+function airM(f, tC, rh) {
+  const T = tC + 273.15, T0 = 293.15, T01 = 273.16, pr = 1, pa = 1, C = -6.8346 * Math.pow(T01 / T, 1.261) + 4.6151, h = rh * Math.pow(10, C) / pa;
+  const frO = pa / pr * (24 + 4.04e4 * h * (0.02 + h) / (0.391 + h)), frN = pa / pr * Math.pow(T / T0, -0.5) * (9 + 280 * h * Math.exp(-4.170 * (Math.pow(T / T0, -1 / 3) - 1)));
+  const aDBm = 8.686 * f * f * (1.84e-11 * (pr / pa) * Math.sqrt(T / T0) + Math.pow(T / T0, -2.5) * (0.01275 * Math.exp(-2239.1 / T) / (frO + f * f / frO) + 0.1068 * Math.exp(-3352.0 / T) / (frN + f * f / frN)));
+  return aDBm / (10 * Math.LOG10E);   // dB/m → 1/m (power)
+}
+// one room: { vol, surf: [{ area, a: [6] }], extra: [6] (furniture and people, m²) } → per band: A (m²), Sabine and Eyring T (s)
+function roomRT(room, air, tC) {
+  const c = 331.3 * Math.sqrt(1 + tC / 273.15), K = 24 * Math.LN10 / c, S = room.surf.reduce((s, q) => s + q.area, 0), out = [];
+  for (let b = 0; b < 6; b++) { const As = room.surf.reduce((s, q) => s + q.area * q.a[b], 0), Ax = room.extra ? room.extra[b] : 0, m4V = 4 * air[b] * room.vol, A = As + Ax;
+    const ab = Math.min(0.99, A / S); out.push({ A, As, Ax, Aair: m4V, sabine: K * room.vol / (A + m4V), eyring: K * room.vol / (-S * Math.log(1 - ab) + m4V), abar: ab }); }
+  return out;
+}
+// DIN 18041:2016 target reverberation time (occupied, mean of 500 Hz and 1 kHz) for a room group and volume; null outside its range
+function dinTarget(group, V) {
+  const L = Math.log10(V); if (group === 'A1') return V >= 30 && V <= 1000 ? 0.45 * L + 0.07 : null; if (group === 'A2') return V >= 50 && V <= 5000 ? 0.37 * L - 0.14 : null;
+  if (group === 'A3') return V >= 30 && V <= 5000 ? 0.32 * L - 0.17 : null; if (group === 'A4') return V >= 30 && V <= 500 ? 0.26 * L - 0.14 : null; if (group === 'home') return 0.5; return null;
+}
+// speech transmission index from reverberation alone (diffuse field, no noise, no direct sound): IEC 60268-16 modulation transfer, octaves 125 Hz–8 kHz
+function stiRev(T6) {
+  const F = [0.63, 0.8, 1, 1.25, 1.6, 2, 2.5, 3.15, 4, 5, 6.3, 8, 10, 12.5], T = T6.concat([T6[5]]);
+  let sti = 0; T.forEach((t, k) => { let ti = 0; for (const f of F) { const m = 1 / Math.sqrt(1 + Math.pow(2 * Math.PI * f * t / 13.8, 2)), snr = Math.max(-15, Math.min(15, 10 * Math.log10(m / (1 - m)))); ti += (snr + 15) / 30; } sti += STI_W[k] * ti / F.length; });
+  return sti;
+}
+
+let SC = null, RES = null, SHOW = 'ratio', PICK = null, IMG = null;
+const RATIO = [[0, [47, 111, 168]], [0.35, [140, 190, 215]], [0.5, [190, 225, 170]], [0.65, [245, 210, 110]], [1, [200, 50, 40]]];   // T ÷ target from 0.4 (dry) to 1.6 (live), 1.0 in the middle
+const RTR = [[0, [235, 245, 235]], [0.3, [170, 215, 160]], [0.6, [245, 200, 90]], [1, [180, 40, 40]]];
+const view = planView($('#cv'), { draw, onClick: (p) => { const k = roomAt(p); if (k >= 0) { PICK = k; roomUI(); view.redraw(); } }, onHover: hover, onLeave: () => { $('#tip').style.display = 'none'; } });
+const fmode = () => $('#formula [aria-pressed="true"]')?.dataset.f || 'eyring';
+const opts = () => ({ target: $('#target').value, people: +$('#people').value || 0, tC: clamp(+$('#temp').value || 20, 0, 35), rh: clamp(+$('#rh').value || 50, 10, 95), formula: fmode(), band: +$('#band').value || 0 });
+const setKey = () => JSON.stringify([SC.name, SC.rooms.length, SC.rooms.map((r) => r.surf.length), opts().target, opts().people, opts().tC, opts().rh]);
+const roomAt = (p) => SC.rooms.findIndex((r) => r.rects.some(([x, y, w, d]) => p[0] >= x && p[0] <= x + w && p[1] >= y && p[1] <= y + d));
+const groupOf = (r, o) => { const own = keep.get('acu:' + (SC.source?.project || 'sample'), {})[r.name]; if (own) return own; if (o.target !== 'auto') return o.target;
+  if (ROOM_SKIP.test(r.name) || /store|storage|utility|wc|toilet|bath|shower|laundry|plant|garage|closet|储|厕|卫/i.test(r.name)) return 'none';
+  if (/class|lecture|seminar|meeting|conference|training|教室|会议/i.test(r.name)) return 'A3'; if (/hall|auditorium|theatre|theater|church|礼堂/i.test(r.name)) return 'A2'; if (/music|rehears|band|choir|音乐/i.test(r.name)) return 'A1'; return 'home'; };
+const matOf = (q) => q.kind === 'window' ? (GLAZ[q.mat] || GLAZ[DEF.glazing]) : q.kind === 'door' ? DOOR : q.kind === 'opening' ? OPENING : (MATS[q.mat] || MATS[DEF[q.kind]] || MATS.plaster);
+const furnA = (f) => { const hit = FURN_A.find(([re]) => re.test(f.name || '') || re.test(f.type || '')); return hit ? { n: hit[1], a: hit[2] } : { n: 'Hard furniture', a: HARD_A }; };
+
+function calcRoom(r, o, air) {
+    const surf = r.surf.map((q) => { const m = matOf(q); return { kind: q.kind, mat: q.mat, name: m.n, area: q.area, a: m.a, set: !!q.mat || q.kind === 'door' || q.kind === 'opening' }; });
+    const furn = r.furn.map((f) => ({ ...f, abs: furnA(f) })), nP = o.people ? Math.max(1, Math.round(r.area / o.people)) : 0;
+    const extra = BANDS.map((_, b) => furn.reduce((s, f) => s + f.abs.a[b], 0) + nP * PERSON_A[b]);
+    const B = roomRT({ vol: r.vol, surf, extra }, air, o.tC), T = B.map((x) => x[o.formula]), mid = (T[2] + T[3]) / 2, grp = groupOf(r, o), tgt = dinTarget(grp, r.vol);
+    const status = tgt == null ? 'none' : mid > tgt * 1.2 ? 'hi' : mid < tgt * 0.8 ? 'lo' : 'ok';
+    return { r, surf, furn, nP, B, T, mid, grp, tgt, status, sti: stiRev(T), S: surf.reduce((s, q) => s + q.area, 0) };
+}
+async function analyse(ui) {
+  const o = opts(); if (!SC.rooms.length) throw new Error('No rooms on this level: draw closed rooms in Plan Studio first.');
+  const air = BANDS.map((f) => airM(f, o.tC, o.rh)); ui.prog(0.2);
+  const rooms = SC.rooms.map((r) => calcRoom(r, o, air));
+  RES = { key: setKey(), rooms, o, air }; IMG = null; ui.prog(1);
+  const n = rooms.filter((x) => x.tgt != null).length, ok = rooms.filter((x) => x.status === 'ok').length;
+  ui.say(`Done: ${rooms.length} room${rooms.length === 1 ? '' : 's'}${n ? `, ${ok} of ${n} on target` : ''}.`, 'ok'); if (PICK == null || PICK >= rooms.length) PICK = rooms.findIndex((x) => x.status === 'hi') >= 0 ? rooms.findIndex((x) => x.status === 'hi') : 0;
+  results(); roomUI(); view.redraw();
+}
+function figures() {
+  if (!RES) return null; const R = RES.rooms, judged = R.filter((x) => x.tgt != null), longest = R.slice().sort((a, b) => b.mid - a.mid)[0];
+  const tot = R.reduce((s, x) => s + x.r.vol, 0), mean = tot ? R.reduce((s, x) => s + x.mid * x.r.vol, 0) / tot : 0, low = R.filter((x) => x.grp !== 'none').sort((a, b) => a.sti - b.sti)[0];
+  return { judged: judged.length, ok: judged.filter((x) => x.status === 'ok').length, longest, mean, low };
+}
+const stTxt = (x) => x.status === 'ok' ? '<span class="st-ok">on target</span>' : x.status === 'hi' ? '<span class="st-hi">too live</span>' : x.status === 'lo' ? '<span class="st-lo">too dry</span>' : '<span class="note">no target</span>';
+const stiWord = (v) => v >= 0.75 ? 'excellent' : v >= 0.6 ? 'good' : v >= 0.45 ? 'fair' : v >= 0.3 ? 'poor' : 'bad';
+function results() {
+  const F = figures(); if (!F) return;
+  const K = [['Rooms on target', F.judged ? `${F.ok} of ${F.judged}` : 'no targets'], ['Longest T 500–1k', F.longest ? `${r2(F.longest.mid)} s` : '—'], ['Mean T 500–1k', `${r2(F.mean)} s`], ['Lowest STI (estimate)', F.low ? F.low.sti.toFixed(2) : '—']];
+  $('#kpis').innerHTML = K.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('');
+  $('#res').innerHTML = `<table class="res"><thead><tr><th>Room</th><th>Target</th><th class="n">T 500–1k</th><th>Status</th></tr></thead><tbody>${RES.rooms.map((x, i) => `<tr data-k="${i}"${i === PICK ? ' class="cur"' : ''}><td>${esc(x.r.name)}</td>
+      <td><select data-grp="${i}" aria-label="Target of ${esc(x.r.name)}">${Object.entries(TARGET_NAME).map(([k, n]) => `<option value="${k}"${k === x.grp ? ' selected' : ''}>${TARGET_SHORT[k]}</option>`).join('')}</select></td>
+      <td class="n">${r2(x.mid)} s${x.tgt != null ? `<br><small class="note">${r2(x.tgt)} s</small>` : ''}</td><td>${stTxt(x)}</td></tr>`).join('')}</tbody></table>
+    <p class="note" style="margin-top:6px">${RES.o.formula === 'eyring' ? 'Eyring' : 'Sabine'} reverberation time, mean of 500 Hz and 1 kHz (the target under it), against the target for the room's use (±20 %). Longest: ${esc(F.longest?.r.name || '—')}; lowest speech clarity: ${esc(F.low?.r.name || '—')}. Change a room's target here; it is kept for this project.</p>`;
+  $$('#res tr[data-k]').forEach((tr) => tr.onclick = (e) => { if (e.target.closest('select')) return; PICK = +tr.dataset.k; results(); roomUI(); view.redraw(); });
+  $$('#res select[data-grp]').forEach((s) => s.onchange = () => { const k = 'acu:' + (SC.source?.project || 'sample'), m = keep.get(k, {}); m[RES.rooms[+s.dataset.grp].r.name] = s.value; keep.set(k, m); ui.start(); });
+  legend();
+}
+// one room: by frequency, what absorbs, and what it would take to reach the target
+function roomUI() {
+  refresh3D();
+  const box = $('#room'); if (!RES || PICK == null || !RES.rooms[PICK]) { box.innerHTML = ''; return; } const x = RES.rooms[PICK], b2 = 2, b3 = 3;
+  const parts = x.surf.map((q) => ({ n: `${q.kind[0].toUpperCase() + q.kind.slice(1)}: ${q.name}${q.set ? '' : ' (not set)'}`, area: q.area, a: (q.a[b2] + q.a[b3]) / 2 })).concat(x.furn.map((f) => ({ n: `${f.name} (${f.abs.n.toLowerCase()})`, area: null, A: (f.abs.a[b2] + f.abs.a[b3]) / 2 })));
+  if (x.nP) parts.push({ n: `${x.nP} people`, area: null, A: x.nP * (PERSON_A[b2] + PERSON_A[b3]) / 2 }); parts.push({ n: 'Air', area: null, A: (x.B[b2].Aair + x.B[b3].Aair) / 2 });
+  const Amid = parts.reduce((s, q) => s + (q.A ?? q.area * q.a), 0);
+  let fix = ''; if (x.tgt != null && x.status === 'hi') { const c = 331.3 * Math.sqrt(1 + RES.o.tC / 273.15), K = 24 * Math.LN10 / c, Aneed = K * x.r.vol / x.tgt - Amid, ce = x.surf.find((q) => q.kind === 'ceiling'), da = (MATS.absorber.a[b2] + MATS.absorber.a[b3]) / 2 - (ce ? (ce.a[b2] + ce.a[b3]) / 2 : 0.03), m2 = Math.max(0, Aneed / Math.max(0.1, da));
+    fix = `<div class="fix">To bring it to ${r2(x.tgt)} s it needs about <b>${Math.round(Aneed)} m²</b> more absorption at 500–1k Hz: for example <b>${Math.round(m2)} m²</b> of acoustic panel${ce && m2 <= ce.area ? ` on the ceiling (${Math.round(m2 / ce.area * 100)} % of it)` : ' on the ceiling and walls'}. Set it in Plan Studio (a wall's finish or the level's ceiling) and calculate again.</div>`; }
+  else if (x.tgt != null && x.status === 'lo') fix = `<div class="fix">Drier than the target: fewer absorbent finishes (a hard floor or ceiling) would bring it up to ${r2(x.tgt)} s.</div>`;
+  box.innerHTML = `<h3 style="margin:14px 0 4px;font-size:13px">${esc(x.r.name)} · ${r1(x.r.area)} m² · ${Math.round(x.r.vol)} m³ · ${stTxt(x)}</h3>
+    <p class="note" style="margin:0">Target ${x.tgt != null ? `${r2(x.tgt)} s (${esc(TARGET_NAME[x.grp])})` : 'none'} · ${RES.o.formula === 'eyring' ? 'Eyring' : 'Sabine'} T 500–1k <b>${r2(x.mid)} s</b> · Sabine ${r2((x.B[2].sabine + x.B[3].sabine) / 2)} s, Eyring ${r2((x.B[2].eyring + x.B[3].eyring) / 2)} s · speech clarity STI ${x.sti.toFixed(2)} (${stiWord(x.sti)}, reverberation only)</p>
+    <canvas class="rbars" id="rbars" aria-label="Reverberation time by frequency"></canvas>
+    <table class="surf"><thead><tr><th>What absorbs (500–1k Hz)</th><th class="n">Area</th><th class="n">α</th><th class="n">A m²</th><th class="n">Share</th></tr></thead><tbody>${parts.map((q) => { const A = q.A ?? q.area * q.a; return `<tr><td>${esc(q.n)}</td><td class="n">${q.area != null ? r1(q.area) : ''}</td><td class="n">${q.area != null ? q.a.toFixed(2) : ''}</td><td class="n">${A.toFixed(1)}</td><td class="n">${Math.round(A / Amid * 100)} %</td></tr>`; }).join('')}</tbody></table>${fix}`;
+  bars();
+}
+function bars() {
+  const cv = $('#rbars'); if (!cv || !RES || PICK == null) return; const x = RES.rooms[PICK], d = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth || 300, H = cv.clientHeight || 170; cv.width = W * d; cv.height = H * d; const g = cv.getContext('2d'); g.scale(d, d);
+  const top = Math.max(1, ...x.B.map((q) => Math.max(q.sabine, q.eyring)), x.tgt ? x.tgt * 1.3 : 0) * 1.1, L = 30, B = H - 22, Y = (v) => B - v / top * (B - 10), bw = (W - L - 8) / 6;
+  g.font = '10px system-ui, sans-serif'; g.fillStyle = '#5a5853'; g.strokeStyle = '#e1dfda'; for (let v = 0; v <= top; v += top > 3 ? 1 : 0.5) { g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(W - 4, Y(v)); g.stroke(); g.fillText(v.toFixed(1), 4, Y(v) + 3); }
+  if (x.tgt) { g.fillStyle = 'rgba(10,122,47,.12)'; g.fillRect(L, Y(x.tgt * 1.2), W - L - 4, Y(x.tgt * 0.8) - Y(x.tgt * 1.2)); g.strokeStyle = 'rgba(10,122,47,.7)'; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(L, Y(x.tgt)); g.lineTo(W - 4, Y(x.tgt)); g.stroke(); g.setLineDash([]); }
+  x.B.forEach((q, i) => { const x0 = L + i * bw + bw * 0.18, w = bw * 0.3; g.fillStyle = RES.o.formula === 'eyring' ? '#111' : '#9b978f'; g.fillRect(x0, Y(q.eyring), w, B - Y(q.eyring)); g.fillStyle = RES.o.formula === 'sabine' ? '#111' : '#9b978f'; g.fillRect(x0 + w + 2, Y(q.sabine), w, B - Y(q.sabine)); g.fillStyle = '#5a5853'; g.fillText(BN[i], x0, H - 8); });
+  g.fillStyle = '#5a5853'; g.fillText('s', 4, 10); g.fillText(`Eyring | Sabine${x.tgt ? ' · target ±20 %' : ''}`, L + 4, 10);
+}
+function legend() {
+  $('#legend').innerHTML = SHOW === 'ratio' ? `<b>Reverberation against target</b><div class="ramp" style="background:${rampCSS(RATIO)}"></div><div class="ends"><span>too dry (−60 %)</span><span>on</span><span>too live (+60 %)</span></div><div class="key"><i style="background:#e8e7e3"></i>No target</div>`
+    : `<b>Reverberation time · ${BN[+$('#band').value || 0]} Hz</b><div class="ramp" style="background:${rampCSS(RTR)}"></div><div class="ends"><span>0 s</span><span>${RES ? r1(Math.max(1, ...RES.rooms.map((x) => x.T[+$('#band').value || 0]))) : 2} s</span></div>`;
+}
+function colourOf(x) {
+  if (SHOW === 'ratio') { if (x.tgt == null) return [232, 231, 227]; return ramp(RATIO, clamp((x.mid / x.tgt - 0.4) / 1.2, 0, 1)); }
+  const b = +$('#band').value || 0, top = Math.max(1, ...RES.rooms.map((q) => q.T[b])); return ramp(RTR, x.T[b] / top);
+}
+function draw(g, v) {
+  const plan = drawPlanScene(g, v, SC, { roomFill: '#ffffff' }), P = (p) => v.W2S(p), k = v.k;
+  if (RES) RES.rooms.forEach((x, i) => { const c = colourOf(x); g.fillStyle = `rgba(${c.join(',')},.78)`; for (const [rx, ry, w, d] of x.r.rects) { const a = P([rx, ry + d]); g.fillRect(a[0], a[1], w * k + 0.5, d * k + 0.5); }
+    if (i === PICK) { g.strokeStyle = '#111'; g.lineWidth = 2; for (const [rx, ry, w, d] of x.r.rects) { const a = P([rx, ry + d]); g.strokeRect(a[0], a[1], w * k, d * k); } } });
+  plan.over();
+  if (RES) { g.font = `600 ${clamp(k * 0.3, 9, 12)}px system-ui, sans-serif`; g.textAlign = 'center'; for (const x of RES.rooms) { const p = P(x.r.label || [x.r.rects[0][0] + x.r.rects[0][2] / 2, x.r.rects[0][1] + x.r.rects[0][3] / 2]), b = +$('#band').value || 0, t = `${r2(SHOW === 'ratio' ? x.mid : x.T[b])} s`; g.fillStyle = 'rgba(255,255,255,.88)'; const w = g.measureText(t).width + 8; g.fillRect(p[0] - w / 2, p[1] + 7, w, 14); g.fillStyle = '#111'; g.fillText(t, p[0], p[1] + 18); } g.textAlign = 'left'; }
+}
+function hover(p, s) {
+  const tip = $('#tip'), k = roomAt(p); if (!RES || k < 0) { tip.style.display = 'none'; return; } const x = RES.rooms[k];
+  tip.textContent = `${x.r.name} · T 500–1k ${r2(x.mid)} s${x.tgt != null ? ` · target ${r2(x.tgt)} s` : ''} · ${Math.round(x.r.vol)} m³`; tip.style.display = 'block'; tip.style.left = (s[0] + 14) + 'px'; tip.style.top = (s[1] + 10) + 'px';
+}
+// a scene from Plan Studio has each room's surfaces; the sample flat (opened on its own) gets them from its rectangles
+function sampleScene() {
+  const s = sampleFlat(), h = s.settings.ceil, onEdge = (p, [x, y, w, d]) => (Math.abs(p[0] - x) < 0.15 || Math.abs(p[0] - x - w) < 0.15) && p[1] >= y - 0.15 && p[1] <= y + d + 0.15 || (Math.abs(p[1] - y) < 0.15 || Math.abs(p[1] - y - d) < 0.15) && p[0] >= x - 0.15 && p[0] <= x + w + 0.15;
+  s.rooms = s.rooms.map((r) => { const R = r.rects[0], area = R[2] * R[3], surf = []; let walls = 2 * (R[2] + R[3]) * h;
+    for (const o of s.open) { const m = [(o.a[0] + o.b[0]) / 2, (o.a[1] + o.b[1]) / 2]; if (!onEdge(m, R)) continue; const a = dist(o.a, o.b) * Math.max(0, o.head - o.sill); walls -= a; surf.push({ kind: o.kind === 'win' ? 'window' : 'door', mat: null, area: r2(a) }); }
+    surf.push({ kind: 'wall', mat: null, area: r2(walls) }, { kind: 'floor', mat: /bath|kitchen/i.test(r.name) ? 'tile' : null, area }, { kind: 'ceiling', mat: null, area });
+    const furn = s.furn.filter((f) => { const c = [f.x + f.w / 2, f.y + f.d / 2]; return c[0] >= R[0] && c[0] <= R[0] + R[2] && c[1] >= R[1] && c[1] <= R[1] + R[3]; }).map((f) => ({ name: f.name, type: f.name, w: f.w, d: f.d, h: f.h, c: [f.x + f.w / 2, f.y + f.d / 2], rot: 0 }));
+    return { ...r, area, h, vol: area * h, surf, furn }; });
+  return s;
+}
+function loadScene(sc, name) {
+  if (sc.materials) MATS = sc.materials; if (sc.glazing) GLAZ = sc.glazing; if (sc.defaults) DEF = sc.defaults;
+  SC = { ...sc, walls: sc.walls || [], open: sc.open || [], rooms: (sc.rooms || []).filter((r) => r.surf && r.vol > 0), furn: sc.furn || [] }; RES = null; IMG = null; PICK = null;
+  $('#mName').textContent = name || sc.name || 'Project model';
+  const set = SC.rooms.reduce((s, r) => s + r.surf.filter((q) => q.mat && q.kind !== 'door' && q.kind !== 'opening').length, 0), all = SC.rooms.reduce((s, r) => s + r.surf.filter((q) => q.kind !== 'door' && q.kind !== 'opening').length, 0);
+  $('#mInfo').textContent = SC.rooms.length ? `${SC.rooms.length} room${SC.rooms.length === 1 ? '' : 's'}, ${Math.round(SC.rooms.reduce((s, r) => s + r.vol, 0))} m³ · finishes set on ${set} of ${all} surfaces${SC.settings?.floorZ ? ` · floor at ${r1(SC.settings.floorZ)} m` : ''}.` : 'No closed rooms on this level.';
+  $('#res').innerHTML = '<p class="note">Calculate to see each room.</p>'; $('#room').innerHTML = ''; $('#runMsg').textContent = SC.rooms.length ? '' : 'No closed rooms on this level: draw rooms in Plan Studio.';
+  const B = SC.walls.length ? wallBox(SC) : { x0: 0, y0: 0, x1: SC.bounds?.w || 10, y1: SC.bounds?.h || 10 }; view.fit({ x0: B.x0 - 1, y0: B.y0 - 1, x1: B.x1 + 1, y1: B.y1 + 1 }); legend(); refresh3D(false);
+  if (SC.rooms.length && window.parent === window) ui.start();
+}
+const ui = runUI(analyse);
+const show = (v) => { SHOW = v; $('#show').value = v; legend(); view.redraw(); };
+$('#show').addEventListener('change', (e) => show(e.target.value));
+// ---- the 3D view: one room, a burst of sound particles (emb/lib/roomacoustics3d.js, loaded when first shown)
+let V3 = null, IS3 = false, SRC3 = {};
+function ctx3() {
+  const o = opts(), k = PICK != null && SC.rooms[PICK] ? PICK : 0, r = SC.rooms[k], b = o.band, air = BANDS.map((f) => airM(f, o.tC, o.rh)), x = calcRoom(r, o, air);
+  const alphaAt = (kind, mat) => matOf({ kind, mat: mat || (kind === 'floor' ? (r.surf.find((q) => q.kind === 'floor' && q.mat) || {}).mat : kind === 'ceiling' ? (r.surf.find((q) => q.kind === 'ceiling' && q.mat) || {}).mat : null) }).a[b];
+  return { room: r, walls: SC.walls, open: SC.open, alphaAt, c: 331.3 * Math.sqrt(1 + o.tC / 273.15), m: air[b], T: x.T[b], formula: o.formula === 'eyring' ? 'Eyring' : 'Sabine', bandName: BN[b] + ' Hz', source: SRC3[r.id] };
+}
+function refresh3D(keepView = true) { if (!V3 || !IS3 || !SC.rooms.length) return; $('#v3room').innerHTML = SC.rooms.map((r, i) => `<option value="${i}"${i === (PICK ?? 0) ? ' selected' : ''}>${esc(r.name)}</option>`).join(''); V3.show(ctx3(), { keepView }); }
+async function setView(v) {
+  IS3 = v === '3d'; $$('#camBar [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v))); for (const id of ['v3bar', 'v3key']) $('#' + id).hidden = !IS3; $('#hint').hidden = IS3; $('#legend').style.visibility = IS3 && $('#stage').contains($('#legend')) ? 'hidden' : '';
+  if (IS3 && !V3) { try { const M3 = await import('./lib/roomacoustics3d.js?v=1'); V3 = M3.makeRoom3D($('#v3'), { onSource: (p) => { const r = SC.rooms[PICK ?? 0]; if (r) SRC3[r.id] = p; } }); V3.bindStats($('#v3stats')); window.__psim.v3 = V3; }
+    catch (e) { console.error(e); IS3 = false; $('#runMsg').textContent = 'The 3D view could not start in this browser.'; return setView('plan'); } }
+  if (V3) V3.setVisible(IS3); if (IS3) refresh3D(false); else view.redraw();
+}
+$$('#camBar [data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+$('#v3play').onclick = () => { const on = V3.play(); $('#v3play').textContent = on ? 'Pause' : 'Play'; $('#v3play').setAttribute('aria-pressed', String(on)); };
+$('#v3again').onclick = () => V3 && V3.replay();
+$('#v3room').onchange = (e) => { PICK = +e.target.value; if (RES) { results(); roomUI(); } view.redraw(); refresh3D(false); };
+$('#v3slow').onchange = (e) => V3 && V3.setSlow(1 / +e.target.value);
+$('#v3n').onchange = (e) => V3 && V3.setCount(+e.target.value);
+seg($('#formula'), 'data-f', () => { if (RES) ui.start(); else refresh3D(); });
+$('#band').addEventListener('change', (e) => { if (e.isTrusted && SHOW !== 'rt' && !IS3) show('rt'); else { legend(); view.redraw(); } refresh3D(); });   // a band picked by hand shows it; one filled in from Account does not
+for (const id of ['target', 'people', 'temp', 'rh']) $('#' + id).addEventListener('change', () => { if (RES) ui.start(); });
+new ResizeObserver(() => bars()).observe($('#panelR'));
+$('#exPng').onclick = () => { const a = document.createElement('a'); a.href = (IS3 && V3 ? V3.canvas() : $('#cv')).toDataURL('image/png'); a.download = 'indoor-acoustics.png'; a.click(); };
+$('#exCsv').onclick = () => { if (!RES) return; const rows = [['Room', 'Volume m3', 'Target', 'Target s', ...BN.map((b) => `T ${b} Hz (${RES.o.formula}) s`), 'T 500-1k s', 'Status', 'STI (reverberation only)'], ...RES.rooms.map((x) => [x.r.name, Math.round(x.r.vol), x.grp, x.tgt != null ? r2(x.tgt) : '', ...x.T.map(r2), r2(x.mid), x.status, x.sti.toFixed(2)])];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map((v) => /[,"]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(',')).join('\n')], { type: 'text/csv' })); a.download = 'indoor-acoustics-rooms.csv'; a.click(); };
+bridge({ onScene: (sc, d) => loadScene(sc, d.name), canvas: () => $('#cv'), state: () => ({ ready: !!RES && RES.key === setKey(), conditions: { schema: 1, tool: 'acoustics', ...opts() } }) });
+loadScene(sampleScene(), 'Sample flat');
+window.__psim = { get RES() { return RES; }, get SC() { return SC; }, run: () => ui.start(), figures, airM, roomRT, dinTarget, stiRev,
+  field: () => { if (!RES) return null; const o = SC.origin || [0, 0], pts = [], st = 0.5; for (const x of RES.rooms) for (const [rx, ry, w, d] of x.r.rects) for (let yy = ry + st / 2; yy < ry + d; yy += st) for (let xx = rx + st / 2; xx < rx + w; xx += st) pts.push(r2(xx + o[0]), r2(yy + o[1]), r2(x.mid));
+    return { label: 'Reverberation time, 500 Hz–1 kHz', unit: 's', step: st, pts }; } };
+</script>
+</body>
+</html>

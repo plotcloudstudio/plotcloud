@@ -1,4 +1,4 @@
-# Engine validation: Sun hours, Daylight and Outdoor noise (2026-10-25)
+# Engine validation: Sun hours, Daylight, Outdoor noise and Indoor acoustics (2026-10-25)
 
 What was checked, against what, how far off the engines are, what was fixed, and where the results should not be trusted.
 Every number below is produced by the scripts in `tests/validation/` (run `tests/validation/run_all.sh`; the GitHub workflow
@@ -13,6 +13,8 @@ the scripts either pull the engine's own functions out of the page or drive the 
 | Daylight | Radiance 5 (`gensky -c` CIE standard overcast sky, `oconv`, `rtrace`), via `pyradiance` | The research and industry reference for daylight; physically based backward ray tracing |
 | Daylight, cross-check | Independent numerical integral of the CIE overcast sky through the opening (600 × 600 elements) | Closed-form physics; written separately from both the engine and Radiance |
 | Sun hours shadows | Exact ray–box intersection (slab test) | Geometry with an exact answer |
+| Air absorption (Indoor acoustics) | ISO 9613-1:1993 table values | The international standard the engine's formula comes from |
+| Reverberation time (Indoor acoustics) | Stochastic ray tracing of the room's energy decay, written for the check (`room_acoustics.cjs`) | Independent of the diffuse-field formulas it checks; seeded, so repeatable |
 
 The two daylight references agree with each other within 0.04 DF points (within 5 %, largest at the back of the room where the values are smallest) at every point, which is the evidence that the Radiance set-up is right.
 
@@ -128,6 +130,41 @@ Wind Flow is a lattice-Boltzmann solver on a coarse grid (BGK with a Smagorinsky
 checked against wind-tunnel data. The next step is a cube in a boundary layer (surface pressure coefficients against the classic
 wind-tunnel measurements, e.g. Castro & Robins 1977) and the AIJ pedestrian-wind benchmark cases. Until then its speeds show where
 the wind speeds up and slows down, not values to report.
+
+## 7. Indoor acoustics (`room_acoustics.cjs`)
+
+Engine: `airM`, `roomRT`, `dinTarget` and `stiRev` in `emb/roomacoustics.html`, pulled out of the page as they ship. The engine gives
+each room's reverberation time in six octave bands from its volume and the absorption of its surfaces (the finishes set in Plan
+Studio), furniture, people and air, by Eyring (default) or Sabine, and compares the mean of 500 Hz and 1 kHz with DIN 18041:2016
+targets (or 0.4–0.6 s for homes and offices, a rule of thumb). Tolerances fixed before running.
+
+**Air absorption** against ISO 9613-1:1993 (the values reprinted in ISO 9613-2 Table 2), 6 conditions × 6 bands (125 Hz–4 kHz),
+tolerance 3 % or 0.06 dB/km: all 36 within. Largest difference: 4 kHz at 15 °C / 20 % RH, 89.41 against 88.8 dB/km (+0.7 %).
+
+**Reverberation time** against an independent stochastic ray tracing written for this check (3 000 rays from the room's centre,
+Lambert-diffuse reflections, air absorption along the paths, T30 fitted from −5 to −35 dB on the room's energy decay). Tolerance
+for Eyring with even absorption: 10 %.
+
+| Room (even absorption) | Ray tracing | Eyring | Sabine |
+|---|---|---|---|
+| Bedroom 4 × 3.5 × 2.7 m, α 0.10, 500 Hz | 0.85 s | 0.83 s (−2.3 %) | 0.88 s (+2.9 %) |
+| Office 5 × 4 × 2.7 m, α 0.20, 1 kHz | 0.46 s | 0.43 s (−4.4 %) | 0.48 s (+6.6 %) |
+| Classroom 9 × 7 × 3 m, α 0.30, 1 kHz | 0.41 s | 0.38 s (−7.0 %) | 0.45 s (+10.4 %) |
+| Hall 20 × 15 × 6 m, α 0.15, 4 kHz (air counts) | 1.39 s | 1.35 s (−2.7 %) | 1.43 s (+3.5 %) |
+| Studio 6 × 6 × 3 m, α 0.05, 500 Hz | 2.30 s | 2.27 s (−1.2 %) | 2.33 s (+1.3 %) |
+
+Uneven absorption, reported and not judged: an office with an absorbing ceiling (α 0.80) over hard walls and floor (α 0.03) gives
+0.39 s by ray tracing, Eyring 0.43 s (+11.5 %), Sabine 0.49 s (+26 %); a room with only a carpeted floor 0.80 s, Eyring 0.82 s.
+
+Also checked: the reverberation-only speech transmission index is 1 without reverberation and falls as it grows (0.74 at 0.5 s,
+0.59 at 1 s, 0.44 at 2 s); the DIN 18041 formulas and their volume ranges.
+
+**What this does and does not show.** It shows that the engine's formulas are the published ones and that, where a room's sound
+field is diffuse, they agree with a ray-traced decay. The ray tracing uses diffuse walls, which favours the formulas: in a real room
+with hard, smooth parallel walls and all the absorption on the ceiling, the decay can be much longer than either formula says (flutter
+between the walls), so a room "on target" with only an absorbent ceiling should be checked by an acoustician. The absorption values
+of finishes, furniture and people are typical published values, not measurements of your products. No sound insulation between rooms,
+no echoes, focusing or room modes (below about 200 Hz in small rooms the 125 Hz value is indicative only), no measured data.
 
 ## Limits: where not to rely on the result
 
