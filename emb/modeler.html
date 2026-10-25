@@ -1151,12 +1151,46 @@ const SITEC = (() => {
   // the terrain as plan-space triangles' corner grid (for analysis tools); null without terrain
   function terrainForPlan(site, north) { if (!site || !site.terrain) return null; const G = site.terrain.grid, pts = []; for (let j = 0; j < G.ny; j++) for (let i = 0; i < G.nx; i++) { const q = siteToPlan(site, [G.x0 + i * G.step, G.y0 + j * G.step], north); pts.push([+q[0].toFixed(2), +q[1].toFixed(2), G.z[j * G.nx + i]]); } return { nx: G.nx, ny: G.ny, pts, provider: site.terrain.provider }; }
 
-  return { frame, tmFwd, tmInv, vincenty, area, centroid, inside, cleanRing, checkFootprint, selfCrossing, parseLength, heightFrom, H_LABEL, STOREY,
+  // ---------- the rest of the surroundings from OpenStreetMap: roads, water, green areas, trees (site meters) ----------
+  const ROAD_MAIN = /^(motorway|trunk|primary|secondary|tertiary)(_link)?$/, ROAD_MINOR = /^(residential|unclassified|service|living_street|road|busway)$/, ROAD_PATH = /^(footway|cycleway|path|pedestrian|steps|track|bridleway)$/;
+  function osmRaw(text) {   // nodes (id → [lat, lon], with tags for points) and ways with their tags, from .osm XML or Overpass JSON
+    const nodes = new Map(), ntags = new Map(), ways = [], s = text.trim();
+    if (s.startsWith('<')) { const re = /<(node|way|relation)\b([^>]*?)(\/>|>([\s\S]*?)<\/\1>)/g; let m;
+      while ((m = re.exec(s))) { const a = attrs(m[2]), body = m[4] || '', tags = {}; body.replace(/<tag\b([^>]*)\/?>/g, (_, x) => { const t = attrs(x); if (t.k != null) tags[t.k] = t.v; });
+        if (m[1] === 'node') { nodes.set(a.id, [+a.lat, +a.lon]); if (Object.keys(tags).length) ntags.set(a.id, tags); } else if (m[1] === 'way') { const nd = []; body.replace(/<nd\b([^>]*)\/?>/g, (_, x) => { nd.push(attrs(x).ref); }); ways.push({ id: a.id, nd, tags }); } } }
+    else { const j = JSON.parse(s); for (const e of j.elements || []) { if (e.type === 'node') { nodes.set(String(e.id), [e.lat, e.lon]); if (e.tags) ntags.set(String(e.id), e.tags); }
+      else if (e.type === 'way') { const nd = (e.nodes || []).map(String); if (e.geometry) e.geometry.forEach((g, i) => { const id = nd[i] || `${e.id}_${i}`; if (g) nodes.set(id, [g.lat, g.lon]); nd[i] = id; }); ways.push({ id: String(e.id), nd, tags: e.tags || {} }); } } }
+    return { nodes, ntags, ways };
+  }
+  function extrasFromOSM(text, origin, boundary) {
+    const R = osmRaw(text), F = frame(origin), xy = (ids) => ids.map((id) => R.nodes.get(id)).filter(Boolean).map((p) => F.fwd(p[0], p[1])), near = (pts) => pts.length && inBoundary(pts, boundary);
+    const roads = [], areas = [], trees = [];
+    for (const w of R.ways) { const t = w.tags; if (!t) continue;
+      if (t.highway && !t.area) { const cls = ROAD_MAIN.test(t.highway) ? 'main' : ROAD_MINOR.test(t.highway) ? 'minor' : ROAD_PATH.test(t.highway) ? 'path' : null; if (!cls) continue; const pts = xy(w.nd); if (pts.length < 2 || !near(pts)) continue;
+        const lanes = +t.lanes || (cls === 'main' ? 2 : cls === 'minor' ? 2 : 1), width = parseLength(t.width) || (cls === 'path' ? 2.5 : lanes * 3.3 + (cls === 'main' ? 1 : 0));
+        roads.push({ id: 'r_' + w.id, ref: 'way/' + w.id, cls, kind: t.highway, name: t.name || '', lanes, width: +width.toFixed(1), pts: pts.map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]) }); continue; }
+      const kind = t.natural === 'water' || t.waterway === 'riverbank' || t.landuse === 'reservoir' || t.landuse === 'basin' ? 'water'
+        : t.leisure === 'park' || t.leisure === 'garden' || t.leisure === 'pitch' || /^(grass|forest|meadow|recreation_ground|village_green|cemetery)$/.test(t.landuse || '') || t.natural === 'wood' || t.natural === 'scrub' ? 'green' : null;
+      if (!kind || w.nd.length < 4 || w.nd[0] !== w.nd[w.nd.length - 1]) continue; const pts = xy(w.nd.slice(0, -1)); if (pts.length < 3 || !near(pts)) continue;
+      areas.push({ id: 'a_' + w.id, ref: 'way/' + w.id, kind, name: t.name || '', pts: pts.map((p) => [+p[0].toFixed(2), +p[1].toFixed(2)]) }); }
+    for (const [id, t] of R.ntags) if (t.natural === 'tree') { const p = R.nodes.get(id), q = F.fwd(p[0], p[1]); if (inBoundary([q, q, q], boundary)) trees.push({ id: 't_' + id, ref: 'node/' + id, xy: [+q[0].toFixed(2), +q[1].toFixed(2)], h: parseLength(t.height) || null }); }
+    return { roads, areas, trees };
+  }
+  // a whole site from one OpenStreetMap download: buildings (with where each height comes from), roads, water, green, trees
+  function siteFromOSM(text, origin, boundary, opts = {}) {
+    const site = newSite(origin, boundary, opts), parsed = parseAny(text), ctx = buildContext(parsed, origin, boundary, { at: opts.at });
+    site.buildings = ctx.buildings; Object.assign(site, extrasFromOSM(text, origin, boundary));
+    addSource(site, { provider: opts.provider || parsed.provider, at: opts.at || new Date().toISOString(), licence: 'ODbL 1.0', attribution: '© OpenStreetMap contributors', buildings: site.buildings.length, roads: site.roads.length, warnings: ctx.warnings });
+    return site;
+  }
+
+  return { frame, tmFwd, tmInv, vincenty, area, centroid, inside, cleanRing, checkFootprint, selfCrossing, parseLength, heightFrom, H_LABEL, STOREY, osmRaw, extrasFromOSM, siteFromOSM,
     parseOSMXML, parseOSMJSON, parseGeoJSON, parseAny, inBoundary, buildContext, newSite, addSource, setHeight, setExcluded, estimateMissing, simBuildings,
     review, readiness, simHash, isStale, reimport, resolve, toPlan, siteToPlan, contextMasses, groundAt, groundUnder, terrainForPlan, guessDST };
 })();
 
 
+window.__SITEC = SITEC;   // the PlotCloud site page builds sites with it (one owner of the site format)
 // Plan Studio core: a multi-level building model (walls, windows and doors in walls, floor openings, furniture),
 // rooms found from the walls, and three early-design analyses on it — airflow (wind + stack, across floors),
 // daylight factor (CIE overcast sky) and views out. Pure functions, no DOM; also runs under Node for tests.
@@ -2307,7 +2341,9 @@ function drawSite() {
   if (bd.kind === 'polygon' && bd.pts) { g.beginPath(); bd.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.stroke(); } else { const o = P(bd.c || [0, 0]); g.beginPath(); g.arc(o[0], o[1], (bd.r || 300) * V.s, 0, Math.PI * 2); g.stroke(); }
   g.setLineDash([]);
   // the surroundings: roads and buildings are only looked at (nothing here is hit-tested, so nothing can be picked or edited)
-  if (st.roads && st.roads.length) { g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(215,205,185,.7)'; for (const r of st.roads) { g.lineWidth = Math.max(2 * d, (r.cls === 'main' ? 9 : 5) * V.s); g.beginPath(); r.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); } g.restore(); }
+  if (st.areas && st.areas.length) { g.save(); for (const a of st.areas) { g.beginPath(); a.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = a.kind === 'water' ? 'rgba(120,170,215,.35)' : 'rgba(140,190,120,.28)'; g.fill(); } g.restore(); }
+  if (st.trees && st.trees.length && V.s > 1.2 * d) { g.save(); g.fillStyle = 'rgba(90,150,80,.45)'; for (const t of st.trees) { const q = P(t.xy); g.beginPath(); g.arc(q[0], q[1], Math.max(2 * d, 2.5 * V.s), 0, 7); g.fill(); } g.restore(); }
+  if (st.roads && st.roads.length) { g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(215,205,185,.7)'; for (const r of st.roads) { g.strokeStyle = r.cls === 'path' ? 'rgba(225,218,200,.55)' : 'rgba(215,205,185,.75)'; g.lineWidth = Math.max(r.cls === 'path' ? 1 * d : 2 * d, (r.width || (r.cls === 'main' ? 9 : 5)) * V.s); g.beginPath(); r.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); } g.restore(); }
   const pp = parcelPlan();
   if (pp) { g.save(); g.beginPath(); pp.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = 'rgba(251,237,232,.55)'; g.fill(); g.clip();
     const xs = pp.map((p) => p[0]), ys = pp.map((p) => p[1]), y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs); g.strokeStyle = 'rgba(216,64,42,.25)'; g.lineWidth = d; g.beginPath();   // a 5 m grid, only inside the boundary
@@ -2959,7 +2995,7 @@ $$('[data-ovl]').forEach((c) => c.addEventListener('change', () => { LAY[c.datas
 addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveProject(); } });
 $('#ghost').addEventListener('change', draw);
 function stripTo() { const cp = $('#chartp'), c = $({ air: '#cAir', day: '#cDay', view: '#cView' }[SHOW]); if (!cp || !c) return; const grp = c.closest('.cpg') || c; const left = SHOW === 'air' ? 0 : grp.offsetLeft - 18; if (cp.scrollWidth > cp.clientWidth + 4) cp.scrollTo({ left, behavior: 'smooth' }); }
-function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false ? SITEC.contextMasses(M.site, M.north || 0) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k, id: SEL.id } : null, fit }); }
+function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k, id: SEL.id } : null, fit }); }
 
 // ---------- levels ----------
 const lvShort = (l) => `${lvSorted().findIndex((q) => q.id === l.id) + 1}F`;
@@ -3813,7 +3849,7 @@ $('#xSvg').addEventListener('click', () => { try { const s = S3.xsvg(1920, XPL.l
 // ---------- 3D update: what is shown follows the layer registry, hidden pieces and the modes ----------
 upd3D = function (fit) {
   if (!window.S3 || !S3.on || !S) return;
-  S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && layerOn('ref.site', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f,
+  S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && layerOn('ref.site', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f,
     sel: SEL && !WALKING && !XPL.on ? { k: SEL.k === 'end' ? 'wall' : SEL.k, id: SEL.id } : null, fit, hidden: new Set(M.hiddenIds || []), furnOk: (f) => layerOn(furnGroup(f), '3d'), openings: layerOn('parts.openings', '3d'),
     ceil: { light: layerOn('ceiling.lights', '3d'), panel: layerOn('ceiling.panels', '3d'), vent: layerOn('ceiling.vents', '3d'), smoke: layerOn('ceiling.vents', '3d') }, all: WALKING, explode: XPL.on ? { d: XPL.d } : null, lights: layerOn('lighting.fix', '3d'), beams: !!window.__elv3 || layerOn('lighting.beams', '3d') });
   gizmoSync(); if (XPL.on) xplOverlay();
@@ -4968,6 +5004,12 @@ window.S3 = (() => {
     if (o.site && o.site.length) { const SG = new T.Group(); SG.name = 'site'; const alpha=o.siteOpacity??(M.siteOpacity??.5),sm=mat('#cfccc4',{transparent:alpha<1,opacity:alpha,depthWrite:alpha>=1}),em=new T.LineBasicMaterial({color:0x55524c,transparent:true,opacity:alpha*.7});
       for (const m of o.site) { const sh = new T.Shape(m.outer.map((p) => new T.Vector2(p[0], p[1]))); for (const hr of m.holes || []) sh.holes.push(new T.Path(hr.map((p) => new T.Vector2(p[0], p[1])))); const geo = new T.ExtrudeGeometry(sh, { depth: Math.max(0.1, m.h - m.base), bevelEnabled: false }); geo.rotateX(-Math.PI / 2); const me = new T.Mesh(geo, sm); me.position.y=m.base;me.userData={k:'site',id:m.id||'context',opacity:alpha};me.add(new T.LineSegments(new T.EdgesGeometry(geo, 25), em)); SG.add(me); }
       G.add(SG); }
+    // the ground of the site (terrain grid, plan metres; z above the site point), so the surroundings stand on it
+    if (o.terrain && o.terrain.pts && o.terrain.nx > 1 && o.terrain.ny > 1) { const T0 = o.terrain, pos = new Float32Array(T0.pts.length * 3), idx = [];
+      T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - 0.05; pos[3 * i + 2] = -p[1]; });
+      for (let j = 0; j < T0.ny - 1; j++) for (let i = 0; i < T0.nx - 1; i++) { const a = j * T0.nx + i, b = a + 1, c = a + T0.nx, d = c + 1; idx.push(a, c, b, b, c, d); }
+      const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+      const tm = new T.Mesh(geo, mat('#dcd8cc', { side: T.DoubleSide, transparent: true, opacity: 0.85 })); tm.name = 'site'; tm.userData = { k: 'site', id: 'terrain' }; G.add(tm); }
     return G;
   }
   const siteFree = (grp) => { const b = new T.Box3(); grp.children.forEach((c) => { if (c.name !== 'site') b.expandByObject(c); }); return b.isEmpty() ? new T.Box3().setFromObject(grp) : b; };

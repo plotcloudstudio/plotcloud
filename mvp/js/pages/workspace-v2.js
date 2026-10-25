@@ -445,9 +445,9 @@ export function render(app, [pid]) {
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
       <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes show in the Shaded model view.</p></div></div>
-    <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Import site</span></button></h2><div class="w3-accb">
-      <button class="btn sm" id="siteBtn">Import site</button>
-      <p class="note">Site geometry always goes on the Site layer, locked. Unlock it in Layers to edit.</p>
+    <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Site</span></button></h2><div class="w3-accb">
+      <p class="note">${M().studio?.site ? `${esc((M().studio.site.origin.label || "").split(",")[0] || "Site")}: ${M().studio.site.buildings.filter((b) => !b.excluded).length} buildings, ${(M().studio.site.roads || []).length} roads${M().studio.site.terrain ? `, ground ${M().studio.site.terrain.relief} m` : ""} · ${esc(M().studio.site.sources?.[0]?.attribution || "")}` : "No site yet."}</p><a class="btn sm" id="siteBtn" href="#/new-site?project=${p.id}">${M().studio?.site ? "Choose another site on the map" : "Choose the site on the map"}</a>
+      <p class="note">The surroundings are on the Site layer, locked; the eye in Layers shows or hides them.</p>
       <p class="note" id="siteMsg" role="status" aria-live="polite"></p></div></div>
     <div class="pane w3-accp${UI.pacc === 'export' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="export" aria-expanded="${UI.pacc === 'export'}"><span>${UI.pacc === 'export' ? '▾' : '▸'} Export</span></button></h2><div class="w3-accb">
       <div class="w2-exp">${FORMATS.map(([k, n, d]) => `<button type="button" class="btn sm" data-exp="${k}" title="${esc(d)}">${esc(n)}</button>`).join('')}</div>
@@ -455,7 +455,6 @@ export function render(app, [pid]) {
       <p class="note" id="expMsg" role="status" aria-live="polite"></p></div></div>`;
     $$('[data-pacc]', host).forEach((b) => b.onclick = () => { UI.pacc = b.dataset.pacc; saveUI(); panel(); });
     $('#proj', host).onchange = (e) => { location.hash = '#/workspace/' + e.target.value; };
-    $('#siteBtn', host).onclick = () => { $('#siteMsg', host).textContent = 'Site import arrives in Step 2'; };
     $$('[data-exp]', host).forEach((b) => b.onclick = async () => {
       const k = b.dataset.exp, f = FORMATS.find((x) => x[0] === k), msg = $('#expMsg', host), base = p.name.replace(/\W+/g, '-').replace(/^-|-$/g, '');
       const save = (href, name) => { const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove(); };

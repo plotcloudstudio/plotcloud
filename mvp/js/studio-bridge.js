@@ -53,3 +53,6 @@ export function studioMeshes(version, site, name) {
     .then(async (r) => ({ studio: r.studio, meshes: await r.meshes }));
   pr.catch(() => MESH.delete(version.id)); MESH.set(version.id, pr); return pr;
 }
+// Plan Studio's site tools (SITEC in emb/modeler.html): the new-project-from-the-map page builds the site with them,
+// so there is one owner of the site format
+export async function sitec() { await studio(); return frame.contentWindow.__SITEC; }

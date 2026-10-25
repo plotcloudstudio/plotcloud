@@ -31,6 +31,7 @@ export function render(app) {
           <select class="inp" id="sort" aria-label="Sort projects"><option value="recent">Last changed</option><option value="name">Name</option><option value="results">Most results</option></select>
           <div class="db-new"><button class="btn accent" id="newBtn" aria-haspopup="true" aria-expanded="false">+ New project</button>
             <div class="db-menu" id="newMenu" hidden role="menu">
+              <a role="menuitem" href="#/new-site"><b>From the map</b><small>Find the place; its buildings, roads and ground come in</small></a>
               <button role="menuitem" data-new="blank"><b>Blank</b><small>An empty model on your default site</small></button>
               <button role="menuitem" data-new="sample"><b>From the sample</b><small>A copy of the courtyard studio with two versions</small></button>
               <button role="menuitem" data-new="import"><b>Import a model</b><small>.obj, .stl or .glb, read in your browser</small></button>
