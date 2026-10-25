@@ -14,7 +14,7 @@ the scripts either pull the engine's own functions out of the page or drive the 
 | Daylight, cross-check | Independent numerical integral of the CIE overcast sky through the opening (600 × 600 elements) | Closed-form physics; written separately from both the engine and Radiance |
 | Sun hours shadows | Exact ray–box intersection (slab test) | Geometry with an exact answer |
 
-The two daylight references agree with each other within 0.04 DF points (within 2.5 %, largest at the back of the room where values are smallest) at every point, which is the evidence that the Radiance set-up is right.
+The two daylight references agree with each other within 0.04 DF points (within 5 %, largest at the back of the room where the values are smallest) at every point, which is the evidence that the Radiance set-up is right.
 
 ## 1. Sun position (`sun_position.py`)
 
@@ -47,45 +47,46 @@ Test room: 5 m wide, 6 m deep, 2.7 m high; one window 3 m wide, sill 0.9 m, head
 
 Tolerances fixed before running: sky through the glass within max(0.2 points, 10 %) of Radiance; daylight factor within max(0.5 points, 25 %) of Radiance.
 
-### What the first run found
+### What was found
 
-- **The engine's sky geometry is right.** The sky seen through the opening matched the independent integral within ±0.5 % (1.7 % at 5.5 m), and with the building opposite it found exactly where the sky disappears (0 % from 2.5 m back, as both references).
-- **The glass was the main error.** The engine used one transmittance for every angle; real clear glass passes less light at oblique angles. Near the window this put the daylight factor 25 % high (18.30 against 14.64).
-- **Inter-reflected light is spread evenly.** The engine's split-flux method gives the whole room one value (0.63 points here); Radiance has about 0.6 near the window falling to 0.37 at the back.
+- **The engine's sky geometry is right.** The sky seen through the opening matches the independent integral and Radiance within ±3 % at the engine's own points, and with the building opposite it finds exactly where the sky disappears (none from 2.5 m back, as both references).
+- **The glass was the main error.** The engine used one transmittance for every angle; real clear glass passes less light at oblique angles. Near the window this put the daylight factor 20 % high in the open case (18.30 against 15.29) and 26 % high behind the building (15.50 against 12.28): **outside the tolerance**.
+- **Inter-reflected light is spread evenly.** The engine's split-flux method gives the whole room one value (0.63 points here); Radiance has about 0.6 near the window falling to 0.38 at the back. Behind the building the engine also counts more light reflected from outside than Radiance (1.08 against 0.59 near the window).
 - **Buildings outside the scene are ignored.** A first set-up with a narrow scene let oblique rays leave the scene before reaching the building opposite, so the engine saw sky that is not there. Real projects from Plan Studio send the building plus 1 m, so neighbouring buildings are not part of a Daylight run (see Limits).
+- **A lesson for the test itself.** The engine reads its grid points, which sit 5 cm closer to the window than the target points. Close behind an obstruction the light changes by about 13 % over those 5 cm, so every reference is now evaluated at the engine's own points; and the black-room Radiance runs use 200,000 ambient samples, so its own noise (about ±1.5 % at 20,000) no longer decides a result.
 
 ### What was changed
 
 Clear glass now transmits by angle of incidence (Fresnel reflection at both faces, multiple reflections, longer path; n = 1.52, scaled to the glass transmittance at normal incidence, as Radiance's `glass`). It applies to the sky, to the sun (ASE) and to LEED Option 2. Geometry is unchanged.
 
-### Results after the change (open view)
+### Results: open view
 
-| Depth | Sky through glass, engine / Radiance | Error | DF engine / Radiance | Error | Reflected, engine / Radiance | DF before the change |
-|---|---|---|---|---|---|---|
-| 0.5 m | 14.73 / 14.15 | +4.1 % | 15.36 / 14.67 | +0.68 pts (+5 %) | 0.63 / 0.52 | 18.30 (+25 %) |
-| 1.5 m | 4.46 / 4.18 | +6.6 % | 5.08 / 4.79 | +0.30 pts | 0.63 / 0.60 | 5.30 |
-| 2.5 m | 1.42 / 1.34 | +5.5 % | 2.05 / 1.91 | +0.14 pts | 0.63 / 0.56 | 2.08 |
-| 3.5 m | 0.57 / 0.54 | +6.5 % | 1.20 / 1.00 | +0.20 pts | 0.63 / 0.46 | 1.21 |
-| 4.5 m | 0.27 / 0.25 | +9.6 % | 0.90 / 0.65 | +0.25 pts | 0.63 / 0.40 | 0.91 |
-| 5.5 m | 0.15 / 0.14 | +6.8 % | 0.78 / 0.51 | +0.27 pts | 0.63 / 0.37 | 0.78 |
+| Depth (engine point) | Sky through glass, engine / Radiance | DF engine / Radiance | DF error | Reflected, engine / Radiance | Before the change: glass error, DF error |
+|---|---|---|---|---|---|
+| 0.5 m (0.45 m) | 14.73 / 14.82 (-0.6 %) | 15.36 / 15.31 | +0.05 pts (+0 %) | 0.63 / 0.49 | +19.7 %, +3.01 pts — failed |
+| 1.5 m (1.45 m) | 4.46 / 4.46 (-0.0 %) | 5.08 / 5.05 | +0.03 pts (+1 %) | 0.63 / 0.60 | +4.9 %, +0.23 pts |
+| 2.5 m (2.45 m) | 1.42 / 1.41 (+0.3 %) | 2.05 / 1.98 | +0.07 pts (+4 %) | 0.63 / 0.56 | +2.2 %, +0.10 pts |
+| 3.5 m (3.45 m) | 0.57 / 0.56 (+2.6 %) | 1.20 / 1.07 | +0.13 pts (+12 %) | 0.63 / 0.51 | +3.2 %, +0.17 pts |
+| 4.5 m (4.45 m) | 0.27 / 0.27 (+2.5 %) | 0.90 / 0.66 | +0.25 pts (+37 %) | 0.63 / 0.39 | +5.6 %, +0.24 pts |
+| 5.5 m (5.45 m) | 0.15 / 0.15 (+0.8 %) | 0.78 / 0.53 | +0.24 pts (+46 %) | 0.63 / 0.38 | +0.7 %, +0.24 pts |
 
-### Building 10 m opposite, 8 m high
+### Results: building 10 m opposite, 8 m high
 
-| Depth | Sky through glass, engine / Radiance | DF engine / Radiance | Error |
-|---|---|---|---|
-| 0.5 m | 11.65 / 10.98 (+6.1 %) | 12.73 / 11.66 | +1.07 pts (+9 %) |
-| 1.5 m | 1.95 / 1.76 (+10.8 %) | 2.92 / 2.38 | +0.54 pts |
-| 2.5 m | 0 / 0 | 0.74 / 0.49 | +0.25 pts |
-| 3.5 m | 0 / 0 | 0.56 / 0.33 | +0.23 pts |
-| 4.5 m | 0 / 0 | 0.49 / 0.23 | +0.26 pts |
-| 5.5 m | 0 / 0 | 0.47 / 0.18 | +0.28 pts |
+| Depth (engine point) | Sky through glass, engine / Radiance | DF engine / Radiance | DF error | Reflected, engine / Radiance | Before the change: glass error, DF error |
+|---|---|---|---|---|---|
+| 0.5 m (0.45 m) | 11.64 / 11.70 (-0.4 %) | 12.73 / 12.29 | +0.44 pts (+4 %) | 1.08 / 0.59 | +23.9 %, +3.23 pts — failed |
+| 1.5 m (1.45 m) | 1.95 / 1.97 (-1.0 %) | 2.92 / 2.62 | +0.29 pts (+11 %) | 0.97 / 0.66 | +5.6 %, +0.41 pts |
+| 2.5 m (2.45 m) | 0.00 / 0.00 (no sky) | 0.74 / 0.52 | +0.23 pts (+44 %) | 0.74 / 0.52 | no sky, +0.24 pts |
+| 3.5 m (3.45 m) | 0.00 / 0.00 (no sky) | 0.56 / 0.34 | +0.23 pts (+67 %) | 0.56 / 0.34 | no sky, +0.23 pts |
+| 4.5 m (4.45 m) | 0.00 / 0.00 (no sky) | 0.49 / 0.24 | +0.25 pts (+105 %) | 0.49 / 0.24 | no sky, +0.24 pts |
+| 5.5 m (5.45 m) | 0.00 / 0.00 (no sky) | 0.47 / 0.18 | +0.29 pts (+162 %) | 0.47 / 0.18 | no sky, +0.28 pts |
 
-All points are within the tolerances: **passed**. The remaining bias is one-sided: the engine reads **high**.
+After the change every point is within the tolerances: **passed** (before it, the points nearest the window failed in both cases). What remains is one-sided: the reflected part reads **high**, by 0.13–0.29 points at the back of the room.
 
 ## Limits: where not to rely on the result
 
 - **Back of deep rooms (Daylight).** Inter-reflected light is spread evenly over a room, so where little sky is seen the daylight factor reads high by up to about 0.3 points (more than double the Radiance value at the back of a room behind a building). Treat "the back of the room reaches 2 % DF" with caution when the sky component there is under 1 %.
-- **Sky through glass reads 4–11 % high (Daylight).** Consistent across both cases; sDA and average DF are slightly optimistic.
+- **Light reflected from outside behind tall neighbours (Daylight)** reads high (about 0.5 points near the window in the test).
 - **Neighbouring buildings (Daylight).** Only what is in the Plan Studio level is counted; buildings across the street do not shade the windows. Sun hours does include the site's neighbours.
 - **Blinds, frames, dirt on glass, coloured or coated glass, multiple panes** are not modelled (the glass model is single clear glass scaled to the transmittance you give).
 - **Not covered yet:** climate-based figures (sDA, ASE) against Radiance's annual methods (rfluxmtx / three-phase), measured data from a real building, other room shapes (L-shaped, rooflights, multiple windows), and independent expert review. These are the next steps of the validation plan.

@@ -37,24 +37,24 @@
      ],
      "sky_through_glass": {
       "engine": 14.728,
-      "radiance": 14.149,
-      "error_pct": 4.1,
+      "radiance": 14.756,
+      "error_pct": -0.2,
       "passed": true
      },
      "df": {
       "engine": 15.357,
-      "radiance": 14.672,
-      "error_points": 0.685,
-      "error_pct": 4.7,
+      "radiance": 15.274,
+      "error_points": 0.083,
+      "error_pct": 0.5,
       "passed": true
      },
      "reflected": {
       "engine": 0.628,
-      "radiance": 0.523
+      "radiance": 0.518
      },
      "references": {
-      "radiance_open": 27.846,
-      "integral_open": 27.823,
+      "radiance_open": 29.587,
+      "integral_open": 29.561,
       "agree": true
      }
     },
@@ -66,24 +66,24 @@
      ],
      "sky_through_glass": {
       "engine": 4.457,
-      "radiance": 4.214,
-      "error_pct": 5.8,
+      "radiance": 4.469,
+      "error_pct": -0.3,
       "passed": true
      },
      "df": {
       "engine": 5.085,
-      "radiance": 4.785,
-      "error_points": 0.3,
-      "error_pct": 6.3,
+      "radiance": 5.062,
+      "error_points": 0.023,
+      "error_pct": 0.5,
       "passed": true
      },
      "reflected": {
       "engine": 0.628,
-      "radiance": 0.571
+      "radiance": 0.593
      },
      "references": {
-      "radiance_open": 7.331,
-      "integral_open": 7.332,
+      "radiance_open": 7.806,
+      "integral_open": 7.819,
       "agree": true
      }
     },
@@ -95,24 +95,24 @@
      ],
      "sky_through_glass": {
       "engine": 1.417,
-      "radiance": 1.35,
-      "error_pct": 5.0,
+      "radiance": 1.412,
+      "error_pct": 0.4,
       "passed": true
      },
      "df": {
       "engine": 2.046,
-      "radiance": 1.91,
-      "error_points": 0.136,
-      "error_pct": 7.1,
+      "radiance": 1.969,
+      "error_points": 0.076,
+      "error_pct": 3.9,
       "passed": true
      },
      "reflected": {
       "engine": 0.628,
-      "radiance": 0.56
+      "radiance": 0.557
      },
      "references": {
-      "radiance_open": 2.261,
-      "integral_open": 2.301,
+      "radiance_open": 2.406,
+      "integral_open": 2.422,
       "agree": true
      }
     },
@@ -124,24 +124,24 @@
      ],
      "sky_through_glass": {
       "engine": 0.571,
-      "radiance": 0.536,
-      "error_pct": 6.6,
+      "radiance": 0.56,
+      "error_pct": 2.0,
       "passed": true
      },
      "df": {
       "engine": 1.2,
-      "radiance": 1.015,
-      "error_points": 0.185,
-      "error_pct": 18.2,
+      "radiance": 1.036,
+      "error_points": 0.164,
+      "error_pct": 15.8,
       "passed": true
      },
      "reflected": {
       "engine": 0.628,
-      "radiance": 0.479
+      "radiance": 0.476
      },
      "references": {
-      "radiance_open": 0.918,
-      "integral_open": 0.923,
+      "radiance_open": 0.95,
+      "integral_open": 0.961,
       "agree": true
      }
     },
@@ -153,24 +153,24 @@
      ],
      "sky_through_glass": {
       "engine": 0.274,
-      "radiance": 0.259,
-      "error_pct": 6.1,
+      "radiance": 0.268,
+      "error_pct": 2.2,
       "passed": true
      },
      "df": {
       "engine": 0.903,
-      "radiance": 0.654,
-      "error_points": 0.248,
-      "error_pct": 38.0,
+      "radiance": 0.67,
+      "error_points": 0.233,
+      "error_pct": 34.7,
       "passed": true
      },
      "reflected": {
       "engine": 0.628,
-      "radiance": 0.396
+      "radiance": 0.402
      },
      "references": {
-      "radiance_open": 0.442,
-      "integral_open": 0.445,
+      "radiance_open": 0.45,
+      "integral_open": 0.46,
       "agree": true
      }
     },
@@ -182,24 +182,24 @@
      ],
      "sky_through_glass": {
       "engine": 0.147,
-      "radiance": 0.132,
-      "error_pct": 11.8,
+      "radiance": 0.142,
+      "error_pct": 3.8,
       "passed": true
      },
      "df": {
       "engine": 0.776,
-      "radiance": 0.506,
-      "error_points": 0.269,
-      "error_pct": 53.1,
+      "radiance": 0.54,
+      "error_points": 0.236,
+      "error_pct": 43.7,
       "passed": true
      },
      "reflected": {
       "engine": 0.628,
-      "radiance": 0.375
+      "radiance": 0.398
      },
      "references": {
-      "radiance_open": 0.233,
-      "integral_open": 0.244,
+      "radiance_open": 0.239,
+      "integral_open": 0.251,
       "agree": true
      }
     }
@@ -241,24 +241,24 @@
      ],
      "sky_through_glass": {
       "engine": 11.645,
-      "radiance": 11.003,
-      "error_pct": 5.8,
+      "radiance": 11.695,
+      "error_pct": -0.4,
       "passed": true
      },
      "df": {
       "engine": 12.726,
-      "radiance": 11.607,
-      "error_points": 1.119,
-      "error_pct": 9.6,
+      "radiance": 12.284,
+      "error_points": 0.442,
+      "error_pct": 3.6,
       "passed": true
      },
      "reflected": {
       "engine": 1.081,
-      "radiance": 0.604
+      "radiance": 0.589
      },
      "references": {
-      "radiance_open": 22.214,
-      "integral_open": 22.23,
+      "radiance_open": 24.035,
+      "integral_open": 23.996,
       "agree": true
      }
     },
@@ -270,24 +270,24 @@
      ],
      "sky_through_glass": {
       "engine": 1.948,
-      "radiance": 1.733,
-      "error_pct": 12.4,
-      "passed": false
+      "radiance": 1.97,
+      "error_pct": -1.1,
+      "passed": true
      },
      "df": {
       "engine": 2.918,
-      "radiance": 2.376,
-      "error_points": 0.542,
-      "error_pct": 22.8,
+      "radiance": 2.64,
+      "error_points": 0.278,
+      "error_pct": 10.5,
       "passed": true
      },
      "reflected": {
       "engine": 0.97,
-      "radiance": 0.643
+      "radiance": 0.67
      },
      "references": {
-      "radiance_open": 3.066,
-      "integral_open": 3.075,
+      "radiance_open": 3.5,
+      "integral_open": 3.481,
       "agree": true
      }
     },
@@ -305,14 +305,14 @@
      },
      "df": {
       "engine": 0.741,
-      "radiance": 0.494,
-      "error_points": 0.247,
-      "error_pct": 50.0,
+      "radiance": 0.522,
+      "error_points": 0.219,
+      "error_pct": 42.0,
       "passed": true
      },
      "reflected": {
       "engine": 0.741,
-      "radiance": 0.494
+      "radiance": 0.522
      },
      "references": {
       "radiance_open": 0.0,
@@ -334,14 +334,14 @@
      },
      "df": {
       "engine": 0.562,
-      "radiance": 0.332,
-      "error_points": 0.23,
-      "error_pct": 69.4,
+      "radiance": 0.331,
+      "error_points": 0.231,
+      "error_pct": 69.7,
       "passed": true
      },
      "reflected": {
       "engine": 0.562,
-      "radiance": 0.332
+      "radiance": 0.331
      },
      "references": {
       "radiance_open": 0.0,
@@ -363,14 +363,14 @@
      },
      "df": {
       "engine": 0.494,
-      "radiance": 0.242,
-      "error_points": 0.252,
-      "error_pct": 104.0,
+      "radiance": 0.243,
+      "error_points": 0.251,
+      "error_pct": 103.2,
       "passed": true
      },
      "reflected": {
       "engine": 0.494,
-      "radiance": 0.242
+      "radiance": 0.243
      },
      "references": {
       "radiance_open": 0.0,
@@ -392,14 +392,14 @@
      },
      "df": {
       "engine": 0.465,
-      "radiance": 0.176,
-      "error_points": 0.289,
-      "error_pct": 164.0,
+      "radiance": 0.181,
+      "error_points": 0.283,
+      "error_pct": 156.4,
       "passed": true
      },
      "reflected": {
       "engine": 0.465,
-      "radiance": 0.176
+      "radiance": 0.181
      },
      "references": {
       "radiance_open": 0.0,
@@ -410,5 +410,5 @@
    ]
   }
  ],
- "passed": false
+ "passed": true
 }

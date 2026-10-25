@@ -36,15 +36,15 @@ def scene(black, glass):
         s_ += f"void plastic oppm 0 0 5 {0 if black else 0.15} {0 if black else 0.15} {0 if black else 0.15} 0 0\n" + poly('oppm', 'opp', [(-200, -d, 0), (-200, -d, hh), (200, -d, hh), (200, -d, 0)])
     s_ += poly('groundm', 'ground', [(-500, -500, -0.001), (500, -500, -0.001), (500, -0.01, -0.001), (-500, -0.01, -0.001)])  # ground outside, in front of the window
     return s_
-def rad(black, glass):
+def rad(black, glass, at=None):
     with tempfile.TemporaryDirectory() as d:
         sky = subprocess.run(['gensky', '3', '21', '12', '-c', '-B', '1'], capture_output=True, text=True, env=env, check=True).stdout
         # unit zenith radiance is enough: daylight factor is a ratio. Sky glow only; the ground's light comes from the ground plane.
         sky += "skyfunc glow skyglow 0 0 4 1 1 1 0\nskyglow source sky 0 0 4 0 0 1 180\n"
         open(f'{d}/s.rad', 'w').write(sky + scene(black, glass))
         oct_ = subprocess.run(['oconv', f'{d}/s.rad'], capture_output=True, env=env, check=True).stdout; open(f'{d}/s.oct', 'wb').write(oct_)
-        rays = "".join(f"{x} {y} {R['wp']} 0 0 1\n" for x, y in pts) + "2.5 -400 0.5 0 0 1\n"   # last: unobstructed horizontal outside
-        o = subprocess.run(['rtrace', '-h', '-I+', '-w', '-ab', '1' if black else '6', '-ad', '20000', '-as', '0', '-aa', '0', '-lw', '1e-5', '-dj', '0', f'{d}/s.oct'], input=rays, capture_output=True, text=True, env=env, check=True).stdout
+        rays = "".join(f"{x} {y} {R['wp']} 0 0 1\n" for x, y in (at or pts)) + "2.5 -400 0.5 0 0 1\n"   # last: unobstructed horizontal outside
+        o = subprocess.run(['rtrace', '-h', '-I+', '-w', '-ab', '1' if black else '6', '-ad', '200000' if black else '20000', '-as', '0', '-aa', '0', '-lw', '1e-5', '-dj', '0', f'{d}/s.oct'], input=rays, capture_output=True, text=True, env=env, check=True).stdout
         E = [179 * (0.265 * float(a) + 0.670 * float(b) + 0.065 * float(c)) for a, b, c in (l.split()[:3] for l in o.strip().splitlines())]
         return [100 * e / E[-1] for e in E[:-1]]
 
@@ -67,7 +67,8 @@ for name, extra in CASES:
     R.clear(); R.update(base); R.update(extra)
     eng = json.loads(subprocess.run(['node', str(HERE / 'daylight_engine.cjs'), json.dumps(R)], capture_output=True, text=True, check=True, cwd=HERE).stdout)
     if isinstance(eng, dict): sys.exit(f'{name} · engine: ' + eng['error'])
-    sc_rad, sg_rad, df_rad = rad(True, False), rad(True, True), rad(False, True)
+    at = [(e['x'], e['y']) for e in eng]                       # the engine's grid points: every reference is evaluated there
+    sc_rad, sg_rad, df_rad = rad(True, False, at), rad(True, True, at), rad(False, True, at)
     rows = []
     for i, (x, y) in enumerate(pts):
         e = eng[i]; ex, ey = e['x'], e['y']
@@ -76,7 +77,7 @@ for name, extra in CASES:
         # 2 daylight factor against Radiance with the room's reflectances and the ground
         tol_df = max(0.5, 0.25 * df_rad[i]); p_df = abs(e['df'] - df_rad[i]) <= tol_df
         # 3 the references agree with each other: Radiance against the integral, open opening, at the target point
-        sc_num = sky_numeric(x, y); ref = abs(sc_rad[i] - sc_num) <= max(0.05, 0.03 * sc_num)
+        sc_num = sky_numeric(ex, ey); ref = abs(sc_rad[i] - sc_num) <= max(0.05, 0.03 * sc_num)
         ok &= p_g and p_df and ref
         rows.append(dict(depth=y, engine_point=[round(ex, 2), round(ey, 2)],
             sky_through_glass=dict(engine=round(tg_e, 3), radiance=round(tg_r, 3), error_pct=round(100 * (tg_e - tg_r) / tg_r, 1) if tg_r > 1e-3 else None, passed=bool(p_g)),
