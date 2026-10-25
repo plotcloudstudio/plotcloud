@@ -28,6 +28,8 @@ jobs:
           node tests/run-browser-check.cjs tests/home-hero.cjs
           node tests/run-browser-check.cjs tests/sun-period.cjs
           node tests/run-browser-check.cjs tests/simulation-fit.cjs
+          node tests/run-browser-check.cjs tests/unified-simulation-audit.cjs
+          node tests/run-browser-check.cjs tests/unified-results.cjs
           node tests/run-browser-check.cjs tests/simulation-art.cjs
           node tests/run-browser-check.cjs tests/shared-conditions.cjs
           node tests/run-browser-check.cjs tests/project-climate.cjs

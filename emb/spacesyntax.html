@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=singlepage-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=unified-20261025-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Space Syntax</title>
@@ -857,6 +857,7 @@ function legend() {
   h += `<div class="it" style="grid-template-columns:1fr auto"><span>${SHOW === 'flowdepth' ? 'deep / quiet' : SHOW === 'depth' ? '0 steps' : 'low · ' + (RES ? (+rg[0].toFixed(SHOW === 'conn' || SHOW === 'gate' ? 0 : 2)) : '')}</span><span>${SHOW === 'flowdepth' ? 'shallow / gathered' : SHOW === 'depth' ? rg[1] + ' steps' : (RES ? (+rg[1].toFixed(SHOW === 'conn' || SHOW === 'gate' ? 0 : 2)) : '') + ' · high'}</span></div>`;
   h += `<p class="note" style="margin:0">${SHOW === 'flowdepth' ? 'Blue marks spatially deeper, quieter floor; white is the transition; pink and red combine shallow integration with repeated agent footfall.' : SHOW === 'integ' ? 'Red: the most integrated spots, easy to see and reach from everywhere; where people tend to gather and move. Blue: segregated, private corners.' : SHOW === 'r3' ? 'Integration within three visual steps: the local centers of each area.' : SHOW === 'conn' ? 'How many floor spots can be seen from each spot.' : SHOW === 'gate' ? 'How often walking agents passed each spot: where movement concentrates.' : 'Visual steps (turns of view) needed to reach each spot from the chosen one.'} Analyzed at ${VH >= 1.2 ? 'eye height (see over low furniture)' : 'knee height (furniture blocks, as for walking)'}.</p>`;
   $('#legend').innerHTML = h;
+  const unified=document.querySelector('[data-pc-unified]'),explanation=$('#legend p.note');if(unified?.pcShowScaleNotes&&explanation){const text=explanation.textContent,button=document.createElement('button');button.type='button';button.className='btn';button.textContent='How to read this scale ⓘ';button.onclick=()=>unified.pcShowScaleNotes(text);explanation.replaceWith(button);}
 }
 function capUI() {
   const on = !T3.on && CAM === 'plan' && !!RES; $('#capbox').hidden = !on; if (!on) return;
@@ -876,7 +877,8 @@ function results() {
 }
 
 // ================= Plan + chart =================
-function sizeCv(c, hCss) { const d = devicePixelRatio || 1, w = Math.max(50, c.clientWidth || c.parentNode.clientWidth - 36); c.style.height = hCss + 'px'; c.width = Math.round(w * d); c.height = Math.round(hCss * d); const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); return { x, w: c.width, h: c.height, k: d }; }
+function sizeCv(c, hCss) {if(document.querySelector('[data-pc-unified]')&&hCss>100){if(c.id==='cHist')hCss=80;if(c.id==='cScat')hCss=100;} const d = devicePixelRatio || 1, w = Math.max(50, c.clientWidth || c.parentNode.clientWidth - 36); c.style.height = hCss + 'px'; c.width = Math.round(w * d); c.height = Math.round(hCss * d); const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); return { x, w: c.width, h: c.height, k: d }; }
+window.__pcUnifiedCharts=()=>{legend();panelUI();};
 const FF = () => getComputedStyle(document.body).fontFamily, HITS = { hist: [], sc: null, jg: [] };
 function msgCv(c, t) { const { x, k } = sizeCv(c, 40); x.fillStyle = '#8a8780'; x.font = `${11.5 * k}px ${FF()}`; x.textBaseline = 'middle'; x.fillText(t, 2 * k, 20 * k); }
 function drawHist() {
@@ -911,7 +913,7 @@ function drawJG() {
   x.font = `${9.5 * k}px IBM Plex Mono, monospace`; x.fillStyle = '#5a5853'; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; for (let L = 0; L < lv.length; L++) if (lv[L]) x.fillText(L > maxD ? 'not reached' : 'depth ' + L, 4 * k, h - (12 + L * 46) * k);
 }
 function panelUI() {
-  if (CAM !== 'split') return;
+  if (CAM !== 'split'&&!document.querySelector('[data-pc-unified]')) return;
   $('#cpSub').textContent = RES ? `${LV[RES.level || 'draft'].name} · ${RES.N.toLocaleString('en-CA')} nodes` : '';
   $('#kp4').innerHTML = `<div><small>Mean int.</small><b>${RES ? mean(RES.integ).toFixed(2) : '—'}</b></div><div><small>Intelligib. R²</small><b>${RES ? RES.r2.toFixed(2) : '—'}</b></div><div><small>Mean conn.</small><b>${RES ? Math.round(mean(RES.conn)) : '—'}</b></div><div><small>Rooms</small><b>${JG ? JG.nodes.filter((n) => !n.out && n.area >= 2).length : '—'}</b></div>`;
   $('#histN').textContent = `${(MEAS[SHOW] || MEAS.integ).short} · click a bar to pick out that range`;
@@ -1219,6 +1221,7 @@ $('#saveJ').addEventListener('click', () => save('PlotCloud_space_syntax_scene.j
 
 // ================= 3D =================
 async function setCam(c) {
+  if(c==='split'&&document.querySelector('[data-pc-unified]'))c='plan';
   CAM = c; $$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === c))); stage.classList.toggle('split', c === 'split');
   if (c === '3d') {
     if (TOOL !== 'select') setTool('select');
@@ -1376,7 +1379,7 @@ function drawLines(ctx) {
   x.textAlign = 'right'; x.fillStyle = '#111'; x.font = `600 ${10.5 * k}px IBM Plex Mono, monospace`; x.fillText(`R² ${R.r2.toFixed(2)}`, Rr - 4 * k, T + 14 * k);
   HITS.lsc = { X, Y, xs, ys, k }; }; }
 $('#cScat').addEventListener('click', (e) => { if (MODE === 'vga') return; e.stopImmediatePropagation(); const S = HITS.lsc; if (!S) return; let best = -1, bd = 12 * S.k; for (let a = 0; a < S.xs.length; a++) { const dd = Math.hypot(S.X(S.xs[a]) - e.offsetX * S.k, S.Y(S.ys[a]) - e.offsetY * S.k); if (dd < bd) { bd = dd; best = a; } } if (best >= 0) selectLine(best); }, true);
-{ const _pu = panelUI; panelUI = function () { if (MODE === 'vga') return _pu(); if (CAM !== 'split') return; const R = LR();
+{ const _pu = panelUI; panelUI = function () { if (MODE === 'vga') return _pu(); if (CAM !== 'split'&&!document.querySelector('[data-pc-unified]')) return; const R = LR();
   $('#cpSub').textContent = R ? `${R.lines.length} ${MODE === 'axial' ? 'lines' : 'segments'}` : '';
   $('#kp4').innerHTML = MODE === 'axial' ? `<div><small>Lines</small><b>${R ? R.lines.length : '—'}</b></div><div><small>Mean int.</small><b>${R ? mean(R.vals.ax_int).toFixed(2) : '—'}</b></div><div><small>Intelligib. R²</small><b>${R ? R.r2.toFixed(2) : '—'}</b></div><div><small>Covered</small><b>${R ? Math.round(R.cover * 100) + '%' : '—'}</b></div>`
     : `<div><small>Segments</small><b>${R ? R.lines.length : '—'}</b></div><div><small>Street km</small><b>${R ? (R.total / 1000).toFixed(2) : '—'}</b></div><div><small>Mean NAIN</small><b>${R ? mean(R.vals.sg_nain).toFixed(2) : '—'}</b></div><div><small>Mean NACH</small><b>${R ? mean(R.vals.sg_nach).toFixed(2) : '—'}</b></div>`;

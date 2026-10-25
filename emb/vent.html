@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=singlepage-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=unified-20261025-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Natural Ventilation</title>
@@ -933,7 +933,7 @@ $('.peekX').addEventListener('click', () => unpeek(true));
 stage.addEventListener('pointerdown', () => unpeek(false), true);
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('.app').classList.contains('peek')) unpeek(true); });
 let VIEW = 'split';
-async function setCam(c) { $$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === c))); VIEW = c; railUI(c !== 'split');
+async function setCam(c) { if(c==='split'&&document.querySelector('[data-pc-unified]'))c='plan';$$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === c))); VIEW = c; railUI(c !== 'split');
   if (c === '3d') { if (TOOL !== 'select') setTool('select'); SPLIT = false; layout(); if (await enter3D()) { $('#tip').textContent = 'Drag to turn, right-drag to pan, scroll to zoom.'; $('#tip').hidden = false; update3D(); } return; }
   if (T3.on) exit3D(); SPLIT = c === 'split'; layout(); fit(); draw(); }
 $('#camBar').addEventListener('click', (e) => { const b = e.target.closest('[data-cam]'); if (b) setCam(b.dataset.cam); });
@@ -1405,9 +1405,20 @@ function results() {
   h += `<p class="note fine2">Early-design estimate, not CFD. Full tables in the CSV and PNG.</p>`;
   r.innerHTML = h;
   const cy = $('#cYear'); if (cy) { const { x, w, h: hh, k } = sizeChart(cy, 110); chartYear(x, 28 * k, 6 * k, w - 34 * k, hh - 36 * k, k); cy.onclick = (e) => { const d = devicePixelRatio || 1, X = 28 * d, Wd = cy.width - 34 * d, dd = Math.floor((e.offsetX * d - X) / Wd * 365), hr = Math.floor((e.offsetY * d - 6 * d) / (cy.height - 36 * d) * 24); if (dd >= 0 && dd < 365 && hr >= 0 && hr < 24) epwPick(dd * 24 + hr); }; }
-  fitCols();
+  window.__pcUnifiedCharts?.();fitCols();
 }
-function sizeChart(c, hCss) { const d = devicePixelRatio || 1, w = c.getBoundingClientRect().width || 320; c.width = Math.round(w * d); c.height = Math.round(hCss * d); c.style.height = hCss + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
+function sizeChart(c, hCss) { const d = devicePixelRatio || 1, w = c.clientWidth || 320; c.width = Math.round(w * d); c.height = Math.round(hCss * d); c.style.height = hCss + 'px'; return { x: c.getContext('2d'), w: c.width, h: c.height, k: d }; }
+window.__pcUnifiedCharts = function(){
+ const root=document.getElementById('unifiedCharts');if(!root||!NET||!G)return;
+ let list=document.getElementById('unifiedVentCharts');
+ if(!list){list=document.createElement('div');list.id='unifiedVentCharts';for(const [id,title]of [['Rooms','Air changes by room'],['Rose','By wind direction'],['Opening','By window opening'],['Year','Through the year']]){const group=document.createElement('section');group.className='cpg';const h=document.createElement('h3');h.textContent=title;h.style.cssText='font-size:12px;margin:0 0 4px';const c=document.createElement('canvas');c.id='unifiedVent'+id;c.setAttribute('aria-label',title);c.style.width='100%';group.append(h,c);list.append(group);}root.append(list);}
+ const room=document.getElementById('unifiedVentRooms'),rose=document.getElementById('unifiedVentRose'),opening=document.getElementById('unifiedVentOpening'),year=document.getElementById('unifiedVentYear');
+ {const {x,w,k}=sizeChart(room,G.rooms.length*22+20);chartRooms(x,0,0,w,k,{instant:true});}
+ {const {x,w,h,k}=sizeChart(rose,120),hits=chartRose(x,w/2,h/2,Math.min(w,h)/2-16*k,k);rose.onclick=e=>{let best=null,distance=28*k;for(const hit of hits){const d=Math.hypot(hit.x-e.offsetX*k,hit.y-e.offsetY*k);if(d<distance){distance=d;best=hit;}}if(best)setDir(best.d);};}
+ {const {x,w,h,k}=sizeChart(opening,80),hit=chartFrac(x,0,0,w,h,k);opening.onclick=e=>{S.frac=clamp(Math.round((e.offsetX*k-hit.X)/hit.pw*20)/20,0,1);$('#fracAll').value=String(S.frac*100);$('#fracOut').textContent=Math.round(S.frac*100)+'%';renet();afterNetQuick(false);};}
+ const hidden=!EPW.res;if(year.parentElement.hidden!==hidden)year.parentElement.hidden=hidden;
+ if(EPW.res){const {x,w,h,k}=sizeChart(year,70);chartYear(x,28*k,6*k,w-34*k,h-30*k,k);year.onclick=e=>{const dd=Math.floor((e.offsetX-28)/(w/k-34)*365),hr=Math.floor((e.offsetY-6)/(h/k-30)*24);if(dd>=0&&dd<365&&hr>=0&&hr<24)epwPick(dd*24+hr);};}
+};
 function opList() {
   const el = $('#opList'); if (!G) { el.innerHTML = ''; return; } const wins = SC.open.map((p, k) => [p, k]).filter(([p]) => p.kind === 'win');
   if (!SC.open.length) { el.innerHTML = '<p class="note">No openings yet: draw windows and doors on the walls (section 2).</p>'; return; }

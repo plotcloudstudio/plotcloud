@@ -14,7 +14,7 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
-import { installSimulationFit } from '../../../ui/simulation-fit.js?v=charts-list-20261024';
+import { installSimulationFit } from '../../../ui/simulation-fit.js?v=unified-20261025-1';
 
 const PLAN_EDIT = '.sec:has(#h-draw) :is([data-tool="wall"], [data-tool="glass"], [data-tool="win"], [data-tool="door"], [data-tool="furn"], #clear)';
 const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : NaN; };
@@ -69,7 +69,6 @@ const CFG = {
   structure: { input: 'none', hide: [],
     prefill: ({ x, site }) => x && ({ 'q-loc': qloc(site), 'q-storeys': x.storeys, 'q-h': r1(x.h), 'q-nx': Math.max(1, Math.min(8, Math.round(x.w / 6))), 'q-sx': r1(x.w / Math.max(1, Math.min(8, Math.round(x.w / 6)))), 'q-ny': Math.max(1, Math.min(8, Math.round(x.d / 6))), 'q-sy': r1(x.d / Math.max(1, Math.min(8, Math.round(x.d / 6)))) }) },
   stormwater: { input: 'obj', hide: [], prefill: ({ A }) => ({ rain: A.rain, duration: A.duration }) },   // applied in its Imported model tab (feedFile)
-  span: { input: 'none', hide: [], prefill: ({ x }) => x && ({ span: r1(x.span), spanR: r1(x.span), storeys: x.storeys }) },
 };
 
 // ---- what a result keeps for Results: a small picture of the engine's own view, and its per-point values where the engine
@@ -140,7 +139,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
     </div>
-    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${pilot?'?v=charts-list-20261024&pilot=shared':sim.id === 'acoustics' ? '?v=wire-20261023-1' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?v=exterior-20261024-1' : ''}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
+    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" src="../emb/${file}.html${pilot?'?layout=unified&v=charts-list-20261024&pilot=shared':sim.id === 'acoustics' ? '?layout=unified&v=wire-20261023-1' : ['wayfinding', 'privacy', 'noise'].includes(sim.id) ? '?layout=unified&v=psim-20261024-1' : ['wind','stormwater'].includes(sim.id) ? '?layout=unified&v=exterior-20261024-1' : '?layout=unified'}"></iframe>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); render(app, sim, params); };
   if(sim.id==='vent'){$('.shsite',app).href='#/project-settings/'+p.id+'?return=vent';$('.shsite',app).textContent=`${site.label||'Site'} · Shared r${shared.revision} ↗`;}
@@ -203,7 +202,9 @@ export function render(app, sim, params = new URLSearchParams()) {
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
     // Distinguish the engine's startup sample from the project's applied model/settings.
     if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
-    if(['vent','daylight'].includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,site,sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.catch(error=>{weatherFailure=error;say(esc(error.message),true);});}
+    if(['vent','daylight'].includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,site,sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.then(()=>fr.contentWindow.PlotCloudSimulationFit?.refresh()).catch(error=>{weatherFailure=error;say(esc(error.message),true);fr.contentWindow.PlotCloudSimulationFit?.refresh();});}
+    fr.contentWindow.PlotCloudSimulationFit?.refresh();
+    for(const child of D.querySelectorAll('iframe'))try{child.contentWindow.PlotCloudSimulationFit?.refresh();}catch{}
   }
   function bindPilot(){
     const D=doc(),box=D?.getElementById('pilotSharedSummary');if(!box){if(alive)setTimeout(bindPilot,100);return;}
@@ -236,13 +237,13 @@ export function render(app, sim, params = new URLSearchParams()) {
       loaded = true; say(`Model: ${esc(name)} as OBJ · design storm ${A.rain} mm/h for ${A.duration} min from Account`);
     }
     if (cfg.input === 'none') { prefill(); loaded = true; say(`Model: ${esc(name)} · ${x ? `${x.storeys} storey${x.storeys > 1 ? 's' : ''}, ${r1(x.w)} × ${r1(x.d)} m` : 'no walls yet'}`); }
+    else if(loaded)prefill();
   }
 
   // the engine's own figures for this run
   function kpisNow() {
     const D = doc(); if (!D) return [];
     const txt = (el) => (el?.textContent || '').replace(/\s+/g, ' ').trim();
-    if (sim.id === 'span') return [['Depth', `${txt(D.getElementById('ansDepth'))} ${txt(D.getElementById('ansWhat'))}`.trim()], ...[...D.querySelectorAll('#colOut dt')].map((dt) => [txt(dt), txt(dt.nextElementSibling)])].filter(([, s]) => s && s !== '—');
     if (sim.id === 'stormwater') { const m = D.getElementById('modelWorkspace'); const W = m && !m.hidden ? m.contentDocument : D.getElementById('gridWorkspace')?.contentDocument; if (!W) return [];
       return [...W.querySelectorAll('.kp4 > div')].map((el) => [txt(el.querySelector(':scope > small')), txt(el.querySelector(':scope > b'))]).filter(([k, s]) => k && s && !/^—/.test(s)); }
     return [];
@@ -315,11 +316,11 @@ export function render(app, sim, params = new URLSearchParams()) {
     .sec > h2.pc-tog { cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; }
     .sec > h2.pc-tog::after { content: '–'; font: 600 14px ui-monospace, monospace; color: #8a8f98; }
     .sec.pc-col > h2.pc-tog::after { content: '+'; }
-    ${sim.id === 'span' ? '.app > aside.panel { order: -1; } .app { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) !important; }' : ''}`;
+    `;
   let tries = 0;
   const shell = () => {
     const D = doc(); if (!alive) return;
-    const ready = D && D.readyState !== 'loading' && D.body && (sim.id === 'stormwater' ? D.getElementById('gridWorkspace')?.contentDocument?.querySelector('h2') : sim.id === 'span' ? D.getElementById('span') : D.querySelector('.sec h2'));
+    const ready = D && D.readyState !== 'loading' && D.body && (sim.id === 'stormwater' ? D.getElementById('gridWorkspace')?.contentDocument?.querySelector('h2') : D.querySelector('.sec h2'));
     if (!ready) { if (tries++ < 200) setTimeout(shell, 100); return; }
     if (!D.getElementById('pc-shell')) { const st = D.createElement('style'); st.id = 'pc-shell'; st.textContent = CSS; D.head.appendChild(st); }
     installSimulationFit(D);

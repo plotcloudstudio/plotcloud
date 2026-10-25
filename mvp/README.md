@@ -32,7 +32,7 @@ Labels used in the UI: `Mock` (prototype estimate), `Working tool` (opens the ex
 **Analysis (14)** — all open from Simulations via `../index.html#/tool/<id>`:
 sunhours (Sun hours), daylight, wind (Wind flow), vent (Natural ventilation), stormwater (Stormwater & waterlogging), acoustics (Indoor acoustics),
 spacesyntax, movementdepth (Movement & spatial depth), evac (Circulation), isovist (Isovist safety), views (View analysis), cameras (Camera coverage),
-structure (Structural analysis), span (Structure sizer).
+structure (Structural analysis).
 
 **Model building** — Plan Studio (`#/studio`), 3D model generator (`furniture`), Facade studio, DetailLab.
 

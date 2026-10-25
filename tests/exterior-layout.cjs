@@ -6,6 +6,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
  const tab=async(f,side,name)=>{await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#panel'+side+' .pc-fit-item[data-pc-fit-active=true]').waitFor();await page.waitForTimeout(60);};
  async function layout(f){
   await f.locator('.app[data-pc-exterior-layout="1"]').waitFor();
+  await f.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Settings',exact:true}).waitFor();
   assert.equal(await f.locator('.sec h2 i').count(),0);
   assert.equal(await f.locator('[data-view=split]').count(),0);
   assert.equal(await f.locator('#chartp').evaluate(e=>e.closest('.lgdsec')===document.querySelector('#legend').closest('.lgdsec')),true);
@@ -18,12 +19,15 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.goto(base+'/mvp/#/simulations/wind');let f=page.frameLocator('#eng');await layout(f);
   await page.waitForFunction(()=>document.querySelector('#eng')?.contentWindow.__windScene);
   await tab(f,'L','Settings');await f.locator('#res').selectOption('draft');await f.locator('#run').click();
+  console.log('Wind Draft started');await page.waitForTimeout(3000);console.log('Wind progress',await f.locator('#run').isDisabled(),await f.locator('#status').textContent());
   await page.waitForFunction(()=>{const d=document.querySelector('#eng')?.contentDocument;return d&&!d.getElementById('resSec').hidden&&!d.getElementById('run').disabled;},null,{timeout:180000});
   assert.match(await f.locator('#stats').innerText(),/\d/);
   await tab(f,'R','Charts');assert(await f.locator('#legend').isVisible());assert(await f.locator('#rose').isVisible());assert(await f.locator('#hist').evaluate(e=>e.width>0&&e.height>0));
   assert.equal(await f.locator('#panelR .pc-fit-pages').isVisible(),false,'Wind charts share a single page');
   await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(350);
-  assert.equal(await f.locator('#panelR .pc-fit-pages').isVisible(),false,'Wind charts fit a 720p window');
+  const fixed=await f.locator('.app').getAttribute('data-pc-unified')==='true';
+  if(fixed)assert.equal(await f.locator('#panelR .pc-fit-pages').isVisible(),false,'Fixed charts do not paginate');
+  else{assert(await f.locator('.pc-layout-review').isVisible(),'Small windows explicitly request layout review');assert.match(await f.locator('#stats').innerText(),/\d/,'Resize fallback preserves calculated results');}
   await page.setViewportSize({width:1440,height:900});await page.waitForTimeout(200);
   assert.equal(await f.locator('#export').evaluate(e=>e.closest('#panelL')?.id),'panelL');
   await tab(f,'L','Export');await f.locator('#export').click();

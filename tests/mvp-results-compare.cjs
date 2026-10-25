@@ -26,7 +26,7 @@ await p.evaluate(async()=>{const S=await import('./js/store.js');S.reload();cons
 await p.goto(B+'#/results');await p.waitForTimeout(3000);
 // §1 · four studies, one input changed, one made to fail
 ok(/unsaved changes/.test(await p.evaluate(()=>document.getElementById('runOn').textContent)),'Results says the Workspace has unsaved changes that will be saved first');
-for(const id of ['daylight','spacesyntax','views','span'])await p.check(`[data-pick="${id}"]`);
+for(const id of ['daylight','spacesyntax','views','isovist'])await p.check(`[data-pick="${id}"]`);
 ok(/Run selected \(4\)/.test(await p.textContent('#btRun')),'Run selected (4)');
 await p.click('[data-open="daylight"]');const wp=await p.$('[data-ov="daylight"][data-id="wp"]');ok(!!wp,'Daylight opens its own inputs (work plane, occupied hours, site)');await wp.fill('0.85');await wp.dispatchEvent('change');
 await p.route('**/emb/views.html*',r=>r.abort());
@@ -35,7 +35,7 @@ const nv=await p.evaluate(()=>{const db=JSON.parse(localStorage.getItem('pc-mvp-
 const st=async()=>p.evaluate(()=>Object.fromEntries(__res.batch.items().map(x=>[x.simId,x.status])));
 let s0;for(let i=0;i<120;i++){await p.waitForTimeout(2000);s0=await st();if(!Object.values(s0).some(x=>x==='queued'||x==='running'))break;if(i%10===0)console.log('  ',JSON.stringify(s0),await p.textContent('#btTxt'));}
 console.log('  statuses:',JSON.stringify(s0));
-ok(s0.daylight==='done'&&s0.spacesyntax==='done'&&s0.span==='done'&&s0.views==='failed','three done, the forced failure failed without stopping them');
+ok(s0.daylight==='done'&&s0.spacesyntax==='done'&&s0.isovist==='done'&&s0.views==='failed','three done, the forced failure failed without stopping them');
 ok(await p.evaluate(()=>!!document.querySelector('[data-row="views"] [data-retry]')&&/Failed/.test(document.querySelector('[data-st="views"]').textContent)),'the failed one is marked Failed with Retry');
 await p.unroute('**/emb/views.html*');await p.click('[data-row="views"] [data-retry]');
 for(let i=0;i<60;i++){await p.waitForTimeout(2000);s0=await st();if(s0.views!=='queued'&&s0.views!=='running')break;}

@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=singlepage-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=unified-20261025-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Isovist Safety</title>
@@ -1383,6 +1383,7 @@ async function walkLevel(level, confirmed) {
 }
 // camera: Plan + chart / Plan / 3D
 { const _sc = setCam; setCam = async function (c) {
+  if(c==='split'&&document.querySelector('[data-pc-unified]'))c='plan';
   IS.cam = c; const sp = c === 'split'; stage.classList.toggle('split', sp); await _sc(sp ? 'plan' : c);
   $$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === c)));
   resize(); fit(); draw(); capUI(); panelUI();
@@ -1401,10 +1402,11 @@ function capUI() {
     : `Eye ${EYE.toFixed(2)} m · looking for ${TGT ? TGT.toFixed(1) + ' m' : 'the floor'} · blind ${pct(A.blind)} of ${A.eff.toFixed(1)} m² · hazards seen ${A.hz.filter((h) => h.seen).length} of ${SC.haz.length}`;
 }
 function sizeCv(c, hCss) { const d = devicePixelRatio || 1, w = Math.max(50, c.clientWidth || c.parentNode.clientWidth - 36); c.style.height = hCss + 'px'; c.width = Math.round(w * d); c.height = Math.round(hCss * d); const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); return { x, w: c.width, h: c.height, k: d }; }
+window.__pcUnifiedCharts=()=>panelUI();
 const IFF = () => getComputedStyle(document.body).fontFamily, CH2 = { eye: [], haz: [], walk: null };
 const msgCv = (c, t) => { const { x, k } = sizeCv(c, 44); x.fillStyle = '#8a8780'; x.font = `${11.5 * k}px ${IFF()}`; x.textBaseline = 'middle'; x.fillText(t, 2 * k, 22 * k); };
 function panelUI() {
-  if (IS.cam !== 'split') return; const ok = A && !A.noView;
+  if (IS.cam !== 'split'&&!document.querySelector('[data-pc-unified]')) return; const ok = A && !A.noView;
   $('#cpSub').textContent = `eye ${EYE.toFixed(2)} m · looking for ${TGT ? TGT.toFixed(1) + ' m' : 'the floor'}`;
   $('#ikp').innerHTML = `<div><small>Blind</small><b>${ok ? pct(A.blind) : '—'}</b></div><div><small>Seen</small><b>${ok ? A.seen.toFixed(0) + ' m²' : '—'}</b></div><div><small>Hazards</small><b>${ok ? `${A.hz.filter((h) => h.seen).length}/${SC.haz.length}` : '—'}</b></div><div><small>Walk</small><b>${WALK ? pct(WALK.cover) : '—'}</b></div>`;
   if (!ok) { msgCv($('#iEye'), 'Place the viewpoint to see this chart.'); msgCv($('#iHaz'), 'Place the viewpoint and add hazards.'); } else { drawEyeC(); drawHazC(); }
@@ -1437,7 +1439,7 @@ function drawHazC() {
   });
 }
 function drawWalkC() {
-  const c = $('#iWalk'); if (IS.cam !== 'split' || !c.offsetParent) return;
+  const c = $('#iWalk'); if ((IS.cam !== 'split'&&!document.querySelector('[data-pc-unified]')) || !c.offsetParent) return;
   if (!WALK) { CH2.walk = null; msgCv(c, SC.path.length >= 2 ? 'Press Walk the path (section 5) to see this chart.' : 'Draw a path with the Path tool, then walk it.'); $('#iWalkN').textContent = 'blind share along the path'; return; }
   const S = WALK.samples, { x, w, h, k } = sizeCv(c, 140), L = 36 * k, R = w - 8 * k, T = 10 * k, B = h - 22 * k, X = (d) => L + (R - L) * d / WALK.L, Y = (v) => B - (B - T) * v;
   $('#iWalkN').textContent = `${WALK.level ? ILV[WALK.level].name + ' · ' : ''}click to move the walker`;

@@ -67,11 +67,6 @@
       "url": "/emb/spacesyntax.html"
     },
     {
-      "file": "emb/span.html",
-      "surface": "tool",
-      "url": "/emb/span.html"
-    },
-    {
       "file": "emb/stairs3d.html",
       "surface": "tool",
       "url": "/emb/stairs3d.html"
@@ -165,15 +160,13 @@
     "isovist",
     "views",
     "cameras",
-    "structure",
-    "span"
+    "structure"
   ],
   "classicToolRoutes": [
     "/index.html#/tool/code-bc",
     "/index.html#/tool/access-bc",
     "/index.html#/tool/leed",
     "/index.html#/tool/ergo",
-    "/index.html#/tool/span",
     "/index.html#/tool/furniture",
     "/index.html#/tool/facade",
     "/index.html#/tool/detaillab",

@@ -46,12 +46,10 @@ export const SIMS = [
     blurb: 'Where security cameras should go for the detail you need.', inputs: ['Floor plan'], metrics: [['cover', 'Floor covered', '%', 1, /^covered/i], ['cams', 'Cameras', '', 0, /^cameras$/i]] },
   { id: 'structure', group: 'Structure', name: 'Structural analysis', tool: 'structure', view: 'wire',
     blurb: 'Frame with NBC loads, member sizing and deflection checks.', inputs: ['Grid and storeys', 'Material and system'], metrics: [['ratio', 'Stress ratio', '', 2, /stress ratio/i], ['disp', 'Displacement', 'mm', 1, /displacement/i]] },
-  { id: 'span', group: 'Structure', name: 'Structure sizer', tool: 'span', view: 'wire',
-    blurb: 'First-guess depths for joists, beams and slabs from a span.', inputs: ['Span'], metrics: [['depth', 'Member depth', 'mm', 0, /^depth/i]] },
 ];
 
 // Spatial scope is independent of discipline: Climate contains both indoor and outdoor studies.
-for(const sim of SIMS) sim.scope=['sunhours','wind','stormwater','noise'].includes(sim.id)?'Exterior':['structure','span'].includes(sim.id)?'Building':'Interior';
+for(const sim of SIMS) sim.scope=['sunhours','wind','stormwater','noise'].includes(sim.id)?'Exterior':sim.id==='structure'?'Building':'Interior';
 
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [

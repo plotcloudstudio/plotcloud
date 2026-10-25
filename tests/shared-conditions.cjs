@@ -32,11 +32,15 @@ try{
   assert.match(await f.locator('#pilotSharedSummary').innerText(),/Toronto/);assert.equal(await f.locator('#lat').inputValue(),'43.65');assert.equal(await f.locator('#north').inputValue(),'15');
   assert(await f.locator('#lat').isDisabled());assert.equal(await f.locator('#pilotOverrides').getAttribute('open'),null);
   if(id==='daylight'){assert.equal(await f.locator('#wp').inputValue(),'1');assert.equal(await f.locator('#occ0').inputValue(),'9');assert.equal(await f.locator('#occ1').inputValue(),'17');}
+  const unified=await f.locator('.app').getAttribute('data-pc-unified')==='true';
+  if(unified){assert.equal(await f.locator('#pilotOverrides').isVisible(),false,'Project values have one editor, not duplicate inputs');assert.equal(await f.locator('#pilotSharedSummary a').count(),1);}
+  else{
   await f.locator('#pilotOverrides').evaluate(e=>e.open=true);await p.waitForTimeout(80);await reach(f,'#pilotOverrideEnabled');await f.locator('#pilotOverrideEnabled').check();await reach(f,'#north');await fill(f,'north',30);
   assert.equal(await p.evaluate(async id=>(await import('./js/store.js')).conditionsOf((await import('./js/store.js')).project(id)).site.north,state.id),15,'Study overrides must not write project conditions');
   await reach(f,'#pilotResetShared');await f.locator('#pilotResetShared').click();assert.equal(await f.locator('#north').inputValue(),'15');assert(await f.locator('#north').isDisabled());
   await reach(f,'#pilotOverrideEnabled');await f.locator('#pilotOverrideEnabled').check();await reach(f,'#north');await fill(f,'north',20);
   await f.locator('#pilotOverrides').evaluate(e=>e.open=false);
+  }
   if(id==='sunhours'){
    await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
    await reach(f,'#run');await f.locator('#run').click();await p.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;},null,{timeout:90000});
@@ -45,8 +49,8 @@ try{
   }
   await p.locator('#save').click();
   const run=await p.evaluate(async({pid,id})=>{const S=await import('./js/store.js');return S.project(pid).runs.filter(r=>r.simId===id).at(-1);},{pid:state.id,id});
-  assert(run,'Real result must be saved');assert.equal(run.settings.sharedConditions.site.north,15);assert.equal(run.settings.sharedConditions.effective.north??run.settings.sharedConditions.effective.parameters?.[3],20);
-  assert.equal(run.settings.sharedConditions.studyOnlyOverrides,true);assert(run.results.kpis.some(([,v])=>/\d/.test(v)));
+  assert(run,'Real result must be saved');assert.equal(run.settings.sharedConditions.site.north,15);assert.equal(run.settings.sharedConditions.effective.north??run.settings.sharedConditions.effective.parameters?.[3],unified?15:20);
+  assert.equal(run.settings.sharedConditions.studyOnlyOverrides,!unified);assert(run.results.kpis.some(([,v])=>/\d/.test(v)));
   await tab(f,'R','Charts');assert(await f.locator('#legend').isVisible());assert.equal(await f.locator('#pilotResults').isVisible(),false);
   assert.equal(await f.locator('#pilotChartSelect').count(),0,'Charts has no per-chart selector');
   assert(await f.locator('#chartp .cpg').count()>=4);

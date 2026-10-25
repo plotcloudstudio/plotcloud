@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
 <link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=singlepage-20261024-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=unified-20261025-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud View Analysis</title>
@@ -732,6 +732,7 @@ function results() {
 
 // ================= Plan + chart =================
 function sizeCv(c, hCss) { const d = devicePixelRatio || 1, w = Math.max(50, c.clientWidth || c.parentNode.clientWidth - 36); c.style.height = hCss + 'px'; c.width = Math.round(w * d); c.height = Math.round(hCss * d); const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); return { x, w: c.width, h: c.height, k: d }; }
+window.__pcUnifiedCharts=()=>panelUI();
 const FF = () => getComputedStyle(document.body).fontFamily, HITS = { crit: [], rooms: [] };
 function msgCv(c, t) { const { x, k } = sizeCv(c, 40); x.fillStyle = '#8a8780'; x.font = `${11.5 * k}px ${FF()}`; x.textBaseline = 'middle'; x.fillText(t, 2 * k, 20 * k); }
 function bars(c, rows, sel, valTxt, target) {
@@ -747,7 +748,7 @@ function bars(c, rows, sel, valTxt, target) {
   x.globalAlpha = 1; return out;
 }
 function panelUI() {
-  if (CAM !== 'split') return; const sm = summary();
+  if (CAM !== 'split'&&!document.querySelector('[data-pc-unified]')) return; const sm = summary();
   $('#cpSub').textContent = RES ? `${LV[RES.level || 'draft'].name} · eye ${EYE.toFixed(2)} m` : '';
   $('#kp4').innerHTML = `<div><small>View out</small><b>${sm ? pct(sm.los) : '—'}</b></div><div><small>Quality</small><b>${sm ? pct(sm.q) : '—'}</b></div><div><small>LEED</small><b style="color:${sm ? (sm.met ? '#1f7a3d' : '#b3261e') : 'inherit'}">${sm ? (sm.met ? 'Met' : 'Not met') : '—'}</b></div><div><small>Floor</small><b>${sm ? Math.round(sm.area) + ' m²' : '—'}</b></div>`;
   if (!sm) { msgCv($('#cCrit'), 'Analyze the views to see this chart.'); msgCv($('#cRooms'), 'Rooms appear after the analysis.'); $('#roomBox').hidden = true; spotUI(); return; }
@@ -1058,6 +1059,7 @@ $('#saveJ').addEventListener('click', () => save('PlotCloud_views_scene.json', s
 
 // ================= 3D =================
 async function setCam(c) {
+  if(c==='split'&&document.querySelector('[data-pc-unified]'))c='plan';
   CAM = c; $$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === c))); stage.classList.toggle('split', c === 'split');
   if (c === '3d') {
     if (TOOL !== 'select') setTool('select');

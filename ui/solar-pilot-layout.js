@@ -42,7 +42,7 @@ export function prepareSolarPilotLayout(doc){
 
 // Allocate real drawing heights instead of CSS-compressing a bitmap and its hit targets.
 export function fitSolarCharts(doc,viewport){
- const charts=doc.getElementById('pilotCharts');if(!charts||charts.dataset.pcFitActive!=='true')return;
+ const charts=doc.getElementById('unifiedCharts')||doc.getElementById('pilotCharts');if(!charts||charts.dataset.pcFitActive!=='true')return;
  const flexible=[...charts.querySelectorAll('canvas')].filter(c=>!['cCrit','cRooms'].includes(c.id));
  if(!flexible.length)return;
  const fixed=charts.getBoundingClientRect().height-flexible.reduce((n,c)=>n+c.getBoundingClientRect().height,0);

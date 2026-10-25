@@ -1,5 +1,6 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
-import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=charts-list-20261024';
+import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=unified-20261025-1';
+import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=1';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){
@@ -101,10 +102,19 @@ export function installSimulationFit(doc = document) {
     if (!state.active) return;
     content.style.transform = ''; content.style.width = '100%';
     pages.hidden = true;
+    if(panel.closest('[data-pc-unified]')&&state.active.id!=='unifiedResults'){
+      if(state.active.id==='unifiedCharts'){fitSolarCharts(doc,viewport);const key=viewport.clientWidth+':'+viewport.clientHeight;if(state.unifiedChartSize!==key){state.unifiedChartSize=key;win.__pcUnifiedCharts?.();win.__pcWindCharts?.();}}
+      if(content.scrollHeight>viewport.clientHeight+2){
+        const app=panel.closest('[data-pc-unified]');app.pcRollbackUnified?.([{group:titleOf(state.active),required:content.scrollHeight,available:viewport.clientHeight,plots:[...state.active.querySelectorAll('canvas')].map(c=>({id:c.id,height:c.clientHeight}))}]);
+        for(const [oldPanel,old]of panels){old.tabs.remove();old.pages.remove();old.viewport.remove();oldPanel.classList.remove('pc-fit-panel');}
+        panels.clear();schedule();return;
+      }
+      state.page=0;state.scale=1;content.style.transform='none';return;
+    }
     fitSolarCharts(doc,viewport);
     if(state.active.contains(doc.getElementById('rose'))){const key=viewport.clientWidth+':'+win.innerHeight;if(state.windChartSize!==key){state.windChartSize=key;win.__pcWindCharts?.();}}
     const natural = Math.max(1, content.scrollHeight), have = viewport.clientHeight;
-    let scale = Math.min(1, Math.max(.85, have / natural));
+    let scale = panel.closest('[data-pc-unified]')?1:Math.min(1, Math.max(.85, have / natural));
     content.style.width = `${100 / scale}%`;
     const height = content.scrollHeight * scale;
     // Long groups have explicit Previous/Next pages instead of wheel scrolling or tiny text.
@@ -142,9 +152,16 @@ export function installSimulationFit(doc = document) {
   function refresh() {
     pending = false;
     const app = doc.querySelector('.app'); if (!app) return;
+    if(doc.readyState!=='complete')return;
     if(!prepareExteriorLayout(doc))return;
     if(!prepareSolarPilotLayout(doc))return;
+    let unifiedRequested=new URLSearchParams(win.location.search).get('layout')==='unified',owner=win.frameElement?.id==='eng'?win.frameElement:null;
+    try{unifiedRequested ||= new URLSearchParams(win.parent.location.search).get('layout')==='unified';if(!owner&&win.parent.frameElement?.id==='eng')owner=win.parent.frameElement;}catch{}
+    if(unifiedRequested&&owner&&owner.dataset.pcSettingsReady!=='true')return;
+    if(doc.body.dataset.pcSharedWeatherLoading)return;
     doc.documentElement.classList.add('pc-simulation-fit');
+    prepareUnifiedSimulation(doc);
+    for(const label of doc.querySelectorAll('#unifiedCharts .cph .note,#unifiedCharts small')){const text=label.textContent.trim();if(label.title!==text)label.title=text;}
     for (const panel of app.querySelectorAll(':scope > aside.panel,:scope > .col')) enhance(panel);
     for(const strip of app.querySelectorAll('.stage > .chartp')){
       if(!strip.getBoundingClientRect().height)continue;
@@ -153,8 +170,6 @@ export function installSimulationFit(doc = document) {
       if(!select){select=doc.createElement('select');select.className='pc-chart-select';select.setAttribute('aria-label','Result chart');groups.forEach((g,i)=>{const o=doc.createElement('option');o.value=i;o.textContent=titleOf(g);select.append(o);});select.onchange=schedule;strip.prepend(select);}
       groups.forEach((chart,i)=>{chart.dataset.pcChartSelected=String(i===+select.value);if(i===+select.value)enhance(chart);});
     }
-    // Structure sizer has charts in a separate drawing column, not #panelR.
-    if (doc.title.includes('Structure Sizer')) for (const panel of app.querySelectorAll(':scope > .draw')) enhance(panel);
     for (const [panel, state] of panels) {
       const inner = state.content.firstElementChild;
       for (const el of [...inner.children]) {
@@ -173,6 +188,7 @@ export function installSimulationFit(doc = document) {
   function schedule() { if (!pending) { pending = true; win.requestAnimationFrame(refresh); } }
   new win.MutationObserver(schedule).observe(doc.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'open'] });
   win.addEventListener('resize', schedule); schedule();
+  doc.fonts?.ready.then(()=>{for(const state of panels.values())state.unifiedChartSize=null;schedule();});
   win.addEventListener('load',schedule,{once:true});
   doc.addEventListener('click',schedule);
   for (const frame of doc.querySelectorAll('iframe')) {
