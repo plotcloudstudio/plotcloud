@@ -22,7 +22,7 @@ const DEF = [
 ];
 
 const TABS = [['profile', 'Profile'], ['site', 'Site & defaults'], ['plan', 'Plan'], ['data', 'Backup & data'], ['notify', 'Notifications']];
-const size = (b) => b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
+const size = (b) => b > 1073741824 ? `${(b / 1073741824).toFixed(1)} GB` : b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
 
 export function render(app, _, params = new URLSearchParams()) {
   const A = S.account();
@@ -166,7 +166,7 @@ export function render(app, _, params = new URLSearchParams()) {
   { const since = A.user.since ? new Date(A.user.since) : new Date(), left = Math.max(0, 7 - Math.floor((Date.now() - since) / 86400000)); $('#trialLeft', app).textContent = left ? `${left} day${left > 1 ? 's' : ''} left of the 7-day trial.` : 'The 7-day trial has ended (prototype: everything stays open).'; }
   function dataUI() {
     const use = S.storageUse(), pc = Math.min(100, 100 * use / S.QUOTA);
-    $('#useBar', app).style.width = pc.toFixed(1) + '%'; $('#useTxt', app).textContent = `${size(use)} of about ${size(S.QUOTA)} used (${Math.round(pc)} %).`;
+    $('#useBar', app).style.width = pc.toFixed(1) + '%'; $('#useTxt', app).textContent = `${size(use)} of about ${size(S.QUOTA)} used (${pc < 1 ? 'under 1' : Math.round(pc)} %) · kept in IndexedDB${S.storageMode() === 'idb' ? '' : ', with a quick copy in localStorage'} · ${S.PERSISTED ? 'the browser keeps it until you clear it' : 'the browser may clear it when the disk is full, so keep a backup'}.`;
     $('#lastB', app).textContent = A.lastBackup ? `Last backup ${when(A.lastBackup)}.` : 'No backup yet.';
   }
   $('#exp', app).onclick = () => { const blob = new Blob([S.exportAll()], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `plotcloud-backup-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); dataUI(); toast('Backup downloaded'); };

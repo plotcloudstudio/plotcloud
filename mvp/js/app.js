@@ -107,4 +107,4 @@ document.addEventListener('change',event=>{
 addEventListener('hashchange', route);
 $('#menuBtn').addEventListener('click', () => { const o = $('#nav').classList.toggle('open'); $('#menuBtn').setAttribute('aria-expanded', String(o)); });
 $$('#themeSeg button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));
-S.load(); setTheme(theme()); route();
+setTheme(theme()); S.init().then(route, route);   // the store comes from IndexedDB first (see store.js)

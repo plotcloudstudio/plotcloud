@@ -11,7 +11,25 @@
 //     Account seeds them once, while other engines retain the existing siteLinked behaviour during the pilot.
 import { sampleModel } from './data.js';
 
-const KEY = 'pc-mvp-v1';
+const KEY = 'pc-mvp-v1', MODE = 'pc-mvp-store';
+// Where it lives: IndexedDB is the store of record (room for sites, terrain and many versions). While the data is small a copy
+// is also kept in localStorage, so every page reads it at once; when it outgrows localStorage that copy is dropped and
+// MODE says 'idb', so the next start reads IndexedDB (init() below, awaited before the first page). Clearing the site's
+// data clears both, as before.
+const IDB_NAME = 'plotcloud', IDB_STORE = 'kv';
+let idbP = null, idbOK = typeof indexedDB !== 'undefined', lastSize = 0;
+const idb = () => idbP || (idbP = new Promise((res, rej) => { try { const r = indexedDB.open(IDB_NAME, 1); r.onupgradeneeded = () => r.result.createObjectStore(IDB_STORE); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }));
+const idbDo = (mode, fn) => idb().then((db) => new Promise((res, rej) => { const t = db.transaction(IDB_STORE, mode), q = fn(t.objectStore(IDB_STORE)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }));
+const idbGet = (k) => idbDo('readonly', (st) => st.get(k)), idbPut = (k, v) => idbDo('readwrite', (st) => st.put(v, k)), idbDel = (k) => idbDo('readwrite', (st) => st.delete(k));
+// how much the browser lets this site keep (IndexedDB), and whether it promised not to clear it on its own
+export let QUOTA = 5 * 1024 * 1024; export let PERSISTED = false;
+export async function init() {
+  if (DB) return DB;
+  try { if (navigator.storage?.estimate) { const e = await navigator.storage.estimate(); if (e.quota) QUOTA = Math.min(e.quota, 4 * 1024 ** 3); } } catch (e) { }
+  try { if (navigator.storage?.persisted) PERSISTED = await navigator.storage.persisted(); if (!PERSISTED && navigator.storage?.persist) PERSISTED = await navigator.storage.persist(); } catch (e) { }
+  try { if (!localStorage.getItem(KEY) && localStorage.getItem(MODE) === 'idb') { const raw = await idbGet(KEY); if (raw) DB = JSON.parse(raw); } } catch (e) { idbOK = false; }
+  return load();
+}
 const uid = (p) => p + Math.random().toString(36).slice(2, 9);
 const now = () => new Date().toISOString();
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -32,9 +50,11 @@ function seed() {
   return { projects: [p], account: { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } } };
 }
 
+let checked = null;
 export function load() {
-  if (DB) return DB;
-  let fresh = false; try { const raw = localStorage.getItem(KEY); fresh = !raw; DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; }
+  if (DB && checked === DB) return DB;
+  let fresh = false; if (!DB) { try { const raw = localStorage.getItem(KEY); fresh = !raw; DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; } }
+  checked = DB;
   if (!DB.account) DB.account = { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } };
   let migrated=false;
   for (const p of DB.projects) {
@@ -55,11 +75,19 @@ function pruneMedia(keep = 0) {
 }
 export function save() {
   if (memoryOnly) return false;
-  for (let i = 0; i < 6; i++) { try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; } catch (e) { if (e && e.name === 'SecurityError') break; if (!pruneMedia(4)) break; } }
-  memoryOnly = true; return false;
+  const txt = JSON.stringify(DB); lastSize = txt.length;
+  if (idbOK) idbPut(KEY, txt).catch(() => { idbOK = false; });
+  try { localStorage.setItem(KEY, txt); localStorage.setItem(MODE, 'mirror'); return true; }
+  catch (e) {
+    if (e && e.name === 'SecurityError') { memoryOnly = true; return false; }
+    if (idbOK) { try { localStorage.removeItem(KEY); localStorage.setItem(MODE, 'idb'); } catch (er) { } return true; }   // too big for the copy: IndexedDB keeps it
+    // no IndexedDB: as before, older results lose their pictures first so the figures are kept
+    for (let i = 0; i < 6; i++) { if (!pruneMedia(4)) break; try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; } catch (er) { } }
+    memoryOnly = true; return false;
+  }
 }
 // read the store again (another page of this site, e.g. a batch run, may have written to it)
-export function reload() { DB = null; return load(); }
+export function reload() { const keep = DB; DB = null; try { if (!localStorage.getItem(KEY) && localStorage.getItem(MODE) === 'idb') DB = keep; } catch (e) { } return load(); }
 export const persistent = () => !memoryOnly;
 export function reset() { DB = seed(); save(); }
 
@@ -107,8 +135,8 @@ export function archiveProject(p, on) { p.archived = !!on; p.updated = now(); sa
 export function deleteProject(p) { load().projects = load().projects.filter((x) => x !== p); save(); }
 export const dirtyDraft = (p) => !p.versions.length || JSON.stringify(p.versions.at(-1).model) !== JSON.stringify(p.draft);
 // bytes this prototype keeps in the browser (localStorage holds about 5 MB per site in most browsers)
-export const QUOTA = 5 * 1024 * 1024;
-export function storageUse() { try { return (localStorage.getItem(KEY) || '').length * 2; } catch (e) { return 0; } }
+export function storageUse() { return lastSize || JSON.stringify(load()).length; }
+export const storageMode = () => { try { return localStorage.getItem(MODE) === 'idb' ? 'idb' : 'mirror'; } catch (e) { return 'mirror'; } };
 // pictures and per-point fields of results that are not on a project's latest version (their figures stay)
 export function pruneOldMedia() {
   let n = 0; for (const p of load().projects) { const last = p.versions.at(-1)?.id; for (const r of p.runs) if (r.versionId !== last && r.results && (r.results.thumb || r.results.field)) { delete r.results.thumb; delete r.results.field; r.results.mediaDropped = true; n++; } }
@@ -125,7 +153,7 @@ export function importAll(text, mode = 'merge') {
   else { for (const p of o.projects) { D.projects = D.projects.filter((x) => x.id !== p.id); D.projects.unshift(p); } }
   save(); reload(); return o.projects.length;
 }
-export function deleteAccount() { try { localStorage.removeItem(KEY); for (const k of Object.keys(localStorage)) if (k.startsWith('pc-mvp') || k.startsWith('pc-psim') || k.startsWith('pc-sim')) localStorage.removeItem(k); indexedDB.deleteDatabase('pc-project-climate'); } catch (e) { } DB = null; }
+export function deleteAccount() { idbDel(KEY).catch(() => { }); try { localStorage.removeItem(KEY); localStorage.removeItem(MODE); for (const k of Object.keys(localStorage)) if (k.startsWith('pc-mvp') || k.startsWith('pc-psim') || k.startsWith('pc-sim')) localStorage.removeItem(k); indexedDB.deleteDatabase('pc-project-climate'); } catch (e) { } DB = null; }
 // where the person last was (Workspace, a simulation, Results), for "pick up where you left off"
 const RKEY = 'pc-mvp-recent';
 export function recent() { try { return JSON.parse(localStorage.getItem(RKEY) || '{}'); } catch (e) { return {}; } }

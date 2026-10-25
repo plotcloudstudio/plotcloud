@@ -7,7 +7,7 @@ import { $, $$, esc, toast, setCurrent, currentProject, currentVersion, setCurre
 
 const SIM = Object.fromEntries(SIMS.map((s) => [s.id, s]));
 const ago = (iso) => { if (!iso) return '—'; const s = (Date.now() - new Date(iso)) / 1000; if (s < 60) return 'just now'; if (s < 3600) return `${Math.round(s / 60)} min ago`; if (s < 86400) return `${Math.round(s / 3600)} h ago`; if (s < 86400 * 7) return `${Math.round(s / 86400)} d ago`; return new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }); };
-const size = (b) => b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
+const size = (b) => b > 1073741824 ? `${(b / 1073741824).toFixed(1)} GB` : b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
 const PREF = 'pc-mvp-dash';
 const pref = () => { try { return JSON.parse(localStorage.getItem(PREF) || '{}'); } catch (e) { return {}; } };
 const setPref = (o) => { try { localStorage.setItem(PREF, JSON.stringify({ ...pref(), ...o })); } catch (e) { } };
@@ -125,7 +125,7 @@ export function render(app) {
     $('#plan', app).innerHTML = `<h3 class="db-h3">Plan</h3><p class="db-big">${trial ? 'Pro trial' : 'Pro'}</p><p class="note">${trial ? (left ? `${left} day${left > 1 ? 's' : ''} left of 7. ` : 'The trial has ended. ') + 'Prototype: no payment is taken.' : 'Prototype plan.'}</p><a class="btn sm accent" href="#/pricing">See plans</a>`;
     const use = S.storageUse(), pc = Math.min(100, 100 * use / S.QUOTA), media = S.projects().reduce((n, p) => n + p.runs.filter((r) => r.results?.thumb).length, 0);
     $('#store', app).innerHTML = `<h3 class="db-h3">Storage in this browser</h3><div class="db-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pc)}" aria-label="Storage used"><i style="width:${pc.toFixed(1)}%"></i></div>
-      <p class="note">${size(use)} of about ${size(S.QUOTA)} · ${S.projects().length} project${S.projects().length === 1 ? '' : 's'} · ${media} result picture${media === 1 ? '' : 's'}</p><p class="note">${A.lastBackup ? `Last backup ${ago(A.lastBackup)}.` : 'Not backed up yet.'} <a href="#/account?tab=data">Backup and space</a></p>`;
+      <p class="note">${size(use)} of about ${size(S.QUOTA)} · ${S.projects().length} project${S.projects().length === 1 ? '' : 's'} · ${media} result picture${media === 1 ? '' : 's'}</p><p class="note">${A.lastBackup ? `Last backup ${ago(A.lastBackup)}.` : 'Not backed up yet.'} <a href="#/account?tab=data">Backup and space</a></p><p class="note">${S.PERSISTED ? 'The browser keeps it until you clear it.' : 'The browser may clear it when the disk is full: keep a backup.'}</p>`;
     const n = {}; for (const p of S.projects()) for (const r of p.runs) n[r.simId] = (n[r.simId] || 0) + 1;
     const top5 = Object.entries(n).filter(([id]) => SIM[id]).sort((a, b) => b[1] - a[1]).slice(0, 5);
     $('#most', app).innerHTML = top5.length ? top5.map(([id, k]) => `<a class="db-sim" href="#/simulations/${id}"><img data-holo="${simImg(id)}" src="${img(simImg(id))}" alt="" loading="lazy"><span><b>${esc(SIM[id].name)}</b><small>${k} run${k > 1 ? 's' : ''} · ${esc(SIM[id].group)}</small></span></a>`).join('')
