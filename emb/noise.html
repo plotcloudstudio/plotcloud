@@ -4,37 +4,64 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PlotCloud Outdoor Noise</title>
+<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="lib/plansim.css?v=1">
+<script type="importmap">{ "imports": { "three": "../furniture/three.module.min.js", "three/addons/": "../furniture/addons/" } }</script>
+<style>
+#v3 { position: absolute; inset: 0; } #v3 canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+.roadlist { display: grid; gap: 2px; max-height: 168px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+.roadlist > div { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding: 3px 5px; border-radius: 6px; font-size: 12px; }
+.roadlist > div:hover, .roadlist > div.on { background: var(--accent-soft); }
+.roadlist b { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .roadlist small { color: var(--muted); font-size: 11px; }
+.roadlist input[type=number] { width: 50px; border: 1px solid var(--line-strong); border-radius: 5px; padding: 2px 4px; font: 12px var(--f-mono); background: var(--surface, #fff); color: inherit; }
+.roadlist > div.off b { text-decoration: line-through; color: var(--muted); }
+.srcnote { font-size: 11.5px; color: var(--muted); }
+.chartbox h3 { font-size: 12.5px; margin: 10px 0 4px; } .chartbox canvas { width: 100%; display: block; }
+#hint { pointer-events: none; }
+</style>
 </head>
 <body>
 <div class="app">
   <aside class="col" id="panelL" aria-label="Outdoor noise settings"><div class="colIn">
     <section class="sec" aria-labelledby="h-scene"><h2 id="h-scene"><i>1</i>Model</h2>
       <div class="minfo"><b id="mName">Sample block</b></div>
-      <p class="note" id="mInfo">Opened on its own: a sample block with a neighbour. From the Simulations page, the version's building masses and the site context come in.</p>
+      <p class="note" id="mInfo">Opened on its own: a sample block with two streets and a park. From the Simulations page, the version's building, the site's neighbours, roads and parks come in.</p>
     </section>
     <section class="sec" aria-labelledby="h-road"><h2 id="h-road"><i>2</i>Roads</h2>
-      <div id="roads" class="list"></div>
-      <div class="two"><button type="button" class="btn" id="drawRoad" aria-pressed="false">Draw a road</button><select id="newType" aria-label="Type of the next road"></select></div>
-      <div class="ctl"><label>Or a street along a side, <span id="offV">8</span> m out</label><div class="four" id="quick"><button type="button" class="btn" data-q="top">Top</button><button type="button" class="btn" data-q="right">Right</button><button type="button" class="btn" data-q="bottom">Bottom</button><button type="button" class="btn" data-q="left">Left</button></div></div>
-      <p class="note">Each road's level is the daytime average (L<sub>Aeq</sub>) 10 m from its centre line. Use a measured or mapped level where you have one; the types are typical values.</p>
+      <p class="srcnote" id="roadSum">—</p>
+      <div class="two">
+        <div class="ctl"><label>Time of day</label><div class="seg" id="period" role="group" aria-label="Time of day"><button type="button" data-p="day" aria-pressed="true">Day</button><button type="button" data-p="night" aria-pressed="false">Night</button></div></div>
+        <div class="ctl"><label>Traffic</label><div class="seg" id="traffic" role="group" aria-label="Traffic"><button type="button" data-t="-3" aria-pressed="false">Less</button><button type="button" data-t="0" aria-pressed="true">Typical</button><button type="button" data-t="3" aria-pressed="false">More</button></div></div>
+      </div>
+      <div class="roadlist" id="roads" role="list" aria-label="Roads and their levels"></div>
+      <details id="addBox"><summary>Add a road</summary>
+        <div class="two" style="margin-top:6px"><button type="button" class="btn" id="drawRoad" aria-pressed="false">Draw a road</button><select id="newType" aria-label="Type of the next road"></select></div>
+        <div class="ctl"><label>Or a street along a side of the building, 8 m out</label><div class="four" id="quick"><button type="button" class="btn" data-q="top">Top</button><button type="button" class="btn" data-q="right">Right</button><button type="button" class="btn" data-q="bottom">Bottom</button><button type="button" class="btn" data-q="left">Left</button></div></div>
+      </details>
+      <p class="note">Each road's level is its average (L<sub>Aeq</sub>, day 07–23 h) 10 m from the centre line, typical for its type and lanes in the map data. Type a measured or mapped level where you have one. Night is taken as 8 dB quieter, a typical drop.</p>
     </section>
-    <section class="sec" aria-labelledby="h-run"><h2 id="h-run"><i>3</i>Analysis</h2>
+    <section class="sec" aria-labelledby="h-ground"><h2 id="h-ground"><i>3</i>Ground</h2>
+      <label class="chk"><input type="checkbox" id="soft" checked> Parks, gardens and grass from the site soften the ground</label>
+      <div class="ctl"><label for="gElse">Everywhere else</label><select id="gElse"><option value="0" selected>Hard: paving, roads, water</option><option value="0.5">Mixed: some gardens and verges</option><option value="1">Soft: grass, fields</option></select></div>
+      <p class="note" id="groundNote">Soft ground takes a few dB off near the ground (ISO 9613-2, eq. 10); hard ground reflects.</p>
+    </section>
+    <section class="sec" aria-labelledby="h-run"><h2 id="h-run"><i>4</i>Analysis</h2>
       <div class="ctl"><label>Map height above the ground</label><div class="seg" id="hSeg" role="group" aria-label="Map height"><button type="button" data-h="1.5" aria-pressed="true">1.5 m</button><button type="button" data-h="4.5" aria-pressed="false">4.5 m</button><button type="button" data-h="7.5" aria-pressed="false">7.5 m</button><button type="button" data-h="10.5" aria-pressed="false">10.5 m</button></div></div>
+      <div class="ctl"><label for="detail">Detail</label><select id="detail"><option value="1500">Draft</option><option value="4000" selected>Standard</option><option value="9000">Fine</option></select></div>
       <button type="button" class="go" id="run">Map the noise</button>
       <div class="prog" id="prog" hidden><i></i></div>
       <p class="msg" id="runMsg"></p>
-      <p class="note">Every road is a line of sound sources. Buildings shield what is behind them: sound bends over their roofs and round their ends, the longer the detour the quieter (Maekawa, 500 Hz). Each façade is checked 1.5 m above its storey's floor.</p>
+      <p class="note">Every road is a line of sound sources. Buildings shield what is behind them: sound bends over their roofs and round their ends (ISO 9613-2 screening, 500 Hz); soft ground and the air take a little more. Each façade of every storey is checked 1.5 m above its floor.</p>
     </section>
-    <section class="sec" aria-labelledby="h-lay"><h2 id="h-lay"><i>4</i>Export</h2>
-      <div class="two"><button type="button" class="btn" id="exPng">Map PNG</button><button type="button" class="btn" id="exCsv">Façades CSV</button></div>
+    <section class="sec" aria-labelledby="h-lay"><h2 id="h-lay"><i>5</i>Export</h2>
+      <div class="two"><button type="button" class="btn" id="exPng">View PNG</button><button type="button" class="btn" id="exCsv">Façades CSV</button></div>
     </section>
   </div></aside>
 
-  <section class="stage" id="stage" aria-label="Site plan">
-    <div class="vbar"><div class="views" id="showBar" role="group" aria-label="Show"><button type="button" data-show="map" aria-pressed="true">Noise map</button><button type="button" data-show="fac" aria-pressed="false">Façades</button></div></div>
-    <canvas id="cv" aria-label="Site plan coloured by road noise"></canvas>
+  <section class="stage" id="stage" aria-label="Site in plan or 3D">
+    <div class="vbar"><div class="views" id="camBar" role="group" aria-label="Camera"><button type="button" data-view="plan" aria-pressed="true">Plan</button><button type="button" data-view="persp" aria-pressed="false">3D</button></div></div>
+    <div id="v3"></div>
     <div class="lgd" id="legend"></div>
     <div class="hint" id="hint" hidden></div>
     <div class="tip" id="tip"></div>
@@ -46,52 +73,38 @@
       <div class="kpis" id="kpis"><div><small>Loudest façade</small><b>—</b></div><div><small>Quietest façade</small><b>—</b></div><div><small>Façade over 65 dB</small><b>—</b></div><div><small>Ground over 55 dB</small><b>—</b></div></div>
       <div id="res"><p class="note">Map the noise to see each façade.</p></div>
     </section>
-  </div></aside>
-  <footer class="fine">Screening estimate for early design: line sources from the road levels you give, straight and diffracted paths (screening as ISO 9613-2 eq. 14, checked: mvp/VALIDATION.md §5). No reflections (up to +3 dB in narrow streets), ground effect or weather; not an ISO 9613 or CNOSSOS-EU assessment.</footer>
+    <section class="sec lgdsec chartbox" aria-label="Charts">
+      <h3>Façade points by level</h3><canvas id="histC" height="150" aria-label="Share of façade points in each noise band"></canvas>
+      <h3>Which roads matter</h3><canvas id="roadC" height="160" aria-label="Share of the sound reaching the façades from each road"></canvas>
+      <p class="note" id="chartNote">Map the noise to fill the charts.</p>
+    </section>
+  </aside>
+  <footer class="fine">Screening estimate for early design: roads as line sources at typical or entered levels; screening by buildings (ISO 9613-2 eq. 14), ground (eq. 10) and air (ISO 9613-1, 500 Hz). No reflections from façades (up to +3 dB in narrow streets), no terrain (flat ground), no weather; free-field façade levels. Not an ISO 9613, CNOSSOS-EU or planning assessment. Checked: mvp/VALIDATION.md §5.</footer>
 </div>
 
 <script type="module">
-import { $, $$, clamp, r1, esc, planView, fieldImage, drawField, raster, centre, sliced, runUI, bridge, keep, seg, inPoly, segCross, dist } from './lib/plansim.js?v=1';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { $, $$, clamp, r1, esc, raster, centre, sliced, runUI, bridge, keep, seg, inPoly, segCross, dist } from './lib/plansim.js?v=1';
 
-const TYPES = [['Quiet residential street', 55], ['Local street', 62], ['Main road', 68], ['Arterial road or highway', 74], ['Railway line', 65]];
+// ---- road levels: typical daytime L_Aeq 10 m from the centre line by OpenStreetMap highway type (assumed traffic, not counts)
+const KIND = { motorway: ['Motorway', 76], trunk: ['Trunk road', 74], primary: ['Primary road', 70], secondary: ['Secondary road', 67], tertiary: ['Tertiary road', 64], unclassified: ['Minor road', 60],
+  residential: ['Residential street', 57], living_street: ['Living street', 52], service: ['Service road', 52], road: ['Road', 58], busway: ['Bus lane', 62] };
+const kindOf = (k) => { const base = String(k || '').replace(/_link$/, ''); const e = KIND[base] || ['Road', 58]; return { name: e[0] + (/_link$/.test(k || '') ? ' (slip road)' : ''), L: e[1] - (/_link$/.test(k || '') ? 2 : 0) }; };
+const defaultL = (r) => { const k = kindOf(r.kind); return Math.round(k.L + (r.cls === 'main' && r.lanes > 2 ? 10 * Math.log10(r.lanes / 2) : 0)); };
+const TYPES = [['Residential street', 57], ['Local street', 62], ['Main road', 68], ['Arterial road or highway', 74], ['Railway line', 65]];
 const BANDS = [[45, [94, 168, 94]], [50, [166, 211, 124]], [55, [240, 223, 102]], [60, [245, 170, 70]], [65, [228, 96, 48]], [70, [196, 38, 52]], [75, [140, 30, 110]], [Infinity, [60, 30, 120]]];
 const band = (L) => (BANDS.find(([u]) => L < u) || BANDS.at(-1))[1];
-const LAMBDA = 0.68, HS = 0.5, OFF = 8;
-let SC = null, ROADS = [], RES = null, IMG = null, SHOW = 'map', HR = 1.5, DRAW = null, HOVER = null, SEL = -1;
+const LAMBDA = 0.68, HS = 0.5, OFF = 8, REACH = 250, AIR = 1.9e-3;   // 500 Hz wavelength; source 0.5 m up; roads counted within 250 m; ISO 9613-1 at 500 Hz, 10 °C, 70 % (dB/m)
+let SC = null, ROADS = [], RES = null, HR = 1.5, DRAW = null, SEL = null, VIEW = 'plan', OWN = {};
 
-function sample() {
-  const box = (id, x, y, w, d, base, h, role) => ({ id, role, base, h, outer: [[x, y], [x + w, y], [x + w, y + d], [x, y + d]], holes: [] });
-  return { kind: 'masses', name: 'Sample block', masses: [box('a0', 0, 0, 24, 12, 0, 3.2, 'proposed'), box('a1', 0, 0, 24, 12, 3.2, 3.2, 'proposed'), box('a2', 0, 0, 24, 12, 6.4, 3.2, 'proposed'),
-    box('b0', 0, 12, 10, 14, 0, 3.2, 'proposed'), box('b1', 0, 12, 10, 14, 3.2, 3.2, 'proposed'), box('n1', 32, 2, 14, 18, 0, 12, 'context')], source: { project: 'sample' } };
-}
-const proposed = () => SC.masses.filter((m) => m.role !== 'context');
-function box(list) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const m of list) for (const p of m.outer) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); } return Number.isFinite(x0) ? { x0, y0, x1, y1 } : { x0: 0, y0: 0, x1: 20, y1: 20 }; }
-const roadKey = () => 'noise:' + (SC.source?.project || 'sample');
-const saveRoads = () => keep.set(roadKey(), ROADS);
-function quick(side) {
-  const B = box(proposed().length ? proposed() : SC.masses), e = 30, L = TYPES.find((t) => t[0] === $('#newType').value) || TYPES[1];
-  const pts = side === 'top' ? [[B.x0 - e, B.y1 + OFF], [B.x1 + e, B.y1 + OFF]] : side === 'bottom' ? [[B.x0 - e, B.y0 - OFF], [B.x1 + e, B.y0 - OFF]] : side === 'left' ? [[B.x0 - OFF, B.y0 - e], [B.x0 - OFF, B.y1 + e]] : [[B.x1 + OFF, B.y0 - e], [B.x1 + OFF, B.y1 + e]];
-  ROADS.push({ pts, type: L[0], L: L[1], name: `Street, ${side}` }); saveRoads(); roadsUI(); stale(); view.redraw();
-}
-function roadsUI() {
-  $('#roads').innerHTML = ROADS.length ? ROADS.map((r, i) => `<div data-r="${i}" style="align-items:center${i === SEL ? ';background:var(--accent-soft)' : ''}"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span>
-      <span style="display:flex;gap:4px;align-items:center"><input type="number" data-l="${i}" value="${r.L}" min="35" max="90" step="1" style="width:52px;border:1px solid var(--line-strong);border-radius:5px;padding:2px 4px;font:12px var(--f-mono)" aria-label="Level of ${esc(r.name)} in dB(A)"><em>dB</em><button type="button" class="btn" data-x="${i}" aria-label="Remove ${esc(r.name)}" style="padding:1px 7px">×</button></span></div>`).join('')
-    : '<p class="note">No road yet: draw one or add a street along a side.</p>';
-  $$('#roads [data-l]').forEach((i) => i.onchange = () => { ROADS[+i.dataset.l].L = clamp(+i.value || 60, 35, 90); saveRoads(); stale(); });
-  $$('#roads [data-x]').forEach((b) => b.onclick = () => { ROADS.splice(+b.dataset.x, 1); SEL = -1; saveRoads(); roadsUI(); stale(); view.redraw(); });
-  $$('#roads [data-r]').forEach((d) => d.onmouseenter = () => { SEL = +d.dataset.r; view.redraw(); });
-  $('#roads').onmouseleave = () => { SEL = -1; view.redraw(); };
-}
-const stale = () => { if (RES) { RES.stale = true; $('#runMsg').textContent = 'Roads or settings changed: map the noise again.'; $('#runMsg').className = 'msg warn'; } };
-const setKey = () => JSON.stringify([SC.name, SC.masses.length, ROADS, HR]);
-
-// ---- sound paths
-function prep() {
-  return SC.masses.map((m) => { const P = m.outer, b = box([m]); // convex hull for the paths round the ends
+// ---- the sound paths (validated as they ship: tests/validation/noise_engine.cjs pulls shield, elements and level out of this page)
+function prep(list) {
+  return list.map((m) => { const P = m.outer, xs = P.map((p) => p[0]), ys = P.map((p) => p[1]), b = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
     const pts = P.slice().sort((a, c) => a[0] - c[0] || a[1] - c[1]), cr = (o, a, c) => (a[0] - o[0]) * (c[1] - o[1]) - (a[1] - o[1]) * (c[0] - o[0]), lo = [], up = [];
     for (const p of pts) { while (lo.length >= 2 && cr(lo.at(-2), lo.at(-1), p) <= 0) lo.pop(); lo.push(p); }
     for (const p of pts.slice().reverse()) { while (up.length >= 2 && cr(up.at(-2), up.at(-1), p) <= 0) up.pop(); up.push(p); }
-    return { P, base: m.base || 0, top: (m.base || 0) + (m.h || 3), b, hull: lo.slice(0, -1).concat(up.slice(0, -1)), role: m.role }; });
+    return { P, base: m.base || 0, top: m.h, b, hull: lo.slice(0, -1).concat(up.slice(0, -1)), role: m.role }; });   // a scene mass's h is the height of its top, not its height
 }
 // how much quieter a path from s to r is behind the buildings (dB), or -1 if r is inside a building at that height
 function shield(M, s, r, hr) {
@@ -118,108 +131,265 @@ function shield(M, s, r, hr) {
   }
   return best;
 }
-function elements(cell) {
+// the roads as short sound sources (sound power per metre from the level 10 m away: an incoherent line source, I = k / d²)
+function elements(cell, roads = ROADS) {
   const el = clamp(cell * 0.8, 1, 4), out = [];
-  for (const r of ROADS) { const k = 10 * Math.pow(10, r.L / 10) / Math.PI; for (let i = 0; i < r.pts.length - 1; i++) { const a = r.pts[i], b = r.pts[i + 1], L = dist(a, b), n = Math.max(1, Math.ceil(L / el));
-    for (let j = 0; j < n; j++) out.push({ p: [a[0] + (b[0] - a[0]) * (j + 0.5) / n, a[1] + (b[1] - a[1]) * (j + 0.5) / n], w: k * L / n }); } }
+  roads.forEach((r, ri) => { if (r.on === false) return; const L0 = r.Leff ?? r.L, k = 10 * Math.pow(10, L0 / 10) / Math.PI; for (let i = 0; i < r.pts.length - 1; i++) { const a = r.pts[i], b = r.pts[i + 1], L = dist(a, b), n = Math.max(1, Math.ceil(L / el));
+    for (let j = 0; j < n; j++) out.push({ p: [a[0] + (b[0] - a[0]) * (j + 0.5) / n, a[1] + (b[1] - a[1]) * (j + 0.5) / n], w: k * L / n, ri }); } });
   return out;
 }
-function level(M, E, p, hr) {
-  let I = 0; for (const e of E) { const A = shield(M, e.p, p, hr); if (A < 0) return NaN; const d2 = Math.max(1, (e.p[0] - p[0]) ** 2 + (e.p[1] - p[1]) ** 2 + (hr - HS) ** 2); I += e.w / d2 * Math.pow(10, -A / 10); }
+// ISO 9613-2 eq. 10 ground attenuation for mostly porous ground (dB), at horizontal distance d with mean path height hm
+function groundAtt(d, hm) { return Math.max(0, 4.8 - (2 * hm / Math.max(1, d)) * (17 + 300 / Math.max(1, d))); }
+// the level at p, hr above the ground; opt: { G(s, p) share of soft ground on the path, air (dB/m), contrib (per road) }
+function level(M, E, p, hr, opt) {
+  let I = 0;
+  for (const e of E) { const Dz = shield(M, e.p, p, hr); if (Dz < 0) return NaN; const d2 = Math.max(1, (e.p[0] - p[0]) ** 2 + (e.p[1] - p[1]) ** 2 + (hr - HS) ** 2);
+    let A = Dz; if (opt) { const d = Math.sqrt(d2); if (opt.G) { const g = opt.G(e.p, p); if (g > 0) A = Math.max(Dz, g * groundAtt(d, (HS + hr) / 2)); } if (opt.air) A += opt.air * d; }   // ISO 9613-2 eq. 12: screening replaces the ground term when larger
+    const i = e.w / d2 * Math.pow(10, -A / 10); I += i; if (opt && opt.contrib) opt.contrib[e.ri] += i; }
   return I > 0 ? 10 * Math.log10(I) : NaN;
 }
+
+// ---- the scene: masses, roads and areas from Plan Studio (or the sample); people's own levels and roads kept per project
+function sample() {
+  const box = (id, x, y, w, d, base, top, role) => ({ id, role, base, h: top, level: base ? `${r1(base)} m` : 'Ground', outer: [[x, y], [x + w, y], [x + w, y + d], [x, y + d]], holes: [] });
+  return { kind: 'masses', name: 'Sample block', north: 0, masses: [box('a0', 0, 0, 24, 12, 0, 3.2, 'proposed'), box('a1', 0, 0, 24, 12, 3.2, 6.4, 'proposed'), box('a2', 0, 0, 24, 12, 6.4, 9.6, 'proposed'),
+    box('b0', 0, 12, 10, 14, 0, 3.2, 'proposed'), box('b1', 0, 12, 10, 14, 3.2, 6.4, 'proposed'), box('n1', 32, 2, 14, 18, 0, 12, 'context'), box('n2', -30, 30, 20, 12, 0, 9, 'context')],
+    roads: [{ id: 's1', name: 'Sample Avenue', kind: 'secondary', cls: 'main', lanes: 2, width: 8, pts: [[-90, -10], [110, -10]] }, { id: 's2', name: 'Sample Lane', kind: 'residential', cls: 'minor', lanes: 2, width: 6, pts: [[-6, -60], [-6, 80]] }],
+    areas: [{ id: 'g1', kind: 'green', name: 'Sample Park', pts: [[20, 30], [70, 30], [70, 70], [20, 70]] }], site: { centre: [12, 10], boundary: { kind: 'radius', r: 110 }, fixture: true, label: 'Sample' }, source: { project: 'sample' } };
+}
+const proposed = () => SC.masses.filter((m) => m.role !== 'context');
+function bbox(pts) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); } return Number.isFinite(x0) ? { x0, y0, x1, y1 } : null; }
+const focus = () => bbox((proposed().length ? proposed() : SC.masses).flatMap((m) => m.outer)) || { x0: -20, y0: -20, x1: 20, y1: 20 };
+const ownKey = () => 'noise2:' + (SC.source?.project || 'sample');
+const saveOwn = () => { OWN.drawn = ROADS.filter((r) => r.drawn).map((r) => ({ id: r.id, name: r.name, type: r.type, L: r.L, pts: r.pts, on: r.on })); keep.set(ownKey(), OWN); };
+const groupKey = (r) => r.drawn ? r.id : `${r.name || ''}|${r.kind || ''}`;
+function buildRoads() {
+  OWN = keep.get(ownKey(), {}) || {}; OWN.groups = OWN.groups || {};
+  ROADS = (SC.roads || []).map((r) => ({ ...r, L: defaultL(r), typeName: kindOf(r.kind).name }));
+  for (const d of OWN.drawn || []) ROADS.push({ ...d, drawn: true, typeName: d.type || 'Drawn road', kind: 'drawn' });
+  for (const r of ROADS) { const o = OWN.groups[groupKey(r)]; if (o) { if (o.L != null) r.L = o.L; if (o.on === false) r.on = false; } }
+  if (!ROADS.length && !OWN.none) quick('bottom', true);
+}
+const groups = () => { const G = new Map(); for (const r of ROADS) { const k = groupKey(r); if (!G.has(k)) G.set(k, { key: k, roads: [], name: r.name || (r.drawn ? r.name : ''), type: r.typeName, drawn: !!r.drawn, assumed: !!r.assumed }); G.get(k).roads.push(r); }
+  return [...G.values()].map((g) => ({ ...g, L: Math.max(...g.roads.map((r) => r.L)), on: g.roads.some((r) => r.on !== false), len: g.roads.reduce((s, r) => s + r.pts.slice(1).reduce((t, p, i) => t + dist(r.pts[i], p), 0), 0) })).sort((a, b) => b.L - a.L || b.len - a.len); };
+function quick(side, assumed) {
+  const B = focus(), e = 30, T = TYPES.find((t) => t[0] === $('#newType').value) || TYPES[1];
+  const pts = side === 'top' ? [[B.x0 - e, B.y1 + OFF], [B.x1 + e, B.y1 + OFF]] : side === 'bottom' ? [[B.x0 - e, B.y0 - OFF], [B.x1 + e, B.y0 - OFF]] : side === 'left' ? [[B.x0 - OFF, B.y0 - e], [B.x0 - OFF, B.y1 + e]] : [[B.x1 + OFF, B.y0 - e], [B.x1 + OFF, B.y1 + e]];
+  ROADS.push({ id: 'd' + Date.now().toString(36) + side, name: assumed ? `Assumed street, ${side}` : `Street, ${side}`, type: T[0], typeName: T[0], kind: 'drawn', L: T[1], pts, drawn: true, assumed: !!assumed, width: 7 });
+  saveOwn(); if (!assumed) { roadsUI(); stale(); draw3(); }
+}
+function roadsUI() {
+  const G = groups(), fromSite = (SC.roads || []).length, att = SC.site?.attribution;
+  $('#roadSum').innerHTML = fromSite ? `${fromSite} road piece${fromSite === 1 ? '' : 's'} from the site${att ? ` (${esc(att)})` : ''}, in ${G.filter((g) => !g.drawn).length} roads${SC.site?.paths ? `; ${SC.site.paths} footpaths left out` : ''}.`
+    : SC.site ? 'The site data has no roads with traffic near the building. Draw the streets, or add one along a side.' : 'No site on this project: draw the streets, or add one along a side. A map site brings its roads in.';
+  $('#roads').innerHTML = G.map((g, i) => `<div role="listitem" data-g="${i}" class="${g.on ? '' : 'off'}${SEL === g.key ? ' on' : ''}"><input type="checkbox" data-on="${i}" ${g.on ? 'checked' : ''} aria-label="Count ${esc(g.name || g.type)}">
+      <span style="min-width:0"><b>${esc(g.name || g.type)}${g.assumed ? ' <small>(assumed)</small>' : ''}</b><small>${esc(g.name ? g.type : '')}${g.name ? ' · ' : ''}${Math.round(g.len)} m${g.roads.length > 1 ? ` · ${g.roads.length} pieces` : ''}</small></span>
+      <span style="display:flex;gap:3px;align-items:center"><input type="number" data-l="${i}" value="${g.L}" min="35" max="90" step="1" aria-label="Level of ${esc(g.name || g.type)} in dB(A)"><small>dB</small>${g.drawn ? `<button type="button" class="btn" data-x="${i}" aria-label="Remove ${esc(g.name)}" style="padding:0 6px">×</button>` : ''}</span></div>`).join('') || '<p class="note" style="padding:4px">No roads yet.</p>';
+  const setG = (i, fn) => { const g = G[i]; for (const r of g.roads) fn(r); if (!g.drawn) OWN.groups[g.key] = { L: g.roads[0].L, on: g.roads[0].on !== false }; saveOwn(); stale(); };
+  $$('#roads [data-l]').forEach((inp) => inp.onchange = () => setG(+inp.dataset.l, (r) => { r.L = clamp(Math.round(+inp.value || 60), 35, 90); }));
+  $$('#roads [data-on]').forEach((c) => c.onchange = () => { setG(+c.dataset.on, (r) => { r.on = c.checked; }); roadsUI(); draw3(); });
+  $$('#roads [data-x]').forEach((b) => b.onclick = () => { const g = G[+b.dataset.x]; ROADS = ROADS.filter((r) => !g.roads.includes(r)); if (!ROADS.length) OWN.none = true; saveOwn(); roadsUI(); stale(); draw3(); });
+  $$('#roads [data-g]').forEach((d) => { d.onmouseenter = () => { SEL = G[+d.dataset.g].key; paintRoads(); }; });
+  $('#roads').onmouseleave = () => { SEL = null; paintRoads(); };
+  $('#addBox').open = !fromSite;
+}
+const opts = () => ({ period: $('#period [aria-pressed="true"]')?.dataset.p || 'day', traffic: +($('#traffic [aria-pressed="true"]')?.dataset.t || 0), soft: $('#soft').checked, gElse: +$('#gElse').value, hr: HR, target: +$('#detail').value });
+const stale = () => { if (RES) { RES.stale = true; $('#runMsg').textContent = 'Roads or settings changed: map the noise again.'; $('#runMsg').className = 'msg warn'; } };
+const setKey = () => JSON.stringify([SC.name, SC.masses.length, ROADS.map((r) => [r.id, r.L, r.on !== false]), opts()]);
+
+// ---- the analysis
 async function analyse(ui) {
-  if (!ROADS.length) throw new Error('Add a road first.');
-  const M = prep(), PB = box(proposed().length ? proposed() : SC.masses);
-  let B = { x0: PB.x0 - 30, y0: PB.y0 - 30, x1: PB.x1 + 30, y1: PB.y1 + 30 };
-  for (const r of ROADS) for (const p of r.pts) { B.x0 = Math.min(B.x0, p[0] - 5); B.y0 = Math.min(B.y0, p[1] - 5); B.x1 = Math.max(B.x1, p[0] + 5); B.y1 = Math.max(B.y1, p[1] + 5); }
-  const span = 140; B = { x0: Math.max(B.x0, PB.x0 - span), y0: Math.max(B.y0, PB.y0 - span), x1: Math.min(B.x1, PB.x1 + span), y1: Math.min(B.y1, PB.y1 + span) };
-  const cell = clamp(Math.sqrt((B.x1 - B.x0) * (B.y1 - B.y0) / 5000), 1, 5), G = raster(B, cell), N = G.W * G.H, E = elements(cell), map = new Float32Array(N).fill(NaN);
-  ui.say(`${N} points, ${E.length} road pieces…`);
-  let ok = await sliced(N, (k) => { map[k] = level(M, E, centre(G, k), HR); }, { onProg: (f) => ui.prog(f * 0.8) }); if (!ok) return;
-  // façades: every edge of every storey, 1.5 m above that storey's floor, a step outside
-  const fac = []; const props = SC.masses.map((m, i) => [m, M[i]]).filter(([m]) => m.role !== 'context' && !/^roof$/i.test(m.level || ''));   // roofs shield, but have no façade
-  for (const [m] of props) { const P = m.outer; let A2 = 0; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; A2 += a[0] * b[1] - b[0] * a[1]; } const ccw = A2 > 0;
+  const o = opts(), live = ROADS.filter((r) => r.on !== false); if (!live.length) throw new Error('Count at least one road.');
+  const F = focus(), span = Math.max(F.x1 - F.x0, F.y1 - F.y0), mg = clamp(span * 0.6, 30, 70); let B = { x0: F.x0 - mg, y0: F.y0 - mg, x1: F.x1 + mg, y1: F.y1 + mg };
+  const near = (b, pad) => !(b.x1 < B.x0 - pad || b.x0 > B.x1 + pad || b.y1 < B.y0 - pad || b.y0 > B.y1 + pad);
+  // roads within reach, each piece as it is; their levels with the time of day and traffic
+  const adj = o.traffic + (o.period === 'night' ? -8 : 0);
+  const rd = ROADS.map((r) => ({ ...r, Leff: r.L + adj, on: r.on !== false && near(bbox(r.pts), REACH) }));
+  const M = prep(SC.masses.filter((m) => near(bbox(m.outer), REACH))), cell = clamp(Math.sqrt((B.x1 - B.x0) * (B.y1 - B.y0) / o.target), 1, 8), G = raster(B, cell), N = G.W * G.H;
+  // ground: a raster of soft-ground share over the map and its roads (parks and grass 1, water 0, the rest as chosen)
+  const RB = { x0: B.x0 - REACH, y0: B.y0 - REACH, x1: B.x1 + REACH, y1: B.y1 + REACH }, gc = 5, GW = Math.ceil((RB.x1 - RB.x0) / gc), GH = Math.ceil((RB.y1 - RB.y0) / gc), GR = new Float32Array(GW * GH).fill(o.gElse);
+  if (o.soft) for (const a of SC.areas || []) { const ab = bbox(a.pts); if (!ab) continue; const v = a.kind === 'green' ? 1 : a.kind === 'water' ? 0 : null; if (v == null) continue;
+    for (let j = Math.max(0, Math.floor((ab.y0 - RB.y0) / gc)); j <= Math.min(GH - 1, Math.floor((ab.y1 - RB.y0) / gc)); j++) for (let i = Math.max(0, Math.floor((ab.x0 - RB.x0) / gc)); i <= Math.min(GW - 1, Math.floor((ab.x1 - RB.x0) / gc)); i++) if (inPoly([RB.x0 + (i + 0.5) * gc, RB.y0 + (j + 0.5) * gc], a.pts)) GR[j * GW + i] = v; }
+  const gAt = (x, y) => { const i = Math.floor((x - RB.x0) / gc), j = Math.floor((y - RB.y0) / gc); return i < 0 || j < 0 || i >= GW || j >= GH ? o.gElse : GR[j * GW + i]; };
+  const Gpath = (s, r) => { let g = 0; for (let k = 0; k < 8; k++) { const t = (k + 0.5) / 8; g += gAt(s[0] + (r[0] - s[0]) * t, s[1] + (r[1] - s[1]) * t); } return g / 8; };
+  // sources: fine pieces near a point, groups of four further away (the far ones change little across a few metres)
+  const E = elements(Math.max(cell, 2.5), rd), CH = [];
+  for (let i = 0; i < E.length; i += 4) { const g = E.slice(i, i + 4).filter((e) => e.ri === E[i].ri), w = g.reduce((s, e) => s + e.w, 0); CH.push({ p: [g.reduce((s, e) => s + e.p[0] * e.w, 0) / w, g.reduce((s, e) => s + e.p[1] * e.w, 0) / w], w, ri: E[i].ri, fine: g, R: 6 * dist(g[0].p, g.at(-1).p) + 12 }); if (g.length < 4) i -= 4 - g.length; }
+  const lev = (p, hr, contrib) => { const pick = []; for (const c of CH) { if (dist(c.p, p) > c.R) pick.push(c); else pick.push(...c.fine); } return level(M, pick, p, hr, { G: Gpath, air: AIR, contrib }); };
+  ui.say(`${N.toLocaleString('en')} map points, ${E.length.toLocaleString('en')} road pieces, ${M.length} buildings…`);
+  const map = new Float32Array(N).fill(NaN);
+  let ok = await sliced(N, (k) => { map[k] = lev(centre(G, k), o.hr); }, { onProg: (f) => ui.prog(f * 0.75) }); if (!ok) return;
+  // façades: every edge of every storey of the building, 1.5 m above that storey's floor, a step outside
+  const fac = [], props = proposed().filter((m) => !/^roof$/i.test(m.level || ''));
+  for (const m of props) { const P = m.outer; let A2 = 0; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; A2 += a[0] * b[1] - b[0] * a[1]; } const ccw = A2 > 0;
     for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], L = dist(a, b); if (L < 0.5) continue; const nx = (ccw ? (b[1] - a[1]) : (a[1] - b[1])) / L, ny = (ccw ? (a[0] - b[0]) : (b[0] - a[0])) / L, n = Math.max(1, Math.round(L / 2)), pts = [];
       for (let j = 0; j < n; j++) pts.push([a[0] + (b[0] - a[0]) * (j + 0.5) / n + nx * 0.3, a[1] + (b[1] - a[1]) * (j + 0.5) / n + ny * 0.3]);
-      fac.push({ a, b, L, m, z: (m.base || 0) + 1.5, level: m.level || `${r1(m.base || 0)} m`, pts, vals: [] }); } }
-  const todo = fac.flatMap((f, fi) => f.pts.map((p, pi) => [fi, pi]));
-  ok = await sliced(todo.length, (i) => { const [fi, pi] = todo[i], f = fac[fi]; f.vals[pi] = level(M, E, f.pts[pi], f.z); }, { onProg: (f) => ui.prog(0.8 + f * 0.2) }); if (!ok) return;
+      // a mass drawn with several storeys (Plan Studio's masses) is checked storey by storey
+      const ns = m.storeys > 1 && m.fh > 0 ? Math.min(60, m.storeys) : 1, fh = ns > 1 ? m.fh : m.h - (m.base || 0);
+      for (let k = 0; k < ns; k++) { const z0 = (m.base || 0) + k * fh; fac.push({ a, b, L, m, z0, z1: k === ns - 1 ? m.h : z0 + fh, z: z0 + 1.5, sk: m.id + ':' + k, level: ns > 1 ? `${m.level || 'Mass'} · storey ${k + 1}` : m.level || `${r1(m.base || 0)} m`, pts, vals: [], n: [nx, ny] }); } } }
+  const contrib = new Float64Array(rd.length), todo = fac.flatMap((f, fi) => f.pts.map((p, pi) => [fi, pi]));
+  ok = await sliced(todo.length, (i) => { const [fi, pi] = todo[i], f = fac[fi]; f.vals[pi] = lev(f.pts[pi], f.z, contrib); }, { onProg: (f) => ui.prog(0.75 + f * 0.25) }); if (!ok) return;
   for (const f of fac) { const v = f.vals.filter(Number.isFinite); f.max = v.length ? Math.max(...v) : NaN; f.min = v.length ? Math.min(...v) : NaN; }
-  RES = { key: setKey(), G, map, fac, cell, hr: HR, stale: false }; IMG = null; ui.prog(1);
-  ui.say(`Done: ${N} map points and ${todo.length} façade points.`, 'ok'); results(); view.redraw();
+  const tot = contrib.reduce((s, v) => s + v, 0), byRoad = new Map();
+  rd.forEach((r, i) => { if (!contrib[i]) return; const k = groupKey(r), g = byRoad.get(k) || { name: r.name || r.typeName, type: r.typeName, e: 0 }; g.e += contrib[i]; byRoad.set(k, g); });
+  RES = { key: setKey(), G, map, fac, cell, hr: o.hr, o, roadsUsed: rd.filter((r) => r.on).length, share: [...byRoad.values()].map((g) => ({ ...g, share: tot ? g.e / tot : 0 })).sort((a, b) => b.share - a.share), stale: false };
+  ui.prog(1); ui.say(`Done: ${N.toLocaleString('en')} map points and ${todo.length.toLocaleString('en')} façade points, ${RES.roadsUsed} road pieces.`, 'ok'); results(); draw3();
 }
 function figures() {
   if (!RES) return null; const f = RES.fac.filter((x) => Number.isFinite(x.max)); if (!f.length) return { none: true };
   const loud = f.reduce((a, b) => (b.max > a.max ? b : a)), quiet = f.reduce((a, b) => (b.max < a.max ? b : a));
   let over = 0, tot = 0; for (const x of f) for (const v of x.vals) { if (!Number.isFinite(v)) continue; tot++; if (v > 65) over++; }
-  const PB = box(proposed()), near = (p) => p[0] > PB.x0 - 20 && p[0] < PB.x1 + 20 && p[1] > PB.y0 - 20 && p[1] < PB.y1 + 20; let g = 0, gn = 0;
+  const PB = focus(), near = (p) => p[0] > PB.x0 - 20 && p[0] < PB.x1 + 20 && p[1] > PB.y0 - 20 && p[1] < PB.y1 + 20; let g = 0, gn = 0;
   for (let k = 0; k < RES.map.length; k++) { const v = RES.map[k]; if (!Number.isFinite(v) || !near(centre(RES.G, k))) continue; gn++; if (v > 55) g++; }
-  const storeys = [...new Set(f.map((x) => x.m))], quietSide = storeys.filter((m) => f.some((x) => x.m === m && x.max < 55)).length;
-  return { loud, quiet, facOver: tot ? 100 * over / tot : 0, ground: gn ? 100 * g / gn : 0, storeys: storeys.length, quietSide };
+  const storeys = [...new Set(f.map((x) => x.sk))], quietSide = storeys.filter((k) => f.some((x) => x.sk === k && x.max < 55)).length;
+  return { loud, quiet, facOver: tot ? 100 * over / tot : 0, ground: gn ? 100 * g / gn : 0, storeys: storeys.length, quietSide, top: RES.share[0] };
 }
 function results() {
-  const F = figures(); if (!F) return; if (F.none) { $('#res').innerHTML = '<p class="note">No façades: the version has no building masses.</p>'; return; }
-  const K = [['Loudest façade', `${Math.round(F.loud.max)} dB`], ['Quietest façade', `${Math.round(F.quiet.max)} dB`], ['Façade over 65 dB', `${r1(F.facOver)} %`], ['Ground over 55 dB', `${r1(F.ground)} %`], ['Quiet side', `${F.quietSide} of ${F.storeys} storeys`]];
+  const F = figures(); if (!F) return; if (F.none) { $('#res').innerHTML = '<p class="note">No façades: the version has no building of its own (only neighbours).</p>'; charts(); legend(); return; }
+  const night = RES.o.period === 'night';
+  const K = [['Loudest façade', `${Math.round(F.loud.max)} dB`], ['Quietest façade', `${Math.round(F.quiet.max)} dB`], ['Façade over 65 dB', `${r1(F.facOver)} %`], ['Ground over 55 dB', `${r1(F.ground)} %`], ['Quiet side', `${F.quietSide} of ${F.storeys} storeys`], ['Main source', F.top ? `${F.top.name} ${Math.round(F.top.share * 100)} %` : '—']];
   $('#kpis').innerHTML = K.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('');
   const lv = [...new Set(RES.fac.map((x) => x.level))];
-  $('#res').innerHTML = `<table class="res"><thead><tr><th>Storey</th><th>Loudest</th><th>Quietest</th></tr></thead><tbody>${lv.map((l) => { const f = RES.fac.filter((x) => x.level === l && Number.isFinite(x.max)); if (!f.length) return '';
+  $('#res').innerHTML = `<table class="res"><thead><tr><th>Storey</th><th class="n">Loudest</th><th class="n">Quietest</th></tr></thead><tbody>${lv.map((l) => { const f = RES.fac.filter((x) => x.level === l && Number.isFinite(x.max)); if (!f.length) return '';
       return `<tr><td>${esc(l)}</td><td class="n">${Math.round(Math.max(...f.map((x) => x.max)))} dB</td><td class="n">${Math.round(Math.min(...f.map((x) => x.max)))} dB</td></tr>`; }).join('')}</tbody></table>
-    <p class="note" style="margin-top:6px">Each façade's figure is its loudest point. WHO (2018) advises road traffic below 53 dB L<sub>den</sub>; many housing guides ask for a quiet side under 55 dB for bedrooms. A façade over 65 dB usually needs better glazing and ventilation that doesn't rely on open windows.</p>`;
-  legend();
+    <p class="note" style="margin-top:6px">${night ? 'Night' : 'Day'} levels, L<sub>Aeq</sub>; each façade's figure is its loudest point, free field (no reflection from the façade itself). WHO (2018) advises road traffic below 53 dB L<sub>den</sub> and 45 dB at night; many housing guides ask for a quiet side under 55 dB for bedrooms. A façade over 65 dB usually needs better glazing and ventilation that doesn't rely on open windows.</p>`;
+  charts(); legend();
+}
+// charts: façade points by band; the roads' shares of the sound reaching the façades
+function charts() {
+  const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#222', mut = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#777';
+  const prepC = (cv) => { const d = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth || 280, H = +cv.getAttribute('height'); cv.width = W * d; cv.height = H * d; cv.style.height = H + 'px'; const g = cv.getContext('2d'); g.scale(d, d); g.clearRect(0, 0, W, H); g.font = '10.5px system-ui, sans-serif'; return [g, W, H]; };
+  const [g, W, H] = prepC($('#histC')), [g2, W2, H2] = prepC($('#roadC'));
+  if (!RES) { $('#chartNote').hidden = false; return; } $('#chartNote').hidden = true;
+  const cnt = BANDS.map(() => 0); let n = 0; for (const f of RES.fac) for (const v of f.vals) if (Number.isFinite(v)) { n++; cnt[BANDS.findIndex(([u]) => v < u)]++; }
+  const bw = (W - 8) / BANDS.length, top = Math.max(1, ...cnt) / Math.max(1, n);
+  BANDS.forEach(([u, c], i) => { const s = n ? cnt[i] / n : 0, h = (H - 34) * s / top; g.fillStyle = `rgb(${c.join(',')})`; g.fillRect(4 + i * bw + 2, H - 20 - h, bw - 4, h); g.fillStyle = mut; g.textAlign = 'center';
+    g.fillText(i === 0 ? `<${u}` : u === Infinity ? `${BANDS[i - 1][0]}+` : `${BANDS[i - 1][0]}`, 4 + i * bw + bw / 2, H - 6); if (s > 0.004) { g.fillStyle = ink; g.fillText(`${Math.round(s * 100)}%`, 4 + i * bw + bw / 2, H - 24 - h); } });
+  const S = RES.share.slice(0, 6), rowH = Math.min(24, (H2 - 6) / Math.max(1, S.length)); g2.textAlign = 'left';
+  S.forEach((r, i) => { const y = 3 + i * rowH, w = (W2 - 120) * r.share; g2.fillStyle = mut; g2.fillText((r.name || r.type).slice(0, 18), 0, y + rowH / 2 + 3); g2.fillStyle = i ? '#9aa3ad' : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c7362c';
+    g2.fillRect(108, y + 3, Math.max(1, w), rowH - 7); g2.fillStyle = ink; g2.fillText(`${Math.round(r.share * 100)} %`, 112 + w, y + rowH / 2 + 3); });
 }
 function legend() {
-  $('#legend').innerHTML = `<b>Road noise, L<sub>Aeq</sub> dB</b>${BANDS.map(([u, c], i) => `<div class="key"><i style="background:rgb(${c.join(',')})"></i>${i === 0 ? `under ${u}` : u === Infinity ? `${BANDS[i - 1][0]} and over` : `${BANDS[i - 1][0]}–${u}`}</div>`).join('')}<span class="note">${SHOW === 'map' ? `Map ${r1(RES?.hr ?? HR)} m above the ground; façade lines at each storey` : 'Façades: the loudest point of each, per storey'}</span>`;
+  $('#legend').innerHTML = `<b>Road noise, L<sub>Aeq</sub> dB${RES?.o.period === 'night' ? ' (night)' : ''}</b>${BANDS.map(([u, c], i) => `<div class="key"><i style="background:rgb(${c.join(',')})"></i>${i === 0 ? `under ${u}` : u === Infinity ? `${BANDS[i - 1][0]} and over` : `${BANDS[i - 1][0]}–${u}`}</div>`).join('')}<span class="note">Ground map ${r1(RES?.hr ?? HR)} m up; façades coloured by their loudest point, every storey</span>`;
 }
-const view = planView($('#cv'), { draw,
-  onClick: (p) => { if (DRAW) { DRAW.pts.push(p); view.redraw(); } },
-  onHover: (p, s) => { HOVER = p; if (DRAW) view.redraw(); tipAt(p, s); }, onLeave: () => { $('#tip').style.display = 'none'; } });
-function finishRoad() { if (!DRAW) return; const pts = DRAW.pts.filter((p, i, a) => !i || dist(p, a[i - 1]) > 0.3); if (pts.length >= 2) { const L = TYPES.find((t) => t[0] === $('#newType').value) || TYPES[1]; ROADS.push({ pts, type: L[0], L: L[1], name: `${L[0]} ${ROADS.length + 1}` }); saveRoads(); roadsUI(); stale(); }
-  DRAW = null; $('#drawRoad').setAttribute('aria-pressed', 'false'); $('#hint').hidden = true; view.redraw(); }
-$('#cv').addEventListener('dblclick', (e) => { e.preventDefault(); finishRoad(); });
-addEventListener('keydown', (e) => { if (!DRAW) return; if (e.key === 'Enter') finishRoad(); if (e.key === 'Escape') { DRAW = null; $('#drawRoad').setAttribute('aria-pressed', 'false'); $('#hint').hidden = true; view.redraw(); } });
-$('#drawRoad').onclick = () => { if (DRAW) return finishRoad(); DRAW = { pts: [] }; $('#drawRoad').setAttribute('aria-pressed', 'true'); $('#hint').hidden = false; $('#hint').textContent = 'Click along the road centre line; double-click or Enter to finish, Esc to cancel. Drag to pan.'; };
-function tipAt(p, s) {
-  const tip = $('#tip'); if (!RES || DRAW) { tip.style.display = 'none'; return; } const i = Math.floor((p[0] - RES.G.x0) / RES.cell), j = Math.floor((p[1] - RES.G.y0) / RES.cell);
-  const f = RES.fac.find((x) => { const dx = x.b[0] - x.a[0], dy = x.b[1] - x.a[1], L2 = dx * dx + dy * dy, t = clamp(((p[0] - x.a[0]) * dx + (p[1] - x.a[1]) * dy) / L2, 0, 1); return Math.hypot(x.a[0] + t * dx - p[0], x.a[1] + t * dy - p[1]) < 0.8; });
-  const v = i >= 0 && j >= 0 && i < RES.G.W && j < RES.G.H ? RES.map[j * RES.G.W + i] : NaN;
-  const t = f && Number.isFinite(f.max) ? `Façade (${f.level}): up to ${Math.round(f.max)} dB` : Number.isFinite(v) ? `${Math.round(v)} dB at ${r1(RES.hr)} m` : '';
-  if (!t) { tip.style.display = 'none'; return; } tip.textContent = t; tip.style.display = 'block'; tip.style.left = (s[0] + 14) + 'px'; tip.style.top = (s[1] + 10) + 'px';
+
+// ---- the view: Plan (from above) and 3D, as Sun hours and Wind flow
+const host = $('#v3'), renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); host.appendChild(renderer.domElement);
+renderer.domElement.setAttribute('aria-label', 'Site with roads, buildings and the noise map');
+const scene = new THREE.Scene(), persp = new THREE.PerspectiveCamera(40, 1, 0.5, 5000), ortho = new THREE.OrthographicCamera(-50, 50, 50, -50, -1000, 1000);
+persp.up.set(0, 0, 1); ortho.up.set(0, 1, 0); ortho.position.set(0, 0, 500);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-60, -90, 140); scene.add(sun);
+let cam = ortho, controls = null; const world = new THREE.Group(); scene.add(world);
+function makeControls() { if (controls) controls.dispose(); controls = new OrbitControls(cam, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = 0.1; controls.screenSpacePanning = true;
+  if (cam === ortho) { controls.enableRotate = false; controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }; controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN }; } controls.addEventListener('change', render); }
+const theme = () => { const night = document.documentElement.dataset.pcTheme === 'night' || matchMedia('(prefers-color-scheme: dark)').matches && !document.documentElement.dataset.pcTheme;
+  const view = getComputedStyle(document.documentElement).getPropertyValue('--view').trim();
+  return night ? { bg: view || '#14171c', ground: '#1b1f25', road: '#3c424c', roadSel: '#df5145', green: '#25432f', water: '#1d3550', prop: '#d9d5cd', ctx: '#5d646f', edge: '#0c0e11', ring: '#6c7580', text: '#c9d1db' }
+    : { bg: view || '#e9ecef', ground: '#f4f5f6', road: '#b3b8c0', roadSel: '#c7362c', green: '#cfe3c5', water: '#cadcef', prop: '#ffffff', ctx: '#b5b9c0', edge: '#59606b', ring: '#9aa1aa', text: '#3a4048' }; };
+const textSprite = (t, color, size = 22) => { const c = document.createElement('canvas'), g = c.getContext('2d'); g.font = `600 ${size}px system-ui, sans-serif`; const w = Math.ceil(g.measureText(t).width) + 12; c.width = w; c.height = size + 12; g.font = `600 ${size}px system-ui, sans-serif`; g.fillStyle = color; g.textBaseline = 'middle'; g.fillText(t, 6, c.height / 2);
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest: false, transparent: true })); s.userData.px = [w, c.height]; s.renderOrder = 10; return s; };
+const ribbon = (pts, w, z) => { const pos = [], idx = []; for (let i = 0; i < pts.length; i++) { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], L = dist(a, b) || 1, nx = -(b[1] - a[1]) / L * w / 2, ny = (b[0] - a[0]) / L * w / 2; pos.push(pts[i][0] + nx, pts[i][1] + ny, z, pts[i][0] - nx, pts[i][1] - ny, z); if (i) idx.push(2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); return g; };
+const shapeOf = (outer, holes = []) => { const s = new THREE.Shape(outer.map((p) => new THREE.Vector2(p[0], p[1]))); for (const h of holes) s.holes.push(new THREE.Path(h.map((p) => new THREE.Vector2(p[0], p[1])))); return s; };
+let roadMeshes = [], facMesh = null, mapMesh = null, labels = [], groundMesh = null, EXT = null;
+function draw3() {
+  if (!SC) return; const T = theme(); renderer.setClearColor(T.bg, 1); world.clear(); roadMeshes = []; facMesh = null; mapMesh = null; labels = [];
+  const F = focus(), c0 = SC.site?.centre || [(F.x0 + F.x1) / 2, (F.y0 + F.y1) / 2], R0 = SC.site?.boundary?.kind === 'radius' ? SC.site.boundary.r : Math.max(80, Math.max(F.x1 - F.x0, F.y1 - F.y0) * 1.5);
+  EXT = { c: c0, r: R0 };
+  groundMesh = new THREE.Mesh(new THREE.CircleGeometry(R0 * 1.25, 96), new THREE.MeshBasicMaterial({ color: T.ground })); groundMesh.position.set(c0[0], c0[1], -0.05); world.add(groundMesh);
+  // the site's edge and the compass, as Sun hours and Wind flow
+  const ring = []; if (SC.site?.boundary?.kind === 'polygon') { const P = SC.site.boundary.pts; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; ring.push(a[0], a[1], 0.05, b[0], b[1], 0.05); } }
+  else for (let i = 0; i < 128; i++) { const a = i / 128 * Math.PI * 2, b = (i + 1) / 128 * Math.PI * 2; ring.push(c0[0] + R0 * Math.cos(a), c0[1] + R0 * Math.sin(a), 0.05, c0[0] + R0 * Math.cos(b), c0[1] + R0 * Math.sin(b), 0.05); }
+  const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(ring, 3)); world.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: T.ring, transparent: true, opacity: 0.8 })));
+  const nb = (SC.north || 0) * Math.PI / 180;   // plan direction of true north: (sin n, cos n), with the scene's north = −(bearing of plan +Y)
+  [['N', 0], ['E', 90], ['S', 180], ['W', 270]].forEach(([t, a]) => { const ang = nb + a * Math.PI / 180, s = textSprite(t, T.text, 22); s.position.set(c0[0] + Math.sin(ang) * (R0 + 10), c0[1] + Math.cos(ang) * (R0 + 10), 0.2); s.userData.label = true; labels.push(s); world.add(s); });
+  for (const a of SC.areas || []) { if (a.kind !== 'green' && a.kind !== 'water') continue; const m = new THREE.Mesh(new THREE.ShapeGeometry(shapeOf(a.pts)), new THREE.MeshBasicMaterial({ color: a.kind === 'green' ? T.green : T.water })); m.position.z = 0.01; world.add(m); }
+  // the noise map, under the buildings
+  if (RES) { const G = RES.G, cv = document.createElement('canvas'); cv.width = G.W; cv.height = G.H; const g = cv.getContext('2d'), im = g.createImageData(G.W, G.H);
+    for (let j = 0; j < G.H; j++) for (let i = 0; i < G.W; i++) { const v = RES.map[j * G.W + i], o = ((G.H - 1 - j) * G.W + i) * 4; if (!Number.isFinite(v)) continue; const c = band(v); im.data[o] = c[0]; im.data[o + 1] = c[1]; im.data[o + 2] = c[2]; im.data[o + 3] = 215; }
+    g.putImageData(im, 0, 0); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.magFilter = THREE.LinearFilter;
+    mapMesh = new THREE.Mesh(new THREE.PlaneGeometry(G.W * G.c, G.H * G.c), new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false })); mapMesh.position.set(G.x0 + G.W * G.c / 2, G.y0 + G.H * G.c / 2, 0.03); world.add(mapMesh); }
+  for (const r of ROADS) { const m = new THREE.Mesh(ribbon(r.pts, r.width || (r.cls === 'main' ? 9 : 6), 0.02), new THREE.MeshBasicMaterial({ color: T.road, transparent: true, opacity: r.on === false ? 0.3 : 0.95, depthWrite: false })); m.userData.road = r; roadMeshes.push(m); world.add(m);
+    const cl = []; for (let i = 0; i < r.pts.length - 1; i++) cl.push(r.pts[i][0], r.pts[i][1], 0.08, r.pts[i + 1][0], r.pts[i + 1][1], 0.08); const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(cl, 3));
+    const ln = new THREE.LineSegments(lg, new THREE.LineDashedMaterial({ color: T.text, dashSize: 3, gapSize: 3, transparent: true, opacity: r.on === false ? 0.25 : 0.7 })); ln.computeLineDistances(); world.add(ln); }
+  // buildings: neighbours plain; the building's storeys plain until mapped, then each façade coloured by its loudest point
+  const lam = (c, op = 1) => new THREE.MeshLambertMaterial({ color: c, transparent: op < 1, opacity: op });
+  for (const m of SC.masses) { if (!(m.h > (m.base || 0))) continue; const isP = m.role !== 'context';
+    const g = new THREE.ExtrudeGeometry(shapeOf(m.outer, m.holes || []), { depth: m.h - (m.base || 0), bevelEnabled: false }); g.translate(0, 0, m.base || 0);
+    const mesh = new THREE.Mesh(g, lam(isP ? T.prop : T.ctx, isP ? 1 : 0.92)); mesh.userData.mass = m; world.add(mesh);
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), new THREE.LineBasicMaterial({ color: T.edge, transparent: true, opacity: isP ? 0.55 : 0.35 })); world.add(e); }
+  if (RES) { const pos = [], col = [], map = []; RES.fac.forEach((f, fi) => { if (!Number.isFinite(f.max)) return; const c = band(f.max).map((v) => v / 255), z0 = f.z0 + 0.02, z1 = f.z1 - 0.02, o = 0.06, a = [f.a[0] + f.n[0] * o, f.a[1] + f.n[1] * o], b = [f.b[0] + f.n[0] * o, f.b[1] + f.n[1] * o];
+      pos.push(a[0], a[1], z0, b[0], b[1], z0, b[0], b[1], z1, a[0], a[1], z0, b[0], b[1], z1, a[0], a[1], z1); for (let k = 0; k < 6; k++) col.push(...c); map.push(fi, fi); });
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
+    facMesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); facMesh.userData.map = map; world.add(facMesh);
+    // in plan, the loudest point of each façade of the lowest storey
+    const low = Math.min(...RES.fac.map((f) => f.z0)); for (const f of RES.fac) { if (f.z0 !== low || f.L < 4 || !Number.isFinite(f.max)) continue; const s = textSprite(String(Math.round(f.max)), T.text, 20); s.position.set((f.a[0] + f.b[0]) / 2 + f.n[0] * 2.4, (f.a[1] + f.b[1]) / 2 + f.n[1] * 2.4, 0.3); s.userData.label = true; s.userData.planOnly = true; labels.push(s); world.add(s); } }
+  paintRoads(); fitLabels(); render();
 }
-function draw(g, v) {
-  const P = (p) => v.W2S(p), k = v.k;
-  if (RES && SHOW === 'map') { if (!IMG) IMG = fieldImage(RES.G, RES.map, (L) => [...band(L), 205]); drawField(g, v, RES.G, IMG); }
-  for (const r of ROADS) { const on = ROADS[SEL] === r; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = on ? '#d8402a' : 'rgba(70,70,70,.85)'; g.lineWidth = Math.max(5, 7 * k); g.beginPath(); r.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(...q) : g.moveTo(...q); }); g.stroke();
-    g.strokeStyle = '#fff'; g.lineWidth = 1; g.setLineDash([6, 6]); g.stroke(); g.setLineDash([]); }
-  const ms = SC.masses.slice().sort((a, b) => (a.base || 0) - (b.base || 0));
-  for (const m of ms) { g.beginPath(); m.outer.forEach((p, i) => { const q = P(p); i ? g.lineTo(...q) : g.moveTo(...q); }); g.closePath(); g.fillStyle = m.role === 'context' ? '#d6d4cf' : '#ffffff'; g.fill(); g.strokeStyle = '#2b2a27'; g.lineWidth = 1.2; g.stroke(); }
-  if (RES) { const pick = (f) => { const ms2 = RES.fac.filter((x) => x.a === f.a && x.b === f.b); const at = ms2.find((x) => RES.hr >= (x.m.base || 0) && RES.hr < (x.m.base || 0) + (x.m.h || 3)); return SHOW === 'fac' ? ms2.reduce((a, b) => (b.max > a.max ? b : a)) : at || ms2[0]; };
-    const done = new Set(); for (const f of RES.fac) { const key = f.a.join() + f.b.join(); if (done.has(key)) continue; done.add(key); const x = pick(f); if (!Number.isFinite(x.max)) continue;
-      g.strokeStyle = `rgb(${band(x.max).join(',')})`; g.lineWidth = SHOW === 'fac' ? Math.max(5, 0.9 * k) : Math.max(3, 0.5 * k); g.beginPath(); g.moveTo(...P(f.a)); g.lineTo(...P(f.b)); g.stroke();
-      if (SHOW === 'fac' && x.L > 3) { const m = P([(f.a[0] + f.b[0]) / 2, (f.a[1] + f.b[1]) / 2]); g.fillStyle = '#111'; g.font = '600 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const t = `${Math.round(x.max)}`, w = g.measureText(t).width + 6; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(m[0] - w / 2, m[1] - 8, w, 16); g.fillStyle = '#111'; g.fillText(t, m[0], m[1]); } } }
-  if (DRAW && DRAW.pts.length) { g.strokeStyle = '#d8402a'; g.lineWidth = 3; g.beginPath(); DRAW.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(...q) : g.moveTo(...q); }); if (HOVER) g.lineTo(...P(HOVER)); g.stroke(); }
-}
+function paintRoads() { const T = theme(); for (const m of roadMeshes) { const on = SEL && groupKey(m.userData.road) === SEL; m.material.color.set(on ? T.roadSel : T.road); m.material.opacity = on ? 1 : m.userData.road.on === false ? 0.3 : 0.95; m.position.z = on ? 0.1 : 0; } render(); }
+// labels keep their size on screen
+function fitLabels() { const H = host.clientHeight || 600; const wpp = cam === ortho ? (ortho.top - ortho.bottom) / ortho.zoom / H : 2 * Math.tan(persp.fov * Math.PI / 360) * persp.position.distanceTo(controls.target) / H;
+  for (const s of labels) { const [w, h] = s.userData.px; s.scale.set(w * wpp * 0.55, h * wpp * 0.55, 1); s.visible = !(s.userData.planOnly && cam !== ortho); } }
+function render() { if (!controls) return; fitLabels(); renderer.render(scene, cam); }
+function size() { const W = host.clientWidth || 300, H = host.clientHeight || 200; renderer.setSize(W, H, false); renderer.domElement.style.width = W + 'px'; renderer.domElement.style.height = H + 'px'; persp.aspect = W / H; persp.updateProjectionMatrix();
+  const half = ortho.userData.half || 60, a = W / H; ortho.left = -half * a; ortho.right = half * a; ortho.top = half; ortho.bottom = -half; ortho.updateProjectionMatrix(); render(); }
+function fit() { const F = focus(), c = [(F.x0 + F.x1) / 2, (F.y0 + F.y1) / 2], sp = Math.max(F.x1 - F.x0, F.y1 - F.y0), mapHalf = sp / 2 + clamp(sp * 0.6, 30, 70), R0 = SC.site?.boundary?.kind === 'radius' ? SC.site.boundary.r : mapHalf * 2;
+  const half = Math.max(mapHalf * 1.15, Math.min(R0 * 1.12, mapHalf * 1.8)), span = half * 2;
+  ortho.userData.half = half; ortho.zoom = 1; ortho.position.set(c[0], c[1], 500); const pd = mapHalf * 2.5; persp.position.set(c[0] - pd * 0.5, c[1] - pd * 0.85, pd * 0.62);
+  makeControls(); controls.target.set(c[0], c[1], 0); controls.update(); size(); }
+function setView(v) { VIEW = v; $$('#camBar [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+  const t = controls ? controls.target.clone() : new THREE.Vector3(); cam = v === 'plan' ? ortho : persp; if (v === 'plan') ortho.position.set(t.x, t.y, 500); makeControls(); controls.target.copy(t); controls.update(); render(); }
+$$('#camBar [data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+new ResizeObserver(size).observe(host);
+const loop = () => { if (controls) controls.update(); requestAnimationFrame(loop); }; requestAnimationFrame(loop);
+// pointer: what is here; drawing a road in plan
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const pick = (e) => { const b = renderer.domElement.getBoundingClientRect(); ndc.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(ndc, cam); return b; };
+const groundPt = () => { const p = new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), p) ? [p.x, p.y] : null; };
+let down = null, preview = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => { if (!DRAW || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return; pick(e); const p = groundPt(); if (p) { DRAW.pts.push(p); drawPreview(); } });
+renderer.domElement.addEventListener('dblclick', (e) => { if (DRAW) { e.preventDefault(); finishRoad(); } });
+renderer.domElement.addEventListener('pointermove', (e) => { const b = pick(e), tip = $('#tip'); if (DRAW) { const p = groundPt(); if (p) drawPreview(p); tip.style.display = 'none'; return; }
+  let t = ''; if (facMesh) { const h = ray.intersectObject(facMesh)[0]; if (h) { const f = RES.fac[facMesh.userData.map[h.faceIndex]]; if (f) t = `Façade, ${f.level}: up to ${Math.round(f.max)} dB, down to ${Math.round(f.min)} dB`; } }
+  if (!t) { const hb = ray.intersectObjects(world.children.filter((o) => o.userData.mass))[0]; if (hb && hb.object.userData.mass.role === 'context') t = 'Neighbour (shields, not assessed)'; }
+  if (!t && RES) { const p = groundPt(); if (p) { const G = RES.G, i = Math.floor((p[0] - G.x0) / G.c), j = Math.floor((p[1] - G.y0) / G.c), v = i >= 0 && j >= 0 && i < G.W && j < G.H ? RES.map[j * G.W + i] : NaN; if (Number.isFinite(v)) t = `${Math.round(v)} dB at ${r1(RES.hr)} m up`; } }
+  if (!t) { const hr = ray.intersectObjects(roadMeshes)[0]; if (hr) { const r = hr.object.userData.road; t = `${r.name || r.typeName} · ${r.typeName} · ${r.L} dB at 10 m${r.on === false ? ' (not counted)' : ''}`; } }
+  if (!t) { tip.style.display = 'none'; return; } tip.textContent = t; tip.style.display = 'block'; tip.style.left = (e.clientX - b.left + 14) + 'px'; tip.style.top = (e.clientY - b.top + 10) + 'px'; });
+renderer.domElement.addEventListener('pointerleave', () => { $('#tip').style.display = 'none'; });
+function drawPreview(h) { if (preview) { world.remove(preview); preview.geometry.dispose(); } const pts = DRAW.pts.concat(h ? [h] : []); if (pts.length < 2) { preview = null; render(); return; }
+  preview = new THREE.Mesh(ribbon(pts, 5, 0.12), new THREE.MeshBasicMaterial({ color: theme().roadSel, transparent: true, opacity: 0.8 })); world.add(preview); render(); }
+function finishRoad() { if (!DRAW) return; const pts = DRAW.pts.filter((p, i, a) => !i || dist(p, a[i - 1]) > 0.3);
+  if (pts.length >= 2) { const T = TYPES.find((t) => t[0] === $('#newType').value) || TYPES[1], n = ROADS.filter((r) => r.drawn).length + 1; ROADS.push({ id: 'd' + Date.now().toString(36), name: `${T[0]} ${n}`, type: T[0], typeName: T[0], kind: 'drawn', L: T[1], pts, drawn: true, width: 7 }); saveOwn(); roadsUI(); stale(); }
+  DRAW = null; if (preview) { world.remove(preview); preview = null; } $('#drawRoad').setAttribute('aria-pressed', 'false'); $('#hint').hidden = true; draw3(); }
+addEventListener('keydown', (e) => { if (!DRAW) return; if (e.key === 'Enter') finishRoad(); if (e.key === 'Escape') { DRAW = null; if (preview) { world.remove(preview); preview = null; } $('#drawRoad').setAttribute('aria-pressed', 'false'); $('#hint').hidden = true; render(); } });
+$('#drawRoad').onclick = () => { if (DRAW) return finishRoad(); setView('plan'); DRAW = { pts: [] }; $('#drawRoad').setAttribute('aria-pressed', 'true'); $('#hint').hidden = false; $('#hint').textContent = 'Click along the road centre line; double-click or Enter to finish, Esc to cancel. Drag to pan.'; };
+new MutationObserver(() => { draw3(); charts(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-pc-theme'] });
+
 function loadScene(sc, name) {
-  SC = { ...sc, masses: (sc.masses || []).filter((m) => m.outer && m.outer.length >= 3) }; RES = null; IMG = null; SEL = -1;
+  SC = { ...sc, masses: (sc.masses || []).filter((m) => m.outer && m.outer.length >= 3 && m.h > (m.base || 0)), roads: sc.roads || [], areas: sc.areas || [] }; RES = null; SEL = null;
   $('#mName').textContent = name || sc.name || 'Project model';
-  const np = proposed().length, nc = SC.masses.length - np; $('#mInfo').textContent = `${np} storey block${np === 1 ? '' : 's'} of the building${nc ? `, ${nc} neighbour${nc === 1 ? '' : 's'}` : ', no neighbours'} from the site.`;
-  ROADS = keep.get(roadKey(), null); if (!ROADS) { ROADS = []; quick('bottom'); } roadsUI();
-  $('#kpis').innerHTML = '<div><small>Loudest façade</small><b>—</b></div><div><small>Quietest façade</small><b>—</b></div>'; $('#res').innerHTML = '<p class="note">Map the noise to see each façade.</p>';
-  const B = box(SC.masses); view.fit({ x0: B.x0 - 18, y0: B.y0 - 18, x1: B.x1 + 18, y1: B.y1 + 18 }); legend();
+  const np = proposed().length, nc = SC.masses.length - np, green = SC.areas.filter((a) => a.kind === 'green').length;
+  $('#mInfo').textContent = `${np} storey block${np === 1 ? '' : 's'} of the building${nc ? `, ${nc} neighbour${nc === 1 ? '' : 's'}` : ', no neighbours'}, ${SC.roads.length} road piece${SC.roads.length === 1 ? '' : 's'} from the site${SC.site?.fixture ? ' (sample or test data)' : ''}.`;
+  $('#groundNote').textContent = `${green ? `${green} park${green === 1 ? '' : 's'} or green area${green === 1 ? '' : 's'} in the site data. ` : 'No parks or green areas in the site data. '}Soft ground takes a few dB off near the ground (ISO 9613-2, eq. 10); hard ground reflects.`;
+  buildRoads(); roadsUI();
+  $('#kpis').innerHTML = '<div><small>Loudest façade</small><b>—</b></div><div><small>Quietest façade</small><b>—</b></div><div><small>Façade over 65 dB</small><b>—</b></div><div><small>Ground over 55 dB</small><b>—</b></div>'; $('#res').innerHTML = '<p class="note">Map the noise to see each façade.</p>'; $('#runMsg').textContent = '';
+  fit(); draw3(); legend(); charts();
 }
-$('#newType').innerHTML = TYPES.map(([n, L]) => `<option value="${esc(n)}" ${n === 'Local street' ? 'selected' : ''}>${esc(n)} · ${L} dB</option>`).join(''); $('#offV').textContent = OFF;
+$('#newType').innerHTML = TYPES.map(([n, L]) => `<option value="${esc(n)}" ${n === 'Local street' ? 'selected' : ''}>${esc(n)} · ${L} dB</option>`).join('');
 $$('#quick [data-q]').forEach((b) => b.onclick = () => quick(b.dataset.q));
 seg($('#hSeg'), 'data-h', (h) => { HR = +h; stale(); });
-seg($('#showBar'), 'data-show', (s) => { SHOW = s; legend(); view.redraw(); });
+seg($('#period'), 'data-p', () => stale()); seg($('#traffic'), 'data-t', () => stale());
+for (const id of ['soft', 'gElse', 'detail']) $('#' + id).addEventListener('change', stale);
 const ui = runUI(analyse);
-$('#exPng').onclick = () => { const a = document.createElement('a'); a.href = $('#cv').toDataURL('image/png'); a.download = 'outdoor-noise.png'; a.click(); };
-$('#exCsv').onclick = () => { if (!RES) return; const rows = [['Storey', 'From x', 'From y', 'To x', 'To y', 'Length (m)', 'Loudest (dB)', 'Quietest (dB)'], ...RES.fac.map((f) => [f.level, r1(f.a[0]), r1(f.a[1]), r1(f.b[0]), r1(f.b[1]), r1(f.L), r1(f.max), r1(f.min)])];
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' })); a.download = 'facade-noise.csv'; a.click(); };
-bridge({ onScene: (sc, d) => loadScene(sc, d.name), canvas: () => $('#cv'), state: () => ({ ready: !!RES && RES.key === setKey(), conditions: { schema: 1, tool: 'noise', mapHeight: HR, roads: ROADS.map((r) => ({ name: r.name, level: r.L, points: r.pts.length })), grid: RES?.cell } }) });
+$('#exPng').onclick = () => { render(); const a = document.createElement('a'); a.href = renderer.domElement.toDataURL('image/png'); a.download = 'outdoor-noise.png'; a.click(); };
+$('#exCsv').onclick = () => { if (!RES) return; const rows = [['Storey', 'From x', 'From y', 'To x', 'To y', 'Length (m)', 'Loudest (dB)', 'Quietest (dB)'], ...RES.fac.map((f) => [f.level, r1(f.a[0]), r1(f.a[1]), r1(f.b[0]), r1(f.b[1]), r1(f.L), r1(f.max), r1(f.min)]), [], ['Road', 'Type', 'Share of façade sound (%)'], ...RES.share.map((r) => [r.name, r.type, r1(r.share * 100)])];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map((v) => /[,"]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(',')).join('\n')], { type: 'text/csv' })); a.download = 'facade-noise.csv'; a.click(); };
+bridge({ onScene: (sc, d) => loadScene(sc, d.name), canvas: () => { render(); return renderer.domElement; }, state: () => ({ ready: !!RES && RES.key === setKey(), conditions: { schema: 2, tool: 'noise', ...opts(), roads: groups().map((g) => ({ name: g.name || g.type, type: g.type, level: g.L, on: g.on, drawn: g.drawn })), grid: RES?.cell } }) });
 loadScene(sample(), 'Sample block');
-window.__psim = { get RES() { return RES; }, get SC() { return SC; }, get ROADS() { return ROADS; }, run: () => ui.start(), figures,
-  field: () => { if (!RES) return null; const pts = []; for (let k = 0; k < RES.map.length; k++) { const v = RES.map[k]; if (!Number.isFinite(v)) continue; const p = centre(RES.G, k); pts.push(Math.round(p[0] * 100) / 100, Math.round(p[1] * 100) / 100, Math.round(v * 10) / 10); }
-    return { label: `Road noise ${r1(RES.hr)} m above the ground`, unit: 'dB', step: Math.round(RES.cell * 100) / 100, pts }; } };
+window.__psim = { get RES() { return RES; }, get SC() { return SC; }, get ROADS() { return ROADS; }, run: () => ui.start(), figures, groups, setView, groundAtt, defaultL,
+  field: () => { if (!RES) return null; const pts = []; const o = SC.origin || [0, 0]; for (let k = 0; k < RES.map.length; k++) { const v = RES.map[k]; if (!Number.isFinite(v)) continue; const p = centre(RES.G, k); pts.push(Math.round((p[0] + o[0]) * 100) / 100, Math.round((p[1] + o[1]) * 100) / 100, Math.round(v * 10) / 10); }
+    return { label: `Road noise ${r1(RES.hr)} m above the ground${RES.o.period === 'night' ? ', night' : ''}`, unit: 'dB', step: Math.round(RES.cell * 100) / 100, pts }; } };
 </script>
 </body>
 </html>

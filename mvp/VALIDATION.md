@@ -119,10 +119,30 @@ before running: 0.1 dB.
 as a thin edge, without the C3 term for its depth (up to about 4 dB too loud behind deep, low buildings). The path over the roof now
 uses C3 with the building's depth along the path, and the limit is 20 dB for one edge, 25 dB for a building.
 
+**Ground and air (added 2026-10-25, with the redesign that reads the site's parks).** Soft ground by ISO 9613-2 eq. 10
+(A_gr = 4.8 − (2h_m/d)(17 + 300/d) ≥ 0), scaled by the share of the path over soft ground (parks and grass from the site, or what the
+person picks for the rest); air 1.9 dB/km (ISO 9613-1, 500 Hz, 10 °C, 70 %); behind a building the larger of screening and ground
+counts (eq. 12). Against an independent integral of the same road (0.05 m pieces), tolerance 0.1 dB:
+
+| Case | Engine | Reference |
+|---|---|---|
+| Soft ground, receiver 10 / 30 / 100 / 200 m | 69.01 / 61.49 / 55.31 / 52.03 | the same |
+| Half soft, 30 m | 63.33 | 63.33 |
+| Hard ground with air, 100 m; soft with air, 200 m | 59.42; 51.30 | 59.42; 51.30 |
+| Behind a 3 m wall on soft ground | 16.29 dB (max of screening and ground) | 16.29 |
+
+Eq. 10 is the standard's A-weighted simplification for mostly porous ground; scaling it by the soft share of the path is this engine's
+interpolation for mixed ground, not part of the standard.
+
+**Found and fixed in the redesign: building heights.** A scene's mass carries the height of its top (`h`, as Sun hours reads it); the
+previous engine added it to the base, so every storey above the ground was taken as standing that much higher (the third storey of a
+9.6 m block as 16 m tall). Screening by upper storeys and neighbours on raised ground was overstated. The engine now reads `h` as the
+top; the screening checks above are unaffected (they pass the building's top directly).
+
 **What this does and does not show.** It checks that the engine computes what ISO 9613-2's screening formula says, on the paths it
-takes. It does not check the model against measurements: no ground effect, no reflections (up to +3 dB in narrow streets), no
-meteorological correction, one frequency instead of octave bands, road levels as entered by the person. The engine remains a
-screening tool; it is not an ISO 9613 or CNOSSOS-EU assessment.
+takes. It does not check the model against measurements: no reflections (up to +3 dB in narrow streets), no terrain (flat ground), no
+meteorological correction, one frequency instead of octave bands, road levels typical for the road type and lanes in the map data (or
+entered by the person), not traffic counts. The engine remains a screening tool; it is not an ISO 9613 or CNOSSOS-EU assessment.
 
 ## 6. Wind (not validated yet)
 

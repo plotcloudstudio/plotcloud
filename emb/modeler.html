@@ -1591,7 +1591,7 @@ const STC = (() => {
     const lvs = M.levels.slice().sort((a, b) => a.z - b.z), masses = [], site = M.site || null;
     lvs.forEach((lv, k) => { const R = S.L[lv.id]; if (!R || !S.rooms.some((r) => r.lv === lv.id)) return; const up = lvs[k + 1], top = up && up.z > lv.z ? up.z : lv.z + lv.h + 0.25;
       outlineLoops(R).forEach((o, i) => { if (SITEC.area(o) < 0) o = o.slice().reverse(); if (SITEC.area(o) < 1) return; masses.push({ id: `${lv.id}_${i}`, role: 'proposed', level: lv.name, base: +lv.z.toFixed(3), h: +top.toFixed(3), outer: o.map((p) => [+p[0].toFixed(3), +p[1].toFixed(3)]), holes: [] }); }); });
-    for (const m of massList(M)) masses.push({ id: 'mass_' + m.id, role: 'proposed', level: m.name || 'Mass', base: m.base, h: m.h, outer: m.outer, holes: [] });
+    for (const m of massList(M)) masses.push({ id: 'mass_' + m.id, role: 'proposed', level: m.name || 'Mass', base: m.base, h: m.h, outer: m.outer, holes: [], storeys: m.storeys, fh: m.fh });   // storeys and floor height: Outdoor noise checks each storey's façades
     for (const o of (M.imports || []).filter((q) => q.type === 'mass' && !(M.hiddenIds || []).includes(q.id))) masses.push({ id: o.id, role: 'context', base: o.g.z, h: o.g.z + o.g.h, outer: [[o.g.x, o.g.y], [o.g.x + o.g.w, o.g.y], [o.g.x + o.g.w, o.g.y + o.g.d], [o.g.x, o.g.y + o.g.d]], holes: [] });   // context blocks kept from the earlier Workspace
     if (site) masses.push(...SITEC.contextMasses(site, M.north || 0));
     const rd = site ? SITEC.readiness(site, 'sun', true) : null;
@@ -1600,9 +1600,24 @@ const STC = (() => {
       source: { app: 'plotcloud-studio', project: M.id, version: M.version || 0, level: 'all', siteVersion: site ? site.version : null, siteHash: site ? SITEC.simHash(site) : null, fixture: !!(site && site.fixture) },
       notes: [site && site.fixture ? 'Site context: test fixture — not real imported data.' : '', site ? '' : 'No site on this project: Sun hours uses the city you pick there, and there are no neighbors.', ...(rd ? rd.warn : [])].filter(Boolean) };
   }
+  // ---------- Outdoor noise: the Sun hours masses plus the site's roads, green and water areas, in plan meters (2026-10-25) ----------
+  function noiseScene(M, S) {
+    const o = sunScene(M, S), site = M.site || null, N = M.north || 0, P = (p) => { const q = SITEC.siteToPlan(site, p, N); return [+q[0].toFixed(2), +q[1].toFixed(2)]; };
+    o.tool = 'noise'; o.roads = []; o.areas = []; o.site = null;
+    if (site) {
+      o.roads = (site.roads || []).filter((r) => r.cls !== 'path' && r.pts && r.pts.length >= 2).map((r) => ({ id: r.id, ref: r.ref, name: r.name || '', kind: r.kind, cls: r.cls, lanes: r.lanes, width: r.width, pts: r.pts.map(P) }));
+      o.areas = (site.areas || []).map((a) => ({ id: a.id, kind: a.kind, name: a.name || '', pts: a.pts.map(P) }));
+      const bd = site.boundary || { kind: 'radius', r: 300 };
+      o.site = { centre: P([0, 0]), boundary: bd.kind === 'polygon' && bd.pts ? { kind: 'polygon', pts: bd.pts.map(P) } : { kind: 'radius', r: bd.r || 300 }, fixture: !!site.fixture, label: (site.origin && site.origin.label) || site.name || '',
+        attribution: (site.sources || []).some((x) => /openstreetmap/i.test(x.attribution || x.provider || '')) ? '© OpenStreetMap contributors' : '', paths: (site.roads || []).filter((r) => r.cls === 'path').length };
+      if (!o.roads.length) o.notes.push('The site data has no roads with traffic: add one in Outdoor noise.');
+    }
+    return o;
+  }
   function sunCompat(M, S) { const why = []; if (!S.rooms.length && !(M.masses || []).length && !(M.site && SITEC.simBuildings(M.site).length)) why.push('No closed rooms, masses or site context to analyze.'); if (M.site) why.push(...SITEC.readiness(M.site, 'sun', true).err); return { ok: !why.length, why, multi: false }; }
   function planScene(M, S, lvId, tool) {
     if (tool === 'sunhours') return sunScene(M, S);
+    if (tool === 'noise') return noiseScene(M, S);
     const lv = M.levels.find((l) => l.id === lvId), B = bounds(M), x0 = B.x0 - 1, y0 = B.y0 - 1, sh = (p) => [+(p[0] - x0).toFixed(3), +(p[1] - y0).toFixed(3)], walls = [], open = [];
     for (const w of M.walls) { if (w.lv !== lvId) continue; const L = wallLen(w), d = wallDir(w), at = (t) => [w.a[0] + d[0] * t, w.a[1] + d[1] * t];
       const os = M.ops.filter((o) => o.wall === w.id).map((o) => [o.pos - o.w / 2, o.pos + o.w / 2, o]).sort((a, b) => a[0] - b[0]);
@@ -1654,7 +1669,7 @@ const STC = (() => {
   }
   // can this level go to this tool? hard blockers and plain notes
   function compat(M, S, lvId, tool) {
-    if (tool === 'sunhours') return sunCompat(M, S);
+    if (tool === 'sunhours' || tool === 'noise') return sunCompat(M, S);
     const T = TOOLS[tool] || XTOOLS[tool]; if (!T) return { ok: false, why: ['Not a Plan Studio-compatible tool yet.'] };
     const why = [], rooms = S.rooms.filter((r) => r.lv === lvId), ext = S.ops.filter((op) => op.lv.id === lvId && op.ext), wins = ext.filter((op) => op.o.object_type === 'window'), doors = S.ops.filter((op) => op.lv.id === lvId && op.o.object_type === 'door' && !op.ext);
     for (const n of T.needs) {

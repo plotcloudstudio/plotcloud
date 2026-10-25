@@ -23,3 +23,27 @@ Test: `tests/mvp-new-sims.cjs` (opens each from the Simulations page on the samp
 The six day/night images use the existing catalogue's standard interior/site models and orthographic camera. `mvp/js/analysis-study-art.js` feeds those models into the actual three engines; `analysis-art.html` displays their computed fields with RGB values copied from the engines' DEPTH, EXP and BANDS definitions. These are labelled sample engine results, not results for the visitor's project. No simulation engine or project data is changed.
 
 Regenerate only these images: `TEST_SIM=wayfinding,privacy,noise node hero/capture-analysis.cjs` with the local static server running. Verify palettes, engine results, camera, theme parity and catalogue images with `node tests/simulation-art.cjs`.
+
+## Outdoor noise, redesigned (2026-10-25)
+
+Outdoor noise now reads the site that is already in the project and looks like Sun hours and Wind flow.
+
+- **Input, nothing to draw:** Plan Studio's noise scene (`toolScene('noise')`): the Sun hours masses (the building per level, masses drawn
+  in Plan Studio with their storeys, the site's neighbours on the terrain) plus the site's OpenStreetMap roads (type, lanes, name; footpaths
+  left out), parks and water, and the site circle, in plan metres. A project without a map site keeps the old way: draw the streets or add
+  one along a side (an *assumed* street is added and labelled until you do).
+- **Road levels:** typical daytime L_Aeq 10 m from the centre line for the road's type (motorway 76 … residential 57 dB), +10 lg(lanes/2)
+  for main roads with more than two lanes; one row per named road, each can be left out or given a measured level (kept for the
+  project). Time of day (night 8 dB quieter, a typical drop) and traffic (±3 dB) apply to all.
+- **Ground and air:** parks and grass from the site soften the ground (ISO 9613-2 eq. 10, by the soft share of each path); the rest is
+  hard, mixed or soft as picked; air 1.9 dB/km. Screening by buildings as before (ISO 9613-2 eq. 14).
+- **View:** Plan (from above) and 3D, on the theme's stage, with the site circle and compass; roads, parks and water from the map; the noise
+  map under the buildings; every façade of every storey coloured by its loudest point; the loudest point of each ground-floor façade
+  labelled in Plan. Hover for values; draw a road in Plan.
+- **Results and charts:** loudest and quietest façade, façade over 65 dB, ground over 55 dB, quiet side, main source; a table by storey;
+  façade points by band; each road's share of the sound reaching the façades. Save, field and Results batch as before.
+- **Fixed:** the previous engine read a mass's top (`h`) as a height above its base, overstating screening by upper storeys
+  (`VALIDATION.md` §5).
+
+Tests: `tests/mvp-noise.cjs` (engine on its own; Plan Studio's scene from a small labelled OpenStreetMap fixture; Workspace → version →
+Simulations page → save → Results batch). Validation: `tests/validation/noise_engine.cjs` (line source, screening, ground and air).
