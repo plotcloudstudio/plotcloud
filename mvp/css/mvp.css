@@ -627,3 +627,13 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .ns-facts small { color: var(--mut); font-size: 12px; } .ns-facts b { font: 700 14px var(--mono); text-align: right; } .ns-facts span { grid-column: 1 / -1; color: var(--mut2); font-size: 12px; }
 .ns-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 8px; vertical-align: -1px; }
 @media (max-width: 900px) { .ns { grid-template-columns: 1fr; grid-template-rows: 55vh auto; height: auto; } .ns-side { border-left: 0; } }
+
+/* A persistent action row; the study's own calculation and confirmations stay authoritative. */
+.study-workflow { display:flex; align-items:center; gap:8px; flex:1 0 100%; min-width:0; flex-wrap:wrap; padding:6px 0 2px; border-top:1px solid var(--line); }
+.study-workflow #studyState { color:var(--ink2); flex:1 1 230px; font-size:12px; line-height:1.5; }
+.study-workflow #studyState[data-state="stale"] { color:var(--accent); }
+.study-workflow #studyState[data-state="running"] { color:var(--ink); }
+.study-workflow button { white-space:nowrap; }
+.study-workflow button[hidden] { display:none; }
+.study-workflow #shmsg:empty { display:none; }
+@media(max-width:600px) { .study-workflow #studyState { flex-basis:100%; } }

@@ -1,3 +1,4 @@
+import {installStudyWorkflow} from '../simulation-workflow.js?v=study-controls-20261026-1';
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
@@ -161,9 +162,13 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
       ${rooms.length ? `<label class="shsel">Room<select id="room">${rooms.map((c) => `<option value="${c.id}" ${c === room ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
       <a class="shsite" href="${pilot?'#/project-settings/'+p.id+'?return='+sim.id:'#/account'}">${pilot?`${esc((site?.label||'Site').split(',')[0])} · Shared r${shared.revision} ↗`:`${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}`}</a>
       <button type="button" class="btn sm" id="reviewInputs">Review inputs${readiness.warnings.length?' ('+readiness.warnings.length+')':''}</button>
-      <span class="sp"></span>
-      <span class="note" id="shmsg" role="status" aria-live="polite"></span>
-      <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
+      <div class="study-workflow" role="group" aria-label="Calculate and save">
+        <span id="studyState" role="status" aria-live="polite">Preparing study…</span>
+        <span class="note" id="shmsg" role="status" aria-live="polite"></span>
+        <button type="button" class="btn sm accent" id="runStudy" disabled>Run study</button>
+        <button type="button" class="btn sm" id="stopStudy" hidden>Stop calculation</button>
+        <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
+      </div>
     </div>
     ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" style="visibility:hidden" src="../emb/${file}.html?layout=unified&v=${encodeURIComponent(ENGINE_RELEASE)}${pilot?'&pilot=shared':''}"></iframe><div id="engineLoading" role="status" style="position:absolute;inset:80px 0 0;display:grid;place-items:center;background:var(--bg);z-index:2">Loading saved model and current Settings…</div>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
@@ -240,6 +245,10 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   // Account values into the engine's own inputs (each stays editable there)
   const OV = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })();   // values changed in the batch panel
   let weatherTask=null,weatherFailure=null;
+  const workflow=installStudyWorkflow({frame:fr,id:sim.id,runButton:$('#runStudy',app),stopButton:$('#stopStudy',app),status:$('#studyState',app),saveButton:saveBtn,
+    prepared:()=>loaded&&fr.dataset.pcVisibleReady==='true',
+    weatherReady:()=>!WEATHER.includes(sim.id)||!!weatherTask&&!weatherFailure&&!doc()?.body.dataset.pcSharedWeatherLoading,
+    hasSnapshot:()=>!pilot||!!pilotRunSnapshot});
   function prefill(skipDate=false) {
     const D = doc(), vals = Object.assign({}, pilot?{city:'custom',lat:site.lat,lon:site.lon,tz:t.tz,north:site.north??0}: {}, cfg.prefill?.(ctx) || {}); if (!alive || !D) return;
     if (batch) for (const [id, val] of Object.entries(OV)) if (val != null && val !== '') { if (!(id in vals)) vals[id] = val; else ovApply[id] = val; }
@@ -265,6 +274,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     D.getElementById('pilotResetShared').onclick=()=>{enabled.checked=false;fields.disabled=true;prefill(true);status();};
     const capture=()=>{pilotRunSnapshot={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},sim.id),site:S.clone(site),defaults:S.clone(A),studyOnlyOverrides:enabled.checked,effective:fr.contentWindow.__pcAnalysisState?.().conditions||{}};};
     for(const id of ['run','longGo','lvStart'])D.getElementById(id)?.addEventListener('click',capture,true);
+    if(sim.id==='daylight')D.getElementById('lvSeg')?.addEventListener('click',e=>{if(e.target.closest('[data-l]'))capture();},true);
     D.getElementById('epwF')?.addEventListener('change',()=>{if(D.body.dataset.pcSharedWeatherLoading)return;enabled.checked=true;fields.disabled=false;status();});
   }
   // file-based inputs (DXF plan, OBJ site) go into the engine's own file picker, as if the person had opened the file
@@ -297,6 +307,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     return [];
   }
   function store(kpis, analysis = null) {
+    if(!workflow.canSave()){say('Calculate the current model and settings before saving a result.',true);if(batch)batchNoResult=true;return;}
     if((WEATHER.includes(sim.id)&&sim.id!=='wind'&&!weatherTask)||weatherFailure||doc()?.body.dataset.pcSharedWeatherLoading){say('Project weather is not ready. Resolve the shared EPW before saving.',true);return;}
     if(pilot){const ready=SUN.includes(sim.id)?!!fr.contentWindow.__sun?.S.lastR&&!fr.contentWindow.__sun.S.busy:fr.contentWindow.__pcAnalysisState?.().ready;
       if(!ready||!pilotRunSnapshot){say('Run the current Workspace model and settings before saving.',true);if(batch)batchNoResult=true;return;}}
@@ -324,6 +335,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
     try { fr.contentWindow.postMessage({ pc: 1, t: 'saved', count: p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).length }, '*'); } catch (e) { }
+    workflow.markSaved();
     toast(`Saved to v${v.n}`); say(p.versions.length<2?`Saved to v${v.n} · <a href="#/workspace/${p.id}">Edit one design change →</a>`:`Saved to v${v.n} · <a href="#/results/${p.id}?sim=${sim.id}">Compare versions →</a>`);
   }
   // batch: run the engine the way a person would (its own Run button, its own Start confirmation for long runs), wait until it
@@ -350,6 +362,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   }
   saveBtn.onclick = () => {
     const D = doc(); if (!D) return;
+    if(!workflow.canSave()){say('Calculate the current model and settings before saving a result.',true);if(batch)batchNoResult=true;return;}
     const own = cfg.save ? D.querySelector(cfg.save) : D.getElementById('pcAdd');
     if (own && !own.disabled) { own.click(); return; }
     store(kpisNow());
@@ -384,12 +397,12 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
       h.setAttribute('aria-expanded', String(!sec.classList.contains('pc-col')));
       const tog = () => { sec.classList.toggle('pc-col'); h.setAttribute('aria-expanded', String(!sec.classList.contains('pc-col'))); try { localStorage.setItem(k, sec.classList.contains('pc-col') ? '1' : '0'); } catch (e) { } };
       h.addEventListener('click', tog); h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } }); }
-    saveBtn.disabled = false;
+    workflow.refresh();
     D.defaultView.dispatchEvent(new Event('resize'));
     if (!loaded && (cfg.input === 'dxf' || cfg.input === 'obj' || cfg.input === 'none')) setTimeout(async () => { await feedFile(); if (batch && loaded) setTimeout(autoRun, cfg.input === 'obj' ? 2500 : 1500); }, cfg.input === 'none' ? 300 : 1200);
   };
   fr.addEventListener('load', () => { tries = 0; loaded = false; shell(); }); shell();
-  return () => { alive = false; removeEventListener('message', onMsg); delete window.__pcHO; };
+  return () => { alive = false; workflow.dispose(); removeEventListener('message', onMsg); delete window.__pcHO; };
 }
 
 // ---- for the batch panel in Results: the inputs this engine takes from Account (the ones its own left column prefills),
