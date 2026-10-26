@@ -36,13 +36,13 @@ const reveal=require('./reveal-simulation-control.cjs');
   }
   await p.waitForTimeout(250);
   assert.equal(await f.locator('.app').getAttribute('data-pc-unified'),'true',id+': '+await f.locator('.app').getAttribute('data-pc-unified-blocked'));
-  assert.deepEqual(await f.locator('#panelL [role=tab]').allTextContents(),['Settings','Export']);
+  assert.deepEqual(await f.locator('#panelL .pc-fit-tabs button').allTextContents(),['Settings','Export']);
   const settings=await f.locator('#panelL .pc-fit-content').evaluate(e=>({transform:getComputedStyle(e).transform,height:e.scrollHeight,available:e.parentElement.clientHeight}));assert.equal(settings.transform,'none');assert(settings.height<=settings.available+2);
   await f.locator('#panelR [role=tab]').getByText('Charts',{exact:true}).click();await p.waitForTimeout(200);assert.equal(await f.locator('#panelR .pc-fit-pages').isVisible(),false);
   for(const c of await f.locator('#unifiedCharts canvas').all()){assert(await c.isVisible(),await c.evaluate(c=>JSON.stringify({id:c.id,display:getComputedStyle(c).display,hidden:c.hidden,parents:[...function*(n){while(n){yield n;n=n.parentElement;}}(c)].slice(0,5).map(e=>[e.id,e.className,getComputedStyle(e).display,e.hidden])})));const size=await c.evaluate(c=>({bitmap:c.height,css:c.clientHeight,dpr:devicePixelRatio,painted:c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v)}));assert(Math.abs(size.bitmap-size.css*size.dpr)<=2);assert(size.painted);}
   if(id==='evac'){await f.locator('#cPairs').focus();await p.keyboard.press('ArrowRight');assert.notEqual(await p.evaluate(()=>document.querySelector('#eng').contentWindow.__ci.S.hp),null);}
   await p.screenshot({path:require('os').tmpdir()+'/selected-layout-'+id+'.png'});
-  await f.locator('#panelL [role=tab]').getByText('Export',{exact:true}).click();await f.locator('#unifiedExport').waitFor({state:'visible'});
+  await f.locator('#panelL .pc-fit-tabs button').getByText('Export',{exact:true}).click();await f.locator('#unifiedExport').waitFor({state:'visible'});
   assert.deepEqual(errors,[]);console.log('PASS '+id+': actual inputs/run, fixed Settings, Charts list, high DPI, Export');await p.close();
  }
  const p=await browser.newPage();await p.goto(base+'/mvp/#/pricing');await p.locator('[data-y="0"]').click();assert.equal(await p.locator('#price').textContent(),'CAD 16.99');await p.locator('[data-y="1"]').click();assert.equal(await p.locator('#price').textContent(),'CAD 79');console.log('PASS monthly CAD 16.99; annual CAD 79 unchanged');await p.close();

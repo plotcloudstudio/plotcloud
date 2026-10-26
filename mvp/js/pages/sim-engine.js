@@ -17,7 +17,7 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
-import { installSimulationFit } from '../../../ui/simulation-fit.js?v=unified-20261025-5';
+import { installSimulationFit } from '../../../ui/simulation-fit.js?v=panel-scroll-20261026-1';
 // Engine HTML must change cache keys with the host module, not just its nested JS.
 const ENGINE_RELEASE=new URL(import.meta.url).searchParams.get('v')||'unified-20261025-5';
 

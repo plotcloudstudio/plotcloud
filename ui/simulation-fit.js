@@ -1,6 +1,6 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
-import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=unified-20261025-1';
-import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=header-20261025-fix';
+import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=panel-scroll-20261026-1';
+import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=panel-scroll-20261026-1';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){
@@ -64,16 +64,14 @@ export function installSimulationFit(doc = document) {
       .pc-simulation-fit .rail,.pc-simulation-fit .peekX{display:none!important}
       .pc-simulation-fit .pc-fit-panel{display:flex!important;flex-direction:column!important;min-height:0!important;overflow:hidden!important;padding:8px!important;gap:8px;box-sizing:border-box}
       .pc-simulation-fit .pc-fit-tabs{display:flex;flex-wrap:wrap;gap:4px;flex:none}
-      .pc-simulation-fit .pc-fit-tabs button,.pc-simulation-fit .pc-fit-pages button{font:500 12px var(--f-body,system-ui);padding:5px 8px;min-height:28px;border:1px solid var(--line,#ddd);border-radius:5px;background:var(--surface,#fff);color:var(--ink,#222);cursor:pointer}
-      .pc-simulation-fit .pc-fit-tabs button[aria-selected=true]{background:var(--accent-soft,#fbe9e5);border-color:var(--accent,#d8402a);color:var(--accent,#d8402a)}
-      .pc-simulation-fit .pc-fit-window{flex:1;min-height:0;overflow:hidden;position:relative}
-      .pc-simulation-fit .pc-fit-content{transform-origin:top left;position:absolute;top:0;left:0;width:100%}
+      .pc-simulation-fit .pc-fit-tabs button{font:500 12px var(--f-body,system-ui);padding:5px 8px;min-height:28px;border:1px solid var(--line,#ddd);border-radius:5px;background:var(--surface,#fff);color:var(--ink,#222);cursor:pointer}
+      .pc-simulation-fit .pc-fit-tabs button:is([aria-selected=true],[aria-current=location]){background:var(--accent-soft,#fbe9e5);border-color:var(--accent,#d8402a);color:var(--accent,#d8402a)}
+      .pc-simulation-fit .pc-fit-window{flex:1;min-height:0;overflow:auto;position:relative;overscroll-behavior:contain;scrollbar-gutter:stable;scroll-padding:8px}
+      .pc-simulation-fit .pc-fit-content{position:relative!important;top:auto!important;left:auto!important;width:100%!important;transform:none!important}
       .pc-simulation-fit .pc-fit-content>.colIn{transform:none!important;width:auto!important;min-height:0!important;padding:0!important;overflow:visible!important;display:block!important}
       .pc-simulation-fit .pc-fit-item{flex:none!important;min-height:0!important;margin:0!important;overflow:visible!important}
       .pc-simulation-fit .pc-fit-item[data-pc-fit-active=false]{display:none!important}
       .pc-simulation-fit .pc-fit-item.shut>:not(h2):not([hidden]),.pc-simulation-fit .pc-fit-item.pc-col>:not(h2):not([hidden]){display:revert!important}
-      .pc-simulation-fit .pc-fit-pages{display:flex;align-items:center;justify-content:space-between;gap:6px;flex:none;font-size:11px}
-      .pc-simulation-fit .pc-fit-pages[hidden]{display:none!important}
       .pc-simulation-fit .pc-fit-content .chartp{position:static!important;display:grid!important;width:auto!important;height:auto!important;padding:8px!important;overflow:visible!important;border:0!important}
       .pc-simulation-fit .pc-fit-content .chartp canvas{display:block!important;position:static!important;inset:auto!important;width:100%!important}
       .pc-simulation-fit .pc-fit-content .chartp :is(#runoffChart,#pondChart){height:150px!important}
@@ -91,59 +89,40 @@ export function installSimulationFit(doc = document) {
   doc.head.append(css);
   let pending = false;
   const panels = new Map();
-  function fitPanel(panel, state) {
-    if (win.innerWidth <= 900 || !panel.getBoundingClientRect().height) return;
-    const { content, viewport, pages, label, prev, next } = state;
-    // Engine-hidden Results must not be forced into view before a run.
+  function fitPanel(panel,state){
+    if(win.innerWidth<=900||!panel.getBoundingClientRect().height)return;
+    const {content,viewport}=state;
     state.items.forEach(el=>el.removeAttribute('data-pc-fit-active'));
-    const available = state.items.filter(el => !el.hidden && win.getComputedStyle(el).display !== 'none');
-    if (!available.includes(state.active)) state.active = available[0];
-    state.items.forEach(el => { const active = el === state.active; el.dataset.pcFitActive = String(active); const b = state.buttons.get(el); if (b) { b.hidden = !available.includes(el); b.setAttribute('aria-selected', String(active)); } });
-    if (!state.active) return;
-    content.style.transform = ''; content.style.width = '100%';
-    pages.hidden = true;
-    if(panel.closest('[data-pc-unified]')&&state.active.id!=='unifiedResults'){
-      if(state.active.id==='unifiedSettings'){const overhead=Math.max(0,content.scrollHeight-state.active.getBoundingClientRect().height);panel.closest('[data-pc-unified]').pcFitSettings?.(viewport.clientHeight-overhead);}
-      if(state.active.id==='unifiedCharts'){fitSolarCharts(doc,viewport);const key=viewport.clientWidth+':'+viewport.clientHeight;if(state.unifiedChartSize!==key){state.unifiedChartSize=key;win.__pcUnifiedCharts?.();win.__pcWindCharts?.();}}
-      if(content.scrollHeight<=viewport.clientHeight+2){state.page=0;state.scale=1;content.style.transform='none';return;}
-      // Constrain only this panel. Never silently resurrect the legacy toolbar.
+    const available=state.items.filter(el=>!el.hidden&&win.getComputedStyle(el).display!=='none');
+    if(!available.includes(state.active))state.active=available[0];
+    state.items.forEach(el=>{
+      const visible=available.includes(el)&&(state.continuous||el===state.active);el.dataset.pcFitActive=String(visible);
+      const button=state.buttons.get(el);if(!button)return;
+      const hidden=!available.includes(el);if(button.hidden!==hidden)button.hidden=hidden;
+      if(state.continuous){button.removeAttribute('aria-selected');if(el===state.active)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');}
+      else button.setAttribute('aria-selected',String(el===state.active));
+    });
+    const hideTabs=available.length<=1;if(state.tabs.hidden!==hideTabs)state.tabs.hidden=hideTabs;
+    content.style.transform='none';content.style.width='100%';state.scale=1;state.page=0;
+    if(!state.active)return;
+    if(state.active.id==='unifiedCharts'||state.active.id==='pilotCharts'){
+      fitSolarCharts(doc,viewport);const key=viewport.clientWidth+':scroll';
+      if(state.unifiedChartSize!==key){state.unifiedChartSize=key;win.__pcUnifiedCharts?.();win.__pcWindCharts?.();}
     }
-    fitSolarCharts(doc,viewport);
-    if(state.active.contains(doc.getElementById('rose'))){const key=viewport.clientWidth+':'+win.innerHeight;if(state.windChartSize!==key){state.windChartSize=key;win.__pcWindCharts?.();}}
-    const natural = Math.max(1, content.scrollHeight), have = viewport.clientHeight;
-    let scale = panel.closest('[data-pc-unified]')?1:Math.min(1, Math.max(.85, have / natural));
-    content.style.width = `${100 / scale}%`;
-    const height = content.scrollHeight * scale;
-    // Long groups have explicit Previous/Next pages instead of wheel scrolling or tiny text.
-    const paging = height > have + 2;
-    pages.hidden = !paging;
-    const pageHeight = Math.max(1, viewport.clientHeight - 12);
-    // Leave a small overlap so a row spanning a page boundary is still reachable in full.
-    state.step = Math.max(1, pageHeight - Math.min(56,pageHeight*.25)); state.scale = scale;
-    const last = Math.max(0, Math.ceil((height - viewport.clientHeight) / state.step));
-    state.page = Math.max(0,Math.min(state.page, last));
-    content.style.transform = `translateY(${-state.page * state.step}px) scale(${scale})`;
-    viewport.scrollTop=0;panel.scrollTop=0;
-    label.textContent = `${panel.closest('[data-pc-unified]')&&paging?'Window too short · ':''}${titleOf(state.active)} · ${state.page + 1} / ${last + 1}`;
-    prev.disabled = state.page === 0; next.disabled = state.page >= last;
+    if(state.active.contains(doc.getElementById('rose'))){const key=viewport.clientWidth+':scroll';if(state.windChartSize!==key){state.windChartSize=key;win.__pcWindCharts?.();}}
   }
   function enhance(panel) {
     if (panels.has(panel)) return;
     let inner = panel.querySelector(':scope > .colIn');
     if (!inner) { inner = doc.createElement('div'); inner.className = 'colIn'; while (panel.firstChild) inner.append(panel.firstChild);if(panel.classList.contains('cpg')){const section=doc.createElement('section');section.className='sec';while(inner.firstChild)section.append(inner.firstChild);inner.append(section);}panel.append(inner); }
-    const tabs = doc.createElement('div'); tabs.className = 'pc-fit-tabs'; tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', panel.id === 'panelR' ? 'Results sections' : 'Parameter sections');
-    const viewport = doc.createElement('div'); viewport.className = 'pc-fit-window';
+    const tabs = doc.createElement('div'); tabs.className = 'pc-fit-tabs'; tabs.setAttribute('role', panel.id==='panelL'?'navigation':'tablist'); tabs.setAttribute('aria-label', panel.id==='panelL'?'Settings and export navigation':'Results sections');
+    const viewport = doc.createElement('div'); viewport.className = 'pc-fit-window';viewport.dataset.pcScrollPanel='true';viewport.setAttribute('role','region');viewport.setAttribute('aria-label',panel.id==='panelL'?'Settings and export':'Study results');viewport.tabIndex=0;
     const content = doc.createElement('div'); content.className = 'pc-fit-content'; content.append(inner); viewport.append(content);
-    const pages = doc.createElement('div'); pages.className = 'pc-fit-pages'; pages.hidden = true;
-    const prev = doc.createElement('button'), next = doc.createElement('button'), label = doc.createElement('span');
-    prev.type = next.type = 'button'; prev.textContent = '← Previous'; next.textContent = 'Next →'; pages.append(prev, label, next);
-    panel.classList.add('pc-fit-panel'); panel.append(tabs, viewport, pages);
-    const state = { content, viewport, tabs, pages, prev, next, label, items: [], buttons: new Map(), active: null, page: 0 };
+    panel.classList.add('pc-fit-panel'); panel.append(tabs, viewport);
+    const state = { content, viewport, tabs, continuous:panel.id==='panelL', items: [], buttons: new Map(), active: null, page: 0 };
     panels.set(panel, state);
-    prev.onclick = () => { state.page--; schedule(); }; next.onclick = () => { state.page++; schedule(); };
-    panel.addEventListener('focusin', e => { if (!content.contains(e.target)) return; const item = state.items.find(el => el.contains(e.target)); if (!item) return; state.active = item; const targetY = (e.target.getBoundingClientRect().top - content.getBoundingClientRect().top); state.page = Math.floor(targetY / Math.max(1,state.step)); schedule(); });
-    // Native scrolling is unnecessary here; model wheel events remain the engine's zoom.
-    panel.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+    panel.addEventListener('focusin',e=>{if(!content.contains(e.target))return;const item=state.items.find(el=>el.contains(e.target));if(!item)return;state.active=item;schedule();});
+    // Wheel, trackpad, touch and keyboard use the panel's native scroll container.
     new win.ResizeObserver(schedule).observe(panel);
   }
   function refresh() {
@@ -172,14 +151,13 @@ export function installSimulationFit(doc = document) {
       const inner = state.content.firstElementChild;
       for (const el of [...inner.children]) {
         if (!el.matches('.sec,.card,.chartp,.cpg') || state.buttons.has(el)) continue;
-        const b = doc.createElement('button'); b.type = 'button'; b.textContent = titleOf(el); b.setAttribute('role','tab');
-        b.onclick = () => { state.active = el; state.page = 0; schedule();if(el.querySelector('#chartp')&&typeof win.drawCharts==='function')win.requestAnimationFrame(()=>win.drawCharts()); };
+        const b = doc.createElement('button'); b.type = 'button'; b.textContent = titleOf(el); if(state.continuous){b.setAttribute('aria-label','Jump to '+titleOf(el));b.title='Scroll to '+titleOf(el)+' in this panel';}else b.setAttribute('role','tab');
+        b.onclick = () => { state.active = el;if(state.continuous){fitPanel(panel,state);state.viewport.scrollTop+=el.getBoundingClientRect().top-state.viewport.getBoundingClientRect().top-8;}else{state.viewport.scrollTop=0;schedule();}if(el.querySelector('#chartp')&&typeof win.drawCharts==='function')win.requestAnimationFrame(()=>win.drawCharts()); };
         el.classList.add('pc-fit-item'); state.tabs.append(b); state.items.push(el); state.buttons.set(el, b);
         const h=el.querySelector(':scope > h2.pc-tog');if(h){h.classList.remove('pc-tog');h.removeAttribute('role');h.removeAttribute('aria-expanded');h.tabIndex=-1;h.addEventListener('click',e=>e.stopImmediatePropagation(),true);}
       }
       // Prefer Analysis on the left, Results on the right; retain an explicit user's tab thereafter.
       if (!state.active) state.active = state.items.find(el=>titleOf(el)===panel.dataset.pcPreferredTab&&!el.hidden) || state.items.find(el => /^(Analysis|Results|Simulation)$/i.test(titleOf(el)) && !el.hidden) || state.items.find(el => !el.hidden);
-      state.tabs.hidden=state.items.length===1;
       fitPanel(panel, state);
     }
   }
@@ -193,5 +171,5 @@ export function installSimulationFit(doc = document) {
     const child = () => { try { if (frame.contentDocument?.body) installSimulationFit(frame.contentDocument); } catch {} };
     frame.addEventListener('load', child); child();
   }
-  win.PlotCloudSimulationFit = { refresh: schedule, panels };
+  win.PlotCloudSimulationFit = { version:'panel-scroll-20261026-1',refresh: schedule, panels };
 }

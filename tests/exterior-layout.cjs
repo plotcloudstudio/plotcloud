@@ -6,14 +6,14 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
  const tab=async(f,side,name)=>{await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#panel'+side+' .pc-fit-item[data-pc-fit-active=true]').waitFor();await page.waitForTimeout(60);};
  async function layout(f){
   await f.locator('.app[data-pc-exterior-layout="1"]').waitFor();
-  await f.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Settings',exact:true}).waitFor();
+  await f.locator('#panelL .pc-fit-tabs').getByRole('button',{name:'Jump to Settings',exact:true}).waitFor();
   assert.equal(await f.locator('.sec h2 i').count(),0);
   assert.equal(await f.locator('[data-view=split]').count(),0);
   assert.equal(await f.locator('#chartp').evaluate(e=>e.closest('.lgdsec')===document.querySelector('#legend').closest('.lgdsec')),true);
   assert.equal(await f.locator('#h-res').evaluate(e=>e.closest('#panelR')?.id),'panelR');
   assert.equal(await f.locator('#h-set,#h-lay').evaluate(e=>e.closest('#panelL')?.id),'panelL');
   assert.equal(await f.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Legend',exact:true}).count(),0);
-  assert.equal(await f.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Settings',exact:true}).count(),1);
+  assert.equal(await f.locator('#panelL .pc-fit-tabs').getByRole('button',{name:'Jump to Settings',exact:true}).count(),1);
  }
  try{
   await page.goto(base+'/mvp/#/simulations/wind');let f=page.frameLocator('#eng');await layout(f);

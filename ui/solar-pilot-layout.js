@@ -46,7 +46,7 @@ export function fitSolarCharts(doc,viewport){
  const flexible=[...charts.querySelectorAll('canvas')].filter(c=>!['cCrit','cRooms'].includes(c.id));
  if(!flexible.length)return;
  const fixed=charts.getBoundingClientRect().height-flexible.reduce((n,c)=>n+c.getBoundingClientRect().height,0);
- const room=Math.max(0,viewport.clientHeight-fixed-4),each=Math.max(58,Math.min(150,Math.floor(room/flexible.length)));
+ const room=Math.max(0,viewport.clientHeight-fixed-4),each=viewport.dataset?.pcScrollPanel==='true'?150:Math.max(58,Math.min(150,Math.floor(room/flexible.length)));
  let changed=false;
  for(const c of flexible)if(c.dataset.chartHeight!==String(each)){c.dataset.chartHeight=each;changed=true;}
  if(changed)doc.defaultView.__pcRedrawCharts?.();

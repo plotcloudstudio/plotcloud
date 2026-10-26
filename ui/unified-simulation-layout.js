@@ -1,4 +1,4 @@
-import {settingsAccordion} from './simulation-settings-accordion.js?v=1';
+import {settingsAccordion} from './simulation-settings-accordion.js?v=panel-scroll-20261026-1';
 // Reparent the engine's real controls: do not clone IDs, listeners, geometry or results.
 export function prepareUnifiedSimulation(doc){
  const win=doc.defaultView;
@@ -182,7 +182,7 @@ export function prepareUnifiedSimulation(doc){
  for(const [panel,group]of [[doc.getElementById('panelL'),settings],[doc.getElementById('panelL'),exports],[doc.getElementById('panelR'),charts]]){
   group.classList.add('pc-fit-content');
   const before=group.getAttribute('style');group.style.cssText=`position:fixed;left:0;top:0;width:${Math.max(200,panel.clientWidth-16)}px;box-sizing:border-box;visibility:hidden;transform:none!important`;
-  const available=Math.floor(panel.clientHeight-56);if(group===settings)app.pcFitSettings(available);
+  const available=Math.floor(panel.clientHeight-56);
   const required=Math.ceil(group.getBoundingClientRect().height);
   measured.push({group:group.querySelector('h2').textContent,required,available,...(group.id==='unifiedCharts'?{plots:[...group.querySelectorAll('canvas')].map(c=>({id:c.id,height:Math.round(c.getBoundingClientRect().height)})),sections:[...group.querySelectorAll('#chartp>.cpg')].map(c=>({title:c.querySelector('.cph b')?.textContent,height:Math.round(c.getBoundingClientRect().height)}))}:{})});
   if(before===null)group.removeAttribute('style');else group.setAttribute('style',before);

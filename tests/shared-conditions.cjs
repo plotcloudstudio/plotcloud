@@ -21,7 +21,7 @@ try{
  await p.evaluate(async id=>{const S=await import('./js/store.js');localStorage.setItem('pc-mvp-current',id);},state.id);
  const open=async id=>{await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-settings-ready="true"]').waitFor();const f=p.frameLocator('#eng');await f.locator('#pilotSettings').waitFor();return f;};
  const tab=async(f,side,name)=>{await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#pilot'+name).waitFor({state:'visible'});await p.waitForTimeout(60);};
- const reach=async(f,selector,side='L')=>{for(let n=0;n<20;n++){const pos=await f.locator(selector).evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return r.top<v.top+1?-1:r.bottom>v.bottom-1?1:0;});if(!pos)return;const b=f.locator('#panel'+side+' .pc-fit-pages').getByRole('button',{name:pos<0?'← Previous':'Next →',exact:true});if(!await b.isVisible()||!await b.isEnabled())break;await b.click();await p.waitForTimeout(50);}throw Error('Not reachable through panel pages: '+selector);};
+ const reach=async(f,selector)=>{await f.locator(selector).scrollIntoViewIfNeeded();};
  const fill=async(f,id,val)=>{await f.locator('#'+id).fill(String(val));await f.locator('#'+id).dispatchEvent('change');};
  for(const id of ['sunhours','daylight']){
   const f=await open(id);
