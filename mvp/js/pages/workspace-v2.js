@@ -28,7 +28,7 @@ const TOOLS = {
   mass: { label: 'Massing', icon: I('<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>'), sections: [
     ['Massing', ['Mass outline', 'Rectangle mass']], ['Surroundings', ['Neighbour building']]] },
   draw: { label: 'Draw room', icon: I('<rect x="4" y="4" width="16" height="16"/><path d="M4 12h7v8"/>'), sections: [
-    ['Draw rooms', ['Straight wall', 'Rectangle room', 'Arc wall', 'Floor', 'Fence']],
+    ['Draw rooms', ['Straight wall', 'Rectangle room', 'Arc wall', 'Floor']],
     ['Add structure', ['Straight stair', 'L-shaped stair', 'U-shaped stair', 'Spiral stair', 'Accessible ramp', 'Floor opening']]] },
   door: { label: 'Door', icon: I('<path d="M5 20h14"/><path d="M7 20V5h7v15"/><path d="M14 5a9 9 0 0 1 6 8.5"/><circle cx="12" cy="13" r=".6" fill="currentColor"/>'), sections: [
     ['Doors', ['Exterior door', 'Interior door', 'Exit door', 'Accessible door']]] },
@@ -127,7 +127,7 @@ export function render(app, [pid]) {
     UI.sels = ids; UI.selProject = p.id; if (ids.length) openOnly(comp(ids.at(-1)).layer); saveUI();
     showParams = ids.length > 0 && params;
     const s = ids.length === 1 ? psSel(ids[0]) : null;   // Plan Studio selects one object: the panes follow a single Plan Studio pick
-    for (const [r, I2] of Object.entries(INST)) if (r !== from && I2.ready) I2.ws.select(s);
+    for (const [r, I2] of Object.entries(INST)) if (I2.ready) { if (r !== from) I2.ws.select(s); I2.ws.selectMany?.(ids.map(psSel).filter(Boolean)); }
     for (const f of subs) f(ids);
   }
   // Rhino: Shift adds, Ctrl (or Cmd) removes, plain click or box replaces
@@ -138,7 +138,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws7-20261025`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws8-20261026`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -155,11 +155,13 @@ export function render(app, [pid]) {
     <div class="w3-pane" data-pane="persp"><iframe id="fPersp" title="Perspective (Plan Studio 3D)" src="${fsrc('persp')}"></iframe></div>
     <div class="w3-pane" data-pane="shaded"><div class="w3-body"><div class="vp" id="vp"></div><div class="hint" id="hint"></div></div></div>
     <div class="w2-cap" id="cap">
+      <button type="button" id="addLevel" title="Add a level above the model" aria-label="Add level above" disabled>+ Level</button>
+      <span class="w2-sep" aria-hidden="true"></span>
       <div><button type="button" id="vBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="vMenu" role="menu" hidden></div></div>
       <span class="w2-sep" aria-hidden="true"></span>
       <div><button type="button" id="dBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="dMenu" role="menu" hidden></div></div>
     </div>
-    <div class="w2-tr"><button class="btn sm" id="fit">Fit</button></div>
+    <div class="w2-tr"><button class="btn accent sm" id="sendSim">Send to Simulation</button><button class="btn sm" id="editSite">Edit site</button><button class="btn sm" id="fit">Fit</button></div>
   </section>
   <aside class="w2-right" aria-label="Panels">
     <div class="w3-tabs"><div class="w3-tlist" role="tablist" id="tabList" aria-label="Panels"></div>
@@ -204,6 +206,7 @@ export function render(app, [pid]) {
   // ---- the panes: Plan Studio instances that call window.__wsHub; they are told the model, layers, locks, snaps and selection
   const INST = { plan: { el: $('#fPlan', app) }, persp: { el: $('#fPersp', app) }, props: { el: $('#fProps', app) } };
   const ready = () => Object.values(INST).filter((x) => x.ready);
+  const activePane = () => INST[UI.view === 'persp' ? 'persp' : 'plan'];
   const any = () => INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : INST.props.ready ? INST.props.ws : null;
   const layerVis = () => { const map = { parts: true, ref: true }; for (const [L, ids] of Object.entries(LMAP)) { const l = M().layers.find((x) => x.name === L), on = l ? l.visible !== false : true; for (const id of ids) map[id] = on; } return map; };
   const lockList = () => M().layers.filter((l) => l.locked).map((l) => l.name);
@@ -220,6 +223,8 @@ export function render(app, [pid]) {
     change(role, snap, live) {
       if (dead || (snap === SNAP && live)) return; SNAP = snap;   // the same model again, not live: a drag was let go, so it is kept now
       for (const [r, I2] of Object.entries(INST)) if (r !== role && I2.ready) I2.ws.apply(snap, live);
+      // A newly added level must exist in each model before its selection is forwarded.
+      if (!live && INST[role]?.ready) { const lv = INST[role].ws.state().lv; for (const [r, I2] of Object.entries(INST)) if (r !== role && I2.ready) I2.ws.level(lv); }
       for (const I2 of ready()) I2.ws.histUI();
       if (!live) { p.draft.studio = JSON.parse(snap); levelUI(); }
       derive(live);
@@ -228,7 +233,8 @@ export function render(app, [pid]) {
     pushUndo(before) { if (INST.plan.ready) INST.plan.ws.pushUndo(before); },
     undo() { if (INST.plan.ready) INST.plan.ws.undo(); }, redo() { if (INST.plan.ready) INST.plan.ws.redo(); },
     hist() { return INST.plan.ready ? INST.plan.ws.hist() : { u: 0, r: 0 }; },
-    select(role, s) { if (dead) return; const id = s ? psId(s) : null;
+    box(role, items, mods) { boxPick(items.map(psId), mods); },
+    select(role, s, mods = {}) { if (mods.add || mods.remove) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
       if (!id) { if (UI.sels.some((x) => PS.test(x))) setSel([], { from: role }); return; }   // empty space in a pane clears a Plan Studio pick; an imported mesh picked in Shaded stays
       if (UI.sels.length === 1 && UI.sels[0] === id) return;
       if (comp(id)) setSel([id], { from: role }); else pendSel = { id, role }; },   // just made (placed, drawn): selected once it is listed
@@ -287,6 +293,7 @@ export function render(app, [pid]) {
   const persist = () => { S.save(); state(); };
   const SELHELP = 'Click to select · drag a box: left→right inside, right→left touching · Shift adds, Ctrl removes · Tab cycles what is under the cursor';
   function hint() { const h = $('#hint', app); h.title = SELHELP; h.textContent = tabInfo ? `${tabInfo.name} — ${tabInfo.index + 1} of ${tabInfo.count} under the cursor${tabInfo.count > 1 ? ' · Tab for the next one' : ''} · click to select` : 'View only · right-drag orbits · Shift+right-drag pans · scroll zooms · click or box to select'; }
+  $('#addLevel', app).onclick = () => { const pane = activePane(); if (!pane.ready) return; pane.win.document.getElementById('lvAdd')?.click(); pane.el.focus(); };
   $('#fit', app).onclick = () => { if (UI.view === 'shaded') vp.fit(); else if (UI.view === 'plan' && INST.plan.ready) INST.plan.win.document.getElementById('fitBtn')?.click(); else if (INST.persp.ready) INST.persp.win.document.getElementById('fitBtn')?.click(); };
   hint();
 
@@ -296,7 +303,7 @@ export function render(app, [pid]) {
   const DISPLAYS = [['shaded', 'Shaded'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe']];
   if (UI.view === 'shaded') UI.view = 'persp';   // the Shaded view is gone (2026-10-25): Perspective draws the imports and the site
   if (!['plan', 'persp'].includes(UI.view)) UI.view = 'plan';
-  function showView(v) { UI.view = v; saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
+  function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
   function viewName() {
     const a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null, L = (INST.plan.ready ? INST.plan.ws : any())?.levels();
     const lv = L ? L.list.find((l) => l.id === L.lv) : null;
@@ -429,12 +436,30 @@ export function render(app, [pid]) {
     const t0 = TOOLS[UI.panel], mine = UI.panel === 'furniture' ? myFurn() : null;
     const t = mine ? { ...t0, sections: [['My furniture', ['\u0000import', ...mine.map((x) => '\u0000' + x.id)]], ...t0.sections] } : t0;   // your own pieces first (2026-10-25)
     const tile = (n) => { if (n === '\u0000import') return `<button type="button" class="w2-card w3-impf" data-tool="Import furniture" data-impfurn="1" aria-pressed="false" title="Import a piece of furniture (.obj, .glb, .stl, .3dm): it joins My furniture and can be placed like the others"><span class="im"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 28v-6a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v6"/><path d="M10 30a3 3 0 0 1 6 0v4h16v-4a3 3 0 0 1 6 0v8H10z"/><path d="M24 4v10M19 9l5 5 5-5"/></svg></span><span>Import furniture</span></button>`;
-      if (n[0] === '\u0000') { const x = mine.find((q) => '\u0000' + q.id === n); return `<button type="button" class="w2-card" data-tool="${esc(x.name)}" data-myfurn="${x.id}" aria-pressed="false" title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m: click it, then click in the Plan to place it (R turns it)"><span class="im"><img src="${x.thumb || ''}" alt="" loading="lazy"></span><span>${esc(x.name)}<i class="w3-mfx" data-myfx="${x.id}" role="button" tabindex="0" title="Remove ${esc(x.name)} from My furniture" aria-label="Remove ${esc(x.name)} from My furniture">×</i></span></button>`; } if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the Plan to place it"><span class="im"><img src="img/furniture/${m.id}.png" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
+      if (n[0] === '\u0000') { const x = mine.find((q) => '\u0000' + q.id === n); return `<button type="button" class="w2-card" data-tool="${esc(x.name)}" data-myfurn="${x.id}" aria-pressed="false" title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m: click it, then click in the current view to place it (R turns it)"><span class="im"><img src="${x.thumb || ''}" alt="" loading="lazy"></span><span>${esc(x.name)}<i class="w3-mfx" data-myfx="${x.id}" role="button" tabindex="0" title="Remove ${esc(x.name)} from My furniture" aria-label="Remove ${esc(x.name)} from My furniture">×</i></span></button>`; } if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the current view to place it"><span class="im"><img src="img/furniture/${m.id}.png" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
       const ic = TOOL_ICONS[n], k = TMAP[n]?.key; return `<button type="button" class="w2-tile" data-tool="${esc(n)}" aria-pressed="false" title="${esc(n)}${k ? ` (${k})` : ''}"><span class="im">${ic?.img ? `<img src="${ic.img}" alt="">` : ic?.svg || ''}</span><span>${esc(n)}${k ? ` <em>(${k})</em>` : ''}</span></button>`; };
     const many = t.sections.length > 1, oi = Math.min(UI.acc[UI.panel] || 0, t.sections.length - 1);   // several groups: one open at a time
     host.innerHTML = `<div class="pane w2-tools"><h2>${t.label}</h2>${t.sections.map(([h, items], i) => `<div class="w2-sec${i === oi ? ' w3-fit' : ''}">${many ? `<button type="button" class="w3-acc" data-acc="${i}" aria-expanded="${i === oi}"><span>${i === oi ? '▾' : '▸'} ${esc(h)}</span><small>${items.length}</small></button>` : `<h3>${esc(h)}</h3>`}${i === oi ? `<div class="w2-grid">${items.map(tile).join('')}</div>` : ''}</div>`).join('')}
       <p class="note" id="toolMsg" role="status" aria-live="polite"></p></div>`;
     $$('[data-tool]', host).forEach((b) => b.onclick = (e) => { const fx = e.target.closest('[data-myfx]'); if (fx) { e.stopPropagation(); return dropMyFurn(fx.dataset.myfx); } startTool(b); });
+    $$('[data-tool]', host).forEach(b => b.addEventListener('pointerdown', e => {
+      if (e.button !== 0 || e.target.closest('[data-myfx]') || b.dataset.impfurn) return;
+      e.preventDefault();
+      const x = e.clientX, y = e.clientY; let moved = false;
+      b.setPointerCapture(e.pointerId);
+      const move = ev => { if (Math.hypot(ev.clientX-x, ev.clientY-y)>5) moved = true; };
+      const end = ev => { b.removeEventListener('pointermove', move); b.removeEventListener('pointerup', end); b.removeEventListener('pointercancel', cancel); if (!moved) return;
+        const pane = activePane(), r = pane.el.getBoundingClientRect();
+        if (!pane.ready || ev.clientX<r.left || ev.clientX>r.right || ev.clientY<r.top || ev.clientY>r.bottom) return;
+        b.setAttribute('aria-pressed','false'); startTool(b);
+        const w = pane.win, cv = w.document.getElementById('cv'), init = {clientX:ev.clientX-r.left,clientY:ev.clientY-r.top,button:0,bubbles:true,pointerId:1};
+        for (const type of ['pointermove','pointerdown','pointerup']) cv.dispatchEvent(new w.PointerEvent(type, init));
+        // Pointer capture retargets the generated click to the card; suppress its toggle.
+        b.addEventListener('click', ev => { ev.stopImmediatePropagation(); ev.preventDefault(); }, {once:true,capture:true});
+      };
+      const cancel = () => { b.removeEventListener('pointermove',move); b.removeEventListener('pointerup',end); b.removeEventListener('pointercancel',cancel); };
+      b.addEventListener('pointermove',move); b.addEventListener('pointerup',end); b.addEventListener('pointercancel',cancel);
+    }));
     if (mine) host.insertAdjacentHTML('beforeend', '<input type="file" id="furnFile" accept=".obj,.glb,.gltf,.stl,.3dm" hidden>');
     const ff = $('#furnFile', host); if (ff) ff.onchange = (e) => { const f = e.target.files[0]; if (f) importFurn(f); e.target.value = ''; };
     $$('[data-acc]', host).forEach((b) => b.onclick = () => { UI.acc[UI.panel] = +b.dataset.acc; saveUI(); panel(); });
@@ -455,29 +480,31 @@ export function render(app, [pid]) {
       const thumb = await INST.plan.ws.thumbMesh(mesh), name = (file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'My piece').slice(0, 40);
       const x = { id: S.uid('mf'), name: name[0].toUpperCase() + name.slice(1), w, d, h, tris: Math.round(mesh.length / 9), mesh, thumb, file: file.name, unit, at: new Date().toISOString() };
       myFurn().unshift(x); S.save(); UI.acc.furniture = 0; saveUI(); panel();
-      const m2 = $('#toolMsg', app); if (m2) m2.textContent = `${x.name}: ${w} × ${d} × ${h} m (read as ${unit}), ${x.tris.toLocaleString('en')} triangles. Click it, then click in the Plan to place it.`; }
+      const m2 = $('#toolMsg', app); if (m2) m2.textContent = `${x.name}: ${w} × ${d} × ${h} m (read as ${unit}), ${x.tris.toLocaleString('en')} triangles. Click it, then click in the current view to place it.`; }
     catch (e) { if (msg) msg.textContent = e.message || 'This file could not be read.'; } }
   function startTool(b) {
-    const w = INST.plan.ready ? INST.plan.ws : null, msg = $('#toolMsg', app), n = b.dataset.tool; if (!w) { if (msg) msg.textContent = 'The Plan pane is still starting. Try again in a moment.'; return; }
+    const pane = activePane(), w = pane.ready ? pane.ws : null, msg = $('#toolMsg', app), n = b.dataset.tool; if (!w) { if (msg) msg.textContent = 'The view is still starting. Try again in a moment.'; return; }
     const st = w.state(), on = b.getAttribute('aria-pressed') === 'true';
     if (on) { w.tool({ tool: 'select' }); toolUI(); return; }   // a second click puts the tool down
     if (b.dataset.impfurn) { $('#furnFile', app).click(); return; }
-    if (b.dataset.myfurn) { const x = myFurn().find((q) => q.id === b.dataset.myfurn); if (!x) return; if (UI.view !== 'plan') showView('plan');
+    if (b.dataset.myfurn) { const x = myFurn().find((q) => q.id === b.dataset.myfurn); if (!x) return;
       M().meshes = M().meshes || {}; if (!M().meshes[x.id]) { M().meshes[x.id] = x.mesh; for (const I2 of ready()) if (I2.ws.importMeshes) I2.ws.importMeshes(M().meshes); }   // the project keeps the mesh once; every piece placed shares it
-      w.placeImport({ ref: x.id, name: x.name, w: x.w, d: x.d, h: x.h, tris: x.tris, layer: 'Furniture' }); INST.plan.el.focus(); try { INST.plan.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
-      if (msg) msg.textContent = `Click in the Plan to place the ${x.name}; R turns it, Esc stops.`; toolUI(); return; }
+      w.placeImport({ ref: x.id, name: x.name, w: x.w, d: x.d, h: x.h, tris: x.tris, layer: 'Furniture' }); pane.el.focus(); try { pane.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
+      if (msg) msg.textContent = `Click in the current view to place the ${x.name}; R turns it, Esc stops.`; toolUI(); return; }
     let spec = b.dataset.furn ? { furn: b.dataset.furn } : TMAP[n] || null;
     if (!spec && UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); spec = k ? { light: k[0] } : null; }
     if (!spec) return; void st;
-    if (UI.view !== 'plan') showView('plan');
-    const okk = w.tool(spec); INST.plan.el.focus(); try { INST.plan.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
-    if (msg) msg.textContent = !okk ? 'This tool could not start: see the message in the Plan pane.' : spec.furn ? `Click in the Plan to place the ${n}. Esc to stop.` : ON_WALL.has(spec.tool) ? `Click on a wall in the Plan to place the ${n.toLowerCase()}. It cuts its own opening and moves with the wall.` : spec.stair ? `Click in the Plan to place the ${n.toLowerCase()}.` : spec.light ? `Click in the Plan to place the ${n.toLowerCase()}.` : `${n}: draw in the Plan. ${spec.tool === 'wall' ? 'Click corner to corner, double-click to finish.' : spec.tool === 'room' || spec.tool === 'floor' || spec.tool === 'void' ? 'Drag a rectangle.' : spec.tool === 'arc' ? 'Click the start, the end, then the bend.' : 'Click the points, double-click to finish.'}`;
+
+    for (const other of ready()) if (other !== pane && other !== INST.props) other.ws.tool(spec);
+    const okk = w.tool(spec); pane.el.focus(); try { pane.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
+    if (msg) msg.textContent = !okk ? 'This tool could not start: see the message in the current view pane.' : spec.furn ? `Click in the current view to place the ${n}. Esc to stop.` : ON_WALL.has(spec.tool) ? `Click on a wall in the current view to place the ${n.toLowerCase()}. It cuts its own opening and moves with the wall.` : spec.stair ? `Click in the current view to place the ${n.toLowerCase()}.` : spec.light ? `Click in the current view to place the ${n.toLowerCase()}.` : `${n}: draw in the current view. ${spec.tool === 'wall' ? 'Click corner to corner, double-click to finish.' : spec.tool === 'room' || spec.tool === 'floor' || spec.tool === 'void' ? 'Drag a rectangle.' : spec.tool === 'arc' ? 'Click the start, the end, then the bend.' : 'Click the points, double-click to finish.'}`;
     toolUI();
   }
-  function toolUI() {   // which tile is on: the Plan pane's own tool
-    const w = INST.plan.ready ? INST.plan.ws : null; if (!w) return; const st = w.state();
+  function toolUI() {   // which tile is on: the active Plan Studio view's tool
+    $('#addLevel', app).disabled = !activePane().ready;
+    const pane = activePane(), w = pane.ready ? pane.ws : null; if (!w) return; const st = w.state();
     $$('#panelBody [data-tool]', app).forEach((b) => { const n = b.dataset.tool, s = b.dataset.furn ? { furn: b.dataset.furn } : TMAP[n]; let on = false;
-      if (b.dataset.myfurn) on = st.impPend === b.dataset.myfurn; else if (b.dataset.furn) on = st.tool === 'place' && st.pick === b.dataset.furn; else if (s?.stair) on = st.tool === 'place' && st.pick === s.stair; else if (s?.tool) on = st.tool === s.tool && (!s.opm || st.opm == null || st.opm === s.opm); else if (UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); on = !!k && st.light === k[0]; }
+      if (b.dataset.myfurn) on = st.impPend === b.dataset.myfurn; else if (b.dataset.furn) on = (st.tool === 'place' || st.tool === 'fence') && st.pick === b.dataset.furn; else if (s?.stair) on = st.tool === 'place' && st.pick === s.stair; else if (s?.tool) on = st.tool === s.tool && (!s.opm || st.opm == null || st.opm === s.opm); else if (UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); on = !!k && st.light === k[0]; }
       b.setAttribute('aria-pressed', String(on)); });
   }
   const toolT = setInterval(() => { if (!document.hidden) toolUI(); }, 500);
@@ -568,6 +595,8 @@ export function render(app, [pid]) {
 
   // ---- right: layers (Rhino-style rows), selection, versions, next
   function layers() {
+    const siteLayer = M().layers.find(l => l.name === 'Site');
+    $('#editSite', app).textContent = siteLayer?.locked === false ? 'Finish site editing' : 'Edit site';
     const host = $('#layers', app), comps = M().components;
     for (const c of comps) if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#ccc', visible: true, locked: false });
     const hid = (c) => { const s = psSel(c.id); return !!s && HIDDEN.has(s.id); };
@@ -617,6 +646,8 @@ export function render(app, [pid]) {
     $('#toSim', app).href = '#/simulations'; $('#toSim', app).onclick = () => { if (last()) setCurrentVersion(p, last().id); };
   }
   function loadAll() { SNAP = JSON.stringify(p.draft.studio); for (const I2 of ready()) { const back = I2.ws.load(SNAP); if (I2 === INST.plan && back !== SNAP) { SNAP = back; p.draft.studio = JSON.parse(back); } tell(I2); } vpFitted = false; derive(false); levelUI(); refresh(true); }
+  $('#sendSim', app).onclick = () => { const v = dirty() || !last() ? S.saveVersion(p, 'Sent from Workspace') : last(); setCurrentVersion(p, v.id); location.hash = '#/simulations'; };
+  $('#editSite', app).onclick = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
   $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if (!name || M().layers.find((l) => l.name === name.trim())) return; M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
   $('#saveV', app).onclick = () => { if (!dirty() && last()) { toast('No changes since v' + last().n); return; } const v = S.saveVersion(p, $('#note', app).value.trim()); $('#note', app).value = ''; state(); toast(`Saved v${v.n}`); };
 
