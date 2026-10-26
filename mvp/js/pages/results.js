@@ -10,6 +10,7 @@ import { $, $$, esc, fmt, when, toast, currentProject, setCurrent, MOCK, LIVE } 
 import { createViewport2, levelsOf } from '../viewport2.js';
 import { createBatch } from '../batch.js';
 import { versionScene, diff as diffOf, COLORS, figureRows, fieldDiff } from '../diff.js';
+import { evidencePayload, resultsCsv } from '../result-export.js';
 
 // simulations that need points a person places in the engine (an observer, destinations): they run on their own page
 const HANDS = { isovist: 'needs an observer you place in the plan', evac: 'needs destinations you place in the plan' };
@@ -32,7 +33,7 @@ export async function render(app, [pid], params) {
   let dead = false;
 
   app.innerHTML = `<div class="wrap">
-    <div class="sec-h" style="margin-top:0;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:end"><div><span class="eyebrow">Results · ${esc(p.name)} · ${esc((site?.label || '').split(',')[0])}</span><h1 class="display" style="margin-top:16px">Change the design.<br><span>See what it did.</span></h1></div>
+    <div class="sec-h" style="margin-top:0;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:end"><div><span class="eyebrow">Results · ${esc(p.name)} · ${p.analysisOnly ? 'No Site model · conditions ' : ''}${esc((site?.label || '').split(',')[0])}</span><h1 class="display" style="margin-top:16px">Change the design.<br><span>See what it did.</span></h1></div>
       <select class="inp" id="proj" style="max-width:280px" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
     <p class="muted">Every saved result is tied to the model version it ran on, with its settings.</p>
 
@@ -69,10 +70,18 @@ export async function render(app, [pid], params) {
     </div>
     <div class="card" id="trend" style="margin-top:14px"></div>`}
 
-    <div class="sec-h rs-h"><h2 class="display sm">All saved results</h2><span class="note" id="nRuns"></span></div>
+    <div class="sec-h rs-h"><h2 class="display sm">All saved results</h2><div class="acts"><span class="note" id="nRuns"></span><button class="btn sm" id="exportCsv">Export CSV</button><button class="btn sm" id="exportJson">Export evidence JSON</button></div></div>
     <div style="overflow-x:auto"><table class="t"><thead><tr><th>When</th><th>Version</th><th>Simulation</th><th>Settings</th><th>Result</th><th>Source</th><th></th></tr></thead><tbody id="log"></tbody></table></div>
   </div>`;
   $('#proj', app).onchange = (e) => { location.hash = '#/results/' + e.target.value; };
+  const download = (blob, name) => { const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 3000); };
+  const baseName = () => (p.name || 'plotcloud-results').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+  $('#exportJson', app).onclick = () => {
+    download(new Blob([JSON.stringify(evidencePayload(p), null, 2)], { type: 'application/json' }), `${baseName()}-evidence.json`); toast('Evidence JSON exported');
+  };
+  $('#exportCsv', app).onclick = () => {
+    download(new Blob([resultsCsv(p)], { type: 'text/csv;charset=utf-8' }), `${baseName()}-results.csv`); toast('Results CSV exported');
+  };
 
   // ================= §1 · batch =================
   const told = new Set();   // Account › Notifications: a message when a batch item finishes or fails
@@ -145,7 +154,7 @@ export async function render(app, [pid], params) {
   function log() {
     $('#nRuns', app).textContent = p.runs.length;
     $('#log', app).innerHTML = p.runs.slice().sort((a, b) => b.created.localeCompare(a.created)).map((r) => { const s = SIMS.find((x) => x.id === r.simId), v = S.version(p, r.versionId);
-      return `<tr><td>${when(r.created)}</td><td class="mono">v${v?.n ?? '?'}</td><td>${esc(s?.name)}</td><td class="small">${Object.entries(r.settings).filter(([k, x]) => x != null && x !== '').map(([k, x]) => k === 'sharedConditions' ? esc('Project conditions r'+x.revision+(x.studyOnlyOverrides?' · study override':'')) : k === 'site' ? esc(x) : `${esc(k)} ${esc(x)}`).join(' · ')}${r.results.roomName ? ' · ' + esc(r.results.roomName) : ''}</td>
+      return `<tr><td>${when(r.created)}</td><td class="mono">v${v?.n ?? '?'}</td><td>${esc(s?.name)}</td><td class="small">${Object.entries(r.settings).filter(([k, x]) => x != null && x !== '').map(([k, x]) => k === 'sharedConditions' ? esc('Project conditions r'+x.revision+(x.studyOnlyOverrides?' · study override':'')) : k === 'analysisPreflight' ? esc(`Input ${x.state}${x.limits?.length ? ' · ' + x.limits.join(' ') : ''}`) : k === 'site' ? esc(x) : `${esc(k)} ${esc(x)}`).join(' · ')}${r.results.roomName ? ' · ' + esc(r.results.roomName) : ''}</td>
       <td class="small mono">${r.results.kpis ? r.results.kpis.slice(0, 4).map(([k, x]) => `${esc(k)} ${esc(x)}`).join(' · ') : s.metrics.map(([k, l, u, d]) => `${fmt(r.results[k], d)}${u ? ' ' + u : ''}`).join(' · ')}</td><td>${r.source === 'prototype-mock' ? MOCK : LIVE}${r.source === 'batch' ? ' <span class="note">batch</span>' : ''}</td><td><button class="btn sm danger" data-del="${r.id}">Delete</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="note">Nothing saved yet.</td></tr>';
     $$('[data-del]', app).forEach((b) => b.onclick = () => { if (!confirm('Delete this saved result?')) return; S.deleteRun(p, b.dataset.del); toast('Result deleted'); log(); cardsUI(); matrix(); if (cmpReady && C.scope === 'sim') compare(); });
   }

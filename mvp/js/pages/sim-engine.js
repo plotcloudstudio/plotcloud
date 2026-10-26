@@ -14,6 +14,7 @@ import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
+import { inspectAnalysisModel } from '../analysis-model.js';
 import { installSimulationFit } from '../../../ui/simulation-fit.js?v=unified-20261025-5';
 // Engine HTML must change cache keys with the host module, not just its nested JS.
 const ENGINE_RELEASE=new URL(import.meta.url).searchParams.get('v')||'unified-20261025-5';
@@ -127,6 +128,11 @@ export function render(app, sim, params = new URLSearchParams()) {
   if (!batch) setCurrent(p);
   const shared=pilot||sim.id==='vent'?S.clone(S.conditionsOf(p)):null;
   const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
+  const preflight = v?.model?.analysisModel ? inspectAnalysisModel(v.model, sim.id) : null;
+  if (preflight?.state === 'not-ready') {
+    app.innerHTML = `<div class="wrap"><span class="eyebrow">Simulation preflight</span><h1 class="display">The analysis model is not ready for ${esc(sim.name)}.</h1><div class="notice warn"><b>Required before running</b><ul>${preflight.issues.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div><p class="note">PlotCloud has not started the engine or created a result. Return to the source mapping so an incomplete display mesh is not treated as valid simulation input.</p><div class="acts"><a class="btn primary" href="#/quick-simulation?study=${sim.id}">Prepare another import</a><a class="btn" href="#/simulations">Choose another study</a></div></div>`;
+    tell({ ok: false, why: preflight.issues.join(' ') }); return;
+  }
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
   const perLevel = cfg.input === 'studio' || cfg.input === 'dxf';
@@ -141,7 +147,7 @@ export function render(app, sim, params = new URLSearchParams()) {
       <label class="shsel">Version<select id="ver">${p.versions.slice().reverse().map((x) => `<option value="${x.id}" ${x === v ? 'selected' : ''}>v${x.n} — ${esc(x.note)}</option>`).join('') || '<option>No saved versions</option>'}</select></label>
       ${perLevel && levels.length > 1 ? `<label class="shsel">Level<select id="lvl">${levels.map((L, i) => `<option value="L${L.n}" ${i === lvIx ? 'selected' : ''}>Level ${L.n}</option>`).join('')}</select></label>` : ''}
       ${rooms.length ? `<label class="shsel">Room<select id="room">${rooms.map((c) => `<option value="${c.id}" ${c === room ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
-      <a class="shsite" href="${pilot?'#/project-settings/'+p.id+'?return='+sim.id:'#/account'}">${pilot?`${esc((site?.label||'Site').split(',')[0])} · Shared r${shared.revision} ↗`:`${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}`}</a>
+      <a class="shsite" href="${pilot?'#/project-settings/'+p.id+'?return='+sim.id:'#/account'}">${p.analysisOnly ? `Environmental conditions · ${esc((site?.label || '—').split(',')[0])} · no Site model` : pilot?`${esc((site?.label||'Site').split(',')[0])} · Shared r${shared.revision} ↗`:`${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}`}</a>
       <span class="sp"></span>
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
@@ -156,6 +162,7 @@ export function render(app, sim, params = new URLSearchParams()) {
   if (!v) { tell({ ok: false, why: 'No saved version.' }); return; }
 
   const fr = $('#eng', app), msg = $('#shmsg', app), saveBtn = $('#save', app), name = `${p.name} · v${v.n}`, x = extent(v.model);
+  if (preflight?.limits?.length) msg.textContent = `Limits recorded: ${preflight.limits.join(' ')}`;
   $('#engineLoading',app).style.top=$('.shbar',app).offsetHeight+'px';
   const ctx = { site, A, t, level, x, room }, filled = {};
   // what this simulation takes from Account, shown in the bar (site, north and time zone are always there)
@@ -294,7 +301,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     for (const [id, val] of Object.entries(filled)) { if (!ACCT[id]) { model[id] = val; continue; }
       const k = ACCT[id][0], now = cur(id); fromAccount[k] = shown(id, val);
       if (now != null && String(now) !== String(val) && !(now !== '' && Number(now) === Number(val))) changed.push(`${k} ${shown(id, now)} (Account ${shown(id, val)})`); }
-    const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };
+    const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...(preflight ? { analysisPreflight: preflight } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };
     if(pilot){settings.sharedConditions=S.clone(pilotRunSnapshot);settings.sharedConditions.effective=S.clone(SUN.includes(sim.id)?{...fr.contentWindow.__sun.S.loc,north:fr.contentWindow.__sun.S.north}:fr.contentWindow.__pcAnalysisState?.().conditions||{});settings.inheritedFrom='Project shared conditions';}
     if(sim.id==='vent'){settings.sharedConditions={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},'vent'),site:S.clone(site),effective:S.clone(fr.contentWindow.__vent?.S||{})};settings.inheritedFrom='Project shared conditions';}
     if(SUN.includes(sim.id)&&fr.contentWindow.__sun?.S?.lastR?.mode){const s=fr.contentWindow.__sun.S,r=s.lastR,c=fr.contentWindow.__sunClimate?.CLIM?.E;settings.analysisPeriod={hours:r.clim.period,count:r.clim.hoursN};settings.climateFile=c?{name:c.name,station:c.station,lat:c.lat,lon:c.lon}:null;settings.grid=r.prep.s;settings.method=r.mode==='radiation'?'Perez sky, 145 patches, sun in 3° groups':'UTCI with SolarCal MRT';if(r.mode==='utci')settings.utci={hoursCounted:r.clim.counted,sunUpOnly:r.clim.day,windExposure:r.clim.alpha};settings.units=r.mode==='radiation'?'kWh/m²':'% of counted hours';}

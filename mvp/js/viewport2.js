@@ -23,6 +23,8 @@ const SEL_COL = 0xd8402a, HOVER_COL = 0x2f7ad8;
 
 // Levels come from the model: the top of every slab is a floor level. A model with no slab has one level at z = 0.
 export function levelsOf(model) {
+  const reviewed = (model?.analysisModel?.levels || []).filter((l) => l.confirmed && Number.isFinite(+l.elevation)).sort((a, b) => +a.elevation - +b.elevation);
+  if (reviewed.length) return reviewed.map((l, i) => ({ n: +(String(l.id || '').match(/\d+/)?.[0] || i + 1), z: +(+l.elevation).toFixed(2), name: l.name || `Level ${i + 1}`, from: l.source || 'analysis review' }));
   const tops = [...new Set((model?.components || []).filter((c) => c.type === 'slab').map((c) => +(c.g.z + c.g.h).toFixed(2)))].sort((a, b) => a - b);
   return (tops.length ? tops : [0]).map((z, i) => ({ n: i + 1, z, from: tops.length ? 'slab' : 'none' }));
 }

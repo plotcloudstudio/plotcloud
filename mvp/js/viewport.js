@@ -117,7 +117,6 @@ export function createViewport(host, { onPick } = {}) {
 // Read an OBJ / STL / GLB file into components (one per mesh), positioned with their bounding box.
 export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
   const ext = file.name.toLowerCase().split('.').pop(), buf = await file.arrayBuffer();
-  if (file.size > 25 * 1048576) throw Error('This file is over 25 MB. Export a simplified model for the prototype.');
   let obj, fileUp = 'y';
   if (ext === 'obj') { const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js'); obj = new OBJLoader().parse(new TextDecoder().decode(buf)); }
   else if (ext === 'stl') { const { STLLoader } = await import('three/addons/loaders/STLLoader.js'); obj = new THREE.Mesh(new STLLoader().parse(buf)); fileUp = 'z'; }
@@ -135,23 +134,33 @@ export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
   }
   else throw Error('The prototype reads .obj, .stl, .glb and .3dm. SketchUp and IFC files open in the full tools.');
   const zUp = (up === 'auto' ? fileUp : up) === 'z';
-  obj.updateMatrixWorld(true); const out = []; let tris = 0;
+  obj.updateMatrixWorld(true); const raw = []; let tris = 0;
   obj.traverse((o) => {
     if (!o.isMesh || !o.geometry?.attributes.position) return;
     const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(o.matrixWorld), a = g.attributes.position;
-    tris += a.count / 3; if (tris > 80000) throw Error('Over 80,000 triangles. Simplify the model for the browser prototype.');
+    tris += a.count / 3;
     const pos = new Float32Array(a.count * 3);
     for (let i = 0; i < a.count; i++) { const x = a.getX(i) * unit, y = a.getY(i) * unit, z = a.getZ(i) * unit; pos[i * 3] = x; pos[i * 3 + 1] = zUp ? y : -z; pos[i * 3 + 2] = zUp ? z : y; }
     let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], pos[i + k]); mx[k] = Math.max(mx[k], pos[i + k]); }
-    for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) pos[i + k] = +(pos[i + k] - mn[k]).toFixed(3);
     const rg = ext === '3dm' && o.parent && o.parent.userData.layer != null ? o.parent : null;   // a Rhino object: its name and layer
-    out.push({ name: (rg && rg.name) || o.name || `Mesh ${out.length + 1}`, srcLayer: rg ? rg.userData.layer : undefined, type: 'imported', layer: 'Imported', g: { x: +mn[0].toFixed(3), y: +mn[1].toFixed(3), z: +mn[2].toFixed(3), w: +(mx[0] - mn[0]).toFixed(3), d: +(mx[1] - mn[1]).toFixed(3), h: +(mx[2] - mn[2]).toFixed(3) }, mat: 'Imported', mesh: Array.from(pos) });
+    raw.push({ name: (rg && rg.name) || o.name || `Mesh ${raw.length + 1}`, srcLayer: rg ? rg.userData.layer : undefined, pos, mn, mx, triangles: a.count / 3 });
     g.dispose();
   });
-  if (!out.length) throw Error('No meshes found in this file.');
+  if (!raw.length) throw Error('No meshes found in this file.');
+  // Keep the source count, but store a deterministic analysis/display proxy instead of rejecting a large model.
+  // Each object keeps at least one triangle and a proportional share of the 120k-triangle browser budget.
+  const budget = 120000, simplify = tris > budget, out = raw.map((r, ri) => {
+    const keep = simplify ? Math.max(1, Math.round(budget * r.triangles / tris)) : r.triangles, step = Math.max(1, Math.ceil(r.triangles / keep));
+    const mesh = []; for (let t = 0; t < r.triangles; t += step) for (let j = 0; j < 9; j++) mesh.push(+(r.pos[t * 9 + j] - r.mn[j % 3]).toFixed(3));
+    return { name: r.name || `Mesh ${ri + 1}`, srcLayer: r.srcLayer, type: 'imported', layer: 'Imported',
+      g: { x: +r.mn[0].toFixed(3), y: +r.mn[1].toFixed(3), z: +r.mn[2].toFixed(3), w: +(r.mx[0] - r.mn[0]).toFixed(3), d: +(r.mx[1] - r.mn[1]).toFixed(3), h: +(r.mx[2] - r.mn[2]).toFixed(3) },
+      mat: 'Imported', mesh, sourceTriangles: Math.round(r.triangles) };
+  });
   // drop the model onto the ground plane at the origin
   const minX = Math.min(...out.map((c) => c.g.x)), minY = Math.min(...out.map((c) => c.g.y)), minZ = Math.min(...out.map((c) => c.g.z));
   for (const c of out) { c.g.x = +(c.g.x - minX).toFixed(3); c.g.y = +(c.g.y - minY).toFixed(3); c.g.z = +(c.g.z - minZ).toFixed(3); }
-  return { components: out, triangles: Math.round(tris) };
+  const proxyTriangles = out.reduce((n, c) => n + c.mesh.length / 9, 0);
+  return { components: out, triangles: Math.round(proxyTriangles), sourceTriangles: Math.round(tris), simplified: simplify,
+    source: { name: file.name, bytes: file.size, format: ext, unitScale: unit, upAxis: zUp ? 'z' : 'y', importedAt: new Date().toISOString() } };
 }

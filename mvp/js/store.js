@@ -115,7 +115,11 @@ export function saveVersion(p, note) {
   p.versions.push(v); p.updated = now(); save(); return v;
 }
 export function addRun(p, versionId, simId, settings, results, source = 'full-tool') {
-  const r = { id: uid('r'), versionId, simId, settings: clone(settings), results, created: now(), source };
+  const v = version(p, versionId), am = v?.model?.analysisModel;
+  const r = { id: uid('r'), versionId, simId, settings: clone(settings), results, created: now(), source,
+    input: { projectId: p.id, versionId, modelSource: am?.source ? clone(am.source) : null, analysisModelId: am?.id || null,
+      analysisGeneratedAt: am?.generatedAt || null, proxy: am?.proxy ? clone(am.proxy) : null, readiness: settings?.analysisPreflight ? clone(settings.analysisPreflight) : am?.readiness ? clone(am.readiness) : null,
+      level: settings?.level || 'all', conditionsRevision: settings?.sharedConditions?.revision || p.sharedConditions?.revision || null } };
   if (results && (results.thumb || results.field)) for (const o of p.runs) if (o.versionId === versionId && o.simId === simId && o.results) { delete o.results.thumb; delete o.results.field; }   // only the newest result of a version keeps its picture
   p.runs.push(r); p.updated = now(); save(); return r;
 }
