@@ -1,0 +1,61 @@
+// Manual beta entitlements. Only hashes and expiry dates are public; never trust a local plan/paid flag.
+export const BETA = Object.freeze({ name: 'PlotCloud Beta', email: 'plotcloud@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
+export const FREE_STUDIES = Object.freeze(['sunhours', 'daylight']);
+const KEY = 'pc-beta-access-code-v1';
+let verified = { active: false, reason: 'code-required' }, lastCode = '', checked = 0, inflight = null, generation = 0;
+export const isFreeStudy = id => FREE_STUDIES.includes(id);
+const readCode = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
+export const normalizeCode = value => String(value || '').replace(/\s+/g, '').toUpperCase();
+export function status() { return { ...verified, active: verified.active && Date.parse(verified.expiresAt) > Date.now() }; }
+export const canUse = id => isFreeStudy(id) || status().active;
+export async function hashCode(value) { const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizeCode(value))); return [...new Uint8Array(bytes)].map(v => v.toString(16).padStart(2, '0')).join(''); }
+export function matchingGrant(ledger, digest, now = Date.now()) {
+  if (ledger?.schema !== 1 || !Array.isArray(ledger.grants)) return null;
+  return ledger.grants.find(g => g.codeHash === digest && g.plan === 'beta-monthly' && !g.revokedAt && Number.isFinite(Date.parse(g.startsAt)) && Date.parse(g.startsAt) <= now && Number.isFinite(Date.parse(g.expiresAt)) && now < Date.parse(g.expiresAt)) || null;
+}
+export async function checkAccess({ force = false, code = readCode() } = {}) {
+  code = normalizeCode(code);
+  if (!/^PCBET-[A-F0-9]{48}$/.test(code)) { generation++; verified = { active: false, reason: code ? 'invalid-code' : 'code-required' }; lastCode = code; return status(); }
+  if (!force && inflight && lastCode === code) return inflight;
+  if (!force && lastCode === code && Date.now() - checked < 15000) return status();
+  if (lastCode !== code) { verified = { active: false, reason: 'verifying' }; checked = 0; }
+  lastCode = code; const epoch = ++generation;
+  const operation = (async () => {
+    try {
+      const url = new URL('../beta-access-ledger.json', import.meta.url); url.searchParams.set('v', String(Date.now()));
+      const response = await fetch(url, { cache: 'no-store', credentials: 'same-origin' });
+      if (!response.ok) throw Error('Access could not be verified. Check your connection and try again.');
+      const grant = matchingGrant(await response.json(), await hashCode(code));
+      if (epoch !== generation) return {active:false,reason:'superseded'};
+      verified = grant ? { active: true, expiresAt: grant.expiresAt, startsAt: grant.startsAt, reference: grant.reference, reason: '' } : { active: false, reason: 'invalid-or-expired' };
+    } catch { if (epoch !== generation) return {active:false,reason:'superseded'}; verified = { active: false, reason: 'verification-unavailable' }; }
+    checked = Date.now(); return status();
+  })();
+  inflight = operation;
+  try { return await operation; } finally { if (inflight === operation) inflight = null; }
+}
+export async function activateCode(value) {
+  const code = normalizeCode(value), result = await checkAccess({ force: true, code });
+  if (!result.active) throw Error(result.reason === 'verification-unavailable' ? 'Access could not be verified. Check your connection and try again.' : 'This code is invalid, not yet active, expired or revoked. Check the code in your confirmation email.');
+  localStorage.setItem(KEY, code); dispatchEvent(new CustomEvent('pc-beta-access')); return result;
+}
+export function clearCode() { generation++; localStorage.removeItem(KEY); verified = { active: false, reason: 'code-required' }; checked = 0; dispatchEvent(new CustomEvent('pc-beta-access')); }
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+export const accessDate = value => new Date(value).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' });
+export function requestURL(subject = 'PlotCloud monthly beta access') {
+  const body = `Hello PlotCloud,\n\nI would like one month of beta access at CAD 16.99, plus applicable taxes. Before I send an e-transfer, please confirm the total, required seller details, included access, exact access dates, activation timing and refund terms.\n\nMy preferred email for the activation code is:\n`;
+  return 'mailto:' + BETA.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+export function mountActivation(host, { onSuccess = () => location.reload() } = {}) {
+  host.innerHTML = `<form class="beta-code-form" style="display:grid;gap:14px"><label class="f">Activation code<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="PCBET-…"></label><button class="btn accent" type="submit">Activate monthly access</button><p class="note" role="status" aria-live="polite"></p></form>`;
+  const form = host.querySelector('form'), message = form.querySelector('[role="status"]'), button = form.querySelector('button');
+  form.onsubmit = async e => { e.preventDefault(); button.disabled = true; message.textContent = 'Verifying your code…'; try { const grant = await activateCode(new FormData(form).get('code')); message.textContent = 'Access active until ' + accessDate(grant.expiresAt); onSuccess(grant); } catch (error) { message.textContent = error.message; } finally { button.disabled = false; } };
+}
+export function renderGate(host, name = 'This tool') {
+  host.innerHTML = `<div class="wrap resource-page"><span class="eyebrow">Paid beta access</span><h1 class="display md" style="margin-top:18px">${esc(name)} needs<br>an active month.</h1><p class="lede" style="margin-top:18px">Sun hours and Daylight remain free. The other simulation studies and resource tools need a manually issued beta activation code.</p><div class="grid g2" style="margin-top:30px"><section class="card"><h2>Already received your code?</h2><p class="note">Enter the code sent after your e-transfer was verified. A payment email or a local account plan does not activate access.</p><div id="betaActivate"></div></section><section class="card"><h2>One month. Repeated use.</h2><p>CAD 16.99 for one calendar month, plus applicable taxes. No per-run charge for the included browser tools. No automatic renewal.</p><a class="btn accent" style="margin-top:20px" href="${esc(requestURL())}">Request payment details</a><p class="note" style="margin-top:14px">E-transfer recipient: ${BETA.email}. Wait for written order details before sending. PlotCloud is in testing; features and results may contain errors.</p><a href="#/pricing">View pricing and payment steps →</a></section></div><p class="note" style="margin-top:24px"><a href="#/simulations/sunhours">Open free Sun hours</a> · <a href="#/simulations/daylight">Open free Daylight</a> · <a href="#/legal/refunds">Refund policy</a></p></div>`;
+  mountActivation(host.querySelector('#betaActivate'));
+}
+if (typeof window !== 'undefined') {
+  window.PlotCloudBetaAccess = Object.freeze({ allows: canUse, status });
+  addEventListener('storage', e => { if (e.key === KEY || e.key === null) { generation++; inflight = null; checked = 0; verified = { active: false, reason: 'code-required' }; dispatchEvent(new CustomEvent('pc-beta-access')); } });
+}

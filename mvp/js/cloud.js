@@ -45,7 +45,7 @@ const back = () => location.origin + location.pathname;   // where emailed links
 // ---- the account
 function toAccount() {   // the Account page's user, from the signed-in person
   const A = S.account(), u = user(); if (!u) return;
-  A.user = { ...(A.user || {}), name: u.name || A.user?.name || u.email.split('@')[0], email: u.email, id: u.id, cloud: true, plan: A.user?.plan || 'trial', since: A.user?.since || u.created || new Date().toISOString() }; S.save();
+  A.user = { ...(A.user || {}), name: u.name || A.user?.name || u.email.split('@')[0], email: u.email, id: u.id, cloud: true, plan: A.user?.plan || 'free', since: A.user?.since || u.created || new Date().toISOString() }; S.save();
 }
 function lost(msg) { setSession(null); const A = S.account(); if (A.user?.cloud) { A.user = null; S.save(); } status.phase = 'signed-out'; status.error = msg || ''; emit(); }
 export async function signUp(email, password, name) {

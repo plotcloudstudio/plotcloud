@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){}window.PC_EMBED={lang:"en",base:"./furniture/"};</script>
+<head><script src="../mvp/js/beta-entry.js?v=beta-20261026-1" data-feature="sunhours"></script><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){}window.PC_EMBED={lang:"en",base:"./furniture/"};</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}
@@ -1774,7 +1774,7 @@ function climUI() {
   const set = $('#h-set') && $('#h-set').closest('.sec'); if (set) set.hidden = clim;   // image sets are shadow and sunlight-hour studies
 }
 function climChanged() { CLIM.cache = null; S.hl = null; climUI(); stale(); lvlUI(); panelUI(); if (S.model) checkGrid(); }
-$('#measure').addEventListener('change', (e) => { S.measure = e.target.value; climChanged(); });
+$('#measure').addEventListener('change', (e) => { const id = e.target.value === 'hours' ? 'sunhours' : e.target.value; if(window.PlotCloudEntryAccess && !PlotCloudEntryAccess.allows(id)){ e.target.value = S.measure; PlotCloudEntryAccess.open(id); return; } S.measure = e.target.value; climChanged(); });
 $('#climPeriod').addEventListener('change', (e) => { S.climPeriod = e.target.value; if (S.climPeriod === 'dates' && !$('#dateEnd').value) $('#dateEnd').value = S.date; climChanged(); });
 $('#dateEnd').addEventListener('change', () => { if (S.measure !== 'hours') climChanged(); });
 $('#utciHours').addEventListener('change', (e) => { S.utciHours = e.target.value; stale(); });
@@ -1791,6 +1791,7 @@ $('#epwF').addEventListener('change', async (e) => { const f = e.target.files[0]
   } catch (err) { $('#epwInfo').textContent = 'Could not read it: ' + (err.message || err); } });
 
 async function runClimate(opt = {}) {
+  if(window.PlotCloudEntryAccess && !PlotCloudEntryAccess.allows(S.measure)){PlotCloudEntryAccess.open(S.measure);return;}
   if (!S.model || S.busy) return;
   if (!CLIM.E) { msg('#runmsg', 'Load a climate file (.epw) first: radiation and comfort come from its hourly weather. EPW files for most cities are free from climate.onebuilding.org.', 'warn'); return; }
   const lvl = opt.level || S.level;

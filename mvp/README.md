@@ -21,7 +21,7 @@ Upload model → organise layers and components → save model version → selec
 | Log in / sign up, account with default site, simulation defaults, your projects | Account (`#/login`, `#/account`) | **Mock** auth kept in this browser; no server, no password stored |
 | Worldwide site search (address, place or `lat, lon`), map, true north | Account › Site | Working: Nominatim (OSM) address search, OSM map embed |
 | Site data: time zone, Köppen climate, annual rain, mean wind + prevailing direction, ground elevation, buildings mapped nearby | Account › Site | Working: Open-Meteo (ERA5 last full year, Copernicus DEM) and Overpass. A value a source does not return is shown as missing, never guessed |
-| Pricing (Free / Pro CAD 9 mo or CAD 79 yr, 7-day trial / Teams) | Pricing | Prices as on the production site; no payment in the prototype |
+| Pricing (Sun/Daylight free; beta CAD 16.99 per month) | Pricing | Email-first e-transfer, manually verified activation codes; no annual plan or automatic renewal. See ../docs/beta-payments.md for operations and enforcement limits. |
 | Day / night theme (saved per browser) | Header | Working |
 | Cloud storage, sharing, real accounts and billing | — | Not in the prototype |
 

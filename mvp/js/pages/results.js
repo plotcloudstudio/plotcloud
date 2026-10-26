@@ -1,3 +1,4 @@
+import {checkAccess, isFreeStudy} from '../beta-access.js';
 // Projects & Results.
 //   Run simulations: tick any number of simulations, adjust each one's inputs, and run them all on the latest saved version
 //   (batch.js runs each simulation page in a hidden frame; a version is saved first when the Workspace has unsaved changes).
@@ -20,6 +21,7 @@ const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const STATUS = { queued: 'Queued', running: 'Running', done: 'Done', failed: 'Failed' };
 
 export async function render(app, [pid], params) {
+  const betaAccess = await checkAccess();
   const p = (pid && S.project(pid)) || currentProject();
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project yet. <a href="#/">Create one on Home.</a></p></div>'; return; }
   setCurrent(p);
@@ -83,14 +85,14 @@ export async function render(app, [pid], params) {
   function batchList() {
     const v = runVersion(), sel = new Set(p.batch.sel), items = new Map(batch.items().filter((x) => x.versionId === v?.id || x.status === 'running' || x.status === 'queued').map((x) => [x.simId, x]));
     $('#btList', app).innerHTML = SIMS.map((s) => {
-      const hand = HANDS[s.id], cfg = p.batch.cfg[s.id] || {}, it = items.get(s.id), info = v ? batchInfo(s.id, p, v) : null, o = open.has(s.id);
+      const paidLocked = !isFreeStudy(s.id) && !betaAccess.active, hand = HANDS[s.id], cfg = p.batch.cfg[s.id] || {}, it = items.get(s.id), info = v ? batchInfo(s.id, p, v) : null, o = open.has(s.id);
       const st = it ? `<span class="st st-${it.status}" data-st="${s.id}">${STATUS[it.status]}${it.status === 'running' ? ` <span class="spin"></span>` : ''}</span>${it.status === 'failed' ? `<button type="button" class="btn sm" data-retry="${esc(it.key)}">Retry</button>` : ''}` : (v && S.lastRun(p, v.id, s.id) ? `<span class="note">saved on v${v.n}</span>` : '');
       const fields = info ? `${info.perLevel && info.levels.length > 1 ? `<label class="f">Level<select data-lv="${s.id}">${info.levels.map((L) => `<option value="${L.id}" ${cfg.level === L.id ? 'selected' : ''}>${L.name}</option>`).join('')}</select></label>` : ''}
         ${info.rooms.length ? `<label class="f">Room<select data-rm="${s.id}">${info.rooms.map((r) => `<option value="${r.id}" ${cfg.room === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></label>` : ''}
         ${info.fields.map((f) => { const val = cfg.ov?.[f.id] ?? f.value; return `<label class="f">${esc(f.label)}${f.unit ? ` (${esc(f.unit)})` : ''}${f.options ? `<select data-ov="${s.id}" data-id="${f.id}">${f.options.map(([ov, ol]) => `<option value="${esc(ov)}" ${String(ov) === String(val) ? 'selected' : ''}>${esc(ol)}</option>`).join('')}</select>` : `<input data-ov="${s.id}" data-id="${f.id}" value="${esc(val)}" ${typeof f.value === 'number' ? 'type="number" step="any"' : ''}>`}${cfg.ov?.[f.id] != null ? `<small>Account: ${esc(f.value)}</small>` : ''}</label>`; }).join('') || '<p class="note">This study takes its inputs from the model only.</p>'}` : '';
       return `<div class="bt-row${hand ? ' hand' : ''}" data-row="${s.id}"><div class="bt-line">
-        <label class="ck"><input type="checkbox" data-pick="${s.id}" ${sel.has(s.id) && !hand ? 'checked' : ''} ${hand ? 'disabled' : ''}> ${esc(s.name)}</label><span class="note">${esc(s.group)}</span>
-        ${hand ? `<span class="note">Not in batches: ${hand}. <a href="#/simulations/${s.id}?project=${p.id}${v ? '&version=' + v.id : ''}">Open it</a></span>` : `<button type="button" class="btn sm ghost" data-open="${s.id}" aria-expanded="${o}">${o ? 'Hide inputs' : 'Inputs'}</button>`}
+        <label class="ck"><input type="checkbox" data-pick="${s.id}" ${sel.has(s.id) && !hand && !paidLocked ? 'checked' : ''} ${hand || paidLocked ? 'disabled' : ''}> ${esc(s.name)}${paidLocked ? ' · Paid beta' : ''}</label><span class="note">${esc(s.group)}</span>
+        ${paidLocked ? '<a class="btn sm" href="#/pricing">Unlock monthly access</a>' : ''}${hand ? `<span class="note">Not in batches: ${hand}. <a href="#/simulations/${s.id}?project=${p.id}${v ? '&version=' + v.id : ''}">Open it</a></span>` : `<button type="button" class="btn sm ghost" data-open="${s.id}" aria-expanded="${o}">${o ? 'Hide inputs' : 'Inputs'}</button>`}
         <span class="sp"></span>${st}</div>
         ${it?.status === 'failed' ? `<p class="bt-why" role="alert">${esc(it.why)}</p>` : ''}
         ${o && !hand ? `<div class="bt-fields">${fields}</div>` : ''}</div>`; }).join('');
@@ -104,20 +106,20 @@ export async function render(app, [pid], params) {
     $$('[data-rm]', app).forEach((el) => el.onchange = () => { cf(el.dataset.rm).room = el.value; S.save(); });
   }
   function batchUI() {
-    const n = p.batch.sel.filter((id) => !HANDS[id]).length, its = batch.items(), act = its.filter((x) => x.status === 'queued' || x.status === 'running');
+    const n = p.batch.sel.filter((id) => !HANDS[id] && (isFreeStudy(id) || betaAccess.active)).length, its = batch.items(), act = its.filter((x) => x.status === 'queued' || x.status === 'running');
     $('#btRun', app).textContent = `Run selected (${n})`; $('#btRun', app).disabled = !n || act.length > 0 || !last();
-    $('#btAll', app).checked = n === SIMS.length - Object.keys(HANDS).length;
+    const eligible = SIMS.filter(s => !HANDS[s.id] && (isFreeStudy(s.id) || betaAccess.active)).length; $('#btAll', app).checked = n > 0 && n === eligible; $('#btAll', app).indeterminate = n > 0 && n < eligible;
     const v = runVersion(); $('#runOn', app).textContent = v ? `Runs on v${v.n}${dirty() ? ' — the Workspace has unsaved changes: they are saved as a new version first' : ' (latest saved)'}` : 'Save a version in the Workspace first';
     const doneN = its.filter((x) => x.status === 'done').length, failN = its.filter((x) => x.status === 'failed').length;
     $('#btProg', app).hidden = !its.length; if (its.length) { $('#btBar', app).style.width = ((doneN + failN) / its.length * 100) + '%';
       $('#btTxt', app).textContent = `${doneN + failN} of ${its.length} finished · ${doneN} done${failN ? ` · ${failN} failed` : ''}${act.length ? ` · running ${SIMS.find((s) => s.id === act.find((x) => x.status === 'running')?.simId)?.name || '…'}` : ''}`; }
     batchList();
   }
-  $('#btAll', app).onchange = (e) => { p.batch.sel = e.target.checked ? SIMS.filter((s) => !HANDS[s.id]).map((s) => s.id) : []; S.save(); batchUI(); };
+  $('#btAll', app).onchange = (e) => { p.batch.sel = e.target.checked ? SIMS.filter((s) => !HANDS[s.id] && (isFreeStudy(s.id) || betaAccess.active)).map((s) => s.id) : []; S.save(); batchUI(); };
   $('#btRun', app).onclick = () => {
     if (dirty() && p.draft) { const v = S.saveVersion(p, 'Saved before a batch run'); toast(`The Workspace's unsaved changes were saved as v${v.n}`); }
     const v = last(); if (!v) return; cardV = v; B = v; refreshVersions();
-    batch.add(p.batch.sel.filter((id) => !HANDS[id]).map((id) => ({ simId: id, projectId: p.id, versionId: v.id, level: p.batch.cfg[id]?.level, room: p.batch.cfg[id]?.room, ov: { ...(p.batch.cfg[id]?.ov || {}) } })));
+    batch.add(p.batch.sel.filter((id) => !HANDS[id] && (isFreeStudy(id) || betaAccess.active)).map((id) => ({ simId: id, projectId: p.id, versionId: v.id, level: p.batch.cfg[id]?.level, room: p.batch.cfg[id]?.room, ov: { ...(p.batch.cfg[id]?.ov || {}) } })));
     cardsUI();
   };
   let lastDone = 0;

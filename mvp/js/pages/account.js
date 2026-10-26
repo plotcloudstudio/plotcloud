@@ -1,3 +1,4 @@
+import {checkAccess, accessDate} from '../beta-access.js';
 import * as S from '../store.js';
 import { geocode, enrich, mapEmbed } from '../site.js';
 import { $, $$, esc, when, toast, refreshWho } from '../app.js';
@@ -25,7 +26,8 @@ const DEF = [
 const TABS = [['profile', 'Profile'], ['site', 'Site & defaults'], ['plan', 'Plan'], ['data', 'Backup & data'], ['notify', 'Notifications']];
 const size = (b) => b > 1073741824 ? `${(b / 1073741824).toFixed(1)} GB` : b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
 
-export function render(app, _, params = new URLSearchParams()) {
+export async function render(app, _, params = new URLSearchParams()) {
+  const betaAccess = await checkAccess();
   const A = S.account();
   if (!A.user) { location.hash = '#/login?next=account'; return; }
   let site = S.clone(A.site), loading = false, tab = TABS.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'site';
@@ -83,11 +85,11 @@ export function render(app, _, params = new URLSearchParams()) {
     <section id="plan" data-pane="plan">
       <div class="kicker"><b>03</b>Plan</div>
       <div class="pplan pro" style="margin-top:20px;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between">
-        <div><span class="eyebrow">Current plan</span><p style="font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:6px">PlotCloud Pro · trial</p>
+        <div><span class="eyebrow">Current plan</span><p style="font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:6px">${betaAccess.active ? 'Monthly beta access' : 'Free access'}</p>
           <p class="muted" id="trialLeft"></p>
-          <p class="muted">Prototype: no payment is taken. On the real site the trial is 7 days, then CAD 79 a year or CAD 9 a month.</p></div>
+          <p class="muted">CAD 16.99 per calendar month, plus applicable taxes. E-transfer payments are reviewed manually. Renew only when you choose; no automatic charge.</p></div>
         <a class="btn accent lg" href="#/pricing">See plans</a></div>
-      <p class="note" style="margin-top:14px">Billing, invoices and team seats need the server and are coming; nothing here charges you.</p>
+      <p class="note" style="margin-top:14px">Sun hours and Daylight remain free. Request written payment details and enter your activation code on Pricing.</p>
     </section>
 
     <section id="data" data-pane="data">
@@ -170,7 +172,7 @@ export function render(app, _, params = new URLSearchParams()) {
   $('#delAcct', app).onclick = async () => { if (prompt(A.user?.cloud ? 'Delete everything: your projects in this browser and in your cloud account? Type DELETE to confirm.' : 'Delete your account and everything in this browser? Type DELETE to confirm.') !== 'DELETE') return;
     if (A.user?.cloud) { try { await C.wipe(); await C.signOut(); } catch (er) { toast('Could not remove the cloud copy: ' + er.message); return; } toast('Your projects were removed from the cloud. To close the login itself, write to us.'); }
     S.deleteAccount(); location.hash = '#/'; location.reload(); };
-  { const since = A.user.since ? new Date(A.user.since) : new Date(), left = Math.max(0, 7 - Math.floor((Date.now() - since) / 86400000)); $('#trialLeft', app).textContent = left ? `${left} day${left > 1 ? 's' : ''} left of the 7-day trial.` : 'The 7-day trial has ended (prototype: everything stays open).'; }
+  $('#trialLeft', app).textContent = betaAccess.active ? 'Active until ' + accessDate(betaAccess.expiresAt) : 'No active beta code. Your saved local projects and results remain available.';
   function dataUI() {
     const use = S.storageUse(), pc = Math.min(100, 100 * use / S.QUOTA);
     $('#useBar', app).style.width = pc.toFixed(1) + '%'; $('#useTxt', app).textContent = `${size(use)} of about ${size(S.QUOTA)} used (${pc < 1 ? 'under 1' : Math.round(pc)} %) · kept in IndexedDB${S.storageMode() === 'idb' ? '' : ', with a quick copy in localStorage'} · ${S.PERSISTED ? 'the browser keeps it until you clear it' : 'the browser may clear it when the disk is full, so keep a backup'}.`;

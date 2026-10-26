@@ -2,6 +2,7 @@
 // one after another, on one version. A failed item is marked and the rest go on; any item can be run again on its own.
 // The results are saved here (one writer for the store), exactly as "Save result" saves them, with source 'batch'.
 import * as S from './store.js';
+import {checkAccess, canUse} from './beta-access.js';
 
 let seq = 0;
 export function createBatch(host, { onChange } = {}) {
@@ -14,7 +15,9 @@ export function createBatch(host, { onChange } = {}) {
     if (busy) return; busy = true;
     try { for (;;) { if (stop) break; const it = items.find((x) => x.status === 'queued'); if (!it) break; await runOne(it); } } finally { busy = false; }
   }
-  function runOne(it) {
+  async function runOne(it) {
+    await checkAccess();
+    if (!canUse(it.simId)) { Object.assign(it, {status:'failed',why:'Paid beta access required. Request an activation code from Pricing.'}); emit(); return; }
     return new Promise((resolve) => {
       const p = S.project(it.projectId), v = p && S.version(p, it.versionId);
       if (!v) { Object.assign(it, { status: 'failed', why: 'That version is gone.' }); emit(); resolve(); return; }

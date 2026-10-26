@@ -1,8 +1,10 @@
+import {checkAccess, isFreeStudy} from '../beta-access.js';
 import * as S from '../store.js';
 import { SIMS, simImg } from '../data.js';
 import { $, $$, esc, currentProject, currentVersion, LIVE, img } from '../app.js';
 
 export async function render(app, [simId], params) {
+  const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
   if (sim) return (await import('./sim-engine.js')).render(app, sim, params);   // every simulation runs its PlotCloud engine
   return catalog(app, params);
@@ -16,7 +18,7 @@ function catalog(app, params) {
   app.innerHTML = `<div class="wrap">
     <span class="eyebrow">Simulations</span>
     <div class="split" style="margin-top:16px"><h1 class="display">Choose a study.<br><span>Run it on a version.</span></h1>
-      <p class="lede">All ${SIMS.length} analysis tools PlotCloud has today. Each runs its PlotCloud engine on a version of your model, with site and climate from Account; save a result to the version and Results compares them.</p></div>
+      <p class="lede">Sun hours and Daylight are free; the other studies need active monthly beta access. Browse all ${SIMS.length} current analysis tools. Each runs its PlotCloud engine on a version of your model, with site and climate from Account; save a result to the version and Results compares them.</p></div>
     ${p ? `<p class="badge-pill" style="margin-top:32px;text-transform:none;letter-spacing:0;font:500 14px var(--sans)">Running on&nbsp;<b>${esc(p.name)}</b>&nbsp;· ${v ? `v${v.n}` : 'no saved version yet'} · ${esc((S.siteOf(p)?.label || '').split(',')[0])}</p>` : ''}
     <div class="pills" role="group" aria-label="Filter" style="margin-top:36px" id="filters">${groups.map((x) => `<button type="button" data-g="${x}" aria-pressed="${x === g}">${x}</button>`).join('')}</div>
     <div class="simgrid" id="grid"></div>
@@ -30,9 +32,9 @@ function catalog(app, params) {
     return `<span class="rdy${okk ? '' : ' no'}" title="${n === 'mass' ? 'Works on masses and the site' : n === 'rooms' ? 'Reads rooms, walls and openings' : 'Works on any model'}">${t}</span>`; };
   const draw = () => { $('#grid', app).innerHTML = SIMS.map((s, i) => [s, i]).filter(([s]) => g === 'All' || s.group === g || s.scope === g).map(([s, i]) => `<article class="card sim" data-scope="${s.scope}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true"><img data-holo="${simImg(s.id)}" src="${img(simImg(s.id))}" alt="" loading="lazy"></a>
-      <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(s.group)} · ${esc(s.scope)}</span><span>${s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>
+      <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(s.group)} · ${esc(s.scope)}</span><span>${isFreeStudy(s.id) ? 'Free · ' : 'Paid beta · '}${s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>
       <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
-      <div class="acts"><a class="btn sm primary" href="${q(s)}">Enter</a>${LIVE}${ready(s)}</div></article>`).join('');
+      <div class="acts"><a class="btn sm primary" href="${q(s)}">${isFreeStudy(s.id) || access.active ? 'Enter' : 'Unlock'}</a>${LIVE}${ready(s)}</div></article>`).join('');
     $$('#filters button', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === g))); };
   $$('#filters button', app).forEach((b) => b.onclick = () => { g = b.dataset.g; try { localStorage.setItem('pc-mvp-simgroup', g); } catch (e) { } draw(); }); draw();
 }

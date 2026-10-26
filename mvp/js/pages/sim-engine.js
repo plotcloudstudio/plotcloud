@@ -1,3 +1,4 @@
+import {canUse, renderGate} from '../beta-access.js';
 // One simulation page for every PlotCloud engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
 // One implementation: nothing here computes or draws a result. This page only
 //   hands the engine the version's model in the engine's own input format (the scene Plan Studio's Send to Simulation
@@ -119,6 +120,11 @@ function sunField(w, sc, label, unit) {
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export function render(app, sim, params = new URLSearchParams()) {
+  if (!canUse(sim.id)) {
+    renderGate(app, sim.name);
+    if (params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Paid beta access required.'},location.origin);
+    return;
+  }
   // batch: Results runs this page in a hidden frame for one simulation of a batch (#/batch-run?…): the project, version,
   // level, room and parameter changes come in the address, the engine runs on its own and the result goes back to Results
   const batch = params.get('batch'), pilot=S.isSharedPilot(sim.id), cfg = pilot&&SUN.includes(sim.id)?{...CFG[sim.id],hide:['.sec:has(#h-model)','#measureRow']}:CFG[sim.id], p = batch ? S.project(params.get('project')) : currentProject();

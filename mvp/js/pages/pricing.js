@@ -1,33 +1,42 @@
-import { $, $$ } from '../app.js';
+import { $, esc, toast } from '../app.js';
+import { BETA, checkAccess, accessDate, requestURL, mountActivation, clearCode } from '../beta-access.js';
 
-// Plans and prices as on the current PlotCloud pricing page.
-export function render(app) {
-  let yearly = true;
+export async function render(app) {
+  const access = await checkAccess();
+  const request = esc(requestURL()), email = BETA.email;
   app.innerHTML = `<div class="wrap">
-    <div style="text-align:center"><span class="eyebrow">Pricing</span>
-      <h1 class="display" style="margin-top:18px">Free tools.<br><span>Pro projects.</span></h1>
-      <p class="lede" style="margin:22px auto 0;font-size:18px">Every analysis and design tool is free. PlotCloud Pro keeps one project together: your site, model versions, simulation results and comparisons.</p>
-      <div class="seg" role="group" aria-label="Billing period" style="margin-top:30px"><button type="button" data-y="0">Monthly</button><button type="button" data-y="1">Yearly · save 61%</button></div></div>
-    <div class="plans">
-      <article class="pplan"><div><span class="eyebrow">Free</span><p style="margin-top:10px"><span class="price">CAD 0</span> <span class="muted">forever</span></p><p class="muted">For trying an idea on any site.</p></div>
-        <ul><li>✓ Every analysis and design tool</li><li>✓ PNG export from each tool</li><li>✓ Free starter resource sets</li><li>✓ Save sets and vote on requests</li></ul>
-        <a class="btn lg" href="#/login?signup=1">Start free</a><p class="note" style="text-align:center">No card, no time limit.</p></article>
-      <article class="pplan pro"><span class="ribbon">7 days free</span><div><span class="eyebrow">PlotCloud Pro</span><p style="margin-top:10px"><span class="price" id="price"></span> <span class="muted" id="per"></span></p><p class="muted" id="pnote"></p></div>
-        <ul><li>✓ Everything in Free</li><li>✓ Projects with your site and defaults</li><li>✓ Saved model versions</li><li>✓ Simulation results saved to versions</li><li>✓ Version comparison</li><li>✓ The full resource library</li><li>✓ Vector and high-resolution exports</li></ul>
-        <a class="btn accent lg" href="#/login?signup=1">Start 7-day free trial</a><p class="muted small" style="text-align:center">No credit card required. Nothing is charged when the trial ends.</p></article>
-      <article class="pplan"><div><span class="eyebrow">Teams &amp; Education</span><p style="margin-top:10px"><span class="price" style="font-size:40px">Contact us</span></p><p class="muted">For architecture firms, instructors and departments.</p></div>
-        <ul><li>✓ Access for your practice or course</li><li>✓ Commercial and group resource licensing</li><li>✓ Support for your design workflow</li><li>✓ Project files processed in the browser</li></ul>
-        <a class="btn lg" href="../index.html#/pricing">Contact us</a><p class="note" style="text-align:center">Tell us your team size and workflow.</p></article>
+    <div style="text-align:center"><span class="eyebrow">Pricing · Testing phase</span>
+      <h1 class="display" style="margin-top:18px">Better-informed design.<br><span>A stronger design report.</span></h1>
+      <p class="lede" style="margin:22px auto 0;font-size:18px">Use simulation data to refine your design, compare alternatives, and support your report with clear evidence behind every decision.</p>
+      <p class="note" style="margin-top:14px">PlotCloud is in beta. Features may change and results may contain errors. We do not promise grades, assessment outcomes or professional compliance.</p></div>
+    <div class="grid g2" style="margin-top:44px;align-items:stretch">
+      <article class="pplan"><div><span class="eyebrow">Start with the essentials</span><p style="margin-top:10px"><span class="price">CAD 0</span></p><p class="muted">Try the workflow before paying.</p></div>
+        <ul><li>✓ Sun hours</li><li>✓ Daylight</li><li>✓ Basic model preparation in Workspace</li><li>✓ Access to your saved local projects and results</li></ul>
+        <a class="btn lg" href="#/simulations/sunhours">Try Sun hours free</a><a class="btn" style="margin-top:0" href="#/simulations/daylight">Try Daylight free</a><p class="note">No payment required for these two studies.</p></article>
+      <article class="pplan" style="border-color:var(--red)"><span class="ribbon" style="position:static;align-self:flex-start">Monthly beta access</span><div><span class="eyebrow">Explore beyond Sun &amp; Daylight</span><p style="margin-top:10px"><span class="price">CAD 16.99</span> <span class="muted">/ month</span></p><p class="muted">A month to test ideas, refine your design, and build the evidence for your report.</p></div>
+        <ul><li>✓ All other current Simulation studies</li><li>✓ Current resource tools and design utilities</li><li>✓ No per-run charge for included browser tools</li><li>✓ Activation dates confirmed with your code</li></ul>
+        <a class="btn accent lg" href="${request}">Request monthly access</a><p class="note">Less than a coffee a week. One calendar month of access; renew only when you choose.</p><p class="note">E-transfer to ${email} after written order confirmation. No automatic renewal. Applicable taxes are confirmed before payment. External rendering/provider charges and third-party licenses are not included.</p></article>
     </div>
-    <h2 class="display sm" style="margin-top:96px">What each plan includes</h2>
-    <div style="overflow-x:auto;margin-top:20px"><table class="t" style="min-width:640px"><thead><tr><th>Feature</th><th style="text-align:center">Free</th><th style="text-align:center;color:var(--red)">Pro</th><th style="text-align:center">Teams</th></tr></thead><tbody>
-      ${[['All analysis, design and present tools', 1, 1, 1], ['PNG export from each tool', 1, 1, 1], ['Free starter resource sets', 1, 1, 1], ['Projects with site and defaults', 0, 1, 1], ['Saved versions and results', 0, 1, 1], ['Version comparison', 0, 1, 1], ['Full library, vector and high-res export', 0, 1, 1]]
-        .map(([f, a, b, c]) => `<tr><td>${f}</td>${[a, b, c].map((x) => `<td style="text-align:center">${x ? '✓' : '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
-    <h2 class="display sm" style="margin-top:96px">Good questions</h2>
-    <div class="cols" style="margin-top:12px">${[['How does the free trial work?', 'You get PlotCloud Pro for 7 days with no credit card. On the last day you choose to keep Pro or go back to Free. Nothing is charged automatically.'], ['Are the tools really free?', 'Yes. Every analysis and design tool works on the Free plan. Pro is for keeping your work together: projects, versions, results and the full library.'], ['Can I cancel?', 'Yes, anytime from your account. You keep Pro until the end of the period you paid for.'], ['Can my practice or school use PlotCloud?', 'Yes. Contact us about team access, educational use and commercial resource licensing.']]
-      .map(([q, a]) => `<div style="padding:22px 0;border-top:1px solid var(--line)"><b style="font-size:17px">${q}</b><p class="muted" style="margin-top:8px">${a}</p></div>`).join('')}</div>
-    <p class="note" style="margin-top:36px">Prices in Canadian dollars, plus GST/HST/PST where it applies.</p>
+    <section style="margin-top:68px" aria-labelledby="paymentTitle"><span class="eyebrow">Pay by e-transfer</span><h2 class="display sm" id="paymentTitle" style="margin-top:12px">A clear payment.<br>A manually verified activation.</h2>
+      <div class="card" style="margin-top:24px"><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><span class="muted">E-transfer recipient</span><strong id="paymentEmail">${email}</strong><button type="button" class="btn sm" id="copyPaymentEmail">Copy email</button></div><p class="note" style="margin-top:12px">Do not send money until we email your complete order details, total price, access dates, activation timing and refund terms.</p></div>
+      <div class="grid g3" style="margin-top:22px"><div class="card"><span class="eyebrow">01 · Confirm your order</span><h3 style="margin-top:12px">Email us first.</h3><p class="muted" style="margin-top:10px">Request one month of beta access. We confirm availability, seller details, the total including applicable taxes, and the access period in writing.</p></div><div class="card"><span class="eyebrow">02 · Send your transfer</span><h3 style="margin-top:12px">Use your own banking app.</h3><p class="muted" style="margin-top:10px">After confirmation, send the agreed total to ${email}. Use the agreed order reference. Verify any displayed recipient name against your order confirmation and follow your bank’s security instructions.</p></div><div class="card"><span class="eyebrow">03 · Activate your month</span><h3 style="margin-top:12px">Enter the code we issue.</h3><p class="muted" style="margin-top:10px">Email the transfer date, amount and reference. We check receipt before issuing your activation code. The code includes a fixed access period; a payment claim alone does not unlock tools.</p></div></div>
+      <p class="note" style="margin-top:16px">Never send banking passwords, one-time banking codes, full statements or security answers by email or in the transfer memo. Bank fees, if any, are set by your bank.</p>
+    </section>
+    <section class="card" style="margin-top:48px;max-width:760px" aria-labelledby="activationTitle"><span class="eyebrow">Already paid and received a code?</span><h2 id="activationTitle" style="margin-top:10px">Activate your monthly access.</h2><p id="accessState" class="note" role="status">${access.active ? 'Active until ' + esc(accessDate(access.expiresAt)) : 'No active beta code on this browser. Enter the code from your confirmation email.'}</p><div id="activationForm" style="margin-top:18px"></div>${access.active ? '<button type="button" class="btn sm" id="forgetCode" style="margin-top:16px">Remove code from this browser</button>' : ''}<p class="note" style="margin-top:14px">Keep your code private. Re-enter it on your own device if needed. Removing it here does not cancel a payment or delete your projects.</p></section>
+    <section style="margin-top:68px"><h2 class="display sm">What stays free?</h2><div style="overflow-x:auto;margin-top:20px"><table class="t"><thead><tr><th>Feature</th><th>Free</th><th>Active monthly beta</th></tr></thead><tbody>${[
+      ['Sun hours and Daylight','Included','Included'],['Other Simulation studies','Activation required','Included'],['Resource tools and design utilities','Activation required','Included'],['Basic Workspace model preparation','Available','Available'],['Your saved local projects and results','Available','Available']
+    ].map(([feature,free,paid])=>`<tr><td>${feature}</td><td>${free}</td><td>${paid}</td></tr>`).join('')}</tbody></table></div><p class="note" style="margin-top:14px">A beta pass does not turn a catalog record into a downloadable source file, grant a third-party license, or add a report-export feature that is not yet implemented.</p></section>
+    <section style="margin-top:68px"><h2 class="display sm">Before you decide.</h2><div class="cols" style="margin-top:12px">${[
+      ['Is this a single-use purchase?','No. It covers one calendar month of repeated use of the included tools. The exact start and expiry dates are confirmed with your activation code.'],
+      ['Will it renew automatically?','No. Each additional month is a separate e-transfer you choose to make. There is no card checkout or automatic charge during beta.'],
+      ['Does paying immediately unlock the tools?','No. Transfers are checked manually. We confirm activation timing before payment, then issue your code after receipt is verified.'],
+      ['What if I do not have Canadian e-transfer?','Email us before paying. We will confirm whether we can accept your order; do not send funds through an unlisted method.'],
+      ['Will this improve my grade?','PlotCloud helps you explore and explain design performance. Your work, interpretation and assessment criteria determine the outcome; no grade or professional approval is guaranteed.'],
+      ['What if something goes wrong?','Beta features may contain errors or change. Contact us with your order reference and the problem so we can review access or refund options. Your statutory consumer rights are not limited.']
+    ].map(([q,a])=>`<div style="padding:22px 0;border-top:1px solid var(--line)"><b style="font-size:17px">${q}</b><p class="muted" style="margin-top:8px">${a}</p></div>`).join('')}</div></section>
+    <p class="note" style="margin-top:36px">Prices are in Canadian dollars. Applicable taxes and any seller-collected charges are disclosed before payment. <a href="#/legal/terms">Terms</a> · <a href="#/legal/privacy">Privacy</a> · <a href="#/legal/refunds">Refunds</a> · <a href="mailto:${email}">${email}</a></p>
   </div>`;
-  const set = () => { $('#price', app).textContent = yearly ? 'CAD 79' : 'CAD 16.99'; $('#per', app).textContent = yearly ? '/ year' : '/ month'; $('#pnote', app).textContent = yearly ? 'CAD 6.58 a month, billed yearly' : 'Billed monthly · cancel anytime'; $$('[data-y]', app).forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.y === '1') === yearly))); };
-  $$('[data-y]', app).forEach((b) => b.onclick = () => { yearly = b.dataset.y === '1'; set(); }); set();
+  mountActivation($('#activationForm', app), { onSuccess: grant => { $('#accessState', app).textContent = 'Active until ' + accessDate(grant.expiresAt); toast('Monthly beta access activated'); } });
+  $('#forgetCode', app)?.addEventListener('click', () => { clearCode(); render(app); });
+  $('#copyPaymentEmail', app).onclick = async () => { try { await navigator.clipboard.writeText(email); toast('Payment email copied'); } catch { toast('Copy this email: ' + email); } };
 }

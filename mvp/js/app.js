@@ -1,6 +1,8 @@
 // Hash router, theme, sign-in state and small helpers shared by the pages.
 import * as S from './store.js';
+import {SIMS} from './data.js';
 import * as C from './cloud.js';
+import {checkAccess, canUse, renderGate} from './beta-access.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -81,6 +83,18 @@ export async function route() {
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
   who();
   const app = $('#app'); app.innerHTML = '';
+  const study = key === 'simulations' ? rest[0]?.split('?')[0] : key === 'batch-run' ? params.get('sim') : null;
+  const resource = key === 'resources' && rest[0] === 'tool' ? rest[1]?.split('?')[0] : null;
+  const resourceTools = ['furniture','facade','detaillab','topo','stairs3d','doors3d','palette','axon','ergo','scale','code-bc','code-on','access-bc','access-on','leed'];
+  const feature = SIMS.some(s => s.id === study) ? study : resourceTools.includes(resource) ? 'resource:' + resource : null;
+  if (feature) {
+    await checkAccess(); if (!isCurrent()) return;
+    if (!canUse(feature)) {
+      renderGate(app, 'This ' + (feature.startsWith('resource:') ? 'tool' : 'study'));
+      if (key === 'batch-run' && params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Paid beta access required.'},location.origin);
+      document.title = 'Beta access · PlotCloud'; return;
+    }
+  }
   const mod = await PAGES[key]();
   if(!isCurrent())return;
   let nextCleanup;
