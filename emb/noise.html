@@ -258,7 +258,7 @@ function results() {
 // charts: façade points by band; the roads' shares of the sound reaching the façades
 function charts() {
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#222', mut = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#777';
-  const prepC = (cv) => { const d = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth || 280, H = +cv.getAttribute('height'); cv.width = W * d; cv.height = H * d; cv.style.height = H + 'px'; const g = cv.getContext('2d'); g.scale(d, d); g.clearRect(0, 0, W, H); g.font = '10.5px system-ui, sans-serif'; return [g, W, H]; };
+  const prepC = (cv) => { const d = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth || 280, H = +(cv.dataset.chartHeight || cv.dataset.baseHeight || (cv.dataset.baseHeight = cv.getAttribute('height'))); cv.width = W * d; cv.height = H * d; cv.style.height = H + 'px'; const g = cv.getContext('2d'); g.scale(d, d); g.clearRect(0, 0, W, H); g.font = '10.5px system-ui, sans-serif'; return [g, W, H]; };
   const [g, W, H] = prepC($('#histC')), [g2, W2, H2] = prepC($('#roadC'));
   if (!RES) { $('#chartNote').hidden = false; return; } $('#chartNote').hidden = true;
   const cnt = BANDS.map(() => 0); let n = 0; for (const f of RES.fac) for (const v of f.vals) if (Number.isFinite(v)) { n++; cnt[BANDS.findIndex(([u]) => v < u)]++; }
@@ -266,9 +266,11 @@ function charts() {
   BANDS.forEach(([u, c], i) => { const s = n ? cnt[i] / n : 0, h = (H - 34) * s / top; g.fillStyle = `rgb(${c.join(',')})`; g.fillRect(4 + i * bw + 2, H - 20 - h, bw - 4, h); g.fillStyle = mut; g.textAlign = 'center';
     g.fillText(i === 0 ? `<${u}` : u === Infinity ? `${BANDS[i - 1][0]}+` : `${BANDS[i - 1][0]}`, 4 + i * bw + bw / 2, H - 6); if (s > 0.004) { g.fillStyle = ink; g.fillText(`${Math.round(s * 100)}%`, 4 + i * bw + bw / 2, H - 24 - h); } });
   const S = RES.share.slice(0, 6), rowH = Math.min(24, (H2 - 6) / Math.max(1, S.length)); g2.textAlign = 'left';
-  S.forEach((r, i) => { const y = 3 + i * rowH, w = (W2 - 120) * r.share; g2.fillStyle = mut; g2.fillText((r.name || r.type).slice(0, 18), 0, y + rowH / 2 + 3); g2.fillStyle = i ? '#9aa3ad' : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c7362c';
+  S.forEach((r, i) => { const y = 3 + i * rowH, w = (W2 - 150) * r.share; g2.fillStyle = mut; g2.fillText((r.name || r.type).slice(0, 18), 0, y + rowH / 2 + 3); g2.fillStyle = i ? '#9aa3ad' : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c7362c';
     g2.fillRect(108, y + 3, Math.max(1, w), rowH - 7); g2.fillStyle = ink; g2.fillText(`${Math.round(r.share * 100)} %`, 112 + w, y + rowH / 2 + 3); });
 }
+// The unified panel allocates real drawing heights through data-chart-height.
+window.__pcRedrawCharts = window.__pcUnifiedCharts = () => charts();
 function legend() {
   $('#legend').innerHTML = `<b>Road noise, L<sub>Aeq</sub> dB${RES?.o.period === 'night' ? ' (night)' : ''}</b>${BANDS.map(([u, c], i) => `<div class="key"><i style="background:rgb(${c.join(',')})"></i>${i === 0 ? `under ${u}` : u === Infinity ? `${BANDS[i - 1][0]} and over` : `${BANDS[i - 1][0]}–${u}`}</div>`).join('')}<span class="note">Ground map ${r1(RES?.hr ?? HR)} m up; façades coloured by their loudest point, every storey</span>`;
 }
