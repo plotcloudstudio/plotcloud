@@ -138,7 +138,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws8-20261026`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws9-20261026`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -155,7 +155,7 @@ export function render(app, [pid]) {
     <div class="w3-pane" data-pane="persp"><iframe id="fPersp" title="Perspective (Plan Studio 3D)" src="${fsrc('persp')}"></iframe></div>
     <div class="w3-pane" data-pane="shaded"><div class="w3-body"><div class="vp" id="vp"></div><div class="hint" id="hint"></div></div></div>
     <div class="w2-cap" id="cap">
-      <button type="button" id="addLevel" title="Add a level above the model" aria-label="Add level above" disabled>+ Level</button>
+      <div style="display:flex;align-items:center"><button type="button" id="levelBtn" aria-haspopup="menu" aria-expanded="false" disabled>Level ▾</button><button type="button" id="addLevel" title="Add level above" aria-label="Add level above" disabled>+</button><div class="w2-menu" id="levelMenu" role="menu" aria-label="Levels" hidden></div></div>
       <span class="w2-sep" aria-hidden="true"></span>
       <div><button type="button" id="vBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="vMenu" role="menu" hidden></div></div>
       <span class="w2-sep" aria-hidden="true"></span>
@@ -198,7 +198,7 @@ export function render(app, [pid]) {
   <footer class="w2-status" aria-label="Status bar">
     ${Object.keys(DEF_UI.snap).map((k) => `<label title="${{ End: 'Wall ends', Near: 'Wall bodies and faces', Mid: 'Wall midpoints', Cen: 'Centres: arc walls, furniture, rooms' }[k]} — for drawing in Plan and for the gumball in Perspective"><input type="checkbox" data-snap="${k}" ${UI.snap[k] ? 'checked' : ''}> ${k}</label>`).join('')}
     <span class="w2-div" aria-hidden="true"></span>
-    <button type="button" class="w2-sw" role="switch" data-sw="gumball" aria-checked="${UI.gumball}" title="Plan Studio's gumball on the selected piece in Perspective: yellow and green arrows move it, the blue arc turns it">Gumball</button>
+    <button type="button" class="w2-sw" role="switch" data-sw="gumball" aria-checked="${UI.gumball}" title="Move or rotate the selected object in Perspective. Hosted objects keep their constraints.">Gumball</button>
     <button type="button" class="w2-sw" role="switch" data-sw="clearance" aria-checked="${UI.clearance}" title="Show the free space each piece wants round it (front, back and sides), from its own size and clearances. A hint only: walls block the piece, not its clearance.">Clearance</button>
     <span class="sp"></span><span class="w2-state" id="state"></span>
   </footer></div>`;
@@ -305,20 +305,22 @@ export function render(app, [pid]) {
   if (!['plan', 'persp'].includes(UI.view)) UI.view = 'plan';
   function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
   function viewName() {
-    const a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null, L = (INST.plan.ready ? INST.plan.ws : any())?.levels();
-    const lv = L ? L.list.find((l) => l.id === L.lv) : null;
-    if (UI.view === 'plan') return a?.view2d === 'ceiling' ? `Ceiling plan · ${lv?.short || ''}` : a?.view2d === 'elev' ? 'Interior elevation' : `Plan · ${lv ? `${lv.short} ${lv.name}` : 'Level 1'}`;
-    if (UI.view === 'persp') return b?.walking || b?.walkpick ? 'Walkthrough' : b?.explode ? 'Exploded view' : 'Perspective';
-    return 'Perspective';
+    const st = INST.plan.ready ? INST.plan.ws.state() : null;
+    return UI.view === 'plan' ? (st?.view2d === 'ceiling' ? 'Ceiling plan' : 'Plan') : 'Perspective';
   }
   function menus() {
     const L = (INST.plan.ready ? INST.plan.ws : any())?.levels(), a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null;
     const it = (attrs, on, label, small = '') => `<button role="menuitemradio" ${attrs} aria-checked="${on}">${label}${small ? `<small>${small}</small>` : ''}</button>`;
     $('#vBtn', app).textContent = viewName() + ' ▾';
-    $('#vMenu', app).innerHTML = (L ? L.list.slice().reverse().map((l) => it(`data-view="plan" data-level="${esc(l.id)}"`, UI.view === 'plan' && a?.view2d === 'plan' && l.id === L.lv, `Plan · ${esc(l.short)} ${esc(l.name)}`, `${l.z.toFixed(2)} m`)).join('') : it('data-view="plan"', UI.view === 'plan', 'Plan'))
+    const current = L?.list.find(l => l.id === L.lv);
+    $('#levelBtn', app).textContent = current ? `Level · ${current.short} ▾` : 'Level ▾';
+    $('#levelBtn', app).title = current ? `${current.name} · ${current.z.toFixed(2)} m` : 'Choose level';
+    $('#levelBtn', app).disabled = !L;
+    $('#levelMenu', app).innerHTML = L ? L.list.slice().reverse().map(l => it(`data-level="${esc(l.id)}"`, l.id === L.lv, `${esc(l.short)} · ${esc(l.name)}`, `${l.z.toFixed(2)} m`)).join('') : '';
+    $$('#levelMenu [data-level]', app).forEach(x => x.onclick = () => { closeMenus(); setSel([], { params: false }); for (const pane of ready()) pane.ws.level(x.dataset.level); menus(); });
+    $('#vMenu', app).innerHTML = it('data-view="plan"', UI.view === 'plan' && a?.view2d !== 'ceiling', 'Plan')
       + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan')
-      + it('data-view="persp"', UI.view === 'persp' && !b?.walking && !b?.walkpick && !b?.explode, 'Perspective', 'Plan Studio 3D')
-      + '<p class="w2-mnote">Every view shows the same model; an edit in one is in all of them. Explode, Walkthrough and Interior elevation are panels on the right.</p>';
+      + it('data-view="persp"', UI.view === 'persp', 'Perspective');
     const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
     $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;
     $('#dMenu', app).innerHTML = DISPLAYS.map(([k, n]) => it(`data-disp="${k}"`, cur === k, n)).join('');
@@ -329,12 +331,12 @@ export function render(app, [pid]) {
       menus(); });
     $$('#dMenu [data-disp]', app).forEach((x) => x.onclick = () => { closeMenus(); const d = x.dataset.disp; if (UI.view === 'shaded') vp.setDisplay(d); else { UI.disp = d; saveUI(); if (INST.persp.ready) INST.persp.ws.display(d); } menus(); });
   }
-  const closeMenus = () => { for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) { $('#' + m, app).hidden = true; $('#' + b, app).setAttribute('aria-expanded', 'false'); } };
-  for (const [b, m] of [['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) $('#' + b, app).onclick = (e) => { e.stopPropagation(); const was = !$('#' + m, app).hidden; closeMenus(); if (!was) { menus(); $('#' + m, app).hidden = false; $('#' + b, app).setAttribute('aria-expanded', 'true'); } };
+  const closeMenus = () => { for (const [b, m] of [['levelBtn', 'levelMenu'], ['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) { $('#' + m, app).hidden = true; $('#' + b, app).setAttribute('aria-expanded', 'false'); } };
+  for (const [b, m] of [['levelBtn', 'levelMenu'], ['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) $('#' + b, app).onclick = (e) => { e.stopPropagation(); const was = !$('#' + m, app).hidden; closeMenus(); if (!was) { menus(); $('#' + m, app).hidden = false; $('#' + b, app).setAttribute('aria-expanded', 'true'); } };
   const outside = (e) => { if (!e.target.closest('#cap')) closeMenus(); if (!e.target.closest('.w3-gearw')) gearMenu(false); }; document.addEventListener('click', outside);
   const away = () => { closeMenus(); gearMenu(false); }; addEventListener('blur', away);   // a click in a view (an iframe) closes the menus too
   // the panes' own buttons (Explode in the toolbar, Esc out of a walkthrough, the level) change the name in the pill too
-  const levelUI = () => menus(), paneUI = () => { if ($('#vMenu', app).hidden) menus(); tabState(); };
+  const levelUI = () => menus(), paneUI = () => { if (['levelMenu', 'vMenu', 'dMenu'].every(id => $('#' + id, app).hidden)) menus(); tabState(); };
   const paneT = setInterval(paneUI, 700);
 
 

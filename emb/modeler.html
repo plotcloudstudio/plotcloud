@@ -3883,11 +3883,105 @@ $('#walkX').addEventListener('click', walkExit);
 
 // ---------- 6 · 3D gizmo: arrows move along the piece's own axes, the arc turns it ----------
 let GZD = null;
-function gizmoSync() {
-  if (!window.S3 || !S3.on || !S3.gizmo) return; const f = SEL && SEL.k === 'furn' ? selObj() : null;
-  if (!f || CAM !== '3d' || WALKING || XPL.on || !furnOk(f, '3d') || HDRAG) { S3.gizmo.set(null); return; }
-  S3.gizmo.set(f, lvObj(f.lv).z, !!f.locked);
+// Adapt authored geometry to the same planar move/rotate manipulator as furniture.
+function gizmoTarget() {
+  const s = SEL, o = selObj();
+  if (!s || !o || isHidden(o.id)) return null;
+  const kind = s.k === 'end' ? 'wall' : s.k;
+  if (!['furn', 'wall', 'op', 'floor', 'void', 'fence', 'mass', 'imp', 'light', 'ceil'].includes(kind)) return null;
+  if (LAYER_OF[kind] && !VIS[LAYER_OF[kind]]) return null;
+  if (kind === 'furn' && !furnOk(o, '3d')) return null;
+  if (kind === 'imp' && !impOn(o, '3d')) return null;
+  if (kind === 'mass' && !layerOn('mass', '3d')) return null;
+  if (kind === 'light' && !layerOn('lighting.fix', '3d')) return null;
+  if (kind === 'ceil' && !layerOn('ceiling', '3d')) return null;
+  const layer = kind === 'imp' ? o.layer || 'Imported' : ({ wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', mass: 'Masses', furn: 'Furniture', light: 'Lighting', ceil: 'Lighting' })[kind];
+  const locked = !!o.locked || !!o.auto || !!window.__ws?.locks.has(layer);
+  const level = lvObj(o.lv || LV) || { z: 0, h: 3 };
+  if (kind === 'furn') return { kind, f: o, z: level.z, locked, apply() {} };
+  const original = JSON.parse(JSON.stringify(o));
+  let F = frameOf(kind, o), points = null, h = o.h || .15, z = level.z;
+  if (['floor', 'void', 'fence', 'mass'].includes(kind)) {
+    points = kind === 'floor' || kind === 'void' ? floorPoints(o) : o.points;
+    const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+    const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
+    F = { c: [(x0 + x1) / 2, (y0 + y1) / 2], th: 0, hw: (x1 - x0) / 2, hd: (y1 - y0) / 2 };
+    if (kind === 'mass') { h = massH(o); z = o.z || 0; }
+    if (kind === 'floor') { h = o.thickness || level.slab || .22; z -= h; }
+    if (kind === 'void') h = .08;
+  } else if (kind === 'imp') {
+    F = { c: [o.g.x + o.g.w / 2, o.g.y + o.g.d / 2], th: 0, hw: o.g.w / 2, hd: o.g.d / 2 };
+    z = o.g.z; h = o.g.h;
+  } else if (kind === 'ceil') {
+    F = { c: [o.x + (o.w || 0) / 2, o.y + (o.d || 0) / 2], th: 0, hw: (o.w || .2) / 2, hd: (o.d || .2) / 2 };
+    z += o.h != null ? o.h : level.h; h = .06;
+  } else if (kind === 'wall') h = wallTopH(o);
+  else if (kind === 'op') { z += o.sill || 0; h = Math.max(.1, (o.head || 2.1) - (o.sill || 0)); }
+  else if (kind === 'light') {
+    const fixture = WBF.fixture(o.type, o.p), corners = fixture.parts.filter(p => p.s !== 'beam' && !p.hidden).flatMap(WBF.partCorners);
+    const lo = corners.length ? Math.min(...corners.map(p => p[2])) : 0, hi = corners.length ? Math.max(...corners.map(p => p[2])) : .2;
+    z += WBF.originZ(o, level.h) + lo; h = hi - lo;
+  }
+  if (!F) return null;
+  const f = { id: o.id, lv: o.lv || LV, x: F.c[0], y: F.c[1], rot: F.th || 0, w: Math.max(.08, F.hw * 2), d: Math.max(.08, F.hd * 2), h: Math.max(.04, h) };
+  // Openings slide along their host; ceiling panels have no rotation in the model.
+  f.axes = kind === 'op' ? ['x'] : kind === 'ceil' || kind === 'light' && isWallType(o.type, o.p) ? ['x', 'y'] : ['x', 'y', 'r'];
+  const origin = { x: f.x, y: f.y, rot: f.rot };
+  const sourcePoints = points?.map(p => p.slice());
+  const followers = kind === 'wall' ? M.walls.filter(w => w !== o && w.lv === o.lv && !w.locked).flatMap(w => ['a', 'b'].filter(e => near(w[e], original.a, .02) || near(w[e], original.b, .02)).map(e => ({ w, e, p: w[e].slice() }))) : [];
+  const transform = p => {
+    const a = f.rot - origin.rot, c = Math.cos(a), sn = Math.sin(a), x = p[0] - origin.x, y = p[1] - origin.y;
+    return [+(f.x + x * c - y * sn).toFixed(4), +(f.y + x * sn + y * c).toFixed(4)];
+  };
+  const bounds = pts => {
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    o.x = Math.min(...xs); o.y = Math.min(...ys); o.w = Math.max(...xs) - o.x; o.d = Math.max(...ys) - o.y;
+  };
+  return { kind, f, z, locked,
+    snapRotation: kind === 'imp' ? a => Math.round(a / (Math.PI / 2)) * Math.PI / 2 : WBP.snapAngle,
+    apply() {
+      if (kind === 'wall') {
+        o.a = transform(original.a); o.b = transform(original.b);
+        for (const q of followers) q.w[q.e] = transform(q.p);
+      } else if (kind === 'op') {
+        const w = wallById(o.wall); if (!w) return;
+        const d = STC.wallDir(w); o.pos = (f.x - w.a[0]) * d[0] + (f.y - w.a[1]) * d[1]; STC.fixOp(M, o);
+      } else if (sourcePoints) {
+        o.points = sourcePoints.map(transform);
+        if (kind === 'floor' || kind === 'void') {
+          if (original.holes) o.holes = original.holes.map(hole => hole.map(transform));
+          bounds(o.points);
+        }
+      } else if (kind === 'imp') {
+        const turn = Math.round((f.rot - origin.rot) / (Math.PI / 2)), odd = Math.abs(turn % 2) === 1;
+        o.rot = (((original.rot || 0) + turn) % 4 + 4) % 4;
+        o.w0 = original.w0 != null ? original.w0 : ((original.rot || 0) & 1 ? original.g.d : original.g.w);
+        o.d0 = original.d0 != null ? original.d0 : ((original.rot || 0) & 1 ? original.g.w : original.g.d);
+        o.g.w = odd ? original.g.d : original.g.w; o.g.d = odd ? original.g.w : original.g.d;
+        o.g.x = +(f.x - o.g.w / 2).toFixed(4); o.g.y = +(f.y - o.g.d / 2).toFixed(4);
+      } else {
+        const p = transform([original.x, original.y]); o.x = p[0]; o.y = p[1];
+        if (kind === 'light') {
+          if (isWallType(o.type, o.p)) { const at = lightAt(o.type, o.p, p); if (at) Object.assign(o, at); else { o.x = original.x; o.y = original.y; } }
+          else o.rot = (original.rot || 0) + f.rot - origin.rot;
+        }
+      }
+    }
+  };
 }
+function gizmoSync() {
+  if (!window.S3 || !S3.on || !S3.gizmo) return;
+  const target = GZD?.target || gizmoTarget();
+  if (!target || CAM !== '3d' || TOOL !== 'select' || WALKING || XPL.on || HDRAG) { S3.gizmo.set(null); return; }
+  S3.gizmo.set(target.f, target.z, target.locked);
+}
+function cancelGizmo() {
+  if (!GZD) return;
+  const before = GZD.before; GZD = null; M = JSON.parse(before); tipOff(); afterLoad(false);
+}
+cv.addEventListener('pointercancel', e => { if (GZD) { e.stopImmediatePropagation(); cancelGizmo(); } }, true);
+addEventListener('keydown', e => { if (GZD && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); cancelGizmo(); } }, true);
+addEventListener('blur', cancelGizmo);
 { const _o3 = drawOverlay3D; drawOverlay3D = function () { if (WALKING || XPL.on) { LB = []; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, VP.w, VP.h); zoomUI(); xplOverlay(); ftbUI(); return; } _o3(); }; }
 
 // ---------- 8 · exploded view (3D): storeys pulled apart along +Z, display only ----------
@@ -3986,8 +4080,8 @@ let WLK = null, NDRAG = null;
 cv.addEventListener('pointerdown', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); e.preventDefault(); WLK = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); return; }
   if (CAM === '3d' && XPL.on) { if (e.button === 0 && TOOL !== 'orbit') setTool('orbit'); return; }
-  if (CAM === '3d' && e.button === 0 && !SPACE && TOOL === 'select' && SEL && SEL.k === 'furn' && S3.gizmo) { const f = selObj(), ax = f && !f.locked ? S3.gizmo.hit(e.clientX, e.clientY) : null;
-    if (ax) { e.stopImmediatePropagation(); e.preventDefault(); const z = lvObj(f.lv).z, p = S3.plane(e.clientX, e.clientY, z); if (!p) return; GZD = { ax, f, z, p0: p, x0: f.x, y0: f.y, r0: f.rot || 0, a0: Math.atan2(p[1] - f.y, p[0] - f.x), before: snapM() }; cv.setPointerCapture(e.pointerId); ftbUI(); return; } }
+  if (CAM === '3d' && e.button === 0 && !SPACE && TOOL === 'select' && SEL && S3.gizmo) { const target = gizmoTarget(), f = target?.f, ax = target && !target.locked ? S3.gizmo.hit(e.clientX, e.clientY) : null;
+    if (ax) { e.stopImmediatePropagation(); e.preventDefault(); cv.focus({ preventScroll: true }); const z = target.z, p = S3.plane(e.clientX, e.clientY, z); if (!p) return; GZD = { ax, f, z, target, p0: p, x0: f.x, y0: f.y, r0: f.rot || 0, a0: Math.atan2(p[1] - f.y, p[0] - f.x), before: snapM() }; cv.setPointerCapture(e.pointerId); ftbUI(); return; } }
   if (CAM !== 'plan') return;
   if (VIEW2D === 'ceiling') {
     if (e.button !== 0 || SPACE) return;   // middle / right / space: the plan's own pan
@@ -4011,7 +4105,7 @@ cv.addEventListener('pointermove', (e) => {
   if (GZD) { e.stopImmediatePropagation(); const p = S3.plane(e.clientX, e.clientY, GZD.z); if (!p) return; const f = GZD.f;
     if (GZD.ax === 'r') { const a = Math.atan2(p[1] - f.y, p[0] - f.x); f.rot = (((GZD.r0 + a - GZD.a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(e, `${Math.round(f.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(f.rot) * 180 / Math.PI) % 360}°`); }
     else { const dir = GZD.ax === 'x' ? [Math.cos(GZD.r0), Math.sin(GZD.r0)] : [-Math.sin(GZD.r0), Math.cos(GZD.r0)], k = wsAxisSnap(GZD, dir, (p[0] - GZD.p0[0]) * dir[0] + (p[1] - GZD.p0[1]) * dir[1]); f.x = +(GZD.x0 + dir[0] * k).toFixed(4); f.y = +(GZD.y0 + dir[1] * k).toFixed(4); tipAt(e, `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${GZD.ax === 'x' ? 'its width (X)' : 'its depth (Y)'}`); }
-    S = STC.build(M); upd3D(); return; }
+    GZD.target.apply(); S = STC.build(M); upd3D(); return; }
   if (CAM !== 'plan') return;
   if (NDRAG) { e.stopImmediatePropagation(); const p = evPt(e); NDRAG.n.x = +sg(p[0] + NDRAG.dx).toFixed(3); NDRAG.n.y = +sg(p[1] + NDRAG.dy).toFixed(3); NDRAG.moved = true; draw(); return; }
   if (VIEW2D === 'ceiling') {
@@ -4023,7 +4117,7 @@ cv.addEventListener('pointermove', (e) => {
 }, true);
 cv.addEventListener('pointerup', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); WLK = null; return; }
-  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.ax === 'r') D.f.rot = WBP.snapAngle(D.f.rot); tidy(); commit(D.before); return; }
+  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.ax === 'r') D.f.rot = (D.target.snapRotation || WBP.snapAngle)(D.f.rot); D.target.apply(); tidy(); commit(D.before); return; }
   if (NDRAG) { e.stopImmediatePropagation(); const D = NDRAG; NDRAG = null; if (D.moved) { tidy(); commit(D.before); } return; }
   if (CAM === 'plan' && VIEW2D === 'ceiling') {
     if (drag && drag.k === 'pan') return; e.stopImmediatePropagation();
@@ -5689,13 +5783,15 @@ window.S3 = (() => {
         const hd = new T.Group(); hd.name = 'gz-handles'; hd.position.y = 0.02;
         const arrow = (col, ax) => { const a = new T.Group(); const sh = top(new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.72, 10), mb(col))); sh.position.y = 0.36; const cone = top(new T.Mesh(new T.ConeGeometry(0.065, 0.2, 18), mb(col))); cone.position.y = 0.82;
           const pk = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 0.96, 8), inv); pk.position.y = 0.48; pk.userData.gz = ax; a.add(sh, cone, pk); if (ax === 'x') a.rotation.z = -Math.PI / 2; else a.rotation.x = -Math.PI / 2; a.name = 'gz-' + ax; hd.add(a); GZ.pick.push(pk); };
-        arrow(0xF1C40F, 'x'); arrow(0x2ECC71, 'y');
+        if (!f.axes || f.axes.includes('x')) arrow(0xF1C40F, 'x'); if (!f.axes || f.axes.includes('y')) arrow(0x2ECC71, 'y');
+        if (!f.axes || f.axes.includes('r')) {
         // v131: the arc is a quarter turn (ARC_SWEEP), on the side away from the two arrows, so each handle can be grabbed on its own
         const SW = ARC_SWEEP * Math.PI / 180, A0 = Math.PI - SW / 2, A1 = A0 + SW, tg = new T.TorusGeometry(0.6, 0.018, 8, 72, SW); tg.rotateZ(A0);
         const arc = top(new T.Mesh(tg, mb(0x3498FF))); arc.rotation.x = Math.PI / 2; arc.name = 'gz-r';
         const head = top(new T.Mesh(new T.ConeGeometry(0.06, 0.18, 16), mb(0x3498FF))); head.position.set(0.6 * Math.cos(A1), 0.6 * Math.sin(A1), 0); head.rotation.z = A1; arc.add(head);
         const head2 = top(new T.Mesh(new T.ConeGeometry(0.06, 0.18, 16), mb(0x3498FF))); head2.position.set(0.6 * Math.cos(A0), 0.6 * Math.sin(A0), 0); head2.rotation.z = A0 + Math.PI; arc.add(head2);
         const pg = new T.TorusGeometry(0.6, 0.08, 6, 36, SW); pg.rotateZ(A0); const pk = new T.Mesh(pg, inv); pk.rotation.x = Math.PI / 2; pk.userData.gz = 'r'; pk.userData.mid = A0 + SW / 2; hd.add(arc, pk); GZ.pick.push(pk);
+        }
         G.add(hd); GZ.hd = hd;
       }
       scene.add(G); GZ.g = G; render();
@@ -6112,10 +6208,10 @@ if (window.__WSROLE) {
     return out; };
   wsAxisSnap = (G, dir, k) => {
     const f = G.f, tol = 0.12, along = (q) => (q[0] - G.x0) * dir[0] + (q[1] - G.y0) * dir[1]; let best = k, bd = tol; WS.snapKind = null;
-    const pts = []; for (const w of lvWalls(f.lv)) { if (WSNAP.end) pts.push([w.a, 'end'], [w.b, 'end']); if (WSNAP.mid) pts.push([[(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2], 'mid']); }
+    const pts = []; for (const w of lvWalls(f.lv)) { if (w.id === f.id) continue; if (WSNAP.end) pts.push([w.a, 'end'], [w.b, 'end']); if (WSNAP.mid) pts.push([[(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2], 'mid']); }
     if (WSNAP.cen) for (const q of wsCenPts(f.lv, f.id)) pts.push([q, 'cen']);
     for (const [q, kd] of pts) { const a = along(q); if (Math.abs(a - k) < bd) { bd = Math.abs(a - k); best = a; WS.snapKind = kd; } }
-    if (WSNAP.near) {   // the leading face of the piece onto the nearest wall face along the arrow
+    if (WSNAP.near && (!G.target || G.target.kind === 'furn')) {   // the leading face of the piece onto the nearest wall face along the arrow
       const half = G.ax === 'x' ? f.w / 2 : f.d / 2, side = G.ax === 'x' ? f.d / 2 : f.w / 2, pr = [-dir[1], dir[0]], c0 = (G.x0) * pr[0] + (G.y0) * pr[1];
       for (const B of wallPolys(f.lv)) { let b0 = Infinity, b1 = -Infinity, l0 = Infinity, l1 = -Infinity; for (const q of B) { const a = along(q), l = q[0] * pr[0] + q[1] * pr[1] - c0; b0 = Math.min(b0, a); b1 = Math.max(b1, a); l0 = Math.min(l0, l); l1 = Math.max(l1, l); }
         if (l1 <= -side || l0 >= side) continue; for (const cand of [b0 - half, b1 + half]) if (Math.abs(cand - k) < bd) { bd = Math.abs(cand - k); best = cand; WS.snapKind = 'near'; } }

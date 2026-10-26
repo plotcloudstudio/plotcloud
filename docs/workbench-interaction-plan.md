@@ -10,8 +10,8 @@ For architects modeling a building and its furniture in a project, then sending 
 - Drag empty space to box-select: right-to-left crossing or left-to-right containment. Hit testing currently uses projected object bounds. Shift adds; Ctrl/Cmd removes. The views and Layers share a selection set. Hidden and locked layers cannot be selected.
 - Send to Simulation saves a new version when needed and selects that version before opening Simulation. The user still chooses the study and its calculation settings there.
 - Edit site and Finish site editing unlock and relock the Site layer. The button label follows the layer's lock state.
-- The + Level button sits to the left of the Plan/Perspective selector. It calls Plan Studio's existing add-level operation. Newly added levels are synchronized after all views receive the updated model.
-- Gumball and the floating toolbar retain Plan Studio's existing capabilities and supported object types. This release does not introduce wall-specific Gumball behavior or group transformation algorithms.
+- The Level control holds the floor list and a + button to add a floor. The adjacent view menu contains only Plan, Ceiling plan and Perspective. It calls Plan Studio's existing add-level operation. Newly added levels are synchronized after all views receive the updated model.
+- Perspective Gumball supports planar move/rotation for authored walls, manual slabs, floor openings, fences, masses and furniture, plus movement of lights, ceiling panels and imported meshes. Wall endpoint connections and hosted openings follow the edited wall. Openings slide on the host axis; imports retain their quarter-turn rotation format. Automatic slabs and locked objects expose no transform handles. Escape or pointer cancellation restores the pre-drag model; a completed drag is one shared undo step. This does not add free vertical transforms or group transforms.
 
 ## Full linked-model management remains separate
 
@@ -22,6 +22,8 @@ Full linked-model support would need a reference record containing the source pr
 Ordinary objects retain their existing category layers and imported layers. Arbitrary custom-layer assignment for native walls, slabs and other objects would also require visibility, lock, export and historical-version rules.
 
 ## Validation
+
+`tests/workbench-gumball.cjs` checks the simplified menu, level selection, object-type adapters, wall connections, hosted constraints, cancellation, shared undo/redo and lock behavior.
 
 `tests/workbench-editing.cjs` covers drawing a wall in Perspective, furniture placement and palette drag, retaining tools across views, starting major tools in 3D, actual mouse box-selection, both fence families, site lock controls, adding levels in both views, and Simulation navigation.
 
