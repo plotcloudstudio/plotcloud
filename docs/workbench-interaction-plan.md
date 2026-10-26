@@ -1,27 +1,32 @@
-# Workbench 建模交互方案
+# Workbench interaction plan
 
-面向在同一项目内进行场地、建筑与家具建模，再送入性能分析的建筑师。减少切换视图后重新找工具、重复导入和手动保存分析版本的操作。
+For architects modeling a building and its furniture in a project, then sending a saved version to performance analysis. The workflow should reduce repeated tool selection, imports and manual version preparation when changing views.
 
-## 当前实现
+## Implemented behavior
 
-- Plan 与 Perspective 使用 Plan Studio 的工具实现与共享模型。左侧工具作用于当前视图；切换视图传递工具、family、门窗型号和导入家具的放置状态。绘制落在当前楼层平面上，门窗使用现有墙体命中逻辑。
-- 家具卡片可拖入当前视图，也可先选卡片再点击放置。墙工具可直接在 Perspective 中逐点绘制。矩形与弧线继续使用同一套原有绘制手势。
-- Balcony railing、Backyard fence 先选择 family，再画路径；Enter 或双击完成。按每段路径的长度、中心和方向生成对应 family，保留其参数和编辑能力。取消未完成路径不会生成模型。Draw room 不再显示独立 Fence 入口。
-- 在空白处拖动框选；右向左为相交框选，左向右为包含框选。当前按对象的投影包围范围判断命中。Shift 累加、Ctrl/Cmd 移除，与 Layers 共用选择集；隐藏和锁定图层不可选。
-- 顶部 Send to Simulation 保存有改动的当前模型版本，并选中该版本进入 Simulation。进入后仍由用户选择分析类型和计算设置。
-- Site 有 Edit site / Finish site editing 入口，分别解锁与重新锁定场地图层。图层中的锁定状态与按钮文字一致。
-- Gumball 和浮动工具栏沿用 Plan Studio 的能力与适用对象；本次没有新增墙体专属 Gumball 或成组变换算法。
+- Plan and Perspective use Plan Studio's modeling tools and the same project model. Palette tools act in the active view. Changing views transfers the active tool, furniture family, opening type and imported-furniture placement state. Drawing uses the current level plane; openings use the existing wall-hit logic.
+- Furniture cards support drag-and-drop into the active view and click-to-place. Walls can be drawn directly in Perspective. Rectangle and arc tools retain their original drawing gestures.
+- Balcony railing and Backyard fence require a path before generation. Enter or double-click finishes the path. Each segment determines the selected family's length, center and direction while retaining its parameters. Cancelling an unfinished path creates no objects. Draw room no longer shows a separate Fence entry.
+- Drag empty space to box-select: right-to-left crossing or left-to-right containment. Hit testing currently uses projected object bounds. Shift adds; Ctrl/Cmd removes. The views and Layers share a selection set. Hidden and locked layers cannot be selected.
+- Send to Simulation saves a new version when needed and selects that version before opening Simulation. The user still chooses the study and its calculation settings there.
+- Edit site and Finish site editing unlock and relock the Site layer. The button label follows the layer's lock state.
+- The + Level button sits to the left of the Plan/Perspective selector. It calls Plan Studio's existing add-level operation. Newly added levels are synchronized after all views receive the updated model.
+- Gumball and the floating toolbar retain Plan Studio's existing capabilities and supported object types. This release does not introduce wall-specific Gumball behavior or group transformation algorithms.
 
-## Linked Model 的后续结构
+## Full linked-model management remains separate
 
-Site 现有账户关联和模型内场地数据继续保留。当前的编辑入口是场地图层编辑模式，不是完整的 Revit 外部链接文件管理。
+Existing account site associations and project-local site data are preserved. The Site edit control is a layer-editing mode, not full Revit-style external file-link management.
 
-完整 Linked Model 应另建引用记录，包含源项目/文件、源版本、坐标变换和链接状态；主模型中按整体引用选择，进入源模型编辑后保存新版本，再显式重新载入。需要明确源模型修改权限、源文件失联、更新冲突和分析结果失效处理。不能仅将图层解锁包装成完整链接模型功能。
+Full linked-model support would need a reference record containing the source project/file, source version, coordinate transform and link status. The host model should treat it as a reference; source editing and explicit reload should preserve version history. Permissions, unavailable sources, update conflicts and outdated analysis results require defined behavior. Unlocking a layer must not be presented as this complete capability.
 
-普通对象目前按既有类别图层和导入图层组织；原生墙、楼板等任意自定义图层重分配，需要一起扩展渲染可见性、锁定、导出和历史版本规则。
+Ordinary objects retain their existing category layers and imported layers. Arbitrary custom-layer assignment for native walls, slabs and other objects would also require visibility, lock, export and historical-version rules.
 
-## 验证
+## Validation
 
-`tests/workbench-editing.cjs` 覆盖 Perspective 画墙、家具点击放置与卡片拖放、切换视图保留工具、主要工具在 3D 中启动、实际鼠标框选、两种 Fence 的路径生成、场地锁定切换、Simulation 跳转。
+`tests/workbench-editing.cjs` covers drawing a wall in Perspective, furniture placement and palette drag, retaining tools across views, starting major tools in 3D, actual mouse box-selection, both fence families, site lock controls, adding levels in both views, and Simulation navigation.
 
-运行前启动仓库静态服务器，默认端口 8765；可使用 TEST_BASE、CHROMIUM_PATH 指定地址与浏览器。浏览器检查使用仓库中的 Three.js 文件代替 CDN，以减少外网依赖。工具启动检查不等同于每种工具的完整端到端验收。
+Serve the repository on port 8765 by default. TEST_BASE and CHROMIUM_PATH override the server and browser. Browser tests use local Three.js assets to reduce CDN dependence. Tool-start checks are not full end-to-end acceptance of every gesture in every tool.
+
+## Static report example
+
+The sample PDF contains only Simulation comparisons, using clearly identified synthetic daylight-factor and sun-hours data. It does not implement report generation or claim real project results. The report, labels, captions, legends, units, tables, notes and disclosures are in English.
