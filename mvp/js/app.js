@@ -55,6 +55,8 @@ function who() {
 document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e.target.closest('.who-w')) { m.hidden = true; $('#whoBtn')?.setAttribute('aria-expanded', 'false'); } });
 
 const PAGES = {
+  'comparison-report':()=>import('./pages/comparison-report.js'),
+  'start-study':()=>import('./pages/start-study.js'),
   admin: () => import('./pages/admin.js'),
   '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
@@ -97,10 +99,12 @@ export async function route() {
       document.title = 'Beta access · PlotCloud'; return;
     }
   }
-  const mod = await PAGES[key]();
+  const recover=error=>{app.innerHTML=`<div class="wrap"><h1 class="display md">This page could not finish loading.</h1><p>Your saved projects and results are kept. Reload to try again, or return to Workspace.</p><details><summary>Technical details</summary><p>${esc(error.message||'Page unavailable')}</p></details><button type="button" class="btn accent" id="retryPageLoad">Reload page</button> <a class="btn" href="#/workspace">Open Workspace</a> <a class="btn" href="#/simulations">Browse studies</a></div>`;$('#retryPageLoad',app).onclick=()=>location.reload();document.title='Page recovery · PlotCloud';};
+  let mod;try{mod=await PAGES[key]();}catch(error){if(isCurrent())recover(error);return;}
+
   if(!isCurrent())return;
   let nextCleanup;
-  try{nextCleanup=await mod.render(app,rest.map(x=>decodeURIComponent(x.split('?')[0])),params,{isCurrent});}catch(error){if(!isCurrent())return;throw error;}
+  try{nextCleanup=await mod.render(app,rest.map(x=>decodeURIComponent(x.split('?')[0])),params,{isCurrent});}catch(error){if(isCurrent())recover(error);return;}
   if(!isCurrent()){if(typeof nextCleanup==='function')nextCleanup();return;}
   cleanup=nextCleanup||null;
   // where the person was, for the Dashboard's “pick up where you left off”

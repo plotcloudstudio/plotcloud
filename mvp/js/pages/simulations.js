@@ -1,16 +1,17 @@
+import {inspectStudy} from '../study-readiness.js';
 import {checkAccess, isFreeStudy} from '../beta-access.js';
 import * as S from '../store.js';
 import { SIMS, simImg } from '../data.js';
 import { $, $$, esc, currentProject, currentVersion, LIVE, img } from '../app.js';
 
-export async function render(app, [simId], params) {
+export async function render(app, [simId], params, context={}) {
   const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
-  if (sim) return (await import('./sim-engine.js')).render(app, sim, params);   // every simulation runs its PlotCloud engine
-  return catalog(app, params);
+  if (sim) return (await import('./sim-engine.js')).render(app, sim, params,context);   // every simulation runs its PlotCloud engine
+  return catalog(app, params, access);
 }
 
-function catalog(app, params) {
+function catalog(app, params, access) {
   const p = currentProject(), v = p && currentVersion(p);
   const q = (s) => `#/simulations/${s.id}`;   // one route per simulation, whichever page you come from
   const groups = ['All', 'Interior', 'Exterior', ...new Set(SIMS.map((s) => s.group))];
@@ -18,18 +19,16 @@ function catalog(app, params) {
   app.innerHTML = `<div class="wrap">
     <span class="eyebrow">Simulations</span>
     <div class="split" style="margin-top:16px"><h1 class="display">Choose a study.<br><span>Run it on a version.</span></h1>
-      <p class="lede">Sun hours and Daylight are free; the other studies need active monthly beta access. Browse all ${SIMS.length} current analysis tools. Each runs its PlotCloud engine on a version of your model, with site and climate from Account; save a result to the version and Results compares them.</p></div>
+      <p class="lede">Sun hours and Daylight are free; the other studies need active monthly beta access. Browse all ${SIMS.length} current analysis tools. Each runs its PlotCloud engine on a version of your model, using its recorded project conditions; save the result to that version, then compare it in Results.</p></div>
     ${p ? `<p class="badge-pill" style="margin-top:32px;text-transform:none;letter-spacing:0;font:500 14px var(--sans)">Running on&nbsp;<b>${esc(p.name)}</b>&nbsp;· ${v ? `v${v.n}` : 'no saved version yet'} · ${esc((S.siteOf(p)?.label || '').split(',')[0])}</p>` : ''}
+    <div class="card" style="margin-top:24px"><h2>New to simulation?</h2><p>Start with an editable example or check your own project. Run a study, save the result, then compare one design change.</p><a class="btn accent" href="#/start-study">Start a guided study</a></div>
     <div class="pills" role="group" aria-label="Filter" style="margin-top:36px" id="filters">${groups.map((x) => `<button type="button" data-g="${x}" aria-pressed="${x === g}">${x}</button>`).join('')}</div>
     <div class="simgrid" id="grid"></div>
     <p class="note" style="margin-top:28px">${LIVE} every study runs the PlotCloud simulation engine itself. Catalogue images are illustrative previews using the same model and camera; they are not computed project results. All studies are for design screening, not code compliance.</p>
   </div>`;
   // what each simulation needs from the open project (2026-10-25): a site or masses, or rooms
-  const NEEDS = { sunhours: 'mass', radiation: 'mass', utci: 'mass', wind: 'mass', noise: 'mass', stormwater: 'any', structure: 'none' }, st = v && v.model && v.model.studio;
-  const hasRooms = !!(st ? (st.walls || []).length >= 3 : v && v.model && (v.model.components || []).some((c) => c.type === 'wall')), hasMass = hasRooms || !!(st && ((st.masses || []).length || st.site));
-  const ready = (s) => { if (!p || !v) return ''; const n = NEEDS[s.id] || 'rooms', okk = n === 'mass' ? hasMass : n === 'rooms' ? hasRooms : true;
-    const t = okk ? 'Ready for this project' : n === 'mass' ? 'Needs a site or masses' : (st && (st.masses || []).length ? 'Needs rooms · Make floors from a mass' : 'Needs rooms');
-    return `<span class="rdy${okk ? '' : ' no'}" title="${n === 'mass' ? 'Works on masses and the site' : n === 'rooms' ? 'Reads rooms, walls and openings' : 'Works on any model'}">${t}</span>`; };
+  const draftChanged=!!(p&&v&&p.draft&&JSON.stringify(p.draft)!==JSON.stringify(v.model));
+  const ready=s=>{if(!p)return '<span class="rdy no">Choose a project</span>';const c=S.conditionsOf(p),r=inspectStudy(p,v,s.id,{site:S.isSharedPilot(s.id)||s.id==='vent'?c.site:S.siteOf(p),defaults:S.isSharedPilot(s.id)?c.defaults:S.account().defaults,draftChanged});return `<span class="rdy${r.ready?'':' no'}" title="${esc(r.errors.map(x=>x.title).join('; ')||'Review scope and inputs inside the study; engine geometry checks still apply')}">${r.ready?'Inputs found · review in study':esc(r.errors[0]?.title||'Review inputs')}</span>`;};
   const draw = () => { $('#grid', app).innerHTML = SIMS.map((s, i) => [s, i]).filter(([s]) => g === 'All' || s.group === g || s.scope === g).map(([s, i]) => `<article class="card sim" data-scope="${s.scope}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true"><img data-holo="${simImg(s.id)}" src="${img(simImg(s.id))}" alt="" loading="lazy"></a>
       <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(s.group)} · ${esc(s.scope)}</span><span>${isFreeStudy(s.id) ? 'Free · ' : 'Paid beta · '}${s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>

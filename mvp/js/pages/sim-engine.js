@@ -1,3 +1,5 @@
+import {inspectStudy} from '../study-readiness.js';
+import {climateFile} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
 // One simulation page for every PlotCloud engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
 // One implementation: nothing here computes or draws a result. This page only
@@ -9,7 +11,7 @@ import {canUse, renderGate} from '../beta-access.js';
 //   and saves the engine's own figures to the version.
 import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
-import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE } from '../app.js';
+import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
 import { studioScene, studioDXF } from '../studio-bridge.js';
 import { windFrom } from '../studio-convert.js';
@@ -81,8 +83,8 @@ function thumbOf(D) {
     const docs = [D, D.getElementById('modelWorkspace')?.contentDocument, D.getElementById('gridWorkspace')?.contentDocument].filter(Boolean);
     const cvs = docs.flatMap((d) => [...d.querySelectorAll('canvas')]).filter((c) => c.offsetParent && c.width > 80 && c.height > 60);
     const cv = cvs.find((c) => c.id === 'cv') || cvs.sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (!cv) return null;
-    const w = 360, k = w / cv.width, c2 = document.createElement('canvas'); c2.width = w; c2.height = Math.max(40, Math.round(cv.height * k)); const g = c2.getContext('2d');
-    g.fillStyle = '#fff'; g.fillRect(0, 0, c2.width, c2.height); g.drawImage(cv, 0, 0, c2.width, c2.height); return c2.toDataURL('image/jpeg', 0.7);
+    const k = Math.min(1,800/cv.width,640/cv.height), c2 = document.createElement('canvas'); c2.width = Math.max(1,Math.round(cv.width*k)); c2.height = Math.max(1,Math.round(cv.height*k)); const g = c2.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c2.width, c2.height); g.drawImage(cv, 0, 0, c2.width, c2.height); return c2.toDataURL('image/jpeg', 0.85);
   } catch (e) { return null; }
 }
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -119,7 +121,7 @@ function sunField(w, sc, label, unit) {
 }
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
-export function render(app, sim, params = new URLSearchParams()) {
+export async function render(app, sim, params = new URLSearchParams(),context={}) {
   if (!canUse(sim.id)) {
     renderGate(app, sim.name);
     if (params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Paid beta access required.'},location.origin);
@@ -133,6 +135,16 @@ export function render(app, sim, params = new URLSearchParams()) {
   if (!batch) setCurrent(p);
   const shared=pilot||sim.id==='vent'?S.clone(S.conditionsOf(p)):null;
   const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
+  const readiness=inspectStudy(p,v,sim.id,{site,defaults:A});
+  if(site?.climate?.hash&&WEATHER.includes(sim.id)){
+    try{if(!await climateFile(site.climate.hash))readiness.errors.push({title:'Restore the project weather file',detail:'The EPW reference exists, but its contents are missing from this browser. Upload the original file again.',href:'#/project-settings/'+p.id});}catch{readiness.errors.push({title:'Weather storage is unavailable',detail:'Allow browser storage or re-upload the project EPW before running.',href:'#/project-settings/'+p.id});}
+  }
+  if(context.isCurrent&&!context.isCurrent())return;
+  const reviewRows=checks=>checks.map(c=>`<li style="margin:12px 0"><b>${esc(c.title)}</b><br><span class="note">${esc(c.detail)}</span>${c.href?` · <a href="${esc(c.href)}">Review input</a>`:''}</li>`).join('');
+  if(readiness.errors.length){
+    app.innerHTML=`<div class="wrap"><span class="eyebrow">${esc(sim.name)} · Input check</span><h1 class="display md">Complete these inputs first.</h1><p class="lede">Your existing model and results are kept. Resolve the items below, then reopen the study.</p><ul>${reviewRows(readiness.errors)}</ul><a class="btn" href="#/workspace/${esc(p.id)}">Open Workspace</a> <a class="btn" href="#/project-settings/${esc(p.id)}">Project conditions</a> <button type="button" class="btn" id="retryReadiness">Check again</button>${!v&&p.draft?'<button type="button" class="btn accent" id="saveFirstVersion">Save draft as a version and recheck</button>':''}<p style="margin-top:24px"><a href="#/start-study">Try a guided example</a> · <a href="#/simulations">All studies</a></p></div>`;
+    $('#retryReadiness',app).onclick=()=>route();$('#saveFirstVersion',app)?.addEventListener('click',()=>{const saved=S.saveVersion(p,'Saved for '+sim.name);setCurrentVersion(p,saved.id);route();});tell({ok:false,why:readiness.errors.map(c=>c.title+': '+c.detail).join(' ')});return;
+  }
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
   const perLevel = cfg.input === 'studio' || cfg.input === 'dxf';
@@ -148,17 +160,19 @@ export function render(app, sim, params = new URLSearchParams()) {
       ${perLevel && levels.length > 1 ? `<label class="shsel">Level<select id="lvl">${levels.map((L, i) => `<option value="L${L.n}" ${i === lvIx ? 'selected' : ''}>Level ${L.n}</option>`).join('')}</select></label>` : ''}
       ${rooms.length ? `<label class="shsel">Room<select id="room">${rooms.map((c) => `<option value="${c.id}" ${c === room ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
       <a class="shsite" href="${pilot?'#/project-settings/'+p.id+'?return='+sim.id:'#/account'}">${pilot?`${esc((site?.label||'Site').split(',')[0])} · Shared r${shared.revision} ↗`:`${esc((site?.label || '—').split(',').slice(0, 2).join(','))}${site?.sample ? ' (sample)' : ''} · north ${site?.north ?? 0}° · UTC${t.tz >= 0 ? '+' : ''}${t.tz}${t.dst ? ' with DST' : ''}`}</a>
+      <button type="button" class="btn sm" id="reviewInputs">Review inputs${readiness.warnings.length?' ('+readiness.warnings.length+')':''}</button>
       <span class="sp"></span>
       <span class="note" id="shmsg" role="status" aria-live="polite"></span>
       <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
     </div>
     ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" style="visibility:hidden" src="../emb/${file}.html?layout=unified&v=${encodeURIComponent(ENGINE_RELEASE)}${pilot?'&pilot=shared':''}"></iframe><div id="engineLoading" role="status" style="position:absolute;inset:80px 0 0;display:grid;place-items:center;background:var(--bg);z-index:2">Loading saved model and current Settings…</div>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
-  $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); render(app, sim, params); };
+  const review=document.createElement('dialog');review.setAttribute('aria-label','Study input review');review.style.cssText='max-width:720px;max-height:85vh;overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:24px';review.innerHTML=`<h2>${esc(sim.name)} · v${v.n}</h2><p>Review these inputs before calculating. Model preparation in the engine still checks the selected level and closed rooms.</p><ul>${reviewRows(readiness.checks)}</ul><h3>Next steps</h3><ol><li>Run the analysis using the study’s Calculate or Run button.</li><li>Use Save result above to keep the actual result on v${v.n}.</li><li>Edit one design variable in Workspace and save a new version.</li><li>Run the same study with matching conditions, then compare in Results.</li></ol><button type="button" class="btn accent" id="closeReview">Continue to study</button>`;app.querySelector('.shx').append(review);$('#reviewInputs',app).onclick=()=>review.showModal();$('#closeReview',app).onclick=()=>review.close();
+  $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); route(); };
   if(sim.id==='vent'){$('.shsite',app).href='#/project-settings/'+p.id+'?return=vent';$('.shsite',app).textContent=`${site.label||'Site'} · Shared r${shared.revision} ↗`;}
-  $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); render(app, sim, params); };
-  const lvSel = $('#lvl', app); if (lvSel) lvSel.onchange = (e) => { try { sessionStorage.setItem(lvKey, e.target.value); } catch (er) { } render(app, sim, params); };
-  const rmSel = $('#room', app); if (rmSel) rmSel.onchange = (e) => { try { sessionStorage.setItem(rmKey, e.target.value); } catch (er) { } render(app, sim, params); };
+  $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); route(); };
+  const lvSel = $('#lvl', app); if (lvSel) lvSel.onchange = (e) => { try { sessionStorage.setItem(lvKey, e.target.value); } catch (er) { } route(); };
+  const rmSel = $('#room', app); if (rmSel) rmSel.onchange = (e) => { try { sessionStorage.setItem(rmKey, e.target.value); } catch (er) { } route(); };
   if (!v) { tell({ ok: false, why: 'No saved version.' }); return; }
 
   const fr = $('#eng', app), msg = $('#shmsg', app), saveBtn = $('#save', app), name = `${p.name} · v${v.n}`, x = extent(v.model);
@@ -204,7 +218,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     return Promise.resolve({ ok: true });
   })();
   input.catch(() => null).then((r) => { if (!alive || !r) return; if (!r.ok && /no closed rooms/i.test((r.why || []).join(' ')) && ((v.model.studio && v.model.studio.masses) || []).length) r.why = [...(r.why || []), 'This version has masses but no rooms yet: in the Workspace, select a mass and use Make floors in its panel.'];
-    if (!r.ok) { const loading=$('#engineLoading',app);if(loading)loading.textContent=`This version can't run here yet: ${(r.why||[]).join(' ')} Open the Workspace to adjust the model.`;say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); tell({ ok: false, why: `This version can't run here yet: ${(r.why || []).join(' ')}` }); } });
+    if (!r.ok) { const loading=$('#engineLoading',app);if(loading)loading.innerHTML=`<div style="padding:24px;max-width:650px"><h2>Review the model for this study</h2><p>${esc((r.why||[]).join(' '))}</p><a class="btn accent" href="#/workspace/${esc(p.id)}">Open Workspace</a> <a class="btn" href="#/start-study">Try an example</a></div>`;say(`This version can't run here yet: ${esc((r.why || []).join(' '))} <a href="#/workspace">Open the Workspace</a>`, true); tell({ ok: false, why: `This version can't run here yet: ${(r.why || []).join(' ')}` }); } });
   input.catch((e) => { if (alive) { const loading=$('#engineLoading',app);if(loading)loading.textContent=e.message||'The model could not be prepared.';say(esc(e.message || 'The model could not be prepared.'), true); tell({ ok: false, why: e.message || 'The model could not be prepared.' }); } });
 
   // the engine asks for the model at once (it is waiting for this page) instead of after its demo analysis
@@ -232,6 +246,7 @@ export function render(app, sim, params = new URLSearchParams()) {
     for (const [id, val] of Object.entries(vals)) { if (id === '@day') {if(skipDate)continue; const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) { b.click(); filled[id] = val; } continue; }
       const el = D.getElementById(id); if (!el || val == null || (typeof val === 'number' && !Number.isFinite(val))) continue;
       el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
+    if(p.guidedStudy?.simId===sim.id&&!D.body.dataset.pcGuidedQuality){const draft=D.querySelector('#lvlSeg [data-l="draft"],#lvSeg [data-l="draft"]');if(draft){draft.click();D.body.dataset.pcGuidedQuality='true';}}
     // Distinguish the engine's startup sample from the project's applied model/settings.
     if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
     if(WEATHER.includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,shared?site:{...site,climate:S.conditionsOf(p).site.climate},sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.then(()=>fr.contentWindow.PlotCloudSimulationFit?.refresh()).catch(error=>{if(sim.id!=='wind')weatherFailure=error;say(esc(error.message),true);fr.contentWindow.PlotCloudSimulationFit?.refresh();});}
@@ -305,10 +320,11 @@ export function render(app, sim, params = new URLSearchParams()) {
     if(sim.id==='vent'){settings.sharedConditions={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},'vent'),site:S.clone(site),effective:S.clone(fr.contentWindow.__vent?.S||{})};settings.inheritedFrom='Project shared conditions';}
     if(SUN.includes(sim.id)&&fr.contentWindow.__sun?.S?.lastR?.mode){const s=fr.contentWindow.__sun.S,r=s.lastR,c=fr.contentWindow.__sunClimate?.CLIM?.E;settings.analysisPeriod={hours:r.clim.period,count:r.clim.hoursN};settings.climateFile=c?{name:c.name,station:c.station,lat:c.lat,lon:c.lon}:null;settings.grid=r.prep.s;settings.method=r.mode==='radiation'?'Perez sky, 145 patches, sun in 3° groups':'UTCI with SolarCal MRT';if(r.mode==='utci')settings.utci={hoursCounted:r.clim.counted,sunUpOnly:r.clim.day,windExposure:r.clim.alpha};settings.units=r.mode==='radiation'?'kWh/m²':'% of counted hours';}
     else if(sim.id==='sunhours'){const s=fr.contentWindow.__sun?.S,r=s?.lastR;if(r){settings.analysisPeriod=r.period||{start:r.ds,end:r.ds,days:1,t0:s.t0,t1:s.t1};settings.grid=r.prep.s;settings.timeStep=s.step;settings.timeZone={...s.loc};settings.units=r.period?'cumulative sunlight hours':'sunlight hours';}}
+    settings.provenance={schema:1,engine:sim.id,engineRelease:ENGINE_RELEASE,versionId:v.id,recordedAt:new Date().toISOString(),site:{label:site?.label,lat:site?.lat,lon:site?.lon,north:site?.north??0,tz:site?.tz},note:'Host context at save time; study overrides and effective run settings are recorded separately.'};
     if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
     try { fr.contentWindow.postMessage({ pc: 1, t: 'saved', count: p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).length }, '*'); } catch (e) { }
-    toast(`Saved to v${v.n}`); say(`Saved to v${v.n} · <a href="#/results/${p.id}?sim=${sim.id}">Compare versions →</a>`);
+    toast(`Saved to v${v.n}`); say(p.versions.length<2?`Saved to v${v.n} · <a href="#/workspace/${p.id}">Edit one design change →</a>`:`Saved to v${v.n} · <a href="#/results/${p.id}?sim=${sim.id}">Compare versions →</a>`);
   }
   // batch: run the engine the way a person would (its own Run button, its own Start confirmation for long runs), wait until it
   // is idle with figures that came from this run, then save through the same path as "Save result"

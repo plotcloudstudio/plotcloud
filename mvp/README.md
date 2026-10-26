@@ -76,3 +76,7 @@ run     { id, versionId, simId, settings, results, created, source: 'prototype-m
 2. Replace `mocksim.js` previews with those real results; keep the label until then.
 3. Move `store.js` to an API (projects, versions, runs) with accounts.
 4. Bring Plan Studio models into the workspace as versions.
+
+## Current usability workflow (October 26, 2026)
+
+The guided study at `#/start-study`, shared readiness checks, page recovery and real comparison exports at `#/comparison-report/<project>` are described in [first-study-and-comparison-report.md](../docs/first-study-and-comparison-report.md). The historical milestone table above is not the current engine/feature matrix. Comparison reports use saved engine evidence and support PDF, HTML, CSV and JSON downloads.

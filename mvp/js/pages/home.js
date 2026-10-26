@@ -5,7 +5,7 @@ import {mountSunExample} from '../home-example.js';
 // The approved preview is the single layout source for the public homepage.
 export async function render(app,rest,params,context={}){
   const hash=location.hash,active=()=>context.isCurrent?context.isCurrent():location.hash===hash;
-  const response=await fetch(new URL('../../home-preview.html?v=20261024-live1',import.meta.url));
+  const response=await fetch(new URL('../../home-preview.html?v=workflow-20261026-1',import.meta.url));
   if(!response.ok)throw new Error('Homepage could not load');
   const doc=new DOMParser().parseFromString(await response.text(),'text/html');
   if(!active())return;

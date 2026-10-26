@@ -1,3 +1,4 @@
+import {compareEvidence,evidenceText} from '../comparison-evidence.js';
 import {checkAccess, isFreeStudy} from '../beta-access.js';
 // Projects & Results.
 //   Run simulations: tick any number of simulations, adjust each one's inputs, and run them all on the latest saved version
@@ -51,7 +52,7 @@ export async function render(app, [pid], params) {
     <div class="sec-h rs-h"><h2 class="display sm">Versions × simulations</h2><span class="note">latest saved result per cell</span></div>
     <div style="overflow-x:auto" id="matrix"></div>
 
-    <div class="sec-h rs-h"><h2 class="display sm">Compare versions</h2></div>
+    <div class="sec-h rs-h"><h2 class="display sm">Compare versions</h2><a class="btn" id="reportLink" href="#/comparison-report/${esc(p.id)}">Export comparison report</a></div>
     ${p.versions.length < 2 ? '<p class="note">Save at least two versions in the workspace to compare them.</p>' : `
     <div class="cw" id="cw">
       <div class="cw-bar">
@@ -147,7 +148,7 @@ export async function render(app, [pid], params) {
   function log() {
     $('#nRuns', app).textContent = p.runs.length;
     $('#log', app).innerHTML = p.runs.slice().sort((a, b) => b.created.localeCompare(a.created)).map((r) => { const s = SIMS.find((x) => x.id === r.simId), v = S.version(p, r.versionId);
-      return `<tr><td>${when(r.created)}</td><td class="mono">v${v?.n ?? '?'}</td><td>${esc(s?.name)}</td><td class="small">${Object.entries(r.settings).filter(([k, x]) => x != null && x !== '').map(([k, x]) => k === 'sharedConditions' ? esc('Project conditions r'+x.revision+(x.studyOnlyOverrides?' · study override':'')) : k === 'site' ? esc(x) : `${esc(k)} ${esc(x)}`).join(' · ')}${r.results.roomName ? ' · ' + esc(r.results.roomName) : ''}</td>
+      return `<tr><td>${when(r.created)}</td><td class="mono">v${v?.n ?? '?'}</td><td>${esc(s?.name)}</td><td class="small">${Object.entries(r.settings).filter(([k, x]) => x != null && x !== '').map(([k, x]) => k === 'provenance' ? esc('Engine '+(x.engineRelease||'release not recorded')) : k === 'sharedConditions' ? esc('Project conditions r'+x.revision+(x.studyOnlyOverrides?' · study override':'')) : k === 'site' ? esc(x) : `${esc(k)} ${esc(x)}`).join(' · ')}${r.results.roomName ? ' · ' + esc(r.results.roomName) : ''}</td>
       <td class="small mono">${r.results.kpis ? r.results.kpis.slice(0, 4).map(([k, x]) => `${esc(k)} ${esc(x)}`).join(' · ') : s.metrics.map(([k, l, u, d]) => `${fmt(r.results[k], d)}${u ? ' ' + u : ''}`).join(' · ')}</td><td>${r.source === 'prototype-mock' ? MOCK : LIVE}${r.source === 'batch' ? ' <span class="note">batch</span>' : ''}</td><td><button class="btn sm danger" data-del="${r.id}">Delete</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="note">Nothing saved yet.</td></tr>';
     $$('[data-del]', app).forEach((b) => b.onclick = () => { if (!confirm('Delete this saved result?')) return; S.deleteRun(p, b.dataset.del); toast('Result deleted'); log(); cardsUI(); matrix(); if (cmpReady && C.scope === 'sim') compare(); });
   }
@@ -162,7 +163,7 @@ export async function render(app, [pid], params) {
     vpa = mk($('#vpa', app), () => vpa, () => vpb); vpb = mk($('#vpb', app), () => vpb, () => vpa);
   }
   async function compare() {
-    if (!cmpEl) return; cmpReady = true; const my = ++token;
+    if (!cmpEl) return; $('#reportLink',app).href='#/comparison-report/'+encodeURIComponent(p.id)+'?'+new URLSearchParams({a:A.id,b:B.id,...(C.scope==='sim'&&C.sim?{sim:C.sim}:{})});cmpReady = true; const my = ++token;
     $('#la', app).textContent = `A · v${A.n}`; $('#lb', app).textContent = `B · v${B.n}`;
     $('#scope', app).value = C.scope; $('#simSel', app).value = C.sim || SIMS[0].id; $('#sync', app).checked = !!C.sync;
     $$('[data-mode]', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === C.mode)));
@@ -224,7 +225,7 @@ export async function render(app, [pid], params) {
   // ---- one simulation: both versions' results side by side, the figures with B − A, and the result field point by point
   function simCompare() {
     const sim = SIMS.find((s) => s.id === C.sim) || SIMS.find((s) => p.runs.some((r) => r.simId === s.id && (r.versionId === A.id || r.versionId === B.id))) || SIMS[0]; C.sim = sim.id; $('#simSel', app).value = sim.id;
-    const ra = S.lastRun(p, A.id, sim.id), rb = S.lastRun(p, B.id, sim.id), fa = ra?.results?.field, fb = rb?.results?.field, both = fa && fb;
+    const ra = S.lastRun(p, A.id, sim.id), rb = S.lastRun(p, B.id, sim.id), fa = ra?.results?.field, fb = rb?.results?.field, both = fa && fb && fa.label===fb.label && fa.unit===fb.unit;
     const thr = C.thr[sim.id + (C.pct ? '%' : '')] ?? (C.pct ? 10 : sim.id === 'sunhours' ? 0.5 : both ? defThr(fa, fb) : 0);
     const D = both ? fieldDiff(fa, fb, { threshold: thr, pct: C.pct }) : null;
     const running = (v) => batch.items().find((x) => x.simId === sim.id && x.versionId === v.id && (x.status === 'queued' || x.status === 'running'));
@@ -252,7 +253,7 @@ export async function render(app, [pid], params) {
       <table class="t cw-tab"><thead><tr><th>Measure</th><th>v${A.n}</th><th>v${B.n}</th><th>${C.pct ? 'B − A %' : 'B − A'}</th></tr></thead><tbody>${rows.map((r) => { const d = Number.isFinite(r.a) && Number.isFinite(r.b) ? r.b - r.a : NaN, pc = Number.isFinite(d) && Math.abs(r.a) > 1e-9 ? d / Math.abs(r.a) * 100 : NaN, ch = Number.isFinite(d) && Math.abs(d) > 1e-9;
         return `<tr><td>${esc(r.label)}${r.unit ? ` <span class="note">${esc(r.unit)}</span>` : ''}</td><td class="n">${ra ? cell(r.a, r.d) : '<span class="note">not run</span>'}</td><td class="n">${rb ? cell(r.b, r.d) : '<span class="note">not run</span>'}</td><td class="n${ch ? ' chg' : ''}" ${ch ? 'data-chg="1"' : ''}>${!Number.isFinite(d) ? '—' : C.pct ? (Number.isFinite(pc) ? (pc > 0 ? '+' : '') + fmt(pc, 1) + ' %' : '—') : (d > 0 ? '+' : '') + fmt(d, r.d)}</td></tr>`; }).join('')}</tbody></table>
       ${[ra,rb].filter(Boolean).map(r=>S.runConditionsStatus(p,r)?`<p class="notice warn">v${S.version(p,r.versionId)?.n}: ${esc(S.runConditionsStatus(p,r))}</p>`:'').join('')}
-      ${ra && rb && JSON.stringify({ ...ra.settings, room: undefined }) !== JSON.stringify({ ...rb.settings, room: undefined }) ? `<p class="notice warn">Settings differ (${Object.keys({ ...ra.settings, ...rb.settings }).filter((k) => k !== 'room' && String(ra.settings[k]) !== String(rb.settings[k])).map((k) => `${esc(k)}: ${esc(ra.settings[k] ?? '—')} → ${esc(rb.settings[k] ?? '—')}`).join(', ')}): part of the difference comes from them.</p>` : ''}`;
+      ${ra&&rb?`<p class="notice ${compareEvidence(ra,rb).status==='match'?'':'warn'}">${esc(compareEvidence(ra,rb).label)}. ${esc(compareEvidence(ra,rb).note||'Differences may reflect input conditions as well as the model.')}${compareEvidence(ra,rb).differences.map(d=>`<br>${esc(d.key)}: ${esc(evidenceText(d.a))} → ${esc(evidenceText(d.b))}`).join('')}</p>`:''}`;
     if (both) {
       $('#thr', app).oninput = (e) => { const t = +e.target.value; C.thr[sim.id + (C.pct ? '%' : '')] = t; saveC(); const D2 = fieldDiff(fa, fb, { threshold: t, pct: C.pct }); if (!C.pic) drawFields(fa, fb, D2); $('#thrO', app).textContent = C.pct ? `${t} %` : `${t} ${unitOf}`; const fc = $('#fCount', app); fc.dataset.changed = D2.changed; fc.innerHTML = cnt(D2.changed, D2.cells.length, t); simWords(sim, ra, rb, D2, t, fa || fb); };
       $('#only', app).onchange = (e) => { C.only = e.target.checked; saveC(); if (!C.pic) drawFields(fa, fb, fieldDiff(fa, fb, { threshold: +$('#thr', app).value, pct: C.pct })); };
@@ -272,8 +273,8 @@ export async function render(app, [pid], params) {
       for (const r of figureRows(sim, ra, rb)) { if (!Number.isFinite(r.a) || !Number.isFinite(r.b)) continue; const d = r.b - r.a, u = r.unit ? (r.unit === '%' ? ' %' : ' ' + r.unit) : '', pc = Math.abs(r.a) > 1e-9 ? d / Math.abs(r.a) * 100 : NaN;
         L.push(Math.abs(d) < 1e-9 ? `${r.label} stayed at ${fmt(r.a, r.d)}${u}.` : `${r.label} ${d > 0 ? 'rose' : 'fell'} from ${fmt(r.a, r.d)}${u} to ${fmt(r.b, r.d)}${u} (${d > 0 ? '+' : '−'}${fmt(Math.abs(d), r.d)}${Number.isFinite(pc) ? `, ${pc > 0 ? '+' : '−'}${fmt(Math.abs(pc), 0)} %` : ''}).`); }
       if (D) L.push(`Point by point, ${D.changed} of ${D.cells.length} points of ${field.label.toLowerCase()} changed by at least ${thr}${C.pct ? ' %' : field.unit ? ' ' + field.unit : ''} (including areas analysed in one version only).`);
-      const diffK = Object.keys({ ...ra.settings, ...rb.settings }).filter((k) => k !== 'room' && String(ra.settings[k]) !== String(rb.settings[k]));
-      L.push(diffK.length ? `The settings differ (${diffK.map((k) => `${k}: ${ra.settings[k] ?? '—'} → ${rb.settings[k] ?? '—'}`).join('; ')}), so part of the difference comes from them.` : 'Both runs used the same settings, so the difference comes from the model.');
+      const evidence=compareEvidence(ra,rb);L.push(evidence.label+'. '+(evidence.note||'Review the recorded inputs before attributing changes to the design.'));
+      for(const d of evidence.differences)L.push(d.key+': '+evidenceText(d.a)+' → '+evidenceText(d.b));
     }
     PLAIN.sim = [`${sim.name} · v${A.n} → v${B.n}`, ...L].join('\n');
     $('#simTxt', app).innerHTML = L.map((x) => `<p>${esc(x)}</p>`).join('');
