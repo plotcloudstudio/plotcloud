@@ -22,6 +22,9 @@
 tr.cur td { background: #f6f5f2; } tr[data-k] { cursor: pointer; }
 .st-ok { color: var(--ok); font-weight: 600; } .st-hi { color: var(--accent); font-weight: 600; } .st-lo { color: #2f6fa8; font-weight: 600; }
 </style>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <div class="app">
@@ -81,7 +84,7 @@ tr.cur td { background: #f6f5f2; } tr[data-k] { cursor: pointer; }
 </div>
 
 <script type="module">
-import { $, $$, clamp, r1, r2, esc, planView, ramp, rampCSS, fieldImage, drawField, raster, centre, runUI, bridge, keep, seg, ROOM_SKIP, sampleFlat, drawPlanScene, wallBox, dist } from './lib/plansim.js?v=1';
+import { $, $$, clamp, r1, r2, esc, planView, ramp, rampCSS, fieldImage, drawField, raster, centre, runUI, bridge, keep, seg, ROOM_SKIP, sampleFlat, drawPlanScene, wallBox, dist } from './lib/plansim.js?v=gray-20261026-1';
 
 const BANDS = [125, 250, 500, 1000, 2000, 4000], BN = ['125', '250', '500', '1k', '2k', '4k'];
 // the finishes, as in Plan Studio (a scene from Plan Studio brings its own copy, which wins)

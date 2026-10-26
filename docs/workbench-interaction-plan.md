@@ -32,3 +32,11 @@ Serve the repository on port 8765 by default. TEST_BASE and CHROMIUM_PATH overri
 ## Static report example
 
 The sample PDF contains only Simulation comparisons, using clearly identified synthetic daylight-factor and sun-hours data. It does not implement report generation or claim real project results. The report, labels, captions, legends, units, tables, notes and disclosures are in English.
+
+## Level operation audit (October 26, 2026)
+
+The Workspace toolbar now pairs Add level with Delete current level. The Level menu also offers Rename current level and Add level below. Deletion lists the affected element count, requires confirmation, keeps at least one floor and chooses the nearest remaining lower/upper floor. It uses the shared model history so Plan and Perspective agree and Undo/Redo restores/removes the contents.
+
+The earlier hidden delete handler omitted lighting, ceiling, level-owned masses and imported objects. Deletion now removes all explicitly level-owned model elements and openings hosted on removed walls, prunes their hidden IDs, and leaves unrelated levels, site context and saved versions. Locked elements/layers block removal until unlocked. Newly added levels use unique IDs and names even after a middle floor was removed. Empty custom Workspace layers have a remove button; built-in, nonempty and locked layers are protected. Duplicate/empty layer names produce feedback.
+
+Validation: tests/workbench-levels.cjs covers cancellation, deletion, Undo/Redo, hosted/orphan-prone content, Perspective, last-level protection, rename and adding below. tests/workbench-gumball.cjs covers prior transforms and selection. Theme changes also update the Plan drawing and Perspective background; model/result palettes remain owned by each tool.

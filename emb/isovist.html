@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Isovist Safety</title>
@@ -590,8 +590,8 @@ function hmImage() {   // the imported model in plan: dark where it reaches the 
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 function drawPlan(ctx) {
   const d = PXR(), B = SC.bounds, ff = getComputedStyle(document.body).fontFamily;
-  LB.r = []; LB.f = []; { const dd = PXR(), mk = (typeof PROBE !== 'undefined' && PROBE && PROBE.p) ? PROBE.p : (typeof SC !== 'undefined' && SC.view && SC.view.length === 2 ? SC.view : null); if (mk) { const q = W2S(mk); lbPut(q[0] - 11 * dd, q[1] - 11 * dd, 22 * dd, 22 * dd); } } ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, VP.w, VP.h);
-  const o = W2S([0, B.h]), e = W2S([B.w, 0]); ctx.fillStyle = '#ffffff'; ctx.fillRect(o[0], o[1], e[0] - o[0], e[1] - o[1]); if (!EXP) { ctx.strokeStyle = '#e1dfda'; ctx.lineWidth = 1; ctx.strokeRect(o[0] + 0.5, o[1] + 0.5, e[0] - o[0] - 1, e[1] - o[1] - 1); }
+  LB.r = []; LB.f = []; { const dd = PXR(), mk = (typeof PROBE !== 'undefined' && PROBE && PROBE.p) ? PROBE.p : (typeof SC !== 'undefined' && SC.view && SC.view.length === 2 ? SC.view : null); if (mk) { const q = W2S(mk); lbPut(q[0] - 11 * dd, q[1] - 11 * dd, 22 * dd, 22 * dd); } } ctx.fillStyle = window.PlotCloudUI?.canvasBackground(!!EXP) || '#ffffff'; ctx.fillRect(0, 0, VP.w, VP.h);
+  const o = W2S([0, B.h]), e = W2S([B.w, 0]); ctx.fillStyle = window.PlotCloudUI?.canvasBackground(!!EXP,true) || '#ffffff'; ctx.fillRect(o[0], o[1], e[0] - o[0], e[1] - o[1]); if (!EXP) { ctx.strokeStyle = '#e1dfda'; ctx.lineWidth = 1; ctx.strokeRect(o[0] + 0.5, o[1] + 0.5, e[0] - o[0] - 1, e[1] - o[1] - 1); }
   // reference lines (doors and ignored layers of an import), faint
   if (SC.raw.length) { ctx.strokeStyle = '#dcdad5'; ctx.lineWidth = 0.8 * d; ctx.beginPath(); for (const s of SC.raw) { const L = SC.layers[s.layer]; if (!L || L.role !== 'door') continue; const a = W2S(s.a), b = W2S(s.b); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); } ctx.stroke(); }
   let snapIds = null;
@@ -1211,8 +1211,8 @@ async function setCam(c) {
 }
 function init3D() {
   const THREE = T3.lib, c = $('#cv3');
-  T3.r = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true }); T3.r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); T3.r.setClearColor(0xf3f3f1, 1);
-  T3.scene = new THREE.Scene(); T3.cam = new THREE.PerspectiveCamera(42, 1, 0.03, 1000);
+  T3.r = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true }); T3.r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); T3.r.setClearColor(window.PlotCloudUI?.viewportColor() || 0xf3f3f1, 1);
+  T3.scene = new THREE.Scene(); window.PlotCloudUI?.trackViewport(T3.scene,T3.r,()=>draw()); T3.cam = new THREE.PerspectiveCamera(42, 1, 0.03, 1000);
   T3.ctl = new T3.OC(T3.cam, c); T3.ctl.maxPolarAngle = Math.PI * 0.495; T3.ctl.addEventListener('change', () => { if (!T3.fp) render3D(); });
   T3.scene.add(new THREE.HemisphereLight(0xffffff, 0xcfccc4, 2.1)); const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-0.5, 1, 0.35); T3.scene.add(sun);
   T3.grp = new THREE.Group(); T3.scene.add(T3.grp);
@@ -1474,6 +1474,7 @@ addEventListener('resize', () => panelUI());
 stage.classList.add('split'); $$('#camBar button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === 'split'))); resize(); fit(); draw(); ilvUI(); panelUI(); capUI();
 window.__iso.walkLevel = walkLevel; window.__iso.IS = IS; window.__iso.iPlan = iPlan;
 
+addEventListener('pc-ui-theme',()=>{if(typeof draw==='function')requestAnimationFrame(()=>draw());});
 </script>
 
 <script>

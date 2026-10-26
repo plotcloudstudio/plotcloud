@@ -149,3 +149,14 @@ export function start() {
 // remove every row of the signed-in person (projects, versions, account settings); the sign-in itself stays (only the project's
 // owner can delete a login, with the service key, which never reaches the browser)
 export async function wipe() { if (!session) return; await call('/rest/v1/cloud_projects?id=not.is.null', { method: 'DELETE' }); await call('/rest/v1/cloud_accounts?owner=not.is.null', { method: 'DELETE' }); state = { uid: session.user?.id, projects: {} }; saveState(); }
+
+// Authenticated membership/admin RPCs. PostgreSQL checks the actor; no browser role flag grants access.
+export async function rpc(name, body = {}) {
+  if (!user()) throw new Error('Log in to your registered account first.');
+  if (!['pc_is_admin','pc_access_status','pc_admin_search','pc_admin_access','pc_admin_history'].includes(name)) throw new Error('Unknown account operation.');
+  return call('/rest/v1/rpc/' + name, { method:'POST', body });
+}
+export async function updateProfile(name) {
+ const result=await call('/auth/v1/user',{method:'PUT',body:{data:{name}}});
+ session.user={...session.user,name:result.user_metadata?.name||name};write(SK,session);toAccount();emit();return user();
+}

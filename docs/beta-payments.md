@@ -1,5 +1,7 @@
 # Monthly beta payments
 
+This document describes the legacy code flow while cloud registration is unconfigured. The new account-based admin flow is in [account-access-admin.md](account-access-admin.md); configured cloud memberships are authoritative.
+
 PlotCloud beta costs CAD 16.99 per calendar month, plus applicable taxes disclosed before payment. It covers repeated use, not one run. There is no annual plan, automatic renewal, card checkout, or free Pro trial. Sun hours and Daylight are free. Basic Workspace preparation and access to locally saved projects/results remain available so the free workflow works. Other current Simulation studies and resource tools require activation. External provider charges and third-party licenses are separate.
 
 The Pricing message is “Better-informed design. A stronger design report.” Simulation evidence can support users' own reports; this does not promise automatic report generation, guaranteed grades, certification, or compliance.

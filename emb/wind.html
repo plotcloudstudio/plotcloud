@@ -23,9 +23,9 @@
 .istats dt.ihead { color: var(--ink, #1a1a1a); font-weight: 600; }
 </style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Wind Flow</title>
@@ -1056,7 +1056,8 @@ function applyTheme() {
   const t = tokens();
   scene.background = new THREE.Color(t.view);
   const dark = new THREE.Color(t.view).getHSL({}).l < 0.4;
-  groundMat.color.set(dark ? 0x2a2a28 : 0xe7e5df);
+  groundMat.color.set(dark ? 0x777b7e : 0xe7e5df);
+  groundMat.emissive.set(dark ? 0x585b5e : 0x000000); groundMat.emissiveIntensity=dark?0.35:0;
   modelMat.color.set(dark ? 0xbdbab3 : 0xf2f0eb);
   edgeMat.color.set(t.ink); arrowMat.color.set(t.ink); faintMat.color.set(t.ink); windMat.color.set(t.accent);
   drawDial();

@@ -6,6 +6,9 @@
 <title>PlotCloud Privacy</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="lib/plansim.css?v=1">
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <div class="app">
@@ -54,7 +57,7 @@
 </div>
 
 <script type="module">
-import { $, $$, clamp, r1, esc, planView, ramp, rampCSS, fieldImage, drawField, raster, paintRect, cellOf, centre, sliced, runUI, bridge, keep, seg, ROOM_SKIP, sampleFlat, drawPlanScene, sceneBounds, wallBox, segCross, dist } from './lib/plansim.js?v=1';
+import { $, $$, clamp, r1, esc, planView, ramp, rampCSS, fieldImage, drawField, raster, paintRect, cellOf, centre, sliced, runUI, bridge, keep, seg, ROOM_SKIP, sampleFlat, drawPlanScene, sceneBounds, wallBox, segCross, dist } from './lib/plansim.js?v=gray-20261026-1';
 
 let SC = sampleFlat(), RES = null, SHOW = 'exp', PICK = null, IMG = null;
 const EXP = [[0, [255, 255, 255]], [0.02, [255, 238, 170]], [0.3, [250, 170, 70]], [0.65, [220, 70, 50]], [1, [140, 20, 40]]];

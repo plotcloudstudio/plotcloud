@@ -54,3 +54,7 @@ the browser), and a site without a backend. It has not been run against a hosted
   user needs the service key (Dashboard › Authentication › Users, or a small Edge Function later).
 - Sharing projects with other people, real-time co-editing, payments and plan limits.
 - Free-plan limits: 500 MB database, projects paused after a week without activity. Upgrade before real users depend on it.
+
+## Monthly access administration
+
+The account access migration and administrator setup are documented in [docs/account-access-admin.md](../docs/account-access-admin.md). Apply `20261026000000_memberships.sql` after the cloud-project migration. This adds private memberships, a private administrator list and an audit trail, exposed only through authenticated, authorization-checked operations. No hosted project is configured in this repository yet. Browser-local profiles are not registered users.

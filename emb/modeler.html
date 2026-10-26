@@ -30,9 +30,9 @@ html.ws-props #secProps{margin:0!important;border:0!important;box-shadow:none!im
 
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=1" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>Workbench</title>
@@ -2232,6 +2232,8 @@ function syncStairHoles() {   // a stair on a level opens the floor of the level
 }
 const FB = '"Inter Tight", "Noto Sans", system-ui, sans-serif', FM = '"JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace';
 const C = { ink: '#1c1b1a', muted: '#6e6a60', line: '#e1dfda', view: '#f5f6f8', accent: '#D8402A', glass: '#2f6fa8', door: '#c2410c', ok: '#2F7A4F', warn: '#b45309', inA: '#2f6fa8', outA: '#D8402A', mid: '#6b6760' };
+function syncEditorTheme(){const css=getComputedStyle(document.documentElement);C.view=css.getPropertyValue('--pc-ui-view').trim()||'#f5f6f8';C.ink=css.getPropertyValue('--pc-ui-text').trim()||'#1c1b1a';C.muted=css.getPropertyValue('--pc-ui-muted').trim()||'#6e6a60';C.line=css.getPropertyValue('--pc-ui-border').trim()||'#e1dfda';}
+syncEditorTheme();addEventListener('pc-ui-theme',()=>{syncEditorTheme();requestAnimationFrame(()=>{if(typeof draw==='function')draw();});});
 const KINDS = { stair: 'Stair', atrium: 'Atrium', shaft: 'Shaft', roof: 'Roof opening' };
 
 let M = STC.migrate(STC.TEMPLATES.house()), LV = 'L1', TOOL = 'select', CAM = 'plan', SHOW = 'air', SEL = null, HOV = null;
@@ -3092,7 +3094,7 @@ lvEdit('#lvSlab', (l, t) => { l.slab = STC.clamp((+t.value || 220) / 1000, 0.05,
 lvEdit('#lvZ', (l, t) => { l.z = (+t.value || 0) / 1000; });
 for (const [id, k] of [['opW', 'w'], ['opF', 'f']]) $('#' + id).addEventListener('input', (e) => { OP[k] = e.target.value / 100; $('#' + id + 'v').textContent = e.target.value + ' %'; if (window.S3 && S3.on) upd3D(); });
 function addLevel(dir) {
-  const b = snapM(), src = lvObj(), ls = lvSorted(), n = M.levels.length + 1; let id = 'L' + n; while (M.levels.some((l) => l.id === id)) id += 'x';
+  const b = snapM(), src = lvObj(), ls = lvSorted(); let n=1; while(M.levels.some(l=>l.id==='L'+n||l.name.toLowerCase()===('Level '+n).toLowerCase()))n++; const id='L'+n;
   const top = ls[ls.length - 1], bot = ls[0];
   const nl = { id, name: `Level ${n}`, z: dir === 'above' ? +(top.z + top.h + 0.3).toFixed(2) : +(bot.z - src.h - 0.3).toFixed(2), h: PROJECT_CONTEXT?.settings.storeyHeight || src.h }; if (src.slab) nl.slab = src.slab; M.levels.push(nl);
   // New levels are empty. The previous level remains a read-only tracing reference.
@@ -3102,7 +3104,19 @@ function addLevel(dir) {
 }
 $('#lvAdd').addEventListener('click', () => addLevel('above'));
 $('#lvBelow').addEventListener('click', () => addLevel('below'));
-$('#lvDel').addEventListener('click', () => { if (M.levels.length < 2) return; if (!confirm(`Remove ${lvObj().name} and everything on it? You can undo this.`)) return; const b = snapM(), id = LV; const ids = new Set(lvWalls(id).map((w) => w.id)); M.levels = M.levels.filter((l) => l.id !== id); M.walls = M.walls.filter((w) => w.lv !== id); M.ops = M.ops.filter((o) => !ids.has(o.wall)); M.voids = M.voids.filter((v) => v.lv !== id); M.furn = M.furn.filter((f) => f.lv !== id); M.floors = M.floors.filter((f) => f.lv !== id);M.fences=(M.fences||[]).filter(f=>f.lv!==id); M.names = M.names.filter((n) => n.lv !== id); LV = lvSorted()[0].id; SEL = null; commit(b); });
+function levelContents(id){const walls=new Set(lvWalls(id).map(w=>w.id));return Object.entries(M).filter(([k,a])=>k!=='levels'&&Array.isArray(a)).flatMap(([kind,a])=>a.filter(o=>o&&typeof o==='object'&&(o.lv===id||walls.has(o.wall))).map(object=>({kind,object})));}
+function removeLevel(id=LV){
+ const level=lvObj(id);if(!level)return false;
+ if(M.levels.length<2){flash('Keep at least one level.');return false;}
+ const blocked=window.__ws?.levelRemovalProblem?.(id);if(blocked){flash(blocked);return false;}
+ const contents=levelContents(id),count=contents.length;
+ if(!confirm(`Delete ${level.name}?${count?' This removes '+count+' model elements, including any hosted openings.':' This level is empty.'} Other levels and saved versions are kept. You can undo this.`))return false;
+ const before=snapM(),sorted=lvSorted(),index=sorted.findIndex(l=>l.id===id),next=sorted[index-1]||sorted[index+1],removed=new Set(contents.map(x=>x.object.id));
+ for(const [key,list] of Object.entries(M))if(Array.isArray(list)&&key!=='levels')M[key]=list.filter(o=>!contents.some(x=>x.object===o));
+ M.levels=M.levels.filter(l=>l.id!==id);M.hiddenIds=(M.hiddenIds||[]).filter(key=>!removed.has(key));
+ LV=next.id;SEL=null;HOV=null;drag=null;drawing=null;commit(before);syncInputs();if(window.S3&&S3.on)upd3D(true);return true;
+}
+$('#lvDel').addEventListener('click',()=>removeLevel());
 $('#clear').addEventListener('click', () => { const n = LAYER === 'Wall' ? lvWalls().length : LAYER === 'Floor' ? M.floors.filter((f) => f.lv === LV).length + M.voids.filter((v) => v.lv === LV).length : M.furn.filter((f) => f.lv === LV).length; if (!n) { flash(`Nothing on the ${LAYER} layer of ${lvObj().name}.`); return; }
   if (!confirm(`Remove all ${n} objects on the ${LAYER} layer of ${lvObj().name}? You can undo this.`)) return; const b = snapM();
   if (LAYER === 'Wall') { const ids = new Set(lvWalls().map((w) => w.id)); M.walls = M.walls.filter((w) => w.lv !== LV); M.ops = M.ops.filter((o) => !ids.has(o.wall)); }
@@ -5581,12 +5595,12 @@ window.S3 = (() => {
   api.init = async (cv, ev) => {
     await lib(); if (R) return; canvas = cv;
     R = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true }); R.setPixelRatio(Math.min(2, devicePixelRatio || 1)); R.outputColorSpace = T.SRGBColorSpace;
-    scene = new T.Scene(); scene.background = new T.Color('#f2f3f5');
+    scene = new T.Scene(); scene.background = new T.Color(window.PlotCloudUI?.viewportColor() || '#f2f3f5'); window.PlotCloudUI?.trackViewport(scene,R,()=>render());
     scene.add(new T.HemisphereLight(0xffffff, 0xcfc9bd, 1.9)); const sun = new T.DirectionalLight(0xfff6ea, 1.6); sun.position.set(-14, 26, 10); scene.add(sun); const fill = new T.DirectionalLight(0xffffff, 0.35); fill.position.set(12, 8, -14); scene.add(fill);
     cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); cam.position.set(18, 16, 22);
     ctl = new OC(cam, ev || canvas); ctl.mouseButtons = { LEFT: null, MIDDLE: T.MOUSE.ROTATE, RIGHT: T.MOUSE.PAN }; ctl.zoomToCursor = true; ctl.enableDamping = false; ctl.maxPolarAngle = Math.PI * 0.49; ctl.addEventListener('change', () => { render(); if (window.zoomUI) window.zoomUI(); if (window.ov3) window.ov3(); });
-    const ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshLambertMaterial({ color: 0xeff1f4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.16; scene.add(ground);
-    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid);
+    const ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshLambertMaterial({ color: window.PlotCloudUI?.viewportColor() || 0xeff1f4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.16; scene.add(ground);
+    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); addEventListener('pc-ui-theme',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
   function render() { if (R && api.on) { if (api.preRender) api.preRender(); R.render(scene, WALK.on ? WALK.cam : cam); } }
@@ -6224,6 +6238,10 @@ if (window.__WSROLE) {
     load(snap) { WS.rx = true; try { useModel(STC.migrate(JSON.parse(snap)), { saved: true }); } finally { WS.rx = false; } C2.m = null; guard(); WS.last = snapM(); WS.lv = LV; WS.sel = KEY(SEL); if (window.S3 && S3.on) { upd3D(true); aspectFit(); } histUI(); return WS.last; },
     apply(snap, live) { if (snap === snapM()) { WS.last = snap; if (!live) { WS.rx = true; try { changed(false); } finally { WS.rx = false; } } return; } WS.rx = true; try { M = JSON.parse(snap); guard(); if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !selObj()) SEL = null; changed(!!live, !!live); if (!live) syncInputs(); if (window.S3 && S3.on) upd3D(); } finally { WS.rx = false; } WS.last = snapM(); WS.sel = KEY(SEL); },
     select(s) { WS.rx = true; try { const o = s ? selObj(s) : null; if (o && o.lv && o.lv !== LV && M.levels.some((l) => l.id === o.lv)) { LV = o.lv; WS.lv = LV; changed(); } SEL = o ? s : null; WS.sel = KEY(SEL); if (SEL && LAYER_OF[SEL.k] && LAYER_OF[SEL.k] !== LAYER) setLayer(LAYER_OF[SEL.k], true); changedSel(); } finally { WS.rx = false; } },
+    addLevel(direction='above'){if(!['above','below'].includes(direction))return false;addLevel(direction);return true;},
+    renameLevel(name){name=String(name||'').trim();if(!name||name.length>80){flash('Use a level name between 1 and 80 characters.');return false;}if(M.levels.some(l=>l.id!==LV&&l.name.toLowerCase()===name.toLowerCase())){flash('A level with that name already exists.');return false;}const before=snapM();lvObj().name=name;commit(before);return true;},
+    levelRemovalProblem(id){const names={walls:'Walls',ops:'Glazing',floors:'Structure',voids:'Structure',fences:'Walls',furn:'Furniture',lights:'Lighting',ceil:'Lighting',names:'Rooms',masses:'Masses',imports:'Imported'};for(const {kind,object} of levelContents(id)){const layer=kind==='imports'?(object.layer||'Imported'):names[kind];if(object.locked||WS.locks.has(layer))return 'Unlock the '+(layer||'affected')+' layer and its elements before removing this level.';}return '';},
+    removeLevel(id){return removeLevel(id||LV);},
     level(id) { if (!M.levels.some((l) => l.id === id) || id === LV) return; WS.rx = true; try { WS.lv = id; gotoLevel(id); WS.sel = KEY(SEL); } finally { WS.rx = false; } },
     pushUndo(b) { UNDO.push(b); if (UNDO.length > 120) UNDO.shift(); REDO.length = 0; histUI(); },
     flash(t) { flash(t); },

@@ -41,7 +41,7 @@ export async function render(app, _, params = new URLSearchParams()) {
       <h1 class="display md" style="margin-top:16px">You.</h1>
       <form id="prof" class="grid g2" style="margin-top:24px;max-width:720px">
         <label class="f">Name<input name="name" autocomplete="name" required value="${esc(A.user.name)}"></label>
-        <label class="f">Email<input name="email" type="email" autocomplete="email" required value="${esc(A.user.email || '')}"></label>
+        <label class="f">Email<input name="email" type="email" autocomplete="email" required ${A.user.cloud?'readonly aria-readonly="true"':''} value="${esc(A.user.cloud?C.user()?.email||A.user.email:A.user.email || '')}"></label>
         <label class="f">Units<select disabled><option>Metric (every engine works in metres)</option></select></label>
         <label class="f">Language<select disabled><option>English</option></select></label>
         <label class="f">Time zone of this computer<input disabled value="${esc(Intl.DateTimeFormat().resolvedOptions().timeZone || '—')}"></label>
@@ -89,7 +89,7 @@ export async function render(app, _, params = new URLSearchParams()) {
           <p class="muted" id="trialLeft"></p>
           <p class="muted">CAD 16.99 per calendar month, plus applicable taxes. E-transfer payments are reviewed manually. Renew only when you choose; no automatic charge.</p></div>
         <a class="btn accent lg" href="#/pricing">See plans</a></div>
-      <p class="note" style="margin-top:14px">Sun hours and Daylight remain free. Request written payment details and enter your activation code on Pricing.</p>
+      <p class="note" style="margin-top:14px">Sun hours and Daylight remain free. Request written payment details using your registration email. ${C.configured()?'After payment verification, monthly access is applied to your account.':'Enter your issued activation code on Pricing.'}</p>
     </section>
 
     <section id="data" data-pane="data">
@@ -168,11 +168,11 @@ export async function render(app, _, params = new URLSearchParams()) {
   $('#logout', app).onclick = async (e) => { e.preventDefault(); if (A.user?.cloud) await C.signOut(); else { A.user = null; S.save(); } refreshWho(); location.hash = '#/'; toast('Logged out'); };
   if ($('#cloudCard', app)) { const st = () => { const i = C.info(), el = $('#cloudSt', app); if (!el) return; el.textContent = `${i.user?.email || ''} · ${i.phase === 'syncing' ? 'syncing…' : i.phase === 'error' ? 'not synced: ' + i.error : i.last ? 'synced ' + when(i.last) : 'not synced yet'}${i.cloud ? ` · ${i.cloud.projects} project${i.cloud.projects === 1 ? '' : 's'}, ${(i.cloud.bytes / 1e6).toFixed(1)} MB in the cloud` : ''}${i.skipped?.length ? ` · too large to send: ${i.skipped.join(', ')}` : ''}`; };
     st(); addEventListener('pc-cloud', st); $('#syncNow', app).onclick = () => C.sync(); }
-  $('#prof', app).onsubmit = (e) => { e.preventDefault(); const fd = new FormData(e.target); A.user.name = String(fd.get('name')).trim() || A.user.name; A.user.email = String(fd.get('email')).trim(); S.save(); refreshWho(); toast('Profile saved'); };
+  $('#prof', app).onsubmit = async(e) => { e.preventDefault(); const fd=new FormData(e.target),name=String(fd.get('name')).trim()||A.user.name;try{if(A.user.cloud)await C.updateProfile(name);else{A.user.name=name;A.user.email=String(fd.get('email')).trim();S.save();}refreshWho();toast('Profile saved');}catch(error){toast(error.message);} };
   $('#delAcct', app).onclick = async () => { if (prompt(A.user?.cloud ? 'Delete everything: your projects in this browser and in your cloud account? Type DELETE to confirm.' : 'Delete your account and everything in this browser? Type DELETE to confirm.') !== 'DELETE') return;
     if (A.user?.cloud) { try { await C.wipe(); await C.signOut(); } catch (er) { toast('Could not remove the cloud copy: ' + er.message); return; } toast('Your projects were removed from the cloud. To close the login itself, write to us.'); }
     S.deleteAccount(); location.hash = '#/'; location.reload(); };
-  $('#trialLeft', app).textContent = betaAccess.active ? 'Active until ' + accessDate(betaAccess.expiresAt) : 'No active beta code. Your saved local projects and results remain available.';
+  $('#trialLeft', app).textContent = betaAccess.active ? 'Active until ' + accessDate(betaAccess.expiresAt) : C.configured()?'No active monthly membership. Your saved projects and results remain available.':'No active beta code. Your saved local projects and results remain available.';
   function dataUI() {
     const use = S.storageUse(), pc = Math.min(100, 100 * use / S.QUOTA);
     $('#useBar', app).style.width = pc.toFixed(1) + '%'; $('#useTxt', app).textContent = `${size(use)} of about ${size(S.QUOTA)} used (${pc < 1 ? 'under 1' : Math.round(pc)} %) · kept in IndexedDB${S.storageMode() === 'idb' ? '' : ', with a quick copy in localStorage'} · ${S.PERSISTED ? 'the browser keeps it until you clear it' : 'the browser may clear it when the disk is full, so keep a backup'}.`;

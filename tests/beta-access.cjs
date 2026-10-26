@@ -9,7 +9,7 @@ const {chromium}=require('playwright');
  const {code,grant}=issueGrant({reference:'TEST_PRIVATE_ONLY',start:new Date(Date.now()-60000)});
  assert.equal(grant.codeHash,crypto.createHash('sha256').update(code).digest('hex'));
  assert(!JSON.stringify(grant).includes(code));
- const access=await import('data:text/javascript;base64,'+Buffer.from(fs.readFileSync('mvp/js/beta-access.js','utf8')).toString('base64'));
+ const access=await import('data:text/javascript;base64,'+Buffer.from(fs.readFileSync('mvp/js/beta-access.js','utf8').replace("import * as Cloud from './cloud.js';","const Cloud={configured:()=>false};")).toString('base64'));
  assert(access.matchingGrant({schema:1,grants:[grant]},grant.codeHash));
  for(const override of [{revokedAt:new Date().toISOString()},{expiresAt:'2020-01-01'},{startsAt:'2099-01-01'},{plan:'other'}]) assert.equal(access.matchingGrant({schema:1,grants:[{...grant,...override}]},grant.codeHash),null);
  console.log('PASS issuer, calendar month, expired/future/revoked/wrong-plan grants');

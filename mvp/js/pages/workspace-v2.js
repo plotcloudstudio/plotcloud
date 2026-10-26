@@ -138,7 +138,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws9-20261026`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws10-gray-levels-20261026`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -155,7 +155,7 @@ export function render(app, [pid]) {
     <div class="w3-pane" data-pane="persp"><iframe id="fPersp" title="Perspective (Plan Studio 3D)" src="${fsrc('persp')}"></iframe></div>
     <div class="w3-pane" data-pane="shaded"><div class="w3-body"><div class="vp" id="vp"></div><div class="hint" id="hint"></div></div></div>
     <div class="w2-cap" id="cap">
-      <div style="display:flex;align-items:center"><button type="button" id="levelBtn" aria-haspopup="menu" aria-expanded="false" disabled>Level ▾</button><button type="button" id="addLevel" title="Add level above" aria-label="Add level above" disabled>+</button><div class="w2-menu" id="levelMenu" role="menu" aria-label="Levels" hidden></div></div>
+      <div style="display:flex;align-items:center"><button type="button" id="levelBtn" aria-haspopup="menu" aria-expanded="false" disabled>Level ▾</button><button type="button" id="addLevel" title="Add level above" aria-label="Add level above" disabled>+</button><button type="button" id="removeLevel" title="Delete current level" aria-label="Delete current level" disabled>−</button><div class="w2-menu" id="levelMenu" role="menu" aria-label="Levels" hidden></div></div>
       <span class="w2-sep" aria-hidden="true"></span>
       <div><button type="button" id="vBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="vMenu" role="menu" hidden></div></div>
       <span class="w2-sep" aria-hidden="true"></span>
@@ -293,7 +293,8 @@ export function render(app, [pid]) {
   const persist = () => { S.save(); state(); };
   const SELHELP = 'Click to select · drag a box: left→right inside, right→left touching · Shift adds, Ctrl removes · Tab cycles what is under the cursor';
   function hint() { const h = $('#hint', app); h.title = SELHELP; h.textContent = tabInfo ? `${tabInfo.name} — ${tabInfo.index + 1} of ${tabInfo.count} under the cursor${tabInfo.count > 1 ? ' · Tab for the next one' : ''} · click to select` : 'View only · right-drag orbits · Shift+right-drag pans · scroll zooms · click or box to select'; }
-  $('#addLevel', app).onclick = () => { const pane = activePane(); if (!pane.ready) return; pane.win.document.getElementById('lvAdd')?.click(); pane.el.focus(); };
+  $('#addLevel', app).onclick = () => { const pane = activePane(); if (!pane.ready) return; pane.ws.addLevel('above'); pane.el.focus(); };
+  $('#removeLevel',app).onclick=()=>{const pane=activePane();if(!pane.ready)return;pane.ws.removeLevel();setSel([], {params:false});menus();pane.el.focus();};
   $('#fit', app).onclick = () => { if (UI.view === 'shaded') vp.fit(); else if (UI.view === 'plan' && INST.plan.ready) INST.plan.win.document.getElementById('fitBtn')?.click(); else if (INST.persp.ready) INST.persp.win.document.getElementById('fitBtn')?.click(); };
   hint();
 
@@ -317,6 +318,10 @@ export function render(app, [pid]) {
     $('#levelBtn', app).title = current ? `${current.name} · ${current.z.toFixed(2)} m` : 'Choose level';
     $('#levelBtn', app).disabled = !L;
     $('#levelMenu', app).innerHTML = L ? L.list.slice().reverse().map(l => it(`data-level="${esc(l.id)}"`, l.id === L.lv, `${esc(l.short)} · ${esc(l.name)}`, `${l.z.toFixed(2)} m`)).join('') : '';
+    if(L){$('#levelMenu',app).insertAdjacentHTML('beforeend',`<hr><button type="button" role="menuitem" data-level-action="rename">Rename current level…</button><button type="button" role="menuitem" data-level-action="below">Add level below</button><button type="button" role="menuitem" data-level-action="remove" ${L.list.length<2?'disabled title="Keep at least one level"':''}>Delete current level…</button>`);
+    $$('[data-level-action]',app).forEach(button=>button.onclick=()=>{closeMenus();const pane=activePane();if(!pane.ready)return;if(button.dataset.levelAction==='rename'){const name=prompt('Level name',current?.name||'');if(name!==null)pane.ws.renameLevel(name);}else if(button.dataset.levelAction==='below')pane.ws.addLevel('below');else pane.ws.removeLevel();menus();});}
+    $('#removeLevel',app).disabled=!L||L.list.length<2;
+    $('#removeLevel',app).title=L?.list.length<2?'Keep at least one level':'Delete current level';
     $$('#levelMenu [data-level]', app).forEach(x => x.onclick = () => { closeMenus(); setSel([], { params: false }); for (const pane of ready()) pane.ws.level(x.dataset.level); menus(); });
     $('#vMenu', app).innerHTML = it('data-view="plan"', UI.view === 'plan' && a?.view2d !== 'ceiling', 'Plan')
       + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan')
@@ -605,9 +610,10 @@ export function render(app, [pid]) {
     host.innerHTML = M().layers.map((l, i) => { const list = comps.filter((c) => c.layer === l.name), o = open.has(l.name), nh = list.filter(hid).length; return `<div class="w2-layer ${l.visible ? '' : 'off'} ${l.locked ? 'locked' : ''}">
       <div class="w2-lrow"><span class="sw" style="background:${l.color}"></span><button class="nm" data-open="${i}" aria-expanded="${o}">${o ? '▾' : '▸'} ${esc(l.name)}${nh ? ` <small class="w3-hidn">${nh} hidden</small>` : ''}</button><span class="cnt">${list.length}</span>
       <button class="ic" data-vis="${i}" title="${l.visible ? 'Hide' : 'Show'} ${esc(l.name)}" aria-label="${l.visible ? 'Hide' : 'Show'} ${esc(l.name)}" aria-pressed="${!l.visible}">${l.visible ? EYE_ON : EYE_OFF}</button>
-      <button class="ic" data-lock="${i}" title="${l.locked ? 'Unlock' : 'Lock'} ${esc(l.name)}" aria-label="${l.locked ? 'Unlock' : 'Lock'} ${esc(l.name)}" aria-pressed="${l.locked}">${l.locked ? LOCK_ON : LOCK_OFF}</button></div>
+      <button class="ic" data-lock="${i}" title="${l.locked ? 'Unlock' : 'Lock'} ${esc(l.name)}" aria-label="${l.locked ? 'Unlock' : 'Lock'} ${esc(l.name)}" aria-pressed="${l.locked}">${l.locked ? LOCK_ON : LOCK_OFF}</button>${!Object.hasOwn(LAYER_COLORS,l.name)?`<button type="button" class="ic" data-remove-layer="${i}" ${list.length||l.locked?'disabled':''} title="${list.length?'Move or delete the layer’s objects first':l.locked?'Unlock this layer first':'Remove empty layer'}" aria-label="Remove empty layer ${esc(l.name)}">×</button>`:''}</div>
       ${o ? `<div class="comps">${list.map((c) => { const h = hid(c), dis = l.locked || !l.visible || h; return `<div class="w3-crow${h ? ' hid' : ''}"><button data-sel="${c.id}" aria-current="${isSel(c.id)}" ${dis ? `aria-disabled="true" title="${h ? 'Hidden piece: show it with the eye' : l.locked ? 'Locked layer: unlock it to select' : 'Hidden layer: show it to select'}"` : 'title="Shift-click adds, Ctrl-click removes"'}>${esc(c.name)}</button>${psSel(c.id)?.k === 'furn' ? `<button class="ic sm" data-pshide="${esc(c.id)}" aria-pressed="${h}" title="${h ? 'Show this piece again' : 'Hide this piece'}" aria-label="${h ? 'Show' : 'Hide'} ${esc(c.name)}">${h ? EYE_OFF : EYE_ON}</button>` : ''}</div>`; }).join('') || '<span class="note">Empty</span>'}</div>` : ''}</div>`; }).join('');
     fit(host, $$('.w2-lrow, .comps > *', host), 'layers');   // the tree, line by line: layers and the open layer's components
+    $$('[data-remove-layer]',host).forEach(button=>button.onclick=()=>{const i=+button.dataset.removeLayer,l=M().layers[i];if(!l||l.locked||Object.hasOwn(LAYER_COLORS,l.name)||M().components.some(c=>c.layer===l.name))return;M().layers.splice(i,1);open.delete(l.name);saveUI();persist();layers();toast('Empty layer removed');});
     $$('[data-open]', host).forEach((b) => b.onclick = () => { const n = M().layers[b.dataset.open].name; openOnly(open.has(n) ? null : n); saveUI(); layers(); });
     $$('[data-vis]', host).forEach((b) => b.onclick = () => { const l = M().layers[b.dataset.vis]; l.visible = !l.visible; persist(); const map = layerVis(), off = offLayers(); for (const I2 of ready()) { I2.ws.layers(map); if (I2.ws.impOff) I2.ws.impOff(off); } drawShaded(false);
       if (!l.visible && UI.sels.some((id) => comp(id)?.layer === l.name)) setSel(UI.sels.filter((id) => comp(id)?.layer !== l.name)); else { vp.select(UI.sels); layers(); } });
@@ -650,7 +656,7 @@ export function render(app, [pid]) {
   function loadAll() { SNAP = JSON.stringify(p.draft.studio); for (const I2 of ready()) { const back = I2.ws.load(SNAP); if (I2 === INST.plan && back !== SNAP) { SNAP = back; p.draft.studio = JSON.parse(back); } tell(I2); } vpFitted = false; derive(false); levelUI(); refresh(true); }
   $('#sendSim', app).onclick = () => { const v = dirty() || !last() ? S.saveVersion(p, 'Sent from Workspace') : last(); setCurrentVersion(p, v.id); location.hash = '#/simulations'; };
   $('#editSite', app).onclick = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
-  $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if (!name || M().layers.find((l) => l.name === name.trim())) return; M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
+  $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if(name===null)return;if(!name.trim()){toast('Enter a layer name.');return;}if(M().layers.find(l=>l.name.toLowerCase()===name.trim().toLowerCase())){toast('A layer with that name already exists.');return;} M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
   $('#saveV', app).onclick = () => { if (!dirty() && last()) { toast('No changes since v' + last().n); return; } const v = S.saveVersion(p, $('#note', app).value.trim()); $('#note', app).value = ''; state(); toast(`Saved v${v.n}`); };
 
   // ---- status bar: snaps for the Plan pane's drawing and the gumball, the gumball itself, clearance in Plan and Shaded

@@ -43,8 +43,9 @@ function who() {
   nav.querySelector('[data-nav="home"]')?.remove();
   if (u) nav.insertAdjacentHTML('afterbegin', `<a href="#/home" data-nav="home"${/^#\/home/.test(location.hash) ? ' aria-current="page"' : ''}>Dashboard</a>`);
   $('#who').innerHTML = u ? `<span class="who-w"><button type="button" class="btn sm who-b" id="whoBtn" aria-haspopup="true" aria-expanded="false" style="padding-left:4px"><span class="avatar">${esc(u.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span>${esc(u.name.split(/\s+/)[0].replace(/^./, (c) => c.toUpperCase()))} ▾</button>
-      <span class="who-m" id="whoMenu" role="menu" hidden><span class="who-id"><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></span><a role="menuitem" href="#/home">Dashboard</a><a role="menuitem" href="#/account?tab=profile">Account settings</a><a role="menuitem" href="#/account?tab=data">Backup &amp; data</a>${u.cloud ? `<span class="who-sync" id="whoSync" aria-live="polite">${esc(syncText())}</span><button role="menuitem" type="button" id="whoSyncNow">Sync now</button>` : ''}<button role="menuitem" type="button" id="whoOut">Log out</button></span></span>`
+      <span class="who-m" id="whoMenu" role="menu" hidden><span class="who-id"><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></span><a role="menuitem" href="#/home">Dashboard</a><a role="menuitem" href="#/account?tab=profile">Account settings</a><a role="menuitem" href="#/account?tab=data">Backup &amp; data</a>${u.cloud?'<span id="adminMenuLink"></span>':''}${u.cloud ? `<span class="who-sync" id="whoSync" aria-live="polite">${esc(syncText())}</span><button role="menuitem" type="button" id="whoSyncNow">Sync now</button>` : ''}<button role="menuitem" type="button" id="whoOut">Log out</button></span></span>`
     : '<a class="btn sm" href="#/login">Log in</a> <a class="btn sm accent" href="#/login?signup=1">Start free</a>';
+  if(u?.cloud){const uid=C.user()?.id;C.rpc('pc_is_admin').then(admin=>{if(admin&&uid===C.user()?.id){const el=$('#adminMenuLink');if(el)el.innerHTML='<a role="menuitem" href="#/admin">Manage account access</a>';}}).catch(()=>{});}
   if (!u) return;
   const b = $('#whoBtn'), m = $('#whoMenu'), shut = () => { m.hidden = true; b.setAttribute('aria-expanded', 'false'); };
   b.onclick = (e) => { e.stopPropagation(); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); };
@@ -54,11 +55,12 @@ function who() {
 document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e.target.closest('.who-w')) { m.hidden = true; $('#whoBtn')?.setAttribute('aria-expanded', 'false'); } });
 
 const PAGES = {
+  admin: () => import('./pages/admin.js'),
   '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/dashboard.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Dashboard', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
+const TITLES = { admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Dashboard', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab

@@ -107,3 +107,13 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-surface="classic"] header.site #nav{gap:20px;font-size:14px}
 [data-pc-ui][data-pc-surface="classic"] :is(.pc-catalog-head>p,.pc-section-heading p,.pc-task p,.pc-eyebrow,.pc-hero-note){color:var(--pc-ui-muted)!important}
 @media(max-width:1100px){[data-pc-ui][data-pc-surface="classic"] header.site #nav{display:none}[data-pc-ui][data-pc-surface="classic"] #burger{display:inline-flex}[data-pc-ui][data-pc-surface="classic"] #mpanel.open{display:block}}
+
+/* Rhino-style neutral gray editing chrome. Explicit adapters beat legacy white skins. */
+[data-pc-ui][data-pc-theme="night"] :is(.pplan,.pplan.pro,.modal,.dialog,dialog,.popover,.dropdown,.menu,.pane,.pane>header,.sdlg-in){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-theme="night"] .pplan.pro :is(.muted,.eyebrow){color:var(--pc-ui-muted)}
+[data-pc-ui][data-pc-surface="tool"] :is(#panelL,#panelR,.col,.colIn,.col .sec,.col .pane,.col .brand,.lcard,.lhead,.chartp,#chartp,.lgd,.legend,.props,.tip,.empty,footer.fine,.kj-status,.kj-foot,.kj-right,.kl-left,.railL .rail,.pc-unified-group){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="tool"] :is(#stage,.stage,#viewport,.viewport,.kj-stage){background-color:var(--pc-ui-view)!important}
+[data-pc-ui][data-pc-surface="tool"] :is(.readout,.badge,.thint,.capbox,.timebar,.runpill,.qbox,.pc-unified-view-controls,.pc-unified-display){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-secondary)!important;border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-surface="tool"] :is(input:not([type=range]):not([type=color]):not([type=checkbox]):not([type=radio]),select,textarea){background-color:var(--pc-ui-subtle)!important;color:var(--pc-ui-text)!important;border-color:var(--pc-ui-border-strong)!important}
+[data-pc-ui][data-pc-theme="night"][data-pc-surface="tool"] :is(.warnbox,.callout,.tag,.kpi,.stat,.metric){background-color:var(--pc-ui-subtle);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
+[data-pc-ui][data-pc-theme="night"] :is(.pc-unified-help,dialog)::backdrop{background:#20222499}

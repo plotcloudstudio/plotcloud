@@ -3,11 +3,20 @@
  'use strict';
  const script=document.currentScript,base=new URL('./',script.src),root=document.documentElement;
  const surface=script.dataset.surface||'tool';
+ // Recover incomplete legacy hosts as well as themed nested srcdoc frames.
+ for(const file of ['tokens.css','components.css'])if(![...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>{try{return new URL(link.href).pathname.endsWith('/ui/'+file)}catch{return false}})){
+  const link=document.createElement('link');link.rel='stylesheet';link.href=new URL(file+'?v=gray-20261026-1',base).href;link.dataset.pcUiAssets='';link.onload=()=>{root.setAttribute('data-theme',root.dataset.theme);publish();window.dispatchEvent(new CustomEvent('pc-ui-theme',{detail:mode}));};document.head.append(link);
+ }
+
  if(surface==='tool')root.dataset.pcTool=location.pathname.split('/').pop().replace(/\.html$/,'');
  const normalize=value=>value==='night'||value==='dark'?'night':value==='day'||value==='light'?'day':null;
  const read=()=>{try{return normalize(localStorage.getItem('pc-ui-theme'))||normalize(localStorage.getItem('pc-mvp-theme'))}catch{return null}};
  let mode=read()||normalize(root.dataset.theme)||'day';
- const roots=new Set([root]),boundFrames=new WeakSet();
+ const roots=new Set([root]),boundFrames=new WeakSet(),viewports=new Set();
+ const viewportColor=()=>getComputedStyle(root).getPropertyValue("--pc-ui-view").trim()||(mode==="night"?"#585b5e":"#e9ecef");
+ const canvasBackground=(exporting=false,plane=false)=>exporting||mode!=="night"?"#ffffff":plane?"#696c70":viewportColor();
+ function updateViewport(view){const color=viewportColor();if(view.color===color)return;view.color=color;if(view.scene?.background?.set)view.scene.background.set(color);else view.renderer?.setClearColor(color,1);if(view.redraw)requestAnimationFrame(view.redraw);}
+ function trackViewport(scene,renderer,redraw){const view={scene,renderer,redraw};viewports.add(view);updateViewport(view);return()=>viewports.delete(view);}
  function apply(target){
   const native=target===root&&surface==='site'?mode:mode==='night'?'dark':'light';
   for(const [key,value] of Object.entries({pcUi:'1',pcTheme:mode,pcSurface:target===root?surface:'tool',theme:native}))if(target.dataset[key]!==value)target.dataset[key]=value;
@@ -16,6 +25,7 @@
  function publish(){
   roots.forEach(target=>{if(target.isConnected)apply(target);else roots.delete(target)});
   document.querySelectorAll('iframe').forEach(frame=>{try{if(new URL(frame.src||location.href,location.href).origin===location.origin)frame.contentWindow?.postMessage({pc:1,t:'ui-theme',theme:mode},location.origin)}catch{}});
+  viewports.forEach(updateViewport);
   const button=document.querySelector('.pc-ui-theme');
   if(button){button.setAttribute('aria-pressed',String(mode==='night'));button.setAttribute('aria-label',mode==='night'?'Switch to day theme':'Switch to night theme');button.title=button.getAttribute('aria-label');button.querySelector('span').textContent=mode==='night'?'Day':'Night'}
  }
@@ -27,7 +37,7 @@
  function adopt(frame){
   try{
    const child=frame.contentDocument;if(!child||!frame.hasAttribute('srcdoc')||!child.documentElement)return;
-   if(!child.querySelector('link[data-pc-ui-assets]'))for(const file of ['tokens.css','components.css']){const link=child.createElement('link');link.rel='stylesheet';link.href=new URL(file,base).href;link.dataset.pcUiAssets='';link.addEventListener('load',()=>{child.documentElement.setAttribute('data-theme',child.documentElement.dataset.theme)});child.head.append(link)}
+   if(!child.querySelector('link[data-pc-ui-assets]'))for(const file of ['tokens.css','components.css']){const link=child.createElement('link');link.rel='stylesheet';link.href=new URL(file+'?v=gray-20261026-1',base).href;link.dataset.pcUiAssets='';link.addEventListener('load',()=>{child.documentElement.setAttribute('data-theme',child.documentElement.dataset.theme)});child.head.append(link)}
    roots.add(child.documentElement);apply(child.documentElement);
   }catch{}
  }
@@ -53,7 +63,7 @@
   const state=context?'true':'false';if(root.dataset.pcContext!==state)root.dataset.pcContext=state;
  }
  function boot(){
-  frames();controls();layout();publish();
+  frames();controls();layout();publish();window.dispatchEvent(new CustomEvent('pc-ui-theme',{detail:mode}));
   if(surface==='tool'&&/Sun Hours|Wind Flow|Daylight|Natural Ventilation|Spatial|Space Syntax|Movement|Isovist|Camera Coverage|Indoor Acoustics|Evacuation|Circulation|View Analysis|Structural Analysis|Stormwater/i.test(document.title))import(new URL('simulation-fit.js?v=unified-20261025-5',base)).then(m=>m.installSimulationFit(document)).catch(e=>console.warn('Simulation layout unavailable',e));
   addEventListener('resize',layout);
   new MutationObserver(records=>{if(records.some(r=>r.addedNodes.length||r.removedNodes.length)){frames();if(controls())publish();layout()}}).observe(document.body,{childList:true,subtree:true});
@@ -63,6 +73,6 @@
  addEventListener('pc-theme',event=>set(event.detail,{persist:true}));
  addEventListener('storage',event=>{if(event.key==='pc-ui-theme'||event.key==='pc-mvp-theme')set(event.newValue)});
  addEventListener('message',event=>{if(event.origin===location.origin&&event.source===parent&&event.data?.pc===1&&event.data.t==='ui-theme')set(event.data.theme)});
- window.PlotCloudUI={version:1,get theme(){return mode},setTheme:value=>set(value,{persist:true})};
+ window.PlotCloudUI={version:1,get theme(){return mode},viewportColor,canvasBackground,trackViewport,setTheme:value=>set(value,{persist:true})};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

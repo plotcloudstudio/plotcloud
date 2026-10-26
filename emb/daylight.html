@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Daylight</title>
@@ -761,8 +761,8 @@ function hmImage() {
 }
 function drawPlan(ctx) {
   const d = PXR(), B = SC.bounds;
-  LB.r = []; LB.f = []; { const dd = PXR(), mk = (typeof PROBE !== 'undefined' && PROBE && PROBE.p) ? PROBE.p : (typeof SC !== 'undefined' && SC.view && SC.view.length === 2 ? SC.view : null); if (mk) { const q = W2S(mk); lbPut(q[0] - 11 * dd, q[1] - 11 * dd, 22 * dd, 22 * dd); } } ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, VP.w, VP.h);
-  const o = W2S([0, B.h]), e = W2S([B.w, 0]); ctx.fillStyle = '#ffffff'; ctx.fillRect(o[0], o[1], e[0] - o[0], e[1] - o[1]); if (!EXP) { ctx.strokeStyle = '#e1dfda'; ctx.lineWidth = 1; ctx.strokeRect(o[0] + 0.5, o[1] + 0.5, e[0] - o[0] - 1, e[1] - o[1] - 1); }
+  LB.r = []; LB.f = []; { const dd = PXR(), mk = (typeof PROBE !== 'undefined' && PROBE && PROBE.p) ? PROBE.p : (typeof SC !== 'undefined' && SC.view && SC.view.length === 2 ? SC.view : null); if (mk) { const q = W2S(mk); lbPut(q[0] - 11 * dd, q[1] - 11 * dd, 22 * dd, 22 * dd); } } ctx.fillStyle = window.PlotCloudUI?.canvasBackground(!!EXP) || '#ffffff'; ctx.fillRect(0, 0, VP.w, VP.h);
+  const o = W2S([0, B.h]), e = W2S([B.w, 0]); ctx.fillStyle = window.PlotCloudUI?.canvasBackground(!!EXP,true) || '#ffffff'; ctx.fillRect(o[0], o[1], e[0] - o[0], e[1] - o[1]); if (!EXP) { ctx.strokeStyle = '#e1dfda'; ctx.lineWidth = 1; ctx.strokeRect(o[0] + 0.5, o[1] + 0.5, e[0] - o[0] - 1, e[1] - o[1] - 1); }
   if (RES && LAY.res && GC.G) { ctx.save(); ctx.imageSmoothingEnabled = false; const go = W2S([0, GC.G.H * GC.G.c]); ctx.drawImage(resImage(), go[0], go[1], GC.G.W * GC.G.c * V.k, GC.G.H * GC.G.c * V.k); ctx.restore(); }
   if (SC.hm) { ctx.save(); ctx.imageSmoothingEnabled = false; const ho = W2S([0, SC.hm.H * SC.hm.c]); ctx.drawImage(hmImage(), ho[0], ho[1], SC.hm.W * SC.hm.c * V.k, SC.hm.H * SC.hm.c * V.k); ctx.restore(); }
   if (LAY.furn) for (const f of SC.furn) {
@@ -1209,8 +1209,8 @@ async function setCam(c) {
 }
 function init3D() {
   const THREE = T3.lib, c = $('#cv3');
-  T3.r = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true }); T3.r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); T3.r.setClearColor(0xf3f3f1, 1);
-  T3.scene = new THREE.Scene(); T3.cam = new THREE.PerspectiveCamera(42, 1, 0.03, 1000);
+  T3.r = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true }); T3.r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); T3.r.setClearColor(window.PlotCloudUI?.viewportColor() || 0xf3f3f1, 1);
+  T3.scene = new THREE.Scene(); window.PlotCloudUI?.trackViewport(T3.scene,T3.r,()=>draw()); T3.cam = new THREE.PerspectiveCamera(42, 1, 0.03, 1000);
   T3.ctl = new T3.OC(T3.cam, c); T3.ctl.maxPolarAngle = Math.PI * 0.495; T3.ctl.addEventListener('change', () => render3D());
   T3.scene.add(new THREE.HemisphereLight(0xffffff, 0xcfccc4, 2.1)); const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-0.5, 1, 0.35); T3.scene.add(sun);
   T3.grp = new THREE.Group(); T3.scene.add(T3.grp);
@@ -1299,6 +1299,7 @@ window.__pcAnalysisState=()=>{
  let parameters=null;try{parameters=RES?JSON.parse(RES.key).slice(1):null;}catch(e){}
  return {ready,stale:!!RES&&RES.key!==setKey(),conditions:{schema:1,tool:'daylight',parameters,spacing:RES?.spacing,bearings:RES?.nb||RES?.nr,excluded:EXCL.map(p=>p.slice())}};
 };
+addEventListener('pc-ui-theme',()=>{if(typeof draw==='function')requestAnimationFrame(()=>draw());});
 </script>
 
 <script>

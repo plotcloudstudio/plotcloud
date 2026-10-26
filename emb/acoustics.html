@@ -455,10 +455,10 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 .wallrow p { margin: 0; color: var(--muted); }
 .hotrow { font: 12px var(--f-mono); padding: 3px 0; }
 </style>
-<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
-<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <div class="app">
@@ -4414,7 +4414,7 @@ three/build/three.module.js:
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.toneMapping = T.NeutralToneMapping; renderer.localClippingEnabled = true;
     renderer.domElement.setAttribute('aria-label', 'Wireframe 3D room: the sound wave, the walls and the ceiling. Drag to orbit; right-drag to pan; wheel to zoom.');
     host.append(renderer.domElement);
-    const scene = new T.Scene(); scene.background = new T.Color('#ffffff');
+    const scene = new T.Scene(); scene.background = new T.Color(window.PlotCloudUI?.viewportColor() || '#ffffff'); window.PlotCloudUI?.trackViewport(scene,null,()=>draw());
     const camera = new T.PerspectiveCamera(35, 1, 0.05, 2e4); camera.up.set(0, 0, 1);
     const controls = new T.OrbitControls(camera, renderer.domElement); controls.enableDamping = true;
     const room = new T.Group(), result = new T.Group(), marks = new T.Group(), wave = new T.Group(); scene.add(room, result, marks, wave);

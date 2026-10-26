@@ -16,9 +16,9 @@
 @media (max-width: 900px) { .chartp { top: auto; left: 0; width: auto; height: 46%; border-left: 0; border-top: 1px solid var(--line); } .stage.split .legend, .stage.split .hud { right: 12px; } }
 </style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Sun Hours</title>
@@ -792,7 +792,8 @@ function applyTheme() {
   const t = tokens();
   scene.background = new THREE.Color(t.view);
   const dark = new THREE.Color(t.view).getHSL({}).l < 0.4;
-  groundMat.color.set(dark ? 0x2a2a28 : 0xe7e5df);
+  groundMat.color.set(dark ? 0x777b7e : 0xe7e5df);
+  groundMat.emissive.set(dark ? 0x585b5e : 0x000000); groundMat.emissiveIntensity=dark?0.35:0;
   modelMat.color.set(dark ? 0xbdbab3 : 0xf2f0eb);
   edgeMat.color.set(t.ink); edgeMat.opacity = dark ? 0.3 : 0.35;
   pathMat.color.set(t.accent); faintMat.color.set(t.ink);

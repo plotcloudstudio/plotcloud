@@ -1,0 +1,7 @@
+# Neutral gray dark workspace
+
+Dark mode uses a neutral gray hierarchy: page #303234, panels #3b3d40, inset controls #45474a and editing viewport #585b5e. Live 3D ground shading stays gray under changing sun lighting instead of turning almost black. Light mode retains its separate palette. Simulation result ramps and numeric calculations are unchanged.
+
+Changes cover shared tokens, legacy hard-coded panel/overlay adapters, root asset recovery, parent-to-iframe theme propagation, nested srcdoc adoption and the live 2D/3D viewport backgrounds. Privacy, Wayfinding and the current room-acoustics engine were missing the shared assets; Outdoor Noise had the runtime but no shared token/component styles. These hosts now load the complete theme. Plan Studio's drawing and Perspective follow the same control. Existing paper-oriented exports retain their explicit white background; this does not claim a redesign of report/board exports.
+
+Validation: tests/dark-workspace.cjs opens the 17 catalog study routes, including solar/UTCI modes, checks neutral gray tokens and visible legacy panel backgrounds, and switches the host theme to light and back inside the iframe. The browser uses only test ledger entitlements. Local screenshots are visual checks in addition to computed CSS checks. Hosted direct browser inspection is subject to the environment network allowlist; verify GitHub Pages deployment independently.

@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PlotCloud Outdoor Noise</title>
-<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="lib/plansim.css?v=1">
 <script type="importmap">{ "imports": { "three": "../furniture/three.module.min.js", "three/addons/": "../furniture/addons/" } }</script>
@@ -284,7 +286,7 @@ function makeControls() { if (controls) controls.dispose(); controls = new Orbit
   if (cam === ortho) { controls.enableRotate = false; controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }; controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN }; } controls.addEventListener('change', render); }
 const theme = () => { const night = document.documentElement.dataset.pcTheme === 'night' || matchMedia('(prefers-color-scheme: dark)').matches && !document.documentElement.dataset.pcTheme;
   const view = getComputedStyle(document.documentElement).getPropertyValue('--view').trim();
-  return night ? { bg: view || '#14171c', ground: '#1b1f25', road: '#3c424c', roadSel: '#df5145', green: '#25432f', water: '#1d3550', prop: '#d9d5cd', ctx: '#5d646f', edge: '#0c0e11', ring: '#6c7580', text: '#c9d1db' }
+  return night ? { bg: view || '#585b5e', ground: '#606368', road: '#3c424c', roadSel: '#df5145', green: '#25432f', water: '#1d3550', prop: '#d9d5cd', ctx: '#5d646f', edge: '#0c0e11', ring: '#6c7580', text: '#c9d1db' }
     : { bg: view || '#e9ecef', ground: '#f4f5f6', road: '#b3b8c0', roadSel: '#c7362c', green: '#cfe3c5', water: '#cadcef', prop: '#ffffff', ctx: '#b5b9c0', edge: '#59606b', ring: '#9aa1aa', text: '#3a4048' }; };
 const textSprite = (t, color, size = 22) => { const c = document.createElement('canvas'), g = c.getContext('2d'); g.font = `600 ${size}px system-ui, sans-serif`; const w = Math.ceil(g.measureText(t).width) + 12; c.width = w; c.height = size + 12; g.font = `600 ${size}px system-ui, sans-serif`; g.fillStyle = color; g.textBaseline = 'middle'; g.fillText(t, 6, c.height / 2);
   const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest: false, transparent: true })); s.userData.px = [w, c.height]; s.renderOrder = 10; return s; };

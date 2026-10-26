@@ -14,12 +14,12 @@ export function render(app, _, params) {
         <p class="lede" style="margin-top:22px">Your account keeps the site, the defaults every simulation uses, and your projects with their versions and results.</p>
         <ol class="numlist" style="margin-top:30px"><li><span>01</span><b>Set your site and defaults once</b></li><li><span>02</span><b>Keep every project and version in one place</b></li><li><span>03</span><b>Sun hours and Daylight stay free; unlock other tools with monthly beta access</b></li></ol>
       </div>
-      <form id="f" class="card" style="flex:1 1 380px;max-width:440px;padding:28px;display:grid;gap:14px" aria-label="${up ? 'Create an account' : 'Log in'}">
+      <form id="f" class="card" style="flex:1 1 380px;max-width:440px;padding:28px;display:grid;gap:14px" aria-label="${cloud?(up?'Create an account':'Log in'):'Local browser profile'}">
         <div class="seg" role="group" aria-label="Log in or create an account" style="display:grid;grid-template-columns:1fr 1fr"><button type="button" data-m="signup" aria-pressed="${up}">Create account</button><button type="button" data-m="login" aria-pressed="${!up}">Log in</button></div>
         ${up ? '<label class="f">Name<input name="name" autocomplete="name" required></label>' : ''}
         <label class="f">Email<input name="email" type="email" autocomplete="email" required placeholder="you@studio.com"></label>
-        <label class="f">Password<input name="password" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" required minlength="6"></label>
-        <button class="btn accent lg" id="go">${up ? 'Create account →' : 'Log in →'}</button>
+        <label class="f">Password<input name="password" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" ${cloud?'required minlength="8"':'disabled placeholder="Cloud registration is not connected"'}></label>
+        <button class="btn accent lg" id="go">${cloud?(up?'Create account →':'Log in →'):'Continue with local profile →'}</button>
         ${cloud ? `<button type="button" class="btn" id="link">Email me a sign-in link instead</button>` : ''}
         <p class="msg" id="authMsg" role="status" aria-live="polite"></p>
         <p class="note" style="text-align:center">${cloud ? 'Your projects stay in this browser and, once you are signed in, are copied to your PlotCloud account so they follow you to your other devices. The sample project stays in the browser.' : 'Cloud accounts are not switched on for this site yet: your details stay in this browser and no password is stored.'}</p>
@@ -37,7 +37,7 @@ export function render(app, _, params) {
         catch (er) { say(er.message === 'Invalid login credentials' ? 'Wrong email or password.' : er.message, true); go.disabled = false; }
         return; }
       const A = S.account(); A.user = { name: String(fd.get('name') || A.user?.name || email.split('@')[0]).trim(), email, plan: 'free', since: new Date().toISOString() };
-      S.save(); refreshWho(); toast(up ? 'Account created' : 'Signed in'); location.hash = '#/' + next;
+      S.save(); refreshWho(); toast('Local profile opened · not a cloud registration'); location.hash = '#/' + next;
     };
   };
   draw();

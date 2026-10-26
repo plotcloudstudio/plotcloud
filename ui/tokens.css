@@ -13,9 +13,9 @@
   --pc-ui-shadow:0 12px 36px #18202b20;
 }
 :root[data-pc-ui][data-pc-theme="night"] {
-  --pc-ui-page:#111317; --pc-ui-surface:#1a1d22; --pc-ui-subtle:#22262c; --pc-ui-view:#14171c;
+  --pc-ui-page:#303234; --pc-ui-surface:#3b3d40; --pc-ui-subtle:#45474a; --pc-ui-view:#585b5e;
   --pc-ui-text:#eceff3; --pc-ui-secondary:#c4cbd4; --pc-ui-muted:#a0aab7;
-  --pc-ui-border:#343a43; --pc-ui-border-strong:#596370;
+  --pc-ui-border:#55585c; --pc-ui-border-strong:#7d8288;
   --pc-ui-primary:#df5145; --pc-ui-primary-hover:#ee6256; --pc-ui-on-primary:#ffffff; --pc-ui-primary-soft:#39211f;
   --pc-ui-selection:#8dbbea; --pc-ui-selection-soft:#21384f; --pc-ui-focus:#8dbbea;
   --pc-ui-success:#88cf9f; --pc-ui-warning:#e8bd70; --pc-ui-danger:#f49a9f;

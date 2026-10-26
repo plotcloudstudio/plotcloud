@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=unified-20261025-5" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=gray-20261026-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Camera Coverage</title>
@@ -710,8 +710,8 @@ function drawCams(ctx) {
 }
 function drawPlan(ctx) {
   const d = PXR(), B = SC.bounds;
-  LB.r = []; LB.f = []; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, VP.w, VP.h);
-  const o = W2S([0, B.h]), e = W2S([B.w, 0]); ctx.fillStyle = '#ffffff'; ctx.fillRect(o[0], o[1], e[0] - o[0], e[1] - o[1]); if (!EXP) { ctx.strokeStyle = '#e1dfda'; ctx.lineWidth = 1; ctx.strokeRect(o[0] + 0.5, o[1] + 0.5, e[0] - o[0] - 1, e[1] - o[1] - 1); }
+  LB.r = []; LB.f = []; ctx.fillStyle = window.PlotCloudUI?.canvasBackground(!!EXP) || '#ffffff'; ctx.fillRect(0, 0, VP.w, VP.h);
+  const o = W2S([0, B.h]), e = W2S([B.w, 0]); ctx.fillStyle = window.PlotCloudUI?.canvasBackground(!!EXP,true) || '#ffffff'; ctx.fillRect(o[0], o[1], e[0] - o[0], e[1] - o[1]); if (!EXP) { ctx.strokeStyle = '#e1dfda'; ctx.lineWidth = 1; ctx.strokeRect(o[0] + 0.5, o[1] + 0.5, e[0] - o[0] - 1, e[1] - o[1] - 1); }
   if (SC.raw.length) { ctx.strokeStyle = '#dcdad5'; ctx.lineWidth = 0.8 * d; ctx.beginPath(); for (const s of SC.raw) { const L = SC.layers[s.layer]; if (!L || L.role !== 'door') continue; const a = W2S(s.a), b = W2S(s.b); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); } ctx.stroke(); }
   if (COV && LAY.cov) { ctx.save(); ctx.imageSmoothingEnabled = false; const go = W2S([0, GC.G.H * GC.G.c]); ctx.drawImage(covImage(), go[0], go[1], GC.G.W * GC.G.c * V.k, GC.G.H * GC.G.c * V.k); ctx.restore(); }
   if (SC.hm) { ctx.save(); ctx.imageSmoothingEnabled = false; const ho = W2S([0, SC.hm.H * SC.hm.c]); ctx.drawImage(hmImage(), ho[0], ho[1], SC.hm.W * SC.hm.c * V.k, SC.hm.H * SC.hm.c * V.k); ctx.restore(); }
@@ -1295,8 +1295,8 @@ async function setCam(c) {
 }
 function init3D() {
   const THREE = T3.lib, c = $('#cv3');
-  T3.r = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true }); T3.r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); T3.r.setClearColor(0xf3f3f1, 1);
-  T3.scene = new THREE.Scene(); T3.cam = new THREE.PerspectiveCamera(42, 1, 0.03, 1000);
+  T3.r = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true }); T3.r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); T3.r.setClearColor(window.PlotCloudUI?.viewportColor() || 0xf3f3f1, 1);
+  T3.scene = new THREE.Scene(); window.PlotCloudUI?.trackViewport(T3.scene,T3.r,()=>draw()); T3.cam = new THREE.PerspectiveCamera(42, 1, 0.03, 1000);
   T3.ctl = new T3.OC(T3.cam, c); T3.ctl.maxPolarAngle = Math.PI * 0.495; T3.ctl.addEventListener('change', () => { if (!T3.fp) render3D(); });
   T3.scene.add(new THREE.HemisphereLight(0xffffff, 0xcfccc4, 2.1)); const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-0.5, 1, 0.35); T3.scene.add(sun);
   T3.grp = new THREE.Group(); T3.scene.add(T3.grp);
@@ -1431,6 +1431,7 @@ loadScene(PRESETS.store()); $('#mName').textContent = 'Case: ' + SC.name; $('#mI
 window.__cam = { SEARCH, startSearch, skipSearch, ANIM, play, stopPlay, get PANEL() { return PANEL; }, get PANELDOTS() { return PANELDOTS; }, SC, get COV() { return COV; }, get OPT() { return OPT; }, get CAND() { return CAND; }, optimise, applyN, setMode, setLevel, setTgt, setCamH, setShow, setCam, enterFP, exitFP, loadScene, PRESETS, TYPES, rangeOf, W2S, get GC() { return GC; }, camsChanged, board, HIST };
 window.__cam.camRun = camRun; window.__cam.QS = QS; window.__cam.qPlan = qPlan; window.__cam.DENS = DENS;
 setCam('split').then(() => { qUI(); camRun('draft', true, true); });
+addEventListener('pc-ui-theme',()=>{if(typeof draw==='function')requestAnimationFrame(()=>draw());});
 </script>
 
 <script>

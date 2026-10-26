@@ -25,6 +25,7 @@ export function planView(cv, { draw, onClick, onHover, onLeave } = {}) {
   const S2W = (x, y) => [V.cx + (x - V.w / 2) / V.k, V.cy - (y - V.h / 2) / V.k];
   let B = { x0: 0, y0: 0, x1: 10, y1: 10 }, raf = 0;
   const redraw = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; g.setTransform(V.d, 0, 0, V.d, 0, 0); g.clearRect(0, 0, V.w, V.h); draw && draw(g, api); }); };
+  addEventListener('pc-ui-theme',redraw);
   const fit = (b) => { if (b) B = b; const w = Math.max(1, B.x1 - B.x0), h = Math.max(1, B.y1 - B.y0); V.k = Math.min(V.w * 0.86 / w, V.h * 0.8 / h); V.cx = (B.x0 + B.x1) / 2; V.cy = (B.y0 + B.y1) / 2 - 0.02 * h; redraw(); };
   const size = () => { const r = cv.getBoundingClientRect(); V.d = PXR(); V.w = Math.max(10, r.width); V.h = Math.max(10, r.height); cv.width = Math.round(V.w * V.d); cv.height = Math.round(V.h * V.d); };
   new ResizeObserver(() => { const first = V.w === 10; size(); if (first) fit(); else redraw(); }).observe(cv);
