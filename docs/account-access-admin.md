@@ -1,6 +1,6 @@
 # Registered accounts and monthly access
 
-Owner's intended administrator email: plotcloud@gmail.com. The site remains on GitHub Pages; Supabase supplies Auth and the private membership database. The browser receives only a public/anon project key and the user's session, never the service-role key. The current release has no connected hosted Supabase project, so real registration and owner account management are not active yet. The Admin route shows setup rather than invented users. Local profiles cannot be searched remotely.
+Owner's intended administrator email: plotcloud@gmail.com. The site remains on GitHub Pages; Supabase supplies Auth and the private membership database. The browser receives only a publishable/anon project key and the user's session, never the service-role key. The owner supplied project `cgxszynizkbiblfiaowf` on 2026-10-27; its public configuration is now in the website. Hosted database initialization, authentication delivery, owner assignment and cross-account isolation still require verification. The execution environment's outbound allowlist blocks this Supabase host, so no hosted verification is claimed. The Admin route includes read-only live endpoint checks that run from the visitor's browser. Local profiles cannot be searched remotely.
 
 ## Connect once
 
@@ -8,7 +8,7 @@ Owner's intended administrator email: plotcloud@gmail.com. The site remains on G
 2. In SQL Editor, run `supabase/migrations/20261025000000_cloud_projects.sql`, then `supabase/migrations/20261026000000_memberships.sql`.
 3. Configure the production Site URL and redirect URL as `https://plotcloudstudio.github.io/plotcloud/mvp/`. Enable email confirmation. Configure production SMTP for registration/confirmation emails; the default Supabase mail sender has limits. Do not promise instant delivery.
 4. Put the Project URL and public/anon key into `mvp/js/backend-config.js` and deploy. Do not use a service-role key or database password. `supabase/README.md` also documents a local-only configuration for testing.
-5. Register plotcloud@gmail.com through the website and confirm the email. Then, as the project owner in SQL Editor, deliberately appoint the confirmed account:
+5. Register plotcloud@gmail.com through the website and confirm the email. This is separate from signing up to the Supabase dashboard. Then, as the project owner in SQL Editor, run `supabase/appoint-admin.sql` to deliberately appoint the confirmed account. It refuses missing or unconfirmed accounts. The equivalent assignment is:
 
 ```sql
 insert into private.pc_admins(user_id)

@@ -17,6 +17,8 @@ const {chromium}=require('playwright');
  try{
  const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage();
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ // Exercise the legacy, unconfigured code flow independently of production account configuration.
+ await context.route('**/js/backend-config.js*',r=>r.fulfill({contentType:'text/javascript',body:"export const SUPABASE_URL='';export const SUPABASE_ANON_KEY='';"}));
  await context.route('https://cdn.jsdelivr.net/npm/three@*/**',r=>{const part=r.request().url().split('/examples/jsm/')[1],file=part?'/workspace/plotcloud/furniture/addons/'+part:'/workspace/plotcloud/furniture/three.module.min.js';return fs.existsSync(file)?r.fulfill({path:file,contentType:'text/javascript'}):r.continue();});
  let grants=[];
  await context.route('**/beta-access-ledger.json?*',r=>r.fulfill({json:{schema:1,grants}}));

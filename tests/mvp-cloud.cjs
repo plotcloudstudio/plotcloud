@@ -13,6 +13,7 @@ const stamp = Date.now().toString(36), EMAIL = `ann.${stamp}@test.dev`, PW = 'co
   const b = await chromium.launch(); const errs = [];
   async function device(name, { config = true } = {}) {
     const ctx = await b.newContext({ viewport: { width: 1400, height: 900 } }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(`${name}: ${e.message}`)); if (process.env.DBG) p.on('response', (r) => { if (/54321/.test(r.url())) console.log('   ', name, r.status(), r.request().method(), r.url().replace(API, '').slice(0, 100)); });
+    if (!config) await ctx.route('**/js/backend-config.js*',r=>r.fulfill({contentType:'text/javascript',body:"export const SUPABASE_URL='';export const SUPABASE_ANON_KEY='';"}));
     await p.goto(B); await p.evaluate(([cfg, url, key]) => { localStorage.clear(); indexedDB.deleteDatabase('plotcloud'); if (cfg) localStorage.setItem('pc-cloud-config', JSON.stringify({ url, key })); }, [config, API, KEY]);
     await p.goto(B + '#/'); await p.reload(); await p.waitForTimeout(700); return p;
   }

@@ -9,7 +9,8 @@
 //   it was changed here since, then sent again); gone here but synced before → deleted here (removed there).
 // The sample project is not sent. A project over 24 MB is not sent (reported in the status).
 import * as S from './store.js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './backend-config.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './backend-config.js?v=cloud-connect-20261027-1';
+import { probeBackend } from './backend-status.js?v=cloud-connect-20261027-1';
 
 const SK = 'pc-cloud-session', STK = 'pc-cloud-state', LIMIT = 24e6;
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
@@ -17,6 +18,7 @@ const write = (k, v) => { try { if (v == null) localStorage.removeItem(k); else 
 // the backend: backend-config.js, or (for testing a project before publishing its keys) { url, key } in localStorage 'pc-cloud-config'
 function cfg() { const o = read('pc-cloud-config'); if (o && o.url && o.key) return { url: String(o.url).replace(/\/+$/, ''), key: o.key }; return SUPABASE_URL && SUPABASE_ANON_KEY ? { url: SUPABASE_URL.replace(/\/+$/, ''), key: SUPABASE_ANON_KEY } : null; }
 export const configured = () => !!cfg();
+export async function checkBackendSetup(){const c=cfg();if(!c)throw Error('Cloud accounts are not configured.');return probeBackend(c);}
 let session = read(SK), state = read(STK) || {}, busy = null, again = false, timer = 0;
 const status = { phase: 'idle', last: state.last || null, error: '', skipped: [], cloud: null };
 export const user = () => session?.user || null;
