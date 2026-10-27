@@ -1,7 +1,7 @@
 """Read-only production check for the owner's public weather function; no credentials."""
 import gzip,io,json,math,urllib.parse,urllib.request,zipfile,hashlib
 from pathlib import Path
-ENDPOINT='https://cgxszynizkbiblfiaowf.supabase.co/functions/v1/plotcloud-weather'
+ENDPOINT='https://cgxszynizkbiblfiaowf.supabase.co/functions/v1/quick-function'
 ORIGINS={'onebuilding':'https://climate.onebuilding.org','doe':'https://energyplus-weather.s3.amazonaws.com'}
 def get(url):
  try:
