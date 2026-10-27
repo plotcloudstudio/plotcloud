@@ -849,7 +849,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 <script src="studio-geometry.js?v=20261021-drawing1"></script>
 <script type="module">
 import {selectedByRect,moveObject} from './emb/lib/workbench-selection.js?v=rhino-selection-20261027-1';
-import {centerModel} from './emb/lib/workbench-center.js?v=center-origin-20261027-1';
+import {centerModel,isImportedBuildingObject} from './emb/lib/workbench-center.js?v=center-building-20261027-1';
 import { MODELS as GM, CATS as GCATS, GROUPS as GGROUPS, COLORS as GCOL, defaults as gDefaults, buildModel as gBuild, materialColor as gColor, paramVisible as gVis } from 'pc/models.js';
 import { t as gT } from 'pc/i18n.js';
 import { partGeometry as gGeom } from 'pc/geom.js';
@@ -6284,10 +6284,11 @@ if (window.__WSROLE) {
     async centerToOrigin(){
       if(GZD||gesture||WALKING||XPL.on)throw Error('Finish the current edit and exit Walkthrough or Explode before centering.');
       const before=snapM(),items=WS.objects(),selected=multi.length?multi:(SEL?[SEL]:[]);
-      const allowed=r=>editableSelection(r)&&(!LAYER_OF[r.k]||VIS[LAYER_OF[r.k]]!==false)&&(r.k!=='imp'||impOn(r.o||selObj(r)));
-      const selection=selected.length?selected:items.filter(allowed);
-      if(!selection.length)throw Error('No visible, unlocked model objects to center.');
-      const meshes=await WS.meshes();if(before!==snapM())throw Error('The model changed. Try Center to origin again.');
+      const building=s=>s.k==='imp'&&isImportedBuildingObject(selObj(s));
+      const allowed=r=>building(r)&&editableSelection(r)&&impOn(r.o||selObj(r));
+      const selection=selected.length?selected.filter(building):items.filter(allowed);
+      if(!selection.length)throw Error('Select an imported building model. Furniture and authored elements cannot use this command.');
+      const meshes=await WS.meshes();if(before!==snapM())throw Error('The model changed. Try Center imported model again.');
       const result=centerModel(M,selection,meshes,allowed);if(!result.moved)return result;
       WS.groupMoving=true;try{M=result.model;commit(before);syncInputs();if(window.S3&&S3.on)upd3D(true);V.user=false;fitView();draw();}finally{WS.finishTransform();}
       return {delta:result.delta,count:result.count,moved:true};
