@@ -1,7 +1,8 @@
-import {installStudyWorkflow} from '../simulation-workflow.js?v=mesh-fidelity-20261027-1';
+import {installStudyWorkflow} from '../simulation-workflow.js?v=scale-review-20261027-1';
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
+import {mountStudyImport} from '../study-import.js?v=scale-review-20261027-1';
 // One simulation page for every PlotCloud engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
 // One implementation: nothing here computes or draws a result. This page only
 //   hands the engine the version's model in the engine's own input format (the scene Plan Studio's Send to Simulation
@@ -14,7 +15,7 @@ import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
-import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=furniture-detail-20261027-1';
+import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=scale-review-20261027-1';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
@@ -132,7 +133,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   // level, room and parameter changes come in the address, the engine runs on its own and the result goes back to Results
   const batch = params.get('batch'), pilot=S.isSharedPilot(sim.id), cfg = pilot&&SUN.includes(sim.id)?{...CFG[sim.id],hide:['.sec:has(#h-model)','#measureRow']}:CFG[sim.id], p = batch ? S.project(params.get('project')) : currentProject();
   const tell = (m) => { if (batch) try { window.parent.postMessage({ pcBatch: batch, sim: sim.id, ...m }, location.origin); } catch (e) { } };
-  if (!p) { app.innerHTML = '<div class="wrap"><p>No project. <a href="#/">Create one on Home.</a></p></div>'; tell({ ok: false, why: 'No project.' }); return; }
+  if (!p) { app.innerHTML = '<div class="wrap"><h1>Import a model to begin.</h1><p>Review its source units and metre dimensions here; a project version is created automatically.</p></div>';mountStudyImport(app.querySelector('.wrap'),sim.id);tell({ ok: false, why: 'No project.' }); return; }
   if (!batch) setCurrent(p);
   const shared=pilot||sim.id==='vent'?S.clone(S.conditionsOf(p)):null;
   const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
@@ -144,7 +145,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   const reviewRows=checks=>checks.map(c=>`<li style="margin:12px 0"><b>${esc(c.title)}</b><br><span class="note">${esc(c.detail)}</span>${c.href?` · <a href="${esc(c.href)}">Review input</a>`:''}</li>`).join('');
   if(readiness.errors.length){
     app.innerHTML=`<div class="wrap"><span class="eyebrow">${esc(sim.name)} · Input check</span><h1 class="display md">Complete these inputs first.</h1><p class="lede">Your existing model and results are kept. Resolve the items below, then reopen the study.</p><ul>${reviewRows(readiness.errors)}</ul><a class="btn" href="#/workspace/${esc(p.id)}">Open Workspace</a> <a class="btn" href="#/project-settings/${esc(p.id)}">Project conditions</a> <button type="button" class="btn" id="retryReadiness">Check again</button>${!v&&p.draft?'<button type="button" class="btn accent" id="saveFirstVersion">Save draft as a version and recheck</button>':''}<p style="margin-top:24px"><a href="#/start-study">Try a guided example</a> · <a href="#/simulations">All studies</a></p></div>`;
-    $('#retryReadiness',app).onclick=()=>route();$('#saveFirstVersion',app)?.addEventListener('click',()=>{const saved=S.saveVersion(p,'Saved for '+sim.name);setCurrentVersion(p,saved.id);route();});tell({ok:false,why:readiness.errors.map(c=>c.title+': '+c.detail).join(' ')});return;
+    $('#retryReadiness',app).onclick=()=>route();$('#saveFirstVersion',app)?.addEventListener('click',()=>{const saved=S.saveVersion(p,'Saved for '+sim.name);setCurrentVersion(p,saved.id);route();});mountStudyImport(app.querySelector('.wrap'),sim.id);tell({ok:false,why:readiness.errors.map(c=>c.title+': '+c.detail).join(' ')});return;
   }
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
@@ -167,12 +168,14 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
         <span class="note" id="shmsg" role="status" aria-live="polite"></span>
         <button type="button" class="btn sm accent" id="runStudy" disabled>Run study</button>
         <button type="button" class="btn sm" id="stopStudy" hidden>Stop calculation</button>
+        <label class="note"><input type="checkbox" id="autoSaveResult" checked> <span id="autoSaveLabel">Auto-save completed result</span></label>
         <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
       </div>
     </div>
     ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" style="visibility:hidden;opacity:0;pointer-events:none" src="../emb/${file}.html?layout=unified&workspace=1&v=${encodeURIComponent(ENGINE_RELEASE)}${pilot?'&pilot=shared':''}"></iframe><div id="engineLoading" role="status" style="position:absolute;inset:80px 0 0;display:grid;place-items:center;background:var(--bg);z-index:2">Preparing your Workspace model…</div>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
-  const review=document.createElement('dialog');review.setAttribute('aria-label','Study input review');review.style.cssText='max-width:720px;max-height:85vh;overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:24px';review.innerHTML=`<h2>${esc(sim.name)} · v${v.n}</h2><p>Review these inputs before calculating. Model preparation in the engine still checks the selected level and closed rooms.</p><ul>${reviewRows(readiness.checks)}</ul><h3>Next steps</h3><ol><li>Run the analysis using the study’s Calculate or Run button.</li><li>Use Save result above to keep the actual result on v${v.n}.</li><li>Edit one design variable in Workspace and save a new version.</li><li>Run the same study with matching conditions, then compare in Results.</li></ol><button type="button" class="btn accent" id="closeReview">Continue to study</button>`;app.querySelector('.shx').append(review);$('#reviewInputs',app).onclick=()=>review.showModal();$('#closeReview',app).onclick=()=>review.close();
+  if(!batch)mountStudyImport(app.querySelector('.shbar'),sim.id);
+  const review=document.createElement('dialog');review.setAttribute('aria-label','Study input review');review.style.cssText='max-width:720px;max-height:85vh;overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:24px';review.innerHTML=`<h2>${esc(sim.name)} · v${v.n}</h2><p>Review these inputs before calculating. Model preparation in the engine still checks the selected level and closed rooms.</p><ul>${reviewRows(readiness.checks)}</ul><h3>Next steps</h3><ol><li>Run the analysis using the study’s Calculate or Run button.</li><li>Completed verified results are auto-saved by default to v${v.n}; turn Auto-save off for manual saving.</li><li>Edit one design variable in Workspace and save a new version.</li><li>Run the same study with matching conditions, then compare in Results.</li></ol><button type="button" class="btn accent" id="closeReview">Continue to study</button>`;app.querySelector('.shx').append(review);$('#reviewInputs',app).onclick=()=>review.showModal();$('#closeReview',app).onclick=()=>review.close();
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); route(); };
   if(sim.id==='vent'){$('.shsite',app).href='#/project-settings/'+p.id+'?return=vent';$('.shsite',app).textContent=`${site.label||'Site'} · Shared r${shared.revision} ↗`;}
   $('#ver', app).onchange = (e) => { setCurrentVersion(p, e.target.value); route(); };
@@ -264,7 +267,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   const workflow=installStudyWorkflow({frame:fr,id:sim.id,runButton:$('#runStudy',app),stopButton:$('#stopStudy',app),status:$('#studyState',app),saveButton:saveBtn,
     prepared:()=>loaded&&fr.dataset.pcVisibleReady==='true',
     weatherReady:()=>!WEATHER.includes(sim.id)||!!weatherTask&&!weatherFailure&&!doc()?.body.dataset.pcSharedWeatherLoading,
-    hasSnapshot:()=>!pilot||!!pilotRunSnapshot});
+    hasSnapshot:()=>!pilot||!!pilotRunSnapshot,onCompleted:()=>{if(!batch&&$('#autoSaveResult',app)?.checked)setTimeout(()=>{if(alive&&workflow.canSave())saveBtn.onclick?.();},0);}});
   function prefill(skipDate=false) {
     const D = doc(), vals = Object.assign({}, pilot?{city:'custom',lat:site.lat,lon:site.lon,tz:t.tz,north:site.north??0}: {}, cfg.prefill?.(ctx) || {}); if (!alive || !D) return;
     if (batch) for (const [id, val] of Object.entries(OV)) if (val != null && val !== '') { if (!(id in vals)) vals[id] = val; else ovApply[id] = val; }
@@ -348,6 +351,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if(sim.id==='vent'){settings.sharedConditions={revision:shared.revision,signature:S.conditionsSignature({sharedConditions:shared},'vent'),site:S.clone(site),effective:S.clone(fr.contentWindow.__vent?.S||{})};settings.inheritedFrom='Project shared conditions';}
     if(SUN.includes(sim.id)&&fr.contentWindow.__sun?.S?.lastR?.mode){const s=fr.contentWindow.__sun.S,r=s.lastR,c=fr.contentWindow.__sunClimate?.CLIM?.E;settings.analysisPeriod={hours:r.clim.period,count:r.clim.hoursN};settings.climateFile=c?{name:c.name,station:c.station,lat:c.lat,lon:c.lon}:null;settings.grid=r.prep.s;settings.method=r.mode==='radiation'?'Perez sky, 145 patches, sun in 3° groups':'UTCI with SolarCal MRT';if(r.mode==='utci')settings.utci={hoursCounted:r.clim.counted,sunUpOnly:r.clim.day,windExposure:r.clim.alpha};settings.units=r.mode==='radiation'?'kWh/m²':'% of counted hours';}
     else if(sim.id==='sunhours'){const s=fr.contentWindow.__sun?.S,r=s?.lastR;if(r){settings.analysisPeriod=r.period||{start:r.ds,end:r.ds,days:1,t0:s.t0,t1:s.t1};settings.grid=r.prep.s;settings.timeStep=s.step;settings.timeZone={...s.loc};settings.units=r.period?'cumulative sunlight hours':'sunlight hours';}}
+    if(SUN.includes(sim.id)){const r=fr.contentWindow.__sun?.S?.lastR;if(r){settings.runSpec=S.clone(r.runSpec||{});settings.elapsedSeconds=r.elapsedSeconds;settings.actualGroundSpacing=S.clone(r.prep?.groundSpacing||null);settings.sampleCount=r.prep?.smpA?.length;settings.importAudit=S.clone(v.model.importAudit||null);}}
     settings.provenance={schema:1,engine:sim.id,engineRelease:ENGINE_RELEASE,versionId:v.id,recordedAt:new Date().toISOString(),site:{label:site?.label,lat:site?.lat,lon:site?.lon,north:site?.north??0,tz:site?.tz},note:'Host context at save time; study overrides and effective run settings are recorded separately.'};
     if(sentScene?.geometryAudit)settings.geometry=S.clone(sentScene.geometryAudit);
     if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }

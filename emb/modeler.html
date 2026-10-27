@@ -5583,7 +5583,7 @@ window.__params = { MATLIB, GLAZING, MAT_DEFAULT, syncArrays, syncLinks, floorMa
 // for tests and the site
 window.__st = { get site() { return M.site || null; }, sunScene: () => STC.planScene(M, S, LV, 'sunhours'), get LAYER() { return LAYER; }, get VIS() { return VIS; }, get TOOL() { return TOOL; }, isDirty: () => isDirty(),  get M() { return M; }, get S() { return S; }, get RES() { return RES; }, get SEL() { return SEL; }, get LV() { return LV; }, toPx: (p) => { const q = W2S(p); return [q[0] / VP.d, q[1] / VP.d]; } };
 // ---------- start ----------
-S = STC.build(M); libUI(); opTiles(); syncInputs(); toolsUI(); layersUI(); legend(); zoomUI(); setTimeout(makeThumbs, 30);
+S = STC.build(M); libUI(); opTiles(); syncInputs(); toolsUI(); layersUI(); legend(); zoomUI(); if(!HOST_MODEL)setTimeout(makeThumbs, 30);
 new ResizeObserver(() => resize()).observe(stage);
 { const cp = $('#chartp'); if (cp) new ResizeObserver(() => { resize(); if (live()) charts(); }).observe(cp); }
 cv.tabIndex = 0;

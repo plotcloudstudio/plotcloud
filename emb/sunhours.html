@@ -698,6 +698,7 @@ if (typeof module !== 'undefined') module.exports = PCS;
 </script>
 <script type="module">
 import * as THREE from 'three';
+import {scaleAssessment,resolutionAssessment,physicalGrid,automaticMargin} from './lib/solar-quality.js?v=scale-review-20261027-1';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
@@ -950,7 +951,7 @@ function buildModel() {
   S.modelVer++; PREP = null;
   const sz = S.model.box.getSize(new THREE.Vector3());
   const note = $('#sizeNote');
-  note.textContent = `Size ${sz.x.toFixed(1)} × ${sz.y.toFixed(1)} × ${sz.z.toFixed(1)} m · ${S.model.tris.toLocaleString('en-CA')} triangles`;
+  note.textContent = `Size ${sz.x.toPrecision(5)} × ${sz.y.toPrecision(5)} × ${sz.z.toPrecision(5)} m · ${S.model.tris.toLocaleString('en-CA')} triangles`;
   note.className = 'note';
   const big = Math.max(sz.x, sz.y, sz.z);
   if (big > 3000 || big < 0.5) { note.textContent += ' · this does not look like a building; check the units'; note.className = 'msg warn'; }
@@ -960,12 +961,12 @@ function buildModel() {
   clearResult(); S.lastR = null; layoutScene(); fit(); updateSun();
 }
 function layoutScene() {
-  const s = S.model.box.getSize(new THREE.Vector3()), R = Math.max(s.x, s.y) * 0.5 + Math.max(10, s.z * 1.2);
+  const s = S.model.box.getSize(new THREE.Vector3()), R = Math.max(s.x, s.y) * 0.5 + automaticMargin([s.x,s.y,s.z]);
   S.R = R;
-  ground.geometry.dispose(); ground.geometry = new THREE.PlaneGeometry(R * 4, R * 4); ground.position.z = -0.01;
+  ground.geometry.dispose(); ground.geometry = new THREE.PlaneGeometry(R * 4, R * 4); ground.position.z = -Math.min(.01,R*.001);
   const span = R * 1.6, cam = sun.shadow.camera;
-  Object.assign(cam, { left: -span, right: span, top: span, bottom: -span, near: 1, far: R * 8 }); cam.updateProjectionMatrix();
-  sunBall.scale.setScalar(Math.max(0.6, R * 0.035));
+  Object.assign(cam, { left: -span, right: span, top: span, bottom: -span, near: Math.max(.001,R*.01), far: Math.max(.1,R*8) }); cam.updateProjectionMatrix();
+  sunBall.scale.setScalar(Math.max(.005,R*.035));
   drawPaths();
 }
 
@@ -1052,32 +1053,34 @@ async function computePeriod(dates,token,onProg){
 // Above HARD_PTS a browser tab runs short of memory (about 200 bytes a point while the points are laid out).
 const SAFE_PTS = 80000, HARD_PTS = 2500000;
 function estimateAt(sp) {   // the same count prepare() makes, without laying the points out
-  const { pos: P } = S.model, box = measureBox(), nTri = P.length / 9, sz = box.getSize(new THREE.Vector3()), margin = S.model.circ ? 0 : S.margin === 'auto' ? Math.min(60, Math.max(10, sz.z * 1.5)) : +S.margin;
+  const { pos: P } = S.model, box = measureBox(), nTri = P.length / 9, sz = box.getSize(new THREE.Vector3()), margin = S.model.circ ? 0 : S.margin === 'auto' ? automaticMargin([sz.x,sz.y,sz.z]) : +S.margin;
   const gx0 = box.min.x - margin, gx1 = box.max.x + margin, gy0 = box.min.y - margin, gy1 = box.max.y + margin; let n = 0;
   for (let i = 0; i < nTri; i++) { if (!sampled(i, P, box, margin)) continue; const o = i * 9, d = (a, b) => Math.hypot(P[o + a] - P[o + b], P[o + a + 1] - P[o + b + 1], P[o + a + 2] - P[o + b + 2]); const k = Math.max(1, Math.ceil(Math.max(d(0, 3), d(3, 6), d(6, 0)) / sp)); n += k * k; }
-  if (S.ground) n += ((gx1 - gx0) / sp) * ((gy1 - gy0) / sp); return n;
+  if (S.ground) n += Math.ceil((gx1-gx0)/sp)*Math.ceil((gy1-gy0)/sp); return n;
 }
 // what is measured: the proposed masses (their box), else the analysis circle, else the whole model
 function measureBox() { const m = S.model; if (m.sbox) return m.sbox; if (m.circ) return new THREE.Box3(new THREE.Vector3(m.circ.x - m.circ.r, m.circ.y - m.circ.r, 0), new THREE.Vector3(m.circ.x + m.circ.r, m.circ.y + m.circ.r, m.box.max.z)); return m.box; }
 const sampled = (i, P, mb, margin) => { const r = S.model.role; if (!r) return true; if (r[i] === 1) return false; if (r[i] === 2) { const x = (P[i * 9] + P[i * 9 + 3] + P[i * 9 + 6]) / 3, y = (P[i * 9 + 1] + P[i * 9 + 4] + P[i * 9 + 7]) / 3; if (S.model.circ) return Math.hypot(x - S.model.circ.x, y - S.model.circ.y) <= S.model.circ.r; return x > mb.min.x - margin && x < mb.max.x + margin && y > mb.min.y - margin && y < mb.max.y + margin; } return true; };
-const fmtDur = (sec) => (sec < 60 ? `${Math.max(1, Math.round(sec))} s` : sec < 3600 ? `${Math.round(sec / 60)} min` : `${(sec / 3600).toFixed(1)} h`);
+const gridText=value=>String(Number(value.toPrecision(6)));
+const fmtDur = (sec) => (!Number.isFinite(sec)?'not calibrated':sec < 60 ? `${Math.max(1, Math.round(sec))} s` : sec < 3600 ? `${Math.round(sec / 60)} min` : `${(sec / 3600).toFixed(1)} h`);
 const fmtN = (n) => (n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + ' million' : Math.round(n).toLocaleString('en-CA'));
 function finestFor(cap) { let a = 0.01, b = 8; if (estimateAt(a) <= cap) return a; for (let k = 0; k < 30; k++) { const m = Math.sqrt(a * b); if (estimateAt(m) > cap) a = m; else b = m; } return Math.ceil(b * 100) / 100; }
 function sunCount(step = S.step) {   // sightlines per sample point: sun positions, or the climate file's sun groups and sky patches
   if (S.measure !== 'hours') return climRays();
   const keep = S.step; S.step = step; let n; try { n = periodDates().reduce((sum, ds) => sum + (sunsFor(ds)?.suns.length || 0), 0) || 1; } catch { n = 40; } S.step = keep; return n;
 }
-function costOf(sp, nSun) { const pts = estimateAt(sp), rate = S.rate || 2e5; return { pts, rays: pts * nSun, sec: (pts * nSun * 0.6) / rate + pts / 250000 }; }   // about 60% of points face any one sun
-function checkGrid() {   // true when the run can go ahead now
-  const box = $('#gwarn'); if (!S.model) return true; const nSun = sunCount();
-  if (S.grid >= 1 && S.step >= 5 && S.period!=='range' && S.measure === 'hours') { box.hidden = true; return true; }
-  const pts = estimateAt(S.grid); if (pts <= SAFE_PTS && costOf(S.grid, nSun).sec < 15) { box.hidden = true; return true; }
-  if (S.fineOK === S.grid && S.fineStep === S.step && pts <= HARD_PTS) { box.hidden = true; return true; }
-  const c = costOf(S.grid, nSun), alt = finestFor(SAFE_PTS), cAlt = costOf(alt, nSun), cap = pts > HARD_PTS ? finestFor(HARD_PTS) : null;
-  box.innerHTML = cap
-    ? `<div><b>Too fine for a browser.</b> A ${S.grid} m grid on this model${S.ground ? ' and its ground' : ''} is about ${fmtN(pts)} points; a browser tab runs out of memory above about ${fmtN(HARD_PTS)}. The finest that fits is <b>${cap} m</b> (about ${fmtDur(costOf(cap, nSun).sec)} at ${S.step} min steps).${S.ground ? ' Turning off the surroundings (Ground: Model surfaces only) or a smaller ground extent lets you go finer.' : ''}</div><div class="gw-btns"><button type="button" class="btn" data-gw="${cap}">Use ${cap} m</button><button type="button" class="btn" data-gw="${alt}">Use ${alt} m (quick)</button></div>`
-    : `<div><b>This will take a while.</b> ${S.grid} m grid: about <b>${fmtN(pts)} points</b> × ${nSun} sun positions (${S.step} min steps) = ${fmtN(c.rays)} sightlines. Estimated time on this computer: <b>about ${fmtDur(c.sec)}</b>${S.rate ? '' : ' (a first guess; it gets better after one run)'}. Export sets repeat this for every date.</div><div class="gw-btns"><button type="button" class="go" data-gw="ok">Run anyway</button><button type="button" class="btn" data-gw="${alt}">Use ${alt} m · about ${fmtDur(cAlt.sec)}</button></div>`;
-  box.hidden = false; return false;
+function costOf(sp,nSun){const pts=estimateAt(sp),rate=S.rates?.[S.measure];return{pts,rays:pts*nSun,sec:rate>0?(pts*nSun*(S.measure==='hours'?.6:1))/rate+pts/250000:null};}   // about 60% of points face any one sun
+function checkGrid(){
+ const box=$('#gwarn');if(!S.model)return false;const size=measureBox().getSize(new THREE.Vector3()).toArray(),scale=scaleAssessment(size),r=resolutionAssessment(size,S.grid);S.validation=null;
+ const fail=(message,button='')=>{stale();S.validation={blocked:true,message};box.innerHTML='<b>Check analysis inputs</b><p></p>'+button;box.querySelector('p').textContent=message;box.hidden=false;return false;};
+ if(scale.blocked)return fail(scale.message);
+ if(scale.suspicious&&S.scaleConfirmedModel!==S.modelVer&&!S.raw.scene?.importAudit?.scaleConfirmed){const ok=fail(scale.message+' Current dimensions: '+size.map(v=>v.toPrecision(5)).join(' × ')+' m. Correct the units or explicitly confirm a scale model.','<button type="button" class="btn" id="confirmModelScale">These metre dimensions are intentional</button>');$('#confirmModelScale').onclick=()=>{S.scaleConfirmedModel=S.modelVer;box.hidden=true;S.validation=null;};return ok;}
+ if(r.blocked){const suggested=Number(r.suggested.toPrecision(4));const ok=fail(r.message+' Model footprint '+size[0].toPrecision(5)+' × '+size[1].toPrecision(5)+' m; grid '+S.grid+' m.','<button type="button" class="btn" id="useResolvedGrid">Use a model-resolving grid</button>');$('#useResolvedGrid').onclick=()=>{S.grid=suggested;S.level='custom';const select=$('#grid');if(![...select.options].some(o=>Number(o.value)===suggested))select.add(new Option(suggested+' m',suggested));select.value=String(suggested);$$('#lvlSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.l==='custom')));S.fineOK=null;invalidate();lvlUI();box.hidden=true;};return ok;}
+ const c=costOf(S.grid,sunCount());if(c.pts>HARD_PTS)return fail('This grid requires '+fmtN(c.pts)+' points, above the browser limit of '+fmtN(HARD_PTS)+'. Choose a smaller analysis extent or an explicit coarser grid. The grid will not be changed automatically.');
+ if(S.fineOK===S.grid&&S.fineStep===S.step){box.hidden=true;return true;}
+ if(c.sec>60&&S.level!=='custom'){ $('#longT').textContent=LVL[S.level].name+': '+S.grid.toPrecision(4)+' m grid, '+S.step+' min steps, '+fmtN(c.pts)+' points. Measured-device estimate: '+fmtDur(c.sec*.5)+'–'+fmtDur(c.sec*2)+'. Preparation and display can add time.';$('#longBox').hidden=false;return false;}
+ if(c.pts>SAFE_PTS||c.sec>15||r.warn){box.innerHTML='<p></p><button type="button" class="go" data-gw="ok">Run with these settings</button>';box.querySelector('p').textContent=(r.message?r.message+' ':'')+fmtN(c.pts)+' sample points. '+(c.sec==null?'First run: no calibrated time estimate yet.':'Measured-device estimate: '+fmtDur(c.sec*.5)+'–'+fmtDur(c.sec*2)+'.');box.hidden=false;return false;}
+ box.hidden=true;return true;
 }
 $('#gwarn').addEventListener('click', (e) => { const b = e.target.closest('[data-gw]'); if (!b) return; const v = b.dataset.gw;
   if (v === 'ok') { S.fineOK = S.grid; S.fineStep = S.step; $('#gwarn').hidden = true; runAnalysis(); return; }
@@ -1091,13 +1094,13 @@ async function prepare(token, onProg) {
   const LIMIT = S.fineOK === S.grid ? HARD_PTS : SAFE_PTS; let s = S.grid;
   const nTri = P.length / 9, sz = box.getSize(new THREE.Vector3());
   const tri = (i, k, v) => v.set(P[i * 9 + k * 3], P[i * 9 + k * 3 + 1], P[i * 9 + k * 3 + 2]);
-  const margin = S.model.circ ? 0 : S.margin === 'auto' ? Math.min(60, Math.max(10, sz.z * 1.5)) : +S.margin;
+  const margin = S.model.circ ? 0 : S.margin === 'auto' ? automaticMargin([sz.x,sz.y,sz.z]) : +S.margin;
   const gx0 = box.min.x - margin, gx1 = box.max.x + margin, gy0 = box.min.y - margin, gy1 = box.max.y + margin;
   const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
-  const estimate = (sp) => { let n = 0; for (let i = 0; i < nTri; i++) { if (!sampled(i, P, box, margin)) continue; tri(i, 0, A); tri(i, 1, B); tri(i, 2, C); const k = Math.max(1, Math.ceil(Math.max(A.distanceTo(B), B.distanceTo(C), C.distanceTo(A)) / sp)); n += k * k; } if (S.ground) n += ((gx1 - gx0) / sp) * ((gy1 - gy0) / sp); return n; };
-  let est = estimate(s), guard = 0;
-  while (est > LIMIT && guard++ < 12) { s *= Math.sqrt(est / LIMIT) * 1.05; est = estimate(s); }
-  const ray = new THREE.Ray(), eps = 0.02;
+  const estimate = (sp) => { let n = 0; for (let i = 0; i < nTri; i++) { if (!sampled(i, P, box, margin)) continue; tri(i, 0, A); tri(i, 1, B); tri(i, 2, C); const k = Math.max(1, Math.ceil(Math.max(A.distanceTo(B), B.distanceTo(C), C.distanceTo(A)) / sp)); n += k * k; } if (S.ground) n += Math.ceil((gx1-gx0)/sp)*Math.ceil((gy1-gy0)/sp); return n; };
+  const est=estimate(s);if(est>HARD_PTS)throw Error('The selected grid exceeds the browser point limit. Choose a smaller extent; the grid was not changed.');
+  S.runPhase='Preparing sample points';
+  const ray = new THREE.Ray(), eps = Math.min(.02,Math.max(1e-6,Math.min(...sz.toArray().filter(v=>v>0))*1e-4));
   const smpP = [], smpN = [], smpA = [], smpK = [], smpG = [], outPos = [], outSmp = [];
   const n = new THREE.Vector3(), g = new THREE.Vector3(), ab = new THREE.Vector3(), ac = new THREE.Vector3(), o = new THREE.Vector3(), nn = new THREE.Vector3();
   const hits = (orig, d) => bvh.raycast(ray.set(orig, d), THREE.DoubleSide).length;
@@ -1106,7 +1109,7 @@ async function prepare(token, onProg) {
     if (!sampled(i, P, box, margin)) continue;
     tri(i, 0, A); tri(i, 1, B); tri(i, 2, C);
     ab.subVectors(B, A); ac.subVectors(C, A); n.crossVectors(ab, ac); const area2 = n.length(); if (area2 < 1e-8) continue; n.divideScalar(area2);
-    if (n.z < -0.9 && Math.max(A.z, B.z, C.z) < 0.05) continue;   // bottom faces resting on the ground
+    if (n.z < -0.9 && Math.max(A.z, B.z, C.z) < Math.max(eps*2,sz.z*1e-5)) continue;   // bottom faces resting on the ground
     g.addVectors(A, B).add(C).divideScalar(3);
     // a face whose normal points into a closed volume is turned outward (odd hits one way, even the other)
     const up = hits(o.copy(g).addScaledVector(n, eps), n), down = hits(o.copy(g).addScaledVector(n, -eps), nn.copy(n).negate());
@@ -1127,8 +1130,9 @@ async function prepare(token, onProg) {
     }
     if (performance.now() - last > 30) { onProg(0.75 * i / nTri); await frame(); if (token !== runToken) return null; last = performance.now(); }
   }
+  let groundSpacing=null;
   if (S.ground) {
-    const nx = Math.max(1, Math.round((gx1 - gx0) / s)), ny = Math.max(1, Math.round((gy1 - gy0) / s)), dx = (gx1 - gx0) / nx, dy = (gy1 - gy0) / ny;
+    const nx = Math.max(1, Math.ceil((gx1 - gx0) / s)), ny = Math.max(1, Math.ceil((gy1 - gy0) / s)), dx = (gx1 - gx0) / nx, dy = (gy1 - gy0) / ny;groundSpacing={x:dx,y:dy,nx,ny};
     const upV = new THREE.Vector3(0, 0, 1);
     for (let a = 0; a < nx; a++) {
       for (let b = 0; b < ny; b++) {
@@ -1143,12 +1147,13 @@ async function prepare(token, onProg) {
       if (performance.now() - last > 30) { onProg(0.75 + 0.25 * a / nx); await frame(); if (token !== runToken) return null; last = performance.now(); }
     }
   }
-  PREP = { key, smpP: new Float32Array(smpP), smpN: new Float32Array(smpN), smpA, smpK, smpG: Uint8Array.from(smpG), outPos: new Float32Array(outPos), outSmp, s, flipped, margin };
+  PREP = { key, smpP: new Float32Array(smpP), smpN: new Float32Array(smpN), smpA, smpK, smpG: Uint8Array.from(smpG), outPos: new Float32Array(outPos), outSmp, s, flipped, margin,groundSpacing };
   return PREP;
 }
 
 // One ray per sample point per sun position
 async function rayPass(prep, suns, weights, token, onProg) {
+  S.runPhase='Tracing sunlight';
   const { bvh } = S.model, N = prep.smpA.length, hours = new Float32Array(N), litA = new Float64Array(suns.length); let totA = 0;
   const ray = new THREE.Ray(), o = new THREE.Vector3(), nn = new THREE.Vector3();
   const OWN = S.model.own, ROLE = S.model.role, BIX = bvh.geometry.index.array, BLK = OWN ? new Float64Array(S.raw.geoms.length) : null; let blkSelf = 0;
@@ -1177,22 +1182,22 @@ async function computeDay(ds, token, onProg) {
 async function runAnalysis(opt = {}) {
   if (S.measure !== 'hours') return runClimate(opt);
   let dates;try{dates=periodDates();}catch(e){msg('#runmsg',e.message,'warn');return;}
-  if (!S.model || S.busy) return; const lvl = opt.level || S.level; if (lvl !== 'custom') { const p = levelPlan(lvl); if (p.est > 60 && !opt.confirmed && !opt.level) { $('#longT').textContent = `${LVL[lvl].name} takes about ${fmtT(p.est)} on this computer (${p.grid} m grid, ${p.step} min steps).`; $('#longBox').hidden = false; return; } applyLevel(lvl); } else if (!checkGrid()) { msg('#runmsg', ''); return; }
+  if (!S.model || S.busy) return; const lvl=opt.level||S.level;if(lvl!=='custom')applyLevel(lvl);if(opt.confirmed){S.fineOK=S.grid;S.fineStep=S.step;}if(!checkGrid())return;
   S.hl = null;
-  const token = ++runToken; S.busy = true; lockUI(true);
+  const token = ++runToken; S.busy = true;S.runStarted=performance.now();S.progress={fraction:0,phase:'Preparing sample points'};S.runSpec=Object.freeze({quality:opt.level||S.level,grid:S.grid,timeStep:S.step,ground:S.ground,margin:S.margin,startedAt:new Date().toISOString()}); lockUI(true);
   $('#prog').hidden = false; setBar('#prog', 0); msg('#runmsg', '');
   try {
     const R = await computePeriod(dates, token, (x) => setBar('#prog', x));
     if (!R) return;
-    if (R.rays > 2e5 && R.secs > 0.3) { S.rate = R.rays * 0.6 / R.secs; try { localStorage.setItem('pc-sun-rate', String(Math.round(S.rate))); } catch (e) {} } showResult(R); setBar('#prog', 1); if(!R.period)DAYS.set(dayKey(R.ds), { R }); lvlUI();
+    recordPerformance(R,.6);R.runSpec=S.runSpec;S.runPhase='Building heatmap';showResult(R);R.elapsedSeconds=(performance.now()-S.runStarted)/1000; setBar('#prog', 1); if(!R.period)DAYS.set(dayKey(R.ds), { R }); lvlUI();
     const notes = [];
-    if (R.prep.s > S.grid * 1.01) notes.push(`Large model: grid spacing widened to ${R.prep.s.toFixed(R.prep.s < 0.1 ? 3 : R.prep.s < 1 ? 2 : 1)} m.`);
+    if (R.prep.s > S.grid * 1.01) notes.push(`Large model: grid spacing widened to ${gridText(R.prep.s)} m.`);
     if (R.prep.flipped && S.raw.name !== 'sample') notes.push(`${R.prep.flipped} faces had inward normals; they were analyzed as facing out.`);
     msg('#runmsg', notes.join(' ') || 'Done. Hover over the model to read the hours at any point.', notes.length ? 'warn' : 'ok');
   } catch (e) { msg('#runmsg', e.message || String(e), 'warn'); }
   finally { if (token === runToken) { S.busy = false; lockUI(false); panelUI(); capUI(); setTimeout(() => { $('#prog').hidden = true; }, 400); } }
 }
-function setBar(sel, x) { $(sel + ' i').style.width = (Math.min(1, x) * 100).toFixed(1) + '%'; }
+function setBar(sel,x){const value=Math.max(0,Math.min(1,x));$(sel+' i').style.width=(value*100).toFixed(1)+'%';if(sel==='#prog'){S.progress={fraction:Math.max(S.progress?.fraction||0,value),phase:value===1?'Calculation complete':S.runPhase||'Calculating',elapsedSeconds:(performance.now()-(S.runStarted||performance.now()))/1000};$(sel).setAttribute('role','progressbar');$(sel).setAttribute('aria-valuemin','0');$(sel).setAttribute('aria-valuemax','100');$(sel).setAttribute('aria-valuenow',String(Math.round(value*100)));let label=$('#calculationProgress');if(!label){label=document.createElement('p');label.id='calculationProgress';label.setAttribute('role','status');$('#runmsg').before(label);}label.textContent=Math.round(S.progress.fraction*100)+'% · '+S.progress.phase+' · elapsed '+S.progress.elapsedSeconds.toFixed(1)+' s';}}
 function msg(sel, text, cls = '') { const e = $(sel); e.textContent = text; e.className = 'msg' + (cls ? ' ' + cls : ''); }
 const lockedInputs=new Map();
 function lockUI(on) { for (const id of ['run', 'runSet', 'export']) $('#' + id).disabled = on;for(const el of $$('.sec input,.sec select,#daySeg button,#lvlSeg button')){if(on){lockedInputs.set(el,el.disabled);el.disabled=true;}else if(lockedInputs.has(el)){el.disabled=lockedInputs.get(el);lockedInputs.delete(el);}} }
@@ -1221,10 +1226,10 @@ function showResult(R, maxOverride) {
   S.result = { R, max, mesh, bvh }; S.lastR = R;
   const st = statsOf(R), row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   $('#stats').innerHTML = (R.period?row('Period',resultPeriod(R))+row('Daily window',R.period.t0==='rise'?'Sunrise to sunset':`${fmt(Number(R.period.t0)*60)}–${fmt(Number(R.period.t1)*60)}`):'')+row('Window', `${fmt(R.t0)}–${fmt(R.t1)} · max ${R.win.toFixed(1)} h${R.period?' cumulative':''}`)
-    + (S.ground ? row('Ground, average', st.ground) + row('Ground with ≥ 2 h', st.ground2) + row('Ground extent', `model + ${Math.round(R.prep.margin)} m`) : '')
-    + row('Roofs, average', st.roof) + row('Facades, average', st.facade)
-    + row('Sample points', `${R.hours.length.toLocaleString('en-CA')} · ${R.prep.s.toFixed(R.prep.s < 1 ? 2 : 1)} m grid`)
-    + row('Computed', `${(R.rays / 1e6).toFixed(2)} M rays · ${R.secs.toFixed(1)} s`);
+    + (S.ground ? row('Ground, average', st.ground) + row('Ground with ≥ 2 h', st.ground2) + row('Ground extent', `model + ${Number(R.prep.margin.toPrecision(4))} m`) : '')
+    + (R.prep.groundSpacing?row('Actual ground cell size',gridText(R.prep.groundSpacing.x)+' × '+gridText(R.prep.groundSpacing.y)+' m'):'')+ row('Roofs, average', st.roof) + row('Facades, average', st.facade)
+    + row('Sample points', `${R.hours.length.toLocaleString('en-CA')} · ${gridText(R.prep.s)} m grid`)
+    + row('Ray tracing', `${(R.rays / 1e6).toFixed(2)} M rays · ${R.secs.toFixed(1)} s`)+row('Run settings',(LVL[R.runSpec?.quality]?.name||'Custom')+' · '+gridText(R.prep.s)+' m grid · '+(R.runSpec?.timeStep||S.step)+' min steps');
   { const ib = $('#infl'); ib.innerHTML = influenceHTML(R); ib.hidden = !ib.innerHTML; }
   $('#resSec').hidden = false;
   $('#ramp').style.background = `linear-gradient(90deg, ${RAMP.map(([x, cc]) => `rgb(${cc.join(',')}) ${x * 100}%`).join(',')})`;
@@ -1578,10 +1583,10 @@ function setNote() {
 
 $('#stopSet').addEventListener('click', () => { runToken++; });
 $('#runSet').addEventListener('click', async () => {
-  if (!S.model || S.busy) return;
+  if (!S.model || S.busy) return;if(S.level!=='custom')applyLevel(S.level);if(!checkGrid())return;
   const def = SETS[setKey], frames = framesFor(setKey);
   if (!frames.length) { msg('#setmsg', 'Nothing to export: the sun does not rise on this date.', 'warn'); return; }
-  const token = ++runToken; S.busy = true; lockUI(true);
+  const token = ++runToken; S.busy = true;S.runStarted=performance.now();S.progress={fraction:0,phase:'Preparing sample points'};S.runSpec=Object.freeze({quality:S.level,grid:S.grid,timeStep:S.step,ground:S.ground,margin:S.margin,startedAt:new Date().toISOString()}); lockUI(true);
   $('#stopSet').hidden = false; $('#setProg').hidden = false; setBar('#setProg', 0); msg('#setmsg', '');
   const keep = { date: S.date, time: +$('#time').value, lastR: S.lastR };
   const busy = $('#busy'); busy.hidden = false;
@@ -1726,17 +1731,14 @@ $('#days').addEventListener('click', (e) => { const d = devicePixelRatio || 1, m
 $('#hist').addEventListener('click', (e) => { const d = devicePixelRatio || 1, mx = e.offsetX * d, hit = HIST_HITS.find((q) => mx >= q.x0 && mx < q.x1); if (!hit || !S.result) return; S.hl = S.hl === hit.i ? null : hit.i; showResult(S.result.R); panelUI(); });
 $('#tday').addEventListener('click', (e) => { if (!TIME_HIT) return; const d = devicePixelRatio || 1, f = Math.max(0, Math.min(1, (e.offsetX * d - TIME_HIT.L) / TIME_HIT.pw)); $('#time').value = Math.round((TIME_HIT.t0 + f * (TIME_HIT.t1 - TIME_HIT.t0)) / 5) * 5; updateSun(); panelUI(); });
 new ResizeObserver(() => panelUI()).observe($('#chartp'));
-// ---------- Draft / Standard / Fine, timed for this computer ----------
-const LVL = { draft: { t: 15, step: 15, name: 'Draft' }, standard: { t: 180, step: 10, name: 'Standard' }, fine: { t: 480, step: 5, name: 'Fine' } };
-try { const r = +localStorage.getItem('pc-sun-rate'); if (r > 1e3) S.rate = r; } catch (e) {}
-function levelPlan(level) {
-  const L = LVL[level], nSun = sunCount(L.step);
-  let lo = 0.01, hi = 8; for (let i = 0; i < 40; i++) { const m = Math.sqrt(lo * hi); if (estimateAt(m) > HARD_PTS || costOf(m, nSun).sec > L.t) lo = m; else hi = m; }
-  const sp = hi < 0.1 ? Math.round(hi * 1000) / 1000 : hi < 1 ? Math.round(hi * 100) / 100 : Math.round(hi * 10) / 10; return { grid: Math.max(0.01, sp), step: L.step, est: costOf(sp, nSun).sec };
-}
-const fmtT = (s) => (s < 60 ? Math.max(1, Math.round(s)) + ' s' : (s < 600 ? (s / 60).toFixed(1).replace(/\.0$/, '') : Math.round(s / 60)) + ' min');
-function lvlUI() { if (!S.model) return; $$('#lvlSeg button').forEach((b) => { const l = b.dataset.l; if (l === 'custom') { b.innerHTML = 'Custom<br><small>your grid</small>'; return; } const p = levelPlan(l); b.innerHTML = `${LVL[l].name}<br><small>~${fmtT(p.est)} · ${p.grid} m</small>`; }); $('#customRow').hidden = S.level !== 'custom'; $('#run').textContent = S.level === 'custom' ? ({ hours: 'Calculate sunlight hours', radiation: 'Calculate solar radiation', utci: 'Calculate outdoor comfort' })[S.measure] : `Calculate · ${LVL[S.level].name} (~${fmtT(levelPlan(S.level).est)})`; }
-function applyLevel(level) { if (level === 'custom' || !S.model) return; const p = levelPlan(level); if (S.grid !== p.grid) PREP = null; S.grid = p.grid; S.step = p.step; S.fineOK = S.grid; S.fineStep = S.step; }
+// ---------- Fixed spatial detail; device measurements affect time estimates only ----------
+const LVL = { draft: { step: 15, name: 'Draft' }, standard: { step: 10, name: 'Standard' }, fine: { step: 5, name: 'Fine' } };
+S.rates={};try{S.rates=JSON.parse(localStorage.getItem('pc-solar-rates-v2')||'{}');}catch{}
+function recordPerformance(R,factor){if(R.rays>2000&&R.secs>.05){S.rates[S.measure]=R.rays*factor/R.secs;try{localStorage.setItem('pc-solar-rates-v2',JSON.stringify(S.rates));}catch{}}}
+function levelPlan(level){const size=measureBox().getSize(new THREE.Vector3()).toArray(),grid=Number(physicalGrid(size,level).toPrecision(4)),step=LVL[level].step,cost=costOf(grid,sunCount(step));return{grid,step,est:cost.sec,pts:cost.pts};}
+const fmtT=sec=>!Number.isFinite(sec)?'not calibrated':fmtDur(sec);
+function lvlUI(){if(!S.model)return;for(const b of $$('#lvlSeg button')){const l=b.dataset.l;if(l==='custom'){b.innerHTML='Custom<br><small>your grid</small>';continue;}const p=levelPlan(l);b.innerHTML=LVL[l].name+'<br><small>'+p.grid+' m · '+p.step+' min</small>';}$('#customRow').hidden=S.level!=='custom';const p=S.level==='custom'?{grid:S.grid,step:S.step,est:costOf(S.grid,sunCount()).sec}:levelPlan(S.level);$('#run').textContent='Calculate · '+(LVL[S.level]?.name||'Custom');$('#run').title=p.est==null?'First run: no calibrated time estimate.':fmtDur(p.est*.5)+'–'+fmtDur(p.est*2)+' estimated; preparation/display add time.';}
+function applyLevel(level){if(level==='custom'||!S.model)return;const p=levelPlan(level);if(S.grid!==p.grid)PREP=null;S.grid=p.grid;S.step=p.step;for(const [id,value]of [['grid',p.grid],['step',p.step]]){const select=$('#'+id);if(![...select.options].some(o=>Number(o.value)===value))select.add(new Option(value+(id==='grid'?' m':' min'),value));select.value=String(value);}}
 $('#lvlSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-l]'); if (!b) return; S.level = b.dataset.l; $$('#lvlSeg button').forEach((q) => q.setAttribute('aria-pressed', String(q === b))); stale(); lvlUI(); });
 $('#longGo').addEventListener('click', () => { $('#longBox').hidden = true; runAnalysis({ confirmed: true }); }); $('#longNo').addEventListener('click', () => { $('#longBox').hidden = true; });
 
@@ -1798,9 +1800,8 @@ async function runClimate(opt = {}) {
   if(window.PlotCloudEntryAccess && !PlotCloudEntryAccess.allows(S.measure)){PlotCloudEntryAccess.open(S.measure);return;}
   if (!S.model || S.busy) return;
   if (!CLIM.E) { msg('#runmsg', 'Load a climate file (.epw) first: radiation and comfort come from its hourly weather. EPW files for most cities are free from climate.onebuilding.org.', 'warn'); return; }
-  const lvl = opt.level || S.level;
-  if (lvl !== 'custom') { const p = levelPlan(lvl); if (p.est > 60 && !opt.confirmed && !opt.level) { $('#longT').textContent = `${LVL[lvl].name} takes about ${fmtT(p.est)} on this computer (${p.grid} m grid).`; $('#longBox').hidden = false; return; } applyLevel(lvl); } else if (!checkGrid()) { msg('#runmsg', ''); return; }
-  S.hl = null; const token = ++runToken; S.busy = true; lockUI(true);
+  const lvl=opt.level||S.level;if(lvl!=='custom')applyLevel(lvl);if(opt.confirmed){S.fineOK=S.grid;S.fineStep=S.step;}if(!checkGrid())return;
+  S.hl = null; const token = ++runToken; S.busy = true;S.runStarted=performance.now();S.progress={fraction:0,phase:'Preparing sample points'};S.runSpec=Object.freeze({quality:opt.level||S.level,grid:S.grid,timeStep:S.step,ground:S.ground,margin:S.margin,startedAt:new Date().toISOString()}); lockUI(true);
   $('#prog').hidden = false; setBar('#prog', 0); msg('#runmsg', '');
   try {
     const C = climSetup(); if (!C.hours.length) throw new Error('No hours in this period.');
@@ -1809,10 +1810,10 @@ async function runClimate(opt = {}) {
     const R = S.measure === 'radiation' ? await radiationPass(prep, C, token, on) : await utciPass(prep, C, token, on);
     if (!R) return;
     R.secs = (performance.now() - t) / 1000;
-    if (R.rays > 2e5 && R.secs > 0.3) { S.rate = R.rays / R.secs; try { localStorage.setItem('pc-sun-rate', String(Math.round(S.rate))); } catch (e) {} }
-    showResult(R); setBar('#prog', 1); lvlUI();
+    recordPerformance(R,1);R.runSpec=S.runSpec;
+    S.runPhase='Building heatmap';showResult(R);R.elapsedSeconds=(performance.now()-S.runStarted)/1000;setBar('#prog',1);lvlUI();
     const notes = [];
-    if (R.prep.s > S.grid * 1.01) notes.push(`Large model: grid spacing widened to ${R.prep.s.toFixed(R.prep.s < 1 ? 2 : 1)} m.`);
+    if (R.prep.s > S.grid * 1.01) notes.push(`Large model: grid spacing widened to ${gridText(R.prep.s)} m.`);
     if (R.clim.outRange) notes.push(`${R.clim.outRange.toLocaleString('en-CA')} of the counted hours are outside the range UTCI was fitted for; read them with care.`);
     msg('#runmsg', notes.join(' ') || 'Done. Hover over the model to read the value at any point.', notes.length ? 'warn' : 'ok');
   } catch (e) { msg('#runmsg', e.message || String(e), 'warn'); }
@@ -1820,6 +1821,7 @@ async function runClimate(opt = {}) {
 }
 function climInfo(C, extra = {}) { return { file: CLIM.E.station, period: S.climPeriod === 'dates' ? `${S.date} to ${$('#dateEnd').value || S.date}` : CLIM_PERIOD[S.climPeriod], hoursN: C.hours.length, ghr: C.sky.ghr / 1000, groups: C.G.length, ...extra }; }
 async function radiationPass(prep, C, token, onProg) {
+  S.runPhase='Tracing sun and sky radiation';
   const { bvh } = S.model, N = prep.smpA.length, val = new Float32Array(N), G = C.G, P = CL.PATCH;
   const gd = G.map((g) => enuToModel(g.v)), pd = P.map((q) => enuToModel(q.v)), hz = P.map((q) => (q.alt === 6 ? [Math.sin(q.az * D2R), Math.cos(q.az * D2R)] : null));
   const visG = new Uint8Array(G.length), visP = new Uint8Array(P.length), ray = new THREE.Ray(), o = new THREE.Vector3(), sunVis = (b) => visG[b] === 1, skyVis = (p) => visP[p] === 1;
@@ -1839,6 +1841,7 @@ async function radiationPass(prep, C, token, onProg) {
   return R;
 }
 async function utciPass(prep, C, token, onProg) {
+  S.runPhase='Calculating outdoor comfort';
   const { bvh } = S.model, N = prep.smpA.length, G = C.G, P = CL.PATCH, nb = Math.max(1, Math.ceil(G.length / 8)), E = CLIM.E;
   const ped = []; for (let k = 0; k < N; k++) if (prep.smpG[k]) ped.push(k);
   if (!ped.length) throw new Error('There is no ground to stand on in this model. Set Ground to "Include surroundings", or send the site with its terrain.');
@@ -1909,7 +1912,7 @@ function showClimate(R) {
   else h += row('Hours counted', `${f0(I.counted)} h · ${I.day ? 'sun up' : 'day and night'}`) + row('No thermal stress, mean', `${st.m.comfort.toFixed(1)}% of the hours`) + row('Heat stress, mean', `${st.m.heat.toFixed(1)}% of the hours`)
     + row('Cold stress, mean', `${st.m.cold.toFixed(1)}% of the hours`) + row('Ground comfortable half the time', `${st.half.toFixed(0)}% of ${f0(st.area)} m²`)
     + row('Wind', `climate file, ${TERRAIN_NAME[I.alpha] || 'exposure ' + I.alpha} · mean ${I.wind.toFixed(1)} m/s at 10 m`) + (I.outRange ? row('Outside UTCI range', `${f0(I.outRange)} h`) : '');
-  h += row('Sample points', `${(R.mode === 'utci' ? R.ped.length : R.hours.length).toLocaleString('en-CA')} · ${R.prep.s.toFixed(R.prep.s < 1 ? 2 : 1)} m grid`) + row('Computed', `${(R.rays / 1e6).toFixed(2)} M sightlines · ${(R.secs || 0).toFixed(1)} s · ${I.groups} sun groups, 145 sky patches`);
+  h += row('Sample points', `${(R.mode === 'utci' ? R.ped.length : R.hours.length).toLocaleString('en-CA')} · ${gridText(R.prep.s)} m grid`) + row('Computed', `${(R.rays / 1e6).toFixed(2)} M sightlines · ${(R.secs || 0).toFixed(1)} s · ${I.groups} sun groups, 145 sky patches`);
   $('#stats').innerHTML = h; $('#infl').hidden = true; $('#resSec').hidden = false;
   $('#ramp').style.background = `linear-gradient(90deg, ${RAMP.map(([x, cc]) => `rgb(${cc.join(',')}) ${x * 100}%`).join(',')})`;
   $('#ticks').innerHTML = [0, 0.25, 0.5, 0.75, 1].map((p) => `<span>${+(lo + (max - lo) * p).toFixed(0)}</span>`).join('');

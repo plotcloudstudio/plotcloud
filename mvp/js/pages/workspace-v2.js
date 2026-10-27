@@ -13,6 +13,7 @@ import {mountWorkbenchShell} from '../workbench-shell.js?v=center-building-20261
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject, setCurrent, setCurrentVersion } from '../app.js';
 import { importModel } from '../viewport.js';
+import {reviewImport} from '../import-review.js?v=scale-review-20261027-1';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js?v=furniture-detail-20261027-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
@@ -139,7 +140,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=furniture-detail-20261027-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=scale-review-20261027-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -520,7 +521,7 @@ export function render(app, [pid]) {
       <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb · .3dm</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm" hidden>
       <button type="button" class="btn sm" id="importAsNew">Import as new model</button><input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note">Import as new model starts a separate project without the sample or current geometry.</p>
-      <div class="grid g2"><label class="f">Units<select id="unit"><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
+      <div class="grid g2"><label class="f">Units<select id="unit"><option value="auto">Read file metadata / review scale</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
       ${M().importAudit?`<p class="note">Last Rhino import: ${M().importAudit.meshObjects} placed surface objects · ${Number(M().importAudit.triangles).toLocaleString('en-CA')} triangles · converted to metres. ${M().importAudit.definitionObjects} block-definition objects were excluded from the scene unless placed as instances.</p>`:''}
@@ -545,7 +546,7 @@ export function render(app, [pid]) {
       catch (e) { msg.textContent = e.message || 'The file could not be written.'; } finally { b.disabled = false; }
     });
     const doImport = async (f,asNew=false) => { const msg = $('#impMsg', host); msg.textContent = 'Reading ' + f.name + '…';
-      try { const r = await importModel(f, { unit: +$('#unit', host).value, up: $('#up', host).value }), by = {};
+      try { const initial=await importModel(f,{unit:$('#unit',host).value,up:$('#up',host).value}),r=await reviewImport(initial,{name:f.name}),by={};if(!r){msg.textContent='Import cancelled. The existing model is unchanged.';return;}
         if (!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
         const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...classify(c),...(srcLayer?{layer:srcLayer}:{}) }));
         if(asNew){const layers=[...new Set(list.map(c=>c.layer))].map(name=>({name,color:LAYER_COLORS[name]||'#cfcac0',visible:true,locked:false})),next=S.createProject(f.name.replace(/\.[^.]+$/,''),{units:'m',layers,components:list,...(r.audit?{importAudit:{...r.audit,triangles:r.triangles,fileName:f.name}}:{})});setCurrent(next);location.hash='#/workspace/'+next.id;return;}

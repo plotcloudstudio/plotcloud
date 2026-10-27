@@ -19,5 +19,5 @@ export function solarMeshScene(raw,model,{name,site,versionId,projectId,context=
  if(terrain&&!off.has('Site'))for(const p of terrain.pts||[])extend(...p);
  return{format:'plotcloud-scene',v:1,kind:'masses',name,app:'plotcloud-workspace',north:-(site?.north||0),loc:site&&Number.isFinite(site.lat)?{lat:site.lat,lon:site.lon,label:site.label,tz:site.utcOffset??Math.round(site.lon/15),dst:0}:null,
   masses,meshes,terrain:off.has('Site')?null:terrain,geometryBounds:{min,max},source:{app:'plotcloud-workspace',project:projectId,version:versionId,level:'all',geometry:'world-triangle-mesh-v1'},
-  geometryAudit:{objects:meshes.length,imported:imports.size,triangles,units:'m',axis:'z-up',representation:'Workspace surface meshes'},notes:['Workspace surface meshes are used without bounding-box replacement. Glazing is currently treated as opaque by this solar screening solver.']};
+  geometryAudit:{objects:meshes.length,imported:imports.size,triangles,units:'m',axis:'z-up',representation:'Workspace surface meshes'},importAudit:model.importAudit||null,notes:['Workspace surface meshes are used without bounding-box replacement. Glazing is currently treated as opaque by this solar screening solver.']};
 }
