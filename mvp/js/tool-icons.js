@@ -1,5 +1,14 @@
 // Tool icons as drawn in Plan Studio (emb/modeler.html): images saved from its tiles, line icons copied as SVG.
 export const TOOL_ICONS = {
+"Mass outline": {
+"svg": "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 20l16-9 18 10-10 6-8-4-7 4 8 5-9 5-8-5z\" fill=\"#e9c39e\" stroke=\"#7d674e\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/><path d=\"M7 20v12l8 5v-12M41 21v12l-10 6-8-4v-12M31 27v12\" fill=\"none\" stroke=\"#7d674e\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/><path d=\"M7 20l16-9 18 10\" fill=\"none\" stroke=\"#d8402a\" stroke-width=\"1.8\" stroke-dasharray=\"3 2\"/><g fill=\"#d8402a\"><circle cx=\"7\" cy=\"20\" r=\"2\"/><circle cx=\"23\" cy=\"11\" r=\"2\"/><circle cx=\"41\" cy=\"21\" r=\"2\"/></g></svg>"
+},
+"Rectangle mass": {
+"svg": "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 17l17-9 17 9-17 9z\" fill=\"#f3ddbf\"/><path d=\"M7 17l17 9v15L7 32z\" fill=\"#c3a17b\"/><path d=\"M24 26l17-9v15l-17 9z\" fill=\"#e9c39e\"/><path d=\"M7 17l17-9 17 9v15l-17 9-17-9zM7 17l17 9 17-9M24 26v15M7 25l17 9 17-9\" fill=\"none\" stroke=\"#7d674e\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/><path d=\"M4 36l3 2m34-2l3 2\" stroke=\"#a7adb3\" stroke-width=\"1.5\"/></svg>"
+},
+"Neighbour building": {
+"svg": "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M3 32l20-11 22 12-20 12z\" fill=\"#dce4db\" stroke=\"#849282\" stroke-width=\"1.2\"/><g stroke=\"#69737e\" stroke-width=\"1.4\" stroke-linejoin=\"round\"><path d=\"M7 23l9-5 9 5v12l-9 5-9-5z\" fill=\"#bcc3cc\"/><path d=\"M7 23l9 5 9-5M16 28v12\" fill=\"none\"/><path d=\"M22 11l8-4 10 5v18l-8 5-10-6z\" fill=\"#d0d5dc\"/><path d=\"M22 11l10 5 8-4M32 16v19M22 19l10 5 8-4M22 25l10 5 8-4\" fill=\"none\"/></g></svg>"
+},
 "Open file": {
 "svg": "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\"><rect x=\"9\" y=\"8\" width=\"30\" height=\"32\" rx=\"3\" fill=\"#f1f2f4\" stroke=\"#7b818a\" stroke-width=\"2\"></rect><path d=\"M24 16v14M18 24l6 6 6-6\" fill=\"none\" stroke=\"#7b818a\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>"
 },

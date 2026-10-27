@@ -12,6 +12,8 @@ The task is to select whole design objects, move or delete a selected set, and o
 - Selected surface geometry is red in Plan and Perspective. Red is the owner's requested selection color. The selection does not add a blue bounding box or change export materials.
 - Perspective right drag orbits. Shift-right drag pans. Selection survives camera navigation.
 - Group moves and group deletion each have one Undo step. Escape cancels a group drag and restores the shared model in every pane.
+- Ctrl/Cmd+A selects the visible, editable objects in the current view, excluding hidden/locked layers and derived room/roof records. Canvas-focused Delete/Backspace and Undo/Redo are forwarded to the shared Workspace history.
+- Multiple selected objects have a shared Gumball at their combined center. Perspective retains the existing axis/rotation adapters and host constraints; Plan provides visible X/Y translation handles. The Gumball switch applies to both views.
 
 Reference: [Rhino 8 selection](https://docs.mcneel.com/rhino/8/help/en-us/commands/selection_commands.htm) and [Rhino 8 mouse options](https://docs.mcneel.com/rhino/8/help/en-us/options/mouse.htm). This change implements these selection interactions, not the complete Rhino command set.
 

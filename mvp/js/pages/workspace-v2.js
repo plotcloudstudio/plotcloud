@@ -16,7 +16,7 @@ import { importModel } from '../viewport.js';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js';   // Plan Studio's parametric furniture: the same ids Plan Studio places
-import { TOOL_ICONS } from '../tool-icons.js';
+import { TOOL_ICONS } from '../tool-icons.js?v=library-icons-20261027-1';
 import { toStudio } from '../studio-convert.js';
 
 // as in the archived Workspace
@@ -139,7 +139,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=rhino-selection-20261027-2`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=workbench-library-20261027-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -237,6 +237,7 @@ export function render(app, [pid]) {
     pushUndo(before) { if (INST.plan.ready) INST.plan.ws.pushUndo(before); },
     undo() { if (INST.plan.ready) INST.plan.ws.undo(); }, redo() { if (INST.plan.ready) INST.plan.ws.redo(); },
     hist() { return INST.plan.ready ? INST.plan.ws.hist() : { u: 0, r: 0 }; },
+    command(action){if(action==='delete'&&UI.sels.length)delIds([...UI.sels]);else if(action==='selectAll')activePane().ws.selectAll?.();},
     box(role, items, mods) { boxPick(items.map(psId), mods); },
     select(role, s, mods = {}) { if (mods.add || mods.remove) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
       if (!id) { if (UI.sels.some((x) => PS.test(x))) setSel([], { from: role }); return; }   // empty space in a pane clears a Plan Studio pick; an imported mesh picked in Shaded stays
@@ -498,7 +499,7 @@ export function render(app, [pid]) {
 
     for (const other of ready()) if (other !== pane && other !== INST.props) other.ws.tool(spec);
     const okk = w.tool(spec); pane.el.focus(); try { pane.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
-    if (msg) msg.textContent = !okk ? 'This tool could not start: see the message in the current view pane.' : spec.furn ? `Click in the current view to place the ${n}. Esc to stop.` : ON_WALL.has(spec.tool) ? `Click on a wall in the current view to place the ${n.toLowerCase()}. It cuts its own opening and moves with the wall.` : spec.stair ? `Click in the current view to place the ${n.toLowerCase()}.` : spec.light ? `Click in the current view to place the ${n.toLowerCase()}.` : `${n}: draw in the current view. ${spec.tool === 'wall' ? 'Click corner to corner, double-click to finish.' : spec.tool === 'room' || spec.tool === 'floor' || spec.tool === 'void' ? 'Drag a rectangle.' : spec.tool === 'arc' ? 'Click the start, the end, then the bend.' : 'Click the points, double-click to finish.'}`;
+    if (msg) msg.textContent = !okk ? 'This tool could not start: see the message in the current view pane.' : spec.furn ? `Click in the current view to place the ${n}. Esc to stop.` : ON_WALL.has(spec.tool) ? `Click on a wall in the current view to place the ${n.toLowerCase()}. It cuts its own opening and moves with the wall.` : spec.stair ? `Click in the current view to place the ${n.toLowerCase()}.` : spec.light ? `Click in the current view to place the ${n.toLowerCase()}.` : `${n}: draw in the current view. ${spec.tool === 'wall' ? 'Click corner to corner, double-click to finish.' : ['room','floor','void','massrect'].includes(spec.tool) ? 'Drag a rectangle.' : spec.tool === 'arc' ? 'Click the start, the end, then the bend.' : 'Click the points, double-click to finish.'}`;
     toolUI();
   }
   function toolUI() {   // which tile is on: the active Plan Studio view's tool
@@ -681,6 +682,7 @@ export function render(app, [pid]) {
     if (k === 'clearance') clearance(); });
   // Esc clears the selection (not while typing)
   const onKey = (e) => { if (e.target.closest?.('input,select,textarea,[contenteditable=true]')) return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();const pane=activePane();if(pane.ready)pane.ws.selectAll?.();}
     if(e.key==='Escape'){const open=['levelMenu','vMenu','dMenu','tabMenu'].some(id=>!$('#'+id,app).hidden);if(open){e.preventDefault();closeMenus();gearMenu(false);return;}if(UI.sels.length)setSel([]);const pane=activePane();if(pane.ready)pane.win.document.dispatchEvent(new pane.win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));}
     if((e.key==='Delete'||e.key==='Backspace')&&UI.sels.length){e.preventDefault();delIds([...UI.sels]);}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)hub.redo();else hub.undo();}

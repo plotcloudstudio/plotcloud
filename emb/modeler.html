@@ -3997,7 +3997,7 @@ function gizmoSync() {
 }
 function cancelGizmo() {
   if (!GZD) return;
-  const before = GZD.before; GZD = null; M = JSON.parse(before); tipOff(); afterLoad(false);
+  const before = GZD.before; GZD = null; M = JSON.parse(before); tipOff(); afterLoad(false);window.__ws?.finishTransform?.();
 }
 cv.addEventListener('pointercancel', e => { if (GZD) { e.stopImmediatePropagation(); cancelGizmo(); } }, true);
 addEventListener('keydown', e => { if (GZD && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); cancelGizmo(); } }, true);
@@ -4100,7 +4100,7 @@ let WLK = null, NDRAG = null;
 cv.addEventListener('pointerdown', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); e.preventDefault(); WLK = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); return; }
   if (CAM === '3d' && XPL.on) { if (e.button === 0 && TOOL !== 'orbit') setTool('orbit'); return; }
-  if (CAM === '3d' && e.button === 0 && !SPACE && TOOL === 'select' && SEL && S3.gizmo) { const target = gizmoTarget(), f = target?.f, ax = target && !target.locked ? S3.gizmo.hit(e.clientX, e.clientY) : null;
+  if (CAM === '3d' && e.button === 0 && !SPACE && TOOL === 'select' && (SEL||window.__wsSelections?.length) && S3.gizmo) { const target = gizmoTarget(), f = target?.f, ax = target && !target.locked ? S3.gizmo.hit(e.clientX, e.clientY) : null;
     if (ax) { e.stopImmediatePropagation(); e.preventDefault(); cv.focus({ preventScroll: true }); const z = target.z, p = S3.plane(e.clientX, e.clientY, z); if (!p) return; GZD = { ax, f, z, target, p0: p, x0: f.x, y0: f.y, r0: f.rot || 0, a0: Math.atan2(p[1] - f.y, p[0] - f.x), before: snapM() }; cv.setPointerCapture(e.pointerId); ftbUI(); return; } }
   if (CAM !== 'plan') return;
   if (VIEW2D === 'ceiling') {
@@ -6167,7 +6167,7 @@ if (window.__WSROLE) {
   }
   { const _c = changed; changed = function (live, kp) { if (!WS.rx&&!WS.groupMoving) guard(); _c(live, kp); if (!live) SAVEDSNAP = snapM(); histUI(); notify(live); }; }
   { const _u = upd3D; upd3D = function (fit) {
-    if (GZD && !WS.rx && guard()) { S = STC.build(M); const D = GZD, dir = D.ax === 'x' ? [Math.cos(D.r0), Math.sin(D.r0)] : [-Math.sin(D.r0), Math.cos(D.r0)], k = (D.f.x - D.x0) * dir[0] + (D.f.y - D.y0) * dir[1];
+    if (GZD && !WS.rx && !WS.groupMoving && guard()) { S = STC.build(M); const D = GZD, dir = D.ax === 'x' ? [Math.cos(D.r0), Math.sin(D.r0)] : [-Math.sin(D.r0), Math.cos(D.r0)], k = (D.f.x - D.x0) * dir[0] + (D.f.y - D.y0) * dir[1];
       if (D.ax !== 'r') { tipEl.textContent = `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${D.ax === 'x' ? 'its width (X)' : 'its depth (Y)'} · stopped at the wall`; } }
     _u(fit); if (GZD) notify(true); }; }
   // history: the Plan pane keeps it; the other panes hand their "before" to it and ask it to undo / redo
@@ -6178,6 +6178,17 @@ if (window.__WSROLE) {
     $('#undo').addEventListener('click', (e) => { e.stopImmediatePropagation(); undo(); }, true); $('#redo').addEventListener('click', (e) => { e.stopImmediatePropagation(); redo(); }, true);
   }
   let multi = [], gesture = null, pickMods = {};
+  const editableSelection=s=>{const o=selObj(s),layer=s.k==='imp'?o?.layer:LOCKK[s.k];return o&&!o.locked&&!isHidden(s.id)&&!WS.locks.has(layer)&&!['room','roof','stair','misc'].includes(s.k);};
+  const primePositions=()=>{C2.m=M.id;for(const f of M.furn)C2.ok.set(f.id,pc(f));};
+  WS.finishTransform=()=>{WS.groupMoving=false;primePositions();};
+  WS.transformState=()=>GZD?{kind:GZD.target.kind,axis:GZD.ax,plan:!!GZD.plan}:null;
+  const baseTarget=gizmoTarget;
+  gizmoTarget=function(){if(multi.length<2)return baseTarget();const saved=SEL,entries=[];try{for(const s of multi){if(!editableSelection(s))continue;const o=selObj(s);if(o.auto||s.k==='op'&&multi.some(w=>w.k==='wall'&&w.id===o.wall))continue;SEL=s;const target=baseTarget();if(target&&!target.locked)entries.push({s,target,start:{x:target.f.x,y:target.f.y,rot:target.f.rot||0}});}}finally{SEL=saved;}if(!entries.length)return null;
+    const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(const {target}of entries){const f=target.f,c=Math.abs(Math.cos(f.rot||0)),s=Math.abs(Math.sin(f.rot||0)),w=(f.w*c+f.d*s)/2,d=(f.w*s+f.d*c)/2;lo[0]=Math.min(lo[0],f.x-w);lo[1]=Math.min(lo[1],f.y-d);lo[2]=Math.min(lo[2],target.z);hi[0]=Math.max(hi[0],f.x+w);hi[1]=Math.max(hi[1],f.y+d);hi[2]=Math.max(hi[2],target.z+f.h);}
+    const f={id:'workspace-selection',x:(lo[0]+hi[0])/2,y:(lo[1]+hi[1])/2,rot:0,w:hi[0]-lo[0],d:hi[1]-lo[1],h:hi[2]-lo[2],axes:entries.some(e=>!e.target.f.axes?.includes('r')&&e.s.k!=='furn')?['x','y']:['x','y','r']},origin={x:f.x,y:f.y};
+    return{kind:'group',f,z:lo[2],locked:false,snapRotation:entries.some(e=>e.s.k==='imp')?a=>Math.round(a/(Math.PI/2))*Math.PI/2:WBP.snapAngle,apply(){WS.groupMoving=true;const c=Math.cos(f.rot),s=Math.sin(f.rot);for(const e of entries){const x=e.start.x-origin.x,y=e.start.y-origin.y;e.target.f.x=f.x+x*c-y*s;e.target.f.y=f.y+x*s+y*c;e.target.f.rot=e.start.rot+f.rot;e.target.apply();}}};
+  };
+  {const cm=commit;commit=function(before){try{return cm(before);}finally{if(!GZD){WS.groupMoving=false;primePositions();}}};const cancel=cancelGizmo;cancelGizmo=function(){try{return cancel();}finally{WS.groupMoving=false;primePositions();}};}
   // selection and level: watched every frame (Plan Studio sets SEL and LV in many places)
   (function poll() {
     const k = KEY(SEL); if (k !== WS.sel) { WS.sel = k; if (!WS.rx) { const h = hub(); if (h) h.select(WS.role, SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k, id: SEL.id } : null, pickMods); } }
@@ -6204,7 +6215,18 @@ if (window.__WSROLE) {
     if(s.k==='floor'||s.k==='void')pts=floorPoints(o);else if(f)pts=frameCorners(f);else if(o.points)pts=o.points;else if(o.a&&o.b)pts=[o.a,o.b];else return null;
     return[pts.map(screen)];
   }
-  WS.selectMany=items=>{multi=items;window.__wsSelections=items;draw();if(CAM==='3d')upd3D();};
+  WS.selectMany=items=>{multi=items;window.__wsSelections=items;draw();if(CAM==='3d'){upd3D();gizmoSync();}};
+  WS.selectAll=()=>{const projected=CAM==='3d'?S3.selectionPolygons():null,items=WS.objects().filter(s=>editableSelection(s)&&selectionPolygons(s,projected));hub()?.box(WS.role,items,{});say(`${items.length} objects selected. Hidden and locked objects are excluded.`);return items.length;};
+  addEventListener('keydown',e=>{if(e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;const key=e.key.toLowerCase();if((e.ctrlKey||e.metaKey)&&key==='a'){e.preventDefault();e.stopImmediatePropagation();WS.selectAll();}else if((e.key==='Delete'||e.key==='Backspace')&&multi.length){e.preventDefault();e.stopImmediatePropagation();hub()?.command('delete');}else if((e.ctrlKey||e.metaKey)&&['z','y'].includes(key)){e.preventDefault();e.stopImmediatePropagation();if(key==='y'||e.shiftKey)hub()?.redo();else hub()?.undo();}},true);
+
+  // Plan uses the same target and transform adapter as Perspective, with screen-size handles.
+  const planGumball=document.createElementNS('http://www.w3.org/2000/svg','svg');planGumball.setAttribute('aria-label','Selection Gumball');planGumball.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;overflow:visible';stage.append(planGumball);
+  function drawPlanGumball(){if(CAM!=='plan'||VIEW2D!=='plan'||TOOL!=='select'||!WS.gb||!multi.length||WALKING||XPL.on){planGumball.innerHTML='';return;}const target=GZD?.target||gizmoTarget();if(!target||target.locked){planGumball.innerHTML='';return;}const q=W2S([target.f.x,target.f.y]),x=q[0]/VP.d,y=q[1]/VP.d;planGumball.innerHTML=`<g transform="translate(${x} ${y})"><g data-group-axis="x" style="pointer-events:stroke;cursor:ew-resize" stroke="#e34a36" stroke-width="5" fill="#e34a36"><path d="M0 0H64"/><path d="M64 0l-10-5v10z" stroke-width="1"/></g><g data-group-axis="y" style="pointer-events:stroke;cursor:ns-resize" stroke="#3fb982" stroke-width="5" fill="#3fb982"><path d="M0 0V-64"/><path d="M0-64l-5 10h10z" stroke-width="1"/></g><circle r="5" fill="#fff" stroke="#53606c" stroke-width="2"/></g>`;}
+  {const paint=draw;draw=function(){paint();drawPlanGumball();};}
+  planGumball.addEventListener('pointerdown',e=>{const axis=e.target.closest('[data-group-axis]')?.dataset.groupAxis,target=gizmoTarget();if(e.button!==0||!axis||!target||target.locked)return;e.preventDefault();e.stopImmediatePropagation();cv.focus({preventScroll:true});const f=target.f;GZD={plan:true,ax:axis,f,z:target.z,target,p0:S2W(...evP(e)),x0:f.x,y0:f.y,r0:0,before:snapM()};planGumball.setPointerCapture(e.pointerId);});
+  document.addEventListener('pointermove',e=>{if(!GZD?.plan)return;e.preventDefault();e.stopImmediatePropagation();const d=GZD,p=S2W(...evP(e));d.f.x=d.x0+(d.ax==='x'?sg(p[0]-d.p0[0],.01):0);d.f.y=d.y0+(d.ax==='y'?sg(p[1]-d.p0[1],.01):0);d.target.apply();changed(true);},true);
+  document.addEventListener('pointerup',e=>{if(!GZD?.plan)return;e.stopImmediatePropagation();const d=GZD;GZD=null;d.target.apply();tidy();commit(d.before);draw();},true);
+  planGumball.addEventListener('pointercancel',()=>{if(GZD?.plan)cancelGizmo();});
   const point=e=>CAM==='3d'?S3.plane(e.clientX,e.clientY,lvObj().z):S2W(...evP(e));
   // Capture above native per-object handles so dragging a selected wall or mesh keeps the full selection.
   document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;if(e.button===2){tipOff();cycleClear();}pickMods={add:e.shiftKey,remove:e.ctrlKey||e.metaKey};if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
@@ -6274,7 +6296,7 @@ if (window.__WSROLE) {
     setLocks(list) { WS.locks = new Set(list); if (SEL && WS.locks.has(LOCKK[SEL.k])) { SEL = null; changedSel(); } },
     snaps(o) { WSNAP.end = !!o.End; WSNAP.mid = !!o.Mid; WSNAP.near = !!o.Near; WSNAP.cen = !!o.Cen; },
     clearance(on) { CLR.on = !!on; clrUI(); draw(); },
-    gumball(on) { WS.gb = !!on; if (window.S3 && S3.on) gizmoSync(); if (window.S3 && S3.on) upd3D(); },
+    gumball(on) { WS.gb = !!on; if (window.S3 && S3.on) gizmoSync(); if (window.S3 && S3.on) upd3D();draw(); },
     display(m) { WS.disp = m; if (window.S3 && S3.display) S3.display(m); },
     async view(v) { if (v === 'walk') await walkEnter(); else if (v === 'bird') await birdView(); else if (v === 'explode') { if (XPL.on) explodeExit(); else await explodeEnter(); } else if (v === 'plan' || v === 'ceiling' || v === 'elev') setView2D(v); return WS.state(); },
     state: () => ({ cam: CAM, view2d: VIEW2D, walking: WALKING, walkpick: WMARK.on, explode: XPL.on, tool: TOOL, impPend: IMP_PEND ? IMP_PEND.ref : null, importSpec: IMP_PEND ? {...IMP_PEND} : null, pick: PICK, opm: OPM[TOOL] || null, light: LTOOL, lv: LV, clr: CLR.on, gumball: WS.gb, disp: window.S3 && S3.displayMode ? S3.displayMode() : 'shaded', snaps: Object.assign({}, WSNAP) }),
