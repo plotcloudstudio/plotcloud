@@ -2,7 +2,7 @@ import * as Cloud from './cloud.js';
 import {checkTestingAccess,allowsTestingStudy,mountTestingAccess} from './simulation-test-access.js?v=private-testing-20261027-1';
 // Manual beta entitlements. Only hashes and expiry dates are public; never trust a local plan/paid flag.
 export const BETA = Object.freeze({ name: 'PlotCloud Beta', email: 'plotcloud@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
-export const FREE_STUDIES = Object.freeze(['sunhours', 'daylight']);
+export const FREE_STUDIES = Object.freeze(["sunhours", "radiation", "utci", "daylight", "wind", "vent", "stormwater", "acoustics", "spacesyntax", "movementdepth", "evac", "isovist", "views", "wayfinding", "privacy", "cameras", "structure"]);
 const KEY = 'pc-beta-access-code-v1';
 let serverChecked=0,serverUser='',serverInflight=null,leaseDeadline=0;
 let verified = { active: false, reason: 'code-required' }, lastCode = '', checked = 0, inflight = null, generation = 0;
