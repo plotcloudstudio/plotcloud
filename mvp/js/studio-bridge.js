@@ -12,7 +12,7 @@ function studio() {
     const keep = (() => { try { return localStorage.getItem('pc-studio-last'); } catch (e) { return null; } })();
     frame = document.createElement('iframe'); frame.title = 'Plan Studio (model conversion)'; frame.setAttribute('aria-hidden', 'true'); frame.tabIndex = -1;
     frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:1200px;height:800px;border:0;visibility:hidden';
-    frame.src = '../emb/modeler.html?workspace=1&v=rhino-selection-20261027-1'; document.body.appendChild(frame);
+    frame.src = '../emb/modeler.html?workspace=1&v=rhino-selection-20261027-2'; document.body.appendChild(frame);
     let n = 0; const wait = () => { const W = frame.contentWindow?.__pcWorkflow;
       if (W?.toolScene && W.use) { try { if (keep == null) localStorage.removeItem('pc-studio-last'); else localStorage.setItem('pc-studio-last', keep); } catch (e) { } res(W); }
       else if (n++ < 300) setTimeout(wait, 100); else rej(new Error('Plan Studio did not start.')); };

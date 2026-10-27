@@ -3057,7 +3057,7 @@ HINT.select = 'Hover near objects; Tab / Shift+Tab cycles the highlight. Click o
 function toolsUI() {   // the toolbar shows the tools of the active layer only
   for (const b of $$('[data-tool]')) b.setAttribute('aria-pressed', String(b.dataset.tool === TOOL && (!b.dataset.opm || OPM[TOOL] === b.dataset.opm)));
   for (const b of $$('[data-stair]')) b.setAttribute('aria-pressed', String(TOOL === 'place' && PICK === b.dataset.stair));
-  $('#toolHint').classList.remove('warn'); $('#toolHint').textContent = (CAM === '3d' && TOOL === 'select') ? 'Click to select, drag to move. Middle-drag (or the Orbit tool) turns the view, right-drag pans, scroll zooms.' : TOOL === 'place' ? (PICK ? `Click in the current view to place a ${libOf(PICK)[1].toLowerCase()}. Esc to stop.` : HINT.place) : HINT[TOOL];
+  $('#toolHint').classList.remove('warn'); $('#toolHint').textContent = (CAM === '3d' && TOOL === 'select') ? (window.__WSROLE?'Left-drag to select or move. Right-drag orbits; Shift+right-drag pans. Scroll zooms.':'Click to select, drag to move. Middle-drag (or the Orbit tool) turns the view, right-drag pans, scroll zooms.') : TOOL === 'place' ? (PICK ? `Click in the current view to place a ${libOf(PICK)[1].toLowerCase()}. Esc to stop.` : HINT.place) : HINT[TOOL];
 }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-tool]'); if (b && !b.closest('#simstub')) { if (b.dataset.opm) OPM[b.dataset.tool] = b.dataset.opm; setTool(b.dataset.tool); } });
 async function setCam(c) {
@@ -6207,7 +6207,7 @@ if (window.__WSROLE) {
   WS.selectMany=items=>{multi=items;window.__wsSelections=items;draw();if(CAM==='3d')upd3D();};
   const point=e=>CAM==='3d'?S3.plane(e.clientX,e.clientY,lvObj().z):S2W(...evP(e));
   // Capture above native per-object handles so dragging a selected wall or mesh keeps the full selection.
-  document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;pickMods={add:e.shiftKey,remove:e.ctrlKey||e.metaKey};if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
+  document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;if(e.button===2){tipOff();cycleClear();}pickMods={add:e.shiftKey,remove:e.ctrlKey||e.metaKey};if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
     if(CAM==='3d')P3upd(e);if(!e.altKey&&CAM==='3d'&&WS.gb&&S3.gizmo.hit(e.clientX,e.clientY))return;
     const raw=e.altKey?null:(cycleCurrent()||hitTest(S2W(...evP(e)))),hit=raw?{k:raw.k==='end'?'wall':raw.k,id:raw.id}:null,p=point(e);
     if(hit&&(pickMods.add||pickMods.remove)){hub()?.select(WS.role,hit,pickMods);e.stopImmediatePropagation();e.preventDefault();return;}
