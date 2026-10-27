@@ -9,7 +9,7 @@
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
-import {mountWorkbenchShell} from '../workbench-shell.js?v=rhino-20261027-2';
+import {mountWorkbenchShell} from '../workbench-shell.js?v=center-origin-20261027-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject, setCurrent, setCurrentVersion } from '../app.js';
 import { importModel } from '../viewport.js';
@@ -139,7 +139,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=workbench-library-20261027-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=center-origin-20261027-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -693,7 +693,12 @@ export function render(app, [pid]) {
   subs.push((ids) => vp.select(ids), () => layers(), () => selPane(), () => { rail(); panel(); });
   function refresh(refit) { drawShaded(refit); layers(); selPane(); state(); }
 
-  const disposeShell=mountWorkbenchShell(app,{activePane,deleteSelection:()=>{if(!UI.sels.length)return false;delIds([...UI.sels]);return true;},fit:()=>$('#fit',app).click()});
+  const disposeShell=mountWorkbenchShell(app,{activePane,deleteSelection:()=>{if(!UI.sels.length)return false;delIds([...UI.sels]);return true;},fit:()=>$('#fit',app).click(),center:async()=>{
+    const pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready)return;shell.inert=true;shell.setAttribute('aria-busy','true');
+    try{const result=await pane.ws.centerToOrigin();toast(result.moved?'Centered '+result.count+' objects at the origin. Undo restores the previous position.':'The model is already centered at the origin.');}
+    catch(error){toast(error.message||'The model could not be centered.');}
+    finally{shell.inert=false;shell.removeAttribute('aria-busy');}
+  }});
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel(); tabsUI();

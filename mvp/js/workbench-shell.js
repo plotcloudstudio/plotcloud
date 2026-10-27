@@ -1,5 +1,5 @@
 // One command surface; existing Plan Studio controls and history remain authoritative.
-export function mountWorkbenchShell(app,{activePane,deleteSelection,fit}){
+export function mountWorkbenchShell(app,{activePane,deleteSelection,fit,center}){
  const root=app.querySelector('.w2');root.classList.add('wb-shell');
  const bar=document.createElement('header');bar.className='wb-commandbar';bar.setAttribute('aria-label','Workbench commands');
  bar.innerHTML='<button type="button" class="btn sm" id="libraryToggle" aria-expanded="true">Tools</button><div class="wb-edit" role="toolbar" aria-label="Edit model"></div><p class="wb-commandline" role="status" id="commandHint">Command: Select objects</p>';
@@ -8,6 +8,7 @@ export function mountWorkbenchShell(app,{activePane,deleteSelection,fit}){
  const source=(pane,key,selector)=>{if(!pane.ready)return null;const doc=pane.win.document,ceiling=pane.ws.state().view2d==='ceiling';return doc.querySelector(ceiling&&['select','delete'].includes(key)?`[data-ct="${key==='delete'?'del':'select'}"]`:selector);};
  const edit=bar.querySelector('.wb-edit');
  for(const [key,label,selector]of commands){const button=document.createElement('button');button.type='button';button.className='btn sm';button.dataset.command=key;button.textContent=label;button.title=label;button.onclick=()=>{const pane=activePane();if(!pane.ready)return;if(key==='delete'&&deleteSelection()!==false)return;source(pane,key,selector)?.click();};edit.append(button);}
+ const centerButton=document.createElement('button');centerButton.type='button';centerButton.className='btn sm';centerButton.dataset.command='center';centerButton.textContent='Center to origin';centerButton.title='Move selected objects, or the visible unlocked model, to X/Y center 0 and base Z=0. One Undo restores the position.';centerButton.onclick=()=>center?.();edit.append(centerButton);
  const more=document.createElement('details');more.className='wb-extra';more.innerHTML='<summary>More ▾</summary><div class="w2-menu" role="group" aria-label="Additional edit tools"></div>';edit.after(more);
  const extra=[['clear','Clear current level…','#clear',false],['light','Ceiling light','[data-ct="light"]',true],['panel','Ceiling panel','[data-ct="panel"]',true],['vent','Ceiling vent','[data-ct="vent"]',true],['smoke','Smoke detector','[data-ct="smoke"]',true]];
  for(const [key,label,selector]of extra){const b=document.createElement('button');b.type='button';b.dataset.extra=key;b.textContent=label;b.onclick=()=>{const p=activePane();const original=p.ready?p.win.document.querySelector(selector):null;if(original&&!original.disabled)original.click();more.open=false;};more.lastElementChild.append(b);}
@@ -21,6 +22,7 @@ export function mountWorkbenchShell(app,{activePane,deleteSelection,fit}){
  app.querySelector('#libraryToggle').onclick=()=>{const closed=root.classList.toggle('wb-library-closed');app.querySelector('#libraryToggle').setAttribute('aria-expanded',String(!closed));};
  if(matchMedia('(max-width:1200px)').matches)app.querySelector('#libraryToggle').click();
  const refresh=()=>{const p=activePane();const doc=p.ready?p.win.document:null;
+  centerButton.disabled=!p.ready;
   for(const [key,,selector]of commands){const b=edit.querySelector(`[data-command="${key}"]`),original=source(p,key,selector);b.disabled=!original||original.disabled;const pressed=original?.getAttribute('aria-pressed');if(pressed!==null&&pressed!==undefined)b.setAttribute('aria-pressed',pressed);}
   for(const[key,,selector,ceiling]of extra){const b=more.querySelector(`[data-extra="${key}"]`),original=doc?.querySelector(selector);b.hidden=ceiling&&(!p.ready||p.ws.state().view2d!=='ceiling');b.disabled=!original||original.disabled;}
   const hint=doc?.getElementById('toolHint')?.textContent?.trim()||'Select objects';const text='Command: '+hint;const line=bar.querySelector('#commandHint');if(line.textContent!==text)line.textContent=text;line.title=hint;
