@@ -139,7 +139,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=rhino-workbench-20261027-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=rhino-selection-20261027-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -216,7 +216,7 @@ export function render(app, [pid]) {
   const lockList = () => M().layers.filter((l) => l.locked).map((l) => l.name);
   const offLayers = () => M().layers.filter((l) => l.visible === false).map((l) => l.name);
   function tell(I2) { const w = I2.ws; if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.display(UI.disp);
-    const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s); }
+    const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s);w.selectMany?.(UI.sels.map(psSel).filter(Boolean)); }
   const hub = {
     ready(role, win) {
       if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true;
@@ -564,7 +564,7 @@ export function render(app, [pid]) {
   }
   const ch = () => { persist(); drawShaded(false); layers(); selPane(); };
   // Plan Studio objects are deleted / duplicated by Plan Studio (so undo, wall openings and the other panes follow); the rest here
-  const psDel = (ids) => { const w = INST.plan.ready ? INST.plan.ws : null; for (const id of ids) { const s = psSel(id); if (s && w && s.k !== 'room' && s.k !== 'roof' && s.k !== 'stair' && s.k !== 'misc') w.del(s); } };
+  const psDel = (ids) => { const w = INST.plan.ready ? INST.plan.ws : null;if(!w)return;const items=ids.map(psSel).filter(s=>s&&!['room','roof','stair','misc'].includes(s.k));if(w.delMany)w.delMany(items);else for(const s of items)w.del(s); };
   function delIds(ids) { const ps = ids.filter((id) => PS.test(id)), nat = new Set(ids.filter((id) => !PS.test(id))); if (nat.size) { M().components = M().components.filter((x) => !nat.has(x.id)); persist(); drawShaded(false); } psDel(ps); setSel([]); }
   // several selected: what they share, move them to a layer, delete them
   function multi(host) {

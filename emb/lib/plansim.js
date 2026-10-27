@@ -140,7 +140,7 @@ export function bridge({ onScene, state, canvas }) {
   });
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene) { SRC = d.source || null; try { onScene(JSON.parse(d.scene), d); } catch (er) { console.error(er); } }
+    if (d.t === 'project' && d.scene) { SRC = d.source || null;window.__pcModelLoadedSource=null;window.__pcInputError=null; try { onScene(JSON.parse(d.scene), d);window.__pcModelLoadedSource=SRC; } catch (er) {window.__pcInputError=er.message||String(er); console.error(er); } }
     if (d.t === 'saved' && note) note.textContent = `Added · ${d.count} result${d.count > 1 ? 's' : ''} on this version`;
     if (d.t === 'error' && note) note.textContent = d.msg || 'Could not save.';
   });

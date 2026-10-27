@@ -1925,11 +1925,11 @@ applyTheme();
 fillTimes();
 resize();
 const PENDING = (() => { const f = $('#file').files && $('#file').files[0]; return f && /\.json$/i.test(f.name) ? f : null; })();
-sample();
+if(!new URLSearchParams(location.search).has('workspace'))sample();
 { const { rise, set } = riseSet(); $('#time').value = Math.round((rise + set) / 2 / 5) * 5; }
 updateSun(); setView('plan'); setNote(); lvlUI();
 getDL();
-if (PENDING) loadFile(PENDING); else runAnalysis({ level: 'draft' });   // the first look is quick; Standard and Fine run when asked
+if (PENDING) loadFile(PENDING); else if(!new URLSearchParams(location.search).has('workspace'))runAnalysis({ level: 'draft' });
 </script>
 
 

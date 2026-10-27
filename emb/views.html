@@ -1001,6 +1001,7 @@ async function threeModel(f, ext) {   // OBJ, STL, glTF/GLB and SketchUp's Colla
   return { els, fileScale: ext === 'glb' || ext === 'gltf' || ext === 'dae' ? 1 : null, up: 'y' };
 }
 async function loadFile(f) {
+window.__pcInputError=null;
   const ext = f.name.split('.').pop().toLowerCase(); msg('Reading ' + f.name + '…');
   try {
     if (ext === 'json') { const o = JSON.parse(await f.text()); if (!o.bounds) throw new Error('not a PlotCloud view-analysis scene'); pushHist(); MODEL = null; M3D = null; loadScene(o, { keepHist: true }); applySettings(o); $('#preset').value = ''; $('#mName').textContent = o.name || f.name; $('#mInfo').textContent = 'saved scene'; msg(`${f.name}: scene loaded.`, 'ok'); return; }
@@ -1011,10 +1012,10 @@ async function loadFile(f) {
     if (!r.els.length) throw new Error('no meshes or solids found');
     MODEL = { name: f.name, ...r }; setUp(DEF_UP[ext] || r.up); MODEL.up = DEF_UP[ext] || r.up; if (ext === 'ifc') { $('#units').value = 'auto'; }
     prepModel(); placeModel();
-  } catch (err) { console.error(err); msg('Could not read ' + f.name + ': ' + (err.message || err), 'warn'); }
+  } catch (err) {window.__pcInputError=err.message||String(err); console.error(err); msg('Could not read ' + f.name + ': ' + (err.message || err), 'warn'); }
 }
 $('#pick').addEventListener('click', () => $('#file').click());
-$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) await loadFile(f); });
+$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) {window.__pcInputReady=loadFile(f);await window.__pcInputReady;window.__pcModelLoadedSource=window.__pcRequestedSource;} });
 stage.addEventListener('dragover', (e) => { e.preventDefault(); stage.classList.add('over'); });
 stage.addEventListener('dragleave', () => stage.classList.remove('over'));
 stage.addEventListener('drop', (e) => { e.preventDefault(); stage.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
@@ -1153,8 +1154,8 @@ async function runLevel(level, confirmed, quiet) {
 }
 
 // ================= start =================
-setTool('select'); loadScene(PRESETS.office()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;
-resize(); fit(); draw(); runLevel('draft', true, true);
+if(!new URLSearchParams(location.search).has('workspace')){setTool('select'); loadScene(PRESETS.office()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;}
+resize(); fit(); draw(); if(!new URLSearchParams(location.search).has('workspace'))runLevel('draft', true, true);
 window.__views = { SC, get RES() { return RES; }, summary, runLevel, setCam, setProbe, get PROBE() { return PROBE; }, spotRays, spotEval, lvPlan, PRESETS, loadScene, setEye, get GC() { return GC; }, toggleExcl, T3 };
 
 window.__pcAnalysisState=()=>{
@@ -1218,7 +1219,7 @@ addEventListener('pc-ui-theme',()=>{if(typeof draw==='function')requestAnimation
   }
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
+    if (d.t === 'project' && d.scene && canScene) { window.__pcRequestedSource=d.source;window.__pcModelLoadedSource=null;if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
     if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';

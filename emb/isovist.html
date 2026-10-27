@@ -937,6 +937,7 @@ async function threeModel(f, ext) {   // OBJ, STL, glTF/GLB and SketchUp's Colla
   return { els, fileScale: ext === 'glb' || ext === 'gltf' || ext === 'dae' ? 1 : null, up: 'y' };
 }
 async function loadFile(f) {
+window.__pcInputError=null;
   const ext = f.name.split('.').pop().toLowerCase(); msg('Reading ' + f.name + '…');
   try {
     if (ext === 'json') { const o = JSON.parse(await f.text()); if (!o.bounds) throw new Error('not a PlotCloud isovist scene'); pushHist(); MODEL = null; M3D = null; loadScene(o, { keepHist: true }); if (o.eye) setEye(o.eye); if (o.target != null) setTgt(o.target); $('#preset').value = ''; $('#mName').textContent = o.name || f.name; $('#mInfo').textContent = 'saved scene'; msg(`${f.name}: scene loaded.`, 'ok'); return; }
@@ -947,10 +948,10 @@ async function loadFile(f) {
     if (!r.els.length) throw new Error('no meshes or solids found');
     MODEL = { name: f.name, ...r }; setUp(DEF_UP[ext] || r.up); MODEL.up = DEF_UP[ext] || r.up; if (ext === 'ifc') { $('#units').value = 'auto'; }
     prepModel(); placeModel();
-  } catch (err) { console.error(err); msg('Could not read ' + f.name + ': ' + (err.message || err), 'warn'); }
+  } catch (err) {window.__pcInputError=err.message||String(err); console.error(err); msg('Could not read ' + f.name + ': ' + (err.message || err), 'warn'); }
 }
 $('#pick').addEventListener('click', () => $('#file').click());
-$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) await loadFile(f); });
+$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) {window.__pcInputReady=loadFile(f);await window.__pcInputReady;window.__pcModelLoadedSource=window.__pcRequestedSource;} });
 stage.addEventListener('dragover', (e) => { e.preventDefault(); stage.classList.add('over'); });
 stage.addEventListener('dragleave', () => stage.classList.remove('over'));
 stage.addEventListener('drop', (e) => { e.preventDefault(); stage.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
@@ -1306,7 +1307,7 @@ $('#fpBar').addEventListener('click', (e) => { const b = e.target.closest('[data
 function shot3D() { const r = T3.r, old = r.getPixelRatio(), w = stage.getBoundingClientRect().width; r.setPixelRatio(Math.min(4, 3200 / Math.max(1, w))); size3D(); if (T3.fp) placeFP(); r.render(T3.scene, T3.cam); const u = r.domElement.toDataURL('image/png'); r.setPixelRatio(old); size3D(); render3D(); const b = atob(u.split(',')[1]), a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
 
 // ================= start =================
-setTool('select'); setEye(1.0); loadScene(PRESETS.kinder()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;
+if(!new URLSearchParams(location.search).has('workspace')){setTool('select'); setEye(1.0); loadScene(PRESETS.kinder()); $('#mName').textContent = 'Case: ' + SC.name; $('#mInfo').textContent = `${SC.bounds.w} × ${SC.bounds.h} m · drawn walls and furniture`;}
 window.__iso = { setPM, routeThrough, get WALK() { return WALK; }, PLAY, computeWalk, seekD: (d) => seekD(d), get MODEL() { return MODEL; }, setTgt, get TGT() { return TGT; }, SC, get A() { return A; }, T3, setEye, setCam, enterFP, exitFP, loadScene, PRESETS, W2S, LAY, get EYE() { return EYE; }, HIST };
 // ================= Plan + chart, detail levels for the walk (added after the original; line numbers above are shared with other tools) =================
 { const st = document.createElement('style'); st.textContent = `
@@ -1529,7 +1530,7 @@ addEventListener('pc-ui-theme',()=>{if(typeof draw==='function')requestAnimation
   }
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent) return; const d = e.data || {}; if (!d.pc) return;
-    if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
+    if (d.t === 'project' && d.scene && canScene) { window.__pcRequestedSource=d.source;window.__pcModelLoadedSource=null;if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
     if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';

@@ -14,7 +14,7 @@ import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
-import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=mesh-fidelity-20261027-1';
+import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=rhino-selection-20261027-1';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
@@ -170,7 +170,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
         <button class="btn sm primary" id="save" disabled>Save result${v ? ` to v${v.n}` : ''}</button>
       </div>
     </div>
-    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" style="visibility:hidden" src="../emb/${file}.html?layout=unified&v=${encodeURIComponent(ENGINE_RELEASE)}${pilot?'&pilot=shared':''}"></iframe><div id="engineLoading" role="status" style="position:absolute;inset:80px 0 0;display:grid;place-items:center;background:var(--bg);z-index:2">Loading saved model and current Settings…</div>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
+    ${v ? `<iframe id="eng" data-emb="${sim.id}" title="${esc(sim.name)}" style="visibility:hidden;opacity:0;pointer-events:none" src="../emb/${file}.html?layout=unified&workspace=1&v=${encodeURIComponent(ENGINE_RELEASE)}${pilot?'&pilot=shared':''}"></iframe><div id="engineLoading" role="status" style="position:absolute;inset:80px 0 0;display:grid;place-items:center;background:var(--bg);z-index:2">Preparing your Workspace model…</div>` : `<div class="wrap"><p class="note">Save a model version first: <a href="#/workspace">open the Workspace</a>.</p></div>`}
   </div>`;
   const review=document.createElement('dialog');review.setAttribute('aria-label','Study input review');review.style.cssText='max-width:720px;max-height:85vh;overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:24px';review.innerHTML=`<h2>${esc(sim.name)} · v${v.n}</h2><p>Review these inputs before calculating. Model preparation in the engine still checks the selected level and closed rooms.</p><ul>${reviewRows(readiness.checks)}</ul><h3>Next steps</h3><ol><li>Run the analysis using the study’s Calculate or Run button.</li><li>Use Save result above to keep the actual result on v${v.n}.</li><li>Edit one design variable in Workspace and save a new version.</li><li>Run the same study with matching conditions, then compare in Results.</li></ol><button type="button" class="btn accent" id="closeReview">Continue to study</button>`;app.querySelector('.shx').append(review);$('#reviewInputs',app).onclick=()=>review.showModal();$('#closeReview',app).onclick=()=>review.close();
   $('#proj', app).onchange = (e) => { setCurrent(S.project(e.target.value)); route(); };
@@ -193,6 +193,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   let alive = true, loaded = false, sentScene = null, done = false, batchNoResult = false, pilotRunSnapshot=null; const ovApply = {};
   const doc = () => { try { return fr.contentDocument; } catch (e) { return null; } };
   const say = (h, warn) => { msg.innerHTML = h; msg.classList.toggle('warn', !!warn); };
+  const currentInput=()=>{const w=fr.contentWindow;if(SUN.includes(sim.id)||sim.id==='wind'){const s=SUN.includes(sim.id)?w.__sunInputStatus:w.__windInputStatus;return s?.state==='ready'&&s.source?.version===v.id;}if(['studio','room'].includes(cfg.input))return w.__pcModelLoadedSource?.version===v.id;return true;};
   let revealing=false;
   function revealEngine(){
     if(revealing||fr.dataset.pcVisibleReady==='true')return;revealing=true;
@@ -201,13 +202,13 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
       if(!alive||!fr.isConnected)return;
       const D=doc(),documents=D?[D,...[...D.querySelectorAll('iframe')].filter(f=>!f.hidden&&f.getBoundingClientRect().width).map(f=>{try{return f.contentDocument;}catch{return null;}}).filter(Boolean)]:[];
       const solarInput=SUN.includes(sim.id)?fr.contentWindow.__sunInputStatus:sim.id==='wind'?fr.contentWindow.__windInputStatus:null;
-      const stormDoc=sim.id==='stormwater'?D?.getElementById('modelWorkspace')?.contentDocument:null,stormError=stormDoc?.getElementById('error')?.textContent.trim(),inputError=solarInput?.state==='error'?solarInput.message:stormError;
+      const stormDoc=sim.id==='stormwater'?D?.getElementById('modelWorkspace')?.contentDocument:null,stormError=stormDoc?.getElementById('error')?.textContent.trim(),inputError=solarInput?.state==='error'?solarInput.message:stormError||fr.contentWindow.__pcInputError;
       if(inputError){if(loading)loading.innerHTML=`<div style="padding:24px;max-width:650px"><h2>The model could not be loaded</h2><p>${esc(inputError)}</p><a class="btn" href="#/workspace/${esc(p.id)}">Review model in Workspace</a></div>`;say(esc(inputError),true);return;}
-      let geometryReady=(!SUN.includes(sim.id)&&sim.id!=='wind')||solarInput?.state==='ready'&&solarInput.source?.version===v.id;
+      let geometryReady=currentInput();
       if(sim.id==='stormwater'){const expected=`${p.name}-v${v.n}.obj`.replace(/[^\w.-]+/g,'-');geometryReady=!!stormDoc?.getElementById('modelMeta')?.textContent.includes(expected)&&stormDoc.getElementById('exportJson')?.disabled===false;}
       if(geometryReady&&fr.dataset.pcSettingsReady==='true'&&documents.some(d=>d.querySelector('.app[data-pc-unified=true]'))&&!documents.some(d=>d.body?.dataset.pcSharedWeatherLoading)){
         if(sentScene?.geometryAudit&&!D.getElementById('geometryAuditNote')){const note=D.createElement('p');note.id='geometryAuditNote';note.className='note';note.textContent=`Model geometry: ${sentScene.geometryAudit.objects} surface objects · ${sentScene.geometryAudit.triangles.toLocaleString('en-CA')} triangles · metres. Original meshes, without bounding-box replacement.${SUN.includes(sim.id)?' Glazing is treated as opaque in this solar screening solver.':''}`;(D.getElementById('unifiedResults')||D.getElementById('panelR'))?.prepend(note);}
-        fr.style.visibility='visible';fr.dataset.pcVisibleReady='true';loading?.remove();
+        fr.style.visibility='visible';fr.style.opacity='1';fr.style.pointerEvents='';fr.dataset.pcVisibleReady='true';loading?.remove();
         if(params.get('autorun')==='workspace'){
           let waits=0;const start=()=>{if(!alive)return;if(weatherFailure||++waits>600){say('Review the inputs, then use Run study to start.',true);return;}const button=$('#runStudy',app);if(button.disabled){setTimeout(start,100);return;}
             // Start once through the real control; expensive-run confirmations stay intact.
@@ -249,7 +250,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
       const r = await input.catch(() => null); if (!alive || !r?.ok) return;
       try { sentScene = JSON.parse(r.scene); } catch (er) { sentScene = null; }
       fr.contentWindow.postMessage({ pc: 1, t: 'project', scene: r.scene, name, source: { app: 'plotcloud-workspace', project: p.id, version: v.id, level: level?.id || 'all', ...(room ? { room: room.id } : {}) } }, '*');
-      loaded = true; say(`Model: ${esc(name)}${r.info ? ' · ' + esc(r.info) : level && levels.length > 1 ? ' · Level ' + level.id.slice(1) : ''}`); setTimeout(prefill, 900); if (batch) setTimeout(autoRun, 1500);
+      revealEngine();const prepared=()=>{if(!alive)return;if(currentInput()){loaded=true;say(`Model: ${esc(name)}${r.info ? ' · ' + esc(r.info) : level && levels.length > 1 ? ' · Level ' + level.id.slice(1) : ''}`);prefill();if(batch)setTimeout(autoRun,1500);}else if(!fr.contentWindow.__pcInputError)setTimeout(prepared,30);};prepared();
     }
     if (d.t === 'save') {
       store(Array.isArray(d.kpis) ? d.kpis : [], d.analysis);

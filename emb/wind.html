@@ -1931,7 +1931,7 @@ new ResizeObserver(() => panelUI()).observe($('#chartp'));
 
 // ---------- start ----------
 if (window.PC_EMBED) document.querySelector('.brand').hidden = true;
-applyTheme(); modeNote(); setDir(S.dir); resize(); sample(); setNote(); getDL(); gridNote(); setView('plan');
+applyTheme(); modeNote(); setDir(S.dir); resize(); if(!new URLSearchParams(location.search).has('workspace'))sample(); setNote(); getDL(); gridNote(); setView('plan');
 runOne('draft');   // the first look is quick; Standard and Fine run when asked
 </script>
 
