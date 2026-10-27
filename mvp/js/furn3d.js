@@ -2,8 +2,8 @@
 // the mesh is rebuilt from furniture/models.js + furniture/geom.js (the same code Plan Studio uses), so nothing heavy is saved.
 import './pc-en.js';
 import * as THREE from 'three';
-import { MODELS, defaults, buildModel, paramVisible, materialColor } from '../../furniture/models.js';
-import { partGeometry } from '../../furniture/geom.js';
+import { MODELS, defaults, buildModel, paramVisible, materialColor } from '../../furniture/models.js?v=furniture-detail-20261027-1';
+import { partGeometry } from '../../furniture/geom.js?v=furniture-detail-20261027-1';
 import { t } from '../../furniture/i18n.js';
 
 export const furnModel = (id) => MODELS.find((m) => m.id === id) || null;

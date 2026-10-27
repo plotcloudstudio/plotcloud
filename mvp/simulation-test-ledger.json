@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "grants": [
+    {
+      "codeHash": "d01ce483ea0076cc8341680c59d1f09a45b86f3be5bb9c8ba6f694d2e5baa268",
+      "scope": "simulations",
+      "features": [
+        "sunhours",
+        "radiation",
+        "utci",
+        "daylight",
+        "wind",
+        "vent",
+        "stormwater",
+        "acoustics",
+        "spacesyntax",
+        "movementdepth",
+        "evac",
+        "isovist",
+        "views",
+        "wayfinding",
+        "privacy",
+        "cameras",
+        "structure"
+      ],
+      "startsAt": "2026-10-27T17:50:54.239Z",
+      "expiresAt": "2026-11-03T17:50:54.239Z",
+      "reference": "owner-simulation-testing-20261027"
+    }
+  ]
+}

@@ -14,7 +14,7 @@ import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
-import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=rhino-selection-20261027-2';
+import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=furniture-detail-20261027-1';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';

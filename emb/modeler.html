@@ -844,7 +844,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 
 
 <script type="importmap">
-{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "three/addons/exporters/OBJExporter.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/OBJExporter.js", "fflate": "./furniture/fflate.js", "pc/": "./furniture/", "pc-base/": "./furniture/", "pc-doors/": "./doors/", "pc-stairs/": "./stairs/" } }
+{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "three/addons/exporters/OBJExporter.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/OBJExporter.js", "fflate": "./furniture/fflate.js", "pc/models.js": "./furniture/models.js?v=furniture-detail-20261027-1", "pc/geom.js": "./furniture/geom.js?v=furniture-detail-20261027-1", "pc/": "./furniture/", "pc-base/": "./furniture/", "pc-doors/": "./doors/", "pc-stairs/": "./stairs/" } }
 </script>
 <script src="studio-geometry.js?v=20261021-drawing1"></script>
 <script type="module">
@@ -2525,12 +2525,13 @@ function drawWall(w) {
 function drawGen(f, sel) {   // a generated piece seen from above: its parts, lowest first
   const d = VP.d, r = genBuild(f.gen), vals = f.gen.vals, c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0);
   const mx = f.mirror ? -1 : 1, loc = (u, v) => { u *= mx; return W2S([f.x + (-u * c + v * s) / 1000, f.y + (-u * s - v * c) / 1000]); };
-  const top = (p) => p.kind === 'prism' ? (p.plane === 'xy' ? p.a0 + p.t : p.cz + 1e3) : p.cz + (p.h || p.r || 0) / 2;
+  const top = (p) => p.kind==='lathe'?p.cz+Math.max(...p.profile.map(q=>q[1])):p.kind === 'prism' ? (p.plane === 'xy' ? p.a0 + p.t : p.cz + 1e3) : p.cz + (p.h || p.r || 0) / 2;
   const poly = (pts) => { g.beginPath(); pts.forEach((q, i) => { const o = loc(q[0], q[1]); if (i) g.lineTo(o[0], o[1]); else g.moveTo(o[0], o[1]); }); g.closePath(); g.fill(); g.stroke(); };
   g.lineWidth = 0.8 * d; g.strokeStyle = 'rgba(28,27,26,.42)'; g.lineJoin = 'round';
   for (const p of r.parts.slice().sort((a, b) => top(a) - top(b))) {
     if (p.kind === 'tube') continue; g.fillStyle = sel?'#d8402a':gColor(p.mat, vals);
     if (p.kind === 'box') { const hx = p.w / 2, hy = p.d / 2, cz = Math.cos(p.rotZ || 0), sz = Math.sin(p.rotZ || 0); poly([[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]].map(([a, b]) => [p.cx + a * cz - b * sz, p.cy + a * sz + b * cz])); }
+    else if(p.kind==='lathe'){const rx=Math.max(...p.profile.map(q=>q[0])),zs=p.profile.map(q=>q[1]),z=Math.max(...zs),rim=p.profile.filter(q=>Math.abs(q[1]-z)<.01).map(q=>q[0]),inner=Math.min(...rim);poly(Array.from({length:48},(_,i)=>[p.cx+rx*Math.cos(i*Math.PI/24),p.cy+rx*p.depthScale*Math.sin(i*Math.PI/24)]));g.fillStyle=sel?'#d8402a':'#b0b5b8';poly(Array.from({length:48},(_,i)=>[p.cx+inner*Math.cos(i*Math.PI/24),p.cy+inner*p.depthScale*Math.sin(i*Math.PI/24)]));}
     else if (p.kind === 'cyl') { if (p.axis === 'y') poly([[p.cx - p.r, p.cy - p.h / 2], [p.cx + p.r, p.cy - p.h / 2], [p.cx + p.r, p.cy + p.h / 2], [p.cx - p.r, p.cy + p.h / 2]]); else poly(Array.from({ length: 24 }, (_, i) => [p.cx + p.r * Math.cos(i / 24 * 6.2832), p.cy + p.ry * Math.sin(i / 24 * 6.2832)])); }
     else if (p.kind === 'prism') { if (p.plane === 'xy') poly(p.pts.map((q) => [q[0] + p.cx, q[1] + p.cy])); else { const us = p.pts.map((q) => q[0]), u0 = Math.min(...us), u1 = Math.max(...us); if (p.plane === 'xz') poly([[u0 + p.cx, p.a0 + p.cy], [u1 + p.cx, p.a0 + p.cy], [u1 + p.cx, p.a0 + p.t + p.cy], [u0 + p.cx, p.a0 + p.t + p.cy]]); else poly([[p.a0 + p.cx, u0 + p.cy], [p.a0 + p.t + p.cx, u0 + p.cy], [p.a0 + p.t + p.cx, u1 + p.cy], [p.a0 + p.cx, u1 + p.cy]]); } }
   }
@@ -3134,11 +3135,11 @@ $('#undo').addEventListener('click', undo); $('#redo').addEventListener('click',
 // ---------- properties of the selection ----------
 function changedSel() { propsUI(); draw(); if (window.S3 && S3.on) upd3D(); }
 function genPropsHTML(o) {   // the generator's own parameters, in the Properties panel
-  const m = genModel(o.gen.id), v = o.gen.vals, F = [], isOp = isOpGen(o), HID = isOp ? ['wall', 'wallL', 'T'] : [];
+  const m = genModel(o.gen.id), v = {...REG[o.gen.id].defaults(m),...o.gen.vals}, F = [], isOp = isOpGen(o), HID = isOp ? ['wall', 'wallL', 'T'] : [];
   F.push(`<div class="cell full sz">${isOp ? `${Math.round(o.w * 1000)} × ${Math.round((o.head - o.sill) * 1000)} mm, sill ${Math.round(o.sill * 1000)}` : `${Math.round(o.w * 1000)} × ${Math.round(o.d * 1000)} × ${Math.round(o.h * 1000)} mm`}</div>`);
   if (m.presets && m.presets.length) F.push(`<div class="cell full"><label for="pg_pre">Preset</label><select id="pg_pre"><option value="">Choose…</option>${m.presets.map((p, i) => `<option value="${i}">${esc(gT(p[0]))}</option>`).join('')}</select></div>`);
   const PF = [];
-  for (const q of m.params) { if (HID.includes(q.k) || !gVis(q, v)) continue; const id = 'pg_' + q.k, lab = `<label for="${id}">${esc(gT(q.label))}${q.type ? '' : ' (mm)'}</label>`;
+  for (const q of m.params) { if (HID.includes(q.k) || !gVis(q, v)) continue; const id = 'pg_' + q.k, lab = `<label for="${id}">${esc(gT(q.label))}${q.type ? '' : ' ('+(q.unit||'mm')+')'}</label>`;
     if (q.type === 'bool') PF.push(`<div class="cell row">${lab}<input type="checkbox" id="${id}" data-gp="${q.k}" ${v[q.k] ? 'checked' : ''}></div>`);
     else if (q.type === 'select') PF.push(`<div class="cell">${lab}<select id="${id}" data-gp="${q.k}">${q.options.map(([val, nm]) => `<option value="${esc(val)}" ${String(v[q.k]) === String(val) ? 'selected' : ''}>${esc(gT(nm))}</option>`).join('')}</select></div>`);
     else PF.push(`<div class="cell">${lab}<input type="number" id="${id}" data-gp="${q.k}" min="${q.min}" max="${q.max}" step="${q.step || 1}" value="${v[q.k]}"></div>`); }

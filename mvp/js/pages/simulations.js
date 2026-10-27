@@ -1,10 +1,12 @@
 import {inspectStudy} from '../study-readiness.js';
-import {checkAccess, isFreeStudy} from '../beta-access.js';
+import {checkAccess, isFreeStudy,canUse} from '../beta-access.js';
+import {activateTestingCode,mountTestingAccess,testingStatus,allowsTestingStudy} from '../simulation-test-access.js?v=private-testing-20261027-1';
 import * as S from '../store.js';
 import { SIMS, simImg } from '../data.js';
 import { $, $$, esc, currentProject, currentVersion, LIVE, img } from '../app.js';
 
 export async function render(app, [simId], params, context={}) {
+  if(params.get('test-code')){const code=params.get('test-code');params.delete('test-code');history.replaceState(null,'','#/simulations'+(simId?'/'+encodeURIComponent(simId):'')+(params.toString()?'?'+params.toString():''));try{await activateTestingCode(code);}catch(error){app.innerHTML='<div class="wrap"><h1>Testing access could not be activated.</h1><p role="alert"></p><a href="#/simulations">Browse studies</a></div>';app.querySelector('[role=alert]').textContent=error.message;return;}}
   if(simId==='noise'){app.innerHTML='<div class="wrap"><h1>Study removed</h1><p>Outdoor Noise is no longer available.</p><a class="btn" href="#/simulations">All studies</a></div>';return;}
   const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
@@ -25,6 +27,7 @@ function catalog(app, params, access) {
     <div class="card" style="margin-top:24px"><h2>New to simulation?</h2><p>Start with an editable example or check your own project. Run a study, save the result, then compare one design change.</p><a class="btn accent" href="#/start-study">Start a guided study</a></div>
     <div class="pills" role="group" aria-label="Filter" style="margin-top:36px" id="filters">${groups.map((x) => `<button type="button" data-g="${x}" aria-pressed="${x === g}">${x}</button>`).join('')}</div>
     <div class="simgrid" id="grid"></div>
+    <section class="card" id="simulationTesting" style="margin-top:24px"></section>
     <p class="note" style="margin-top:28px">${LIVE} every study runs the PlotCloud simulation engine itself. Catalogue images are illustrative previews using the same model and camera; they are not computed project results. All studies are for design screening, not code compliance.</p>
   </div>`;
   // what each simulation needs from the open project (2026-10-25): a site or masses, or rooms
@@ -32,9 +35,10 @@ function catalog(app, params, access) {
   const ready=s=>{if(!p)return '<span class="rdy no">Choose a project</span>';const c=S.conditionsOf(p),r=inspectStudy(p,v,s.id,{site:S.isSharedPilot(s.id)||s.id==='vent'?c.site:S.siteOf(p),defaults:S.isSharedPilot(s.id)?c.defaults:S.account().defaults,draftChanged});return `<span class="rdy${r.ready?'':' no'}" title="${esc(r.errors.map(x=>x.title).join('; ')||'Review scope and inputs inside the study; engine geometry checks still apply')}">${r.ready?'Inputs found · review in study':esc(r.errors[0]?.title||'Review inputs')}</span>`;};
   const draw = () => { $('#grid', app).innerHTML = SIMS.map((s, i) => [s, i]).filter(([s]) => g === 'All' || s.group === g || s.scope === g).map(([s, i]) => `<article class="card sim" data-scope="${s.scope}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true"><img data-holo="${simImg(s.id)}" src="${img(simImg(s.id))}" alt="" loading="lazy"></a>
-      <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(s.group)} · ${esc(s.scope)}</span><span>${isFreeStudy(s.id) ? 'Free · ' : 'Paid beta · '}${s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>
+      <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(s.group)} · ${esc(s.scope)}</span><span>${isFreeStudy(s.id) ? 'Free · ' : allowsTestingStudy(s.id)?'Test access · ':'Paid beta · '}${s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>
       <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
-      <div class="acts"><a class="btn sm primary" href="${q(s)}">${isFreeStudy(s.id) || access.active ? 'Enter' : 'Unlock'}</a>${LIVE}${ready(s)}</div></article>`).join('');
+      <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id) ? 'Enter' : 'Unlock'}</a>${LIVE}${ready(s)}</div></article>`).join('');
     $$('#filters button', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === g))); };
   $$('#filters button', app).forEach((b) => b.onclick = () => { g = b.dataset.g; try { localStorage.setItem('pc-mvp-simgroup', g); } catch (e) { } draw(); }); draw();
+  mountTestingAccess($('#simulationTesting',app));if(testingStatus().active)app.querySelector('.lede').textContent='Your private testing access opens every current simulation study until its listed expiry. Model input checks still apply. Sun hours and Daylight remain free for everyone; other visitors still need paid beta access.';
 }

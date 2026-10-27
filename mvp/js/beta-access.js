@@ -1,4 +1,5 @@
 import * as Cloud from './cloud.js';
+import {checkTestingAccess,allowsTestingStudy,mountTestingAccess} from './simulation-test-access.js?v=private-testing-20261027-1';
 // Manual beta entitlements. Only hashes and expiry dates are public; never trust a local plan/paid flag.
 export const BETA = Object.freeze({ name: 'PlotCloud Beta', email: 'plotcloud@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
 export const FREE_STUDIES = Object.freeze(['sunhours', 'daylight']);
@@ -9,13 +10,14 @@ export const isFreeStudy = id => FREE_STUDIES.includes(id);
 const readCode = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
 export const normalizeCode = value => String(value || '').replace(/\s+/g, '').toUpperCase();
 export function status() { return { ...verified, active: verified.active && (verified.source==='account' ? performance.now()<leaseDeadline : Date.parse(verified.expiresAt)>Date.now()) }; }
-export const canUse = id => isFreeStudy(id) || status().active;
+export const canUse = id => isFreeStudy(id) || status().active || allowsTestingStudy(id);
 export async function hashCode(value) { const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizeCode(value))); return [...new Uint8Array(bytes)].map(v => v.toString(16).padStart(2, '0')).join(''); }
 export function matchingGrant(ledger, digest, now = Date.now()) {
   if (ledger?.schema !== 1 || !Array.isArray(ledger.grants)) return null;
   return ledger.grants.find(g => g.codeHash === digest && g.plan === 'beta-monthly' && !g.revokedAt && Number.isFinite(Date.parse(g.startsAt)) && Date.parse(g.startsAt) <= now && Number.isFinite(Date.parse(g.expiresAt)) && now < Date.parse(g.expiresAt)) || null;
 }
 export async function checkAccess({ force = false, code = readCode() } = {}) {
+  await checkTestingAccess({force});
   if(Cloud.configured()){
     const uid=Cloud.user()?.id;
     if(!uid){generation++;verified={active:false,reason:'login-required',source:'account'};serverUser='';leaseDeadline=0;return status();}
@@ -23,7 +25,7 @@ export async function checkAccess({ force = false, code = readCode() } = {}) {
     if(serverUser===uid&&!force&&performance.now()-serverChecked<15000)return status();
     if(serverUser!==uid){serverChecked=0;leaseDeadline=0;verified={active:false,source:'account',reason:'verifying'};}
     serverUser=uid;const epoch=++generation;
-    const task=(async()=>{try{const grant=await Cloud.rpc('pc_access_status');if(epoch!==generation)return{active:false,reason:'superseded'};const remaining=Date.parse(grant.expiresAt)-Date.parse(grant.serverNow);leaseDeadline=performance.now()+Math.min(30000,Math.max(0,remaining||0));verified={...grant,source:'account',accountId:uid,active:grant.active===true&&remaining>0};}catch{if(epoch!==generation)return{active:false,reason:'superseded'};leaseDeadline=0;verified={active:false,reason:'verification-unavailable',source:'account'};}serverChecked=performance.now();return status();})();serverInflight=task;try{return await task;}finally{if(serverInflight===task)serverInflight=null;}
+    const task=(async()=>{try{const grant=await Cloud.rpc('pc_access_status');if(epoch!==generation)return{active:false,reason:'superseded'};const permanent=grant.accessType==='permanent'&&grant.expiresAt===null,remaining=permanent?30000:Date.parse(grant.expiresAt)-Date.parse(grant.serverNow);leaseDeadline=performance.now()+Math.min(30000,Math.max(0,remaining||0));verified={...grant,source:'account',accountId:uid,active:grant.active===true&&remaining>0};}catch{if(epoch!==generation)return{active:false,reason:'superseded'};leaseDeadline=0;verified={active:false,reason:'verification-unavailable',source:'account'};}serverChecked=performance.now();return status();})();serverInflight=task;try{return await task;}finally{if(serverInflight===task)serverInflight=null;}
   }
   code = normalizeCode(code);
   if (!/^PCBET-[A-F0-9]{48}$/.test(code)) { generation++; verified = { active: false, reason: code ? 'invalid-code' : 'code-required' }; lastCode = code; return status(); }
@@ -71,6 +73,7 @@ export function renderGate(host, name = 'This tool') {
     host.querySelector('#betaActivate').previousElementSibling.textContent='Access is linked to your confirmed registration email and expires automatically after the granted period.';
   }
   mountActivation(host.querySelector('#betaActivate'));
+  const testing=document.createElement('section');testing.className='card';testing.style.marginTop='24px';host.querySelector('.wrap').append(testing);mountTestingAccess(testing);
 }
 if (typeof window !== 'undefined') {
   window.PlotCloudBetaAccess = Object.freeze({ allows: canUse, status });

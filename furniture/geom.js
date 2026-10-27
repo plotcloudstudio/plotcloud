@@ -4,8 +4,13 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 export function partGeometry(p) {
   let g;
+  if(p.kind==='lathe'){
+    g=new THREE.LatheGeometry(p.profile.map(q=>new THREE.Vector2(q[0],q[1])),64);
+    g.rotateX(Math.PI/2);g.scale(1,p.depthScale,1);g.translate(p.cx,p.cy,p.cz);return g;
+  }
   if (p.kind === 'prism') {
     const sh = new THREE.Shape(p.pts.map((q) => new THREE.Vector2(q[0], q[1])));
+    for(const hole of p.holes||[])sh.holes.push(new THREE.Path(hole.map(q=>new THREE.Vector2(q[0],q[1]))));
     g = new THREE.ExtrudeGeometry(sh, { depth: p.t, bevelEnabled: false, curveSegments: 1 });
     if (p.plane === 'xy') g.translate(0, 0, p.a0);
     else if (p.plane === 'xz') { g.rotateX(Math.PI / 2); g.translate(0, p.a0 + p.t, 0); }
@@ -47,7 +52,7 @@ export function triangles(g) {
 
 // Can this part be written to Rhino as a true NURBS solid?
 export function isNurbsable(p) {
-  if (p.kind === 'tube') return false;
+  if (p.kind === 'tube'||p.kind==='lathe'||p.holes?.length) return false;
   if (p.kind === 'prism') return true;
   if (p.kind === 'box') return !(p.round > 1 && Math.min(p.round, Math.min(p.w, p.d, p.h) / 2 - 0.5) > 1);
   return p.ry === p.r && p.taper === 1;

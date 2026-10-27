@@ -1,6 +1,8 @@
 // PlotCloud furniture configurator — parametric base models.
 // Units: millimetres. Axes: Z up, X = width, Y = depth, front faces -Y.
 // After building, every model is moved so the origin sits at the bottom centre of its footprint.
+import { refineFurniture, DETAIL_FAMILIES, STORAGE_FAMILIES } from './furniture-details.js?v=furniture-detail-20261027-1';
+import { studioModels } from './studio-models.js?v=furniture-detail-20261027-1';
 
 export const COLORS = {
   fabric: [
@@ -38,9 +40,13 @@ export function makeBuilder() {
       parts.push({ kind: 'cyl', axis: 'y', name, layer, mat, cx, cy, cz, r, ry: r, taper: 1, h: len, seg: o.seg || 32 });
     },
     // planar polygon extruded by t. plane 'xy' → extrude along z from a0; 'xz' → along y; 'yz' → along x. pts are [u,v] in that plane
-    prism(name, layer, mat, plane, pts, a0, t) {
+    prism(name, layer, mat, plane, pts, a0, t, holes = []) {
       if (pts.length < 3 || t <= 0) return;
-      parts.push({ kind: 'prism', name, layer, mat, plane, pts, a0, t, cx: 0, cy: 0, cz: 0 });
+      parts.push({ kind: 'prism', name, layer, mat, plane, pts, holes, a0, t, cx: 0, cy: 0, cz: 0 });
+    },
+    // Closed radial profile in [radius, height], revolved about Z, optionally elliptical.
+    lathe(name, layer, mat, cx, cy, z0, profile, depthScale = 1) {
+      parts.push({kind:'lathe',name,layer,mat,cx,cy,cz:z0,profile,depthScale});
     },
     // round bar along a 3D polyline
     tube(name, layer, mat, pts, r) {
@@ -51,6 +57,7 @@ export function makeBuilder() {
 }
 
 function partBounds(p) {
+  if(p.kind==='lathe'){const r=Math.max(...p.profile.map(q=>q[0])),zs=p.profile.map(q=>q[1]);return[p.cx-r,p.cy-r*p.depthScale,p.cz+Math.min(...zs),p.cx+r,p.cy+r*p.depthScale,p.cz+Math.max(...zs)];}
   if (p.kind === 'prism') {
     const us = p.pts.map((q) => q[0]), vs = p.pts.map((q) => q[1]);
     const u0 = Math.min(...us), u1 = Math.max(...us), v0 = Math.min(...vs), v1 = Math.max(...vs);
@@ -122,10 +129,11 @@ export const MODELS = [
       const top = p.frameH + p.mat;
       if (p.head) B.box('Headboard', 'Headboard', 'fabric', 0, fl / 2 + 30, 0, fw, 60, Math.max(p.headH, top + 150), { r: 25 });
       if (p.pillows > 0) {
-        const pw = Math.min(700, (p.W - 100) / p.pillows - 20);
+        const margin=Math.min(50,p.W*.05),gap=Math.min(24,p.W*.02),slot=(p.W-2*margin)/p.pillows;
+        const pw = Math.min(900,slot-gap),pd=Math.min(400,pw*.72),ph=Math.min(130,pw*.22);
         for (let i = 0; i < p.pillows; i++) {
-          const x = -p.W / 2 + 50 + (pw + 20) * (i + 0.5);
-          B.box('Pillow', 'Bedding', 'mattress', x, p.L / 2 - 260, top, pw, 400, 130, { r: 55 });
+          const x = (i-(p.pillows-1)/2)*slot;
+          B.box('Pillow', 'Bedding', 'mattress', x, p.L / 2 - pd/2 - 60, top, pw, pd, ph, { r: Math.min(55,ph*.4) });
         }
       }
       if (p.duvet) B.box('Duvet', 'Bedding', 'fabric', 0, -p.L / 2 + p.L * 0.31 - 10, top, p.W + 20, p.L * 0.62, 40, { r: 18 });
@@ -1022,10 +1030,18 @@ const ACC = [
     params: [{ k: 'W', label: 'Width', min: 800, max: 1200, step: 10, def: 1000 }, { k: 'D', label: 'Depth', min: 280, max: 400, step: 10, def: 350 }, { k: 'H', label: 'Height', min: 800, max: 1300, step: 10, def: 1000 }, { k: 'doors', label: 'Doors', type: 'int', min: 1, max: 4, def: 2 }], build: buildShoeCabinet },
 ];
 MODELS.push(...ACC);
+MODELS.push(...studioModels(makeBuilder));
+for(const m of MODELS)if(DETAIL_FAMILIES.has(m.id)){
+  m.params.push({k:'details',label:'Construction details',type:'bool',def:true});
+  if(STORAGE_FAMILIES.has(m.id))m.params.push({k:'openStorage',label:'Show cabinet interior',type:'bool',def:false});
+  if(['vanity','kitchen','island'].includes(m.id))m.params.push({k:'bowlDepth',label:'Basin depth',min:m.id==='vanity'?80:100,max:m.id==='vanity'?180:230,step:5,def:m.id==='vanity'?130:170,...(m.id!=='vanity'?{if:'sink'}:{})});
+  const build=m.build;m.build=p=>refineFurniture(m.id,p,build(p),makeBuilder);
+}
 
 const ORDER = ['bed', 'nightstand', 'wardrobe', 'dresser', 'sofa', 'sectional', 'armchair', 'coffee', 'sidetable', 'tvstand', 'bookshelf',
   'dining', 'chair', 'desk', 'office', 'kitchen', 'island', 'fridge', 'range', 'washer', 'toilet', 'vanity', 'bathtub', 'shower',
-  'balcony_rail', 'fence', 'person_adult', 'person_elderly', 'person_child', 'person_wheelchair', 'cat', 'dog', 'car', 'bicycle', 'picture', 'mirror', 'plant', 'tree', 'shoecab'];
+  'balcony_rail', 'fence', 'person_adult', 'person_elderly', 'person_child', 'person_wheelchair', 'cat', 'dog', 'car', 'bicycle', 'picture', 'mirror', 'plant', 'tree', 'shoecab',
+  'drafting_table','studio_stool','workstation','pinup_panel','locker','banquette'];
 MODELS.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
 
 // Clearance: the free space (metres) a piece wants beyond its footprint. A planning hint shown as a dashed outline in Workbench, never a rule (it blocks and snaps nothing).
@@ -1035,9 +1051,9 @@ const CLEARANCE = { bed: { front: 0.9 }, sofa: { front: 0.8 }, chair: { back: 0.
 const NO_CLEARANCE = new Set(['balcony_rail', 'fence', 'person_adult', 'person_elderly', 'person_child', 'person_wheelchair', 'cat', 'dog', 'car', 'bicycle', 'picture', 'mirror', 'plant', 'tree']);
 for (const m of MODELS) if (!NO_CLEARANCE.has(m.id)) m.clearance = Object.assign({}, CLEARANCE_DEFAULT, CLEARANCE[m.id]);
 
-export const CATS = ['卧室', '客厅', '餐厅与书房', '厨房与家电', '卫浴'];
+export const CATS = [...new Set(MODELS.map(m=>m.cat))];
 // the Furnish tab groups pieces by `group` (English, in this order); a new kind of piece only needs a group name here and in its entry
-export const GROUPS = ['Bedroom', 'Living', 'Dining & Office', 'Kitchen', 'Bathroom', 'Outdoor & Fence', 'People', 'Pets', 'Vehicles', 'Decor', 'Plants', 'Entry'];
+export const GROUPS = ['Bedroom', 'Living', 'Dining & Office', 'Kitchen', 'Bathroom', 'Outdoor & Fence', 'People', 'Pets', 'Vehicles', 'Decor', 'Plants', 'Entry','Studio & Education'];
 
 export function defaults(model) {
   const v = {};
@@ -1051,11 +1067,17 @@ export function paramVisible(q, v) {
   return typeof q.if === 'function' ? q.if(v) : !!v[q.if];
 }
 
+export function normaliseValues(model,values={}){
+  const v={...defaults(model),...values};
+  for(const q of model.params){let x=v[q.k];if(q.type==='bool')x=typeof x==='boolean'?x:q.def;else if(q.type==='select'){if(!q.options.some(o=>o[0]===x))x=q.def;}else{if(!Number.isFinite(x))x=q.def;x=Math.max(q.min,Math.min(q.max,x));if(q.type==='int')x=Math.round(x);}v[q.k]=x;}
+  return v;
+}
 export function buildModel(model, values) {
+  values=normaliseValues(model,values);
   const parts = normalise(model.build(values));
   const b = bounds(parts);
   const dims = { W: n(b[3] - b[0]), D: n(b[4] - b[1]), H: n(b[5] - b[2]) };
-  return { parts, dims };
+  return { parts, dims, values };
 }
 
 export function materialColor(mat, values) {

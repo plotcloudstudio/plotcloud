@@ -204,7 +204,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 </div>
 
 <script type="importmap">
-{ "imports": { "three": "../furniture/three.module.min.js", "three/addons/": "../furniture/addons/", "fflate": "../furniture/fflate.js", "pc/": "../furniture/" } }
+{ "imports": { "three": "../furniture/three.module.min.js", "three/addons/": "../furniture/addons/", "fflate": "../furniture/fflate.js", "pc/models.js": "../furniture/models.js?v=furniture-detail-20261027-1", "pc/geom.js": "../furniture/geom.js?v=furniture-detail-20261027-1", "pc/exporters.js": "../furniture/exporters.js?v=furniture-detail-20261027-1", "pc/": "../furniture/" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -560,7 +560,7 @@ function paramRow(q) {
   } else {
     const num = el('div', 'num');
     const inp = el('input'); inp.type = 'number'; inp.min = q.min; inp.max = q.max; inp.step = q.step; inp.value = v[q.k]; inp.id = id; inp.inputMode = 'numeric';
-    const unit = el('span'); unit.textContent = 'mm';
+    const unit = el('span'); unit.textContent = q.unit || 'mm';
     num.append(inp, unit); head.appendChild(num);
     const rg = el('input'); rg.type = 'range'; rg.min = q.min; rg.max = q.max; rg.step = q.step; rg.value = v[q.k]; rg.id = id + '-r';
     rg.setAttribute('aria-label', t(q.label));
