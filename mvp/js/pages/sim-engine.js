@@ -1,4 +1,4 @@
-import {installStudyWorkflow} from '../simulation-workflow.js?v=study-controls-20261026-1';
+import {installStudyWorkflow} from '../simulation-workflow.js?v=mesh-fidelity-20261027-1';
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
@@ -14,7 +14,7 @@ import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
-import { studioScene, studioDXF } from '../studio-bridge.js';
+import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=mesh-fidelity-20261027-1';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
@@ -109,10 +109,10 @@ const FIELDS = {
   utci: (w, sc) => sunField(w, sc, 'Hours without thermal stress (UTCI 9–26 °C)', '%'),
 };
 function sunField(w, sc, label, unit) {
-    const S0 = w.__sun?.S, R = S0?.lastR || S0?.result?.R, P = R?.prep, pos = S0?.model?.pos; if (!R?.hours || !P?.smpP || !pos || !sc?.masses?.length) return null;
+    const S0 = w.__sun?.S, R = S0?.lastR || S0?.result?.R, P = R?.prep, pos = S0?.model?.pos; if (!R?.hours || !P?.smpP || !pos || (!sc?.masses?.length&&!sc?.meshes?.length)) return null;
     const vals = R.mode === 'utci' ? R.vals.comfort : R.hours;
     let ex = Infinity, ey = Infinity; for (let i = 0; i < pos.length; i += 3) { if (pos[i] < ex) ex = pos[i]; if (pos[i + 1] < ey) ey = pos[i + 1]; }
-    const mx = Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[0]))), my = Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[1]))), dx = ex - mx, dy = ey - my;
+    const mx = sc.geometryBounds?.min?.[0]??Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[0]))), my = sc.geometryBounds?.min?.[1]??Math.min(...sc.masses.flatMap((m) => m.outer.map((q) => q[1]))), dx = ex - mx, dy = ey - my;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const K = P.smpK, SP = P.smpP;
     for (let k = 0; k < R.hours.length; k++) if (K[k] === 0 && Number.isFinite(vals[k])) { const x = SP[3 * k] - dx, y = SP[3 * k + 1] - dy; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (!Number.isFinite(x0)) return null; const cs = Math.max(0.5, Math.sqrt((x1 - x0) * (y1 - y0) / 2400)), nx = Math.ceil((x1 - x0) / cs) + 1, ny = Math.ceil((y1 - y0) / cs) + 1, sum = new Float64Array(nx * ny), cnt = new Uint32Array(nx * ny);
@@ -200,7 +200,13 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     const probe=()=>{
       if(!alive||!fr.isConnected)return;
       const D=doc(),documents=D?[D,...[...D.querySelectorAll('iframe')].filter(f=>!f.hidden&&f.getBoundingClientRect().width).map(f=>{try{return f.contentDocument;}catch{return null;}}).filter(Boolean)]:[];
-      if(fr.dataset.pcSettingsReady==='true'&&documents.some(d=>d.querySelector('.app[data-pc-unified=true]'))&&!documents.some(d=>d.body?.dataset.pcSharedWeatherLoading)){
+      const solarInput=SUN.includes(sim.id)?fr.contentWindow.__sunInputStatus:sim.id==='wind'?fr.contentWindow.__windInputStatus:null;
+      const stormDoc=sim.id==='stormwater'?D?.getElementById('modelWorkspace')?.contentDocument:null,stormError=stormDoc?.getElementById('error')?.textContent.trim(),inputError=solarInput?.state==='error'?solarInput.message:stormError;
+      if(inputError){if(loading)loading.innerHTML=`<div style="padding:24px;max-width:650px"><h2>The model could not be loaded</h2><p>${esc(inputError)}</p><a class="btn" href="#/workspace/${esc(p.id)}">Review model in Workspace</a></div>`;say(esc(inputError),true);return;}
+      let geometryReady=(!SUN.includes(sim.id)&&sim.id!=='wind')||solarInput?.state==='ready'&&solarInput.source?.version===v.id;
+      if(sim.id==='stormwater'){const expected=`${p.name}-v${v.n}.obj`.replace(/[^\w.-]+/g,'-');geometryReady=!!stormDoc?.getElementById('modelMeta')?.textContent.includes(expected)&&stormDoc.getElementById('exportJson')?.disabled===false;}
+      if(geometryReady&&fr.dataset.pcSettingsReady==='true'&&documents.some(d=>d.querySelector('.app[data-pc-unified=true]'))&&!documents.some(d=>d.body?.dataset.pcSharedWeatherLoading)){
+        if(sentScene?.geometryAudit&&!D.getElementById('geometryAuditNote')){const note=D.createElement('p');note.id='geometryAuditNote';note.className='note';note.textContent=`Model geometry: ${sentScene.geometryAudit.objects} surface objects · ${sentScene.geometryAudit.triangles.toLocaleString('en-CA')} triangles · metres. Original meshes, without bounding-box replacement.${SUN.includes(sim.id)?' Glazing is treated as opaque in this solar screening solver.':''}`;(D.getElementById('unifiedResults')||D.getElementById('panelR'))?.prepend(note);}
         fr.style.visibility='visible';fr.dataset.pcVisibleReady='true';loading?.remove();
         if(params.get('autorun')==='workspace'){
           let waits=0;const start=()=>{if(!alive)return;if(weatherFailure||++waits>600){say('Review the inputs, then use Run study to start.',true);return;}const button=$('#runStudy',app);if(button.disabled){setTimeout(start,100);return;}
@@ -220,6 +226,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   const input = (() => {
     // a project with a site or masses in its Plan Studio model: Sun hours reads Plan Studio's own scene (masses, the site's buildings standing on the terrain, location)
     // Outdoor noise reads the same scene with the site's roads, green and water areas added (2026-10-25)
+    if((SUN.includes(sim.id)||sim.id==='wind')&&v.model.studio?.v===2)return studioSolarScene(v,site,p.name,p.id);
     if (cfg.input === 'masses' && (SUN.includes(sim.id) || sim.id === 'noise') && v.model.studio && v.model.studio.v === 2 && ((v.model.studio.masses || []).length || v.model.studio.site))
       return studioScene(v, site, p.name, SUN.includes(sim.id) ? 'sunhours' : sim.id).then((r) => { if (!r.ok) return r; const sc = JSON.parse(r.scene); return { ...r, info: `${sc.masses.filter((m) => m.role === 'proposed').length} blocks, ${sc.masses.filter((m) => m.role === 'context').length} neighbours${sc.roads ? `, ${sc.roads.length} road${sc.roads.length === 1 ? '' : 's'}` : ''}${sc.terrain ? ', terrain' : ''}` }; });
     if (cfg.input === 'masses') { const sc = sunScene(v.model, site, { name, project: p.id, version: v.id }); return Promise.resolve({ ok: true, scene: JSON.stringify(sc), info: `${sc.masses.filter((m) => m.role === 'proposed').length} blocks, ${sc.masses.filter((m) => m.role === 'context').length} neighbours` }); }
@@ -298,7 +305,8 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
       const site3d = { ...v.model, components: v.model.components.filter((c) => ['wall', 'slab', 'roof', 'mass', 'terrain', 'imported'].includes(c.type)) };
       const set = (id, val) => { const el = m.getElementById(id); if (el && val != null) { el.value = String(val); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); filled[id] = val; } };
       set('units', [...(m.getElementById('units')?.options || [])].find((o) => /met/i.test(o.textContent))?.value); set('axis', [...(m.getElementById('axis')?.options || [])].find((o) => /y up/i.test(o.textContent))?.value);
-      giveFile(m.getElementById('file'), await obj(site3d).text(), `${p.name}-v${v.n}.obj`.replace(/[^\w.-]+/g, '-'), 'text/plain');
+      const converted=v.model.studio?.v===2?await studioOBJ(v,site,p.name):{text:await obj(site3d).text()};if(converted.geometryAudit)sentScene={geometryAudit:converted.geometryAudit};
+      giveFile(m.getElementById('file'), converted.text, `${p.name}-v${v.n}.obj`.replace(/[^\w.-]+/g, '-'), 'text/plain');
       setTimeout(() => { set('rain', A.rain); set('duration', A.duration); }, 600);
       loaded = true; say(`Model: ${esc(name)} as OBJ · design storm ${A.rain} mm/h for ${A.duration} min from Account`);
     }
@@ -340,6 +348,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if(SUN.includes(sim.id)&&fr.contentWindow.__sun?.S?.lastR?.mode){const s=fr.contentWindow.__sun.S,r=s.lastR,c=fr.contentWindow.__sunClimate?.CLIM?.E;settings.analysisPeriod={hours:r.clim.period,count:r.clim.hoursN};settings.climateFile=c?{name:c.name,station:c.station,lat:c.lat,lon:c.lon}:null;settings.grid=r.prep.s;settings.method=r.mode==='radiation'?'Perez sky, 145 patches, sun in 3° groups':'UTCI with SolarCal MRT';if(r.mode==='utci')settings.utci={hoursCounted:r.clim.counted,sunUpOnly:r.clim.day,windExposure:r.clim.alpha};settings.units=r.mode==='radiation'?'kWh/m²':'% of counted hours';}
     else if(sim.id==='sunhours'){const s=fr.contentWindow.__sun?.S,r=s?.lastR;if(r){settings.analysisPeriod=r.period||{start:r.ds,end:r.ds,days:1,t0:s.t0,t1:s.t1};settings.grid=r.prep.s;settings.timeStep=s.step;settings.timeZone={...s.loc};settings.units=r.period?'cumulative sunlight hours':'sunlight hours';}}
     settings.provenance={schema:1,engine:sim.id,engineRelease:ENGINE_RELEASE,versionId:v.id,recordedAt:new Date().toISOString(),site:{label:site?.label,lat:site?.lat,lon:site?.lon,north:site?.north??0,tz:site?.tz},note:'Host context at save time; study overrides and effective run settings are recorded separately.'};
+    if(sentScene?.geometryAudit)settings.geometry=S.clone(sentScene.geometryAudit);
     if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
     try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
     try { fr.contentWindow.postMessage({ pc: 1, t: 'saved', count: p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).length }, '*'); } catch (e) { }

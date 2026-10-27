@@ -644,7 +644,7 @@ const PCS = (() => {
     for (const p of A) for (let i = 0; i < B.length; i++) d = Math.min(d, segD(p, B[i], B[(i + 1) % B.length]));
     for (const p of B) for (let i = 0; i < A.length; i++) d = Math.min(d, segD(p, A[i], A[(i + 1) % A.length])); return d; }
   // what is being studied: the proposed masses, else the analysis circle, else the site point
-  function target(scene) { const P = scene.masses.filter((m) => m.role !== 'context' && Array.isArray(m.outer) && m.outer.length > 2);
+  function target(scene) { const P = [...scene.masses,...(scene.meshes||[])].filter((m) => m.role !== 'context' && m.role!=='terrain' && Array.isArray(m.outer) && m.outer.length > 2);
     if (P.length) { const all = P.flatMap((m) => m.outer); return { polys: P.map((m) => m.outer), c: cen(all), h: Math.max(...P.map((m) => m.h - (m.base || 0))), proposed: true }; }
     const an = scene.analysis; return { polys: [], c: an ? [an.cx, an.cy] : [0, 0], h: 0, r: an ? an.r : 0, proposed: false }; }
   function distTo(t, outer) { if (t.polys.length) return Math.min(...t.polys.map((p) => polyDist(p, outer))); return Math.max(0, polyDist([t.c, t.c, t.c], outer)); }
@@ -1654,12 +1654,13 @@ function readWindScene(j) {
   if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Plan Studio or Sun hours, or open a 3D file.');
   const W = PCS.windMasses(j), ok = W.masses.filter((m) => Array.isArray(m.outer) && m.outer.length > 2 && m.h > (m.base || 0)), b0 = ok.length ? Math.min(...ok.map((m) => m.base || 0)) : 0;
   const geoms = []; let skipped = W.masses.length - ok.length;
+  for(const m of j.meshes||[]){const p=m.positions;if(!Array.isArray(p)||!p.length||p.length%9||p.some(n=>!Number.isFinite(n)))throw Error('Invalid imported mesh: '+(m.name||m.id));const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geoms.push(g);}
   for (const m of ok) { const base = m.role === 'context' ? b0 : (m.base || 0); if (!(m.h > base)) { skipped++; continue; }
     const sh = new THREE.Shape(m.outer.map((p) => new THREE.Vector2(p[0], p[1]))); for (const hr of m.holes || []) sh.holes.push(new THREE.Path(hr.map((p) => new THREE.Vector2(p[0], p[1]))));
     const g = new THREE.ExtrudeGeometry(sh, { depth: m.h - base, bevelEnabled: false }); g.translate(0, 0, base); geoms.push(g); }
   if (!geoms.length) throw new Error('This scene has no masses with a height.');
   const kept = Object.assign({}, j, { masses: ok }), nC = ok.filter((m) => m.role === 'context').length;
-  return { geoms, up: 'z', unit: 1, unitKnown: true, scene: j, wscene: kept, wind: { n: nC, dropped: W.dropped, R: W.R, proposed: W.t.proposed, nP: ok.length - nC },
+  return { geoms, up: 'z', unit: 1, unitKnown: true, scene: j, wscene: kept, wind: { n: nC, dropped: W.dropped, R: W.R, proposed: W.t.proposed, nP: ok.length - nC+(j.meshes||[]).filter(m=>m.role!=='context').length },
     warn: skipped ? `${skipped} mass${skipped > 1 ? 'es' : ''} without a valid height were skipped.` : '' };
 }
 const escH = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1695,6 +1696,7 @@ async function ctxRerun() {
 window.__windCtx = { ctxCheck, ctxRerun, windInflHTML, get PREV() { return PREV; } };
 
 async function loadFile(file) {
+  window.__windInputStatus={state:'loading'};
   if (!RERUN) PREV = null;
   if (S.busy) { simToken++; }
   msg('#loadmsg', `Reading ${file.name}…`);
@@ -1717,7 +1719,8 @@ async function loadFile(file) {
     if (r.scene) tips.push(r.wind.n ? `Surroundings from the saved site go into the grid as solid blocks (read-only)${r.wind.dropped ? `; ${r.wind.dropped} farther ones are left out` : ''}. Terrain is not modeled here: flat ground.` : '');
     if (!r.scene) tips.push('Remove trees, people and furniture first: the solver treats every object as a solid wall.');
     msg('#loadmsg', tips.join(' '), r.warn ? 'warn' : '');
-  } catch (e) { msg('#loadmsg', e.message || 'The file could not be read.', 'warn'); }
+    window.__windInputStatus={state:'ready',source:r.scene?.source||null,triangles:S.model.tris};
+  } catch (e) {const message=e.message||'The file could not be read.';window.__windInputStatus={state:'error',message};msg('#loadmsg', message, 'warn'); }
 }
 $('#pick').addEventListener('click', () => $('#file').click());
 $('#file').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });

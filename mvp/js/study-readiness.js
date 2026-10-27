@@ -9,6 +9,10 @@ export function inspectStudy(project,version,id,{site=project?.sharedConditions?
  if(!version?.model)add('version','error','Save a model version','Studies use a saved snapshot. Your working draft has not been saved yet.',workspace);
  else{
   const model=version.model,st=model.studio,components=model.components||[],walls=st?.walls||components.filter(c=>c.type==='wall');
+  const hidden=new Set(st?.hiddenIds||[]),off=new Set((model.layers||[]).filter(l=>l.visible===false).map(l=>l.name)),imports=(st?.imports||[]).filter(o=>!hidden.has(o.id)&&!off.has(o.layer||'Imported'));
+  if(imports.length&&(project?.runs||[]).some(r=>r.versionId===version.id&&!r.settings?.geometry))add('legacy-import-runs','warning','Rerun older imported-model results','Earlier runs may have used simplified or incomplete imported geometry. A result without a geometry audit has not been verified against the original imported surfaces.');
+  if(PLAN.has(id)&&imports.some(o=>!['mass','terrain'].includes(o.type)))add('mesh-semantics','error','Prepare imported geometry for this indoor study','The imported surfaces are retained, but this engine needs native analysis walls, closed rooms and relevant openings. A visible 3D mesh is not yet a room or window definition. No sample model or bounding-box substitute will be analyzed.',workspace);
+  if(id==='structure'&&imports.length)add('structural-semantics','error','Define the structural system before analysis','The imported visual geometry has no verified analytical members, supports, material properties or loads. The default structural grid must not be presented as analysis of this imported building.',workspace);
   add('version','ok',`Saved version v${version.n}`,'This snapshot is kept separately from later model edits.');
   if(draftChanged??(project?.draft&&JSON.stringify(project.draft)!==JSON.stringify(model)))add('draft','warning','Unsaved design changes','This study uses the selected saved version. Save a new version to analyse your latest edits.',workspace);
   const units=st?.units||model.units;

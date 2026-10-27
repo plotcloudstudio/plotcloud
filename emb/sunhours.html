@@ -662,7 +662,7 @@ const PCS = (() => {
     for (const p of A) for (let i = 0; i < B.length; i++) d = Math.min(d, segD(p, B[i], B[(i + 1) % B.length]));
     for (const p of B) for (let i = 0; i < A.length; i++) d = Math.min(d, segD(p, A[i], A[(i + 1) % A.length])); return d; }
   // what is being studied: the proposed masses, else the analysis circle, else the site point
-  function target(scene) { const P = scene.masses.filter((m) => m.role !== 'context' && Array.isArray(m.outer) && m.outer.length > 2);
+  function target(scene) { const P = [...scene.masses,...(scene.meshes||[])].filter((m) => m.role !== 'context' && m.role!=='terrain' && Array.isArray(m.outer) && m.outer.length > 2);
     if (P.length) { const all = P.flatMap((m) => m.outer); return { polys: P.map((m) => m.outer), c: cen(all), h: Math.max(...P.map((m) => m.h - (m.base || 0))), proposed: true }; }
     const an = scene.analysis; return { polys: [], c: an ? [an.cx, an.cy] : [0, 0], h: 0, r: an ? an.r : 0, proposed: false }; }
   function distTo(t, outer) { if (t.polys.length) return Math.min(...t.polys.map((p) => polyDist(p, outer))); return Math.max(0, polyDist([t.c, t.c, t.c], outer)); }
@@ -910,6 +910,7 @@ function readableFileError(error, file) {
 function readScene(j) {
   if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Plan Studio or Site Context, or open a 3D file.');
   const geoms = [], roles = [], refs = []; let skipped = 0;
+  for(const m of j.meshes||[]){const p=m.positions;if(!Array.isArray(p)||!p.length||p.length%9||p.some(n=>!Number.isFinite(n)))throw Error('Invalid mesh triangles in '+(m.name||m.id));const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geoms.push(g);roles.push(m.role==='context'?'context':m.role==='terrain'?'terrain':'proposed');refs.push(m);}
   for (const m of j.masses) {
     if (!Array.isArray(m.outer) || m.outer.length < 3 || !(m.h > m.base)) { skipped++; continue; }
     const sh = new THREE.Shape(m.outer.map((p) => new THREE.Vector2(p[0], p[1]))); for (const hr of m.holes || []) sh.holes.push(new THREE.Path(hr.map((p) => new THREE.Vector2(p[0], p[1]))));
@@ -1412,6 +1413,7 @@ $('#toWind').addEventListener('click', () => { const sc = S.raw && S.raw.scene; 
 window.__sunCtx = { ctxCheck, ctxRerun, influenceHTML, get PREV() { return PREV; } };
 
 async function loadFile(file) {
+  window.__sunInputStatus={state:'loading'};
   if (!RERUN) PREV = null;
   if (S.busy) { runToken++; S.busy = false; lockUI(false); $('#prog').hidden = true; $('#setProg').hidden = true; $('#stopSet').hidden = true; $('#busy').hidden = true; }
   msg('#loadmsg', `Reading ${file.name}…`);
@@ -1428,13 +1430,14 @@ async function loadFile(file) {
     if (r.scene) applyScene(r.scene);
     buildModel(); setNote(); ctxCheck(); $('#windRow').hidden = !(r.scene && window.parent !== window);
     const tips = [];
-    if (r.scene) { const sc = r.scene, nP = sc.masses.filter((m) => m.role !== 'context').length, nC = sc.masses.filter((m) => m.role === 'context').length;
+    if (r.scene) { const sc = r.scene, all=[...sc.masses,...(sc.meshes||[])],nP = all.filter((m) => m.role !== 'context').length, nC = all.filter((m) => m.role === 'context').length;
       $('#fileinfo b').textContent = sc.name || file.name; $('#fileinfo span').textContent = `${nP} proposed mass${nP === 1 ? '' : 'es'} · ${nC} context building${nC === 1 ? '' : 's'} (shadows only)${sc.terrain ? ' · terrain' : ''}`;
       tips.push(nC ? 'Context buildings cast shadows but are not measured.' : '', ...(sc.notes || [])); }
     if (r.warn) tips.push(r.warn);
     if (!r.unitKnown) tips.push('Check the size below. If it is wrong, change the units. If the model is lying on its side, switch the up axis.');
     msg('#loadmsg', tips.filter(Boolean).join(' ') || 'Loaded. Set true north, then calculate.', r.warn || (r.scene && r.scene.source && r.scene.source.fixture) ? 'warn' : '');
-  } catch (e) { msg('#loadmsg', readableFileError(e, file), 'warn'); }
+    window.__sunInputStatus={state:'ready',source:r.scene?.source||null,triangles:S.model.tris};
+  } catch (e) {const message=readableFileError(e,file);window.__sunInputStatus={state:'error',message};msg('#loadmsg', message, 'warn'); }
 }
 $('#pick').addEventListener('click', () => $('#file').click());
 $('#file').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });

@@ -5,6 +5,7 @@ import { SIMS, simImg } from '../data.js';
 import { $, $$, esc, currentProject, currentVersion, LIVE, img } from '../app.js';
 
 export async function render(app, [simId], params, context={}) {
+  if(simId==='noise'){app.innerHTML='<div class="wrap"><h1>Study removed</h1><p>Outdoor Noise is no longer available.</p><a class="btn" href="#/simulations">All studies</a></div>';return;}
   const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
   if (sim) return (await import('./sim-engine.js')).render(app, sim, params,context);   // every simulation runs its PlotCloud engine

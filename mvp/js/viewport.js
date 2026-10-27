@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { loadRhino } from './export3d.js';
+import {rhinoGeometry} from './rhino-geometry.js?v=mesh-fidelity-20261027-1';
 
 const MAT = {
   wall: 0xf1f0ec, slab: 0xe6e3dc, roof: 0xdedbd4, mass: 0xd2cec6, terrain: 0xe9e7e1, furniture: 0xd9d3c7, imported: 0xe6e3dc, window: 0x9cc3e0, room: 0xe8b04a,
@@ -118,20 +119,14 @@ export function createViewport(host, { onPick } = {}) {
 export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
   const ext = file.name.toLowerCase().split('.').pop(), buf = await file.arrayBuffer();
   if (file.size > 25 * 1048576) throw Error('This file is over 25 MB. Export a simplified model for the prototype.');
-  let obj, fileUp = 'y';
+  let obj, fileUp = 'y',audit=null;
   if (ext === 'obj') { const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js'); obj = new OBJLoader().parse(new TextDecoder().decode(buf)); }
   else if (ext === 'stl') { const { STLLoader } = await import('three/addons/loaders/STLLoader.js'); obj = new THREE.Mesh(new STLLoader().parse(buf)); fileUp = 'z'; }
   else if (ext === 'glb' || ext === 'gltf') { const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js'); obj = (await new GLTFLoader().parseAsync(buf, '')).scene; }
   else if (ext === '3dm') {   // Rhino: meshes, and the render meshes of surfaces, polysurfaces and extrusions; the file's units and layers are kept
     const rh = await loadRhino(), doc = rh.File3dm.fromByteArray(new Uint8Array(buf)); if (!doc) throw Error('This .3dm file could not be read.');
     const U = rh.UnitSystem, us = doc.settings().modelUnitSystem, k = us === U.Millimeters ? 0.001 : us === U.Centimeters ? 0.01 : us === U.Inches ? 0.0254 : us === U.Feet ? 0.3048 : us === U.Kilometers ? 1000 : 1;
-    unit = k; fileUp = 'z'; obj = new THREE.Group(); const L = doc.layers(), names = []; for (let i = 0; i < L.count; i++) names.push(L.get(i).name);
-    const loader = new THREE.BufferGeometryLoader(), O = doc.objects(); let skipped = 0;
-    for (let i = 0; i < O.count; i++) { const ro = O.get(i), g = ro.geometry(), at = ro.attributes(), ms = [];
-      if (g instanceof rh.Mesh) ms.push(g); else if (g instanceof rh.Brep) { for (let f = 0; f < g.faces().count; f++) { const m = g.faces().get(f).getMesh(rh.MeshType.Any); if (m) ms.push(m); } } else if (g instanceof rh.Extrusion) { const m = g.getMesh(rh.MeshType.Any); if (m) ms.push(m); }
-      if (!ms.length) { skipped++; continue; } const grp = new THREE.Group(); grp.name = at.name || names[at.layerIndex] || `Object ${i + 1}`; grp.userData.layer = names[at.layerIndex] || '';
-      for (const m of ms) grp.add(new THREE.Mesh(loader.parse(m.toThreejsJSON()))); obj.add(grp); }
-    doc.delete(); if (!obj.children.length) throw Error(skipped ? `None of the ${skipped} objects has a render mesh. In Rhino, shade the model once (or use Mesh) and save again.` : 'No objects in this .3dm file.');
+    unit = k; fileUp = 'z';try{const result=rhinoGeometry(doc,rh,THREE);obj=result.object;audit={...result.audit,unitScale:k,axis:'z-up'};}finally{doc.delete();}if(!obj.children.length)throw Error('No placed surface meshes in this .3dm file. Unplaced block definitions are not scene geometry.');
   }
   else throw Error('The prototype reads .obj, .stl, .glb and .3dm. SketchUp and IFC files open in the full tools.');
   const zUp = (up === 'auto' ? fileUp : up) === 'z';
@@ -153,5 +148,5 @@ export async function importModel(file, { unit = 1, up = 'auto' } = {}) {
   // drop the model onto the ground plane at the origin
   const minX = Math.min(...out.map((c) => c.g.x)), minY = Math.min(...out.map((c) => c.g.y)), minZ = Math.min(...out.map((c) => c.g.z));
   for (const c of out) { c.g.x = +(c.g.x - minX).toFixed(3); c.g.y = +(c.g.y - minY).toFixed(3); c.g.z = +(c.g.z - minZ).toFixed(3); }
-  return { components: out, triangles: Math.round(tris) };
+  return { components: out, triangles: Math.round(tris),audit };
 }

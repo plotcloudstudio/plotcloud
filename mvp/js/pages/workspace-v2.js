@@ -518,9 +518,11 @@ export function render(app, [pid]) {
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
       <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb · .3dm</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm" hidden>
+      <button type="button" class="btn sm" id="importAsNew">Import as new model</button><input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note">Import as new model starts a separate project without the sample or current geometry.</p>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status"></p>
+      ${M().importAudit?`<p class="note">Last Rhino import: ${M().importAudit.meshObjects} placed surface objects · ${Number(M().importAudit.triangles).toLocaleString('en-CA')} triangles · converted to metres. ${M().importAudit.definitionObjects} block-definition objects were excluded from the scene unless placed as instances.</p>`:''}
       <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes become part of the model: an outline in Plan, the mesh in Perspective; drag one to move it.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Site</span></button></h2><div class="w3-accb">
       <p class="note">${M().studio?.site ? `${esc((M().studio.site.origin.label || "").split(",")[0] || "Site")}: ${M().studio.site.buildings.filter((b) => !b.excluded).length} buildings, ${(M().studio.site.roads || []).length} roads${M().studio.site.terrain ? `, ground ${M().studio.site.terrain.relief} m` : ""} · ${esc(M().studio.site.sources?.[0]?.attribution || "")}` : "No site yet."}</p><a class="btn sm" id="siteBtn" href="#/new-site?project=${p.id}">${M().studio?.site ? "Choose another site on the map" : "Choose the site on the map"}</a>
@@ -541,17 +543,20 @@ export function render(app, [pid]) {
         msg.textContent = `Saved ${base}.${k} (${(blob.size / 1024).toFixed(0)} KB).`; }
       catch (e) { msg.textContent = e.message || 'The file could not be written.'; } finally { b.disabled = false; }
     });
-    const doImport = async (f) => { const msg = $('#impMsg', host); msg.textContent = 'Reading ' + f.name + '…';
+    const doImport = async (f,asNew=false) => { const msg = $('#impMsg', host); msg.textContent = 'Reading ' + f.name + '…';
       try { const r = await importModel(f, { unit: +$('#unit', host).value, up: $('#up', host).value }), by = {};
         if (!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
-        const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...(srcLayer && M().layers.some((l) => l.name === srcLayer) ? { ...c, layer: srcLayer } : classify(c)) })); M().meshes = M().meshes || {};   // a Rhino layer that the project has keeps its objects
-        for (const c of list) { by[c.layer] = (by[c.layer] || 0) + 1; M().meshes[c.id] = c.mesh; open.add(c.layer); if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#cfcac0', visible: true, locked: false }); }
+        const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...classify(c),...(srcLayer?{layer:srcLayer}:{}) }));
+        if(asNew){const layers=[...new Set(list.map(c=>c.layer))].map(name=>({name,color:LAYER_COLORS[name]||'#cfcac0',visible:true,locked:false})),next=S.createProject(f.name.replace(/\.[^.]+$/,''),{units:'m',layers,components:list,...(r.audit?{importAudit:{...r.audit,triangles:r.triangles,fileName:f.name}}:{})});setCurrent(next);location.hash='#/workspace/'+next.id;return;}
+        M().meshes = M().meshes || {};for (const c of list) { by[c.layer] = (by[c.layer] || 0) + 1; M().meshes[c.id] = c.mesh; open.add(c.layer); if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#cfcac0', visible: true, locked: false }); }
         for (const I2 of ready()) if (I2.ws.importMeshes) I2.ws.importMeshes(M().meshes);
         INST.plan.ws.addImports(list.map(({ mesh, ...c }) => ({ ...c, tris: Math.round(mesh.length / 9) })));   // Plan Studio keeps it; the sync brings it to the other panes and the project
+        if(r.audit)p.draft.importAudit={...r.audit,triangles:r.triangles,fileName:f.name};
         UI.open = [...open]; saveUI(); persist(); refresh(true);
         msg.textContent = `${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`; }
       catch (e) { msg.textContent = e.message; } };
     $('#pick', host).onclick = () => $('#file', host).click();
+    $('#importAsNew',host).onclick=()=>$('#newModelFile',host).click();$('#newModelFile',host).onchange=e=>{const f=e.target.files[0];if(f)doImport(f,true);e.target.value='';};
     $('#file', host).onchange = (e) => { const f = e.target.files[0]; if (f) doImport(f); e.target.value = ''; };
     const drop = $('#drop', host);
     ['dragenter', 'dragover'].forEach((n) => drop.addEventListener(n, (e) => { e.preventDefault(); drop.classList.add('over'); }));

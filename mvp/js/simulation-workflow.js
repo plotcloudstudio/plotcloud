@@ -56,7 +56,7 @@ export function installStudyWorkflow({ frame, id, runButton, stopButton, status,
     // Expensive runs retain the engine's own confirmation, estimate and Cancel action.
     setTimeout(() => {
       if (stopped) return;
-      const confirm = ['longGo', 'lvStart'].map(id => doc.getElementById(id)).find(el => {
+      const confirm = [...['longGo', 'lvStart'].map(id => doc.getElementById(id)),...doc.querySelectorAll('#gwarn [data-gw]')].find(el => {
         if (!el) return false;
         for (let p = el; p; p = p.parentElement) if (p.hidden) return false;
         return true;
