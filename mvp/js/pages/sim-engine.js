@@ -1,3 +1,4 @@
+import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-service-20261027-2';
 import {installStudyWorkflow} from '../simulation-workflow.js?v=import-feedback-20261027-1';
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile,ensureProjectClimate,cancelProjectClimate} from '../project-climate.js';
@@ -136,7 +137,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   if (!p) { app.innerHTML = '<div class="wrap"><h1>Import a model to begin.</h1><p>Review its source units and metre dimensions here; a project version is created automatically.</p></div>';mountStudyImport(app.querySelector('.wrap'),sim.id);tell({ ok: false, why: 'No project.' }); return; }
   if (!batch) setCurrent(p);
   let automaticWeatherError='';const weatherSite=S.conditionsOf(p).site;
-  if(WEATHER.includes(sim.id)&&!weatherSite.sample&&(!weatherSite.climate||weatherSite.climate.automatic)){
+  if(weatherDownloadAvailable()&&WEATHER.includes(sim.id)&&!weatherSite.sample&&(!weatherSite.climate||weatherSite.climate.automatic)){
     const start=performance.now();app.innerHTML='<div class="wrap"><h1>Preparing project weather…</h1><p id="automaticWeatherProgress" role="status" aria-live="polite">Finding nearby EPW stations…</p><p class="note" id="automaticWeatherElapsed"></p><button type="button" class="btn" id="cancelAutomaticWeather">Cancel weather import</button> <a class="btn" href="#/project-settings/'+esc(p.id)+'?return='+sim.id+'">Review weather stations or upload EPW</a></div>';
     $('#cancelAutomaticWeather',app).onclick=()=>cancelProjectClimate(p);
     const update=e=>{if(e.detail.projectId===p.id&&(!context.isCurrent||context.isCurrent())){const el=$('#automaticWeatherProgress',app);if(el)el.textContent=e.detail.message;}};addEventListener('pc-project-climate',update);const timer=setInterval(()=>{const el=$('#automaticWeatherElapsed',app);if(el)el.textContent=((performance.now()-start)/1000).toFixed(1)+' s elapsed';},250);

@@ -1,3 +1,4 @@
+import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-service-20261027-2';
 // New project from the map (#/new-site): find the place, set the study area, draw or pick your plot, load what is around it
 // from open data, and start the project with the site already in Plan Studio (buildings, roads, water, green, trees, terrain).
 // Nothing is invented: what a source does not have is shown as missing; heights that are guessed are marked as estimates.
@@ -136,13 +137,13 @@ export async function render(app, _, params = new URLSearchParams()) {
       if (into) {   // the project keeps its model; its site is replaced (the change shows as unsaved until a version is saved)
         if (!into.draft.studio) throw Error('Open this project in the Workspace once, then choose its site.');
         into.draft.studio.site = site; into.draft.studio.north = 0; into.site = S.clone(psite); into.siteLinked = false; into.sharedConditions.site = S.clone(psite); into.updated = new Date().toISOString(); S.save();
-        ensureProjectClimate(into).catch(()=>{});setCurrent(into); toast(`New site for ${into.name}: save a version to keep it`); location.hash = '#/workspace/' + into.id; return;
+        if(weatherDownloadAvailable())ensureProjectClimate(into).catch(()=>{});setCurrent(into); toast(`New site for ${into.name}: save a version to keep it`); location.hash = '#/workspace/' + into.id; return;
       }
       const studio = toStudio({ layers: [], components: [] }, psite, { name }); studio.site = site; studio.north = 0; studio.name = name;
       const layers = Object.keys(LAYER_COLORS).filter((k) => k !== 'Imported' && k !== 'Context').map((n) => ({ name: n, color: LAYER_COLORS[n], visible: true, locked: n === 'Site' }));
       const p = S.createProject(name, { units: 'm', north: 0, layers, components: [], studio });
       p.site = S.clone(psite); p.siteLinked = false; p.sharedConditions.site = S.clone(psite); S.saveVersion(p, 'Site from OpenStreetMap');
-      ensureProjectClimate(p).catch(()=>{});setCurrent(p); setCurrentVersion(p, p.versions.at(-1).id); toast(`${name}: ${psite.buildings} buildings around your plot`); location.hash = '#/workspace/' + p.id;
+      if(weatherDownloadAvailable())ensureProjectClimate(p).catch(()=>{});setCurrent(p); setCurrentVersion(p, p.versions.at(-1).id); toast(`${name}: ${psite.buildings} buildings around your plot`); location.hash = '#/workspace/' + p.id;
     } catch (er) { msg.textContent = er.message || 'The project could not be made.'; btn.disabled = false; }
   };
   window.__newsite = { map, center, setPlot: (p) => { plot = p; plotUI(); }, get data() { return data; }, get plot() { return plot; } };
