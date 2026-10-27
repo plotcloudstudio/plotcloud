@@ -1,6 +1,6 @@
 // The Workspace (#/workspace): Plan Studio in one view (chosen at the top left), with the Workspace's own tools, Rhino-style panels on the
-// right (Layers, Versions, Explode, Walkthrough, Interior elevation: pick which ones with the gear) and the status bar. Nothing in it scrolls:
-// a list that does not fit is cut into pages.
+// right (Properties, Layers, Versions; additional views under View tools) and the status bar.
+// The command bar is outside the viewport; long panel lists scroll without pagination.
 //   Plan        = Plan Studio's 2D (emb/modeler.html?ws=plan): its wall, room, door, window and furniture tools, handles, toolbars and clearance.
 //   Perspective = Plan Studio's 3D (?ws=persp): its gumball, Bird / Walkthrough / Explode, plus a Ghosted / Wireframe display switch.
 //   (Shaded     = the earlier solid view (viewport2.js); since 2026-10-25 not shown: imported meshes and the site are in Plan Studio's
@@ -9,10 +9,11 @@
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
-import { LAYER_COLORS } from '../data.js';
+import {mountWorkbenchShell} from '../workbench-shell.js?v=rhino-20261027-1';
+import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject, setCurrent, setCurrentVersion } from '../app.js';
 import { importModel } from '../viewport.js';
-import { createViewport2 } from '../viewport2.js';
+import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js';   // Plan Studio's parametric furniture: the same ids Plan Studio places
 import { TOOL_ICONS } from '../tool-icons.js';
@@ -138,7 +139,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ws10-gray-levels-20261026`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=rhino-workbench-20261027-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -204,6 +205,9 @@ export function render(app, [pid]) {
   </footer></div>`;
 
   // ---- the panes: Plan Studio instances that call window.__wsHub; they are told the model, layers, locks, snaps and selection
+  const propertyPanel=document.createElement('section');propertyPanel.className='pane w3-tp wb-properties';propertyPanel.dataset.tab='properties';propertyPanel.setAttribute('role','tabpanel');
+  propertyPanel.innerHTML='<div id="propertyBody"><h2>Properties</h2><p class="note">Select an object in the viewport or Layers to inspect its properties.</p></div>';
+  propertyPanel.append($('#propsWrap',app));$('.w3-tbody',app).prepend(propertyPanel);
   const INST = { plan: { el: $('#fPlan', app) }, persp: { el: $('#fPersp', app) }, props: { el: $('#fProps', app) } };
   const ready = () => Object.values(INST).filter((x) => x.ready);
   const activePane = () => INST[UI.view === 'persp' ? 'persp' : 'plan'];
@@ -327,7 +331,7 @@ export function render(app, [pid]) {
       + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan')
       + it('data-view="persp"', UI.view === 'persp', 'Perspective');
     const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
-    $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;
+    $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;$('#dBtn',app).parentElement.hidden=plan;
     $('#dMenu', app).innerHTML = DISPLAYS.map(([k, n]) => it(`data-disp="${k}"`, cur === k, n)).join('');
     $$('#vMenu [data-view]', app).forEach((x) => x.onclick = async () => { closeMenus(); const v = x.dataset.view;
       if (v === 'plan' || v === 'ceiling' || v === 'elev') { showView('plan'); if (x.dataset.level) for (const I2 of ready()) I2.ws.level(x.dataset.level); if (INST.plan.ready) await INST.plan.ws.view(v === 'ceiling' ? 'ceiling' : v === 'elev' ? 'elev' : 'plan'); }
@@ -345,41 +349,26 @@ export function render(app, [pid]) {
   const paneT = setInterval(paneUI, 700);
 
 
-  // ---- no scroll bars anywhere in the Workspace: a list that would not fit its box is cut into pages (‹ 1 / 3 ›)
-  const PG = {}, FITS = {}, CUR = {};
+  // Continuous lists retain their entries and native scroll position on resize.
   function fit(box, items, key) {
-    FITS[key] = () => fit(box, items, key);
-    box.querySelectorAll(`.w3-pager[data-pk="${key}"]`).forEach((e) => e.remove()); items.forEach((e) => e.classList.remove('w3-pghide'));
-    if (!box.isConnected || !box.offsetParent || !items.length) return;
-    const over = () => box.scrollHeight > box.clientHeight + 1; if (!over()) return;
-    const pg = document.createElement('div'); pg.className = 'w3-pager'; pg.dataset.pk = key;
-    pg.innerHTML = '<button type="button" data-pg="-1" aria-label="Previous page">‹</button><span></span><button type="button" data-pg="1" aria-label="Next page">›</button>';
-    const par = items.at(-1).parentElement; if (par === box || items.some((e) => e.parentElement !== par)) box.appendChild(pg); else par.after(pg);
-    const show = (per, k) => items.forEach((e, i) => e.classList.toggle('w3-pghide', Math.floor(i / per) !== k));
-    let lo = 1, hi = items.length - 1; while (lo < hi) { const m = Math.ceil((lo + hi) / 2); show(m, 0); if (over()) hi = m - 1; else lo = m; }
-    const per = lo, n = Math.ceil(items.length / per), cur = items.findIndex((e) => e.matches('[aria-current="true"],[aria-pressed="true"]') || e.querySelector('[aria-current="true"],[aria-pressed="true"]'));
-    const go = (k) => { PG[key] = Math.max(0, Math.min(n - 1, k)); show(per, PG[key]); pg.querySelector('span').textContent = `${PG[key] + 1} / ${n}`; pg.firstChild.disabled = PG[key] === 0; pg.lastChild.disabled = PG[key] === n - 1; };
-    pg.onclick = (e) => { const b = e.target.closest('[data-pg]'); if (b) go(PG[key] + +b.dataset.pg); };
-    const jump = cur >= 0 && cur !== CUR[key]; CUR[key] = cur; go(jump ? Math.floor(cur / per) : PG[key] || 0);   // a new pick: its page
+    box.querySelectorAll('.w3-pager').forEach(e=>e.remove());items.forEach(e=>e.classList.remove('w3-pghide'));
   }
-  const refit = () => { for (const f of Object.values(FITS)) f(); };
-  const ro = new ResizeObserver(() => refit()); ro.observe($('.w2', app));
 
   // ---- right: Rhino-style panels. The gear chooses which ones show; Layers always does.
-  const PANELS = [['layers', 'Layers', I('<path d="M12 4l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/>')],
+  const PANELS = [['properties','Properties',I('<path d="M5 5h14M5 12h14M5 19h14"/>')],['layers', 'Layers', I('<path d="M12 4l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/>')],
     ['versions', 'Versions', I('<circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7.5v9M18 10c0 4.5-6.5 3.5-10.6 7"/>')],
     ['explode', 'Explode', I('<path d="M4 7l8-3.5L20 7l-8 3.5z"/><path d="M4 17l8-3.5 8 3.5-8 3.5z"/><path d="M12 11.5v1.5" stroke-dasharray="1 1.5"/>')],
     ['walk', 'Walkthrough', I('<circle cx="13" cy="4.5" r="1.8"/><path d="M10.5 21l2-6 3 3v3M8.5 12.5l2.5-5 4 1.2 2 3.8M12.8 8.5l-1.3 5"/>')],
     ['elev', 'Interior elevation', I('<rect x="3" y="4" width="18" height="16"/><path d="M6.5 20v-9h4v9M13.5 9h4.5v5h-4.5z"/>')]];
   let lastMode = null;
   function tabsUI() {
-    UI.tabs = PANELS.map(([k]) => k).filter((k) => k === 'layers' || UI.tabs.includes(k)); if (!UI.tabs.includes(UI.tab)) UI.tab = 'layers';
-    $('#tabList', app).innerHTML = PANELS.filter(([k]) => UI.tabs.includes(k)).map(([k, n, ic]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === UI.tab}" title="${n}" aria-label="${n}">${ic}</button>`).join('');
+    UI.tabs = PANELS.map(([k])=>k);if(!UI.tabs.includes(UI.tab))UI.tab='layers';
+    $('#tabList', app).innerHTML = PANELS.filter(([k]) => ['layers','properties','versions',UI.tab].includes(k)).map(([k, n]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === UI.tab}" title="${n}" aria-label="${n}">${n}</button>`).join('');
     $$('#tabList [data-tab]', app).forEach((b) => b.onclick = () => { UI.tab = b.dataset.tab; saveUI(); tabsUI(); });
     $$('.w3-tp', app).forEach((el) => el.hidden = el.dataset.tab !== UI.tab);
-    $('#tabMenu', app).innerHTML = '<p class="w2-mnote">Panels on the right</p>' + PANELS.map(([k, n]) => `<label class="w3-tm"><input type="checkbox" data-tabon="${k}" ${UI.tabs.includes(k) ? 'checked' : ''} ${k === 'layers' ? 'disabled' : ''}> ${n}</label>`).join('') + '<p class="w2-mnote">Layers always stays: it is where you show, hide and lock.</p>';
-    $$('#tabMenu [data-tabon]', app).forEach((i) => i.onchange = () => { const k = i.dataset.tabon; UI.tabs = i.checked ? [...UI.tabs, k] : UI.tabs.filter((x) => x !== k); if (i.checked) UI.tab = k; saveUI(); tabsUI(); });
-    tabState(true); refit();
+    $('#tabMenu', app).innerHTML = '<p class="w2-mnote">View tools</p>' + PANELS.filter(([k])=>!['layers','properties','versions'].includes(k)).map(([k,n])=>`<button type="button" data-view-panel="${k}">${n}</button>`).join('');
+    $$('[data-view-panel]',app).forEach(b=>b.onclick=()=>{UI.tab=b.dataset.viewPanel;saveUI();gearMenu(false);tabsUI();});
+    tabState(true);
   }
   const gearMenu = (on) => { $('#tabMenu', app).hidden = !on; $('#tabGear', app).setAttribute('aria-expanded', String(on)); };
   $('#tabGear', app).onclick = (e) => { e.stopPropagation(); gearMenu($('#tabMenu', app).hidden); };
@@ -408,7 +397,7 @@ export function render(app, [pid]) {
     const dlg = qd?.getElementById('elvDlg'), ev = qd?.getElementById('elvView'), picking = !!dlg && !dlg.hidden, picked = !!ev && !ev.hidden, eon = picking || picked;   // Plan Studio: a wall-picker box, then the elevation
     const mode = b?.explode ? 'explode' : b?.walking || b?.walkpick ? 'walk' : eon ? 'elev' : null;
     if (mode !== lastMode) { lastMode = mode; if (mode && UI.tabs.includes(mode) && UI.tab !== mode) { UI.tab = mode; saveUI(); return tabsUI(); } }
-    if (UI.tab === 'layers' || UI.tab === 'versions') return;
+    if (['layers','properties','versions'].includes(UI.tab)) return;
     const xon = !!b?.explode;
     $('#xStat', app).textContent = !b ? 'The Perspective view is still starting.' : xon ? 'Exploded: the storeys are apart in Perspective.' : 'Off.';
     $('#xGo', app).textContent = xon ? 'Put the storeys back' : 'Explode the storeys'; $('#xGo', app).disabled = !b;
@@ -427,27 +416,32 @@ export function render(app, [pid]) {
 
   // ---- left: rail + panel (project / tool group / parameters of the selection)
   let LIGHTS = null;
-  function rail() { const k = showParams && UI.sels.length ? null : UI.panel; $$('[data-panel]', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.panel === k)));
+  function rail() { const k = UI.panel; $$('[data-panel]', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.panel === k)));
     // the next step, from what the model has (2026-10-25): an empty model starts with Massing; masses and no walls go on to Make floors
     const st = M().studio || {}, walls = (st.walls || []).length, ms = (st.masses || []).length, next = !walls && !ms ? 'mass' : !walls ? 'draw' : null;
     $$('.w2-rail [data-panel]', app).forEach((b) => { const t = TOOLS[b.dataset.panel]; b.classList.toggle('w2-next', b.dataset.panel === next); if (t) b.title = b.dataset.panel === next ? (next === 'mass' ? `${t.label} · start here: draw masses on the site` : `${t.label} · next: select a mass and use Make floors in its panel, or draw rooms`) : t.label; }); }
   $$('[data-panel]', app).forEach((b) => b.onclick = () => { UI.panel = b.dataset.panel; saveUI(); showParams = false; rail(); panel(); });
-  const propsOn = (on) => { $('#propsWrap', app).dataset.off = String(!on); $('#panelBody', app).hidden = on; };
+  const propsOn = (on) => { $('#propsWrap', app).dataset.off = String(!on); $('#propertyBody',app).hidden=on; };
   function panel() {
     const host = $('#panelBody', app); propsOn(false);
-    if (showParams && UI.sels.length > 1) return multi(host);
+    const propertyHost=$('#propertyBody',app);
+    if(showParams&&UI.sels.length){UI.tab='properties';tabsUI();}
+    if (showParams && UI.sels.length > 1) return multi(propertyHost);
     const c = comp(primary());
     if (showParams && c && PS.test(c.id)) { propsOn(true); $('#pWhat', app).textContent = `${c.name} · ${c.layer}. Plan Studio’s own parameters; changes show in all three panes.`; return; }
-    if (showParams && c) return params(host, c);
+    if (showParams && c) return params(propertyHost, c);
+    propertyHost.innerHTML='<h2>Properties</h2><p class="note">Select an object in the viewport or Layers to inspect its properties.</p>';
     if (UI.panel === 'project') return projectPanel(host);
     const t0 = TOOLS[UI.panel], mine = UI.panel === 'furniture' ? myFurn() : null;
     const t = mine ? { ...t0, sections: [['My furniture', ['\u0000import', ...mine.map((x) => '\u0000' + x.id)]], ...t0.sections] } : t0;   // your own pieces first (2026-10-25)
     const tile = (n) => { if (n === '\u0000import') return `<button type="button" class="w2-card w3-impf" data-tool="Import furniture" data-impfurn="1" aria-pressed="false" title="Import a piece of furniture (.obj, .glb, .stl, .3dm): it joins My furniture and can be placed like the others"><span class="im"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 28v-6a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v6"/><path d="M10 30a3 3 0 0 1 6 0v4h16v-4a3 3 0 0 1 6 0v8H10z"/><path d="M24 4v10M19 9l5 5 5-5"/></svg></span><span>Import furniture</span></button>`;
       if (n[0] === '\u0000') { const x = mine.find((q) => '\u0000' + q.id === n); return `<button type="button" class="w2-card" data-tool="${esc(x.name)}" data-myfurn="${x.id}" aria-pressed="false" title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m: click it, then click in the current view to place it (R turns it)"><span class="im"><img src="${x.thumb || ''}" alt="" loading="lazy"></span><span>${esc(x.name)}<i class="w3-mfx" data-myfx="${x.id}" role="button" tabindex="0" title="Remove ${esc(x.name)} from My furniture" aria-label="Remove ${esc(x.name)} from My furniture">×</i></span></button>`; } if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the current view to place it"><span class="im"><img src="img/furniture/${m.id}.png" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
       const ic = TOOL_ICONS[n], k = TMAP[n]?.key; return `<button type="button" class="w2-tile" data-tool="${esc(n)}" aria-pressed="false" title="${esc(n)}${k ? ` (${k})` : ''}"><span class="im">${ic?.img ? `<img src="${ic.img}" alt="">` : ic?.svg || ''}</span><span>${esc(n)}${k ? ` <em>(${k})</em>` : ''}</span></button>`; };
-    const many = t.sections.length > 1, oi = Math.min(UI.acc[UI.panel] || 0, t.sections.length - 1);   // several groups: one open at a time
+    const many = t.sections.length > 1, oi = Math.min(UI.acc[UI.panel] ?? (mine&&!mine.length?1:0), t.sections.length - 1);
     host.innerHTML = `<div class="pane w2-tools"><h2>${t.label}</h2>${t.sections.map(([h, items], i) => `<div class="w2-sec${i === oi ? ' w3-fit' : ''}">${many ? `<button type="button" class="w3-acc" data-acc="${i}" aria-expanded="${i === oi}"><span>${i === oi ? '▾' : '▸'} ${esc(h)}</span><small>${items.length}</small></button>` : `<h3>${esc(h)}</h3>`}${i === oi ? `<div class="w2-grid">${items.map(tile).join('')}</div>` : ''}</div>`).join('')}
       <p class="note" id="toolMsg" role="status" aria-live="polite"></p></div>`;
+    host.dataset.library=UI.panel;
+    if(t.cards){const controls=document.createElement('div');controls.innerHTML=`<label class="f">Category<select id="furnitureCategory">${t.sections.map(([name],i)=>`<option value="${i}" ${i===oi?'selected':''}>${esc(name)}</option>`).join('')}</select></label><input class="wb-library-search" type="search" id="furnitureSearch" aria-label="Search this category" placeholder="Search this category"><p class="note" id="furnitureMatch" role="status"></p>`;host.querySelector('h2').after(controls);controls.querySelector('select').onchange=e=>{UI.acc.furniture=+e.target.value;saveUI();panel();};controls.querySelector('input').oninput=e=>{const q=e.target.value.trim().toLowerCase(),buttons=$$('[data-tool]',host);let n=0;for(const b of buttons){b.hidden=!b.dataset.tool.toLowerCase().includes(q);if(!b.hidden)n++;}controls.querySelector('#furnitureMatch').textContent=n?n+' items':'No matching furniture in this category.';};}
     $$('[data-tool]', host).forEach((b) => b.onclick = (e) => { const fx = e.target.closest('[data-myfx]'); if (fx) { e.stopPropagation(); return dropMyFurn(fx.dataset.myfx); } startTool(b); });
     $$('[data-tool]', host).forEach(b => b.addEventListener('pointerdown', e => {
       if (e.button !== 0 || e.target.closest('[data-myfx]') || b.dataset.impfurn) return;
@@ -575,7 +569,7 @@ export function render(app, [pid]) {
       <p class="note">${Object.entries(byL).map(([l, n]) => `${n} on ${esc(l)}`).join(' · ')}</p>
       <div class="w2-mlist">${list.map((c) => `<button type="button" data-one="${c.id}" title="Edit only this one">${esc(c.name)}<small>${esc(c.layer)}</small></button>`).join('')}</div>
       ${nat.length ? `<label class="f">Move ${nat.length < list.length ? `the ${nat.length} imported` : 'all'} to layer<select id="mLayer"><option value="">Choose…</option>${M().layers.filter((l) => !l.locked).map((l) => `<option>${esc(l.name)}</option>`).join('')}</select></label>` : '<p class="note">Plan Studio objects keep their layers (walls on Walls, doors and windows on Glazing…).</p>'}
-      <button class="btn danger" id="mDel">Delete ${list.length}</button></div>`;
+      <button class="btn danger" id="mDel">Delete</button></div>`;
     $('#pBack', host).onclick = () => { showParams = false; rail(); panel(); };
     $$('[data-one]', host).forEach((b) => b.onclick = () => setSel([b.dataset.one]));
     $('#mLayer', host)?.addEventListener('change', (e) => { if (!e.target.value) return; for (const c of nat) c.layer = e.target.value; openOnly(e.target.value); ch(); setTimeout(panel, 0); });
@@ -627,7 +621,7 @@ export function render(app, [pid]) {
     if (!c) { host.innerHTML = `<h2>Selection</h2><p class="note">Nothing selected: click an object in the view or a name in Layers.</p>`; return; }
     if (list.length > 1) {
       host.innerHTML = `<h2>Selection <button class="btn sm" id="desel">Clear</button></h2><p style="font-weight:600">${list.length} components</p><p class="note">${esc(list.map((x) => x.name).slice(0, 4).join(', '))}${list.length > 4 ? ` and ${list.length - 4} more` : ''}</p>
-        <button class="btn sm" id="edit">Edit selection</button><button class="btn danger" id="del">Delete ${list.length}</button>`;
+        <button class="btn sm" id="edit">Edit selection</button><button class="btn danger" id="del">Delete</button>`;
       $('#desel', host).onclick = () => setSel([]); $('#edit', host).onclick = () => { showParams = true; rail(); panel(); };
       $('#del', host).onclick = () => { if (!confirm(`Delete ${list.length} components?`)) return; delIds(list.map((x) => x.id)); };
       return;
@@ -654,7 +648,23 @@ export function render(app, [pid]) {
     $('#toSim', app).href = '#/simulations'; $('#toSim', app).onclick = () => { if (last()) setCurrentVersion(p, last().id); };
   }
   function loadAll() { SNAP = JSON.stringify(p.draft.studio); for (const I2 of ready()) { const back = I2.ws.load(SNAP); if (I2 === INST.plan && back !== SNAP) { SNAP = back; p.draft.studio = JSON.parse(back); } tell(I2); } vpFitted = false; derive(false); levelUI(); refresh(true); }
-  $('#sendSim', app).onclick = () => { const v = dirty() || !last() ? S.saveVersion(p, 'Sent from Workspace') : last(); setCurrentVersion(p, v.id); location.hash = '#/simulations'; };
+  const studyChoice=document.createElement('select');studyChoice.id='workspaceStudy';studyChoice.setAttribute('aria-label','Simulation study');studyChoice.innerHTML=SIMS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  try{const saved=localStorage.getItem('pc-workspace-study');if(SIMS.some(s=>s.id===saved))studyChoice.value=saved;}catch{}
+  $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
+  $('#sendSim', app).onclick = async () => {
+    const button=$('#sendSim',app),pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready){toast('The model is still loading.');return;}button.disabled=true;shell.inert=true;shell.setAttribute('aria-busy','true');
+    try{
+      // Flush the active model and its derived geometry before freezing the version.
+      const snapshot=pane.ws.model();p.draft.studio=JSON.parse(snapshot);SNAP=snapshot;
+      for(const i of ready())if(i!==pane)i.ws.apply(snapshot,false);
+      if(dT){cancelAnimationFrame(dT);dT=0;}while(dRun&&!dead)await new Promise(r=>setTimeout(r,20));if(dead)return;
+      await deriveNow(false);if(dead)return;
+      const v=dirty()||!last()?S.saveVersion(p,'Sent from Workspace'):last();setCurrent(p);setCurrentVersion(p,v.id);
+      const levels=pane.ws.levels(),selected=levels.list.find(l=>l.id===levels.lv),level=levelsOf(v.model).find(l=>Math.abs(l.z-(selected?.z??0))<.001);
+      if(level)sessionStorage.setItem('pc-sim-level:'+p.id,'L'+level.n);
+      location.hash='#/simulations/'+studyChoice.value+'?autorun=workspace';
+    }catch(error){toast('The current model could not be sent: '+(error.message||'storage unavailable'));button.disabled=false;shell.inert=false;shell.removeAttribute('aria-busy');}
+  };
   $('#editSite', app).onclick = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
   $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if(name===null)return;if(!name.trim()){toast('Enter a layer name.');return;}if(M().layers.find(l=>l.name.toLowerCase()===name.trim().toLowerCase())){toast('A layer with that name already exists.');return;} M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
   $('#saveV', app).onclick = () => { if (!dirty() && last()) { toast('No changes since v' + last().n); return; } const v = S.saveVersion(p, $('#note', app).value.trim()); $('#note', app).value = ''; state(); toast(`Saved v${v.n}`); };
@@ -665,12 +675,18 @@ export function render(app, [pid]) {
     for (const I2 of ready()) { if (k === 'clearance') I2.ws.clearance(UI.clearance); if (k === 'gumball') I2.ws.gumball(UI.gumball); }
     if (k === 'clearance') clearance(); });
   // Esc clears the selection (not while typing)
-  const onKey = (e) => { if (e.target.closest?.('input,select,textarea')) return; if (e.key === 'Escape' && UI.sels.length) setSel([]); };
+  const onKey = (e) => { if (e.target.closest?.('input,select,textarea,[contenteditable=true]')) return;
+    if(e.key==='Escape'){const open=['levelMenu','vMenu','dMenu','tabMenu'].some(id=>!$('#'+id,app).hidden);if(open){e.preventDefault();closeMenus();gearMenu(false);return;}if(UI.sels.length)setSel([]);const pane=activePane();if(pane.ready)pane.win.document.dispatchEvent(new pane.win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));}
+    if((e.key==='Delete'||e.key==='Backspace')&&UI.sels.length){e.preventDefault();delIds([...UI.sels]);}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)hub.redo();else hub.undo();}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();hub.redo();}
+  };
   addEventListener('keydown', onKey);
 
   subs.push((ids) => vp.select(ids), () => layers(), () => selPane(), () => { rail(); panel(); });
   function refresh(refit) { drawShaded(refit); layers(); selPane(); state(); }
 
+  const disposeShell=mountWorkbenchShell(app,{activePane,deleteSelection:()=>{if(!UI.sels.length)return false;delIds([...UI.sels]);return true;},fit:()=>$('#fit',app).click()});
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel(); tabsUI();
@@ -678,5 +694,5 @@ export function render(app, [pid]) {
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; ro.disconnect(); document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

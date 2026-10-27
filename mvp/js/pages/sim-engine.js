@@ -201,7 +201,15 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
       if(!alive||!fr.isConnected)return;
       const D=doc(),documents=D?[D,...[...D.querySelectorAll('iframe')].filter(f=>!f.hidden&&f.getBoundingClientRect().width).map(f=>{try{return f.contentDocument;}catch{return null;}}).filter(Boolean)]:[];
       if(fr.dataset.pcSettingsReady==='true'&&documents.some(d=>d.querySelector('.app[data-pc-unified=true]'))&&!documents.some(d=>d.body?.dataset.pcSharedWeatherLoading)){
-        fr.style.visibility='visible';fr.dataset.pcVisibleReady='true';loading?.remove();return;
+        fr.style.visibility='visible';fr.dataset.pcVisibleReady='true';loading?.remove();
+        if(params.get('autorun')==='workspace'){
+          let waits=0;const start=()=>{if(!alive)return;if(weatherFailure||++waits>600){say('Review the inputs, then use Run study to start.',true);return;}const button=$('#runStudy',app);if(button.disabled){setTimeout(start,100);return;}
+            // Start once through the real control; expensive-run confirmations stay intact.
+            if(SUN.includes(sim.id))D.querySelector('#lvlSeg [data-l="draft"]')?.click();
+            button.click();const url=new URL(location.href);url.hash=url.hash.replace(/[?&]autorun=workspace/,'');history.replaceState(null,'',url);
+          };setTimeout(start,100);
+        }
+        return;
       }
       if(loading){loading.style.top=$('.shbar',app).offsetHeight+'px';if(Date.now()-started>15000)loading.textContent='Still preparing the selected model and Settings. Please wait…';}
       setTimeout(probe,50);

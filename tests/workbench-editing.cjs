@@ -1,9 +1,9 @@
 // Run against a local static server; TEST_BASE and CHROMIUM_PATH can override defaults.
-const path=require('node:path'), fs=require('node:fs');
+const path=require('node:path'), fs=require('node:fs'),crypto=require('node:crypto'),{execFileSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({...(process.env.CHROMIUM_PATH || fs.existsSync('/usr/bin/chromium') ? {executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium'} : {}),args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});const p=await b.newPage({viewport:{width:1600,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
-await p.route('https://cdn.jsdelivr.net/npm/three@*/**',r=>{const part=r.request().url().split('/examples/jsm/')[1];return r.fulfill({path:part?path.join(root,'furniture/addons',part):path.join(root,'furniture/three.module.min.js'),contentType:'text/javascript'});});
+await p.route('https://cdn.jsdelivr.net/**',r=>{const url=r.request().url(),file='/tmp/pc-cdn-'+crypto.createHash('sha256').update(url).digest('hex')+'.js';if(!fs.existsSync(file))execFileSync('curl',['--fail','--silent','--show-error',url,'-o',file],{timeout:30000});return r.fulfill({path:file,contentType:'text/javascript'});});
 await p.goto((process.env.TEST_BASE||'http://127.0.0.1:8765')+'/mvp/#/workspace');await p.waitForFunction(()=>window.__ws2?.ready());
 await p.click('#vBtn');await p.click('[data-view="persp"]');await p.waitForTimeout(800);
 await p.click('[data-panel="draw"]');await p.click('[data-tool="Straight wall"]');
@@ -35,5 +35,5 @@ assert(await p.evaluate(()=>document.querySelector('#addLevel').getBoundingClien
 await p.click('#addLevel');await p.waitForTimeout(900);assert.equal(await p.evaluate(()=>__ws2.model().studio.levels.length),levelCount+1);
 assert.equal(await p.evaluate(()=>document.querySelector('#fPlan').contentWindow.__ws.levels().lv),await p.evaluate(()=>document.querySelector('#fPersp').contentWindow.__ws.levels().lv));
 await p.click('#vBtn');await p.click('[data-view="persp"]');await p.waitForTimeout(400);await p.click('#addLevel');await p.waitForTimeout(900);assert.equal(await p.evaluate(()=>__ws2.model().studio.levels.length),levelCount+2);assert(await p.evaluate(()=>document.querySelector('[data-pane="persp"]').classList.contains('on')));console.log('PASS add level in both views, with synchronized level selection');
-await p.click('#sendSim');await p.waitForURL('**/#/simulations');console.log('PASS send to Simulation');
+await p.click('#sendSim');await p.waitForURL('**/#/simulations/sunhours*');await p.locator('#eng[data-pc-visible-ready=true]').waitFor({timeout:60000});console.log('PASS current Workspace model sent directly to Simulation');
 console.log('errors',errors);assert.deepEqual(errors,[]);await b.close();})().catch(e=>{console.error(e);process.exit(1)});

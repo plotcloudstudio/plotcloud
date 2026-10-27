@@ -16,7 +16,8 @@ html.ws .kj-top,html.ws .kl-left,html.ws .kj-status,html.ws .kbl,html.ws #draftB
 html.ws:not(.ws-props) .kj-right{display:none!important}
 html.ws .kj{position:relative}
 html.ws:not(.ws-props) .stage{position:absolute!important;inset:0!important;grid-area:auto!important;width:auto!important;height:auto!important;min-height:0!important}
-html.ws .thint{bottom:12px}
+html.ws .thint,html.ws #toolBar,html.ws .kbr{display:none!important}
+html.ws .annot .an-box{display:none!important}
 html.ws-props .stage{position:fixed!important;left:-4000px;top:0;width:640px;height:420px;visibility:hidden}
 html.ws-props .kj-right{display:flex!important;flex-direction:column;grid-column:1!important;grid-row:1!important;border:0!important;width:auto!important;min-width:0}
 html.ws-props .kj-right>*{display:none!important}
@@ -2385,8 +2386,9 @@ function tag(x, y, text, o = {}) {   // a text label with a soft plate; tries a 
   const tw = g.measureText(text).width, pw = tw + 8 * d, ph = fs + 6 * d;
   const tries = o.tries || [[0, 0], [0, -ph - 2 * d], [0, ph + 2 * d], [pw / 2 + 6 * d, 0], [-pw / 2 - 6 * d, 0]];
   for (const [dx, dy] of tries) { const r = { x: x + dx - pw / 2, y: y + dy - ph / 2, w: pw, h: ph }; if (r.x < 2 || r.y < 2 || r.x + r.w > VP.w - 2 || r.y + r.h > VP.h - 2) continue; if (!o.force && lbHit(r)) continue;
-    LB.push(r); if (o.plate !== false) { g.fillStyle = o.bg || 'rgba(255,255,255,.88)'; rr(r.x, r.y, r.w, r.h, 3 * d); g.fill(); }
-    g.fillStyle = o.col || C.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, r.x + r.w / 2, r.y + r.h / 2 + 0.5 * d); return r; }
+    const darkPlate=window.PlotCloudUI?.theme==='night'&&!o.bg&&o.plate!==false;
+    LB.push(r); if (o.plate !== false) { g.fillStyle = o.bg || (darkPlate?'rgba(59,61,64,.95)':'rgba(255,255,255,.88)'); rr(r.x, r.y, r.w, r.h, 3 * d); g.fill(); }
+    g.fillStyle = darkPlate&&(!o.col||['#6e6a60','#1c1b1a'].includes(o.col))?'#e4e7eb':o.col || C.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, r.x + r.w / 2, r.y + r.h / 2 + 0.5 * d); return r; }
   return false;
 }
 function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -5792,7 +5794,7 @@ window.S3 = (() => {
       if (!R) return; if (GZ.g) { scene.remove(GZ.g); GZ.g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); GZ.g = null; GZ.hd = null; GZ.pick = []; } if (!f) { render(); return; }
       const G = new T.Group(); G.name = 'gizmo'; G.position.set(f.x, z + 0.04, -f.y); G.rotation.y = f.rot || 0;
       const top = (m) => { m.renderOrder = 1000; return m; }, mb = (col) => new T.MeshBasicMaterial({ color: col, depthTest: false, transparent: true }), inv = new T.MeshBasicMaterial({ visible: false });
-      const bx = top(new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(f.w, f.h, f.d)), new T.LineBasicMaterial({ color: 0x3498ff, depthTest: false, transparent: true }))); bx.position.y = f.h / 2; bx.name = 'gz-box'; G.add(bx);
+      if(!window.__WSROLE){const bx = top(new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(f.w, f.h, f.d)), new T.LineBasicMaterial({ color: 0x3498ff, depthTest: false, transparent: true }))); bx.position.y = f.h / 2; bx.name = 'gz-box'; G.add(bx);}
       if (!locked) {
         const hd = new T.Group(); hd.name = 'gz-handles'; hd.position.y = 0.02;
         const arrow = (col, ax) => { const a = new T.Group(); const sh = top(new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.72, 10), mb(col))); sh.position.y = 0.36; const cone = top(new T.Mesh(new T.ConeGeometry(0.065, 0.2, 18), mb(col))); cone.position.y = 0.82;
@@ -6197,7 +6199,8 @@ if (window.__WSROLE) {
     const r=cv.getBoundingClientRect(),d=VP.d;return [Math.min(...projected.map(p=>p[0]))/d+r.left,Math.min(...projected.map(p=>p[1]))/d+r.top,Math.max(...projected.map(p=>p[0]))/d+r.left,Math.max(...projected.map(p=>p[1]))/d+r.top];
   }
   WS.selectMany=items=>{multi=items;draw();};
-  const baseDraw=draw;draw=function(){baseDraw();g.save();g.strokeStyle='#348cff';g.lineWidth=2*VP.d;const r=cv.getBoundingClientRect();for(const s of multi){const b=selectionBounds(s);if(b)g.strokeRect((b[0]-r.left)*VP.d,(b[1]-r.top)*VP.d,(b[2]-b[0])*VP.d,(b[3]-b[1])*VP.d);}g.restore();};
+  // Selection is reported by the shared inspector and native object handles/gumball.
+  // Do not paint an extra screen-space blue rectangle over selected geometry.
   cv.addEventListener('pointerdown',e=>{pickMods={add:e.shiftKey,remove:e.ctrlKey||e.metaKey};if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on)return;if(CAM==='3d'&&!P3upd(e))return;const hit=hitTest(S2W(...evP(e)));if(hit)return;gesture={x:e.clientX,y:e.clientY,mods:pickMods};e.stopImmediatePropagation();e.preventDefault();cv.setPointerCapture(e.pointerId);},true);
   cv.addEventListener('pointermove',e=>{if(!gesture)return;e.stopImmediatePropagation();const a=gesture,cross=e.clientX<a.x;Object.assign(boxOverlay.style,{display:'block',left:Math.min(a.x,e.clientX)+'px',top:Math.min(a.y,e.clientY)+'px',width:Math.abs(e.clientX-a.x)+'px',height:Math.abs(e.clientY-a.y)+'px',borderStyle:cross?'dashed':'solid'});},true);
   cv.addEventListener('pointerup',e=>{if(!gesture)return;e.stopImmediatePropagation();const a=gesture;gesture=null;boxOverlay.style.display='none';const rect=[Math.min(a.x,e.clientX),Math.min(a.y,e.clientY),Math.max(a.x,e.clientX),Math.max(a.y,e.clientY)],cross=e.clientX<a.x;
