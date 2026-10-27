@@ -1,4 +1,4 @@
-import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-service-20261027-2';
+import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-connected-20261027-3';
 import * as S from '../store.js';
 import {geocode,enrich} from '../site.js';
 import {mountProjectClimate} from '../project-climate.js';

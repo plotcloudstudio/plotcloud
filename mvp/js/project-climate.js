@@ -1,6 +1,6 @@
 // Persist contents instead of a File reference that can expire after navigation.
 import * as S from './store.js';
-import {validLocation,distanceKm,stationCatalog,nearestStations,downloadStation,archiveURL,weatherDownloadAvailable} from './automatic-climate.js?v=epw-service-20261027-2';
+import {validLocation,distanceKm,stationCatalog,nearestStations,downloadStation,archiveURL,weatherDownloadAvailable} from './automatic-climate.js?v=epw-connected-20261027-3';
 function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open('pc-project-climate',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 export async function climateFile(hash){if(!hash)return null;const db=await database();try{return await new Promise((resolve,reject)=>{const r=db.transaction('files').objectStore('files').get(hash);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);});}finally{db.close();}}
 export async function saveClimate(file,provenance={}){

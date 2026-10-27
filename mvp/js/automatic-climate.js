@@ -1,4 +1,4 @@
-import {WEATHER_PROXY_URL} from './weather-config.js?v=epw-service-20261027-2';
+import {WEATHER_PROXY_URL} from './weather-config.js?v=epw-connected-20261027-3';
 // Station metadata only is bundled. Weather archives stay with their original publishers.
 const catalogURL=new URL('../data/epw-stations.json.gz?v=epw-auto-20261027-1',import.meta.url);
 const publishers={onebuilding:'https://climate.onebuilding.org',doe:'https://energyplus-weather.s3.amazonaws.com'};

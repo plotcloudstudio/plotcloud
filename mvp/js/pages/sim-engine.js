@@ -1,4 +1,4 @@
-import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-service-20261027-2';
+import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-connected-20261027-3';
 import {installStudyWorkflow} from '../simulation-workflow.js?v=import-feedback-20261027-1';
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile,ensureProjectClimate,cancelProjectClimate} from '../project-climate.js';

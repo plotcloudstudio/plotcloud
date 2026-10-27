@@ -1,2 +1,7 @@
 [functions.plotcloud-weather]
 verify_jwt = false
+
+# Dashboard-created deployment name; reuse the existing canonical source.
+[functions.quick-function]
+verify_jwt = false
+entrypoint = './functions/plotcloud-weather/index.ts'

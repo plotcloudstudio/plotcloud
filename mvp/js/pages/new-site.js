@@ -1,4 +1,4 @@
-import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-service-20261027-2';
+import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-connected-20261027-3';
 // New project from the map (#/new-site): find the place, set the study area, draw or pick your plot, load what is around it
 // from open data, and start the project with the site already in Plan Studio (buildings, roads, water, green, trees, terrain).
 // Nothing is invented: what a source does not have is shown as missing; heights that are guessed are marked as estimates.
