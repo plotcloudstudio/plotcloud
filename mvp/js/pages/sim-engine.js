@@ -1,6 +1,6 @@
 import {installStudyWorkflow} from '../simulation-workflow.js?v=import-feedback-20261027-1';
 import {inspectStudy} from '../study-readiness.js';
-import {climateFile} from '../project-climate.js';
+import {climateFile,ensureProjectClimate,cancelProjectClimate} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
 import {mountStudyImport} from '../study-import.js?v=import-feedback-20261027-1';
 // One simulation page for every PlotCloud engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
@@ -135,9 +135,16 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   const tell = (m) => { if (batch) try { window.parent.postMessage({ pcBatch: batch, sim: sim.id, ...m }, location.origin); } catch (e) { } };
   if (!p) { app.innerHTML = '<div class="wrap"><h1>Import a model to begin.</h1><p>Review its source units and metre dimensions here; a project version is created automatically.</p></div>';mountStudyImport(app.querySelector('.wrap'),sim.id);tell({ ok: false, why: 'No project.' }); return; }
   if (!batch) setCurrent(p);
+  let automaticWeatherError='';const weatherSite=S.conditionsOf(p).site;
+  if(WEATHER.includes(sim.id)&&!weatherSite.sample&&(!weatherSite.climate||weatherSite.climate.automatic)){
+    const start=performance.now();app.innerHTML='<div class="wrap"><h1>Preparing project weather…</h1><p id="automaticWeatherProgress" role="status" aria-live="polite">Finding nearby EPW stations…</p><p class="note" id="automaticWeatherElapsed"></p><button type="button" class="btn" id="cancelAutomaticWeather">Cancel weather import</button> <a class="btn" href="#/project-settings/'+esc(p.id)+'?return='+sim.id+'">Review weather stations or upload EPW</a></div>';
+    $('#cancelAutomaticWeather',app).onclick=()=>cancelProjectClimate(p);
+    const update=e=>{if(e.detail.projectId===p.id&&(!context.isCurrent||context.isCurrent())){const el=$('#automaticWeatherProgress',app);if(el)el.textContent=e.detail.message;}};addEventListener('pc-project-climate',update);const timer=setInterval(()=>{const el=$('#automaticWeatherElapsed',app);if(el)el.textContent=((performance.now()-start)/1000).toFixed(1)+' s elapsed';},250);
+    try{await ensureProjectClimate(p);}catch(error){automaticWeatherError=error.message;}finally{clearInterval(timer);removeEventListener('pc-project-climate',update);}if(context.isCurrent&&!context.isCurrent())return;
+  }
   const shared=pilot||sim.id==='vent'?S.clone(S.conditionsOf(p)):null;
   const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
-  const readiness=inspectStudy(p,v,sim.id,{site,defaults:A});
+  const readiness=inspectStudy(p,v,sim.id,{site,defaults:A});if(automaticWeatherError)readiness.errors.push({title:'Automatic EPW import needs attention',detail:automaticWeatherError,href:'#/project-settings/'+p.id+'?return='+sim.id});
   if(site?.climate?.hash&&WEATHER.includes(sim.id)){
     try{if(!await climateFile(site.climate.hash))readiness.errors.push({title:'Restore the project weather file',detail:'The EPW reference exists, but its contents are missing from this browser. Upload the original file again.',href:'#/project-settings/'+p.id});}catch{readiness.errors.push({title:'Weather storage is unavailable',detail:'Allow browser storage or re-upload the project EPW before running.',href:'#/project-settings/'+p.id});}
   }
