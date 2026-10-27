@@ -6167,7 +6167,7 @@ if (window.__WSROLE) {
     if (WS.rx) return; nLive = nLive && !!live; if (nT) return;
     nT = requestAnimationFrame(() => { nT = 0; const lv = nLive; nLive = true; const s = snapM(); if (s === WS.last && (lv || !WS.sentLive)) return; WS.last = s; WS.sentLive = lv; const h = hub(); if (h) h.change(WS.role, s, lv); });   // the release after a drag goes up even when the last live frame already had it
   }
-  { const _c = changed; changed = function (live, kp) { if (!WS.rx&&!WS.groupMoving) guard(); _c(live, kp); if (!live) SAVEDSNAP = snapM(); histUI(); notify(live); }; }
+  { const _c = changed; changed = function (live, kp) { if (!WS.rx&&!WS.groupMoving) guard(); _c(live, kp);if(WS.projectName)WS.projectLabel(WS.projectName); if (!live) SAVEDSNAP = snapM(); histUI(); notify(live); }; }
   { const _u = upd3D; upd3D = function (fit) {
     if (GZD && !WS.rx && !WS.groupMoving && guard()) { S = STC.build(M); const D = GZD, dir = D.ax === 'x' ? [Math.cos(D.r0), Math.sin(D.r0)] : [-Math.sin(D.r0), Math.cos(D.r0)], k = (D.f.x - D.x0) * dir[0] + (D.f.y - D.y0) * dir[1];
       if (D.ax !== 'r') { tipEl.textContent = `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${D.ax === 'x' ? 'its width (X)' : 'its depth (Y)'} · stopped at the wall`; } }
@@ -6282,6 +6282,7 @@ if (window.__WSROLE) {
 
   // ---- what the Workspace calls
   Object.assign(WS, {
+    projectLabel(name){WS.projectName=String(name||'Untitled project');$('#mName').textContent=WS.projectName;$('#mName').title=WS.projectName;if(document.activeElement!==$('#mNameIn'))$('#mNameIn').value=WS.projectName;},
     async centerToOrigin(){
       if(GZD||gesture||WALKING||XPL.on)throw Error('Finish the current edit and exit Walkthrough or Explode before centering.');
       const before=snapM(),items=WS.objects(),selected=multi.length?multi:(SEL?[SEL]:[]);

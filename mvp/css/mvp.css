@@ -686,3 +686,13 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .wb-shell #furnitureMatch:empty{display:none}
 @media(max-width:820px){.wb-shell.w2{grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto minmax(300px,1fr) 260px auto;height:auto;min-height:calc(100dvh - var(--pc-ui-shell-height,64px))}.wb-shell>.w2-stage{grid-column:2;grid-row:2;min-height:50vh}.wb-shell>.w2-right{grid-column:2;grid-row:3}.wb-shell>.w2-rail{grid-column:1;grid-row:2/4}.wb-shell>.w2-status{grid-row:4;grid-column:1/-1;flex-wrap:wrap}.wb-shell>.w2-panel{position:fixed;top:var(--pc-ui-shell-height,100px);bottom:40px;left:40px;width:240px;z-index:12;background:var(--bg);border:1px solid var(--line)}.wb-shell.wb-library-closed{grid-template-columns:40px minmax(0,1fr)}.wb-shell .wb-commandbar .w2-tr{margin-left:0}.wb-shell .w2-status #state{flex-basis:100%}}
 @media(max-width:600px) { .study-workflow #studyState { flex-basis:100%; } }
+/* Import explanations use the panel's continuous scroll; complete notes stay readable. */
+.wb-shell .w3-accp,.wb-shell .w3-accb,.wb-shell .w3-accb .f,.wb-shell .w3-accb .grid{min-width:0;max-width:100%}
+.wb-shell .w3-accb select{width:100%;min-width:0;max-width:100%}
+.wb-shell .w3-accb .note,.study-import [role=status]{white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip}
+.wb-shell #retryImport{justify-self:start}
+.study-import{min-width:0;max-width:100%}.study-import details{max-width:600px}.study-import summary{cursor:pointer;font-size:12px}
+
+.study-workflow progress{width:100px;height:8px;accent-color:var(--accent)}
+.study-workflow progress[hidden]{display:none}
+.study-workflow #studyState[data-state="error"]{color:var(--accent)}

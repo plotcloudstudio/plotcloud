@@ -11,9 +11,9 @@
 import * as S from '../store.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=center-building-20261027-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
-import { $, $$, esc, when, toast, currentProject, setCurrent, setCurrentVersion } from '../app.js';
+import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel } from '../viewport.js';
-import {reviewImport} from '../import-review.js?v=scale-review-20261027-1';
+import {reviewImport} from '../import-review.js?v=import-feedback-20261027-1';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js?v=furniture-detail-20261027-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
@@ -114,7 +114,7 @@ export function render(app, [pid]) {
     if (p.draft.meshes && p.draft.studio) { const keep = new Set((p.draft.studio.imports || []).map((o) => o.ref || o.id)); for (const k of Object.keys(p.draft.meshes)) if (!keep.has(k)) delete p.draft.meshes[k]; } }
   const M = () => p.draft, comp = (id) => M().components.find((c) => c.id === id);
   const layerOf = (c) => M().layers.find((l) => l.name === c?.layer);
-  const last = () => p.versions.at(-1), dirty = () => !last() || JSON.stringify(last().model) !== JSON.stringify(p.draft);
+  const last = () => p.versions.at(-1),baseline=()=>currentVersion(p)||last(), dirty = () => !baseline() || JSON.stringify(baseline().model) !== JSON.stringify(p.draft);
   const UI = readUI(); const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(UI)); } catch (e) { } };
   const open = new Set((UI.open || []).slice(-1));   // one layer open at a time, so the list fits without scrolling
   const openOnly = (n) => { open.clear(); if (n) open.add(n); UI.open = [...open]; };
@@ -140,7 +140,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=scale-review-20261027-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=import-feedback-20261027-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -213,10 +213,11 @@ export function render(app, [pid]) {
   const ready = () => Object.values(INST).filter((x) => x.ready);
   const activePane = () => INST[UI.view === 'persp' ? 'persp' : 'plan'];
   const any = () => INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : INST.props.ready ? INST.props.ws : null;
+  const importState={busy:false,file:null,asNew:true,message:'Choose a file to import into a new project.',error:false};
   const layerVis = () => { const map = { parts: true, ref: true }; for (const [L, ids] of Object.entries(LMAP)) { const l = M().layers.find((x) => x.name === L), on = l ? l.visible !== false : true; for (const id of ids) map[id] = on; } return map; };
   const lockList = () => M().layers.filter((l) => l.locked).map((l) => l.name);
   const offLayers = () => M().layers.filter((l) => l.visible === false).map((l) => l.name);
-  function tell(I2) { const w = I2.ws; if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.display(UI.disp);
+  function tell(I2) { const w = I2.ws;w.projectLabel?.(p.name); if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.display(UI.disp);
     const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s);w.selectMany?.(UI.sels.map(psSel).filter(Boolean)); }
   const hub = {
     ready(role, win) {
@@ -515,16 +516,16 @@ export function render(app, [pid]) {
   function projectPanel(host) {
     host.innerHTML = `<div class="pane w3-accp${UI.pacc === 'project' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="project" aria-expanded="${UI.pacc === 'project'}"><span>${UI.pacc === 'project' ? '▾' : '▸'} Project</span></button></h2><div class="w3-accb">
       <select class="inp" id="proj" aria-label="Project">${S.projects().map((x) => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-      <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
+      <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
       <p class="note">Plan and Perspective show the one model (Plan Studio’s): walls, masses, the site and imported meshes. Edit here, then run simulations on a saved version.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
-      <div class="drop" id="drop"><button class="btn sm" id="pick">Import .obj · .stl · .glb · .3dm</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
+      <label class="f">Import destination<select id="importMode"><option value="new">New project (keeps this project)</option><option value="add">Add to current project</option></select></label><div class="drop" id="drop"><button class="btn sm" id="pick">Choose model for a new project</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm" hidden>
-      <button type="button" class="btn sm" id="importAsNew">Import as new model</button><input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note">Import as new model starts a separate project without the sample or current geometry.</p>
+      <input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note" id="importDestinationNote">A new project keeps the current model unchanged. Choose Add only when you intend to combine models.</p><p class="note">Maximum file size: 25 MiB. Maximum geometry: 80,000 triangles. OBJ, STL, GLB, glTF and Rhino 3DM are supported.</p><p><a href="examples/building-metres.obj" download="PlotCloud-example-10x8x6m.obj">Download example building · 10 × 8 × 6 m · Z up</a></p>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="auto">Read file metadata / review scale</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
-      <p class="msg note" id="impMsg" role="status"></p>
-      ${M().importAudit?`<p class="note">Last Rhino import: ${M().importAudit.meshObjects} placed surface objects · ${Number(M().importAudit.triangles).toLocaleString('en-CA')} triangles · converted to metres. ${M().importAudit.definitionObjects} block-definition objects were excluded from the scene unless placed as instances.</p>`:''}
+      <p class="msg note" id="impMsg" role="status" aria-live="polite"></p><button type="button" class="btn sm" id="retryImport" hidden>Retry last import</button>
+      ${M().importAudit?`<p class="note">Last import: ${esc(M().importAudit.source||'Model')} · ${M().importAudit.meshObjects??M().studio.imports.length} surface object${(M().importAudit.meshObjects??M().studio.imports.length)===1?'':'s'} · ${Number(M().importAudit.triangles).toLocaleString('en-CA')} triangles · converted to metres.${M().importAudit.definitionObjects?' Unplaced block definitions are excluded.':''}</p>`:''}
       <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes become part of the model: an outline in Plan, the mesh in Perspective; drag one to move it.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Site</span></button></h2><div class="w3-accb">
       <p class="note">${M().studio?.site ? `${esc((M().studio.site.origin.label || "").split(",")[0] || "Site")}: ${M().studio.site.buildings.filter((b) => !b.excluded).length} buildings, ${(M().studio.site.roads || []).length} roads${M().studio.site.terrain ? `, ground ${M().studio.site.terrain.relief} m` : ""} · ${esc(M().studio.site.sources?.[0]?.attribution || "")}` : "No site yet."}</p><a class="btn sm" id="siteBtn" href="#/new-site?project=${p.id}">${M().studio?.site ? "Choose another site on the map" : "Choose the site on the map"}</a>
@@ -545,9 +546,17 @@ export function render(app, [pid]) {
         msg.textContent = `Saved ${base}.${k} (${(blob.size / 1024).toFixed(0)} KB).`; }
       catch (e) { msg.textContent = e.message || 'The file could not be written.'; } finally { b.disabled = false; }
     });
-    const doImport = async (f,asNew=false) => { const msg = $('#impMsg', host); msg.textContent = 'Reading ' + f.name + '…';
-      try { const initial=await importModel(f,{unit:$('#unit',host).value,up:$('#up',host).value}),r=await reviewImport(initial,{name:f.name}),by={};if(!r){msg.textContent='Import cancelled. The existing model is unchanged.';return;}
-        if (!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
+    for(const note of host.querySelectorAll('.note'))note.title=note.textContent;
+    const mode=$('#importMode',host),pickButton=$('#pick',host),retry=$('#retryImport',host);
+    const report=(message,error=false)=>{importState.message=message;importState.error=error;const msg=$('#impMsg',app);if(msg){msg.textContent=message;msg.title=message;msg.setAttribute('role',error?'alert':'status');}const retry=$('#retryImport',app);if(retry)retry.hidden=!error||!importState.file;};
+    const modeUI=()=>{const add=mode.value==='add';pickButton.textContent=importState.busy?'Importing…':add?'Choose model to add':'Choose model for a new project';pickButton.disabled=importState.busy;pickButton.setAttribute('aria-busy',String(importState.busy));mode.disabled=importState.busy;for(const el of [$('#unit',host),$('#up',host)])if(el)el.disabled=importState.busy;$('#importDestinationNote',host).textContent=add?(p.sample?'You are adding geometry to a sample project. The scale review will ask you to confirm this explicitly.':'Adds geometry to '+p.name+'. Existing geometry stays; choose New project to keep models separate.'):'Creates a separate project. This project and its geometry are kept.';};
+    mode.value=importState.asNew?'new':'add';mode.onchange=()=>{importState.asNew=mode.value==='new';modeUI();};report(importState.message,importState.error);modeUI();
+    const doImport=async(f,asNew=mode.value==='new')=>{
+      if(importState.busy){toast('An import is already in progress. Please wait for its status.');return;}
+      importState.file=f;importState.asNew=asNew;importState.busy=true;importState.error=false;report('Reading '+f.name+'…');modeUI();retry.disabled=true;
+      try{const initial=await importModel(f,{unit:$('#unit',host)?.value||'auto',up:$('#up',host)?.value||'auto'});if(dead)return;report('Review the file units, dimensions and import destination.');const r=await reviewImport(initial,{name:f.name,destination:{label:asNew?'New project: '+f.name.replace(/\.[^.]+$/,''):'Add to current project: '+p.name,sample:!asNew&&!!p.sample}}),by={};if(!r){report('Import cancelled. The existing model is unchanged.');return;}if(dead)return;
+        report('Preparing '+r.components.length+' imported component'+(r.components.length===1?'':'s')+'…');
+        if (!asNew&&!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
         const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...classify(c),...(srcLayer?{layer:srcLayer}:{}) }));
         if(asNew){const layers=[...new Set(list.map(c=>c.layer))].map(name=>({name,color:LAYER_COLORS[name]||'#cfcac0',visible:true,locked:false})),next=S.createProject(f.name.replace(/\.[^.]+$/,''),{units:'m',layers,components:list,...(r.audit?{importAudit:{...r.audit,triangles:r.triangles,fileName:f.name}}:{})});setCurrent(next);location.hash='#/workspace/'+next.id;return;}
         M().meshes = M().meshes || {};for (const c of list) { by[c.layer] = (by[c.layer] || 0) + 1; M().meshes[c.id] = c.mesh; open.add(c.layer); if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#cfcac0', visible: true, locked: false }); }
@@ -555,11 +564,15 @@ export function render(app, [pid]) {
         INST.plan.ws.addImports(list.map(({ mesh, ...c }) => ({ ...c, tris: Math.round(mesh.length / 9) })));   // Plan Studio keeps it; the sync brings it to the other panes and the project
         if(r.audit)p.draft.importAudit={...r.audit,triangles:r.triangles,fileName:f.name};
         UI.open = [...open]; saveUI(); persist(); refresh(true);
-        msg.textContent = `${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`; }
-      catch (e) { msg.textContent = e.message; } };
-    $('#pick', host).onclick = () => $('#file', host).click();
-    $('#importAsNew',host).onclick=()=>$('#newModelFile',host).click();$('#newModelFile',host).onchange=e=>{const f=e.target.files[0];if(f)doImport(f,true);e.target.value='';};
-    $('#file', host).onchange = (e) => { const f = e.target.files[0]; if (f) doImport(f); e.target.value = ''; };
+        report(`${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`); }
+      catch(error){const message='Import did not finish: '+(error.message||'Unknown reader error')+' Retry the import or choose the file again.';report(message,true);toast(message);}
+      finally{importState.busy=false;retry.disabled=false;if(!dead){const pick=$('#pick',app),mode=$('#importMode',app),again=$('#retryImport',app);if(pick){pick.disabled=false;pick.setAttribute('aria-busy','false');pick.textContent=mode?.value==='add'?'Choose model to add':'Choose model for a new project';}for(const el of [mode,$('#unit',app),$('#up',app),again])if(el)el.disabled=false;}}
+    };
+    retry.onclick=()=>{if(importState.file)doImport(importState.file,importState.asNew);};
+    pickButton.onclick=()=>{report(mode.value==='new'?'Choose a model file for a separate project. Cancel keeps the current model.':'Choose a model file to add to '+p.name+'.');$('#file',host).click();};
+    $('#newModelFile',host).onchange=e=>{const file=e.target.files[0];if(file){mode.value='new';doImport(file,true);}e.target.value='';};
+    $('#file',host).onchange=e=>{const file=e.target.files[0];if(file)doImport(file);else report('No file selected. The current model is unchanged.');e.target.value='';};
+    for(const input of [$('#file',host),$('#newModelFile',host)])input.addEventListener('cancel',()=>report('No file selected. The current model is unchanged.'));
     const drop = $('#drop', host);
     ['dragenter', 'dragover'].forEach((n) => drop.addEventListener(n, (e) => { e.preventDefault(); drop.classList.add('over'); }));
     ['dragleave', 'drop'].forEach((n) => drop.addEventListener(n, (e) => { e.preventDefault(); drop.classList.remove('over'); if (n === 'drop' && e.dataTransfer.files[0]) doImport(e.dataTransfer.files[0]); }));
@@ -644,37 +657,40 @@ export function render(app, [pid]) {
     $('#del', host)?.addEventListener('click', () => delIds([c.id]));
   }
   function state() {
-    const v = last(), d = dirty();
-    $('#state', app).innerHTML = `${p.sample ? 'Sample project with mock results. Edits are kept in this browser.' : 'Edits are kept in this browser.'} · ${esc(p.name)} · ${v ? 'v' + v.n : 'no version yet'}${d ? ' · <span class="dirty">unsaved changes</span>' : ''}`;
+    const v = baseline(), d = dirty();refreshProjectContext(p);
+    $('#state', app).innerHTML = `${p.sample ? 'Sample project. Edits are kept in this browser.' : 'Edits are kept in this browser.'} · ${esc(p.name)} · ${v ? 'v' + v.n : 'no version yet'}${d ? ' · <span class="dirty">unsaved changes</span>' : ''}`;
+    $('#state',app).title=$('#state',app).textContent;
     $('#dirty', app).textContent = d ? (v ? `Changes since v${v.n} are not saved.` : 'Save the first version to run simulations.') : `Up to date with v${v.n}.`;
     $('#versions', app).innerHTML = p.versions.slice().reverse().map((x) => `<div class="vrow ${x === v && !d ? 'cur' : ''}"><span class="vn">v${x.n}</span><div><div>${esc(x.note)}</div><div class="vmeta">${when(x.created)} · ${p.runs.filter((r) => r.versionId === x.id).length} results</div></div>
       <div style="display:grid;gap:4px"><button class="btn sm" data-load="${x.id}">Open</button><a class="btn sm" href="#/simulations" data-simv="${x.id}">Simulate</a></div></div>`).join('') || '<p class="note">No versions yet.</p>';
     fit($('#versions', app), $$('#versions .vrow', app), 'versions');
-    $$('[data-load]', app).forEach((b) => b.onclick = () => { if (dirty() && !confirm('Discard unsaved changes and open this version?')) return; p.draft = S.clone(S.version(p, b.dataset.load).model); const conv = ensureStudio(p); persist(); loadAll(); setSel([]); toast(conv ? 'Version opened (converted to Plan Studio’s model)' : 'Version opened'); });
+    $$('[data-load]', app).forEach((b) => b.onclick = () => { if (dirty() && !confirm('Discard unsaved changes and open this version?')) return; p.draft = S.clone(S.version(p, b.dataset.load).model);setCurrentVersion(p,b.dataset.load); const conv = ensureStudio(p); persist(); loadAll(); setSel([]); toast(conv ? 'Version opened (converted to Plan Studio’s model)' : 'Version opened'); });
     $$('[data-simv]', app).forEach((a) => a.onclick = () => setCurrentVersion(p, a.dataset.simv));
-    $('#toSim', app).href = '#/simulations'; $('#toSim', app).onclick = () => { if (last()) setCurrentVersion(p, last().id); };
+    $('#toSim', app).href = '#/simulations'; $('#toSim', app).onclick = () => { if (baseline()) setCurrentVersion(p, baseline().id); };
   }
   function loadAll() { SNAP = JSON.stringify(p.draft.studio); for (const I2 of ready()) { const back = I2.ws.load(SNAP); if (I2 === INST.plan && back !== SNAP) { SNAP = back; p.draft.studio = JSON.parse(back); } tell(I2); } vpFitted = false; derive(false); levelUI(); refresh(true); }
+  async function flushCurrentModel(pane=activePane()){
+    if(!pane.ready)throw Error('The model is still loading. Try again when the view is ready.');
+    const snapshot=pane.ws.model();p.draft.studio=JSON.parse(snapshot);SNAP=snapshot;for(const i of ready())if(i!==pane)i.ws.apply(snapshot,false);
+    if(dT){cancelAnimationFrame(dT);dT=0;}while(dRun&&!dead)await new Promise(r=>setTimeout(r,20));if(dead)throw Error('The view changed before saving completed.');await deriveNow(false);if(dead)throw Error('The view changed before saving completed.');
+  }
   const studyChoice=document.createElement('select');studyChoice.id='workspaceStudy';studyChoice.setAttribute('aria-label','Simulation study');studyChoice.innerHTML=SIMS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
   try{const saved=localStorage.getItem('pc-workspace-study');if(SIMS.some(s=>s.id===saved))studyChoice.value=saved;}catch{}
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
   $('#sendSim', app).onclick = async () => {
-    const button=$('#sendSim',app),pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready){toast('The model is still loading.');return;}button.disabled=true;shell.inert=true;shell.setAttribute('aria-busy','true');
+    const button=$('#sendSim',app),pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready){toast('The model is still loading.');return;}button.disabled=true;button.textContent='Preparing simulation…';button.setAttribute('aria-busy','true');shell.inert=true;shell.setAttribute('aria-busy','true');
     try{
       // Flush the active model and its derived geometry before freezing the version.
-      const snapshot=pane.ws.model();p.draft.studio=JSON.parse(snapshot);SNAP=snapshot;
-      for(const i of ready())if(i!==pane)i.ws.apply(snapshot,false);
-      if(dT){cancelAnimationFrame(dT);dT=0;}while(dRun&&!dead)await new Promise(r=>setTimeout(r,20));if(dead)return;
-      await deriveNow(false);if(dead)return;
-      const v=dirty()||!last()?S.saveVersion(p,'Sent from Workspace'):last();setCurrent(p);setCurrentVersion(p,v.id);
+      await flushCurrentModel(pane);
+      const v=dirty()||!baseline()?S.saveVersion(p,'Sent from Workspace'):baseline();setCurrent(p);setCurrentVersion(p,v.id);
       const levels=pane.ws.levels(),selected=levels.list.find(l=>l.id===levels.lv),level=levelsOf(v.model).find(l=>Math.abs(l.z-(selected?.z??0))<.001);
       if(level)sessionStorage.setItem('pc-sim-level:'+p.id,'L'+level.n);
       location.hash='#/simulations/'+studyChoice.value+'?autorun=workspace';
-    }catch(error){toast('The current model could not be sent: '+(error.message||'storage unavailable'));button.disabled=false;shell.inert=false;shell.removeAttribute('aria-busy');}
+    }catch(error){toast('The current model could not be sent: '+(error.message||'storage unavailable'));button.disabled=false;button.textContent='Send to Simulation';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}
   };
   $('#editSite', app).onclick = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
   $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if(name===null)return;if(!name.trim()){toast('Enter a layer name.');return;}if(M().layers.find(l=>l.name.toLowerCase()===name.trim().toLowerCase())){toast('A layer with that name already exists.');return;} M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
-  $('#saveV', app).onclick = () => { if (!dirty() && last()) { toast('No changes since v' + last().n); return; } const v = S.saveVersion(p, $('#note', app).value.trim()); $('#note', app).value = ''; state(); toast(`Saved v${v.n}`); };
+  $('#saveV',app).onclick=async()=>{const button=$('#saveV',app);if(button.disabled)return;if(!dirty()&&baseline()){toast('No changes since v'+baseline().n);return;}button.disabled=true;button.textContent='Saving version…';button.setAttribute('aria-busy','true');const shell=$('.wb-shell',app);shell.inert=true;shell.setAttribute('aria-busy','true');try{await new Promise(requestAnimationFrame);await flushCurrentModel();const v=S.saveVersion(p,$('#note',app).value.trim());setCurrentVersion(p,v.id);$('#note',app).value='';state();toast('Saved v'+v.n);}catch(error){toast('The version could not be saved: '+error.message);}finally{button.disabled=false;button.textContent='Save version';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}};
 
   // ---- status bar: snaps for the Plan pane's drawing and the gumball, the gumball itself, clearance in Plan and Shaded
   $$('[data-snap]', app).forEach((i) => i.onchange = () => { UI.snap[i.dataset.snap] = i.checked; saveUI(); for (const I2 of ready()) I2.ws.snaps(UI.snap); });
@@ -696,7 +712,7 @@ export function render(app, [pid]) {
 
   const disposeShell=mountWorkbenchShell(app,{activePane,deleteSelection:()=>{if(!UI.sels.length)return false;delIds([...UI.sels]);return true;},fit:()=>$('#fit',app).click(),center:async()=>{
     const pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready)return;shell.inert=true;shell.setAttribute('aria-busy','true');
-    try{const result=await pane.ws.centerToOrigin();toast(result.moved?'Centered '+result.count+' imported building objects. Furniture was not moved. Undo restores the previous position.':'The imported building is already centered at the origin.');}
+    try{const result=await pane.ws.centerToOrigin();toast(result.moved?'Centered '+result.count+' imported building object'+(result.count===1?'':'s')+'. Furniture was not moved. Undo restores the previous position.':'The imported building is already centered at the origin.');}
     catch(error){toast(error.message||'The model could not be centered.');}
     finally{shell.inert=false;shell.removeAttribute('aria-busy');}
   }});

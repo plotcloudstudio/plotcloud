@@ -1,8 +1,8 @@
-import {installStudyWorkflow} from '../simulation-workflow.js?v=scale-review-20261027-1';
+import {installStudyWorkflow} from '../simulation-workflow.js?v=import-feedback-20261027-1';
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
-import {mountStudyImport} from '../study-import.js?v=scale-review-20261027-1';
+import {mountStudyImport} from '../study-import.js?v=import-feedback-20261027-1';
 // One simulation page for every PlotCloud engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
 // One implementation: nothing here computes or draws a result. This page only
 //   hands the engine the version's model in the engine's own input format (the scene Plan Studio's Send to Simulation
@@ -15,7 +15,7 @@ import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
-import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=scale-review-20261027-1';
+import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=import-feedback-20261027-1';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
@@ -327,14 +327,14 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     return [];
   }
   function store(kpis, analysis = null) {
-    if(!workflow.canSave()){say('Calculate the current model and settings before saving a result.',true);if(batch)batchNoResult=true;return;}
-    if((WEATHER.includes(sim.id)&&sim.id!=='wind'&&!weatherTask)||weatherFailure||doc()?.body.dataset.pcSharedWeatherLoading){say('Project weather is not ready. Resolve the shared EPW before saving.',true);return;}
+    if(!workflow.canSave()){if(workflow.isSaving())workflow.failSave('Inputs changed before the result could be saved. Calculate again.');if(batch)batchNoResult=true;return;}
+    if((WEATHER.includes(sim.id)&&sim.id!=='wind'&&!weatherTask)||weatherFailure||doc()?.body.dataset.pcSharedWeatherLoading){workflow.failSave('Project weather is not ready. Resolve the shared EPW before saving.');say('Project weather is not ready. Resolve the shared EPW before saving.',true);return;}
     if(pilot){const ready=SUN.includes(sim.id)?!!fr.contentWindow.__sun?.S.lastR&&!fr.contentWindow.__sun.S.busy:fr.contentWindow.__pcAnalysisState?.().ready;
-      if(!ready||!pilotRunSnapshot){say('Run the current Workspace model and settings before saving.',true);if(batch)batchNoResult=true;return;}}
+      if(!ready||!pilotRunSnapshot){workflow.failSave('Run the current model and settings before saving.');say('Run the current Workspace model and settings before saving.',true);if(batch)batchNoResult=true;return;}}
     let K = kpis.map(([k, s]) => [String(k), String(s ?? '').trim()]).filter(([, s]) => s && !/^[—–-]+(\s|$)/.test(s));
     const D = doc();
     if (SUN.includes(sim.id)) { const stats = [...(D?.querySelectorAll('#stats dt') || [])].map((dt) => [dt.textContent.trim(), (dt.nextElementSibling?.textContent || '').trim()]); K = K.concat(stats.filter(([k]) => !/window|extent/i.test(k))); }
-    if (!K.some(([, s]) => /\d/.test(s))) { say('Run the analysis first; then save its result.', true); if (batch) batchNoResult = true; return; }
+    if (!K.some(([, s]) => /\d/.test(s))) { workflow.failSave('Run the analysis first; then save its result.');say('Run the analysis first; then save its result.', true); if (batch) batchNoResult = true; return; }
     const results = { kpis: K };
     const th = thumbOf(D); if (th) results.thumb = th;
     try { const f = FIELDS[sim.id]?.(fr.contentWindow, sentScene); if (f && f.pts.length) results.field = f; } catch (e) { }
@@ -354,8 +354,8 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if(SUN.includes(sim.id)){const r=fr.contentWindow.__sun?.S?.lastR;if(r){settings.runSpec=S.clone(r.runSpec||{});settings.elapsedSeconds=r.elapsedSeconds;settings.actualGroundSpacing=S.clone(r.prep?.groundSpacing||null);settings.sampleCount=r.prep?.smpA?.length;settings.importAudit=S.clone(v.model.importAudit||null);}}
     settings.provenance={schema:1,engine:sim.id,engineRelease:ENGINE_RELEASE,versionId:v.id,recordedAt:new Date().toISOString(),site:{label:site?.label,lat:site?.lat,lon:site?.lon,north:site?.north??0,tz:site?.tz},note:'Host context at save time; study overrides and effective run settings are recorded separately.'};
     if(sentScene?.geometryAudit)settings.geometry=S.clone(sentScene.geometryAudit);
-    if (batch) { done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
-    try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
+    if (batch) { workflow.markSaved();done = true; tell({ ok: true, settings, results }); say('Done · handed to Results'); return; }
+    try { S.addRun(p, v.id, sim.id, settings, results, 'full-tool'); } catch (error) { workflow.failSave('This result could not be saved. Retry Save result or export the calculation.');say('This result could not be saved: ' + esc(error.message || 'storage unavailable'), true); try { fr.contentWindow.postMessage({ pc: 1, t: 'error', msg: 'Project save failed. Export JSON to keep this result.' }, '*'); } catch {} return; }
     try { fr.contentWindow.postMessage({ pc: 1, t: 'saved', count: p.runs.filter((r) => r.versionId === v.id && r.simId === sim.id).length }, '*'); } catch (e) { }
     workflow.markSaved();
     toast(`Saved to v${v.n}`); say(p.versions.length<2?`Saved to v${v.n} · <a href="#/workspace/${p.id}">Edit one design change →</a>`:`Saved to v${v.n} · <a href="#/results/${p.id}?sim=${sim.id}">Compare versions →</a>`);
@@ -384,7 +384,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   }
   saveBtn.onclick = () => {
     const D = doc(); if (!D) return;
-    if(!workflow.canSave()){say('Calculate the current model and settings before saving a result.',true);if(batch)batchNoResult=true;return;}
+    if(!workflow.beginSave()){if(batch)batchNoResult=true;return;}
     const own = cfg.save ? D.querySelector(cfg.save) : D.getElementById('pcAdd');
     if (own && !own.disabled) { own.click(); return; }
     store(kpisNow());

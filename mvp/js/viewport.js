@@ -116,13 +116,16 @@ export function createViewport(host, { onPick } = {}) {
 }
 
 // Read an OBJ / STL / GLB file into components (one per mesh), positioned with their bounding box.
+const loaderFailures=new Map();
+async function modelLoader(path){const count=loaderFailures.get(path)||0;try{return await import(path+(count?'?retry='+count:''));}catch{loaderFailures.set(path,count+1);throw Error('The model reader could not load from the network. Retry the import or reload this page; this does not mean the model file is damaged.');}}
 export async function importModel(file, { unit = 'auto', up = 'auto' } = {}) {
-  const ext = file.name.toLowerCase().split('.').pop(), buf = await file.arrayBuffer();
-  if (file.size > 25 * 1048576) throw Error('This file is over 25 MB. Export a simplified model for the prototype.');
+  const ext = file.name.toLowerCase().split('.').pop();
+  if (file.size > 25 * 1048576) throw Error('This file is over 25 MiB. Export a simplified model for the prototype.');
+  let buf;try{buf=await file.arrayBuffer();}catch{throw Error('This browser session could not read the selected file. Retry, or choose the file again.');}
   let obj, fileUp = 'y',audit=null,sourceUnit='Unknown (not declared)',detectedScale=null;const requestedUnit=unit;
-  if (ext === 'obj') { const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js'); obj = new OBJLoader().parse(new TextDecoder().decode(buf)); }
-  else if (ext === 'stl') { const { STLLoader } = await import('three/addons/loaders/STLLoader.js'); obj = new THREE.Mesh(new STLLoader().parse(buf)); fileUp = 'z'; }
-  else if (ext === 'glb' || ext === 'gltf') { const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js'); obj = (await new GLTFLoader().parseAsync(buf, '')).scene;sourceUnit='Metres (glTF specification)';detectedScale=1; }
+  if (ext === 'obj') { const { OBJLoader } = await modelLoader('three/addons/loaders/OBJLoader.js'); obj = new OBJLoader().parse(new TextDecoder().decode(buf)); }
+  else if (ext === 'stl') { const { STLLoader } = await modelLoader('three/addons/loaders/STLLoader.js'); obj = new THREE.Mesh(new STLLoader().parse(buf)); fileUp = 'z'; }
+  else if (ext === 'glb' || ext === 'gltf') { const { GLTFLoader } = await modelLoader('three/addons/loaders/GLTFLoader.js');try{obj = (await new GLTFLoader().parseAsync(buf, '')).scene;}catch(error){throw Error(ext==='gltf'?'The glTF reader could not load this file. If it uses external buffers or textures, export a self-contained GLB and retry.':('The GLB reader did not finish: '+error.message));}sourceUnit='Metres (glTF specification)';detectedScale=1; }
   else if (ext === '3dm') {   // Rhino: meshes, and the render meshes of surfaces, polysurfaces and extrusions; the file's units and layers are kept
     const rh = await loadRhino(), doc = rh.File3dm.fromByteArray(new Uint8Array(buf)); if (!doc) throw Error('This .3dm file could not be read.');
     const U = rh.UnitSystem, us = doc.settings().modelUnitSystem, k = us === U.Millimeters ? 0.001 : us === U.Centimeters ? 0.01 : us === U.Inches ? 0.0254 : us === U.Feet ? 0.3048 : us === U.Kilometers ? 1000 : 1;
@@ -152,5 +155,6 @@ export async function importModel(file, { unit = 'auto', up = 'auto' } = {}) {
   const minX = Math.min(...out.map((c) => c.g.x)), minY = Math.min(...out.map((c) => c.g.y)), minZ = Math.min(...out.map((c) => c.g.z));
   for (const c of out) { c.g.x -= minX; c.g.y -= minY; c.g.z -= minZ; }
   audit.boundsMetres={min:[0,0,0],max:['x','y','z'].map((a,i)=>Math.max(...out.map(c=>c.g[a]+c.g[['w','d','h'][i]])))};
+  audit.meshObjects??=out.length;audit.triangles=Math.round(tris);
   return { components: out, triangles: Math.round(tris),audit };
 }

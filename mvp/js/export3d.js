@@ -83,7 +83,8 @@ export function dae(model) {   // Collada 1.4.1, Z up, metres: SketchUp, Rhino, 
 
 let rhinoP = null;
 export function loadRhino() {   // rhino3dm (McNeel's openNURBS for the web), loaded once; also used to read .3dm (viewport.js)
-  return rhinoP ||= new Promise((res, rej) => { if (window.rhino3dm) return res(window.rhino3dm()); const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.min.js'; s.onload = () => res(window.rhino3dm()); s.onerror = () => { rhinoP = null; rej(Error('The Rhino library could not load. Check the connection and try again.')); }; document.head.appendChild(s); });
+  if(rhinoP)return rhinoP;const operation=new Promise((res,rej)=>{if(window.rhino3dm){res(window.rhino3dm());return;}const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.min.js';s.onload=()=>{try{res(window.rhino3dm());}catch(error){rej(error);}};s.onerror=()=>{s.remove();rej(Error('The Rhino reader script could not load.'));};document.head.appendChild(s);});
+  rhinoP=operation.catch(error=>{rhinoP=null;throw Error('The Rhino reader did not initialize: '+(error.message||error)+'. Check the connection and retry; the model file has not been diagnosed as damaged.');});return rhinoP;
 }
 export async function rhino(model) {   // Rhino .3dm: one mesh per component, named, on its layer, metres
   const rh = await loadRhino(), doc = new rh.File3dm(); doc.settings().modelUnitSystem = rh.UnitSystem.Meters;

@@ -8,6 +8,13 @@ export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toLocaleString('en-CA', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—');
+export function refreshProjectContext(project=currentProject()){
+  const host=document.querySelector('.pc-ui-context');if(!host||!project)return;
+  if(host.dataset.project&&host.dataset.project!==project.id)return;
+  host.dataset.project=project.id;const name=host.querySelector('strong'),version=host.querySelector('[data-pc-version]'),v=currentVersion(project),latest=v===project.versions.at(-1);
+  if(name){name.textContent=project.name;name.title=project.name;}
+  if(version){version.textContent=v?(latest?'Latest saved v':'Saved v')+v.n:'No saved version';version.title=version.textContent;}
+}
 export const when = (iso) => new Date(iso).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 export function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
 export const MOCK = '<span class="tag mock" title="Prototype estimate from simple model quantities. Not the PlotCloud simulation engine.">Mock</span>';
@@ -117,6 +124,7 @@ export async function route() {
       const version=currentVersion(project), latest=version&&version===project.versions.at(-1);   // the version simulations run on (chosen in the Workspace or the version picker)
       context.innerHTML='<strong>'+esc(project.name)+'</strong><span data-pc-version>'+(version?(latest?'Latest saved v':'Saved v')+version.n:'No saved version')+'</span><span>'+esc((((S.isSharedPilot(rest[0])||rest[0]==='vent')?S.conditionsOf(project).site:S.siteOf(project))?.label||'Site not set').split(',')[0])+'</span><a href="#/project-settings/'+esc(project.id)+'">Shared conditions</a><span class="pc-ui-storage">'+(S.persistent()?'Saved in this browser':'Session only · storage unavailable')+'</span>';
       app.before(context);
+      refreshProjectContext(project);
     }
   }
   document.title = 'PlotCloud — ' + TITLES[key];
