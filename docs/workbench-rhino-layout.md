@@ -8,6 +8,11 @@ model object opens Properties without removing the library. Extra view panels
 scroll rather than being divided into height-dependent pages. Tools can be
 collapsed to give the canvas more room.
 
+Fit, Zoom selected and zoom controls are always reachable in the status bar.
+More retains the original Clear current level action and contextual Ceiling plan
+light, panel, vent and smoke-detector tools. These delegate to the native controls
+and retain their own confirmations and constraints.
+
 The command strip delegates to Plan Studio's actual tools and shared history.
 Delete removes the current selection; with no selection it starts the existing
 deletion tool. Input fields retain ordinary text-editing keyboard behavior. Host
