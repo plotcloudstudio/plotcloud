@@ -1,0 +1,24 @@
+name: PlotCloud live weather service
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/weather-service-live.yml'
+      - 'tests/weather-service-live.py'
+      - 'mvp/js/weather-config.js'
+      - 'supabase/functions/plotcloud-weather/**'
+  workflow_dispatch:
+jobs:
+  verify-weather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check public function and real Vancouver and Toronto archives
+        run: python3 tests/weather-service-live.py
+      - name: Retain public station verification report
+        uses: actions/upload-artifact@v4
+        with:
+          name: plotcloud-weather-live-verification
+          path: /tmp/plotcloud-weather-live.json
+          if-no-files-found: ignore
