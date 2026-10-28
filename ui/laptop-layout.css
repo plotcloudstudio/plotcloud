@@ -1,0 +1,82 @@
+/* Laptop density: reflow controls; never scale the canvas, geometry or whole page. */
+@media (min-width:901px) and (max-width:1600px), (min-width:901px) and (max-height:800px){
+ body:has(.w2,.shx,.struct-study)>header.top{height:48px;min-height:48px;padding:0 16px;gap:14px}
+ body:has(.w2,.shx,.struct-study)>header.top nav{gap:16px;font-size:12px}
+ body:has(.w2,.shx,.struct-study)>header.top .right{gap:8px}
+ body:has(.w2,.shx,.struct-study)>header.top .btn{font-size:12px;min-height:28px;padding:5px 9px}
+ body:has(.w2,.shx,.struct-study)>.pc-ui-context{min-height:30px;padding:5px 16px;gap:10px;font-size:11px;box-sizing:border-box}
+ body:has(.w2,.shx,.struct-study) #app{min-height:0}
+ .wb-shell.w2{grid-template-columns:42px 202px minmax(0,1fr) 242px;grid-template-rows:auto minmax(0,1fr) 30px;font-size:12px;min-height:0}
+ .wb-shell.wb-library-closed{grid-template-columns:42px 0 minmax(0,1fr) 242px}
+ .wb-commandbar{padding:5px 8px;gap:4px}
+ .wb-commandbar::after{content:'';flex-basis:100%;height:0;order:2}
+ .wb-commandbar .wb-commandline{order:3;flex:1 1 160px;font-size:11px}
+ .wb-commandbar .w2-tr{order:4;margin-left:auto;flex-wrap:nowrap}
+ .wb-commandbar .btn,.wb-commandbar .w2-cap button,.wb-commandbar .w3-gear{font-size:12px;min-height:28px;padding:4px 7px}
+ .wb-commandbar .wb-extra>summary{min-height:28px;padding:4px 7px}
+ .wb-commandbar #workspaceStudy{width:128px;font-size:12px}
+ .wb-shell .w2-panel .pane,.wb-shell .w3-tp{padding:10px}
+ .wb-shell :is(.w2-panel,.w2-right) :is(p,label,select,input,.btn,.w2-lrow){font-size:12px}
+ .wb-shell :is(.w2-panel,.w2-right) p{line-height:1.45;overflow-wrap:anywhere}
+ .wb-shell .w3-tlist button{font-size:12px;min-height:30px;padding:4px 7px}
+ .wb-shell .wb-properties{padding:8px;min-height:0}
+ .wb-shell .wb-properties .w3-props iframe{min-height:200px}
+ .wb-shell .w3-selp{max-height:130px}
+ .wb-shell .w2-status{padding:0 8px;gap:6px}
+ .wb-shell .w2-status label,.wb-shell .w2-status button{font-size:11px}
+ .shbar{gap:6px;padding:5px 10px;font-size:12px}
+ .shbar .shname{font-size:14px}
+ .shbar .btn{font-size:12px;min-height:28px;padding:5px 8px}
+ .shbar .shsel select{font-size:12px;max-width:165px;padding:3px 7px;border-radius:4px}
+ .shbar .shsite{max-width:210px;font-size:11px;padding:4px 7px;border-radius:4px}
+ .study-workflow{gap:6px;padding:4px 0 0}
+ .study-workflow #studyState{font-size:11px;flex:1 1 140px}
+ .study-workflow #shmsg{font-size:11px;max-width:180px}
+ .study-workflow label.note{font-size:11px}
+ .shbar>.study-import{margin:2px 0!important;gap:6px!important;flex:1 0 100%}
+ .shbar>.study-import>.note{font-size:11px;flex:1;min-width:0;line-height:1.35}
+ .shbar>.study-import details{font-size:11px}
+ .struct-study{padding:6px 10px 0;font-size:12px}
+ .ss-head{gap:6px;padding-bottom:6px}
+ .ss-head>div:first-child{min-width:180px}
+ .ss-head .btn,.ss-view-tools .btn{font-size:12px;min-height:28px;padding:4px 7px}
+ .ss-head select{max-width:150px;font-size:12px}
+ .ss-body{grid-template-columns:280px minmax(0,1fr);gap:8px;min-height:280px}
+ .ss-setup{padding:9px}
+ .ss-setup details{padding:9px 0}
+ .ss-view{min-height:190px}
+ .ss-view-tools{top:6px;left:6px;right:6px;gap:4px}
+ .ss-view-tools span{max-width:100%;overflow-wrap:anywhere}
+ .ss-legend{font-size:11px;line-height:1.35;bottom:6px;padding:5px 7px}
+ /* Native simulation panels, including visible engines inside nested iframes. */
+ html.pc-simulation-fit .app:has(>#panelL),html.pc-simulation-fit .app[data-pc-unified]:has(>#panelL){grid-template-columns:clamp(232px,21vw,270px) minmax(0,1fr) clamp(224px,20vw,260px)!important}
+ html.pc-simulation-fit body{font-size:12px!important}
+ html.pc-simulation-fit .pc-fit-panel{padding:6px!important;gap:6px!important}
+ html.pc-simulation-fit :is(.sec,.card,.pc-unified-group){padding:8px!important}
+ html.pc-simulation-fit :is(.sec,.card) :is(label,p,.note,.rbtn,.btn,.go,select,input){font-size:12px!important}
+ html.pc-simulation-fit :is(.sec,.card) :is(h2,h3){font-size:13px!important;margin-top:0}
+ html.pc-simulation-fit :is(input:not([type=checkbox]):not([type=range]):not([type=radio]),select){min-height:28px!important;padding:4px 6px!important;max-width:100%;box-sizing:border-box}
+ html.pc-simulation-fit :is(button,.rbtn,.btn,.go){min-height:28px!important}
+ html.pc-simulation-fit :is(.two,.row){min-width:0;gap:6px!important}
+ html.pc-simulation-fit .pc-fit-content .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html.pc-simulation-fit .pc-fit-content .three{grid-template-columns:repeat(3,minmax(0,1fr))}
+ html.pc-simulation-fit .pc-fit-content :is(input,select){min-width:0}
+ html.pc-simulation-fit .note{white-space:normal!important;overflow-wrap:anywhere}
+ html.pc-simulation-fit #panelR .pc-fit-content .kp4{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
+ html.pc-simulation-fit #panelR .pc-fit-content .kp4>div{min-width:0;padding:6px!important}
+ html.pc-simulation-fit #panelR .pc-fit-content .kp4 b{font-size:14px!important;overflow-wrap:anywhere}
+}
+/* The properties editor is a narrow iframe even on a wide laptop viewport. */
+html.ws-props body{font-size:12px}
+html.ws-props .props .kv{gap:6px}
+html.ws-props .props .kv :is(label,input,select){font-size:12px}
+html.ws-props .props .kv label{white-space:normal!important;overflow:visible!important;text-overflow:clip;line-height:1.35}
+@media(min-width:901px) and (max-width:1100px){
+ .wb-shell.w2{grid-template-columns:38px 184px minmax(0,1fr) 222px}
+ .wb-shell.wb-library-closed{grid-template-columns:38px 0 minmax(0,1fr) 222px}
+ .wb-commandbar .wb-edit{gap:2px}
+ .wb-commandbar .btn,.wb-commandbar .w2-cap button{padding:4px 6px}
+ .shbar .shsel select{max-width:135px}
+ .ss-head>div:first-child{flex-basis:100%}
+ .ss-body{grid-template-columns:260px minmax(0,1fr)}
+}

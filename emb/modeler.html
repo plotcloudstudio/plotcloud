@@ -4830,7 +4830,7 @@ for (const c of KRCARDS) { const h = c.querySelector('.kr-h'); const t = documen
 let PPAGE = { key: '', i: 0 }, VPAGE = 0;
 const krOver = () => KRS && KRS.scrollHeight > KRS.clientHeight + 1;
 function krFit(pref) {
-  if (!KRS) return; KRS.scrollTop = 0;
+  if (!KRS) return; if (window.__WSROLE !== 'props') KRS.scrollTop = 0;
   // groups closed automatically come back when there is room again
   for (const c of KRCARDS) if (c.dataset.auto === '1' && c !== pref) { c.classList.remove('kr-closed'); if (krOver()) c.classList.add('kr-closed'); else delete c.dataset.auto; }
   for (const c of KRCARDS.slice().sort((a, b) => (+a.dataset.pref || 0) - (+b.dataset.pref || 0) || (a.id === 'verCard' ? -1 : 1))) {   /* the oldest opened first; Versions before Level properties */ if (!krOver()) break; if (c !== pref && !c.classList.contains('kr-closed')) { c.classList.add('kr-closed'); c.dataset.auto = '1'; c.querySelector('.kr-tg').setAttribute('aria-expanded', 'false'); } }
@@ -4839,7 +4839,7 @@ function krFit(pref) {
 }
 // a long Properties panel is paged (‹ 1/2 ›) rather than scrolled
 function propsPage() {
-  const kv = $('#props > .kv'); $$('#props .ppg').forEach((e) => e.remove()); if (!kv) return; const cells = [...kv.children]; cells.forEach((c) => { c.hidden = false; }); if (!krOver() || cells.length < 4) return;
+  const kv = $('#props > .kv'); $$('#props .ppg').forEach((e) => e.remove()); if (!kv) return; const cells = [...kv.children]; cells.forEach((c) => { c.hidden = false; }); if (window.__WSROLE === 'props' || !krOver() || cells.length < 4) return;
   const key = SEL ? SEL.k + SEL.id : ''; if (PPAGE.key !== key) PPAGE = { key, i: 0 };
   const pg = document.createElement('div'); pg.className = 'ppg'; pg.innerHTML = '<button type="button" class="btn" data-pp="-1" aria-label="Previous settings">‹</button><span></span><button type="button" class="btn" data-pp="1" aria-label="More settings">›</button>'; kv.after(pg);
   let per = cells.length; while (per > 2) { cells.forEach((c, i) => { c.hidden = i >= per; }); if (!krOver()) break; per--; }

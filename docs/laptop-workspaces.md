@@ -1,0 +1,13 @@
+# Laptop workspace layout
+
+The task is to keep the model, analysis controls and status reachable on common laptop viewports, including the effective CSS viewport when browser zoom is increased. The change is presentation only: no model units, geometry coordinates, calculation inputs, results, permissions or pricing are rescaled or rewritten.
+
+An inconsistent module URL in the previous site entry loaded two instances of the router. It could create duplicate project bars and make the viewport-height calculation miss 40 pixels. The entry now imports the same canonical module as every page through the import map. The regression checks exactly one context bar and a fully visible footer.
+
+`ui/laptop-layout.css` supplies compact density at laptop widths or short desktop heights. Navigation uses 48 pixels and project context 30 pixels; controls use about 12-pixel type and native 28-pixel button targets. Workbench commands reflow above the viewport, with the command hint beside the simulation handoff. Sidebars become narrower and retain native scrolling. Properties no longer force a 320-pixel iframe into a shorter panel. The embedded Properties role keeps all applicable fields in a continuous native scroll area rather than hiding fields behind Settings 1/2 pages. Labels can wrap. Wide desktop and mobile layouts retain their existing behavior.
+
+Simulation model/version selectors and workflow controls use less height, while Run and Save remain visible. Settings and Export stay on one continuous scroll surface. The model canvas is not CSS-scaled. Structural screening uses the same compact header and bounded viewport/results arrangement.
+
+`ui/laptop-layout.js` applies the stylesheet to the site's existing same-origin iframe documents, including visible nested simulation engines and the narrow properties editor. It observes inserted frames and load events, does not clone controls, and does not add a render loop. ResizeObserver keeps the shell-height variable aligned with measured header/context height after responsive CSS loads.
+
+Validation: `tests/laptop-layout.cjs` checks Workbench and all 17 studies at 1536×864, 1366×768, 1280×720, 1093×614 (a representative zoomed laptop viewport), and 1024×640. It checks single context, outer-page bounds, Run/Save/commands, analysis viewport area, native panel scrolling, no settings pagination, nested stylesheet coverage, geometry preservation, a wide desktop and mobile horizontal layout. Structural and existing Workbench interaction regressions separately exercise calculation/reporting and editing/handoff. Browser-generated screenshots are evidence of the actual interface, not illustrative mockups.

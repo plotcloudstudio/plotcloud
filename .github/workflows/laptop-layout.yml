@@ -1,0 +1,44 @@
+name: Laptop workspace verification
+on:
+  push:
+    branches: [main]
+    paths: ['ui/laptop-layout.*', 'mvp/index.html', 'mvp/js/workbench-shell.js', 'mvp/js/pages/workspace-v2.js', 'tests/laptop-layout.cjs', '.github/workflows/laptop-layout.yml']
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Check Workbench and all 17 simulations
+        env:
+          TEST_BASE: http://127.0.0.1:8790
+        run: |
+          python3 -m http.server 8790 --bind 127.0.0.1 > /tmp/laptop-http.log 2>&1 &
+          node tests/laptop-layout.cjs
+          node tests/structural-study-ui.cjs
+      - name: Check the deployed laptop workspaces
+        env:
+          TEST_BASE: https://plotcloudstudio.github.io/plotcloud
+          LAPTOP_STUDIES: sunhours,daylight,vent,acoustics,structure
+        run: |
+          ready=false
+          for attempt in $(seq 1 48); do
+            if curl --fail --silent --show-error "$TEST_BASE/mvp/index.html?release=$GITHUB_SHA" -o /tmp/laptop-live-index.html && cmp -s /tmp/laptop-live-index.html mvp/index.html; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          test "$ready" = true
+          node tests/laptop-layout.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: laptop-layout-evidence
+          path: /tmp/plotcloud-laptop

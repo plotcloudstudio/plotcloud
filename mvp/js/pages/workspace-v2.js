@@ -10,7 +10,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
-import {mountWorkbenchShell} from '../workbench-shell.js?v=center-building-20261027-1';
+import {mountWorkbenchShell} from '../workbench-shell.js?v=laptop-layout-20261028-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel } from '../viewport.js';
@@ -141,7 +141,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=import-feedback-20261027-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=laptop-layout-20261028-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
