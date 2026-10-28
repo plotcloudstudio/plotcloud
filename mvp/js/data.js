@@ -49,7 +49,7 @@ export const SIMS = [
   { id: 'cameras', group: 'Space & movement', name: 'Camera coverage', tool: 'cameras', view: 'plan',
     blurb: 'Where security cameras should go for the detail you need.', inputs: ['Floor plan'], metrics: [['cover', 'Floor covered', '%', 1, /^covered/i], ['cams', 'Cameras', '', 0, /^cameras$/i]] },
   { id: 'structure', group: 'Structure', name: 'Structural analysis', tool: 'structure', view: 'wire',
-    blurb: 'Frame with NBC loads, member sizing and deflection checks.', inputs: ['Grid and storeys', 'Material and system'], metrics: [['ratio', 'Stress ratio', '', 2, /stress ratio/i], ['disp', 'Displacement', 'mm', 1, /displacement/i]] },
+    blurb: 'Confirmed steel and engineered-timber frame screening on your building, with source-linked issues and editable column schemes.', inputs: ['Confirmed member axes and sections', 'Structural materials, supports and load paths'], metrics: [['ratio', 'Stress ratio', '', 2, /stress ratio/i], ['disp', 'Displacement', 'mm', 1, /displacement/i]] },
 ];
 
 // Spatial scope is independent of discipline: Climate contains both indoor and outdoor studies.

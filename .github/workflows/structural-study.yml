@@ -1,0 +1,33 @@
+name: Structural frame study
+on:
+  push:
+    branches: [main]
+    paths: ['mvp/js/structural-*.js', 'mvp/js/pages/structure-study.js', 'mvp/css/structure-study.css', 'emb/lib/structural-solver.js', 'emb/structure.html', 'tests/structural-*.cjs', '.github/workflows/structural-study.yml']
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Validate mechanics and building workflow
+        env:
+          TEST_BASE: http://127.0.0.1:8790
+          ARTIFACT_DIR: /tmp/plotcloud-structural-artifacts
+        run: |
+          node tests/structural-workflow.cjs
+          python3 -m http.server 8790 --bind 127.0.0.1 > /tmp/structural-http.log 2>&1 &
+          node tests/structural-study-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: structural-study-evidence
+          path: |
+            /tmp/plotcloud-structural-artifacts
+            /tmp/structural-study-report.html
+            /tmp/structural-study-inputs.json

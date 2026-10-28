@@ -130,6 +130,7 @@ export function updateConditions(p,site,defaults){
   const c=conditionsOf(p);p.sharedConditions={schema:1,revision:c.revision+1,updated:now(),site:clone(site),defaults:clone(defaults)};p.updated=now();save();return p.sharedConditions;
 }
 export function runConditionsStatus(p,r){
+  if(r.simId==='structure'&&!r.settings?.structuralStudy?.source?.versionId)return 'Legacy structural grid result · building mapping unverified';
   if(!isSharedPilot(r.simId)&&r.simId!=='vent')return '';
   const used=r.settings?.sharedConditions;
   return !used?'Legacy result · verify conditions':used.signature!==conditionsSignature(p,r.simId)?'Shared conditions changed · rerun required':'';
