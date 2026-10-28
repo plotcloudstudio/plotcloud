@@ -1,6 +1,6 @@
 # Local reference-engine execution: first delivery
 
-Release: `local-compute-20261028-1`.
+Release: `local-compute-20261028-2`.
 
 ## Product task and boundary
 

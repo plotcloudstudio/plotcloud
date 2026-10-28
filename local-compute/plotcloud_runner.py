@@ -23,7 +23,7 @@ from urllib.parse import urlsplit
 import webbrowser
 import zipfile
 
-RELEASE = 'local-compute-20261028-1'
+RELEASE = 'local-compute-20261028-2'
 MAX_BODY = 48 * 1024 * 1024
 MAX_TRIANGLES = 180000
 MAX_SENSORS = 4096
@@ -87,7 +87,7 @@ def validate(job):
         rows = list(csv.reader(io.StringIO(epw)))
         require(len(rows) in (8768, 8792) and all(len(r) >= 35 for r in rows[8:]), 'EPW must have 8 header lines and 8760 or 8784 complete hourly rows.')
         for key in model:
-            require(not key.lower().startswith(('pythonplugin', 'externalinterface', 'parametric', 'utilitycost')), 'This runner does not allow plugins, external interfaces, parametric expansion or financial analysis.')
+            require(not key.lower().startswith(('pythonplugin', 'externalinterface', 'parametric')), 'This runner does not allow plugins, external interfaces or parametric expansion.')
         def no_external(value):
             if isinstance(value, dict):
                 for k, v in value.items():

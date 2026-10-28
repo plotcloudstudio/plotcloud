@@ -1,5 +1,5 @@
 // File-based handoff intentionally avoids HTTPS-to-localhost mixed-content/private-network restrictions.
-export const RELEASE='local-compute-20261028-1';
+export const RELEASE='local-compute-20261028-2';
 export const SCHEMA='plotcloud-local-job-v1';
 export const MAX_FILE=48*1024*1024;
 export async function sha256(value){const bytes=new TextEncoder().encode(typeof value==='string'?value:JSON.stringify(value));return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');}
