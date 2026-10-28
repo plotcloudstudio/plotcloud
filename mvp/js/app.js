@@ -62,7 +62,7 @@ function who() {
 document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e.target.closest('.who-w')) { m.hidden = true; $('#whoBtn')?.setAttribute('aria-expanded', 'false'); } });
 
 const PAGES = {
-  'local-compute':()=>import('./pages/local-compute.js?v=study-unified-20261028-1'),
+  'local-compute':()=>import('./pages/local-compute.js?v=study-unified-20261028-2'),
   'comparison-report':()=>import('./pages/comparison-report.js'),
   'start-study':()=>import('./pages/start-study.js'),
   admin: () => import('./pages/admin.js'),
