@@ -1,23 +1,28 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {chromium}=require('playwright');
 const inventory=require('../ui/inventory.json');
+const {resourceAccessFixture,cacheCDN}=require('./resource-access-fixture.cjs');
+const paidEngines=['furniture','facade','detaillab','topo','stairs3d','doors3d'];
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 let currentTarget='browser startup';
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
- const results=[];
+ const results=[];const members=await browser.newContext({viewport:{width:1440,height:900}});await resourceAccessFixture(members);await cacheCDN(members);
  try{
-  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const context=await browser.newContext({viewport:{width:1440,height:900}});await cacheCDN(context);
   for(const host of inventory.hosts){
    currentTarget=host.file;
-   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+   const resource=paidEngines.find(id=>host.file==='emb/'+id+'.html');
+   const page=await(resource?members:context).newPage();const errors=[];let target=page;page.on('pageerror',e=>errors.push(e.message));
    try{
     const url=host.file==='index.html'?'/index.html#/home':host.url;
-    await page.goto(base+url,{waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>window.PlotCloudUI?.version===1);
+    await page.goto(base+(resource?'/mvp/#/resources/tool/'+resource:url),{waitUntil:'domcontentloaded'});
+    if(resource){const frame=await page.locator('#resourceEngine').elementHandle();target=await frame.contentFrame();}
+    await target.waitForFunction(()=>window.PlotCloudUI?.version===1);
     const check=async theme=>{
      await page.evaluate(t=>PlotCloudUI.setTheme(t),theme);
-     const actual=await page.evaluate(()=>{
+     await target.waitForFunction(t=>document.documentElement.dataset.pcTheme===t,theme);
+     const actual=await target.evaluate(()=>{
       const root=document.documentElement,cs=getComputedStyle(root),body=getComputedStyle(document.body);
       return {theme:root.dataset.pcTheme,surface:root.dataset.pcSurface,font:body.fontFamily,text:body.color,token:cs.getPropertyValue('--pc-ui-text').trim(),fields:[...document.querySelectorAll('input[type=number],select')].filter(e=>e.getBoundingClientRect().width>0).slice(0,3).map(e=>({color:getComputedStyle(e).color,bg:getComputedStyle(e).backgroundColor}))};
      });

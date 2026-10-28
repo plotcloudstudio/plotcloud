@@ -1,6 +1,6 @@
 // Hash router, theme, sign-in state and small helpers shared by the pages.
 import * as S from './store.js';
-import {SIMS} from './data.js';
+import {SIMS,MODEL_TOOLS,RESOURCES} from './data.js';
 import * as C from './cloud.js';
 import {checkAccess, canUse, renderGate} from './beta-access.js';
 
@@ -101,7 +101,8 @@ export async function route() {
   if (feature) {
     await checkAccess(); if (!isCurrent()) return;
     if (!canUse(feature)) {
-      renderGate(app, 'This ' + (feature.startsWith('resource:') ? 'tool' : 'study'));
+      const toolName=[...MODEL_TOOLS,...RESOURCES.utilities,...RESOURCES.refs].find(t=>t.tool===resource)?.name||({stairs3d:'Stair generator',doors3d:'Door generator'})[resource];
+      renderGate(app, toolName || 'This tool');
       if (key === 'batch-run' && params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Paid beta access required.'},location.origin);
       document.title = 'Beta access · PlotCloud'; return;
     }

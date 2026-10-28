@@ -58,11 +58,13 @@ for(const sim of SIMS) sim.scope=['sunhours','radiation','utci','wind','stormwat
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [
   { name: '3D model generator', tool: 'furniture', blurb: 'Parametric furniture and fittings.' },
+  { name: 'Stair generator', tool: 'stairs3d', blurb: 'Parametric stairs and railings with model export.' },
+  { name: 'Door generator', tool: 'doors3d', blurb: 'Parametric doors and frames with model export.' },
   { name: 'Facade studio', tool: 'facade', blurb: 'Parametric facade studies.' },
   { name: 'DetailLab', tool: 'detaillab', blurb: 'Construction details in 3D.' },
 ];
 
-// Resources: free tools and files that bring people in.
+// Resource discovery is public; resource tools retain their access requirements.
 export const RESOURCES = {
   utilities: [
     { name: 'Color palettes', tool: 'palette', blurb: 'Palettes for boards, renders and materials.' },

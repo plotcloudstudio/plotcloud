@@ -1,9 +1,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {destination}=require('../legacy-redirect.js');
+const {resourceAccessFixture,cacheCDN}=require('./resource-access-fixture.cjs');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
- const page=await browser.newPage({viewport:{width:1440,height:1000},acceptDownloads:true}),errors=[],oldRequests=[];
+ const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});await resourceAccessFixture(context);await cacheCDN(context);
+ const page=await context.newPage(),errors=[],oldRequests=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/index\.html(?:[?#]|$)/.test(r.url()))oldRequests.push(r.url());});
  const open=async route=>{await page.goto(base+'/mvp/#/'+route);await page.locator('.resource-page,.resource-engine').waitFor();};
  try{
@@ -13,7 +15,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   assert.equal(await page.locator('#app a[href*="index.html"]').count(),0);
   assert.equal(await page.locator('#app a[href*="studio"],#app a[href*="render"],#app a[href*="composer"],#app a[href*="atlas"]').count(),0);
   assert.equal(await page.locator('#nav').getByRole('link',{name:/All tools/}).count(),0);
-  const links=await page.locator('.resource-tools a').evaluateAll(a=>a.map(x=>x.getAttribute('href')));assert.equal(links.length,11);
+  const links=await page.locator('.resource-tools a').evaluateAll(a=>a.map(x=>x.getAttribute('href')));assert.equal(links.length,13);
   await page.locator('#resourceCategory').selectOption('cad');assert.equal(await page.locator('.resource-card').count(),2);
   await page.locator('#resourceSearch').fill('stair');assert.equal(await page.locator('.resource-card').count(),1);
   await page.reload();await page.locator('.resource-card').waitFor();assert.equal(await page.locator('#resourceCategory').inputValue(),'cad');
@@ -31,7 +33,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 
   for(const href of links){
    await open(href.replace(/^#\//,''));
-   if(href.includes('/tool/furniture')||href.includes('/tool/facade')||href.includes('/tool/detaillab')||href.includes('/tool/topo')){
+   if(['furniture','facade','detaillab','topo','stairs3d','doors3d'].some(id=>href.endsWith('/tool/'+id))){
     await page.frameLocator('#resourceEngine').locator('body').waitFor();
     assert.equal(await page.locator('#resourceEngine').evaluate(f=>f.getAttribute('src').startsWith('../emb/')),true);
    }else await page.locator('#utilityBody').waitFor();
@@ -69,6 +71,6 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   for(const f of ['render','atlas','composer','studio'])assert.equal((await page.request.get(base+'/emb/'+f+'.html')).status(),404,'Retired page '+f+' must be deleted');
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('pc-proto'))),preserved);
   assert.deepEqual(errors,[]);
-  console.log('PASS native Resources: all 19 records, 9 categories, 11 tool/reference links, metadata export, local data preservation, filters/reload, collections, utility calculations/exports, mobile, legacy redirects and shared Workspace');
+  console.log('PASS native Resources: all 19 records, 9 categories, 13 tool/reference links, metadata export, local data preservation, filters/reload, collections, utility calculations/exports, mobile, legacy redirects and shared Workspace');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

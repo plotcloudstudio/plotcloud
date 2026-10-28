@@ -1,0 +1,39 @@
+name: Resource entry verification
+on:
+  push:
+    branches: [main]
+    paths: ['mvp/js/beta-access.js', 'mvp/js/beta-entry.js', 'mvp/js/pages/resource*.js', 'tests/resource*.cjs', 'tests/ui-unification.cjs', '.github/workflows/resource-entry.yml']
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Check resource routing, permissions, exports and themes
+        env:
+          TEST_BASE: http://127.0.0.1:8790
+        run: |
+          python3 -m http.server 8790 --bind 127.0.0.1 > /tmp/resource-http.log 2>&1 &
+          node tests/resource-entry.cjs
+          node tests/resources-native.cjs
+          node tests/ui-unification.cjs
+      - name: Check the deployed resource entries
+        env:
+          TEST_BASE: https://plotcloudstudio.github.io/plotcloud
+        run: |
+          ready=false
+          for attempt in $(seq 1 48); do
+            if curl --fail --silent --show-error "$TEST_BASE/mvp/index.html?release=$GITHUB_SHA" -o /tmp/resource-live-index.html && cmp -s /tmp/resource-live-index.html mvp/index.html; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          test "$ready" = true
+          node tests/resource-entry.cjs
