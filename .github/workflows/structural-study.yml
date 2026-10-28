@@ -23,6 +23,21 @@ jobs:
           node tests/structural-workflow.cjs
           python3 -m http.server 8790 --bind 127.0.0.1 > /tmp/structural-http.log 2>&1 &
           node tests/structural-study-ui.cjs
+      - name: Verify the deployed website
+        env:
+          TEST_BASE: https://plotcloudstudio.github.io/plotcloud
+          ARTIFACT_DIR: /tmp/plotcloud-structural-artifacts/live
+        run: |
+          ready=false
+          for attempt in $(seq 1 48); do
+            if curl --fail --silent --show-error "$TEST_BASE/mvp/index.html?release=$GITHUB_SHA" -o /tmp/structural-live-index.html && cmp -s /tmp/structural-live-index.html mvp/index.html; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          test "$ready" = true
+          node tests/structural-study-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
