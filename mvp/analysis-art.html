@@ -1,10 +1,11 @@
 <!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;overflow:hidden;font-family:Arial,sans-serif}canvas{display:block}.head,.foot{position:absolute;left:44px;right:44px;display:flex;justify-content:space-between;z-index:2}.head{top:34px;font-size:17px;font-weight:600}.foot{bottom:28px;font-size:11px;letter-spacing:1px}.bar{width:150px;height:6px;display:inline-block;margin-left:12px;vertical-align:middle;background:linear-gradient(90deg,var(--low),var(--high))}</style></head><body><div class="head"><span id="name"></span><span style="font-size:11px;letter-spacing:1px;opacity:.55">PLOTCLOUD / ANALYSIS</span></div><div class="foot"><span>ILLUSTRATIVE PREVIEW · SAME MODEL / SAME VIEW</span><span id="legend"></span></div><script type="module">
 import * as T from '../furniture/three.module.min.js';
 import {sampleModel,SIMS} from './js/data.js';
+import {environmentalArt}from'./js/environment/art.js';
 import {SITE_BOXES,studyField} from './js/analysis-study-art.js';
 const q=new URLSearchParams(location.search),id=q.get('mode')||'daylight',night=q.get('t')==='night',sim=SIMS.find(s=>s.id===id),W=1200,H=900;
 const exterior=sim.scope==='Exterior';document.querySelector('.foot>span').textContent=`ILLUSTRATIVE PREVIEW · ${sim.scope.toUpperCase()} STUDY`;
-const colours=await(await fetch('./engine-colours.json')).json(),palette=colours[id];if(!palette)throw Error('Missing engine colours: '+id);
+const colours=await(await fetch('./engine-colours.json')).json(),palette=colours[id]||(sim.family==='environment'?colours.sunhours:null);if(!palette)throw Error('Missing engine colours: '+id);
 const css=c=>Array.isArray(c)?`rgb(${c.map(Math.round).join(',')})`:c;
 function engineColour(t){t=Math.max(0,Math.min(1,t));const stops=palette.stops;if(palette.thresholds){const L=palette.range[0]+t*(palette.range[1]-palette.range[0]),k=palette.thresholds.findIndex(v=>L<v);return css(stops[k<0?stops.length-1:k][1]);}if(palette.discrete)return css(stops[Math.min(stops.length-1,Math.floor(t*stops.length))][1]);if(id==='structure')t=Math.min(1,(Math.floor(t*12-1e-9)+.5)/12);for(let i=1;i<stops.length;i++)if(t<=stops[i][0]){const[a,ca]=stops[i-1],[b,cb]=stops[i],f=(t-a)/(b-a);return css(ca.map((v,j)=>v+(cb[j]-v)*f));}return css(stops.at(-1)[1]);}
 const low=engineColour(0),high=engineColour(1);document.body.style.cssText=`color:${night?'#eeeae4':'#333c48'};--low:${low};--high:${high}`;document.querySelector('#name').textContent=sim.name;document.querySelector('#legend').innerHTML='LOW <i class="bar"></i> HIGH';document.querySelector('.bar').style.background=`linear-gradient(90deg,${palette.stops.map(([t,c])=>`${css(c)} ${t*100}%`).join(',')})`;if(['evac','cameras','span','isovist'].includes(id))document.querySelector('#legend').textContent={evac:'MOVEMENT PATHS',cameras:'COVERAGE CONES',span:'SPAN & MEMBER DEPTH',isovist:'VISIBLE / OCCLUDED'}[id];
@@ -43,5 +44,6 @@ if(['wayfinding','privacy','noise'].includes(id)){
  if(!cells||!(max>min))throw Error('Catalogue field is empty or has no variation: '+id);
  window.__artInfo={engine:result.engine,cells,min,max,conditions:result.conditions,model:result.source.version,scope:sim.scope};
 }
+if(sim.family==='environment')environmentalArt({T,id,mesh,path,group,night,high,low});
 const cam=new T.OrthographicCamera(-13.7,13.7,10.275,-10.275,.1,200);cam.up.set(0,0,1);cam.position.set(31,-28,30);cam.lookAt(8,6,.4);r.render(scene,cam);window.__artCamera={position:cam.position.toArray(),bounds:[cam.left,cam.right,cam.top,cam.bottom],target:[8,6,.4]};window.__artReady=true;
 </script></body></html>

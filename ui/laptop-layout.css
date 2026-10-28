@@ -1,11 +1,11 @@
 /* Laptop density: reflow controls; never scale the canvas, geometry or whole page. */
 @media (min-width:901px) and (max-width:1600px), (min-width:901px) and (max-height:800px){
- body:has(.w2,.shx,.struct-study,.env-study)>header.top{height:48px;min-height:48px;padding:0 16px;gap:14px}
- body:has(.w2,.shx,.struct-study,.env-study)>header.top nav{gap:16px;font-size:12px}
- body:has(.w2,.shx,.struct-study,.env-study)>header.top .right{gap:8px}
- body:has(.w2,.shx,.struct-study,.env-study)>header.top .btn{font-size:12px;min-height:28px;padding:5px 9px}
- body:has(.w2,.shx,.struct-study,.env-study)>.pc-ui-context{min-height:30px;padding:5px 16px;gap:10px;font-size:11px;box-sizing:border-box}
- body:has(.w2,.shx,.struct-study,.env-study) #app{min-height:0}
+ body:has(.w2,.shx,.struct-study,.env-study,.local-study)>header.top{height:48px;min-height:48px;padding:0 16px;gap:14px}
+ body:has(.w2,.shx,.struct-study,.env-study,.local-study)>header.top nav{gap:16px;font-size:12px}
+ body:has(.w2,.shx,.struct-study,.env-study,.local-study)>header.top .right{gap:8px}
+ body:has(.w2,.shx,.struct-study,.env-study,.local-study)>header.top .btn{font-size:12px;min-height:28px;padding:5px 9px}
+ body:has(.w2,.shx,.struct-study,.env-study,.local-study)>.pc-ui-context{min-height:30px;padding:5px 16px;gap:10px;font-size:11px;box-sizing:border-box}
+ body:has(.w2,.shx,.struct-study,.env-study,.local-study) #app{min-height:0}
  .wb-shell.w2{grid-template-columns:42px 202px minmax(0,1fr) 242px;grid-template-rows:auto minmax(0,1fr) 30px;font-size:12px;min-height:0}
  .wb-shell.wb-library-closed{grid-template-columns:42px 0 minmax(0,1fr) 242px}
  .wb-commandbar{padding:5px 8px;gap:4px}

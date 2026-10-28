@@ -22,7 +22,7 @@ export const LIVE = '<span class="tag live" title="Computed by the PlotCloud sim
 
 // ---- theme: night by default, remembered in this browser; pages and the 3D view follow it
 export const theme = () => document.documentElement.dataset.theme || 'night';
-export const img = (name) => `img/${name}-${theme()}.jpg${['analysis-noise','analysis-wayfinding','analysis-privacy'].includes(name)?'?v=engine-20261024-1':''}`;
+export const img = (name) => `img/${name}-${theme()}.jpg${['analysis-climate','analysis-passive','analysis-skyview','analysis-shadebenefit','analysis-solarenvelope'].includes(name)?'?v=study-unified-20261028-1':['analysis-noise','analysis-wayfinding','analysis-privacy'].includes(name)?'?v=engine-20261024-1':''}`;
 export function setTheme(t) {
   document.documentElement.dataset.theme = t; try { localStorage.setItem('pc-mvp-theme', t); } catch (e) { }
   $$('#themeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === t)));
@@ -62,7 +62,7 @@ function who() {
 document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e.target.closest('.who-w')) { m.hidden = true; $('#whoBtn')?.setAttribute('aria-expanded', 'false'); } });
 
 const PAGES = {
-  'local-compute':()=>import('./pages/local-compute.js?v=local-compute-20261028-2'),
+  'local-compute':()=>import('./pages/local-compute.js?v=study-unified-20261028-1'),
   'comparison-report':()=>import('./pages/comparison-report.js'),
   'start-study':()=>import('./pages/start-study.js'),
   admin: () => import('./pages/admin.js'),

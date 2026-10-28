@@ -1,0 +1,68 @@
+name: Unified simulation interaction and covers
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mvp/js/study-ui/**'
+      - 'mvp/js/environment/**'
+      - 'mvp/js/pages/environment-study.js'
+      - 'mvp/js/pages/local-compute.js'
+      - 'mvp/js/pages/structure-study.js'
+      - 'mvp/js/structural-viewport.js'
+      - 'mvp/css/study-unified.css'
+      - 'mvp/img/analysis-climate-*'
+      - 'mvp/img/analysis-passive-*'
+      - 'mvp/img/analysis-skyview-*'
+      - 'mvp/img/analysis-shadebenefit-*'
+      - 'mvp/img/analysis-solarenvelope-*'
+      - 'mvp/index.html'
+      - 'tests/study-unified-ui.cjs'
+      - '.github/workflows/study-unified.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install actual Radiance and browser
+        run: |
+          python -m pip install pyradiance==1.3.1
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Check calculations, navigation, source data and exports
+        run: |
+          python -m http.server 8790 --bind 127.0.0.1 > /tmp/study-unified-http.log 2>&1 &
+          node tests/environment-analysis.cjs
+          TEST_BASE=http://127.0.0.1:8790 ARTIFACT_DIR=/tmp/study-unified/source node tests/run-browser-check.cjs tests/study-unified-ui.cjs
+          TEST_BASE=http://127.0.0.1:8790 node tests/run-browser-check.cjs tests/environment-ui.cjs
+          TEST_BASE=http://127.0.0.1:8790 node tests/run-browser-check.cjs tests/structural-study-ui.cjs
+          TEST_BASE=http://127.0.0.1:8790 node tests/run-browser-check.cjs tests/local-compute-ui.cjs
+      - name: Check actual published website
+        run: |
+          python - <<'PY'
+          import time,urllib.request
+          url='https://plotcloudstudio.github.io/plotcloud/mvp/index.html?verify='+str(time.time())
+          for attempt in range(36):
+              try:
+                  with urllib.request.urlopen(url,timeout=20) as response: body=response.read().decode()
+                  if 'css/study-unified.css?v=study-unified-20261028-1' in body: break
+              except Exception: pass
+              time.sleep(5)
+          else: raise SystemExit('The published study shell did not become available.')
+          PY
+          TEST_BASE=https://plotcloudstudio.github.io/plotcloud ARTIFACT_DIR=/tmp/study-unified/live node tests/run-browser-check.cjs tests/study-unified-ui.cjs
+          TEST_BASE=https://plotcloudstudio.github.io/plotcloud node tests/run-browser-check.cjs tests/environment-ui.cjs
+          TEST_BASE=https://plotcloudstudio.github.io/plotcloud node tests/run-browser-check.cjs tests/structural-study-ui.cjs
+          TEST_BASE=https://plotcloudstudio.github.io/plotcloud node tests/run-browser-check.cjs tests/local-compute-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unified-study-workspaces
+          path: /tmp/study-unified
