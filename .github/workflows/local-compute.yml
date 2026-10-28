@@ -1,0 +1,72 @@
+name: PlotCloud local reference engines
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'local-compute/**'
+      - 'mvp/js/local-compute.js'
+      - 'mvp/js/pages/local-compute.js'
+      - 'mvp/css/local-compute.css'
+      - 'mvp/js/app.js'
+      - 'mvp/index.html'
+      - 'tests/local-compute*'
+      - '.github/workflows/local-compute.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REQUIRE_RADIANCE: '1'
+      REQUIRE_ENERGYPLUS: '1'
+      ENERGYPLUS_EXE: /tmp/plotcloud-energyplus/energyplus
+      ENERGYPLUS_MODEL: /tmp/plotcloud-ep-example/1ZoneUncontrolled.epJSON
+      ENERGYPLUS_EPW: /tmp/plotcloud-energyplus/WeatherData/USA_CO_Golden-NREL.724666_TMY3.epw
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install actual Radiance distribution and browser
+        run: |
+          python -m pip install pyradiance==1.3.1
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Install and check official EnergyPlus 25.2.0 example
+        run: |
+          curl --fail --location --retry 2 'https://github.com/NatLabRockies/EnergyPlus/releases/download/v25.2.0/EnergyPlus-25.2.0-cf7368216c-Linux-Ubuntu24.04-x86_64.tar.gz' -o /tmp/energyplus.tar.gz
+          echo '4641bc1cb4fd94267eb0e66d8b84a3a2ecc6735fa8d5007206df265508e15f85  /tmp/energyplus.tar.gz' | sha256sum --check
+          mkdir -p /tmp/plotcloud-energyplus /tmp/plotcloud-ep-example
+          tar -xzf /tmp/energyplus.tar.gz -C /tmp/plotcloud-energyplus --strip-components=1
+          /tmp/plotcloud-energyplus/energyplus --convert-only -d /tmp/plotcloud-ep-example /tmp/plotcloud-energyplus/ExampleFiles/1ZoneUncontrolled.idf
+      - name: Verify real reference engines, failure paths and local API
+        run: python tests/local-compute-runner.py
+      - name: Verify website to real local engine to report workflow
+        run: |
+          python -m http.server 8790 --bind 127.0.0.1 > /tmp/local-compute-site.log 2>&1 &
+          TEST_BASE=http://127.0.0.1:8790 ARTIFACT_DIR=/tmp/local-compute-source node tests/run-browser-check.cjs tests/local-compute-ui.cjs
+      - name: Verify published website and downloadable runner
+        run: |
+          python - <<'PY'
+          import time, urllib.request
+          url='https://plotcloudstudio.github.io/plotcloud/mvp/js/pages/local-compute.js?verify='+str(time.time())
+          for attempt in range(36):
+              try:
+                  with urllib.request.urlopen(url,timeout=20) as response: text=response.read().decode()
+                  if 'local-compute-20261028-1' in text: break
+              except Exception: pass
+              time.sleep(5)
+          else: raise SystemExit('Published local-compute page did not become available.')
+          urllib.request.urlretrieve('https://plotcloudstudio.github.io/plotcloud/local-compute/plotcloud_runner.py?verify='+str(time.time()),'/tmp/published-plotcloud-runner.py')
+          PY
+          TEST_BASE=https://plotcloudstudio.github.io/plotcloud RUNNER_FILE=/tmp/published-plotcloud-runner.py ARTIFACT_DIR=/tmp/local-compute-live node tests/run-browser-check.cjs tests/local-compute-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-compute-public-example-verification
+          path: |
+            /tmp/local-compute-source
+            /tmp/local-compute-live
