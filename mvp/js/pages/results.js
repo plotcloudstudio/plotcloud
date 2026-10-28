@@ -14,7 +14,7 @@ import { createBatch } from '../batch.js';
 import { versionScene, diff as diffOf, COLORS, figureRows, fieldDiff } from '../diff.js';
 
 // simulations that need points a person places in the engine (an observer, destinations): they run on their own page
-const HANDS = { structure:'needs confirmed structural axes, materials, supports and load paths in its study', isovist: 'needs an observer you place in the plan', evac: 'needs destinations you place in the plan' };
+const HANDS = {climate:'needs reviewed project weather and period',passive:'needs reviewed weather and opportunity thresholds',skyview:'needs a confirmed evaluation region',shadebenefit:'needs selected shade objects and a confirmed region',solarenvelope:'needs confirmed solar dates and receptor constraints', structure:'needs confirmed structural axes, materials, supports and load paths in its study', isovist: 'needs an observer you place in the plan', evac: 'needs destinations you place in the plan' };
 const CKEY = 'pc-mvp-cmp';
 const DEF_C = { mode: 'solid', sync: true, scope: 'model', level: 1, sim: null, thr: {}, only: false, pct: false, pic: false };
 const readC = () => { try { return { ...DEF_C, ...(JSON.parse(localStorage.getItem(CKEY) || 'null') || {}) }; } catch (e) { return { ...DEF_C }; } };

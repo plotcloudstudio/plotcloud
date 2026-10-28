@@ -125,6 +125,7 @@ function sunField(w, sc, label, unit) {
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
+  if(sim.family==='environment')return(await import('./environment-study.js?v=environment-20261028-1')).render(app,sim,params,context);
   if(sim.id==='structure')return(await import('./structure-study.js?v=structural-study-20261028-1')).render(app,sim,params,context);
   if (!canUse(sim.id)) {
     renderGate(app, sim.name);

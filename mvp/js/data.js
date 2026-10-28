@@ -52,8 +52,17 @@ export const SIMS = [
     blurb: 'Confirmed steel and engineered-timber frame screening on your building, with source-linked issues and editable column schemes.', inputs: ['Confirmed member axes and sections', 'Structural materials, supports and load paths'], metrics: [['ratio', 'Stress ratio', '', 2, /stress ratio/i], ['disp', 'Displacement', 'mm', 1, /displacement/i]] },
 ];
 
+// Environmental design workflows share the existing source model and project EPW.
+SIMS.push(
+ {id:'climate',family:'environment',group:'Climate & passive design',scope:'Exterior',name:'Climate Analysis',tool:'climate',view:'chart',blurb:'Actual EPW temperature, humidity, wind, radiation and daily-mean degree days with recorded coverage.',inputs:['Shared project EPW','Reviewed period'],metrics:[['value','Mean air temperature','°C',2,/mean air/i]]},
+ {id:'passive',family:'environment',group:'Climate & passive design',scope:'Exterior',name:'Passive Design Strategies',tool:'passive',view:'chart',blurb:'Psychrometric weather opportunities with explicit temperature and humidity thresholds; not indoor comfort or energy savings.',inputs:['Shared project EPW','Reviewed weather thresholds'],metrics:[['value','Weather in screening band','%',2,/screening band/i]]},
+ {id:'skyview',family:'environment',group:'Climate & passive design',scope:'Exterior',name:'Sky Exposure & Solar Mask',tool:'skyview',view:'shaded',blurb:'Equal-solid-angle sky exposure, horizontal projected sky view and a dated solar mask using original model/context obstructions.',inputs:['Saved building geometry','Confirmed evaluation region'],metrics:[['value','Mean projected sky view','%',2,/projected sky view/i]]},
+ {id:'shadebenefit',family:'environment',group:'Climate & passive design',scope:'Exterior',name:'Shade Benefit',tool:'shadebenefit',view:'shaded',blurb:'Compare actual shade objects against the unchanged context using temperature-weighted sun benefit and harm.',inputs:['Shared project EPW','Selected shade objects','Confirmed evaluation region'],metrics:[['value','Mean net shade benefit','K·h',2,/net shade benefit/i]]},
+ {id:'solarenvelope',family:'environment',group:'Climate & passive design',scope:'Exterior',name:'Solar Envelope',tool:'solarenvelope',view:'shaded',blurb:'Sampled solar-rights and solar-collection boundaries with recorded receptors, dates and opaque source geometry.',inputs:['Project coordinates and standard time zone','Confirmed receptor / collection region'],metrics:[['value','Mean envelope elevation','m',2,/envelope elevation/i]]}
+);
+
 // Spatial scope is independent of discipline: Climate contains both indoor and outdoor studies.
-for(const sim of SIMS) sim.scope=['sunhours','radiation','utci','wind','stormwater','noise'].includes(sim.id)?'Exterior':sim.id==='structure'?'Building':'Interior';
+for(const sim of SIMS) sim.scope=sim.scope||(['sunhours','radiation','utci','wind','stormwater','noise'].includes(sim.id)?'Exterior':sim.id==='structure'?'Building':'Interior');
 
 // Tools that build or prepare a model; the Workspace hands off to them for detailed work.
 export const MODEL_TOOLS = [

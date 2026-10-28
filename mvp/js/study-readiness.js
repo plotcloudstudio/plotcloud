@@ -1,7 +1,7 @@
 // Conservative input checks. Engine geometry validation remains authoritative.
 const PLAN=new Set(['daylight','vent','acoustics','spacesyntax','movementdepth','views','cameras','privacy','wayfinding','isovist','evac']);
-const LOCATION=new Set(['sunhours','daylight','radiation','utci']);
-const EPW=new Set(['radiation','utci']);
+const LOCATION=new Set(['sunhours','daylight','radiation','utci','shadebenefit','solarenvelope']);
+const EPW=new Set(['radiation','utci','climate','passive','shadebenefit']);
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 export function inspectStudy(project,version,id,{site=project?.sharedConditions?.site||project?.site,defaults=project?.sharedConditions?.defaults||{},draftChanged}={}){
  const checks=[],add=(key,state,title,detail,href)=>checks.push({key,state,title,detail,href}),workspace='#/workspace/'+encodeURIComponent(project?.id||''),conditions='#/project-settings/'+encodeURIComponent(project?.id||'');

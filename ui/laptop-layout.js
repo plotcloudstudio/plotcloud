@@ -1,6 +1,6 @@
 // Presentation bridge for the site's existing same-origin nested workspaces.
 // Keep native scrolling, model coordinates, camera state and handlers unchanged.
-const stylesheet=new URL('./laptop-layout.css?v=laptop-layout-20261028-1',import.meta.url).href;
+const stylesheet=new URL('./laptop-layout.css?v=environment-20261028-1',import.meta.url).href;
 const documents=new WeakSet(),frames=new WeakSet();
 function mount(doc){
  try{

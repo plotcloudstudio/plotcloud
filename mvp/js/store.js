@@ -120,10 +120,13 @@ export function addRun(p, versionId, simId, settings, results, source = 'full-to
   p.runs.push(r); p.updated = now(); save(); return r;
 }
 export function deleteRun(p, id) { p.runs = p.runs.filter((r) => r.id !== id); save(); }
-export const isSharedPilot = id => ['sunhours','radiation','utci','daylight'].includes(id);
+export const isSharedPilot = id => ['sunhours','radiation','utci','daylight','climate','passive','skyview','shadebenefit','solarenvelope'].includes(id);
 export const conditionsOf = p => p.sharedConditions;
 export function conditionsSignature(p,id){
   const c=conditionsOf(p),s=c.site,d=c.defaults;
+  if(['climate','passive','shadebenefit'].includes(id))return JSON.stringify({lat:s.lat,lon:s.lon,north:id==='shadebenefit'?(s.north||0):undefined,climate:s.climate?.hash});
+  if(id==='skyview')return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north||0,tz:s.tz});
+  if(id==='solarenvelope')return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north||0,tz:s.tz});
   return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north??0,tz:s.tz,...(id==='sunhours'?{period:d.period}:id==='radiation'?{climate:s.climate?.hash}:id==='utci'?{terrain:s.terrain||'suburban',climate:s.climate?.hash}:id==='vent'?{terrain:s.terrain||'suburban',shelter:s.shelter||'semi',climate:s.climate?.hash}:{plane:d.plane,occStart:d.occStart,occEnd:d.occEnd,climate:s.climate?.hash})});
 }
 export function updateConditions(p,site,defaults){

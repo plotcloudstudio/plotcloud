@@ -1,5 +1,11 @@
 import {compareEvidence} from './comparison-evidence.js';
 export const METHOD_NOTES={
+ climate:'Actual EPW statistics in local standard time. Degree days use complete selected days; missing fields are reported. No building-response calculation.',
+ passive:'Outdoor psychrometric opportunity screening. Thresholds are explicit and overlapping; no indoor comfort or energy savings are predicted.',
+ skyview:'Opaque original geometry. Sky exposure is equal-solid-angle; projected sky view uses cosine weighting. Samples require a confirmed evaluation region.',
+ shadebenefit:'Temperature-weighted direct-sun shade benefit/harm, K·h. Candidate shade is removed only in the analytical baseline. Not cooling savings or a UTCI difference.',
+ solarenvelope:'Sampled solar-rights / solar-collection geometry. Review mode, receptor, dates, north and heights. Not planning approval or a continuous-time guarantee.',
+
  sunhours:'Direct-sun screening. Results depend on model/context completeness, grid spacing, analysis dates and time step.',
  daylight:'Simplified daylight screening. Inter-reflected light is approximated; annual sDA/ASE are not a Radiance-based certification assessment. Neighbouring obstructions are included only if present in the analysed scene.',
  wind:'Qualitative wind-flow screening. The solver has not been validated against wind-tunnel benchmarks; do not present its speeds or comfort classes as an approved wind assessment.',

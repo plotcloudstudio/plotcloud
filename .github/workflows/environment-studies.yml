@@ -1,0 +1,49 @@
+name: Environmental study verification
+on:
+  push:
+    branches: [main]
+    paths: ['mvp/js/environment/**', 'mvp/js/pages/environment-study.js', 'mvp/css/environment-study.css', 'tests/environment-*.cjs', '.github/workflows/environment-studies.yml']
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Verify analytic and independent real-weather references
+        env:
+          ENV_EPW_PATH: /tmp/environment-chicago.epw
+        run: |
+          curl --fail --silent --show-error https://raw.githubusercontent.com/ladybug-tools/ladybug/329a3b851a61e061b163c83d9d5c7bac845e050b/tests/assets/epw/chicago.epw -o "$ENV_EPW_PATH"
+          node tests/environment-analysis.cjs
+      - name: Exercise the five environmental workflows and all free study entries
+        env:
+          TEST_BASE: http://127.0.0.1:8790
+        run: |
+          python3 -m http.server 8790 --bind 127.0.0.1 > /tmp/environment-http.log 2>&1 &
+          node tests/environment-ui.cjs
+          node tests/free-simulations.cjs
+      - name: Verify the deployed environmental studies
+        env:
+          TEST_BASE: https://plotcloudstudio.github.io/plotcloud
+        run: |
+          ready=false
+          for attempt in $(seq 1 48); do
+            if curl --fail --silent --show-error "$TEST_BASE/mvp/index.html?release=$GITHUB_SHA" -o /tmp/environment-live-index.html && cmp -s /tmp/environment-live-index.html mvp/index.html; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          test "$ready" = true
+          node tests/environment-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: environmental-study-evidence
+          path: /tmp/plotcloud-environment
