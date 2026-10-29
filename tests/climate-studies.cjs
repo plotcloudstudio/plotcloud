@@ -28,7 +28,7 @@ function epw(){const lat=49.28,lon=-123.12,tz=-8,lines=[`LOCATION,QA Climate,BC,
   // 3 · one EPW in project conditions feeds both
   await p.goto(base+'/mvp/#/project-settings/'+pid+'?return=radiation');await p.locator('#projectEpw').setInputFiles({name:'qa.epw',mimeType:'text/plain',buffer:epw()});await p.locator('#projectEpwSummary').filter({hasText:'8760 hours'}).waitFor();
   for(const id of ['radiation','utci']){
-   await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-visible-ready="true"]').waitFor({timeout:120000});const f=p.frameLocator('#eng');
+   await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-emb="'+id+'"][data-pc-visible-ready="true"]').waitFor({timeout:120000});const f=p.frameLocator('#eng');
    await f.locator('#projectClimateSummary').filter({hasText:'qa.epw'}).waitFor({state:'attached',timeout:90000});
    const st=await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow;return {measure:w.__sun.S.measure,file:w.__sunClimate.CLIM.E?.station,row:getComputedStyle(w.document.getElementById('measureRow')).display};});
    assert.equal(st.measure,id);assert.equal(st.file,'QA Climate, BC, CAN');assert.equal(st.row,'none','The study is fixed by the page: no measure switch');

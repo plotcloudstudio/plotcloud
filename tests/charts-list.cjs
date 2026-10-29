@@ -8,7 +8,7 @@ const reveal=require('./reveal-simulation-control.cjs');
   p.on('pageerror',e=>errors.push(e.message));await p.goto(base+'/mvp/');await p.waitForFunction(()=>document.querySelector('#app h1'));
   await p.evaluate(async()=>{const S=await import('./js/store.js');S.reset();localStorage.setItem('pc-mvp-current',S.projects()[0].id);});
   for(const id of ['sunhours','daylight']){
-   await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-settings-ready="true"]').waitFor();const f=p.frameLocator('#eng');
+   await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-emb="'+id+'"][data-pc-settings-ready="true"]').waitFor();const f=p.frameLocator('#eng');
    if(id==='sunhours'){
     await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
    }
