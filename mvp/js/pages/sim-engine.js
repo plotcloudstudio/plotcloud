@@ -55,7 +55,7 @@ function extent(model) {
 
 // per engine: file, what it reads, what it hides, what Account fills in
 const CFG = {
-  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ A }) => ({ measure: 'hours', t0:'9',t1:'15', '@day': DAY[String(A.period || '').toLowerCase()] || '03-20' }) },
+  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ A }) => ({ measure: 'hours', allDay:false,t0:'09:00',t1:'15:00', '@day': DAY[String(A.period || '').toLowerCase()] || '03-20' }) },
   // the same engine measuring with the project's climate file (2026-10-25)
   radiation: { file: 'sunhours', input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: () => ({ measure: 'radiation' }) },
   utci: { file: 'sunhours', input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ site }) => ({ measure: 'utci', utciTerrain: { open: '0.14', suburban: '0.22', city: '0.33' }[site?.terrain || 'suburban'] || '0.22' }) },
@@ -286,7 +286,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if (batch) for (const [id, val] of Object.entries(OV)) if (val != null && val !== '') { if (!(id in vals)) vals[id] = val; else ovApply[id] = val; }
     for (const [id, val] of Object.entries(vals)) { if (id === '@day') {if(skipDate)continue; const b = D.querySelector(`#daySeg [data-d="${val}"]`); if (b) { b.click(); filled[id] = val; } continue; }
       const el = D.getElementById(id); if (!el || val == null || (typeof val === 'number' && !Number.isFinite(val))) continue;
-      el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
+      if(el.type==='checkbox')el.checked=!!val;else el.value = String(val); filled[id] = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
     if(p.guidedStudy?.simId===sim.id&&!D.body.dataset.pcGuidedQuality){const draft=D.querySelector('#lvlSeg [data-l="draft"],#lvSeg [data-l="draft"]');if(draft){draft.click();D.body.dataset.pcGuidedQuality='true';}}
     // Distinguish the engine's startup sample from the project's applied model/settings.
     if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
@@ -354,9 +354,9 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     for (const [k, , , , re] of sim.metrics) { const hit = re && K.find(([l]) => re.test(l)); if (hit) results[k] = num(hit[1]); }
     // the Account values this run used, and any changed in the engine before it ran
     const cur = (id) => { if (id === '@day') return D?.querySelector('#daySeg [aria-pressed="true"]')?.dataset.d;
-      const W = sim.id === 'stormwater' ? D?.getElementById('modelWorkspace')?.contentDocument : D, el = W?.getElementById(id); return el ? el.value : undefined; };
+      const W = sim.id === 'stormwater' ? D?.getElementById('modelWorkspace')?.contentDocument : D, el = W?.getElementById(id); return el ? el.type==='checkbox'?el.checked:el.value : undefined; };
     const fromAccount = {}, changed = [], model = {};
-    for (const [id, val] of Object.entries(filled)) { if (!ACCT[id]) { model[id] = val; continue; }
+    for (const [id, val] of Object.entries(filled)) { if (!ACCT[id]) { model[id] = cur(id)??val; continue; }
       const k = ACCT[id][0], now = cur(id); fromAccount[k] = shown(id, val);
       if (now != null && String(now) !== String(val) && !(now !== '' && Number(now) === Number(val))) changed.push(`${k} ${shown(id, now)} (Account ${shown(id, val)})`); }
     const settings = { site: site?.label, ...(perLevel && level ? { level: level.id } : {}), ...(room ? { room: room.name } : {}), ...fromAccount, ...(changed.length ? { 'changed here': changed.join('; ') } : {}), ...model };

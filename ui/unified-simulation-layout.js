@@ -165,7 +165,7 @@ export function prepareUnifiedSimulation(doc){
  .pc-unified-help{max-width:680px;max-height:75vh;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:24px}
  }`;
  doc.head.append(css);
- for(const details of settings.querySelectorAll('details'))if(details!==advanced)details.open=true;
+ for(const details of settings.querySelectorAll('details'))if(details!==advanced&&!details.closest('#studyContract'))details.open=true;
  app.pcFitSettings=settingsAccordion(doc,settings,extraNodes);
  const context=doc.getElementById('props'),contextHome=context?.parentElement;
  const updateContext=()=>{if(!app.dataset.pcUnified||!context||!isovist)return;const target=!context.hidden&&!context.querySelector('input,select,textarea')?results:contextHome;if(context.parentElement!==target)target.append(context);};

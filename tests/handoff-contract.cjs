@@ -12,5 +12,6 @@ const uri=text=>'data:text/javascript;base64,'+Buffer.from(text).toString('base6
  const v2=S.saveVersion(p,'Updated model');assert.match(S.runConditionsStatus(p,run),/model is now v2/);assert.equal(v2.n,2);assert.match(H.assumptionsHTML(p,run),/Workbench/);assert.match(H.assumptionsHTML(p,run),/This simulation/);assert.equal(H.baselineRows(p,model).find(([key])=>key==='Building type')[1],'Office');
  assert.match(H.weatherLabel({climate:{name:'Station.epw',automatic:true,period:'2004–2018',hash:'sha'}}),/automatically matched/);
  assert.match(H.weatherLabel({}),/No EPW matched/);
+ const detailed={...run,settings:{...run.settings,analysisPeriod:{t0:'10:00',t1:'14:00'},sharedConditions:{effective:{lat:49}}}};assert.match(H.assumptionsHTML(p,detailed),/10:00/);assert.match(H.assumptionsHTML(p,detailed),/14:00/);assert.match(H.assumptionsHTML(p,detailed),/grid/);
  console.log('PASS confirmation invalidation, immutable handoffs/results, weather provenance, named configurations, model staleness and assumption sources');
 })().catch(e=>{console.error(e);process.exit(1)});
