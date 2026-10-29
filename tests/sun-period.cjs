@@ -65,7 +65,7 @@ const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     // Exercise the production page shell too: its versioned model and Results archive.
     await page.setViewportSize({ width: 1500, height: 1100 });
     await page.goto(base + '/mvp/#/simulations/sunhours');
-    const engine = page.frameLocator('#eng');
+    await page.locator('#eng[data-pc-settings-ready=true][data-pc-visible-ready=true]').waitFor({timeout:90000});const engine = page.frameLocator('#eng');
     await page.waitForFunction(() => { const w = document.querySelector('#eng')?.contentWindow; return w?.__sun?.S.raw?.scene && !w.__sun.S.busy && w.__sun.S.date.endsWith('-03-20'); }, null, { timeout: 90000 });
     const ec = async (id, value) => { await engine.locator('#' + id).fill(value); await engine.locator('#' + id).dispatchEvent('change'); };
     await engine.locator('#pilotAdvanced').evaluate(e=>e.open=true);
