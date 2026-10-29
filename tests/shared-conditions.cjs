@@ -43,7 +43,7 @@ try{
   }
   if(id==='sunhours'){
    await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
-   await reach(f,'#run');await f.locator('#run').click();await p.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;},null,{timeout:90000});
+   await reach(f,'#run');await f.locator('#run').click();await require('./confirm-solar-inputs.cjs')(f);await p.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;},null,{timeout:90000});
   }else{
    await f.locator('#run:not([disabled])').waitFor();await reach(f,'#lvSeg [data-l=draft]');await f.locator('#lvSeg [data-l=draft]').click();if(await f.locator('#lvStart').isVisible())await f.locator('#lvStart').click();await p.waitForFunction(()=>document.querySelector('#eng').contentWindow.__pcAnalysisState?.().ready,null,{timeout:90000}).catch(async error=>{console.error('Daylight readiness',await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow,d=w.document;return {state:w.__pcAnalysisState?.(),run:d.querySelector('#runMsg')?.textContent,progress:d.querySelector('#runLeft')?.textContent,confirmation:d.querySelector('#lvLong')?.hidden,loading:d.body.dataset.pcSharedWeatherLoading,quality:[...d.querySelectorAll('#lvSeg [aria-pressed=true]')].map(e=>e.dataset.l)};}));throw error;});
   }
