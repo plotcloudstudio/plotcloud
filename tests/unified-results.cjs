@@ -4,7 +4,7 @@ const reveal=require('./reveal-simulation-control.cjs');
 (async()=>{const b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--enable-unsafe-swiftshader']});try{
  for(const id of ['spacesyntax','movementdepth','isovist','views','wayfinding','privacy','noise'].filter(id=>!process.env.TEST_SIM||process.env.TEST_SIM===id)){
   const p=await b.newPage({viewport:{width:1440,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
-  await p.goto(base+'/mvp/#/simulations/'+id);const f=p.frameLocator('#eng');await f.locator('.app[data-pc-unified=true]').waitFor({state:'attached',timeout:60000});
+  await p.goto(base+'/mvp/#/simulations/'+id);if(id==='noise'){await require('./native-study-layout.cjs')(p,id);assert.deepEqual(errors,[]);await p.close();continue;}const f=p.frameLocator('#eng');await f.locator('.app[data-pc-unified=true]').waitFor({state:'attached',timeout:60000});
   if(id==='isovist'){
    await reveal(f,'#toolBar [data-tool=view]');await f.locator('#toolBar [data-tool=view]').click();
    const pt=await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow,s=w.__iso.SC.bounds,xy=w.__iso.W2S([s.w*.3,s.h*.5]);return{x:xy[0]/w.devicePixelRatio,y:xy[1]/w.devicePixelRatio};});await f.locator('#cv').click({position:pt});

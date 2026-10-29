@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
-const palettes=require('../mvp/engine-colours.json'),ids=['wayfinding','privacy','noise'];
+const palettes=require('../mvp/engine-colours.json'),ids=['wayfinding','privacy'];
 // Verify the catalogue's RGB values against the engine definitions, not an invented palette.
 for(const [id,key] of [['wayfinding','DEPTH'],['privacy','EXP'],['noise','BANDS']]){
  const text=fs.readFileSync(require.resolve('../emb/'+id+'.html'),'utf8'),literal=text.match(new RegExp('const '+key+' = (\\[.*\\]);'))[1];
@@ -21,10 +21,10 @@ try{const page=await browser.newPage({viewport:{width:1200,height:900}}),errors=
     if(theme==='day')day=result.info;else assert.deepEqual(result.info,day,'Theme must not change simulation inputs or values');}
   }
  }
- await page.goto(base+'/mvp/#/simulations');
+ await page.goto(base+'/mvp/#/simulations');assert.equal(await page.locator('[data-sim="noise"]').count(),0,'Removed noise study is absent from the catalog');
  for(const theme of ['day']){
   for(const id of ids){const card=page.locator('[data-sim="'+id+'"]');await card.waitFor();assert.equal(await card.getAttribute('data-scope'),id==='noise'?'Exterior':'Interior');
    const image=card.locator('img');await image.evaluate(im=>im.loading='eager');await image.evaluate(im=>im.decode());assert.match(await image.getAttribute('src'),new RegExp('analysis-'+id+'-'+theme+'\\.jpg\\?v=engine-'));assert.deepEqual(await image.evaluate(im=>[im.naturalWidth,im.naturalHeight]),[1200,900]);}
  }
- assert.deepEqual(errors,[]);console.log('PASS three new simulation previews: real varying engine fields, exact engine RGB palettes, shared camera/scale, light appearance and catalogue images');
+ assert.deepEqual(errors,[]);console.log('PASS current spatial simulation previews: real varying engine fields, exact engine RGB palettes, shared camera/scale, light appearance and catalogue images');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});
