@@ -1,0 +1,7 @@
+const assert=require('node:assert/strict');
+module.exports=async(page,id,sizes=[{width:1440,height:900},{width:1280,height:650}])=>{
+ const structural=id==='structure',environment=['climate','passive','skyview','shadebenefit','solarenvelope'].includes(id);if(!structural&&!environment)return false;
+ const prefix=structural?'ss':'env',setup='.'+prefix+'-setup';await page.locator('#'+prefix+'-run').waitFor({timeout:90000});const values=()=>page.locator(setup).evaluate(e=>[...e.querySelectorAll('input,select')].map(c=>[c.id,c.value,c.checked]));const original=await values();
+ for(const size of sizes){await page.setViewportSize(size);const area=await page.locator(setup).evaluate(e=>({width:e.clientWidth,height:e.clientHeight,overflow:getComputedStyle(e).overflowY,right:e.getBoundingClientRect().right,viewport:innerWidth}));assert(area.width>100&&area.height>100&&area.right<=area.viewport+2,id+JSON.stringify(area));assert.match(area.overflow,/auto|scroll/);assert.deepEqual(await values(),original,id+' resize preserves native study inputs');}
+ assert(await page.locator('.'+prefix+'-results').isVisible());assert(await page.locator('#'+prefix+'-json').isVisible());console.log('PASS '+id+' native setup, results and export; bounded scroll and retained settings');return true;
+};

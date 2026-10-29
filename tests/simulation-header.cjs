@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),{chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 const sims=(process.env.TEST_SIM||'sunhours,wind,daylight,vent,spacesyntax,movementdepth,isovist,cameras,views,acoustics,evac,structure,stormwater,wayfinding,privacy,noise').split(',');
 (async()=>{const b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--enable-unsafe-swiftshader']});try{for(const id of sims){
- const p=await b.newPage({viewport:{width:1440,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-settings-ready=true]').waitFor({state:'attached',timeout:60000});await p.waitForTimeout(id==='stormwater'?2500:500);
+ const p=await b.newPage({viewport:{width:1440,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(base+'/mvp/#/simulations/'+id);if(await require('./native-study-layout.cjs')(p,id)){assert.deepEqual(errors,[]);await p.close();continue;}await p.locator('#eng[data-pc-settings-ready=true]').waitFor({state:'attached',timeout:60000});await p.waitForTimeout(id==='stormwater'?2500:500);
  let checked=0;const frames=p.frames().filter(f=>f!==p.mainFrame());for(const f of frames){if(!await f.locator('#unifiedSettings').count())continue;checked++;
   assert.equal(await f.locator('.vbar #toolBar,.vbar #undo,.vbar #redo,.vbar [data-layer],.vbar #showBar,.vbar .pc-unified-display,.vbar .pc-unified-view-controls,#stage>.bar [data-look]').count(),0,id+' header only contains viewport controls');
   const advanced=f.locator('#unifiedViewSettings');if(await advanced.isVisible()){
