@@ -12,7 +12,7 @@ const reveal=require('./reveal-simulation-control.cjs');
    if(id==='sunhours'){
     await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
    }
-   await reveal(f,'#run:not([disabled])');await f.locator('#run:not([disabled])').click();
+   if(id==='daylight'){await reveal(f,'#lvSeg [data-l=draft]');await f.locator('#lvSeg [data-l=draft]').click();if(await f.locator('#lvStart').isVisible())await f.locator('#lvStart').click();}else{await reveal(f,'#run:not([disabled])');await f.locator('#run:not([disabled])').click();await require('./confirm-solar-inputs.cjs')(f);}
    await p.waitForFunction(id=>{const w=document.querySelector('#eng').contentWindow;return id==='sunhours'?w.__sun.S.lastR&&!w.__sun.S.busy:w.__pcAnalysisState?.().ready;},id,{timeout:90000});
    await f.locator('#panelR [role=tab]').getByText('Charts',{exact:true}).click();
    for(const theme of ['light']){

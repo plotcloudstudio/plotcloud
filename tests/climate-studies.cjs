@@ -33,7 +33,7 @@ function epw(){const lat=49.28,lon=-123.12,tz=-8,lines=[`LOCATION,QA Climate,BC,
    const st=await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow;return {measure:w.__sun.S.measure,file:w.__sunClimate.CLIM.E?.station,row:getComputedStyle(w.document.getElementById('measureRow')).display};});
    assert.equal(st.measure,id);assert.equal(st.file,'QA Climate, BC, CAN');assert.equal(st.row,'none','The study is fixed by the page: no measure switch');
    await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow,d=w.document;d.querySelector('#lvlSeg [data-l=custom]').click();const g=d.getElementById('grid');g.value='4';g.dispatchEvent(new Event('change',{bubbles:true}));});
-   await p.evaluate(()=>document.querySelector('#eng').contentDocument.getElementById('run').click());
+   await p.locator('#autoSaveResult').uncheck();await p.evaluate(()=>document.querySelector('#eng').contentDocument.getElementById('run').click());await require('./confirm-solar-inputs.cjs')(f);
    await p.waitForFunction(id=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&s.lastR.mode===id&&!s.busy;},id,{timeout:240000});
    const shown=await p.evaluate(()=>[...document.querySelector('#eng').contentDocument.querySelectorAll('#stats dt')].map(d=>[d.textContent,d.nextElementSibling.textContent]));
    if(id==='radiation'){const open=+shown.find(([k])=>/open level ground/i.test(k))[1].replace(/[^\d.]/g,''),roof=+shown.find(([k])=>/^roofs, mean/i.test(k))[1].replace(/[^\d.]/g,'');assert(open>500&&roof>0&&roof<=open*1.05,`roofs ${roof} vs open ground ${open}`);}
