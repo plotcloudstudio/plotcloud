@@ -1,78 +1,17 @@
-/* Shared theme bridge. Presentation only: never reads or rewrites project/model data. */
+/* Shared light interface and viewport adapters. No theme preference is stored. */
 (()=>{
  'use strict';
- const script=document.currentScript,base=new URL('./',script.src),root=document.documentElement;
- const surface=script.dataset.surface||'tool';
- // Recover incomplete legacy hosts as well as themed nested srcdoc frames.
- for(const file of ['tokens.css','components.css'])if(![...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>{try{return new URL(link.href).pathname.endsWith('/ui/'+file)}catch{return false}})){
-  const link=document.createElement('link');link.rel='stylesheet';link.href=new URL(file+'?v=gray-20261026-1',base).href;link.dataset.pcUiAssets='';link.onload=()=>{root.setAttribute('data-theme',root.dataset.theme);publish();window.dispatchEvent(new CustomEvent('pc-ui-theme',{detail:mode}));};document.head.append(link);
- }
-
- if(surface==='tool')root.dataset.pcTool=location.pathname.split('/').pop().replace(/\.html$/,'');
- const normalize=value=>value==='night'||value==='dark'?'night':value==='day'||value==='light'?'day':null;
- const read=()=>{try{return normalize(localStorage.getItem('pc-ui-theme'))||normalize(localStorage.getItem('pc-mvp-theme'))}catch{return null}};
- let mode=read()||normalize(root.dataset.theme)||'day';
- const roots=new Set([root]),boundFrames=new WeakSet(),viewports=new Set();
- const viewportColor=()=>getComputedStyle(root).getPropertyValue("--pc-ui-view").trim()||(mode==="night"?"#585b5e":"#e9ecef");
- const canvasBackground=(exporting=false,plane=false)=>exporting||mode!=="night"?"#ffffff":plane?"#696c70":viewportColor();
- function updateViewport(view){const color=viewportColor();if(view.color===color)return;view.color=color;if(view.scene?.background?.set)view.scene.background.set(color);else view.renderer?.setClearColor(color,1);if(view.redraw)requestAnimationFrame(view.redraw);}
- function trackViewport(scene,renderer,redraw){const view={scene,renderer,redraw};viewports.add(view);updateViewport(view);return()=>viewports.delete(view);}
- function apply(target){
-  const native=target===root&&surface==='site'?mode:mode==='night'?'dark':'light';
-  for(const [key,value] of Object.entries({pcUi:'1',pcTheme:mode,pcSurface:target===root?surface:'tool',theme:native}))if(target.dataset[key]!==value)target.dataset[key]=value;
-  target.style.colorScheme=mode==='night'?'dark':'light';
- }
- function publish(){
-  roots.forEach(target=>{if(target.isConnected)apply(target);else roots.delete(target)});
-  document.querySelectorAll('iframe').forEach(frame=>{try{if(new URL(frame.src||location.href,location.href).origin===location.origin)frame.contentWindow?.postMessage({pc:1,t:'ui-theme',theme:mode},location.origin)}catch{}});
-  viewports.forEach(updateViewport);
-  const button=document.querySelector('.pc-ui-theme');
-  if(button){button.setAttribute('aria-pressed',String(mode==='night'));button.setAttribute('aria-label',mode==='night'?'Switch to day theme':'Switch to night theme');button.title=button.getAttribute('aria-label');button.querySelector('span').textContent=mode==='night'?'Day':'Night'}
- }
- function set(value,{persist=false}={}){
-  const next=normalize(value);if(!next)return;const changed=next!==mode;mode=next;
-  if(persist)try{localStorage.setItem('pc-ui-theme',mode);localStorage.setItem('pc-mvp-theme',mode)}catch{}
-  publish();if(changed)window.dispatchEvent(new CustomEvent('pc-ui-theme',{detail:mode}));
- }
- function adopt(frame){
-  try{
-   const child=frame.contentDocument;if(!child||!frame.hasAttribute('srcdoc')||!child.documentElement)return;
-   if(!child.querySelector('link[data-pc-ui-assets]'))for(const file of ['tokens.css','components.css']){const link=child.createElement('link');link.rel='stylesheet';link.href=new URL(file+'?v=gray-20261026-1',base).href;link.dataset.pcUiAssets='';link.addEventListener('load',()=>{child.documentElement.setAttribute('data-theme',child.documentElement.dataset.theme)});child.head.append(link)}
-   roots.add(child.documentElement);apply(child.documentElement);
-  }catch{}
- }
- function frames(){for(const frame of document.querySelectorAll('iframe')){
-  if(!boundFrames.has(frame)){boundFrames.add(frame);frame.addEventListener('load',()=>{adopt(frame);publish()})}adopt(frame);
- }}
- function controls(){
-  const toolbar=surface==='classic'?document.querySelector('header.site .hicons'):surface==='tool'?document.querySelector('.kj-top, .topbar, body>.top, .app>.top, header.top, .app>header'):null;
-  if(toolbar&&!document.querySelector('.pc-ui-theme')){
-   const button=document.createElement('button');button.type='button';button.className='pc-ui-theme';
-   button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2a8 8 0 1 0 8 8 6 6 0 0 1-8-8Z"/></svg><span></span>';
-   button.addEventListener('click',()=>{set(mode==='night'?'day':'night',{persist:true})});
-   // Embedded tools use the host's theme control instead of adding duplicate chrome.
-   if(window.parent===window){toolbar.append(button);return true}
-  }
-  return false;
- }
- function layout(){
-  if(surface!=='site')return;
-  const header=document.querySelector('header.top'),context=document.querySelector('.pc-ui-context');
-  const value=Math.round((header?.getBoundingClientRect().height||0)+(context?.getBoundingClientRect().height||0))+'px';
-  if(root.style.getPropertyValue('--pc-ui-shell-height')!==value)root.style.setProperty('--pc-ui-shell-height',value);
-  const state=context?'true':'false';if(root.dataset.pcContext!==state)root.dataset.pcContext=state;
- }
- function boot(){
-  frames();controls();layout();publish();window.dispatchEvent(new CustomEvent('pc-ui-theme',{detail:mode}));
-  if(surface==='tool'&&/Sun Hours|Wind Flow|Daylight|Natural Ventilation|Spatial|Space Syntax|Movement|Isovist|Camera Coverage|Indoor Acoustics|Evacuation|Circulation|View Analysis|Structural Analysis|Stormwater/i.test(document.title))import(new URL('simulation-fit.js?v=panel-scroll-20261026-1',base)).then(m=>m.installSimulationFit(document)).catch(e=>console.warn('Simulation layout unavailable',e));
-  addEventListener('resize',layout);
-  new MutationObserver(records=>{if(records.some(r=>r.addedNodes.length||r.removedNodes.length)){frames();if(controls())publish();layout()}}).observe(document.body,{childList:true,subtree:true});
- }
- apply(root);
- new MutationObserver(()=>{const next=normalize(root.dataset.theme);if(next&&next!==mode)set(next,{persist:true})}).observe(root,{attributes:true,attributeFilter:['data-theme']});
- addEventListener('pc-theme',event=>set(event.detail,{persist:true}));
- addEventListener('storage',event=>{if(event.key==='pc-ui-theme'||event.key==='pc-mvp-theme')set(event.newValue)});
- addEventListener('message',event=>{if(event.origin===location.origin&&event.source===parent&&event.data?.pc===1&&event.data.t==='ui-theme')set(event.data.theme)});
- window.PlotCloudUI={version:1,get theme(){return mode},viewportColor,canvasBackground,trackViewport,setTheme:value=>set(value,{persist:true})};
+ const script=document.currentScript,base=new URL('./',script.src),root=document.documentElement,surface=script.dataset.surface||'tool',roots=new Set([root]),framesBound=new WeakSet(),views=new Set();
+ try{localStorage.removeItem('pc-ui-theme');localStorage.removeItem('pc-mvp-theme');}catch{}
+ function apply(target){target.dataset.pcUi='1';target.dataset.pcSurface=target===root?surface:'tool';target.dataset.theme=surface==='site'&&target===root?'day':'light';target.removeAttribute('data-pc-theme');target.style.colorScheme='light';}
+ const viewportColor=()=>getComputedStyle(root).getPropertyValue('--pc-ui-view').trim()||'#e9ecef';
+ function redraw(view){const color=viewportColor();if(view.color===color)return;view.color=color;if(view.scene?.background?.set)view.scene.background.set(color);else view.renderer?.setClearColor(color,1);if(view.redraw)requestAnimationFrame(view.redraw);}
+ function styles(doc){for(const file of ['tokens.css','components.css'])if(![...doc.querySelectorAll('link[rel="stylesheet"]')].some(l=>{try{return new URL(l.href).pathname.endsWith('/ui/'+file);}catch{return false;}})){const link=doc.createElement('link');link.rel='stylesheet';link.href=new URL(file+'?v=light-only-20261028-1',base).href;link.dataset.pcUiAssets='';link.onload=()=>views.forEach(redraw);doc.head.append(link);}}
+ function adopt(frame){try{const doc=frame.contentDocument;if(doc?.documentElement&&frame.hasAttribute('srcdoc')){styles(doc);roots.add(doc.documentElement);apply(doc.documentElement);}}catch{}}
+ function frames(){for(const frame of document.querySelectorAll('iframe')){if(!framesBound.has(frame)){framesBound.add(frame);frame.addEventListener('load',()=>adopt(frame));}adopt(frame);}}
+ function layout(){if(surface!=='site')return;const header=document.querySelector('header.top'),context=document.querySelector('.pc-ui-context');root.style.setProperty('--pc-ui-shell-height',Math.round((header?.getBoundingClientRect().height||0)+(context?.getBoundingClientRect().height||0))+'px');root.dataset.pcContext=String(!!context);}
+ function boot(){styles(document);frames();layout();if(surface==='tool'&&/Sun Hours|Wind Flow|Daylight|Natural Ventilation|Spatial|Space Syntax|Movement|Isovist|Camera Coverage|Indoor Acoustics|Evacuation|Circulation|View Analysis|Structural Analysis|Stormwater/i.test(document.title))import(new URL('simulation-fit.js?v=light-only-20261028-1',base)).then(m=>m.installSimulationFit(document)).catch(e=>console.warn('Simulation layout unavailable',e));addEventListener('resize',layout);new MutationObserver(records=>{if(records.some(r=>r.addedNodes.length||r.removedNodes.length)){frames();layout();}}).observe(document.body,{childList:true,subtree:true});}
+ if(surface==='tool')root.dataset.pcTool=location.pathname.split('/').pop().replace(/\.html$/,'');apply(root);
+ window.PlotCloudUI={version:1,viewportColor,canvasBackground:()=> '#ffffff',trackViewport(scene,renderer,redrawView){const view={scene,renderer,redraw:redrawView};views.add(view);redraw(view);return()=>views.delete(view);}};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

@@ -8,12 +8,11 @@ import {rhinoGeometry} from './rhino-geometry.js?v=mesh-fidelity-20261027-1';
 const MAT = {
   wall: 0xf1f0ec, slab: 0xe6e3dc, roof: 0xdedbd4, mass: 0xd2cec6, terrain: 0xe9e7e1, furniture: 0xd9d3c7, imported: 0xe6e3dc, window: 0x9cc3e0, room: 0xe8b04a,
 };
-// Holographic look, following the page theme: frosted solids with white edges, misty blue-grey by day, near-black by night.
+// Frosted model solids on a light blue-grey background.
 const LOOK = {
   day: { clear: 0x9ca2af, grid: [0xc4c8d2, 0xb3b8c4], solid: 0xe9ecf2, ctx: 0xd5d9e2, op: 0.62, edge: 0xffffff, edgeOp: 0.85, ctxEdge: 0.4, hemi: [0xffffff, 0x8a90a0, 2.4] },
-  night: { clear: 0x08090c, grid: [0x2a2d35, 0x1c1f26], solid: 0x2a2f3a, ctx: 0x1d2028, op: 0.7, edge: 0xffffff, edgeOp: 0.9, ctxEdge: 0.3, hemi: [0xffffff, 0x1a1d24, 1.3] },
 };
-const look = () => LOOK[document.documentElement.dataset.theme === 'day' ? 'day' : 'night'];
+const look = () => LOOK.day;
 
 export function createViewport(host, { onPick } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -77,8 +76,6 @@ export function createViewport(host, { onPick } = {}) {
   }
   function render() { renderer.render(scene, camera); }
   controls.addEventListener('change', render);
-  const onTheme = () => { renderer.setClearColor(look().clear, 1); hemi.color.set(look().hemi[0]); hemi.groundColor.set(look().hemi[1]); hemi.intensity = look().hemi[2]; makeGrid(); build(); size(); render(); };
-  addEventListener('pc-theme', onTheme);
   new ResizeObserver(() => { size(); render(); }).observe(host);
 
   // plan view: pan with drag, zoom with wheel

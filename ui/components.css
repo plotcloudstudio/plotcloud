@@ -15,8 +15,6 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui] :where(.card,.notice,.sdlg-in,.dialog,.modal,.toast) { border-radius:var(--pc-ui-panel-radius); }
 [data-pc-ui] :where(.tag,.badge-pill) { font-family:var(--pc-ui-mono); }
 [data-pc-ui] :where(.notice.warn,.gwarn,.draft) { color:var(--pc-ui-warning);background:var(--pc-ui-warning-soft);border-color:var(--pc-ui-warning); }
-.pc-ui-theme { display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:none;font:500 12px var(--pc-ui-font);padding:5px 9px;min-height:32px;border:1px solid var(--pc-ui-border-strong);border-radius:var(--pc-ui-radius);background:var(--pc-ui-surface);color:var(--pc-ui-text);cursor:pointer; }
-.pc-ui-theme svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5}
 .pc-ui-context{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:40px;padding:8px 28px;border-bottom:1px solid var(--pc-ui-border);background:var(--pc-ui-surface);color:var(--pc-ui-secondary);font:12px var(--pc-ui-font)}
 .pc-ui-context strong{font-weight:600;color:var(--pc-ui-text)}
 .pc-ui-context a{color:var(--pc-ui-selection);text-decoration:none}
@@ -46,7 +44,7 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-surface="tool"] :is(.go.alt,.go.ghost2){background:var(--pc-ui-surface)!important;color:var(--pc-ui-text)!important;border-color:var(--pc-ui-border-strong)}
 [data-pc-ui][data-pc-surface="tool"] :is(.panel h1,.panel h2,.pane h2,.sec h2,.side h2){font-family:var(--pc-ui-font)}
 [data-pc-ui][data-pc-surface="tool"] :is(.panel input,.panel select,.props input,.props select,.kv input,.kv select,.side input,.side select){background-color:var(--pc-ui-surface);color:var(--pc-ui-text);border-color:var(--pc-ui-border-strong)}
-@media(pointer:coarse){[data-pc-ui] :where(.btn,.go,.rbtn,.pc-ui-button,.pc-ui-theme){min-height:44px}}
+@media(pointer:coarse){}
 @media(max-width:640px){.pc-ui-context{padding:8px 16px;gap:6px}.pc-ui-context .pc-ui-storage{margin-left:0;width:100%}}
 @media(prefers-reduced-motion:reduce){[data-pc-ui] :where(.btn,.go,.card,.pc-ui-button){transition:none!important}}
 /* Legacy analysis shells include hard-coded white cards; adapt the interface cards explicitly. */
@@ -107,13 +105,7 @@ html[data-pc-ui] body { font-family:var(--pc-ui-font); }
 [data-pc-ui][data-pc-surface="classic"] header.site #nav{gap:20px;font-size:14px}
 [data-pc-ui][data-pc-surface="classic"] :is(.pc-catalog-head>p,.pc-section-heading p,.pc-task p,.pc-eyebrow,.pc-hero-note){color:var(--pc-ui-muted)!important}
 @media(max-width:1100px){[data-pc-ui][data-pc-surface="classic"] header.site #nav{display:none}[data-pc-ui][data-pc-surface="classic"] #burger{display:inline-flex}[data-pc-ui][data-pc-surface="classic"] #mpanel.open{display:block}}
-
-/* Rhino-style neutral gray editing chrome. Explicit adapters beat legacy white skins. */
-[data-pc-ui][data-pc-theme="night"] :is(.pplan,.pplan.pro,.modal,.dialog,dialog,.popover,.dropdown,.menu,.pane,.pane>header,.sdlg-in){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
-[data-pc-ui][data-pc-theme="night"] .pplan.pro :is(.muted,.eyebrow){color:var(--pc-ui-muted)}
 [data-pc-ui][data-pc-surface="tool"] :is(#panelL,#panelR,.col,.colIn,.col .sec,.col .pane,.col .brand,.lcard,.lhead,.chartp,#chartp,.lgd,.legend,.props,.tip,.empty,footer.fine,.kj-status,.kj-foot,.kj-right,.kl-left,.railL .rail,.pc-unified-group){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
 [data-pc-ui][data-pc-surface="tool"] :is(#stage,.stage,#viewport,.viewport,.kj-stage){background-color:var(--pc-ui-view)!important}
 [data-pc-ui][data-pc-surface="tool"] :is(.readout,.badge,.thint,.capbox,.timebar,.runpill,.qbox,.pc-unified-view-controls,.pc-unified-display){background-color:var(--pc-ui-surface)!important;color:var(--pc-ui-secondary)!important;border-color:var(--pc-ui-border)}
 [data-pc-ui][data-pc-surface="tool"] :is(input:not([type=range]):not([type=color]):not([type=checkbox]):not([type=radio]),select,textarea){background-color:var(--pc-ui-subtle)!important;color:var(--pc-ui-text)!important;border-color:var(--pc-ui-border-strong)!important}
-[data-pc-ui][data-pc-theme="night"][data-pc-surface="tool"] :is(.warnbox,.callout,.tag,.kpi,.stat,.metric){background-color:var(--pc-ui-subtle);color:var(--pc-ui-text);border-color:var(--pc-ui-border)}
-[data-pc-ui][data-pc-theme="night"] :is(.pc-unified-help,dialog)::backdrop{background:#20222499}

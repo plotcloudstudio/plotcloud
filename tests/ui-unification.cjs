@@ -19,20 +19,8 @@ let currentTarget='browser startup';
     await page.goto(base+(resource?'/mvp/#/resources/tool/'+resource:url),{waitUntil:'domcontentloaded'});
     if(resource){const frame=await page.locator('#resourceEngine').elementHandle();target=await frame.contentFrame();}
     await target.waitForFunction(()=>window.PlotCloudUI?.version===1);
-    const check=async theme=>{
-     await page.evaluate(t=>PlotCloudUI.setTheme(t),theme);
-     await target.waitForFunction(t=>document.documentElement.dataset.pcTheme===t,theme);
-     const actual=await target.evaluate(()=>{
-      const root=document.documentElement,cs=getComputedStyle(root),body=getComputedStyle(document.body);
-      return {theme:root.dataset.pcTheme,surface:root.dataset.pcSurface,font:body.fontFamily,text:body.color,token:cs.getPropertyValue('--pc-ui-text').trim(),fields:[...document.querySelectorAll('input[type=number],select')].filter(e=>e.getBoundingClientRect().width>0).slice(0,3).map(e=>({color:getComputedStyle(e).color,bg:getComputedStyle(e).backgroundColor}))};
-     });
-     assert.equal(actual.theme,theme);assert.equal(actual.surface,host.surface);assert(actual.font.includes('Inter'));
-     assert.equal(actual.text,theme==='day'?'rgb(32, 36, 43)':'rgb(236, 239, 243)',host.file+' body text');
-     for(const field of actual.fields)assert.notEqual(field.color,field.bg,host.file+' unreadable input');
-    };
-    await check('day');await check('night');
-    // Returning to day also verifies the adapter does not get stuck in native dark/light syntax.
-    await check('day');
+    const actual=await target.evaluate(()=>({surface:document.documentElement.dataset.pcSurface,font:getComputedStyle(document.body).fontFamily,text:getComputedStyle(document.body).color,scheme:getComputedStyle(document.documentElement).colorScheme,switches:document.querySelectorAll('#themeSeg,.pc-ui-theme').length}));
+    assert.equal(actual.surface,host.surface);assert(actual.font.includes('Inter'));assert.equal(actual.text,'rgb(32, 36, 43)');assert.equal(actual.scheme,'light');assert.equal(actual.switches,0);
     results.push({file:host.file,status:'passed',pageErrors:errors});
    }catch(error){results.push({file:host.file,status:'failed',reason:error.message,pageErrors:errors})}
    finally{await page.close()}
@@ -47,26 +35,22 @@ let currentTarget='browser startup';
    await routePage.locator('#app').waitFor({state:'attached'});
    await routePage.waitForFunction(()=>document.querySelector('#app')?.children.length>0);
    assert((await routePage.locator('#app').innerText()).trim().length>10||await routePage.locator('#app iframe[data-emb]').count()>0,url+' must contain content or its embedded tool');
-   await routePage.evaluate(()=>PlotCloudUI.setTheme('night'));
-   assert.equal(await routePage.evaluate(()=>document.documentElement.dataset.pcTheme),'night');
+   assert.equal(await routePage.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'light');
    assert.deepEqual(errors,[],url+' startup errors');routeChecks.push(url);
    await routePage.close();
   }
   const p=await context.newPage();await p.goto(base+'/mvp/#/resources');await p.waitForFunction(()=>window.PlotCloudUI?.version===1);
   assert.equal(await p.locator('#nav [data-nav="workspace"]').count(),1);
   assert.equal(await p.locator('#nav [data-nav="workspace-v2"]').count(),0);
-  await p.locator('#themeSeg [data-theme=night]').click();
-  await p.waitForFunction(()=>PlotCloudUI.theme==='night');
+  assert.equal(await p.locator('#themeSeg').count(),0);
   await p.goto(base+'/index.html#/studio');
-  await p.frameLocator('#fPlan').locator('[data-pc-theme=night]').waitFor();
-  const frame=await p.locator('#fPlan').elementHandle();
-  assert.equal(await (await frame.contentFrame()).evaluate(()=>document.documentElement.dataset.pcTheme),'night');
-  assert.equal(await p.frameLocator('#fPlan').locator('.pc-ui-theme').count(),0,'Embedded tool must not duplicate host theme control');
+  await p.frameLocator('#fPlan').locator('[data-pc-ui]').waitFor();
+  const frame=await p.locator('#fPlan').elementHandle();assert.equal(await(await frame.contentFrame()).evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'light');
   await p.close();
   fs.mkdirSync('/tmp/plotcloud-ui',{recursive:true});fs.writeFileSync('/tmp/plotcloud-ui/inventory-results.json',JSON.stringify({hosts:results,routes:routeChecks},null,2));
   results.forEach(r=>console.log(r.status.toUpperCase(),r.file,r.reason||'',r.pageErrors.length?'PAGE ERRORS: '+r.pageErrors.join(' | '):''));
-  assert.equal(results.filter(r=>r.status==='failed').length,0,'Every inventory host must load the common UI and both themes');
-  console.log('PASS all '+results.length+' UI hosts and '+routeChecks.length+' site routes, both themes, public workspace navigation and embedded theme propagation. Host checks validate UI integration; they are not functional analysis-engine tests.');
+  assert.equal(results.filter(r=>r.status==='failed').length,0,'Every inventory host must load the common UI and light appearance');
+  console.log('PASS all '+results.length+' UI hosts and '+routeChecks.length+' site routes, light appearance, public workspace navigation and embedded light appearance. Host checks validate UI integration; they are not functional analysis-engine tests.');
  }finally{await browser.close()}
 })().catch(e=>{
  console.error('UI check target:',currentTarget);console.error(e);

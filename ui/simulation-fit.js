@@ -1,6 +1,6 @@
 // Presentation only. Keep the actual controls, listeners, canvases and model coordinates.
 import {prepareSolarPilotLayout,fitSolarCharts} from './solar-pilot-layout.js?v=panel-scroll-20261026-1';
-import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=panel-scroll-20261026-1';
+import {prepareUnifiedSimulation} from './unified-simulation-layout.js?v=light-only-20261028-1';
 const installed = new WeakSet();
 const titleOf = el => (el.id==='chartp'?'Charts':el.querySelector('h2,h3,.cph b')?.textContent || el.getAttribute('aria-label') || (el.querySelector('.legend,.ramp') ? 'Legend' : 'Notes')).replace(/^\s*\d+\s*/, '').trim();
 function prepareExteriorLayout(doc){

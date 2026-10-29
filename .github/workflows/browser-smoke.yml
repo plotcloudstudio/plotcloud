@@ -9,6 +9,26 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - group: core
+            scripts: >-
+              tests/ui-unification.cjs tests/acoustics.cjs tests/home-hero.cjs tests/sun-period.cjs
+          - group: layout
+            scripts: >-
+              tests/simulation-fit.cjs tests/unified-simulation-audit.cjs tests/unified-results.cjs tests/selected-layouts.cjs
+          - group: study
+            scripts: >-
+              tests/simulation-header.cjs tests/short-simulation-window.cjs tests/simulation-startup.cjs tests/simulation-art.cjs
+          - group: climate
+            scripts: >-
+              tests/shared-conditions.cjs tests/project-climate.cjs tests/climate-studies.cjs tests/charts-list.cjs tests/exterior-layout.cjs
+          - group: presentation
+            scripts: >-
+              hero/toronto.test.cjs tests/resources-native.cjs tests/compare-2d.cjs tests/workflow.cjs
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,33 +41,16 @@ jobs:
       - name: Verify service and shared selection contracts
         run: node --test server/render-api.test.mjs tests/studio-tab.cjs
       - name: Serve site and run browser smoke
+        env:
+          TEST_BASE: http://127.0.0.1:8765
+          CHECK_SCRIPTS: ${{ matrix.scripts }}
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/plotcloud-http.log 2>&1 &
-          node tests/run-browser-check.cjs tests/ui-unification.cjs
-          node tests/run-browser-check.cjs tests/acoustics.cjs
-          node tests/run-browser-check.cjs tests/home-hero.cjs
-          node tests/run-browser-check.cjs tests/sun-period.cjs
-          node tests/run-browser-check.cjs tests/simulation-fit.cjs
-          node tests/run-browser-check.cjs tests/unified-simulation-audit.cjs
-          node tests/run-browser-check.cjs tests/unified-results.cjs
-          node tests/run-browser-check.cjs tests/selected-layouts.cjs
-          node tests/run-browser-check.cjs tests/simulation-header.cjs
-          node tests/run-browser-check.cjs tests/short-simulation-window.cjs
-          node tests/run-browser-check.cjs tests/simulation-startup.cjs
-          node tests/run-browser-check.cjs tests/simulation-art.cjs
-          node tests/run-browser-check.cjs tests/shared-conditions.cjs
-          node tests/run-browser-check.cjs tests/project-climate.cjs
-          node tests/run-browser-check.cjs tests/climate-studies.cjs
-          node tests/run-browser-check.cjs tests/charts-list.cjs
-          node tests/run-browser-check.cjs tests/exterior-layout.cjs
-          node tests/run-browser-check.cjs hero/toronto.test.cjs
-          node tests/run-browser-check.cjs tests/resources-native.cjs
-          node tests/run-browser-check.cjs tests/compare-2d.cjs
-          node tests/run-browser-check.cjs tests/workflow.cjs
+          for check in $CHECK_SCRIPTS; do node tests/run-browser-check.cjs "$check" || exit $?; done
       - name: Save responsive screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plotcloud-responsive-screenshots
+          name: plotcloud-responsive-screenshots-${{ matrix.group }}
           path: /tmp/plotcloud-screenshots
           if-no-files-found: ignore

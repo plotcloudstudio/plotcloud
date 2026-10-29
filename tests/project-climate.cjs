@@ -9,7 +9,7 @@ function epw(){const lines=['LOCATION,QA Station,BC,CAN,TEST,000,49,-123,-8,70',
  await p.goto(base+'/mvp/#/project-settings/'+pid+'?return=vent');await p.locator('#projectTerrain').selectOption('city');await p.locator('#projectShelter').selectOption('sheltered');
  await p.locator('#sharedNorth').fill('35');await p.getByRole('button',{name:'Save shared conditions',exact:true}).click();
  console.log('Exposure saved');
- await p.locator('#projectEpw').setInputFiles({name:'qa.epw',mimeType:'text/plain',buffer:epw()});await p.locator('#projectClimateStatus').filter({hasText:'8760 hours'}).waitFor();
+ await p.locator('#projectEpw').setInputFiles({name:'qa.epw',mimeType:'text/plain',buffer:epw()});await p.locator('#projectEpwSummary').filter({hasText:'8760 hours'}).waitFor();
  const saved=await p.evaluate(async pid=>{const S=await import('./js/store.js');return S.clone(S.conditionsOf(S.project(pid)));},pid);assert.equal(saved.site.terrain,'city');assert.equal(saved.site.shelter,'sheltered');assert.equal(saved.site.north,35);assert(saved.site.climate.hash);
  await p.locator('#sharedLabel').fill('Climate QA');await p.getByRole('button',{name:'Save shared conditions',exact:true}).click();
  assert.equal(await p.evaluate(async pid=>(await import('./js/store.js')).conditionsOf((await import('./js/store.js')).project(pid)).site.climate.hash,pid),saved.site.climate.hash,'Editing site must preserve shared climate');
@@ -28,6 +28,6 @@ function epw(){const lines=['LOCATION,QA Station,BC,CAN,TEST,000,49,-123,-8,70',
  await p.goto(base+'/mvp/#/simulations/daylight');f=p.frameLocator('#eng');await f.locator('#projectClimateSummary').filter({hasText:'qa.epw'}).waitFor({state:'attached',timeout:90000});assert.match(await f.locator('#epwInfo').textContent(),/QA Station/);assert.equal(await f.locator('#pilotOverrideEnabled').isChecked(),false,'Shared EPW is not a study-only override');
  const snapshot=await p.evaluate(async pid=>{const S=await import('./js/store.js'),pr=S.project(pid),run={simId:'vent',settings:{sharedConditions:{signature:S.conditionsSignature(pr,'vent')}}};S.updateConditions(pr,{...S.conditionsOf(pr).site,north:45},S.conditionsOf(pr).defaults);return S.runConditionsStatus(pr,run);},pid);assert.match(snapshot,/rerun/);
  await p.evaluate(async pid=>{const S=await import('./js/store.js'),pr=S.project(pid),c=S.conditionsOf(pr);S.updateConditions(pr,{...c.site,climate:{...c.site.climate,hash:'missing-file'}},c.defaults);},pid);
- await p.goto(base+'/mvp/#/simulations/vent');f=p.frameLocator('#eng');await f.locator('#projectClimateSummary').filter({hasText:'missing from this browser'}).waitFor({state:'attached',timeout:90000});assert(await f.locator('#run').isDisabled(),'Missing shared file must not silently substitute weather');
+ await p.goto(base+'/mvp/#/simulations/vent');await p.getByText('Restore the project weather file',{exact:true}).waitFor({timeout:90000});assert.equal(await p.locator('#eng').count(),0,'Missing shared file blocks engine creation instead of silently substituting weather');
  assert.deepEqual(errors,[]);console.log('PASS project climate: validated upload, persistent contents, project isolation, exposure/north inheritance, Ventilation + Daylight reuse, no false override, stale signature');
  }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

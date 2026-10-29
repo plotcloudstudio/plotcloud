@@ -19,9 +19,9 @@ try{
  await p.getByRole('button',{name:'Save shared conditions',exact:true}).click();assert.match(await p.locator('#sharedNotice').innerText(),/No changes/);
  await p.locator('#sharedOccEnd').fill('8');await p.getByRole('button',{name:'Save shared conditions',exact:true}).click();assert.match(await p.locator('#sharedNotice').innerText(),/later than/);
  await p.evaluate(async id=>{const S=await import('./js/store.js');localStorage.setItem('pc-mvp-current',id);},state.id);
- const open=async id=>{await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-settings-ready="true"]').waitFor();const f=p.frameLocator('#eng');await f.locator('#pilotSettings').waitFor();return f;};
- const tab=async(f,side,name)=>{await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#pilot'+name).waitFor({state:'visible'});await p.waitForTimeout(60);};
- const reach=async(f,selector)=>{await f.locator(selector).scrollIntoViewIfNeeded();};
+ const open=async id=>{await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-emb="'+id+'"][data-pc-settings-ready="true"][data-pc-visible-ready="true"]').waitFor();const f=p.frameLocator('#eng');await f.locator('#pilotSettings').waitFor();await p.locator('#autoSaveResult').uncheck();return f;};
+ const tab=async(f,side,name)=>{if(side==='L')await f.getByRole('button',{name:'Jump to '+name,exact:true}).click();else await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#pilot'+name).waitFor({state:'visible'});await p.waitForTimeout(60);};
+ const reach=async(f,selector)=>{await require('./reveal-simulation-control.cjs')(f,selector);await f.locator(selector).scrollIntoViewIfNeeded();};
  const fill=async(f,id,val)=>{await f.locator('#'+id).fill(String(val));await f.locator('#'+id).dispatchEvent('change');};
  for(const id of ['sunhours','daylight']){
   const f=await open(id);
@@ -43,9 +43,9 @@ try{
   }
   if(id==='sunhours'){
    await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
-   await reach(f,'#run');await f.locator('#run').click();await p.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;},null,{timeout:90000});
+   await reach(f,'#run');await f.locator('#run').click();await require('./confirm-solar-inputs.cjs')(f);await p.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;},null,{timeout:90000});
   }else{
-   await f.locator('#run:not([disabled])').waitFor();await reach(f,'#run');await f.locator('#run').click();await p.waitForFunction(()=>document.querySelector('#eng').contentWindow.__pcAnalysisState?.().ready,null,{timeout:90000});
+   await f.locator('#run:not([disabled])').waitFor();await reach(f,'#lvSeg [data-l=draft]');await f.locator('#lvSeg [data-l=draft]').click();if(await f.locator('#lvStart').isVisible())await f.locator('#lvStart').click();await p.waitForFunction(()=>document.querySelector('#eng').contentWindow.__pcAnalysisState?.().ready,null,{timeout:90000}).catch(async error=>{console.error('Daylight readiness',await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow,d=w.document;return {state:w.__pcAnalysisState?.(),run:d.querySelector('#runMsg')?.textContent,progress:d.querySelector('#runLeft')?.textContent,confirmation:d.querySelector('#lvLong')?.hidden,loading:d.body.dataset.pcSharedWeatherLoading,quality:[...d.querySelectorAll('#lvSeg [aria-pressed=true]')].map(e=>e.dataset.l)};}));throw error;});
   }
   await p.locator('#save').click();
   const run=await p.evaluate(async({pid,id})=>{const S=await import('./js/store.js');return S.project(pid).runs.filter(r=>r.simId===id).at(-1);},{pid:state.id,id});

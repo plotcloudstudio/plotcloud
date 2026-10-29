@@ -11,10 +11,10 @@
  .pcdesk b{font:800 30px "Inter Tight",system-ui,sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:var(--pc-ink)} .pcdesk p{margin:0 auto;max-width:420px;color:var(--pc-muted);font-size:15px;line-height:1.5}
  .pcdesk span{font:500 11px "JetBrains Mono",monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--pc-muted)}}
 </style><!--/PCSKIN-->
-<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/tokens.css?v=light-only-20261028-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=light-only-20261028-1" data-pc-ui-assets>
 <script src="../ui/downloads.js?v=1"></script>
-<script src="../ui/runtime.js?v=panel-scroll-20261026-1" data-surface="tool" defer></script>
+<script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 </head>
 <body><!--PCSKIN--><div class="pcdesk" role="note"><span>PlotCloud · tools</span><b>door & window generator works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
 <title>PlotCloud Door & Window Generator</title>
@@ -303,16 +303,13 @@ function applyTheme() {
   grid.position.y = -0.5;
   grid.material.transparent = true; grid.material.opacity = 0.7;
   scene.add(grid);
-  const dark = new THREE.Color(theme.view).getHSL({}).l < 0.4;
-  floor.material.opacity = dark ? 0.35 : 0.16;
-  edgeMat.color.set(theme.ink); edgeMat.opacity = dark ? 0.28 : 0.32;
+  floor.material.opacity = 0.16;
+  edgeMat.color.set(theme.ink); edgeMat.opacity = 0.32;
   dimMat.color.set(theme.accent);
 }
 const edgeMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.32 });
 const dimMat = new THREE.LineBasicMaterial({});
 applyTheme();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
 const matCache = new Map();
 function material(mat, color) {

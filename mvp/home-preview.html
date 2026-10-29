@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="night">
+<html lang="en" data-theme="day">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PlotCloud — homepage layout preview</title>
@@ -14,7 +14,7 @@ html{scroll-behavior:smooth}body{overflow-x:hidden}.preview-nav{max-width:1440px
 </style>
 </head>
 <body>
-<header class="preview-nav"><a class="wordmark" href="./">plotcloud<i>—</i></a><nav class="navlinks" aria-label="Main"><a href="#studies">Simulations</a><a href="#example">Results</a><a href="#studio">Workspace</a><a href="#resources">Resources</a></nav><div class="navright"><span class="preview-label">HOMEPAGE PREVIEW</span><button class="btn sm" id="theme" aria-label="Switch colour theme">Day ↗</button><a class="btn accent sm" href="./#/simulations">Start analysis →</a></div></header>
+<header class="preview-nav"><a class="wordmark" href="./">plotcloud<i>—</i></a><nav class="navlinks" aria-label="Main"><a href="#studies">Simulations</a><a href="#example">Results</a><a href="#studio">Workspace</a><a href="#resources">Resources</a></nav><div class="navright"><span class="preview-label">HOMEPAGE PREVIEW</span><a class="btn accent sm" href="./#/simulations">Start analysis →</a></div></header>
 <main>
 <section class="intro"><div class="eyeline">Building simulation · early design</div><h1>Understand your building.<br><span>Improve your design.</span></h1><p>Explore sunlight, airflow, acoustics and movement. Compare design options and export results for your next review.</p><div class="actions"><a class="btn accent lg" href="./#/start-study">Start a guided study →</a><a class="btn lg" href="#example">Explore an example ↘</a></div><small>Bring an existing model or develop a plan in PlotCloud.</small></section>
 <figure class="scene" aria-label="Toronto environmental illustration"><iframe data-home-hero title="Interactive Toronto architectural model"></iframe></figure>
@@ -32,11 +32,8 @@ html{scroll-behavior:smooth}body{overflow-x:hidden}.preview-nav{max-width:1440px
 <footer class="preview-foot"><a class="wordmark" href="./">plotcloud<i>—</i></a><p>Independent homepage layout preview.<br>Screening studies for design, not code compliance.</p></footer></div>
 </main>
 <script type="module">
-import {mountHomeHero} from './js/home-hero.js?v=20261024-click2';
+import {mountHomeHero} from './js/home-hero.js?v=light-only-20261028-1';
 import {mountSunExample} from './js/home-example.js';
-const button=document.querySelector('#theme');
-function theme(value){document.documentElement.dataset.theme=value;button.textContent=value==='night'?'Day ↗':'Night ↗';document.querySelectorAll('[data-image]').forEach(image=>image.src=`img/${image.dataset.image.replace(/^sim-/,'analysis-')}-${value}.jpg`);dispatchEvent(new CustomEvent('pc-theme'));}
-button.onclick=()=>theme(document.documentElement.dataset.theme==='night'?'day':'night');
-await mountSunExample(document);theme('night');const cleanup=mountHomeHero(document.querySelector('.scene'));addEventListener('pagehide',cleanup,{once:true});
+await mountSunExample(document);const cleanup=mountHomeHero(document.querySelector('.scene'));addEventListener('pagehide',cleanup,{once:true});
 </script>
 </body></html>

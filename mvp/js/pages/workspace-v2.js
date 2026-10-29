@@ -1,3 +1,5 @@
+import {inspectStudy} from '../study-readiness.js';
+import {mountHandoff,createHandoff} from '../handoff.js?v=handoff-20261028-1';
 import {editStructuralProperties,structuralSummary} from '../structural-properties.js?v=structural-study-20261028-1';
 // The Workspace (#/workspace): Plan Studio in one view (chosen at the top left), with the Workspace's own tools, Rhino-style panels on the
 // right (Properties, Layers, Versions; additional views under View tools) and the status bar.
@@ -10,7 +12,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
-import {mountWorkbenchShell} from '../workbench-shell.js?v=laptop-layout-20261028-1';
+import {mountWorkbenchShell} from '../workbench-shell.js?v=light-only-20261028-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel } from '../viewport.js';
@@ -660,7 +662,7 @@ export function render(app, [pid]) {
   }
   function state() {
     const v = baseline(), d = dirty();refreshProjectContext(p);
-    $('#state', app).innerHTML = `${p.sample ? 'Sample project. Edits are kept in this browser.' : 'Edits are kept in this browser.'} · ${esc(p.name)} · ${v ? 'v' + v.n : 'no version yet'}${d ? ' · <span class="dirty">unsaved changes</span>' : ''}`;
+    $('#state', app).innerHTML = `${p.sample ? 'Sample project. Edits are kept in this browser.' : 'Edits are kept in this browser.'} · ${esc(p.name)} · ${v ? 'Model v' + v.n : 'no version yet'} · ${p.runs.filter(r=>r.versionId!==v?.id).length} results on other versions${d ? ' · <span class="dirty">unsaved changes</span>' : ''}`;
     $('#state',app).title=$('#state',app).textContent;
     $('#dirty', app).textContent = d ? (v ? `Changes since v${v.n} are not saved.` : 'Save the first version to run simulations.') : `Up to date with v${v.n}.`;
     $('#versions', app).innerHTML = p.versions.slice().reverse().map((x) => `<div class="vrow ${x === v && !d ? 'cur' : ''}"><span class="vn">v${x.n}</span><div><div>${esc(x.note)}</div><div class="vmeta">${when(x.created)} · ${p.runs.filter((r) => r.versionId === x.id).length} results</div></div>
@@ -676,6 +678,8 @@ export function render(app, [pid]) {
     const snapshot=pane.ws.model();p.draft.studio=JSON.parse(snapshot);SNAP=snapshot;for(const i of ready())if(i!==pane)i.ws.apply(snapshot,false);
     if(dT){cancelAnimationFrame(dT);dT=0;}while(dRun&&!dead)await new Promise(r=>setTimeout(r,20));if(dead)throw Error('The view changed before saving completed.');await deriveNow(false);if(dead)throw Error('The view changed before saving completed.');
   }
+  let preflightCache=null,preflightKey='';
+  const checkHandoff=()=>{const pane=activePane(),st=M().studio,key=JSON.stringify([studyChoice?.value,S.conditionsOf(p),st,pane.ready]);if(preflightCache&&key===preflightKey)return preflightCache;preflightKey=key;const r=inspectStudy(p,{id:baseline()?.id||'draft',n:baseline()?.n||1,model:M()},studyChoice?.value||'sunhours',{site:S.conditionsOf(p).site,defaults:S.conditionsOf(p).defaults,draftChanged:false});r.checks=r.checks.filter(c=>c.key!=='version');r.loaded=pane.ready;r.study=studyChoice?.value||'sunhours';if(pane.ready){const native=pane.win.__pcWorkflow?.preflight?.(r.study);for(const [kind,state]of [['errors','error'],['warnings','warning']])for(const issue of native?.[kind]||[])r.checks.push({key:'native-'+issue.code,state,title:issue.msg,ref:issue.ref});}else r.checks.push({key:'loading',state:'error',title:'Model is still loading'});r.errors=r.checks.filter(c=>c.state==='error');r.warnings=r.checks.filter(c=>c.state==='warning');r.ready=!r.errors.length;return preflightCache=r;};
   const studyChoice=document.createElement('select');studyChoice.id='workspaceStudy';studyChoice.setAttribute('aria-label','Simulation study');studyChoice.innerHTML=SIMS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
   try{const saved=localStorage.getItem('pc-workspace-study');if(SIMS.some(s=>s.id===saved))studyChoice.value=saved;}catch{}
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
@@ -684,13 +688,18 @@ export function render(app, [pid]) {
     try{
       // Flush the active model and its derived geometry before freezing the version.
       await flushCurrentModel(pane);
-      const v=dirty()||!baseline()?S.saveVersion(p,'Sent from Workspace'):baseline();setCurrent(p);setCurrentVersion(p,v.id);
+      preflightKey='';const checks=checkHandoff();if(checks.errors.length){shell.inert=false;button.removeAttribute('aria-busy');handoff.refresh();app.querySelector('#geometryHealth').click();throw Error('Resolve the pre-flight issues in Workbench first.');}
+      shell.inert=false;button.removeAttribute('aria-busy');if(!await handoff.review()){button.disabled=false;button.textContent='Send to Simulation';shell.removeAttribute('aria-busy');return;}shell.inert=true;
+      const v=dirty()||!baseline()?S.saveVersion(p,'Sent from Workspace'):baseline();
+      const record=createHandoff(p,v,studyChoice.value,checkHandoff().checks);p.handoffs=[...(p.handoffs||[]),record];S.save();setCurrent(p);setCurrentVersion(p,v.id);
       const levels=pane.ws.levels(),selected=levels.list.find(l=>l.id===levels.lv),level=levelsOf(v.model).find(l=>Math.abs(l.z-(selected?.z??0))<.001);
       if(level)sessionStorage.setItem('pc-sim-level:'+p.id,'L'+level.n);
       location.hash='#/simulations/'+studyChoice.value+'?autorun=workspace';
     }catch(error){toast('The current model could not be sent: '+(error.message||'storage unavailable'));button.disabled=false;button.textContent='Send to Simulation';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}
   };
-  $('#editSite', app).onclick = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
+  const editSiteGeometry = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
+  const handoff=mountHandoff(app,p,{model:M,version:baseline,dirty,check:checkHandoff,locate:ref=>{const k=({Wall:'wall',Opening:'op',Furniture:'furn',Floor:'floor','Floor opening':'void'})[ref.k]||ref.k;setSel(['ps:'+k+':'+ref.id],{params:true});},onGeometryEdit:editSiteGeometry});
+  $('#editSite',app).onclick=()=>app.querySelector('#projectBaseline').click();
   $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if(name===null)return;if(!name.trim()){toast('Enter a layer name.');return;}if(M().layers.find(l=>l.name.toLowerCase()===name.trim().toLowerCase())){toast('A layer with that name already exists.');return;} M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
   $('#saveV',app).onclick=async()=>{const button=$('#saveV',app);if(button.disabled)return;if(!dirty()&&baseline()){toast('No changes since v'+baseline().n);return;}button.disabled=true;button.textContent='Saving version…';button.setAttribute('aria-busy','true');const shell=$('.wb-shell',app);shell.inert=true;shell.setAttribute('aria-busy','true');try{await new Promise(requestAnimationFrame);await flushCurrentModel();const v=S.saveVersion(p,$('#note',app).value.trim());setCurrentVersion(p,v.id);$('#note',app).value='';state();toast('Saved v'+v.n);}catch(error){toast('The version could not be saved: '+error.message);}finally{button.disabled=false;button.textContent='Save version';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}};
 
@@ -725,5 +734,5 @@ export function render(app, [pid]) {
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

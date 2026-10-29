@@ -8,15 +8,14 @@ const reveal=require('./reveal-simulation-control.cjs');
   p.on('pageerror',e=>errors.push(e.message));await p.goto(base+'/mvp/');await p.waitForFunction(()=>document.querySelector('#app h1'));
   await p.evaluate(async()=>{const S=await import('./js/store.js');S.reset();localStorage.setItem('pc-mvp-current',S.projects()[0].id);});
   for(const id of ['sunhours','daylight']){
-   await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-settings-ready="true"]').waitFor();const f=p.frameLocator('#eng');
+   await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-emb="'+id+'"][data-pc-settings-ready="true"]').waitFor();const f=p.frameLocator('#eng');
    if(id==='sunhours'){
     await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
    }
-   await reveal(f,'#run:not([disabled])');await f.locator('#run:not([disabled])').click();
+   if(id==='daylight'){await reveal(f,'#lvSeg [data-l=draft]');await f.locator('#lvSeg [data-l=draft]').click();if(await f.locator('#lvStart').isVisible())await f.locator('#lvStart').click();}else{await reveal(f,'#run:not([disabled])');await f.locator('#run:not([disabled])').click();await require('./confirm-solar-inputs.cjs')(f);}
    await p.waitForFunction(id=>{const w=document.querySelector('#eng').contentWindow;return id==='sunhours'?w.__sun.S.lastR&&!w.__sun.S.busy:w.__pcAnalysisState?.().ready;},id,{timeout:90000});
    await f.locator('#panelR [role=tab]').getByText('Charts',{exact:true}).click();
-   for(const theme of ['light','dark']){
-   await p.evaluate(theme=>window.PlotCloudUI.setTheme(theme),theme);
+   for(const theme of ['light']){
    for(const [width,height]of [[1280,720],[1366,768],[1920,1080]]){
     await p.setViewportSize({width,height});await p.waitForTimeout(400);
     const layout=await f.locator('#pilotCharts').evaluate(el=>{
@@ -26,7 +25,7 @@ const reveal=require('./reveal-simulation-control.cjs');
     await p.screenshot({path:require('os').tmpdir()+'/charts-list-'+id+'-'+theme+'-'+width+'.png'});
     assert.equal(await f.locator('#pilotChartSelect').count(),0);
     assert.equal(await f.locator('#panelR .pc-fit-pages').isVisible(),false,'Charts must not require paging');
-    for(const c of layout.charts){assert(c.top>=-1&&c.bottom<=layout.height+2,c.id+' must fit');assert(c.painted,c.id+' must draw actual data');assert(Math.abs(c.bitmap-c.css*c.dpr)<=1,c.id+' bitmap matches logical height at high DPI');}
+    for(const c of layout.charts){await f.locator('#'+c.id).scrollIntoViewIfNeeded();const bounds=await f.locator('#'+c.id).evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return {top:r.top-v.top,bottom:r.bottom-v.top,height:v.height};});assert(bounds.top>=-1&&bounds.bottom<=bounds.height+2,c.id+' remains reachable by native scrolling');assert(c.painted,c.id+' must draw actual data');assert(Math.abs(c.bitmap-c.css*c.dpr)<=1,c.id+' bitmap matches logical height at high DPI');}
    }
    }
    if(id==='daylight'){

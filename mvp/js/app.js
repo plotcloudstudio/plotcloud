@@ -20,15 +20,8 @@ export function toast(msg) { const t = document.createElement('div'); t.classNam
 export const MOCK = '<span class="tag mock" title="Prototype estimate from simple model quantities. Not the PlotCloud simulation engine.">Mock</span>';
 export const LIVE = '<span class="tag live" title="Computed by the PlotCloud simulation engine">Engine</span>';
 
-// ---- theme: night by default, remembered in this browser; pages and the 3D view follow it
-export const theme = () => document.documentElement.dataset.theme || 'night';
-export const img = (name) => `img/${name}-${theme()}.jpg${['analysis-climate','analysis-passive','analysis-skyview','analysis-shadebenefit','analysis-solarenvelope'].includes(name)?'?v=study-unified-20261028-1':['analysis-noise','analysis-wayfinding','analysis-privacy'].includes(name)?'?v=engine-20261024-1':''}`;
-export function setTheme(t) {
-  document.documentElement.dataset.theme = t; try { localStorage.setItem('pc-mvp-theme', t); } catch (e) { }
-  $$('#themeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === t)));
-  $$('img[data-holo]').forEach((im) => { im.src = img(im.dataset.holo); });
-  dispatchEvent(new CustomEvent('pc-theme', { detail: t }));
-}
+// Fixed light artwork; project data is independent of interface appearance.
+export const img = (name) => `img/${name}-day.jpg${['analysis-climate','analysis-passive','analysis-skyview','analysis-shadebenefit','analysis-solarenvelope'].includes(name)?'?v=study-unified-20261028-1':['analysis-noise','analysis-wayfinding','analysis-privacy'].includes(name)?'?v=engine-20261024-1':''}`;
 
 // the project people are working on, remembered between pages
 export function currentProject() {
@@ -133,7 +126,6 @@ export async function route() {
   window.scrollTo(0, 0);
 }
 export const refreshWho = who;
-addEventListener('pc-ui-theme',event=>setTheme(event.detail));
 document.addEventListener('change',event=>{
   if(event.target.id!=='ver')return;
   const version=currentProject()?.versions.find(v=>v.id===event.target.value);
@@ -141,9 +133,8 @@ document.addEventListener('change',event=>{
 });
 addEventListener('hashchange', route);
 $('#menuBtn').addEventListener('click', () => { const o = $('#nav').classList.toggle('open'); $('#menuBtn').setAttribute('aria-expanded', String(o)); });
-$$('#themeSeg button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));
 // accounts and the cloud copy (cloud.js): an emailed sign-in link comes back in the address; read it before the first page
 const fromLink = C.captureRedirect();
 addEventListener('pc-cloud', (e) => { const el = $('#whoSync'); if (el) el.textContent = syncText(); if (e.detail.user && !S.account().user) who();
   const d = e.detail; if ((d.changed || d.copies || d.removed) && /^#\/(home|account|results)?(\?|$)|^#?$/.test(location.hash)) route(); else if (d.changed || d.copies) toast('Projects updated from your other devices'); });
-setTheme(theme()); S.init().then(() => { C.start(); if (fromLink?.error) toast(fromLink.error); return route(); }, route);   // the store comes from IndexedDB first (see store.js)
+S.init().then(() => { C.start(); if (fromLink?.error) toast(fromLink.error); return route(); }, route);   // the store comes from IndexedDB first (see store.js)

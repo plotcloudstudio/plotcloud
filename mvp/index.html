@@ -1,24 +1,25 @@
 <!doctype html>
-<html lang="en" data-theme="night">
+<html lang="en" data-theme="day">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PlotCloud — simulation-first prototype</title>
 <meta name="description" content="PlotCloud: set the site once, model, run 22 simulations and compare design versions.">
-<script>try{var t=localStorage.getItem('pc-mvp-theme');if(t==='day'||t==='night')document.documentElement.dataset.theme=t;}catch(e){}</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="css/structure-study.css?v=structural-study-20261028-1">
-<link rel="stylesheet" href="css/mvp.css?v=import-feedback-20261027-1">
-<script type="importmap">{"imports":{"./js/study-ui/stage.js?v=study-unified-20261028-1":"./js/study-ui/stage.js?v=study-unified-20261028-2","three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/","../furniture/models.js":"../furniture/models.js?v=furniture-detail-20261027-1","../furniture/geom.js":"../furniture/geom.js?v=furniture-detail-20261027-1","./js/furn3d.js":"./js/furn3d.js?v=furniture-detail-20261027-1","./js/studio-bridge.js":"./js/studio-bridge.js?v=import-feedback-20261027-1"}}</script>
+<link rel="stylesheet" href="css/mvp.css?v=light-only-20261028-1">
+<script type="importmap">{"imports":{"./js/study-ui/stage.js?v=light-only-20261028-1":"./js/study-ui/stage.js?v=light-only-20261028-1","three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/","../furniture/models.js":"../furniture/models.js?v=furniture-detail-20261027-1","../furniture/geom.js":"../furniture/geom.js?v=furniture-detail-20261027-1","./js/furn3d.js":"./js/furn3d.js?v=furniture-detail-20261027-1","./js/studio-bridge.js":"./js/studio-bridge.js?v=import-feedback-20261027-1"}}</script>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=panel-scroll-20261026-1" data-surface="site" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=light-only-20261028-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=light-only-20261028-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="site" defer></script>
 <link rel="stylesheet" href="css/environment-study.css?v=environment-20261028-1">
 <link rel="stylesheet" href="css/local-compute.css?v=local-compute-20261028-2">
 <link rel="stylesheet" href="css/study-unified.css?v=study-unified-20261028-1">
+<link rel="stylesheet" href="css/handoff.css?v=handoff-20261028-1">
 </head>
 <body>
 <header class="top">
@@ -33,12 +34,11 @@
   </nav>
   <div class="right">
     <span class="proto" title="Interactive prototype. Results marked Mock are estimates; results marked Engine come from the PlotCloud engine.">Prototype</span>
-    <div class="seg" id="themeSeg" role="group" aria-label="Day or night"><button type="button" data-theme="day">Day</button><button type="button" data-theme="night">Night</button></div>
     <span id="who"></span>
   </div>
 </header>
 <main id="app" tabindex="-1"></main>
-<script type="importmap">{"imports":{"./js/project-climate.js":"./js/project-climate.js?v=epw-connected-20261027-3","./js/pages/project-settings.js":"./js/pages/project-settings.js?v=epw-connected-20261027-3","./js/pages/new-site.js":"./js/pages/new-site.js?v=epw-connected-20261027-3","./js/store.js":"./js/store.js?v=environment-20261028-1","./js/data.js":"./js/data.js?v=environment-20261028-1","./js/export3d.js":"./js/export3d.js?v=import-feedback-20261027-1","./js/viewport.js":"./js/viewport.js?v=import-feedback-20261027-1","./js/pages/workspace-v2.js":"./js/pages/workspace-v2.js?v=laptop-layout-20261028-1","./js/pages/start-study.js":"./js/pages/start-study.js?v=panel-scroll-20261026-1","./js/study-readiness.js":"./js/study-readiness.js?v=environment-20261028-1","./js/pages/comparison-report.js":"./js/pages/comparison-report.js?v=panel-scroll-20261026-1","./js/comparison-report.js":"./js/comparison-report.js?v=panel-scroll-20261026-1","./js/comparison-report-data.js":"./js/comparison-report-data.js?v=environment-20261028-1","./js/comparison-evidence.js":"./js/comparison-evidence.js?v=panel-scroll-20261026-1","./js/pages/home.js":"./js/pages/home.js?v=panel-scroll-20261026-1","./js/app.js":"./js/app.js?v=study-unified-20261028-2","./js/pages/simulations.js":"./js/pages/simulations.js?v=study-unified-20261028-1","./js/pages/sim-engine.js":"./js/pages/sim-engine.js?v=study-unified-20261028-1","./js/pages/admin.js":"./js/pages/admin.js?v=admin-setup-20261027-1","./js/pages/pricing.js":"./js/pages/pricing.js?v=admin-setup-20261027-1","./js/batch.js":"./js/batch.js?v=panel-scroll-20261026-1","./js/beta-access.js":"./js/beta-access.js?v=environment-20261028-1","./js/cloud.js":"./js/cloud.js?v=cloud-connect-20261027-1","./js/pages/results.js":"./js/pages/results.js?v=local-compute-20261028-2","./js/pages/account.js":"./js/pages/account.js?v=admin-setup-20261027-1","./js/pages/login.js":"./js/pages/login.js?v=panel-scroll-20261026-1","./js/pages/legal.js":"./js/pages/legal.js?v=panel-scroll-20261026-1","./js/pages/resources.js":"./js/pages/resources.js?v=panel-scroll-20261026-1"}}</script>
+<script type="importmap">{"imports":{"./js/project-climate.js":"./js/project-climate.js?v=handoff-location-20261029-1","./js/pages/project-settings.js":"./js/pages/project-settings.js?v=handoff-20261028-1","./js/pages/new-site.js":"./js/pages/new-site.js?v=epw-connected-20261027-3","./js/store.js":"./js/store.js?v=handoff-20261028-1","./js/data.js":"./js/data.js?v=environment-20261028-1","./js/export3d.js":"./js/export3d.js?v=import-feedback-20261027-1","./js/viewport.js":"./js/viewport.js?v=light-only-20261028-1","./js/pages/workspace-v2.js":"./js/pages/workspace-v2.js?v=handoff-20261028-1","./js/pages/start-study.js":"./js/pages/start-study.js?v=panel-scroll-20261026-1","./js/study-readiness.js":"./js/study-readiness.js?v=environment-20261028-1","./js/pages/comparison-report.js":"./js/pages/comparison-report.js?v=panel-scroll-20261026-1","./js/comparison-report.js":"./js/comparison-report.js?v=panel-scroll-20261026-1","./js/comparison-report-data.js":"./js/comparison-report-data.js?v=environment-20261028-1","./js/comparison-evidence.js":"./js/comparison-evidence.js?v=handoff-20261028-1","./js/pages/home.js":"./js/pages/home.js?v=light-only-20261028-1","./js/app.js":"./js/app.js?v=light-only-20261028-1","./js/pages/simulations.js":"./js/pages/simulations.js?v=handoff-20261028-1","./js/pages/environment-study.js":"./js/pages/environment-study.js?v=light-only-20261028-1","./js/pages/structure-study.js":"./js/pages/structure-study.js?v=handoff-20261028-1","./js/pages/sim-engine.js":"./js/pages/sim-engine.js?v=handoff-20261028-1","./js/pages/admin.js":"./js/pages/admin.js?v=admin-setup-20261027-1","./js/pages/pricing.js":"./js/pages/pricing.js?v=admin-setup-20261027-1","./js/batch.js":"./js/batch.js?v=panel-scroll-20261026-1","./js/beta-access.js":"./js/beta-access.js?v=environment-20261028-1","./js/cloud.js":"./js/cloud.js?v=cloud-connect-20261027-1","./js/pages/results.js":"./js/pages/results.js?v=handoff-20261028-1","./js/pages/account.js":"./js/pages/account.js?v=admin-setup-20261027-1","./js/pages/login.js":"./js/pages/login.js?v=panel-scroll-20261026-1","./js/pages/legal.js":"./js/pages/legal.js?v=panel-scroll-20261026-1","./js/pages/resources.js":"./js/pages/resources.js?v=panel-scroll-20261026-1"}}</script>
 <script type="module">import "./js/app.js";</script>
 <script type="module" src="../ui/laptop-layout.js?v=study-unified-20261028-1"></script>
 <link rel="stylesheet" href="css/resources.css?v=native-20261024-1">

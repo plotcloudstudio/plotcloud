@@ -2,12 +2,12 @@
 
 ## Implemented
 
-- Shared interface tokens, typography, controls, semantic colors and day/night themes in `ui/`.
+- Shared interface tokens, typography, controls, semantic colors and a fixed light appearance in `ui/`.
 - Compatibility adapters loaded by all 30 product HTML hosts: classic shell, both standalone MVP shells and all 27 embedded-tool files.
 - Theme propagation across navigation, separate tabs, same-origin tool iframes and Stormwater's nested srcdoc views. User artwork, output sheets, model materials and simulation palettes retain their own ownership.
 - Matching public navigation in MVP and classic shells. One public Workspace entry; advanced and Plan Studio variants remain reachable inside the workspace. Original tool and project routes remain valid.
 - Consistent project context for workspace, analysis and results, using existing project/version/site metadata. Local or session-only persistence is disclosed without inventing cloud storage.
-- Common action/field shapes, keyboard focus and accessible primary-action colors; legacy cards, floating hints, options and numeric labels adapted for dark surfaces. Interface colors switch together during theme changes.
+- Common action/field shapes, keyboard focus and accessible primary-action colors; legacy cards, floating hints, options and numeric labels adapted for tool surfaces. Interface colors switch together during theme changes.
 - Homepage retains its approved larger, borderless, model-only Toronto visual, hover/drag and return-based state cycling.
 - Internal component reference at `ui/reference.html`; route and host coverage at `ui/inventory.json`.
 

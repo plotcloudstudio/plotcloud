@@ -1,12 +1,6 @@
-/* PlotCloud MVP — night (default) and day themes. Tokens live on :root[data-theme]. */
-:root, :root[data-theme="night"] {
-  --bg: #303234; --card: #3b3d40; --ink: #f4f2ee; --ink2: #c9c6c0; --mut: #a8a49e; --mut2: #8f8b85;
-  --line: rgba(244,242,238,.12); --line2: rgba(244,242,238,.25); --chip: #45474a;
-  --inv: #f4f2ee; --invfg: #0a0a0b; --red: #e8413a; --btn: #d4322b; --ok: #7fc79a; --miss: #f0b45a;
-  --mock: #c9b6f2; --mock-bg: rgba(201,182,242,.12); --view: #585b5e; --paper: #303234;
-  color-scheme: dark;
-}
-:root[data-theme="day"] {
+/* PlotCloud interface · light appearance. */
+
+:root {
   --bg: #eef0f3; --card: #ffffff; --ink: #0d0f14; --ink2: #3d434f; --mut: #4f5562; --mut2: #5c6370;
   --line: rgba(13,15,20,.12); --line2: rgba(13,15,20,.22); --chip: rgba(255,255,255,.9);
   --inv: #0d0f14; --invfg: #ffffff; --red: #c42b24; --btn: #c92e27; --ok: #1f7a45; --miss: #9a5b00;

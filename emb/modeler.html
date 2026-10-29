@@ -31,9 +31,9 @@ html.ws-props #secProps{margin:0!important;border:0!important;box-shadow:none!im
 
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=panel-scroll-20261026-1" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=light-only-20261028-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=light-only-20261028-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>Workbench</title>
@@ -742,7 +742,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
           <div class="lp-sub" id="lpSub" hidden></div>
         </div>
       </div>
-      
+
     </div>
     <div class="kbr" role="toolbar" aria-label="View tools">
       <button type="button" class="kb ic" id="snapBtn" title="Save the view as a picture" aria-label="Save the view as a picture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18l5.5-5.5 4 4 2.5-2.5L20 18"/></svg></button>
@@ -2236,7 +2236,7 @@ function syncStairHoles() {   // a stair on a level opens the floor of the level
 const FB = '"Inter Tight", "Noto Sans", system-ui, sans-serif', FM = '"JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace';
 const C = { ink: '#1c1b1a', muted: '#6e6a60', line: '#e1dfda', view: '#f5f6f8', accent: '#D8402A', glass: '#2f6fa8', door: '#c2410c', ok: '#2F7A4F', warn: '#b45309', inA: '#2f6fa8', outA: '#D8402A', mid: '#6b6760' };
 function syncEditorTheme(){const css=getComputedStyle(document.documentElement);C.view=css.getPropertyValue('--pc-ui-view').trim()||'#f5f6f8';C.ink=css.getPropertyValue('--pc-ui-text').trim()||'#1c1b1a';C.muted=css.getPropertyValue('--pc-ui-muted').trim()||'#6e6a60';C.line=css.getPropertyValue('--pc-ui-border').trim()||'#e1dfda';}
-syncEditorTheme();addEventListener('pc-ui-theme',()=>{syncEditorTheme();requestAnimationFrame(()=>{if(typeof draw==='function')draw();});});
+syncEditorTheme();addEventListener('load',()=>{syncEditorTheme();requestAnimationFrame(()=>{if(typeof draw==='function')draw();});},{once:true});
 const KINDS = { stair: 'Stair', atrium: 'Atrium', shaft: 'Shaft', roof: 'Roof opening' };
 
 const HOST_MODEL=!!window.__WSROLE||new URLSearchParams(location.search).has('workspace');
@@ -2390,9 +2390,8 @@ function tag(x, y, text, o = {}) {   // a text label with a soft plate; tries a 
   const tw = g.measureText(text).width, pw = tw + 8 * d, ph = fs + 6 * d;
   const tries = o.tries || [[0, 0], [0, -ph - 2 * d], [0, ph + 2 * d], [pw / 2 + 6 * d, 0], [-pw / 2 - 6 * d, 0]];
   for (const [dx, dy] of tries) { const r = { x: x + dx - pw / 2, y: y + dy - ph / 2, w: pw, h: ph }; if (r.x < 2 || r.y < 2 || r.x + r.w > VP.w - 2 || r.y + r.h > VP.h - 2) continue; if (!o.force && lbHit(r)) continue;
-    const darkPlate=window.PlotCloudUI?.theme==='night'&&!o.bg&&o.plate!==false;
-    LB.push(r); if (o.plate !== false) { g.fillStyle = o.bg || (darkPlate?'rgba(59,61,64,.95)':'rgba(255,255,255,.88)'); rr(r.x, r.y, r.w, r.h, 3 * d); g.fill(); }
-    g.fillStyle = darkPlate&&(!o.col||['#6e6a60','#1c1b1a'].includes(o.col))?'#e4e7eb':o.col || C.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, r.x + r.w / 2, r.y + r.h / 2 + 0.5 * d); return r; }
+    LB.push(r); if (o.plate !== false) { g.fillStyle = o.bg || 'rgba(255,255,255,.88)'; rr(r.x, r.y, r.w, r.h, 3 * d); g.fill(); }
+    g.fillStyle = o.col || C.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, r.x + r.w / 2, r.y + r.h / 2 + 0.5 * d); return r; }
   return false;
 }
 function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -5608,7 +5607,7 @@ window.S3 = (() => {
     cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); cam.position.set(18, 16, 22);
     ctl = new OC(cam, ev || canvas); ctl.mouseButtons = { LEFT: null, MIDDLE: window.__WSROLE?T.MOUSE.PAN:T.MOUSE.ROTATE, RIGHT: window.__WSROLE?T.MOUSE.ROTATE:T.MOUSE.PAN }; ctl.zoomToCursor = true; ctl.enableDamping = false; ctl.maxPolarAngle = Math.PI * 0.49; ctl.addEventListener('change', () => { render(); if (window.zoomUI) window.zoomUI(); if (window.ov3) window.ov3(); });
     const ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshLambertMaterial({ color: window.PlotCloudUI?.viewportColor() || 0xeff1f4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.16; scene.add(ground);
-    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); addEventListener('pc-ui-theme',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
+    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
   function render() { if (R && api.on) { if (api.preRender) api.preRender(); R.render(scene, WALK.on ? WALK.cam : cam); } }
@@ -5947,7 +5946,7 @@ window.S3 = (() => {
         const m = new T.Mesh(new T.ConeGeometry(len * Math.tan(ang / 2), len, 28, 1, true), new T.MeshBasicMaterial({ color: lc, transparent: true, opacity: 0.13, depthWrite: false, side: T.DoubleSide }));
         const d = v3(q.dir).normalize(); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.clone().negate()); m.position.copy(v3(q.c)).add(d.multiplyScalar(len / 2)); m.name = 'beam'; m.raycast = () => {}; G.add(m); continue; }
       const geo = q.s === 'box' ? new T.BoxGeometry(q.size[0], q.size[2], q.size[1]) : q.s === 'cyl' ? new T.CylinderGeometry(q.r, q.r, q.h, 28) : new T.CylinderGeometry(q.r0, q.r1, q.h, 36, 1, true);
-      const dark = ['rod', 'track', 'stem', 'canopy'].includes(q.name), m = new T.Mesh(geo, q.emit ? new T.MeshBasicMaterial({ color: lc }) : mat(dark ? '#3a3d42' : '#ecebe7', q.s === 'cone' ? { side: T.DoubleSide } : {}));
+      const dark = ['rod', 'track', 'stem', 'canopy'].includes(q.name), m = new T.Mesh(geo, q.emit ? new T.MeshBasicMaterial({ color: lc }) : mat('#ecebe7', q.s === 'cone' ? { side: T.DoubleSide } : {}));
       if (q.dir) m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), v3(q.dir).normalize()); m.position.copy(v3(q.c)); m.name = 'lp_' + q.name; body.add(m); }
     G.add(body); const bb = new T.Box3().setFromObject(body); G.userData.dims = bb.isEmpty() ? null : bb.getSize(new T.Vector3()).toArray().map((v) => +v.toFixed(4)); return G;
   }
@@ -6069,6 +6068,7 @@ window.__pcWorkflow={getModel:()=>JSON.parse(snapM()),duplicate:pcDuplicate,cond
 // Same scenes as Send to Simulation: STC.planScene for the chosen tool and level; nothing is computed differently.
 // use(N) opens a model as saved, so nothing is kept as a draft in this browser's Plan Studio.
 Object.assign(window.__pcWorkflow,{use:N=>useModel(STC.migrate(N),{saved:true}),levels:()=>lvSorted().map(l=>({id:l.id,name:l.name,z:l.z,h:l.h})),
+ preflight:(tool)=>{const v=STC.validate(M),indoor=['daylight','vent','views','isovist','spacesyntax','movementdepth','acoustics','cameras','privacy','wayfinding','evac'].includes(tool);return {errors:v.errors.filter(e=>indoor||e.code!=='rooms'),warnings:indoor?v.warnings:[]};},
  toolScene:(tool,lvId)=>{const V=STC.validate(M);if(V.errors.length)return{ok:false,why:V.errors.map(e=>e.msg)};const lv=lvId&&M.levels.some(l=>l.id===lvId)?lvId:lvSorted()[0].id;const c=STC.compat(M,V.S,lv,tool);if(!c.ok)return{ok:false,why:c.why};return{ok:true,level:lv,scene:JSON.stringify(STC.planScene(M,V.S,lv,tool))};},
  dxf:(lvId)=>{const V=STC.validate(M);return WBP.dxf(M,V.S,lvId||lvSorted()[0].id).text;}});
 
@@ -6438,7 +6438,7 @@ if (window.__WSROLE) {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
   const nm = $('#mName'), inf = $('#mInfo'), sn = $('#stName'), si = $('#stInfo');
   const sync = () => { sn.textContent = nm.textContent || 'Plan Studio'; si.textContent = inf.textContent; };
-  for (const e of [nm, inf]) new MutationObserver(sync).observe(e, { childList: true, characterData: true, subtree: true }); sync();
+  for (const e of [nm, inf].filter(Boolean)) new MutationObserver(sync).observe(e, { childList: true, characterData: true, subtree: true }); sync();
 })();
 </script>
 

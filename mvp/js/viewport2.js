@@ -11,9 +11,8 @@ import { furnMesh } from './furn3d.js';
 
 const LOOK = {
   day: { clear: 0x9ca2af, grid: [0xc4c8d2, 0xb3b8c4], solid: 0xe9ecf2, ctx: 0xd5d9e2, edge: 0x2b2f38, ctxEdge: 0.4, hemi: [0xffffff, 0x8a90a0, 2.4] },
-  night: { clear: 0x08090c, grid: [0x2a2d35, 0x1c1f26], solid: 0x2a2f3a, ctx: 0x1d2028, edge: 0xffffff, ctxEdge: 0.3, hemi: [0xffffff, 0x1a1d24, 1.3] },
 };
-const look = () => LOOK[document.documentElement.dataset.theme === 'day' ? 'day' : 'night'];
+const look = () => LOOK.day;
 // Shaded and Ghosted use Plan Studio's warm model colours (beige walls, light timber, pale blue glass), by material first, then by type.
 const SHADE_MAT = { Plaster: 0xece4d6, Gypsum: 0xefe9df, Concrete: 0xdcd5c9, Timber: 0xd9c4a0, Carpet: 0xb9a58e, 'Acoustic panel': 0xcdbfa6, Glass: 0x9ec3dc, Grass: 0xc5cfae, Context: 0xd6d2ca, Imported: 0xe2ddd3 };
 const SHADE_TYPE = { wall: 0xece4d6, slab: 0xd9cdb8, roof: 0xe3ddd2, window: 0x9ec3dc, furniture: 0xd9c4a0, mass: 0xd6d2ca, terrain: 0xc5cfae, imported: 0xe2ddd3, room: 0xe8b04a };
@@ -219,9 +218,6 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     controls.enabled = camera === persp;
     for (const g of objects.values()) paint(g); drawClearance(); size(); render();
   }
-
-  const onTheme = () => { renderer.setClearColor(look().clear, 1); hemi.color.set(look().hemi[0]); hemi.groundColor.set(look().hemi[1]); hemi.intensity = look().hemi[2]; makeGrid(); build(); render(); };
-  addEventListener('pc-theme', onTheme);
   const ro = new ResizeObserver(() => { size(); render(); }); ro.observe(host);
 
   // ---- picking: every selectable object under a screen point, nearest first (locked layers and anything cut away are skipped)
@@ -333,6 +329,6 @@ export function createViewport2(host, { onPick, onBox, onHover, onPlace, onFrame
     camera: () => (camera === persp ? 'persp' : camera === plan ? 'plan' : camera === elev ? 'elev' : camera === iel ? 'ielev' : 'walk'),
     eye: () => walkCam.position.z, hoverId: () => hover, candidates: () => [...cand],
     screenOf: (id) => { const g = objects.get(id); if (!g) return null; const bb = new THREE.Box3().setFromObject(g.userData.face), r = el.getBoundingClientRect(), q = bb.getCenter(new THREE.Vector3()).project(camera); return { x: r.left + (q.x + 1) / 2 * r.width, y: r.top + (1 - q.y) / 2 * r.height }; },
-    dispose() { removeEventListener('pc-theme', onTheme); removeEventListener('keydown', onKey, true); ro.disconnect(); controls.dispose(); renderer.dispose(); el.remove(); labelBox.remove(); boxEl.remove(); },
+    dispose() { removeEventListener('keydown', onKey, true); ro.disconnect(); controls.dispose(); renderer.dispose(); el.remove(); labelBox.remove(); boxEl.remove(); },
   };
 }

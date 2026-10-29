@@ -1,0 +1,2 @@
+// Exercise the existing input-review controls for this known metre-scale test fixture.
+module.exports=async frame=>{for(let i=0;i<4;i++){if(await frame.locator('#useResolvedGrid').isVisible()){await frame.locator('#useResolvedGrid').click();await frame.locator('#run').click();}else if(await frame.locator('#gwarn [data-gw="ok"]').isVisible())await frame.locator('#gwarn [data-gw="ok"]').click();else if(await frame.locator('#longGo').isVisible())await frame.locator('#longGo').click();else break;}};
