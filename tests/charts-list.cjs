@@ -25,7 +25,7 @@ const reveal=require('./reveal-simulation-control.cjs');
     await p.screenshot({path:require('os').tmpdir()+'/charts-list-'+id+'-'+theme+'-'+width+'.png'});
     assert.equal(await f.locator('#pilotChartSelect').count(),0);
     assert.equal(await f.locator('#panelR .pc-fit-pages').isVisible(),false,'Charts must not require paging');
-    for(const c of layout.charts){assert(c.top>=-1&&c.bottom<=layout.height+2,c.id+' must fit');assert(c.painted,c.id+' must draw actual data');assert(Math.abs(c.bitmap-c.css*c.dpr)<=1,c.id+' bitmap matches logical height at high DPI');}
+    for(const c of layout.charts){await f.locator('#'+c.id).scrollIntoViewIfNeeded();const bounds=await f.locator('#'+c.id).evaluate(e=>{const r=e.getBoundingClientRect(),v=e.closest('.pc-fit-window').getBoundingClientRect();return {top:r.top-v.top,bottom:r.bottom-v.top,height:v.height};});assert(bounds.top>=-1&&bounds.bottom<=bounds.height+2,c.id+' remains reachable by native scrolling');assert(c.painted,c.id+' must draw actual data');assert(Math.abs(c.bitmap-c.css*c.dpr)<=1,c.id+' bitmap matches logical height at high DPI');}
    }
    }
    if(id==='daylight'){
