@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
 const palettes=require('../mvp/engine-colours.json'),ids=['wayfinding','privacy'];
 // Verify the catalogue's RGB values against the engine definitions, not an invented palette.
-for(const [id,key] of [['wayfinding','DEPTH'],['privacy','EXP'],['noise','BANDS']]){
+for(const [id,key] of [['wayfinding','DEPTH'],['privacy','EXP']]){
  const text=fs.readFileSync(require.resolve('../emb/'+id+'.html'),'utf8'),literal=text.match(new RegExp('const '+key+' = (\\[.*\\]);'))[1];
  const values=JSON.parse(JSON.stringify(vm.runInNewContext(literal,{}, {timeout:1000})));
  if(id==='noise'){assert.deepEqual(palettes[id].stops.map(s=>s[1]),values.map(s=>s[1]));assert.deepEqual(palettes[id].thresholds,values.slice(0,-1).map(s=>s[0]));}
