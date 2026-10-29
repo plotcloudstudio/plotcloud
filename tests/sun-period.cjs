@@ -42,7 +42,7 @@ const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     const image = await page.locator('#expmsg img').evaluate(img => ({ src: img.src.slice(0, 22), bytes: img.src.length }));
     assert.equal(image.src, 'data:image/png;base64,'); assert(image.bytes > 10000);
     await page.screenshot({ path: process.env.SUN_SCREENSHOT || 'sun-period-check.png' });
-    await page.getByRole('button',{name:'Jump to Settings',exact:true}).click();
+    await page.getByRole('button',{name:'Jump to Analysis',exact:true}).click();
     await change('date', '2028-02-28'); await change('dateEnd', '2028-03-01');
     assert.deepEqual(await page.evaluate(() => __sun.dates()), ['2028-02-28', '2028-02-29', '2028-03-01']);
     await change('dateEnd', '2028-02-27'); await page.locator('#run').click();
