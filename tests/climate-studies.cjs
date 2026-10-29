@@ -26,7 +26,7 @@ function epw(){const lat=49.28,lon=-123.12,tz=-8,lines=[`LOCATION,QA Climate,BC,
   // 2 · the catalogue lists both studies as exterior climate studies
   await p.goto(base+'/mvp/#/simulations');for(const id of ['radiation','utci']){const card=p.locator(`[data-sim="${id}"]`);await card.waitFor();assert.equal(await card.getAttribute('data-scope'),'Exterior');}
   // 3 · one EPW in project conditions feeds both
-  await p.goto(base+'/mvp/#/project-settings/'+pid+'?return=radiation');await p.locator('#projectEpw').setInputFiles({name:'qa.epw',mimeType:'text/plain',buffer:epw()});await p.locator('#projectClimateStatus').filter({hasText:'8760 hours'}).waitFor();
+  await p.goto(base+'/mvp/#/project-settings/'+pid+'?return=radiation');await p.locator('#projectEpw').setInputFiles({name:'qa.epw',mimeType:'text/plain',buffer:epw()});await p.locator('#projectEpwSummary').filter({hasText:'8760 hours'}).waitFor();
   for(const id of ['radiation','utci']){
    await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-visible-ready="true"]').waitFor({timeout:120000});const f=p.frameLocator('#eng');
    await f.locator('#projectClimateSummary').filter({hasText:'qa.epw'}).waitFor({state:'attached',timeout:90000});
