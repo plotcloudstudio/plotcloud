@@ -64,12 +64,15 @@ export async function applyProjectClimate(frame,site,sim,edit){
  status.textContent='Loading project EPW…';
  const run=doc.getElementById('run'),wasDisabled=run?.disabled;if(run)run.disabled=true;
  doc.body.dataset.pcSharedWeatherLoading='true';
+ // EPW station coordinates describe the weather source, not the project site.
+ const projectLocation=sim==='daylight'?{lat:site.lat,lon:site.lon,tz:Number(doc.getElementById('tz').value)}:null;
  let applied=false;
  try{
   const file=await climateFile(site.climate.hash);if(!file)throw Error('Shared EPW is missing from this browser. Upload it again in project conditions.');
   const input=doc.getElementById('epwF'),dt=new DataTransfer();dt.items.add(new File([file.text],file.name,{type:'text/plain'}));input.files=dt.files;
   const info=doc.getElementById('epwInfo');info.textContent='Loading project EPW…';input.dispatchEvent(new Event('change',{bubbles:true}));
   await new Promise((resolve,reject)=>{const start=Date.now(),poll=()=>{const text=info.textContent;if(/could not/i.test(text))reject(Error(text));else if(text!=='Loading project EPW…')resolve();else if(Date.now()-start>30000)reject(Error('Timed out reading project EPW.'));else setTimeout(poll,50);};poll();});
+  if(projectLocation){for(const [id,value]of Object.entries(projectLocation))doc.getElementById(id).value=String(value);for(const id of Object.keys(projectLocation))doc.getElementById(id).dispatchEvent(new Event('change',{bubbles:true}));}
   status.textContent=`Project north ${site.north??0}° · EPW: ${file.name} · ${file.station}`;
   applied=true;
  }catch(error){status.textContent=error.message;throw error;}
