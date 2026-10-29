@@ -5,7 +5,8 @@ export function stableValue(value){
 }
 export const evidenceText=v=>v===undefined?'Not recorded':typeof v==='object'?JSON.stringify(stableValue(v)):String(v);
 function inputs(settings={}){
- const out={...settings};delete out.provenance;delete out.inheritedFrom;
+ const out={...settings};delete out.provenance;delete out.inheritedFrom;delete out.configurationName;delete out.handoff;
+ if(settings.handoff)out.WorkbenchBaseline=settings.handoff.baselineSignature;
  if(settings.provenance)out['Engine and host context']={engine:settings.provenance.engine,release:settings.provenance.engineRelease,site:settings.provenance.site};
  if(settings.sharedConditions){const c=settings.sharedConditions;let signature=c.signature;try{signature=JSON.parse(signature);}catch{}out.sharedConditions={signature,effective:c.effective,studyOnlyOverrides:c.studyOnlyOverrides};}
  return out;

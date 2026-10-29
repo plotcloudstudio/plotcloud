@@ -1,2 +1,4 @@
 tests/validation/*.out.json
 tests/site-cities.out.json
+
+.qa/

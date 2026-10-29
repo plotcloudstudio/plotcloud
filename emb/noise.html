@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PlotCloud Outdoor Noise</title>
-<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=panel-scroll-20261026-1" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=light-only-20261028-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=light-only-20261028-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="lib/plansim.css?v=1">
 <script type="importmap">{ "imports": { "three": "../furniture/three.module.min.js", "three/addons/": "../furniture/addons/" } }</script>
@@ -254,7 +254,7 @@ function results() {
   const lv = [...new Set(RES.fac.map((x) => x.level))];
   $('#res').innerHTML = `<table class="res"><thead><tr><th>Storey</th><th class="n">Loudest</th><th class="n">Quietest</th></tr></thead><tbody>${lv.map((l) => { const f = RES.fac.filter((x) => x.level === l && Number.isFinite(x.max)); if (!f.length) return '';
       return `<tr><td>${esc(l)}</td><td class="n">${Math.round(Math.max(...f.map((x) => x.max)))} dB</td><td class="n">${Math.round(Math.min(...f.map((x) => x.max)))} dB</td></tr>`; }).join('')}</tbody></table>
-    <p class="note" style="margin-top:6px">${night ? 'Night' : 'Day'} levels, L<sub>Aeq</sub>; each façade's figure is its loudest point, free field (no reflection from the façade itself). WHO (2018) advises road traffic below 53 dB L<sub>den</sub> and 45 dB at night; many housing guides ask for a quiet side under 55 dB for bedrooms. A façade over 65 dB usually needs better glazing and ventilation that doesn't rely on open windows.</p>`;
+    <p class="note" style="margin-top:6px">${'Day'} levels, L<sub>Aeq</sub>; each façade's figure is its loudest point, free field (no reflection from the façade itself). WHO (2018) advises road traffic below 53 dB L<sub>den</sub> and 45 dB at night; many housing guides ask for a quiet side under 55 dB for bedrooms. A façade over 65 dB usually needs better glazing and ventilation that doesn't rely on open windows.</p>`;
   charts(); legend();
 }
 // charts: façade points by band; the roads' shares of the sound reaching the façades
@@ -284,10 +284,9 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 1.6)); const sun = new T
 let cam = ortho, controls = null; const world = new THREE.Group(); scene.add(world);
 function makeControls() { if (controls) controls.dispose(); controls = new OrbitControls(cam, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = 0.1; controls.screenSpacePanning = true;
   if (cam === ortho) { controls.enableRotate = false; controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }; controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN }; } controls.addEventListener('change', render); }
-const theme = () => { const night = document.documentElement.dataset.pcTheme === 'night' || matchMedia('(prefers-color-scheme: dark)').matches && !document.documentElement.dataset.pcTheme;
+const theme = () => {
   const view = getComputedStyle(document.documentElement).getPropertyValue('--view').trim();
-  return night ? { bg: view || '#585b5e', ground: '#606368', road: '#3c424c', roadSel: '#df5145', green: '#25432f', water: '#1d3550', prop: '#d9d5cd', ctx: '#5d646f', edge: '#0c0e11', ring: '#6c7580', text: '#c9d1db' }
-    : { bg: view || '#e9ecef', ground: '#f4f5f6', road: '#b3b8c0', roadSel: '#c7362c', green: '#cfe3c5', water: '#cadcef', prop: '#ffffff', ctx: '#b5b9c0', edge: '#59606b', ring: '#9aa1aa', text: '#3a4048' }; };
+  return { bg: view || '#e9ecef', ground: '#f4f5f6', road: '#b3b8c0', roadSel: '#c7362c', green: '#cfe3c5', water: '#cadcef', prop: '#ffffff', ctx: '#b5b9c0', edge: '#59606b', ring: '#9aa1aa', text: '#3a4048' }; };
 const textSprite = (t, color, size = 22) => { const c = document.createElement('canvas'), g = c.getContext('2d'); g.font = `600 ${size}px system-ui, sans-serif`; const w = Math.ceil(g.measureText(t).width) + 12; c.width = w; c.height = size + 12; g.font = `600 ${size}px system-ui, sans-serif`; g.fillStyle = color; g.textBaseline = 'middle'; g.fillText(t, 6, c.height / 2);
   const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest: false, transparent: true })); s.userData.px = [w, c.height]; s.renderOrder = 10; return s; };
 const ribbon = (pts, w, z) => { const pos = [], idx = []; for (let i = 0; i < pts.length; i++) { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], L = dist(a, b) || 1, nx = -(b[1] - a[1]) / L * w / 2, ny = (b[0] - a[0]) / L * w / 2; pos.push(pts[i][0] + nx, pts[i][1] + ny, z, pts[i][0] - nx, pts[i][1] - ny, z); if (i) idx.push(2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i); }
@@ -366,7 +365,6 @@ function finishRoad() { if (!DRAW) return; const pts = DRAW.pts.filter((p, i, a)
   DRAW = null; if (preview) { world.remove(preview); preview = null; } $('#drawRoad').setAttribute('aria-pressed', 'false'); $('#hint').hidden = true; draw3(); }
 addEventListener('keydown', (e) => { if (!DRAW) return; if (e.key === 'Enter') finishRoad(); if (e.key === 'Escape') { DRAW = null; if (preview) { world.remove(preview); preview = null; } $('#drawRoad').setAttribute('aria-pressed', 'false'); $('#hint').hidden = true; render(); } });
 $('#drawRoad').onclick = () => { if (DRAW) return finishRoad(); setView('plan'); DRAW = { pts: [] }; $('#drawRoad').setAttribute('aria-pressed', 'true'); $('#hint').hidden = false; $('#hint').textContent = 'Click along the road centre line; double-click or Enter to finish, Esc to cancel. Drag to pan.'; };
-new MutationObserver(() => { draw3(); charts(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-pc-theme'] });
 
 function loadScene(sc, name) {
   SC = { ...sc, masses: (sc.masses || []).filter((m) => m.outer && m.outer.length >= 3 && m.h > (m.base || 0)), roads: sc.roads || [], areas: sc.areas || [] }; RES = null; SEL = null;

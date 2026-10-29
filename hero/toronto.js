@@ -8,9 +8,9 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const options = new URLSearchParams(location.search);
 const embedded = options.get('embed') === '1';
 const initialMode = ['sun','wind','rain','sound','snow'].includes(options.get('mode')) ? options.get('mode') : 'sun';
-let visualTheme = options.get('theme') === 'night' ? 'night' : 'day';
+
 if (embedded) document.documentElement.dataset.embedded = 'true';
-document.documentElement.dataset.theme = visualTheme;
+
 let mode = 'sun', paused = reduced.matches, visible = true, failed = false;
 let renderer, scene, camera, frame, observer, resizeObserver;
 const names = {sun:'Sun / light & shadow',wind:'Wind / airflow paths',rain:'Rain / surface water',sound:'Sound / wave propagation',snow:'Snow / winter drift'};
@@ -47,7 +47,7 @@ try {
   const baseMaterial = new T.MeshStandardMaterial({color:0xe2e1d7,roughness:1});
   const roadMaterial = new T.MeshStandardMaterial({color:0xc9cdc4,roughness:1});
   renderer = new T.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'low-power'});
-  const backgroundColor=()=>embedded?(visualTheme==='night'?0x111317:0xeef0f3):0xf7f7f2;
+  const backgroundColor=()=>embedded?0xeef0f3:0xf7f7f2;
   renderer.setClearColor(backgroundColor());
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
   renderer.shadowMap.enabled = true;
@@ -296,9 +296,9 @@ try {
     if(embedded){camera.updateMatrixWorld(true);const aspect=(camera.right-camera.left)/(camera.top-camera.bottom);let half=0;for(const point of modelFrame){const p=framePoint.copy(point).applyMatrix4(camera.matrixWorldInverse);half=Math.max(half,Math.abs(p.x)/aspect,Math.abs(p.y));}half*=1.065;camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();}
     const tint=new T.Color(mode==='sun'?0xffdfa7:mode==='rain'?0xdbe8f8:0xf4f3ea);
     key.color.lerp(tint,dt?Math.min(1,dt*3):1);
-    const night=visualTheme==='night';ambient.intensity=night?.32:1.7;fill.intensity=night?.5:1;nightGroups.forEach(g=>g.visible=night);effects.sun.visible=mode==='sun'&&!night;solarSurfaces.forEach(s=>s.visible=mode==='sun'&&!night);
-    white.color.set(night?0x3d506b:0xf1f0e8);chalk.color.set(night?0x2d3b50:0xe3e3db);roof.color.set(night?0x7188a0:0xf8f7f1);baseMaterial.color.set(night?0x17263d:0xe2e1d7);roadMaterial.color.set(night?0x162034:0xc9cdc4);
-    key.intensity=T.MathUtils.lerp(key.intensity,night?.65:mode==='sun'?4.2:3,dt?Math.min(1,dt*3):1);
+    ambient.intensity=1.7;fill.intensity=1;nightGroups.forEach(g=>g.visible=false);effects.sun.visible=mode==='sun';solarSurfaces.forEach(s=>s.visible=mode==='sun');
+    white.color.set(0xf1f0e8);chalk.color.set(0xe3e3db);roof.color.set(0xf8f7f1);baseMaterial.color.set(0xe2e1d7);roadMaterial.color.set(0xc9cdc4);
+    key.intensity=T.MathUtils.lerp(key.intensity,mode==='sun'?4.2:3,dt?Math.min(1,dt*3):1);
     key.position.x=-9+(mode==='sun'?Math.sin(clock*.09)*4:0);
     const solarPhase=.85+Math.sin(clock*.09)*.35;
     sunOrb.position.set(Math.cos(solarPhase)*6.25,Math.sin(solarPhase)*7.2+.08,-1.5);
@@ -343,18 +343,14 @@ try {
     const dt=lastTime?Math.min((time-lastTime)/1000,.1):0;lastTime=time;lastRender=time;
     if(!paused)render(dt);
   }
-  function applyTheme(value){
-    visualTheme=value==='night'?'night':'day';document.documentElement.dataset.theme=visualTheme;
-    renderer.setClearColor(backgroundColor());scene.fog.color.setHex(backgroundColor());render(0);
-  }
+
   if(embedded)addEventListener('message',event=>{
     if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='plotcloud-hero-config')return;
-    if(['day','night'].includes(event.data.theme))applyTheme(event.data.theme);
     if(names[event.data.mode]&&event.data.mode!==mode)setMode(event.data.mode);
   });
   setMode(initialMode);resize();root.dataset.ready='true';
   if(embedded)parent.postMessage({type:'plotcloud-hero-ready'},location.origin);
-  window.PlotCloudHero={get state(){return {mode,paused,frames,ready:!failed,azimuth,elevation,clock,leanX,leanY,theme:visualTheme};}};
+  window.PlotCloudHero={get state(){return {mode,paused,frames,ready:!failed,azimuth,elevation,clock,leanX,leanY};}};
   frame=requestAnimationFrame(loop);
   addEventListener('pagehide',()=>{cancelAnimationFrame(frame);observer.disconnect();resizeObserver.disconnect();scene.traverse(object=>{object.geometry?.dispose();if(object.material){const materials=Array.isArray(object.material)?object.material:[object.material];materials.forEach(material=>material.dispose());}});renderer.dispose();},{once:true});
 } catch(error) { showFallback(error); }

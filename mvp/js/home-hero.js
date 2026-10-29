@@ -14,8 +14,7 @@ export function mountHomeHero(figure) {
   const saved = lastMode();
   let mode = MODES.includes(saved) ? saved : MODES[0];
   remember(mode);
-  const theme = () => document.documentElement.dataset.theme === 'night' ? 'night' : 'day';
-  const send = () => frame.contentWindow?.postMessage({type:'plotcloud-hero-config', mode, theme:theme()}, location.origin);
+  const send = () => frame.contentWindow?.postMessage({type:'plotcloud-hero-config', mode}, location.origin);
   const onMessage = event => {
     if (event.origin !== location.origin || event.source !== frame.contentWindow) return;
     if (event.data?.type === 'plotcloud-hero-ready') send();
@@ -23,15 +22,12 @@ export function mountHomeHero(figure) {
       mode = event.data.mode; remember(mode);
     }
   };
-  const onTheme = () => send();
   window.addEventListener('message', onMessage);
-  window.addEventListener('pc-theme', onTheme);
   frame.addEventListener('load', send);
   // Bundled scene has no external CSS, engine or module requests.
-  frame.src = `../hero/toronto-standalone.html?v=20261024-click2&embed=1&mode=${mode}&theme=${theme()}`;
+  frame.src = `../hero/toronto-standalone.html?v=20261024-click2&embed=1&mode=${mode}`;
   return () => {
     window.removeEventListener('message', onMessage);
-    window.removeEventListener('pc-theme', onTheme);
     frame.removeEventListener('load', send);
   };
 }

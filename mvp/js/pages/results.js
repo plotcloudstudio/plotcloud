@@ -1,3 +1,4 @@
+import {assumptionsHTML} from '../handoff.js?v=handoff-20261028-1';
 import {compareEvidence,evidenceText} from '../comparison-evidence.js';
 import {checkAccess, isFreeStudy} from '../beta-access.js';
 // Projects & Results.
@@ -26,6 +27,7 @@ export async function render(app, [pid], params) {
   const p = (pid && S.project(pid)) || currentProject();
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project yet. <a href="#/">Create one on Home.</a></p></div>'; return; }
   setCurrent(p);
+  queueMicrotask(()=>{const a=app.querySelector('#compareRunA'),b=app.querySelector('#compareRunB'),out=app.querySelector('#compareRunValues');if(!a||!b)return;const selected=()=>[p.runs[Number(a.value)],p.runs[Number(b.value)]],draw=()=>{const[x,y]=selected();if(!x||!y||x===y){out.textContent='Select two different saved runs.';return;}const evidence=compareEvidence(x,y);out.innerHTML='<p class="notice">'+esc(x.simId===y.simId?evidence.label:'Different study types; units and metrics are not directly comparable.')+'</p><div style="overflow:auto"><table><thead><tr><th>Run A</th><th>Run B</th></tr></thead><tbody><tr>'+[x,y].map(r=>'<td>'+esc(r.settings?.configurationName||r.simId)+' · v'+S.version(p,r.versionId)?.n+'<br>'+esc(r.results?.kpis?.map(k=>k.join(': ')).join(' · ')||'No KPI summary recorded')+'</td>').join('')+'</tr><tr>'+[x,y].map(r=>'<td>'+assumptionsHTML(p,r)+'</td>').join('')+'</tr></tbody></table></div>';};a.onchange=b.onchange=draw;draw();app.querySelector('#exportRunPair').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(selected(),null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='plotcloud-run-comparison.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};});
   const site = S.siteOf(p), C = readC(); const saveC = () => { try { localStorage.setItem(CKEY, JSON.stringify(C)); } catch (e) { } };
   const last = () => p.versions.at(-1), dirty = () => !last() || JSON.stringify(last().model) !== JSON.stringify(p.draft);
   if (!p.batch) p.batch = { sel: [], cfg: {} };
@@ -50,6 +52,7 @@ export async function render(app, [pid], params) {
     <div class="sec-h rs-h"><h2 class="display sm">Results by version</h2><label class="f inline">Version <select id="cardV" class="inp"></select></label></div>
     <div class="rcards" id="cards"></div>
 
+    <details class="card" style="margin-top:18px" id="runComparison"><summary>Compare two saved runs · same or different model versions</summary><p class="note">Names and actual saved KPIs are shown side by side. Different baselines and settings are called out before interpreting differences.</p><div class="grid g2"><label>Run A<select id="compareRunA">${p.runs.map((r,i)=>`<option value="${i}">${esc(r.settings?.configurationName||SIMS.find(s=>s.id===r.simId)?.name||r.simId)} · v${S.version(p,r.versionId)?.n} · ${esc(when(r.created))}</option>`).join('')}</select></label><label>Run B<select id="compareRunB">${p.runs.map((r,i)=>`<option value="${i}" ${i===p.runs.length-1?'selected':''}>${esc(r.settings?.configurationName||SIMS.find(s=>s.id===r.simId)?.name||r.simId)} · v${S.version(p,r.versionId)?.n} · ${esc(when(r.created))}</option>`).join('')}</select></label></div><div id="compareRunValues"></div><button type="button" class="btn sm" id="exportRunPair">Export selected runs · JSON</button></details>
     <div class="sec-h rs-h"><h2 class="display sm">Versions × simulations</h2><span class="note">latest saved result per cell</span></div>
     <div style="overflow-x:auto" id="matrix"></div>
 
@@ -137,7 +140,7 @@ export async function render(app, [pid], params) {
     const v = cardV; if (!v) { $('#cards', app).innerHTML = '<p class="note">No saved version yet.</p>'; return; }
     const runs = SIMS.map((s) => [s, S.lastRun(p, v.id, s.id)]).filter(([, r]) => r);
     $('#cards', app).innerHTML = runs.map(([s, r]) => `<article class="rcard" data-card="${s.id}">${r.results.thumb ? `<img src="${r.results.thumb}" alt="${esc(s.name)} on v${v.n}">` : '<div class="ph">No picture kept</div>'}
-      <div class="rc-b"><h3>${esc(s.name)}</h3>${S.runConditionsStatus(p,r)?`<p class="notice warn" data-conditions-stale>${esc(S.runConditionsStatus(p,r))}</p>`:''}<p class="note">${when(r.created)} · ${r.source === 'batch' ? 'batch run' : 'saved from its page'}</p>
+      <div class="rc-b"><h3>${esc(s.name)}</h3>${assumptionsHTML(p,r)}${S.runConditionsStatus(p,r)?`<p class="notice warn" data-conditions-stale>${esc(S.runConditionsStatus(p,r))}</p>`:''}<p class="note">${when(r.created)} · ${r.source === 'batch' ? 'batch run' : 'saved from its page'}</p>
       <dl>${(r.results.kpis || []).slice(0, 3).map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
       <a class="btn sm primary" href="#/simulations/${s.id}?project=${p.id}&version=${v.id}">Enter</a></div></article>`).join('') || `<p class="note">Nothing run on v${v.n} yet. Tick studies above and Run selected.</p>`;
   }

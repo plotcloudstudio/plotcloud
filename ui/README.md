@@ -1,6 +1,6 @@
 # PlotCloud shared interface
 
-`tokens.css` owns interface colors, typography and legacy variable mappings. `components.css` owns scoped public-site and tool-shell adapters; no canvas/geometry styles or simulation palettes are replaced. `runtime.js` synchronizes remembered day/night state, translates native light/dark names, and propagates the host theme into same-origin iframes and the Stormwater `srcdoc` children.
+`tokens.css` owns interface colors, typography and legacy variable mappings. `components.css` owns scoped public-site and tool-shell adapters; no canvas/geometry styles or simulation palettes are replaced. `runtime.js` applies the shared light palette, tracks viewport colors and prepares embedded tool layouts. Appearance is fixed; it does not read a theme preference or expose a mode switch.
 
 `inventory.json` lists the 30 product HTML hosts, 9 MVP routes, registered classic pages, every public tool-catalog route and 14 analysis entries. `reference.html` is an internal component reference, not another public navigation item.
 

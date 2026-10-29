@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=panel-scroll-20261026-1" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=light-only-20261028-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=light-only-20261028-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Circulation</title>
@@ -1666,7 +1666,7 @@ S.cam = 'split';
 setTool('pan'); stage.classList.add('split'); resize(); sampleApartment(); listAll(); applyLevel('standard'); run().then(() => setCam('split'));
 window.__curG = () => G;
 window.__ci = { TRIP, tripRun, tripAdd, tripOrders, setView, HIST, undo, redo, resetEdits, W2S, getRG, PLAN, S, PTS, get NET() { return NET; }, get DEN() { return DEN; }, ANIM, run, importFile, T3, setCam, INKS };
-addEventListener('pc-ui-theme',()=>{if(typeof draw==='function')requestAnimationFrame(()=>draw());});
+addEventListener('load',()=>{if(typeof draw==='function')requestAnimationFrame(()=>draw());},{once:true});
 </script>
 
 <script>

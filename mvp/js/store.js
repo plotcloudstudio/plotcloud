@@ -115,6 +115,8 @@ export function saveVersion(p, note) {
   p.versions.push(v); p.updated = now(); save(); return v;
 }
 export function addRun(p, versionId, simId, settings, results, source = 'full-tool') {
+  const handoff=[...(p.handoffs||[])].reverse().find(h=>h.versionId===versionId&&h.study===simId&&h.baselineSignature===JSON.stringify({site:conditionsOf(p).site,defaults:conditionsOf(p).defaults}));
+  settings={...settings,...(p.activeStudyConfiguration?.[simId]?{configurationName:p.activeStudyConfiguration[simId]}:{}),...(handoff?{handoff:clone(handoff)}:{})};
   const r = { id: uid('r'), versionId, simId, settings: clone(settings), results, created: now(), source };
   if (results && (results.thumb || results.field)) for (const o of p.runs) if (o.versionId === versionId && o.simId === simId && o.results) { delete o.results.thumb; delete o.results.field; }   // only the newest result of a version keeps its picture
   p.runs.push(r); p.updated = now(); save(); return r;
@@ -133,6 +135,8 @@ export function updateConditions(p,site,defaults){
   const c=conditionsOf(p);p.sharedConditions={schema:1,revision:c.revision+1,updated:now(),site:clone(site),defaults:clone(defaults)};p.updated=now();save();return p.sharedConditions;
 }
 export function runConditionsStatus(p,r){
+  const latest=p.versions.at(-1);if(latest&&r.versionId!==latest.id)return 'Based on v'+(version(p,r.versionId)?.n??'?')+' · model is now v'+latest.n+' · review or rerun';
+  if(r.settings?.handoff&&r.settings.handoff.baselineSignature!==JSON.stringify({site:conditionsOf(p).site,defaults:conditionsOf(p).defaults}))return 'Workbench baseline changed · rerun required';
   if(r.simId==='structure'&&!r.settings?.structuralStudy?.source?.versionId)return 'Legacy structural grid result · building mapping unverified';
   if(!isSharedPilot(r.simId)&&r.simId!=='vent')return '';
   const used=r.settings?.sharedConditions;

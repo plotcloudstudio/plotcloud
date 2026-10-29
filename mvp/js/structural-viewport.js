@@ -1,6 +1,6 @@
 import {panelGeometry,settingFor} from './structural-model.js?v=structural-study-20261028-1';
 import * as THREE from 'three';
-import{studyStage}from'./study-ui/stage.js?v=study-unified-20261028-1';
+import{studyStage}from'./study-ui/stage.js?v=light-only-20261028-1';
 const COLORS={red:0xd94436,amber:0xdba540,gray:0x91938d,neutral:0xc8c7be};
 export function structuralViewport(host,{onPick,onJoint,onVertex,onError}={}){
  let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});}catch(error){onError?.('3D preview is unavailable. The object list, coordinates and calculations remain available.');return{setObjects(){},setAnalysis(){},select(){},fit(){},isolate(){return false;},showAll(){},viewState(){return{};},png(){return null;},dispose(){}};}

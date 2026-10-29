@@ -39,7 +39,7 @@ function catalog(app, params, access) {
   const draw = () => { $('#grid', app).innerHTML = SIMS.map((s, i) => [s, i]).filter(([s]) => g === 'All' || s.group === g || s.scope === g).map(([s, i]) => `<article class="card sim" data-scope="${s.scope}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true">${thumbnail(s)}</a>
       <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(s.group)} · ${esc(s.scope)}</span><span>${isFreeStudy(s.id) ? 'Free · ' : allowsTestingStudy(s.id)?'Test access · ':'Paid beta · '}${s.view === 'chart' ? 'Charts' : s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>
-      <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
+      <h3>${esc(({sunhours:'How many hours of direct sun?',daylight:'Is there enough daylight?',utci:'Where is outdoor heat stress?',radiation:'Where is solar exposure highest?',vent:'How well do rooms ventilate?',wind:'Where does wind accelerate?'})[s.id]||s.name)}</h3><p class="note">${esc(s.name)}</p><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
       <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id) ? 'Enter' : 'Unlock'}</a>${LIVE}${ready(s)}</div></article>`).join('');
     $$('#filters button', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === g))); };
   $$('#filters button', app).forEach((b) => b.onclick = () => { g = b.dataset.g; try { localStorage.setItem('pc-mvp-simgroup', g); } catch (e) { } draw(); }); draw();

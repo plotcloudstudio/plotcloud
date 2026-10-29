@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-<link rel="stylesheet" href="../ui/tokens.css?v=gray-20261026-1" data-pc-ui-assets>
-<link rel="stylesheet" href="../ui/components.css?v=gray-20261026-1" data-pc-ui-assets>
-<script src="../ui/runtime.js?v=panel-scroll-20261026-1" data-surface="tool" defer></script>
+<link rel="stylesheet" href="../ui/tokens.css?v=light-only-20261028-1" data-pc-ui-assets>
+<link rel="stylesheet" href="../ui/components.css?v=light-only-20261028-1" data-pc-ui-assets>
+<script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 </head>
 <body>
 <title>PlotCloud Camera Coverage</title>
@@ -1432,7 +1432,7 @@ if(!new URLSearchParams(location.search).has('workspace')){loadScene(PRESETS.sto
 window.__cam = { SEARCH, startSearch, skipSearch, ANIM, play, stopPlay, get PANEL() { return PANEL; }, get PANELDOTS() { return PANELDOTS; }, SC, get COV() { return COV; }, get OPT() { return OPT; }, get CAND() { return CAND; }, optimise, applyN, setMode, setLevel, setTgt, setCamH, setShow, setCam, enterFP, exitFP, loadScene, PRESETS, TYPES, rangeOf, W2S, get GC() { return GC; }, camsChanged, board, HIST };
 window.__cam.camRun = camRun; window.__cam.QS = QS; window.__cam.qPlan = qPlan; window.__cam.DENS = DENS;
 if(!new URLSearchParams(location.search).has('workspace'))setCam('split').then(() => { qUI(); camRun('draft', true, true); });else qUI();
-addEventListener('pc-ui-theme',()=>{if(typeof draw==='function')requestAnimationFrame(()=>draw());});
+addEventListener('load',()=>{if(typeof draw==='function')requestAnimationFrame(()=>draw());},{once:true});
 </script>
 
 <script>

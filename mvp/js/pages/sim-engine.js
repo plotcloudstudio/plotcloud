@@ -1,3 +1,4 @@
+import {mountStudyContract} from '../study-contract.js?v=handoff-20261028-1';
 import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-connected-20261027-3';
 import {installStudyWorkflow} from '../simulation-workflow.js?v=import-feedback-20261027-1';
 import {inspectStudy} from '../study-readiness.js';
@@ -54,7 +55,7 @@ function extent(model) {
 
 // per engine: file, what it reads, what it hides, what Account fills in
 const CFG = {
-  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ A }) => ({ measure: 'hours', '@day': DAY[String(A.period || '').toLowerCase()] || '03-20' }) },
+  sunhours: { input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ A }) => ({ measure: 'hours', t0:'9',t1:'15', '@day': DAY[String(A.period || '').toLowerCase()] || '03-20' }) },
   // the same engine measuring with the project's climate file (2026-10-25)
   radiation: { file: 'sunhours', input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: () => ({ measure: 'radiation' }) },
   utci: { file: 'sunhours', input: 'masses', hide: ['.sec:has(#h-model)', '.sec:has(#h-site)', '#measureRow'], prefill: ({ site }) => ({ measure: 'utci', utciTerrain: { open: '0.14', suburban: '0.22', city: '0.33' }[site?.terrain || 'suburban'] || '0.22' }) },
@@ -145,7 +146,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     const update=e=>{if(e.detail.projectId===p.id&&(!context.isCurrent||context.isCurrent())){const el=$('#automaticWeatherProgress',app);if(el)el.textContent=e.detail.message;}};addEventListener('pc-project-climate',update);const timer=setInterval(()=>{const el=$('#automaticWeatherElapsed',app);if(el)el.textContent=((performance.now()-start)/1000).toFixed(1)+' s elapsed';},250);
     try{await ensureProjectClimate(p);}catch(error){automaticWeatherError=error.message;}finally{clearInterval(timer);removeEventListener('pc-project-climate',update);}if(context.isCurrent&&!context.isCurrent())return;
   }
-  const shared=pilot||sim.id==='vent'?S.clone(S.conditionsOf(p)):null;
+  const shared=S.clone(S.conditionsOf(p));
   const v = batch ? S.version(p, params.get('version')) : currentVersion(p), site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), file = cfg.file || sim.id;
   const readiness=inspectStudy(p,v,sim.id,{site,defaults:A});if(automaticWeatherError)readiness.errors.push({title:'Automatic EPW import needs attention',detail:automaticWeatherError,href:'#/project-settings/'+p.id+'?return='+sim.id});
   if(site?.climate?.hash&&WEATHER.includes(sim.id)){
@@ -202,9 +203,11 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if (more.length&&!pilot) chip.insertAdjacentHTML('beforeend', more.map(([id, val]) => ` · ${esc(ACCT[id][0])} ${esc(shown(id, val))}`).join(''));
     chip.title = `Linked to Account${p.siteLinked === false ? ' (this project keeps its own site)' : ''}: change a value there and this simulation uses it the next time it opens. Values changed here are recorded with the result.\n`
       + [`Site ${site?.label || '—'}`, ...linked.map(([id, val]) => `${ACCT[id][0]} ${shown(id, val)}`)].join('\n'); }
+  $('.shsite',app).href='#/project-settings/'+p.id;
   if(pilot)$('.shsite',app).title='Frozen project conditions · edit once for Sun Hours and Daylight. Account changes do not update this project.';
   let alive = true, loaded = false, sentScene = null, done = false, batchNoResult = false, pilotRunSnapshot=null; const ovApply = {};
   const doc = () => { try { return fr.contentDocument; } catch (e) { return null; } };
+  const disposeContract=mountStudyContract(app,p,v,sim.id,{document:doc,prepared:()=>loaded});
   const say = (h, warn) => { msg.innerHTML = h; msg.classList.toggle('warn', !!warn); };
   const currentInput=()=>{const w=fr.contentWindow;if(SUN.includes(sim.id)||sim.id==='wind'){const s=SUN.includes(sim.id)?w.__sunInputStatus:w.__windInputStatus;return s?.state==='ready'&&s.source?.version===v.id;}if(['studio','room'].includes(cfg.input))return w.__pcModelLoadedSource?.version===v.id;return true;};
   let revealing=false;
@@ -294,7 +297,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   }
   function bindPilot(){
     const D=doc(),box=D?.getElementById('pilotSharedSummary');if(!box){if(alive)setTimeout(bindPilot,100);return;}
-    box.innerHTML=`<b>From project · revision ${shared.revision}</b><br>${esc((site.label||'Site').split(',')[0])} · north ${site.north??0}° · UTC${t.tz>=0?'+':''}${t.tz}${sim.id==='daylight'?`<br>Work plane ${A.plane} m · occupied ${A.occStart}:00–${A.occEnd}:00`:''}<br><a id="pilotEditProject" href="#">Edit shared conditions ↗</a><p id="pilotOverrideStatus" role="status">Using project values</p>`;
+    box.innerHTML=`<b>From project · revision ${shared.revision}</b><br>${esc((site.label||'Site').split(',')[0])} · ${esc(shared.defaults.buildingType||'Type unspecified')} · ${esc(site.climate?.name||'No EPW')} · north ${site.north??0}° · UTC${t.tz>=0?'+':''}${t.tz}${sim.id==='daylight'?`<br>Work plane ${A.plane} m · occupied ${A.occStart}:00–${A.occEnd}:00`:''}<br><a id="pilotEditProject" href="#">Edit shared conditions ↗</a><p id="pilotOverrideStatus" role="status">Using project values</p>`;
     D.getElementById('pilotEditProject').onclick=e=>{e.preventDefault();location.hash='#/project-settings/'+p.id+'?return='+sim.id;};
     fr.dataset.pcSettingsReady='true';if(D.body.dataset.pcPilotBound)return;D.body.dataset.pcPilotBound='1';
     if(sim.id==='daylight'&&!fr.contentWindow.__pcAnalysisState?.().ready){const note=D.getElementById('runMsg');if(note){note.textContent='Workspace model and project inputs applied. Run this study to calculate current results.';note.className='msg';}}
@@ -434,14 +437,14 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if (!loaded && (cfg.input === 'dxf' || cfg.input === 'obj' || cfg.input === 'none')) setTimeout(async () => { await feedFile(); if (batch && loaded) setTimeout(autoRun, cfg.input === 'obj' ? 2500 : 1500); }, cfg.input === 'none' ? 300 : 1200);
   };
   fr.addEventListener('load', () => { tries = 0; loaded = false; shell(); }); shell();
-  return () => { alive = false; workflow.dispose(); removeEventListener('message', onMsg); delete window.__pcHO; };
+  return () => { alive = false; disposeContract();workflow.dispose(); removeEventListener('message', onMsg); delete window.__pcHO; };
 }
 
 // ---- for the batch panel in Results: the inputs this engine takes from Account (the ones its own left column prefills),
 // with the value the page would put in them, and how to show them; changes there go to the engine the same way
 const OPTS = { band: BANDS.map((b, i) => [i, b]), '@day': [['03-20', 'Mar 20 (equinox)'], ['06-21', 'Jun 21 (summer solstice)'], ['12-21', 'Dec 21 (winter solstice)']], 'q-loc': Object.entries(QNAME) };
 export function batchInfo(simId, p, v) {
-  const cfg = CFG[simId]; if (!cfg) return null; const shared=S.isSharedPilot(simId)?S.conditionsOf(p):null,site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), levels = v ? levelsOf(v.model) : [];
+  const cfg = CFG[simId]; if (!cfg) return null; const shared=S.conditionsOf(p),site = shared?shared.site:S.siteOf(p), A = shared?shared.defaults:S.account().defaults, t = tzInfo(site), levels = v ? levelsOf(v.model) : [];
   const rooms = v && cfg.input === 'room' ? v.model.components.filter((c) => c.type === 'room') : [];
   const ctx = { site, A, t, level: levels[0] ? { id: 'L' + levels[0].n, z: levels[0].z } : null, x: v ? extent(v.model) : null, room: rooms[0] || null };
   const fields = Object.entries(cfg.prefill?.(ctx) || {}).filter(([id, val]) => ACCT[id] && val != null && !(typeof val === 'number' && !Number.isFinite(val)) && !(id === 'wdir' && false))

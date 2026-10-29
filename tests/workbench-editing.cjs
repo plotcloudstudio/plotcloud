@@ -29,11 +29,11 @@ for(const family of ['fence','balcony_rail']) {
   const result=await p.evaluate(()=>({n:__ws2.model().studio.furn.length,gen:__ws2.model().studio.furn.at(-1).gen}));assert.equal(result.n,before+1);assert.equal(result.gen.id,family);assert.equal(result.gen.vals.L,4000);
 }
 console.log('PASS both fence families generate along a four-metre path');
-await p.click('#editSite');assert.equal(await p.evaluate(()=>__ws2.model().layers.find(l=>l.name==='Site').locked),false);await p.click('#editSite');assert.equal(await p.evaluate(()=>__ws2.model().layers.find(l=>l.name==='Site').locked),true);console.log('PASS site editing enters and exits with lock restored');
+await p.click('#editSite');await p.click('#handoffGeometryEdit');assert.equal(await p.evaluate(()=>__ws2.model().layers.find(l=>l.name==='Site').locked),false);await p.click('#editSite');await p.click('#handoffGeometryEdit');assert.equal(await p.evaluate(()=>__ws2.model().layers.find(l=>l.name==='Site').locked),true);console.log('PASS site editing enters and exits with lock restored');
 const levelCount=await p.evaluate(()=>__ws2.model().studio.levels.length);
 assert(await p.evaluate(()=>document.querySelector('#addLevel').getBoundingClientRect().right<=document.querySelector('#vBtn').getBoundingClientRect().left));
 await p.click('#addLevel');await p.waitForTimeout(900);assert.equal(await p.evaluate(()=>__ws2.model().studio.levels.length),levelCount+1);
 assert.equal(await p.evaluate(()=>document.querySelector('#fPlan').contentWindow.__ws.levels().lv),await p.evaluate(()=>document.querySelector('#fPersp').contentWindow.__ws.levels().lv));
 await p.click('#vBtn');await p.click('[data-view="persp"]');await p.waitForTimeout(400);await p.click('#addLevel');await p.waitForTimeout(900);assert.equal(await p.evaluate(()=>__ws2.model().studio.levels.length),levelCount+2);assert(await p.evaluate(()=>document.querySelector('[data-pane="persp"]').classList.contains('on')));console.log('PASS add level in both views, with synchronized level selection');
-await p.click('#sendSim');await p.waitForURL('**/#/simulations/sunhours*');await p.locator('#eng[data-pc-visible-ready=true]').waitFor({timeout:60000});console.log('PASS current Workspace model sent directly to Simulation');
+await p.click('#sendSim');await p.locator('#handoffConfirm').click();await p.waitForURL('**/#/simulations/sunhours*');await p.locator('#eng[data-pc-visible-ready=true]').waitFor({timeout:60000});console.log('PASS current Workspace model sent directly to Simulation');
 console.log('errors',errors);assert.deepEqual(errors,[]);await b.close();})().catch(e=>{console.error(e);process.exit(1)});

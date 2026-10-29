@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import{studyStage}from'../study-ui/stage.js?v=study-unified-20261028-1';
+import{studyStage}from'../study-ui/stage.js?v=light-only-20261028-1';
 export function sourceMeshes(scene){
  const meshes=(scene.meshes||[]).map(m=>({key:m.kind+':'+m.id,name:m.name||m.id,positions:m.positions,glass:!!m.glass}));
  for(const [i,m]of(scene.masses||[]).entries()){

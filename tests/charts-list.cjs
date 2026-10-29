@@ -15,8 +15,7 @@ const reveal=require('./reveal-simulation-control.cjs');
    await reveal(f,'#run:not([disabled])');await f.locator('#run:not([disabled])').click();
    await p.waitForFunction(id=>{const w=document.querySelector('#eng').contentWindow;return id==='sunhours'?w.__sun.S.lastR&&!w.__sun.S.busy:w.__pcAnalysisState?.().ready;},id,{timeout:90000});
    await f.locator('#panelR [role=tab]').getByText('Charts',{exact:true}).click();
-   for(const theme of ['light','dark']){
-   await p.evaluate(theme=>window.PlotCloudUI.setTheme(theme),theme);
+   for(const theme of ['light']){
    for(const [width,height]of [[1280,720],[1366,768],[1920,1080]]){
     await p.setViewportSize({width,height});await p.waitForTimeout(400);
     const layout=await f.locator('#pilotCharts').evaluate(el=>{
