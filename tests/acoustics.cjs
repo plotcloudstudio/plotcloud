@@ -19,12 +19,12 @@ try{
  assert.equal(report.model.name,studio.name);assert.equal(report.statistics.volume,288);assert(report.model.record.includes('"version":7'),'Imported source record must retain version');
  const before=report.statistics.rt[2];
  const unified=await work.locator('.app[data-pc-unified=true]').count()>0;
- await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:unified?'Settings':'Surfaces',exact:true}).click();
+ if(unified)await work.getByRole('button',{name:'Jump to Settings',exact:true}).click();else await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Surfaces',exact:true}).click();
  await reveal(work,'#allWalls');await work.locator('#allWalls').click();await work.locator('#wallMat').selectOption('panel');
  const after=await work.evaluate(()=>AcousticStudy.stats.rt[2]);assert(after<before,'Absorptive wall material should lower RT60');
  for(const view of ['section','three','plan']){await work.locator(`[data-view="${view}"]`).click();assert.equal(await work.locator(`[data-view="${view}"]`).getAttribute('aria-pressed'),'true');}
  assert(await work.locator('#webgl canvas').count(),'3D view must create its real WebGL canvas');
- await work.locator((unified?'#panelL':'#panelR')+' .pc-fit-tabs').getByRole('tab',{name:'Export',exact:true}).click();
+ if(unified)await work.getByRole('button',{name:'Jump to Export',exact:true}).click();else await work.locator('#panelR .pc-fit-tabs').getByRole('tab',{name:'Export',exact:true}).click();
  const download=page.waitForEvent('download');await work.locator('#json').click();const file=await download;
  assert.equal(file.suggestedFilename(),'plotcloud-indoor-acoustics-report.json');
  const exported=JSON.parse(fs.readFileSync(await file.path(),'utf8'));assert.equal(exported.schema,'plotcloud-acoustics-prototype-v2');assert.equal(exported.model.name,studio.name);assert.equal(exported.statistics.rt[2],after);
