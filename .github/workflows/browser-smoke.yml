@@ -21,6 +21,8 @@ jobs:
       - name: Verify service and shared selection contracts
         run: node --test server/render-api.test.mjs tests/studio-tab.cjs
       - name: Serve site and run browser smoke
+        env:
+          TEST_BASE: http://127.0.0.1:8765
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/plotcloud-http.log 2>&1 &
           node tests/run-browser-check.cjs tests/ui-unification.cjs
