@@ -45,5 +45,5 @@ const reveal=require('./reveal-simulation-control.cjs');
   await f.locator('#panelL .pc-fit-tabs button').getByText('Export',{exact:true}).click();await f.locator('#unifiedExport').waitFor({state:'visible'});
   assert.deepEqual(errors,[]);console.log('PASS '+id+': actual inputs/run, fixed Settings, Charts list, high DPI, Export');await p.close();
  }
- const p=await browser.newPage();await p.goto(base+'/mvp/#/pricing');await p.locator('[data-y="0"]').click();assert.equal(await p.locator('#price').textContent(),'CAD 16.99');await p.locator('[data-y="1"]').click();assert.equal(await p.locator('#price').textContent(),'CAD 79');console.log('PASS monthly CAD 16.99; annual CAD 79 unchanged');await p.close();
+ const p=await browser.newPage();await p.goto(base+'/mvp/#/pricing');await p.locator('.pplan .price').first().waitFor();assert.deepEqual(await p.locator('.pplan .price').allTextContents(),['CAD 0','CAD 16.99']);assert.equal(await p.locator('[data-y]').count(),0,'Retired annual-plan toggle stays absent');assert(await p.getByRole('link',{name:'Request monthly access',exact:true}).isVisible());console.log('PASS current monthly CAD 16.99 and free tier unchanged');await p.close();
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
