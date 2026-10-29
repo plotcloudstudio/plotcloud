@@ -29,7 +29,7 @@ try{
  assert.equal(file.suggestedFilename(),'plotcloud-indoor-acoustics-report.json');
  const exported=JSON.parse(fs.readFileSync(await file.path(),'utf8'));assert.equal(exported.schema,'plotcloud-acoustics-prototype-v2');assert.equal(exported.model.name,studio.name);assert.equal(exported.statistics.rt[2],after);
  assert(/no diffraction/i.test(exported.assumptions),'Report must preserve method limitations');
- await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:unified?'Settings':'Room & source',exact:true}).click();
+ if(unified)await work.getByRole('button',{name:'Jump to Settings',exact:true}).click();else await work.locator('#panelL .pc-fit-tabs').getByRole('tab',{name:'Room & source',exact:true}).click();
  await work.locator('#reset').click();assert.equal(await work.locator('#time').inputValue(),'0','Reset returns animation to the start');
  await page.setViewportSize({width:390,height:844});assert(await work.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Acoustic tool overflows mobile width');
  assert.deepEqual(errors,[],'Browser errors: '+errors.join(' | '));

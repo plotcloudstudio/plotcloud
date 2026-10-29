@@ -20,7 +20,7 @@ try{
  await p.locator('#sharedOccEnd').fill('8');await p.getByRole('button',{name:'Save shared conditions',exact:true}).click();assert.match(await p.locator('#sharedNotice').innerText(),/later than/);
  await p.evaluate(async id=>{const S=await import('./js/store.js');localStorage.setItem('pc-mvp-current',id);},state.id);
  const open=async id=>{await p.goto(base+'/mvp/#/simulations/'+id);await p.locator('#eng[data-pc-settings-ready="true"]').waitFor();const f=p.frameLocator('#eng');await f.locator('#pilotSettings').waitFor();return f;};
- const tab=async(f,side,name)=>{await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#pilot'+name).waitFor({state:'visible'});await p.waitForTimeout(60);};
+ const tab=async(f,side,name)=>{if(side==='L')await f.getByRole('button',{name:'Jump to '+name,exact:true}).click();else await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#pilot'+name).waitFor({state:'visible'});await p.waitForTimeout(60);};
  const reach=async(f,selector)=>{await f.locator(selector).scrollIntoViewIfNeeded();};
  const fill=async(f,id,val)=>{await f.locator('#'+id).fill(String(val));await f.locator('#'+id).dispatchEvent('change');};
  for(const id of ['sunhours','daylight']){
