@@ -74,7 +74,7 @@ const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     await engine.locator('#pilotAdvanced').evaluate(e=>e.open=false);
     await engine.locator('#period').selectOption('range'); await ec('date', '2026-03-20'); await ec('dateEnd', '2026-03-21');
     await engine.locator('#allDay').uncheck(); await ec('t0', '08:30'); await ec('t1', '10:45');
-    await engine.locator('#run').click();
+    await page.locator('#autoSaveResult').uncheck();await engine.locator('#run').click();if(await engine.locator('#longGo').isVisible())await engine.locator('#longGo').click();
     await page.waitForFunction(() => { const s = document.querySelector('#eng').contentWindow.__sun.S; return !s.busy && s.lastR?.period?.days === 2; }, null, { timeout: 90000 });
     await page.locator('#save').click();
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('pc-mvp-v1')).projects[0].runs.some(r => r.simId === 'sunhours'));
