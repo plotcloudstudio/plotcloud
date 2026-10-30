@@ -6,7 +6,7 @@ import{climateFile,saveClimate,ensureProjectClimate}from'../project-climate.js';
 import{studioSolarScene}from'../studio-bridge.js?v=import-feedback-20261027-1';
 import{tzInfo}from'../sunscene.js';
 import{RELEASE,defaults,validateInput,readWeather,fingerprint,effectiveInput}from'../environment/analysis.js?v=environment-20261028-1';
-import{sourceMeshes,environmentViewport}from'../environment/scene.js?v=study-unified-20261028-1';
+import{sourceMeshes,environmentViewport}from'../environment/scene.js?v=unified-modes-20261030-2';
 import{weatherHTML,passiveHTML,drawPlots,table,maskSVG,number,csv,months}from'../environment/plots.js?v=light-only-20261028-1';
 const WEATHER=new Set(['climate','passive','shadebenefit']),SPATIAL=new Set(['skyview','shadebenefit','solarenvelope']);
 const UNIT={skyview:'%',shadebenefit:'K·h',solarenvelope:'m'};

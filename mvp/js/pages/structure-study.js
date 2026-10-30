@@ -6,7 +6,7 @@ import {studioSolarScene} from '../studio-bridge.js?v=import-feedback-20261027-1
 import {mountStudyImport} from '../study-import.js?v=import-feedback-20261027-1';
 import {toStudio} from '../studio-convert.js';
 import {defaultInput,inheritStudyInput,meshDescriptor,geometrySignature,allObjects,settingFor,effective,assemble,panelGeometry,ROLES,MATERIALS,sectionOptions,solver,suggestAssignments,inputSignature,nodeKey} from '../structural-model.js?v=structural-study-20261028-1';
-import {structuralViewport} from '../structural-viewport.js?v=light-only-20261028-1';
+import {structuralViewport} from '../structural-viewport.js?v=unified-modes-20261030-2';
 import {editStructuralProperties,structuralSummary} from '../structural-properties.js?v=structural-study-20261028-1';
 const metric=x=>Number.isFinite(x)?(x!==0&&Math.abs(x)<.01?x.toExponential(1):x.toFixed(2)):'—';
 const n=x=>Number.isFinite(x)?Number(x.toPrecision(7)).toString():'—',coord=p=>p.map(n).join(', '),options=(rows,value,empty)=>`${empty?`<option value="">${esc(empty)}</option>`:''}${rows.map(([k,label])=>`<option value="${esc(k)}" ${String(value)===String(k)?'selected':''}>${esc(label)}</option>`).join('')}`;

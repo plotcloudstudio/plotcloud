@@ -42,3 +42,24 @@
 .study-shell .shbar .study-workflow{justify-content:flex-end}
 .study-shell .shbar .study-workflow .study-state{flex:1 1 260px!important;order:-1}
 .study-shell .shbar .study-workflow progress{order:-1}
+/* Centre view and side panels exactly in the Sun Hours pattern */
+.study-shell{padding:0!important;gap:0!important}
+.study-shell .shbar.env-head,.study-shell .shbar.ss-head{padding:6px 16px!important}
+.study-shell :is(.env-body,.ss-body){grid-template-columns:270px minmax(0,1fr) 250px!important;gap:0!important}
+.study-shell .study-settings,.study-shell .study-results{border:0!important;border-radius:0!important;background:var(--bg)!important;padding:6px!important}
+.study-shell .study-settings{border-right:1px solid var(--line)!important}.study-shell .study-results{border-left:1px solid var(--line)!important}
+.study-shell .study-settings>.study-tab-panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+.study-shell .study-results>:not(.study-panel-nav){background:var(--card);border-left:1px solid var(--line);border-right:1px solid var(--line);padding:4px 8px;margin:0}
+.study-shell .study-results>.study-panel-nav+*{border-top:1px solid var(--line);border-radius:8px 8px 0 0;padding-top:8px}
+.study-shell .study-results>:last-child{border-bottom:1px solid var(--line);border-radius:0 0 8px 8px;padding-bottom:8px}
+.study-shell .study-results>.study-chart-gallery[hidden]{display:none!important}
+.study-shell .study-panel-nav{border-bottom:0!important;background:transparent!important;margin-bottom:6px}
+.study-shell :is(.env-view,.ss-view){border:0!important;border-radius:0!important}
+.study-shell .study-stage{--view:#e9ecef}
+.study-shell .study-modes{background:#fff!important;border:1px solid var(--line2,#d5d8dc);border-radius:8px!important;padding:3px!important;box-shadow:0 1px 2px rgba(0,0,0,.04);margin:6px}
+.study-shell .study-modes button[aria-pressed=true]{background:#e8effc!important;color:var(--blue,#2d6cdf)!important;box-shadow:none}
+.study-shell .study-nav-tools,.study-shell .study-orientation{display:none!important}
+.study-shell .study-navigation-hint{left:12px!important;right:auto!important;bottom:12px!important;max-width:min(520px,60%);background:#fff!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 2px 8px rgba(0,0,0,.08);font:11px/1.4 var(--mono,ui-monospace,monospace)!important;padding:6px 10px!important}
+.study-shell :is(.env-legend,.ss-legend){left:auto!important;right:12px!important;bottom:12px!important;max-width:min(460px,45%);background:#fff!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 2px 8px rgba(0,0,0,.08);font:11px/1.4 var(--mono,ui-monospace,monospace)!important;padding:6px 10px!important}
+.study-shell .study-struct-tools{top:50px!important;left:6px!important;margin:6px;background:#fff;border:1px solid var(--line2,#d5d8dc);border-radius:8px;padding:3px!important;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.study-shell .study-struct-tools button{border:0!important;background:transparent!important;border-radius:6px;font:500 11.5px var(--sans,system-ui)!important}
