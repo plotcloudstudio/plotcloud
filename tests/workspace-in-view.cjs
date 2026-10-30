@@ -33,11 +33,11 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert(saved.linked && saved.sim === 'sunhours' && saved.src === 'workspace' && saved.day === '03-21' && Math.abs(saved.ground - st.res.avg) < 0.01, JSON.stringify(saved));
     console.log('PASS Save to results keeps the result with the saved version it was computed on');
 
-    await p.click('[data-sp=compare]'); const cmp = await p.locator('.sp-compare').innerText();
-    assert.match(cmp, /Ground, mean[\s\S]*\d\.\d h/); assert.match(cmp, /Current/); assert.match(cmp, /v2/);
+    await p.click('#tabList [data-tab=versions]'); await p.locator('.sp-sheet').waitFor(); const cmp = await p.locator('.sp-sheet').innerText();
+    assert.match(cmp, /Sun hours · Ground, mean[\s\S]*\d\.\d h/); assert.match(cmp, /Current/); assert.match(cmp, /BUILDING[\s\S]*SITE[\s\S]*SPACE[\s\S]*ELEMENT[\s\S]*RESULTS/); assert(await p.locator('.sp-sheet #saveV').isVisible(), 'Add sketch saves a version');
     const dl = p.waitForEvent('download'); await p.click('[data-cmp=csv]'); const csv = fs.readFileSync(await (await dl).path(), 'utf8');
-    assert.match(csv, /"Ground, mean"/); console.log('PASS Results and compare on the right, with a CSV export');
-    await p.click('[data-cmp=close]');
+    assert.match(csv, /"Sun hours · Ground, mean"/); console.log('PASS Compare sketches: sketch columns, grouped rows with the saved study result, Add sketch, Export to Excel (CSV)');
+    await p.click('[data-cmp=close]'); assert(await p.locator('.sp-sheet').isHidden());
 
     // every other study opens inside this page too: the full Sun hours study, after the handoff, without leaving the Workspace
     await p.click('[data-st=page]'); await p.waitForFunction(() => window.__wsHost?.id() || document.querySelector('#handoffDialog[open]'), null, { timeout: 30000 });

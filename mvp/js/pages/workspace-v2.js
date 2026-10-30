@@ -14,7 +14,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 import * as S from '../store.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
-import { mountChrome } from '../workspace-chrome.js?v=host-20261030-1';
+import { mountChrome } from '../workspace-chrome.js?v=sketch-20261030-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -148,7 +148,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=study-20261030-5`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=sketch-20261030-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -370,7 +370,7 @@ export function render(app, [pid]) {
 
   // ---- right: Rhino-style panels. The gear chooses which ones show; Layers always does.
   const PANELS = [['properties','Properties',I('<path d="M5 5h14M5 12h14M5 19h14"/>')],['layers', 'Layers', I('<path d="M12 4l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/>')],
-    ['versions', 'Versions', I('<circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7.5v9M18 10c0 4.5-6.5 3.5-10.6 7"/>')],
+    ['versions', 'Compare sketches', I('<circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7.5v9M18 10c0 4.5-6.5 3.5-10.6 7"/>')],
     ['explode', 'Explode', I('<path d="M4 7l8-3.5L20 7l-8 3.5z"/><path d="M4 17l8-3.5 8 3.5-8 3.5z"/><path d="M12 11.5v1.5" stroke-dasharray="1 1.5"/>')],
     ['walk', 'Walkthrough', I('<circle cx="13" cy="4.5" r="1.8"/><path d="M10.5 21l2-6 3 3v3M8.5 12.5l2.5-5 4 1.2 2 3.8M12.8 8.5l-1.3 5"/>')],
     ['elev', 'Interior elevation', I('<rect x="3" y="4" width="18" height="16"/><path d="M6.5 20v-9h4v9M13.5 9h4.5v5h-4.5z"/>')]];
