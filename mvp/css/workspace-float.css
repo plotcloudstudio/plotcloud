@@ -3,6 +3,7 @@
 body.sp-full>header.top,body.sp-full>.pc-ui-context{display:none}
 body.sp-full .toast{bottom:76px}
 body.sp-full #app{padding:0;max-width:none}
+body.sp-full{--pc-ui-shell-height:0px}
 .w2.sp{--sp-ink:#111827;--sp-sub:#6b7280;--sp-line:#eceef1;--sp-dark:#1f2633;--sp-dark2:#2c3442;--sp-shadow:0 1px 3px rgba(17,24,39,.08),0 6px 18px rgba(17,24,39,.08);
   display:block;position:relative;height:100vh;overflow:hidden;background:#eef0f2}
 .w2.sp>.w2-stage{position:absolute;inset:0;height:auto;min-height:0}
@@ -174,3 +175,9 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-cmp thead th:nth-child(2){color:#1d4ed8}
 .w2.sp .sp-cmph td{font:600 10.5px Inter,system-ui,sans-serif;color:var(--sp-ink)!important;background:#f9fafb!important;text-align:left}
 .w2.sp .sp-compare footer{display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--sp-line);margin-top:8px}
+
+/* a study page mounted in the Workspace: beside the left rail, the model's editing controls hidden */
+.w2.sp>.sp-host{position:absolute;z-index:32;inset:0;padding-left:64px;box-sizing:border-box;background:#fff;overflow:auto}
+.w2.sp.sp-hosting :is(.sp-left,.sp-add){z-index:34}
+.w2.sp.sp-hosting :is(.sp-tl,.sp-tr,.sp-right,.sp-bottom,.sp-bl,.sp-studycard,.sp-legend,.sp-palette,.sp-panelcard){display:none!important}
+.w2.sp .sp-hosterr{padding:24px;font-size:13px}

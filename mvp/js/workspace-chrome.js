@@ -220,10 +220,24 @@ export function mountChrome(app, api) {
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, legend);
   const ST = { id: null, tab: 'results', day: '03-21', res: null, key: '', at: null, busy: false, err: '' };
   const simMenu = document.querySelector('.w2-simmenu');
-  if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { if (IN_VIEW[b.dataset.addsim]) b.insertAdjacentHTML('beforeend', ' <small class="sp-inview">in view</small>'); });
+  if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { void b; });
     simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
   const simName = (id) => (api.sims.find((x) => x.id === id) || { name: id }).name;
-  function openStudy(id) { if (ST.id !== id && ST.res && INST.persp.ready) INST.persp.ws.clearStudy?.(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', at: null, err: '', tab: IN_VIEW[id] ? 'settings' : 'results' }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; drawStudy(); }
+  // ---- every study in this page (2026-10-30): a study that does not run in the Workspace panel itself mounts its own study page
+  // here, beside the left rail, after the usual handoff (pre-flight, site review, the version it runs on). Its "Back" returns to
+  // the model; the model's editing controls are hidden while it is open.
+  const HOST = { el: null, cleanup: null, token: 0, id: null };
+  async function openHost(id) {
+    closeHost(); closeStudy(); openCard(false); closePops(); palOpen(false); cmp.hidden = true;
+    const token = ++HOST.token, el = el2('section', 'sp-host'); el.setAttribute('aria-label', simName(id)); HOST.el = el; HOST.id = id; root.append(el); root.classList.add('sp-hosting');
+    el.addEventListener('click', (e) => { const a = e.target.closest('a[href]'); if (!a) return; const h = a.getAttribute('href') || ''; if (/^#\/workspace(\/|$)/.test(h) || (a.closest('.shbar') && /Back/.test(a.textContent))) { e.preventDefault(); closeHost(); } }, true);
+    try { const mod = await import('./pages/simulations.js'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
+    catch (e) { el.innerHTML = `<div class="sp-hosterr"><p>${esc(simName(id))} could not open here: ${esc(e.message || e)}.</p><a class="btn sm" href="#/simulations/${esc(id)}">Open it on its own page</a></div>`; }
+  }
+  function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }
+  const el2 = (tag, cls) => { const e = document.createElement(tag); e.className = cls; return e; };
+  window.__wsHost = { open: openHost, close: closeHost, id: () => HOST.id };
+  function openStudy(id) { if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res && INST.persp.ready) INST.persp.ws.clearStudy?.(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', at: null, err: '', tab: IN_VIEW[id] ? 'settings' : 'results' }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; drawStudy(); }
   function closeStudy() { studyCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; if (INST.persp.ready) INST.persp.ws.clearStudy?.(); }
   function openPage(id) { const sel = $('#workspaceStudy'); if (sel) { sel.value = id; sel.onchange?.(); } $('#sendSim')?.click(); }
   async function runStudy() {
@@ -254,7 +268,8 @@ export function mountChrome(app, api) {
       <div class="sp-stbody">${!inView ? `<p class="sp-note">${esc(name)} does not run inside the Workspace yet. Open it on its own page: the current model is saved as a version first, and you come back here afterwards.</p><button type="button" class="btn sm primary" data-st="page">Open ${esc(name)}</button>`
         : ST.tab === 'settings' ? `<label class="sp-field">Day<select data-st="day">${DAYS.map(([k, n]) => `<option value="${k}" ${k === ST.day ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
           <p class="sp-note">Location, time zone and true north come from the project site. Shading: masses, the building (walls, and each room as a box up to its ceiling) and the surrounding buildings, on the terrain.</p>
-          <button type="button" class="btn sm primary sp-run" data-st="run" ${ST.busy ? 'disabled' : ''}>${ST.busy ? 'Running…' : r ? 'Run again' : 'Run analysis'}</button>`
+          <button type="button" class="btn sm primary sp-run" data-st="run" ${ST.busy ? 'disabled' : ''}>${ST.busy ? 'Running…' : r ? 'Run again' : 'Run analysis'}</button>
+          <button type="button" class="btn sm" data-st="page" title="The full study: roofs and facades, the whole year, export">Open the full study</button>`
         : r ? `${kv('Average on the ground', fmt(r.avg, 1) + ' h')}${kv('Range', fmt(r.min, 1) + '–' + fmt(r.max, 1) + ' h')}${kv('Ground with ≥ 2 h of sun', fmt(r.two * 100) + '%')}${r.plot ? kv('Plot with ≥ 2 h of sun', fmt(r.plot.two * 100) + '%') : ''}${kv('Day length', fmt(r.dayLength, 1) + ' h')}
           <h4>How this was found</h4><p class="sp-note">Sun directions through ${esc(r.dayName)} at the site; each ${fmt(r.cell, 1)} m ground cell (${fmt(r.cells)} cells, ${fmt(r.area)} m²) counts the time it sees the sun past ${fmt(r.prisms)} building parts and ${fmt(r.context)} surrounding buildings${r.terrain ? ', on the terrain' : ''}. ${fmt(r.ms)} ms in this browser. A design check for early massing, not a compliance result. ${ST.saved ? '' : 'Not saved yet: Save to results keeps it with a saved version of the model.'}</p>
           ${ST.saved ? `<p class="sp-note">Saved to results with ${esc(ST.saved)}.</p>` : `<button type="button" class="btn sm primary" data-st="save" ${stale || ST.busy ? 'disabled' : ''}>Save to results</button>`} <button type="button" class="btn sm" data-st="clear">Clear from view</button> <button type="button" class="btn sm" data-st="page">Open the full study</button>`
@@ -318,5 +333,5 @@ export function mountChrome(app, api) {
   };
   const timer = setInterval(tick, 400); tick();
   window.__wsStudy = { open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }) };   // for the browser checks
-  return () => { clearInterval(timer); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; };
+  return () => { closeHost(); clearInterval(timer); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
 }

@@ -14,7 +14,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 import * as S from '../store.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
-import { mountChrome } from '../workspace-chrome.js?v=study-20261030-1';
+import { mountChrome } from '../workspace-chrome.js?v=host-20261030-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -707,7 +707,7 @@ export function render(app, [pid]) {
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
   // "Add simulation" on the left rail: pick a study, then the same pre-flight and handoff as Send to Simulation
   const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
-  simMenu.innerHTML=CATEGORIES.map(c=>`<div class="w2-simcat">${esc(c.label)}</div>`+SIMS.filter(x=>categoryOf(x.id)===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}">${esc(x.name)}</button>`).join('')).join('');
+  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>categoryOf(x.id)===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}">${esc(x.name)}</button>`).join('')).join('');
   document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
   const placeMenu=()=>{const r=addSim.getBoundingClientRect(),h=Math.min(simMenu.scrollHeight,innerHeight*0.7);simMenu.style.left=(r.right+8)+'px';simMenu.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top-h/2))+'px';};
   const closeMenu=()=>{simMenu.hidden=true;addSim.setAttribute('aria-expanded','false');};
@@ -726,7 +726,9 @@ export function render(app, [pid]) {
       const record=createHandoff(p,v,studyChoice.value,checkHandoff().checks);p.handoffs=[...(p.handoffs||[]),record];S.save();setCurrent(p);setCurrentVersion(p,v.id);
       const levels=pane.ws.levels(),selected=levels.list.find(l=>l.id===levels.lv),level=levelsOf(v.model).find(l=>Math.abs(l.z-(selected?.z??0))<.001);
       if(level)sessionStorage.setItem('pc-sim-level:'+p.id,'L'+level.n);
-      location.hash='#/simulations/'+studyChoice.value+'?autorun=workspace';
+      // since 2026-10-30 the study opens inside the Workspace (workspace-chrome.js); its own page stays for links and other entry points
+      if(window.__wsHost?.open){button.disabled=false;button.textContent='Send to Simulation';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');window.__wsHost.open(studyChoice.value);}
+      else location.hash='#/simulations/'+studyChoice.value+'?autorun=workspace';
     }catch(error){toast('The current model could not be sent: '+(error.message||'storage unavailable'));button.disabled=false;button.textContent='Send to Simulation';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}
   };
   // site edit mode banner (bottom centre): the Site layer is unlocked until Done

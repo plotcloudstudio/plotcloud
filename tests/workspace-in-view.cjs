@@ -39,9 +39,14 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.match(csv, /"Ground, mean"/); console.log('PASS Results and compare on the right, with a CSV export');
     await p.click('[data-cmp=close]');
 
-    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=wind]');
-    assert.match(await p.locator('.sp-studycard').innerText(), /does not run inside the Workspace yet/); assert.equal(await p.evaluate(() => __ws2.inst.persp.win.S3._topoState().ana), null, 'the previous result is cleared');
-    console.log('PASS a study that does not run here yet says so and offers its own page; the previous result is cleared');
+    // every other study opens inside this page too: the full Sun hours study, after the handoff, without leaving the Workspace
+    await p.click('[data-st=page]'); await p.waitForFunction(() => window.__wsHost?.id() || document.querySelector('#handoffDialog[open]'), null, { timeout: 30000 });
+    if (await p.locator('#handoffConfirm').isVisible().catch(() => false)) await p.click('#handoffConfirm');
+    await p.waitForFunction(() => window.__wsHost?.id() === 'sunhours', null, { timeout: 60000 }); await p.locator('.sp-host #eng').waitFor({ state: 'attached', timeout: 60000 });
+    assert.match(await p.evaluate(() => location.hash), /^#\/workspace/); assert.equal(await p.evaluate(() => [...document.querySelectorAll('.w2-simmenu .w2-simcat')].map((x) => x.textContent).join('|')), 'Building|Interior');
+    await p.evaluate(() => [...document.querySelectorAll('.sp-host a')].find((a) => /Back/.test(a.textContent)).click());
+    assert.equal(await p.evaluate(() => !!document.querySelector('.sp-host')), false); assert(await p.evaluate(() => window.__ws2.inst.plan.ready));
+    console.log('PASS a full study opens inside the Workspace page (no separate page) and Back returns to the model; + lists Building and Interior');
 
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-view]');
     await p.click('[data-view=list]'); assert.match(await p.locator('.ph-rows').innerText(), /Projects[\s\S]*Created[\s\S]*Last edited[\s\S]*QA site/);
