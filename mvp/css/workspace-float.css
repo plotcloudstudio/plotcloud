@@ -1,0 +1,136 @@
+/* Workspace floating layout (workspace-chrome.js): the model fills the window; white cards and dark icon rails float over it.
+   Small type (11–12 px), 18 px line icons, 36 px buttons. Scoped to .w2.sp. */
+body.sp-full>header.top,body.sp-full>.pc-ui-context{display:none}
+body.sp-full .toast{bottom:76px}
+body.sp-full #app{padding:0;max-width:none}
+.w2.sp{--sp-ink:#111827;--sp-sub:#6b7280;--sp-line:#eceef1;--sp-dark:#1f2633;--sp-dark2:#2c3442;--sp-shadow:0 1px 3px rgba(17,24,39,.08),0 6px 18px rgba(17,24,39,.08);
+  display:block;position:relative;height:100vh;overflow:hidden;background:#eef0f2}
+.w2.sp>.w2-stage{position:absolute;inset:0;height:auto;min-height:0}
+.w2.sp>.wb-commandbar,.w2.sp>.w2-rail,.w2.sp .w2-tr{display:none!important}
+.w2.sp .sp-card{background:#fff;border-radius:10px;box-shadow:var(--sp-shadow);border:0}
+.w2.sp .sp-b{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;padding:0;font:600 11px Inter,system-ui,sans-serif;flex:none}
+.w2.sp .sp-b:disabled{opacity:.35;cursor:default}
+.w2.sp .sp-sep{width:1px;align-self:stretch;margin:6px 4px;background:var(--sp-line);flex:none}
+.w2.sp .sp-hr{height:1px;width:24px;margin:4px auto;background:rgba(255,255,255,.14)}
+/* controls whose text the Workspace rewrites: the icon is a CSS mask, the text stays for screen readers and tests */
+.w2.sp .sp-mask{position:relative;width:36px!important;height:36px!important;min-height:0!important;padding:0!important;border:0!important;border-radius:8px!important;background:transparent!important;color:inherit!important;font-size:0!important;box-shadow:none!important;display:grid!important;place-items:center;cursor:pointer}
+.w2.sp .sp-mask::before{content:"";width:18px;height:18px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+
+/* top left: project and level */
+.w2.sp .sp-tl{position:absolute;left:12px;top:12px;z-index:30;display:flex;gap:8px;align-items:flex-start}
+.w2.sp .sp-proj{position:relative}
+.w2.sp .sp-pname{display:grid;grid-template-columns:auto 14px;column-gap:10px;align-items:center;text-align:left;border:0;background:none;padding:8px 10px 8px 12px;min-width:200px;max-width:280px;cursor:pointer;font:600 12.5px Inter,system-ui,sans-serif;color:var(--sp-ink)}
+.w2.sp .sp-pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.w2.sp .sp-pname small{grid-column:1;font:400 10.5px Inter,system-ui,sans-serif;color:var(--sp-sub)}
+.w2.sp .sp-pname svg{grid-column:2;grid-row:1/3;color:var(--sp-sub)}
+.w2.sp .sp-pmenu{left:0;top:calc(100% + 6px);min-width:220px}
+.w2.sp .sp-pmenu a{display:block;padding:6px 10px;border-radius:6px;color:var(--sp-ink);text-decoration:none;font-size:12px}
+.w2.sp .sp-pmenu a:hover{background:#f3f4f6}.w2.sp .sp-pmenu a[aria-current]{font-weight:600}
+.w2.sp .sp-pmenu hr{border:0;border-top:1px solid var(--sp-line);margin:4px 0}
+.w2.sp .sp-level{position:relative!important;inset:auto!important;transform:none!important;display:flex!important;align-items:center;padding:3px!important;gap:0!important;height:auto;min-height:0}
+.w2.sp .sp-level .w2-sep{display:none}
+.w2.sp .sp-level button{font:500 11.5px Inter,system-ui,sans-serif;min-height:30px;border:0;background:none;padding:0 8px;border-radius:7px;color:var(--sp-ink);cursor:pointer}
+.w2.sp .sp-level button:hover:not(:disabled){background:#f3f4f6}
+
+/* top right: saved state, undo / redo, export, import, simulation */
+.w2.sp .sp-tr{position:absolute;right:12px;top:12px;z-index:30;display:flex;align-items:center;padding:3px;color:#374151}
+.w2.sp .sp-tr .sp-b:hover:not(:disabled){background:#f3f4f6}
+.w2.sp .sp-saved[data-state=saved]{color:#16a34a}
+.w2.sp .sp-saved[data-state=dirty]{color:#d97706}
+.w2.sp .sp-saved[data-state=dirty] svg{display:none}
+.w2.sp .sp-saved[data-state=dirty]::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.w2.sp #sendSim{margin-left:4px;min-height:30px;padding:0 12px;border-radius:7px;font:600 11.5px Inter,system-ui,sans-serif}
+
+/* dark icon rails */
+.w2.sp .sp-rail{position:absolute;z-index:30;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;background:var(--sp-dark);border-radius:10px;box-shadow:var(--sp-shadow);color:#e5e7eb}
+.w2.sp .sp-rail .sp-b:hover:not(:disabled),.w2.sp .sp-rail .sp-mask:hover{background:var(--sp-dark2)!important}
+.w2.sp .sp-rail [aria-pressed=true],.w2.sp .sp-rail [aria-expanded=true],.w2.sp .sp-rail [aria-selected=true]{background:#3b4556!important;color:#fff!important}
+.w2.sp .sp-left{left:12px;top:50%;transform:translateY(-62%)}
+.w2.sp .sp-add{left:12px;top:calc(50% + 118px)}
+.w2.sp .sp-add .w2-addsim{width:36px;height:36px;margin:0;border-radius:8px;background:transparent}
+.w2.sp .sp-add .w2-addsim:hover{background:var(--sp-dark2)}
+.w2.sp .sp-right{right:12px;top:50%;transform:translateY(-50%)}
+.w2.sp .sp-dim{font-size:11px;letter-spacing:.02em}
+/* the panel tabs as rail icons */
+.w2.sp .sp-left #tabList{display:flex;flex-direction:column;gap:2px;border:0;padding:0;background:none;margin:0;flex-wrap:nowrap}
+.w2.sp .sp-left #tabList button{width:36px!important;height:36px!important;min-height:0!important;padding:0!important;border:0!important;border-radius:8px!important;background:transparent;color:#e5e7eb;display:grid;place-items:center;cursor:pointer;box-shadow:none!important}
+.w2.sp .sp-left #tabList button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.w2.sp .sp-left #tabList button svg{width:18px;height:18px}
+.w2.sp:not(.sp-card-open) .sp-left #tabList [aria-selected=true]{background:transparent!important;color:#e5e7eb!important}
+/* menus that open from the rails */
+.w2.sp .sp-menuwrap{position:relative}
+.w2.sp .sp-right .w2-menu,.w2.sp .sp-right .w3-tabmenu{position:absolute;right:46px;left:auto;top:0;min-width:180px;color:var(--sp-ink)}
+.w2.sp .sp-right .w3-gearw{display:block}
+
+/* bottom: Edit site | tools */
+.w2.sp .sp-bottom{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:30;display:flex;gap:8px;max-width:calc(100vw - 24px)}
+.w2.sp .sp-tools{display:flex;align-items:center;gap:2px;padding:4px;color:#374151;overflow-x:auto;scrollbar-width:none}
+.w2.sp .sp-tools [data-panel]{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;padding:0;flex:none;position:relative}
+.w2.sp .sp-tools :is([data-panel],.sp-b,.sp-mask):hover{background:#f3f4f6!important}
+.w2.sp .sp-tools [aria-pressed=true]{background:#eef2ff!important;color:#1d4ed8!important}
+.w2.sp .sp-tools [data-panel].w2-next::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#d4322b}
+.w2.sp .sp-tools .wb-extra{position:relative}
+.w2.sp .sp-tools .wb-extra>summary{list-style:none;width:36px;height:36px;display:grid;place-items:center;border-radius:8px;cursor:pointer}
+.w2.sp .sp-tools .wb-extra>summary::-webkit-details-marker{display:none}
+.w2.sp .sp-tools .wb-extra .w2-menu{position:fixed;bottom:64px;top:auto;left:auto;transform:translateX(-40%)}
+.w2.sp.wb-site-editing #editSite{background:#1f9d63!important;color:#fff!important}
+
+/* the palette: a tool group's tiles above the bottom bar; the Project panel above the bottom left */
+.w2.sp>.w2-panel.sp-palette{position:absolute;z-index:29;left:50%;bottom:66px;transform:translateX(-50%);width:min(560px,calc(100vw - 24px));max-height:min(52vh,520px);overflow:auto;padding:4px 6px;display:none}
+.w2.sp.sp-pal-open>.w2-panel.sp-palette{display:block}
+.w2.sp.sp-pal-project>.w2-panel.sp-palette{left:12px;transform:none;bottom:62px;width:min(340px,calc(100vw - 24px))}
+.w2.sp .sp-palette #panelBody{overflow:visible}
+.w2.sp .sp-palette .w2-grid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.w2.sp .sp-palette .pane{border:0;padding:8px}
+
+/* bottom left: project settings */
+.w2.sp .sp-bl{position:absolute;left:12px;bottom:14px;z-index:30;display:flex;align-items:center;gap:8px}
+.w2.sp .sp-bl [data-panel=project]{width:36px;height:36px;border-radius:8px;background:var(--sp-dark);color:#e5e7eb;border:0;display:grid;place-items:center;cursor:pointer;box-shadow:var(--sp-shadow)}
+.w2.sp .sp-bl [data-panel=project][aria-pressed=true]{background:#3b4556}
+.w2.sp .sp-blt{display:flex;flex-direction:column;font:400 11px/1.35 Inter,system-ui,sans-serif;color:var(--sp-sub);text-shadow:0 0 4px #fff}
+.w2.sp .sp-blt b{font-weight:600;color:var(--sp-ink)}
+
+/* the panels card (layers, versions, properties, view tools) beside the left rail */
+.w2.sp>.w2-right.sp-panelcard{position:absolute;z-index:29;left:60px;top:64px;bottom:66px;width:300px;display:none;flex-direction:column;overflow:hidden;padding-top:6px}
+.w2.sp.sp-card-open>.w2-right.sp-panelcard{display:flex}
+.w2.sp .sp-panelcard .w3-tabs{display:none}
+.w2.sp .sp-panelcard .w3-tbody{flex:1;min-height:0;overflow:auto}
+.w2.sp .sp-x{position:absolute;right:6px;top:6px;z-index:2;width:24px;height:24px;border:0;border-radius:6px;background:none;color:var(--sp-sub);font-size:16px;line-height:1;cursor:pointer}
+.w2.sp .sp-x:hover{background:#f3f4f6;color:var(--sp-ink)}
+
+/* popovers (statistics, spaces from the left; sun, snapping, visibility from the right) */
+.w2.sp .sp-pop{position:absolute;z-index:31;width:250px;max-height:calc(100vh - 140px);overflow:auto;padding:12px 14px;font:11.5px/1.45 Inter,system-ui,sans-serif;color:var(--sp-ink)}
+.w2.sp .sp-pop[hidden]{display:none}
+.w2.sp .sp-pop-stats,.w2.sp .sp-pop-spaces{left:60px}
+.w2.sp .sp-pop-sun,.w2.sp .sp-pop-snap,.w2.sp .sp-pop-vis{right:60px}
+.w2.sp .sp-pop h3{font:600 12px Inter,system-ui,sans-serif;margin:0 0 8px}
+.w2.sp .sp-pop h4{font:500 10.5px Inter,system-ui,sans-serif;color:var(--sp-sub);margin:10px 0 2px}
+.w2.sp .sp-kv{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f5f6f7}
+.w2.sp .sp-kv b{font-weight:600;font-variant-numeric:tabular-nums}
+.w2.sp .sp-row{display:flex;justify-content:space-between;width:100%;border:0;background:none;padding:5px 6px;border-radius:6px;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.w2.sp .sp-row:hover{background:#f3f4f6}
+.w2.sp .sp-note{font-size:10.5px;color:var(--sp-sub);margin:8px 0 0}
+.w2.sp .sp-sw{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
+.w2.sp .sp-sw i{width:9px;height:9px;border-radius:2px;flex:none}
+.w2.sp .sp-sl{display:block;margin-top:8px}
+.w2.sp .sp-sl span{display:flex;justify-content:space-between;color:var(--sp-sub);font-size:10.5px}
+.w2.sp .sp-sl output{color:var(--sp-ink);font-variant-numeric:tabular-nums}
+.w2.sp .sp-sl input{width:100%}
+/* the status bar's snaps and switches, inside the Snapping popover */
+.w2.sp .sp-pop-snap .w2-status{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:none;border:0;padding:0;height:auto;min-height:0}
+.w2.sp .sp-pop-snap .w2-status label{display:flex;gap:8px;align-items:center}
+.w2.sp .sp-pop-snap .w2-status :is(.w2-div,.sp,.w2-state,.wb-zoom){display:none!important}
+.w2.sp .sp-pop-snap .w2-sw{margin-top:4px}
+
+/* the getting-started checklist below the top right card; the site banner above the bottom bar */
+body.sp-full .pc-start{top:62px!important;right:60px!important}
+body.sp-full .pc-start-min{top:62px!important;right:60px!important}
+.w2.sp~.wb-site-banner,.w2.sp .wb-site-banner{bottom:68px}
+
+@media (max-width:760px){
+  .w2.sp .sp-pname{min-width:0;max-width:150px}
+  .w2.sp .sp-tr{top:auto;bottom:66px}
+  .w2.sp .sp-bottom{left:56px;right:56px;transform:none;max-width:none}
+  .w2.sp .sp-bl .sp-blt{display:none}
+  .w2.sp>.w2-right.sp-panelcard{left:56px;right:56px;width:auto}
+}

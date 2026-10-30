@@ -2625,7 +2625,7 @@ function drawPreview() {
   if (PREV && TOOL === 'place') { g.globalAlpha = 0.7; drawFurn(PREV, true); g.globalAlpha = 1; }
 }
 function hud() {   // north, wind and a scale bar, bottom left
-  const d = VP.d, x = 34 * d, y = VP.h - 34 * d;
+  const d = VP.d, x = 34 * d, y = VP.h - (document.documentElement.classList.contains('ws') ? 96 : 34) * d;   // in the Workspace: above its project card
   const nb = M.north || 0, vec = (b) => { const r = (b - nb) * Math.PI / 180; return [Math.sin(r), -Math.cos(r)]; };
   g.fillStyle = 'rgba(255,255,255,.92)'; g.strokeStyle = C.line; g.lineWidth = 1 * d; g.beginPath(); g.arc(x, y, 22 * d, 0, 7); g.fill(); g.stroke(); LB.push({ x: x - 24 * d, y: y - 24 * d, w: 48 * d, h: 48 * d });
   const nv = vec(0); g.fillStyle = C.ink; g.beginPath(); g.moveTo(x + nv[0] * 17 * d, y + nv[1] * 17 * d); g.lineTo(x - nv[1] * 5 * d, y + nv[0] * 5 * d); g.lineTo(x + nv[1] * 5 * d, y - nv[0] * 5 * d); g.closePath(); g.fill();
@@ -5603,7 +5603,7 @@ window.S3 = (() => {
     await lib(); if (R) return; canvas = cv;
     R = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true }); R.setPixelRatio(Math.min(2, devicePixelRatio || 1)); R.outputColorSpace = T.SRGBColorSpace;
     scene = new T.Scene(); scene.background = new T.Color(window.PlotCloudUI?.viewportColor() || '#f2f3f5'); window.PlotCloudUI?.trackViewport(scene,R,()=>render());
-    scene.add(new T.HemisphereLight(0xffffff, 0xcfc9bd, 1.9)); const sun = new T.DirectionalLight(0xfff6ea, 1.6); sun.position.set(-14, 26, 10); scene.add(sun); const fill = new T.DirectionalLight(0xffffff, 0.35); fill.position.set(12, 8, -14); scene.add(fill);
+    scene.add(new T.HemisphereLight(0xffffff, 0xcfc9bd, 1.9)); const sun = new T.DirectionalLight(0xfff6ea, 1.6); sun.position.set(-14, 26, 10); scene.add(sun); scene.add(sun.target); SUN.light = sun; const fill = new T.DirectionalLight(0xffffff, 0.35); fill.position.set(12, 8, -14); scene.add(fill);
     cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); cam.position.set(18, 16, 22);
     ctl = new OC(cam, ev || canvas); ctl.mouseButtons = { LEFT: null, MIDDLE: window.__WSROLE?T.MOUSE.PAN:T.MOUSE.ROTATE, RIGHT: window.__WSROLE?T.MOUSE.ROTATE:T.MOUSE.PAN }; ctl.zoomToCursor = true; ctl.enableDamping = false; ctl.maxPolarAngle = Math.PI * 0.49; ctl.addEventListener('change', () => { render(); if (window.zoomUI) window.zoomUI(); if (window.ov3) window.ov3(); });
     const ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshLambertMaterial({ color: window.PlotCloudUI?.viewportColor() || 0xeff1f4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.16; scene.add(ground);
@@ -5754,6 +5754,32 @@ window.S3 = (() => {
     if (o.fit || !fitted) { fitted = true; const b = siteFree(grp), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6); ctl.target.copy(c); cam.position.set(c.x + r * 0.75, c.y + r * 0.85, c.z + r * 1.0); cam.near = 0.1; cam.far = r * 40; cam.updateProjectionMatrix(); ctl.update(); d0 = cam.position.distanceTo(ctl.target); }
     render();
   };
+  // ---- the sun at a date and solar time (2026-10-30): the key light points from the sun and casts shadows. Display only:
+  // the Sun hours study is the measurement. Position: NOAA declination and hour angle, plan +Y faces bearing M.north.
+  const SUN = { light: null, on: null, north: 0 };
+  function sunDir(lat, doy, hour) {
+    const D = Math.PI / 180, g = 2 * Math.PI / 365 * (doy - 1 + (hour - 12) / 24);
+    const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+    const ha = (hour - 12) * 15 * D, la = lat * D, alt = Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(ha));
+    let az = Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(dec) * Math.cos(la)) + Math.PI;   // from north, clockwise
+    return { alt: alt / D, az: ((az / D) % 360 + 360) % 360 };
+  }
+  function sunApply() {
+    const L = SUN.light; if (!L || !R) return; const o = SUN.on;
+    R.shadowMap.enabled = !!o; R.shadowMap.type = T.PCFSoftShadowMap; L.castShadow = !!o;
+    if (grp) grp.traverse((m) => { if (m.isMesh) { const site = m.name === 'site' || m.userData?.k === 'site'; m.castShadow = !!o && !site; m.receiveShadow = !!o; } });
+    if (!o) { L.position.set(-14, 26, 10); L.target.position.set(0, 0, 0); L.intensity = 1.6; render(); return; }
+    const b = grp ? new T.Box3().setFromObject(grp) : null, c = b && !b.isEmpty() ? b.getCenter(new T.Vector3()) : new T.Vector3(), r = b && !b.isEmpty() ? Math.max(10, b.getSize(new T.Vector3()).length() / 2) : 50;
+    const D = Math.PI / 180, a = (o.az - SUN.north) * D, alt = Math.max(o.alt, 0.5) * D, v = new T.Vector3(Math.sin(a) * Math.cos(alt), Math.sin(alt), -Math.cos(a) * Math.cos(alt));
+    L.target.position.copy(c); L.position.copy(c).addScaledVector(v, r * 2); L.intensity = o.alt > 0 ? 1.9 : 0.15;
+    const sc = L.shadow.camera; sc.left = sc.bottom = -r; sc.right = sc.top = r; sc.near = 0.5; sc.far = r * 4; sc.updateProjectionMatrix();
+    L.shadow.mapSize.set(2048, 2048); L.shadow.bias = -0.0004; L.shadow.normalBias = 0.02; if (L.shadow.map) { L.shadow.map.dispose(); L.shadow.map = null; }
+    render();
+  }
+  // api.sun({ lat, doy, hour, north }) or api.sun(null) to go back to the studio light; returns the sun's altitude and bearing
+  api.sun = (o) => { if (!o) { SUN.on = null; sunApply(); return null; } SUN.north = o.north || 0; SUN.on = sunDir(o.lat, o.doy, o.hour); sunApply(); return { ...SUN.on }; };
+  api.sunDir = sunDir;
+  { const _upd = api.update; api.update = (...a) => { _upd(...a); if (SUN.on) sunApply(); }; }
   api.zoom = (k) => { if (!R) return; const v = cam.position.clone().sub(ctl.target); v.multiplyScalar(1 / k); cam.position.copy(ctl.target).add(v); ctl.update(); render(); if (window.zoomUI) window.zoomUI(); };
   api.pct = () => R ? Math.round(d0 / Math.max(1e-6, cam.position.distanceTo(ctl.target)) * 100) : 100;
   api.snap = async (M, S, o, w, h) => {   // a picture of the whole building for the overview panel

@@ -14,6 +14,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 import * as S from '../store.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
+import { mountChrome } from '../workspace-chrome.js?v=float-20261030-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=light-only-20261028-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -147,7 +148,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=world-map-20261030-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=float-20261030-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -344,16 +345,18 @@ export function render(app, [pid]) {
     const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
     $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;$('#dBtn',app).parentElement.hidden=plan;
     $('#dMenu', app).innerHTML = DISPLAYS.map(([k, n]) => it(`data-disp="${k}"`, cur === k, n)).join('');
-    $$('#vMenu [data-view]', app).forEach((x) => x.onclick = async () => { closeMenus(); const v = x.dataset.view;
-      if (v === 'plan' || v === 'ceiling' || v === 'elev') { showView('plan'); if (x.dataset.level) for (const I2 of ready()) I2.ws.level(x.dataset.level); if (INST.plan.ready) await INST.plan.ws.view(v === 'ceiling' ? 'ceiling' : v === 'elev' ? 'elev' : 'plan'); }
-      else if (v === 'persp' || v === 'walk' || v === 'explode') { showView('persp'); if (INST.persp.ready) { const st = INST.persp.ws.state(); if (v === 'persp') await INST.persp.ws.view('bird'); else if (v === 'walk' && !st.walking && !st.walkpick) await INST.persp.ws.view('walk'); else if (v === 'explode' && !st.explode) await INST.persp.ws.view('explode'); } }
-      else showView('shaded');
-      menus(); });
+    $$('#vMenu [data-view]', app).forEach((x) => x.onclick = () => { closeMenus(); goView(x.dataset.view, x.dataset.level); });
     $$('#dMenu [data-disp]', app).forEach((x) => x.onclick = () => { closeMenus(); const d = x.dataset.disp; if (UI.view === 'shaded') vp.setDisplay(d); else { UI.disp = d; saveUI(); if (INST.persp.ready) INST.persp.ws.display(d); } menus(); });
   }
+  async function goView(v, level) {
+      if (v === 'plan' || v === 'ceiling' || v === 'elev') { showView('plan'); if (level) for (const I2 of ready()) I2.ws.level(level); if (INST.plan.ready) await INST.plan.ws.view(v === 'ceiling' ? 'ceiling' : v === 'elev' ? 'elev' : 'plan'); }
+      else if (v === 'persp' || v === 'walk' || v === 'explode') { showView('persp'); if (INST.persp.ready) { const st = INST.persp.ws.state(); if (v === 'persp') await INST.persp.ws.view('bird'); else if (v === 'walk' && !st.walking && !st.walkpick) await INST.persp.ws.view('walk'); else if (v === 'explode' && !st.explode) await INST.persp.ws.view('explode'); } }
+      else showView('shaded');
+      menus(); }
+
   const closeMenus = () => { for (const [b, m] of [['levelBtn', 'levelMenu'], ['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) { $('#' + m, app).hidden = true; $('#' + b, app).setAttribute('aria-expanded', 'false'); } };
   for (const [b, m] of [['levelBtn', 'levelMenu'], ['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) $('#' + b, app).onclick = (e) => { e.stopPropagation(); const was = !$('#' + m, app).hidden; closeMenus(); if (!was) { menus(); $('#' + m, app).hidden = false; $('#' + b, app).setAttribute('aria-expanded', 'true'); } };
-  const outside = (e) => { if (!e.target.closest('#cap')) closeMenus(); if (!e.target.closest('.w3-gearw')) gearMenu(false); }; document.addEventListener('click', outside);
+  const outside = (e) => { if (!e.target.closest('#cap, .sp-menuwrap')) closeMenus(); if (!e.target.closest('.w3-gearw')) gearMenu(false); }; document.addEventListener('click', outside);
   const away = () => { closeMenus(); gearMenu(false); }; addEventListener('blur', away);   // a click in a view (an iframe) closes the menus too
   // the panes' own buttons (Explode in the toolbar, Esc out of a walkthrough, the level) change the name in the pill too
   const levelUI = () => menus(), paneUI = () => { if (['levelMenu', 'vMenu', 'dMenu'].every(id => $('#' + id, app).hidden)) menus(); tabState(); };
@@ -374,7 +377,7 @@ export function render(app, [pid]) {
   let lastMode = null;
   function tabsUI() {
     UI.tabs = PANELS.map(([k])=>k);if(!UI.tabs.includes(UI.tab))UI.tab='layers';
-    $('#tabList', app).innerHTML = PANELS.filter(([k]) => ['layers','properties','versions',UI.tab].includes(k)).map(([k, n]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === UI.tab}" title="${n}" aria-label="${n}">${n}</button>`).join('');
+    $('#tabList', app).innerHTML = PANELS.filter(([k]) => ['layers','properties','versions',UI.tab].includes(k)).map(([k, n]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === UI.tab}" title="${n}" aria-label="${n}">${PANELS.find(([q]) => q === k)[2]}<span>${n}</span></button>`).join('');
     $$('#tabList [data-tab]', app).forEach((b) => b.onclick = () => { UI.tab = b.dataset.tab; saveUI(); tabsUI(); });
     $$('.w3-tp', app).forEach((el) => el.hidden = el.dataset.tab !== UI.tab);
     $('#tabMenu', app).innerHTML = '<p class="w2-mnote">View tools</p>' + PANELS.filter(([k])=>!['layers','properties','versions'].includes(k)).map(([k,n])=>`<button type="button" data-view-panel="${k}">${n}</button>`).join('');
@@ -758,6 +761,9 @@ export function render(app, [pid]) {
     catch(error){toast(error.message||'The model could not be centered.');}
     finally{shell.inert=false;shell.removeAttribute('aria-busy');}
   }});
+  // the floating layout (workspace-chrome.js): the model fills the window, the controls above move onto cards and rails
+  document.body.classList.add('sp-full');
+  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers });
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel(); tabsUI();
@@ -765,5 +771,5 @@ export function render(app, [pid]) {
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }
