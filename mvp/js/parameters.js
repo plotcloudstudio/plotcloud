@@ -41,6 +41,14 @@ export const DEFS = {
   'project.buildingType': { unit: '', type: 'string', physical: false, mirror: ['defaults', 'buildingType'] },
   'display.units': { unit: '', type: 'enum', values: ['Metric', 'Imperial'], physical: false, mirror: ['defaults', 'units'] },
   'display.legend': { unit: '', type: 'string', physical: false },
+  'program.use': { unit: '', type: 'enum', values: ['office', 'residential', 'school', 'generic'], physical: true },
+  'program.occupancyDensity': { unit: 'people/m²', type: 'number', min: 0, max: 5, physical: true },
+  'program.lightingPowerDensity': { unit: 'W/m²', type: 'number', min: 0, max: 50, physical: true },
+  'program.equipmentPowerDensity': { unit: 'W/m²', type: 'number', min: 0, max: 200, physical: true },
+  'program.occupiedFrom': { unit: 'h', type: 'number', min: 0, max: 23, physical: true },
+  'program.occupiedUntil': { unit: 'h', type: 'number', min: 1, max: 24, physical: true },
+  'program.lightingMode': { unit: '', type: 'enum', values: ['area', 'fixtures'], physical: true },
+  'target.daylight.meanDF': { unit: '%', type: 'number', min: 0, max: 20, physical: false },
   'ui.mode': { unit: '', type: 'enum', values: ['simple', 'advanced'], physical: false },
 };
 // Object/room properties are open-ended paths (e.g. object.material.reflectance); they are physical unless under display.
@@ -115,6 +123,8 @@ function candidates(p, { path, study = null, target = null }) {
     const here = recs.filter((r) => r.scope === scope && match[scope](r)).sort((a, b) => (EXPLICIT.has(b.valueOrigin) ? 1 : 0) - (EXPLICIT.has(a.valueOrigin) ? 1 : 0));
     out.push(...here);
   }
+  const u = p.contract?.config?.program;   // the use template fixed in this project (use-templates.js), below explicit values
+  if (u && u.values && u.values[path] !== undefined) out.push({ id: 'program:' + u.id + '@' + u.version, path, scope: 'template', value: u.values[path], unit: defOf(path)?.unit ?? '', valueOrigin: 'platform-default', acquisition: 'template', modeAtAcquisition: null, ruleVersion: u.id + '@' + u.version, parents: [], fixed: true });
   const t = p.contract?.config?.template;
   if (t && t.values && t.values[path] !== undefined) out.push({ id: 'template:' + t.id + '@' + t.version, path, scope: 'template', value: t.values[path], unit: defOf(path)?.unit ?? '', valueOrigin: 'platform-default', acquisition: 'template', modeAtAcquisition: null, ruleVersion: t.id + '@' + t.version, parents: [], fixed: true });
   if (RECIPE_FALLBACKS[path] !== undefined) out.push({ id: 'fallback:' + RECIPE_FALLBACK_VERSION, path, scope: 'recipe-fallback', value: RECIPE_FALLBACKS[path], unit: defOf(path)?.unit ?? '', valueOrigin: 'platform-default', acquisition: 'template', modeAtAcquisition: null, ruleVersion: RECIPE_FALLBACK_VERSION, parents: [], fixed: true });

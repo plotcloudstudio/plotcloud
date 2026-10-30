@@ -58,12 +58,13 @@ const PAGES = {
   'local-compute':()=>import('./pages/local-compute.js?v=study-unified-20261028-2'),
   'comparison-report':()=>import('./pages/comparison-report.js'),
   'start-study':()=>import('./pages/start-study.js'),
+  project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'),
   admin: () => import('./pages/admin.js'),
   '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/dashboard.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Dashboard', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
+const TITLES = { project:'Project', tables:'Tables', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Dashboard', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab

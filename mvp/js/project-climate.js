@@ -1,5 +1,6 @@
 // Persist contents instead of a File reference that can expire after navigation.
 import * as S from './store.js';
+import {validateEpw,qualitySummary} from './epw-validate.js';
 import {validLocation,distanceKm,stationCatalog,nearestStations,downloadStation,archiveURL,weatherDownloadAvailable} from './automatic-climate.js?v=epw-connected-20261027-3';
 function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open('pc-project-climate',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 export async function climateFile(hash){if(!hash)return null;const db=await database();try{return await new Promise((resolve,reject)=>{const r=db.transaction('files').objectStore('files').get(hash);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);});}finally{db.close();}}
@@ -12,12 +13,14 @@ export async function putClimateRecord(record){
 }
 export async function saveClimate(file,provenance={}){
  if(file.size>8*1024*1024)throw Error('EPW must be smaller than 8 MB.');
- const text=await file.text(),lines=text.trim().split(/\r?\n/),head=lines[0].split(','),hours=lines.length-8;
- if(head[0]!=='LOCATION'||head.length<10||![8760,8784].includes(hours))throw Error('Choose a complete hourly EPW file (8 header lines and 8760 or 8784 hours).');
- if(lines.slice(8).some(line=>{const a=line.split(',');return a.length<22||![6,20,21].every(i=>a[i].trim()!==''&&Number.isFinite(+a[i]))||+a[6]>=99||+a[20]>=999||+a[21]>=999||+a[21]<0;}))throw Error('EPW has missing or invalid hourly temperature/wind data.');
+ const text=await file.text(),lines=text.trim().split(/\r?\n/),head=lines[0].split(','),check=validateEpw(text);
+ if(!check.ok)throw Error('EPW not accepted: '+check.errors.join(' '));
+ const hours=check.hours;
+ // every current weather engine reads temperature and wind on every hour: those must be complete; other fields block per study
+ if(['dryBulb','windDir','windSpeed'].some(k=>check.fields[k].missing||check.fields[k].outOfRange))throw Error('EPW has missing or invalid hourly temperature/wind data.');
  const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(n=>n.toString(16).padStart(2,'0')).join('');
  const location={lat:Number(head[6]),lon:Number(head[7]),utcOffset:Number(head[8]),elevation:Number(head[9])};if(![6,7,8,9].every(i=>head[i]?.trim())||!validLocation(location)||!Number.isFinite(location.utcOffset)||Math.abs(location.utcOffset)>14||!Number.isFinite(location.elevation))throw Error('EPW LOCATION coordinates, time zone or elevation are invalid.');
- const record={...provenance,name:file.name,text,hash,station:head[1],hours,epwSource:head[4],wmo:head[5],...location},db=await database();
+ const record={...provenance,name:file.name,text,hash,station:head[1],hours,epwSource:head[4],wmo:head[5],...location,quality:qualitySummary(check)},db=await database();
  try{await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(record,hash);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}finally{db.close();}
  const {text:contents,...metadata}=record;return metadata;
 }

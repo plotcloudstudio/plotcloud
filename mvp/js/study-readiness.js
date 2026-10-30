@@ -37,6 +37,7 @@ export function inspectStudy(project,version,id,{site=project?.sharedConditions?
  }
  if(EPW.has(id)&&!site?.climate?.hash)add('weather','error','Upload a project EPW','This study needs a complete hourly weather file in project conditions.',conditions);
  else if(id==='daylight'&&!site?.climate?.hash)add('weather','warning','Daylight will use a generic year','Upload an EPW for a weather-file-based study. Review the method and limitations with the result.',conditions);
+ else if(site?.climate?.quality?.blocked?.[id])add('weather','error','Weather file lacks fields this study needs',`${site.climate.name||'Project EPW'} is missing ${site.climate.quality.blocked[id].join(', ')} for more than 10 % of hours. Missing values are not filled; choose another station or upload a complete file.`,conditions);
  else if(site?.climate?.hash)add('weather','ok',`Weather: ${site.climate.name||site.climate.station||'project EPW'}`,'The file must also be available in this browser.',conditions);
  if(id==='daylight'&&((finite(defaults.plane)&&(defaults.plane<0||defaults.plane>1.5))||(finite(defaults.occStart)&&finite(defaults.occEnd)&&defaults.occStart>=defaults.occEnd)))add('settings','error','Review the daylight work plane and occupied hours','Use a work plane from 0 to 1.5 m and occupied end time later than start.',conditions);
  if(['isovist','evac','cameras'].includes(id))add('interaction','warning','Place study-specific inputs','Choose the observer, destinations or cameras inside the study before running.');

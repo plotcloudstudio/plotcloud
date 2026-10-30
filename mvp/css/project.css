@@ -1,0 +1,9 @@
+/* project overview, tables, plan comparison, reports (replan items 05–12) */
+.pc-table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}.pc-table :is(th,td){padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;overflow-wrap:anywhere}.pc-table th{font-weight:600}
+.pc-scroll{max-width:100%;overflow:auto}
+.pj{max-width:1180px;padding-bottom:56px}.pj section.card{padding:22px;margin-top:18px}.pj h2{margin:0 0 8px}.pj .grid{gap:12px}
+.pj-status{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}.pj-status>div{border:1px solid var(--line);border-radius:8px;padding:12px}.pj-status [data-state=ok] b{color:var(--green,#4a926f)}.pj-status [data-state=error] b{color:var(--red,#c4473a)}.pj-status [data-state=warning] b{color:var(--amber,#ad842c)}
+.pj-mode{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}.pj-mode label{display:inline-flex;gap:4px;align-items:center}
+.pj-good{color:var(--green,#4a926f)}.pj-bad{color:var(--red,#c4473a)}.pj-warn{color:var(--amber,#ad842c)}
+.pj [hidden]{display:none!important}
+@media(max-width:700px){.pj .grid.g2{grid-template-columns:1fr}.pc-table{font-size:12px}}

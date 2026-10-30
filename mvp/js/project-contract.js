@@ -68,8 +68,8 @@ export function initProject(p, { at = now(), uiMode = 'advanced', fromSample = f
   for (const path of Object.keys(P.DEFS)) {
     const v = P.conditionValue(c, path); if (v === undefined || v === null || path === 'weather.epw') continue;
     const def = TEMPLATE.values[path] ?? P.RECIPE_FALLBACKS[path];
-    const asDefault = fromSample || def !== undefined && JSON.stringify(def) === JSON.stringify(v);
-    try { P.setParameter(p, { path, value: v, valueOrigin: asDefault ? 'platform-default' : 'user-override', acquisition: asDefault ? 'template' : 'account-default', mode: null, ruleVersion: asDefault ? (fromSample ? 'plotcloud-sample-site' : TEMPLATE.id + '@' + TEMPLATE.version) : null, at, event: 'seeded' }); }
+    const sample = fromSample && path.startsWith('site.'), asDefault = sample || def !== undefined && JSON.stringify(def) === JSON.stringify(v);
+    try { P.setParameter(p, { path, value: v, valueOrigin: asDefault ? 'platform-default' : 'user-override', acquisition: asDefault ? 'template' : 'account-default', mode: null, ruleVersion: asDefault ? (sample ? 'plotcloud-sample-site' : TEMPLATE.id + '@' + TEMPLATE.version) : null, at, event: 'seeded' }); }
     catch (e) { P.setParameter(p, { path, value: v, valueOrigin: 'unrecorded', acquisition: 'unrecorded', at, event: 'seeded-unvalidated', unvalidated: true, meta: { validation: e.message } }); }
   }
   if (c?.site?.climate) P.recordConditionsChange(p, emptyLike, { site: { climate: c.site.climate }, defaults: {} }, { at, event: 'seeded', mode: null });
@@ -171,4 +171,18 @@ export function integrityProblems(p) {
   for (const r of p.reportRevisions || []) for (const id of r.runIds || []) if (!RUN.has(id)) out.push(`report ${r.id} points at missing run ${id}`);
   for (const f of p.feedback || []) if (f.reportRevisionId && !REP.has(f.reportRevisionId)) out.push(`feedback ${f.id} points at missing report ${f.reportRevisionId}`);
   return out;
+}
+
+// Use template (use-templates.js): copied into this project's configuration as a new configuration revision. A later template
+// version is a separate, explicit change; saved plan revisions keep the values they froze.
+export function applyProgram(p, template, { at = now(), author = null } = {}) {
+  const cfg = p.contract.config, prev = cfg.program ? cfg.program.id + '@' + cfg.program.version : null;
+  cfg.revision += 1; cfg.program = clone(template);
+  cfg.history.push({ revision: cfg.revision, at, author, change: prev ? 'use template changed from ' + prev : 'use template applied', template: template.id + '@' + template.version });
+  return cfg.program;
+}
+// Counts for project cards and the overview (plan §3.1).
+export function stats(p) {
+  const recs = (p.parameters?.records || []).filter((r) => r.active);
+  return { mode: p.contract?.uiMode || 'advanced', overrides: recs.filter((r) => ['user-override', 'workbench-input'].includes(r.valueOrigin)).length, derived: recs.filter((r) => r.valueOrigin === 'derived').length, unrecorded: recs.filter((r) => r.valueOrigin === 'unrecorded').length, plans: (p.plans || []).length, revisions: (p.planRevisions || []).length, runs: (p.runs || []).length, reports: (p.reportRevisions || []).length, openFeedback: (p.feedback || []).filter((f) => f.status === 'open').length };
 }

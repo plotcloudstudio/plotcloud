@@ -2,6 +2,7 @@
 // (new, open, rename, duplicate, archive, delete), recent activity, the simulations you use most, plan and storage.
 // Everything comes from this browser's store (store.js); nothing here is estimated.
 import * as S from '../store.js';
+import * as Cx from '../project-contract.js';
 import { SIMS, sampleModel, simImg } from '../data.js';
 import { $, $$, esc, toast, setCurrent, currentProject, currentVersion, setCurrentVersion, img } from '../app.js';
 
@@ -31,6 +32,7 @@ export function render(app) {
           <select class="inp" id="sort" aria-label="Sort projects"><option value="recent">Last changed</option><option value="name">Name</option><option value="results">Most results</option></select>
           <div class="db-new"><button class="btn accent" id="newBtn" aria-haspopup="true" aria-expanded="false">+ New project</button>
             <div class="db-menu" id="newMenu" hidden role="menu">
+              <a role="menuitem" href="#/project/new"><b>From an address</b><small>Simple or Advanced · weather is matched for you</small></a>
               <a role="menuitem" href="#/new-site"><b>From the map</b><small>Find the place; its buildings, roads and ground come in</small></a>
               <button role="menuitem" data-new="blank"><b>Blank</b><small>An empty model on your default site</small></button>
               <button role="menuitem" data-new="sample"><b>From the sample</b><small>A copy of the courtyard studio with two versions</small></button>
@@ -86,8 +88,9 @@ export function render(app) {
       return `<article class="card db-p" data-id="${p.id}"><a class="db-th" href="#/workspace/${p.id}" data-open="${p.id}" tabindex="-1" aria-hidden="true">${thumbOf(p)}</a>
         <div class="db-pb"><div class="db-pt"><h3>${esc(p.name)}</h3><button class="db-dots" data-more="${p.id}" aria-label="More for ${esc(p.name)}" aria-haspopup="true">⋯</button></div>
         <p class="meta">${esc((S.siteOf(p)?.label || '—').split(',')[0])} · ${p.versions.length} version${p.versions.length === 1 ? '' : 's'} · ${p.runs.length} result${p.runs.length === 1 ? '' : 's'}</p>
+        <p class="note" data-stats>${(() => { const st = Cx.stats(p); return `${st.mode === 'simple' ? 'Simple' : 'Advanced'} · ${st.plans} plan${st.plans === 1 ? '' : 's'} · ${st.derived} derived · ${st.overrides} custom${st.openFeedback ? ` · ${st.openFeedback} open feedback` : ''} · ${S.persistent() ? 'this browser' : 'not saved'}`; })()}</p>
         <p class="note">${last ? `v${last.n} “${esc(last.note)}” · ` : 'No saved version · '}changed ${ago(p.updated)}${dirty ? ' · <span class="dirty">unsaved changes</span>' : ''}${p.archived ? ' · archived' : ''}</p>
-        <div class="acts"><a class="btn sm primary" href="#/workspace/${p.id}" data-open="${p.id}">Open</a><a class="btn sm" href="#/results/${p.id}" data-open="${p.id}">Results</a><a class="btn sm" href="#/simulations" data-open="${p.id}">Simulate</a></div></div></article>`; }).join('')
+        <div class="acts"><a class="btn sm primary" href="#/project/${p.id}" data-open="${p.id}">Overview</a><a class="btn sm" href="#/workspace/${p.id}" data-open="${p.id}">Open</a><a class="btn sm" href="#/results/${p.id}" data-open="${p.id}">Results</a><a class="btn sm" href="#/simulations" data-open="${p.id}">Simulate</a></div></div></article>`; }).join('')
       || `<div class="card db-empty"><b>${showArch ? 'No archived projects.' : q ? 'No project matches.' : 'No projects yet.'}</b>${!showArch && !q ? '<p class="note">Start one with “+ New project”.</p>' : ''}</div>`;
     const ab = $('#arch', app); ab.hidden = !arch.length && !showArch; ab.textContent = showArch ? '← Back to your projects' : `Show archived (${arch.length})`;
     $$('#plist [data-open]', app).forEach((a) => a.addEventListener('click', () => setCurrent(S.project(a.dataset.open))));
