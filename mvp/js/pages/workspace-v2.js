@@ -14,6 +14,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 import * as S from '../store.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
+import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=light-only-20261028-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
@@ -150,6 +151,7 @@ export function render(app, [pid]) {
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
+    <button type="button" id="addSimBtn" class="w2-addsim" title="Add simulation" aria-label="Add simulation" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <span class="sp"></span>
     <button type="button" data-panel="project" title="Project" aria-label="Project">${PROJECT_ICON}</button>
   </nav>
@@ -637,6 +639,7 @@ export function render(app, [pid]) {
   function layers() {
     const siteLayer = M().layers.find(l => l.name === 'Site');
     $('#editSite', app).textContent = siteLayer?.locked === false ? 'Finish site editing' : 'Edit site';
+    siteBanner(siteLayer?.locked === false);
     const host = $('#layers', app), comps = M().components;
     for (const c of comps) if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#ccc', visible: true, locked: false });
     const hid = (c) => { const s = psSel(c.id); return !!s && HIDDEN.has(s.id); };
@@ -699,6 +702,16 @@ export function render(app, [pid]) {
   const studyChoice=document.createElement('select');studyChoice.id='workspaceStudy';studyChoice.setAttribute('aria-label','Simulation study');studyChoice.innerHTML=SIMS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
   try{const saved=localStorage.getItem('pc-workspace-study');if(SIMS.some(s=>s.id===saved))studyChoice.value=saved;}catch{}
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
+  // "Add simulation" on the left rail: pick a study, then the same pre-flight and handoff as Send to Simulation
+  const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
+  simMenu.innerHTML=CATEGORIES.map(c=>`<div class="w2-simcat">${esc(c.label)}</div>`+SIMS.filter(x=>categoryOf(x.id)===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}">${esc(x.name)}</button>`).join('')).join('');
+  document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
+  const placeMenu=()=>{const r=addSim.getBoundingClientRect(),h=Math.min(simMenu.scrollHeight,innerHeight*0.7);simMenu.style.left=(r.right+8)+'px';simMenu.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top-h/2))+'px';};
+  const closeMenu=()=>{simMenu.hidden=true;addSim.setAttribute('aria-expanded','false');};
+  addSim.onclick=e=>{e.stopPropagation();if(simMenu.hidden){simMenu.hidden=false;placeMenu();addSim.setAttribute('aria-expanded','true');simMenu.querySelector('button')?.focus();}else closeMenu();};
+  simMenu.onclick=e=>{const b=e.target.closest('[data-addsim]');if(!b)return;closeMenu();studyChoice.value=b.dataset.addsim;studyChoice.onchange();$('#sendSim',app).click();};
+  simMenu.onkeydown=e=>{if(e.key==='Escape'){closeMenu();addSim.focus();}};
+  document.addEventListener('click',e=>{if(!simMenu.hidden&&!simMenu.contains(e.target)&&e.target!==addSim)closeMenu();});
   $('#sendSim', app).onclick = async () => {
     const button=$('#sendSim',app),pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready){toast('The model is still loading.');return;}button.disabled=true;button.textContent='Preparing simulation…';button.setAttribute('aria-busy','true');shell.inert=true;shell.setAttribute('aria-busy','true');
     try{
@@ -713,6 +726,8 @@ export function render(app, [pid]) {
       location.hash='#/simulations/'+studyChoice.value+'?autorun=workspace';
     }catch(error){toast('The current model could not be sent: '+(error.message||'storage unavailable'));button.disabled=false;button.textContent='Send to Simulation';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}
   };
+  // site edit mode banner (bottom centre): the Site layer is unlocked until Done
+  function siteBanner(on) { let b = $('#siteEditBanner', app); if (!b) { b = document.createElement('div'); b.id = 'siteEditBanner'; b.className = 'wb-site-banner'; b.setAttribute('role', 'status'); b.innerHTML = '<b>Editing site</b><span>Terrain and surroundings are unlocked; changes are kept with the next saved version.</span><button type="button">Done</button>'; app.querySelector('.wb-shell').append(b); b.querySelector('button').onclick = () => editSiteGeometry(); } b.hidden = !on; app.querySelector('.wb-shell').classList.toggle('wb-site-editing', on); }
   const editSiteGeometry = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
   const handoff=mountHandoff(app,p,{model:M,version:baseline,dirty,check:checkHandoff,locate:ref=>{const k=({Wall:'wall',Opening:'op',Furniture:'furn',Floor:'floor','Floor opening':'void'})[ref.k]||ref.k;setSel(['ps:'+k+':'+ref.id],{params:true});},onGeometryEdit:editSiteGeometry});
   $('#editSite',app).onclick=()=>app.querySelector('#projectBaseline').click();
@@ -750,5 +765,5 @@ export function render(app, [pid]) {
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; disposeStart(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

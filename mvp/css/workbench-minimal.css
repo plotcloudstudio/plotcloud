@@ -21,3 +21,14 @@
 /* checklist and its reopen button at the same scale */
 .pc-start{width:250px;padding:12px;font-size:12px}.pc-start h2{font-size:12.5px}.pc-start p{font-size:11px}.pc-start li a{padding:5px 4px;font-size:11.5px}.pc-start .ck{width:14px;height:14px;font-size:9px}
 .w2.w3 .btn.sm:disabled{opacity:.45;cursor:not-allowed}
+.w2.w3 .w2-addsim{margin-top:8px;width:30px;height:30px;border-radius:8px;border:0;background:#111827;color:#fff;display:grid;place-items:center;cursor:pointer}
+.w2.w3 .w2-addsim:hover{background:#374151}
+.w2-simmenu{position:fixed;z-index:70;width:210px;max-height:70vh;overflow:auto;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 10px 30px rgba(20,25,35,.15);padding:6px;font:11.5px Inter,system-ui,sans-serif}
+.w2-simmenu[hidden]{display:none}
+.w2-simcat{font-size:10px;color:#9ca3af;padding:8px 8px 3px}
+.w2-simmenu button{display:block;width:100%;text-align:left;border:0;background:none;padding:6px 8px;border-radius:6px;color:#111827;font:inherit;cursor:pointer}
+.w2-simmenu button:hover,.w2-simmenu button:focus{background:#f3f4f6;outline:none}
+.wb-site-banner{position:fixed;z-index:65;left:50%;bottom:44px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#1f9d63;color:#fff;border-radius:8px;padding:7px 8px 7px 14px;font:11.5px Inter,system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.wb-site-banner[hidden]{display:none}.wb-site-banner b{font-weight:700}.wb-site-banner span{opacity:.92}
+.wb-site-banner button{border:0;border-radius:6px;background:#fff;color:#1f6b45;font:600 11px Inter,system-ui,sans-serif;padding:4px 10px;cursor:pointer}
+.wb-site-editing #editSite{background:#1f9d63!important;color:#fff!important}
