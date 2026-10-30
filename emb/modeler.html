@@ -5607,10 +5607,43 @@ window.S3 = (() => {
     cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); cam.position.set(18, 16, 22);
     ctl = new OC(cam, ev || canvas); ctl.mouseButtons = { LEFT: null, MIDDLE: window.__WSROLE?T.MOUSE.PAN:T.MOUSE.ROTATE, RIGHT: window.__WSROLE?T.MOUSE.ROTATE:T.MOUSE.PAN }; ctl.zoomToCursor = true; ctl.enableDamping = false; ctl.maxPolarAngle = Math.PI * 0.49; ctl.addEventListener('change', () => { render(); if (window.zoomUI) window.zoomUI(); if (window.ov3) window.ov3(); });
     const ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshLambertMaterial({ color: window.PlotCloudUI?.viewportColor() || 0xeff1f4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.16; scene.add(ground);
-    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
+    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); WM.ground = [ground, grid]; ctl.maxDistance = 4e6; addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
-  function render() { if (R && api.on) { if (api.preRender) api.preRender(); R.render(scene, WALK.on ? WALK.cam : cam); } }
+  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); R.render(scene, WALK.on ? WALK.cam : cam); } }
+  // ---- the world around the site: OpenStreetMap tiles in three rings (about 24 km, 780 km and the world) under the site.
+  // Hidden close up (only the site shows); fades in as the camera pulls back. Tiles: Esri Light Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors).
+  const WM = { key: '', rings: [], siteR: 300, ground: [] };
+  const wmTile = (z, x, y) => new Promise((res) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${z}/${y}/${x}`; });   // Esri Light Gray Canvas (no labels); attribution in the viewport
+  async function worldBuild(site) {
+    const o = site && site.origin; if (!T || !o || !isFinite(o.lat) || !isFinite(o.lon)) return;
+    const key = o.lat.toFixed(5) + ',' + o.lon.toFixed(5); if (WM.key === key) return; WM.key = key;
+    for (const r of WM.rings) { scene.remove(r); r.geometry.dispose(); r.material.map?.dispose(); r.material.dispose(); } WM.rings = [];
+    WM.siteR = (site.boundary && site.boundary.r) || 300;
+    const kx = 111320 * Math.cos(o.lat * Math.PI / 180), ky = 110574, toLat = (y, n) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
+    for (const [i, z, span] of [[0, 13, 5], [1, 8, 5], [2, 3, 8]]) {
+      const n = 2 ** z, cx = Math.floor((o.lon + 180) / 360 * n), cy = Math.floor((1 - Math.log(Math.tan(Math.PI / 4 + o.lat * Math.PI / 360)) / Math.PI) / 2 * n), h = Math.floor(span / 2);
+      const x0 = Math.max(0, cx - h), y0 = Math.max(0, cy - h), x1 = Math.min(n - 1, x0 + span - 1), y1 = Math.min(n - 1, y0 + span - 1), w = x1 - x0 + 1, hh = y1 - y0 + 1;
+      const cv = document.createElement('canvas'); cv.width = w * 256; cv.height = hh * 256; const g = cv.getContext('2d'); g.fillStyle = '#eef0f2'; g.fillRect(0, 0, cv.width, cv.height);
+      const ims = await Promise.all([...Array(w * hh)].map((_, k) => wmTile(z, x0 + (k % w), y0 + Math.floor(k / w)))); if (WM.key !== key) return;
+      g.filter = 'grayscale(1) brightness(1.04)'; ims.forEach((im, k) => { if (im) g.drawImage(im, (k % w) * 256, Math.floor(k / w) * 256); });
+      const lonW = x0 / n * 360 - 180, lonE = (x1 + 1) / n * 360 - 180, latN = toLat(y0, n), latS = toLat(y1 + 1, n);
+      const W0 = (lonW - o.lon) * kx, E0 = (lonE - o.lon) * kx, N0 = (latN - o.lat) * ky, S0 = (latS - o.lat) * ky;
+      const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+      const m = new T.Mesh(new T.PlaneGeometry(E0 - W0, N0 - S0), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2; m.position.set((W0 + E0) / 2, -0.6 - i * 0.6, -(N0 + S0) / 2); m.renderOrder = -10 + i; m.name = 'world-map'; m.userData = { k: 'world', ring: i };
+      scene.add(m); WM.rings.push(m);
+    }
+    render();
+  }
+  function worldFade() {
+    if (!cam || !ctl) return; const d = cam.position.distanceTo(ctl.target), r = WM.siteR;
+    const t = Math.max(0, Math.min(1, (d - 3.5 * r) / (4 * r)));   // 0 close up (fitted view shows only the site) → 1 zoomed out
+    for (const m of WM.rings) m.material.opacity = m.userData.ring === 0 ? t : m.userData.ring === 1 ? t * Math.max(0, Math.min(1, (d - 8000) / 8000)) : t * Math.max(0, Math.min(1, (d - 150000) / 150000));
+    for (const g of WM.ground) g.visible = t < 0.98;
+    if (WM.rings.length && canvas?.parentElement) { if (!WM.credit) { WM.credit = document.createElement('div'); WM.credit.textContent = 'Map: Esri, HERE, Garmin, © OpenStreetMap contributors'; WM.credit.style.cssText = 'position:absolute;right:8px;bottom:6px;font:10px system-ui,sans-serif;color:#6b7280;background:rgba(255,255,255,.7);padding:1px 6px;border-radius:4px;pointer-events:none;z-index:2'; canvas.parentElement.append(WM.credit); } WM.credit.hidden = t <= 0; }
+    const far = Math.max(2000, d * 30); if (Math.abs(cam.far - far) > far * 0.2) { cam.far = far; cam.near = Math.max(0.05, d / 4000); cam.updateProjectionMatrix(); }
+  }
 
   // ---- geometry ----
   const MAT = {};
@@ -5716,6 +5749,7 @@ window.S3 = (() => {
   const siteFree = (grp) => { const b = new T.Box3(); grp.children.forEach((c) => { if (c.name !== 'site') b.expandByObject(c); }); return b.isEmpty() ? new T.Box3().setFromObject(grp) : b; };
   api.update = (M, S, o) => {
     if (!R) return; if (grp) { scene.remove(grp); grp.traverse((m) => { if (m.geometry) m.geometry.dispose();if(m.userData.__selected)for(const material of [m.material].flat().filter(Boolean))material.dispose(); }); }
+    if (M && M.site) worldBuild(M.site);
     grp = o.explode ? explodeGroup(M, S, o) : buildGroup(M, S, o); const selected=window.__wsSelections||[o.sel].filter(Boolean);for(const s of selected)highlight(grp,s); scene.add(grp);
     if (o.fit || !fitted) { fitted = true; const b = siteFree(grp), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6); ctl.target.copy(c); cam.position.set(c.x + r * 0.75, c.y + r * 0.85, c.z + r * 1.0); cam.near = 0.1; cam.far = r * 40; cam.updateProjectionMatrix(); ctl.update(); d0 = cam.position.distanceTo(ctl.target); }
     render();

@@ -13,6 +13,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
 import * as P from '../parameters.js';
+import { mountChecklist } from '../onboarding.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=light-only-20261028-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
@@ -103,6 +104,7 @@ export function render(app, [pid]) {
   const p = (pid && S.project(pid)) || currentProject();
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project yet. <a href="#/">Create one on Home.</a></p></div>'; return; }
   setCurrent(p);
+  const disposeStart = mountChecklist(p);   // getting-started checklist (onboarding.js)
   const converted = ensureStudio(p);
   if (!p.draft.layers.find((l) => l.name === 'Masses')) {   // massing (2026-10-25): every project has the layer; a saved draft stays saved
     const lv = p.versions.at(-1), clean = lv && JSON.stringify(lv.model) === JSON.stringify(p.draft), add = (m) => m.layers.splice(Math.max(0, m.layers.findIndex((l) => l.name === 'Site') + 1), 0, { name: 'Masses', color: LAYER_COLORS.Masses, visible: true, locked: false });
@@ -144,7 +146,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=laptop-layout-20261028-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=world-map-20261030-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -748,5 +750,5 @@ export function render(app, [pid]) {
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; disposeStart(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

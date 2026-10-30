@@ -54,3 +54,9 @@ export async function fetchTerrain(F, r, step = 10) {
   const zz = abs.map((v) => Math.round((v - e0) * 100) / 100), lo = Math.min(...zz), hi = Math.max(...zz);
   return { provider: 'AWS Terrain Tiles (Terrarium, zoom 15, bilinear; SRTM, NED and other public elevation data)', res: step, elev0: Math.round(e0 * 10) / 10, relief: Math.round((hi - lo) * 10) / 10, grid: { x0, y0, step, nx, ny, z: zz } };
 }
+// Is terrain available at a point? Reads the one zoom-12 Terrarium tile under it and returns the ground height there (m).
+export async function terrainAt(lat, lon) {
+  const z = 12, n = 2 ** z, tx = (lon + 180) / 360 * n, s = Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)), ty = (1 - s / Math.PI) / 2 * n;
+  const d = await tile(z, Math.floor(tx), Math.floor(ty)), px = Math.min(255, Math.floor((tx % 1) * 256)), py = Math.min(255, Math.floor((ty % 1) * 256)), i = (py * 256 + px) * 4;
+  return Math.round((d[i] * 256 + d[i + 1] + d[i + 2] / 256) - 32768);   // tile() resolves to the RGBA pixel array
+}
