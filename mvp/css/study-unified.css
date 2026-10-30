@@ -23,3 +23,22 @@
 @media(max-width:900px){.study-shell{height:auto;min-height:calc(100dvh - var(--pc-ui-shell-height,64px))}.study-shell :is(.env-body,.ss-body,.study-local-body){grid-template-columns:minmax(0,1fr)!important;grid-template-rows:440px auto auto}.study-shell .study-main{grid-row:1;min-height:400px}.study-shell .study-settings,.study-shell .study-results{max-height:65vh!important}.study-local-head>.acts{flex-wrap:wrap;margin-left:0}.study-local-head select{max-width:180px}.study-shell .study-main .ss-view{min-height:350px!important}.study-nav button{font-size:11px}}
 
 .study-port{user-select:none;-webkit-user-select:none}.study-shell tr[aria-selected=true]{background:color-mix(in srgb,var(--btn) 20%,var(--card));outline:1px solid var(--btn)}
+/* One study layout for every simulation (Sun Hours pattern): header, Settings|Export and Results|Charts tabs, view switch */
+.study-shell .shbar.env-head,.study-shell .shbar.ss-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 4px 4px!important;border-bottom:1px solid var(--line);background:var(--bg);font-size:13px}
+.study-shell .shbar .shname{font-size:16px;letter-spacing:-.02em;font-weight:700}
+.study-shell .shbar .study-workflow .study-state{flex:1 0 100%;margin:0;color:var(--ink2);font-size:12px;line-height:1.5}
+.study-shell .shbar .btn{font-size:12px;min-height:28px}
+.study-shell .study-panel-nav.pc-fit-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.study-shell .study-panel-nav.pc-fit-tabs button{font:500 12px var(--sans,system-ui);padding:5px 8px;min-height:28px;border:1px solid var(--line,#ddd);border-radius:5px;background:var(--card,#fff);color:var(--ink,#222);cursor:pointer}
+.study-shell .study-panel-nav.pc-fit-tabs button[aria-selected=true]{background:var(--accent-soft,#fbe9e5);border-color:var(--accent,#d8402a);color:var(--accent,#d8402a)}
+.study-shell .study-tab-panel[hidden],.study-shell .study-chart-gallery[hidden]{display:none!important}
+.study-shell .study-results[data-study-tab=charts]>:not(.study-panel-nav):not(.study-chart-gallery){display:none!important}
+.study-shell .study-results[data-study-tab=results] :is(canvas,.env-wind-rose){display:none!important}
+.study-shell .study-chart-gallery figure{margin:0 0 14px}.study-shell .study-chart-gallery figcaption{font:600 12px var(--sans,system-ui);margin-bottom:6px}
+.study-shell .study-export-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0 10px;border-bottom:1px solid var(--line)}.study-shell .study-export-actions h3{flex-basis:100%;margin:0;font-size:13px}.study-shell .study-export-actions .note{flex-basis:100%;margin:0}
+.study-shell .study-modes{background:var(--fill,#ececef);border-radius:9px;padding:2px;gap:2px!important}
+.study-shell .study-modes button{border:0!important;border-radius:7px;background:transparent!important;color:var(--ink)!important;font:500 12.5px var(--sans,system-ui);padding:4px 10px}
+.study-shell .study-modes button[aria-pressed=true]{background:#fff!important;color:var(--blue,#2d6cdf)!important;box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+.study-shell .shbar .study-workflow{justify-content:flex-end}
+.study-shell .shbar .study-workflow .study-state{flex:1 1 260px!important;order:-1}
+.study-shell .shbar .study-workflow progress{order:-1}
