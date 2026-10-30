@@ -33,7 +33,7 @@
 .study-shell .study-panel-nav.pc-fit-tabs button[aria-selected=true]{background:var(--accent-soft,#fbe9e5);border-color:var(--accent,#d8402a);color:var(--accent,#d8402a)}
 .study-shell .study-tab-panel[hidden],.study-shell .study-chart-gallery[hidden]{display:none!important}
 .study-shell .study-results[data-study-tab=charts]>:not(.study-panel-nav):not(.study-chart-gallery){display:none!important}
-.study-shell .study-results[data-study-tab=results] :is(canvas,.env-wind-rose){display:none!important}
+.study-shell .study-results[data-study-tab=results] :is(canvas,svg[role=img],.env-wind-rose,.env-mask){display:none!important}
 .study-shell .study-chart-gallery figure{margin:0 0 14px}.study-shell .study-chart-gallery figcaption{font:600 12px var(--sans,system-ui);margin-bottom:6px}
 .study-shell .study-export-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0 10px;border-bottom:1px solid var(--line)}.study-shell .study-export-actions h3{flex-basis:100%;margin:0;font-size:13px}.study-shell .study-export-actions .note{flex-basis:100%;margin:0}
 .study-shell .study-modes{background:var(--fill,#ececef);border-radius:9px;padding:2px;gap:2px!important}

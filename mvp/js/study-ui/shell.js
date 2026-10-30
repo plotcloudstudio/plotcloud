@@ -41,12 +41,17 @@ function unify(root,kind,{settings,results,nav,heading,chartStage}){
  rnav.innerHTML='<button type="button" role="tab" data-study-result-tab="results">Results</button><button type="button" role="tab" data-study-result-tab="charts">Charts</button>';
  const gallery=document.createElement('div');gallery.className='study-chart-gallery';gallery.hidden=true;
  heading.replaceWith(rnav);results.append(gallery);
- function charts(){gallery.replaceChildren();const visuals=[...results.querySelectorAll('canvas,.env-wind-rose'),...(chartStage?[...chartStage.querySelectorAll('canvas,.env-wind-rose')]:[])].filter(v=>!gallery.contains(v));
-  for(const v of visuals){const fig=document.createElement('figure');let h=v.previousElementSibling;while(h&&!h.matches('h2,h3'))h=h.previousElementSibling;const cap=document.createElement('figcaption');cap.textContent=h?.textContent||'';
+ function charts(){gallery.replaceChildren();const pick='canvas,svg[role=img],.env-wind-rose',visuals=[...results.querySelectorAll(pick),...(chartStage?[...chartStage.querySelectorAll(pick)]:[])].filter((v,i,a)=>!gallery.contains(v)&&a.indexOf(v)===i);
+  for(const v of visuals){const fig=document.createElement('figure');let h=v.previousElementSibling;while(h&&!h.matches('h2,h3'))h=h.previousElementSibling;const cap=document.createElement('figcaption');cap.textContent=h?.textContent||v.getAttribute('aria-label')||'';
    if(v.tagName==='CANVAS'){const img=document.createElement('img');try{img.src=v.toDataURL('image/png');}catch{continue;}img.alt=cap.textContent||'Chart';img.style.maxWidth='100%';fig.append(cap,img);}else fig.append(cap,v.cloneNode(true));gallery.append(fig);}
   if(!gallery.children.length)gallery.innerHTML='<p class="note">No charts for this result yet. Run the study; numeric results are under Results.</p>';else if(chartStage)gallery.insertAdjacentHTML('afterbegin','<p class="note">The same charts are also shown in the main view.</p>');}
  function showResult(which){for(const b of rnav.querySelectorAll('button'))b.setAttribute('aria-selected',String(b.dataset.studyResultTab===which));results.dataset.studyTab=which;gallery.hidden=which!=='charts';if(which==='charts')charts();}
  for(const b of rnav.querySelectorAll('button'))b.onclick=()=>showResult(b.dataset.studyResultTab);showResult('results');
+ // the study code re-renders the results panel after each run: keep the tab bar and gallery, and show fresh results
+ let pending=0;
+ new MutationObserver(list=>{if(rnav.parentElement!==results){results.prepend(rnav);results.append(gallery);showResult('results');return;}
+  // hover picking redraws the sky mask: keep the Charts tab current
+  if(results.dataset.studyTab==='charts'&&list.some(m=>!gallery.contains(m.target))&&!pending)pending=requestAnimationFrame(()=>{pending=0;charts();});}).observe(results,{childList:true,subtree:true,attributes:true,characterData:true});
 }
 export function mountStudyShell(root,{kind='environment',spatial=true}={}){
  root.classList.add('study-shell');const $=s=>root.querySelector(s);let body,settings,main,results,chartStage=null;
