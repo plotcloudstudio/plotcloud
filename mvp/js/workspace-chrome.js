@@ -68,15 +68,16 @@ export function mountChrome(app, api) {
   tr.innerHTML = `<button type="button" class="sp-b sp-saved" data-sp="saved" title="Versions" aria-label="Versions">${I(P.check)}</button><span class="sp-sep"></span><span class="sp-u"></span><span class="sp-sep"></span>${btn('export', 'Export model', 'download')}${btn('import', 'Import model', 'upload')}<span class="sp-c"></span>`;
   tr.querySelector('.sp-u').replaceWith(cmd('undo', P.undo, 'Undo (Ctrl+Z)'), cmd('redo', P.redo, 'Redo (Ctrl+Y)'));
   tr.querySelector('.sp-c').replaceWith(cmd('center', '<circle cx="12" cy="12" r="2.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', 'Center the imported building at the origin'));
-  { const st = $('#workspaceStudy'); if (st) { st.classList.add('sp-study'); tr.append(st); } }   // the study Send to Simulation sends
-  tr.append($('#sendSim')); root.append(tr);
+  // Send to Simulation is gone from view (2026-10-30): studies open in this view from Add simulation. The button and its study
+  // picker stay, hidden, because a study that does not run here yet opens its own page through them (the version handoff)
+  const keep = el('div', 'sp-keep'); keep.hidden = true; keep.append(...[$('#workspaceStudy'), $('#sendSim')].filter(Boolean)); root.append(tr, keep);
 
   // ---- left rail: statistics, the panels, spaces; Add simulation on its own below
   const left = el('nav', 'sp-rail sp-left'); left.setAttribute('aria-label', 'Panels');
   left.innerHTML = btn('stats', 'Statistics', 'stats', 'aria-pressed="false"');
   const tabList = $('#tabList'); left.append(tabList);
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
-  left.insertAdjacentHTML('beforeend', `<a class="sp-b" href="#/project/${p.id}" title="Results and reports: compare studies, export the report" aria-label="Results and reports">${I(P.results)}</a>`);
+  left.insertAdjacentHTML('beforeend', btn('compare', 'Results and compare: versions side by side', 'results', 'aria-pressed="false"'));
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'));
   root.append(left, add);
 
@@ -115,7 +116,8 @@ export function mountChrome(app, api) {
   for (const k of ['stats', 'spaces', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
-  function openCard(on) { root.classList.toggle('sp-card-open', on); if (on) closePops(); }
+  // the panels card and a study panel share the left side: the card covers the study panel while it is open
+  function openCard(on) { root.classList.toggle('sp-card-open', on); if (on) closePops(); const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
   let lastTab = UI.tab;
   tabList.addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (!t) return;
     if (root.classList.contains('sp-card-open') && t.getAttribute('aria-selected') === 'true') { e.stopImmediatePropagation(); openCard(false); return; }
@@ -151,6 +153,7 @@ export function mountChrome(app, api) {
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
     else if (k === 'dim') goView(UI.view === 'plan' ? 'persp' : 'plan');
+    else if (k === 'compare') { cmp.hidden = !cmp.hidden; b.setAttribute('aria-pressed', String(!cmp.hidden)); if (!cmp.hidden) drawCompare(); }
     else if (k === 'zoomSel') doc()?.getElementById('fitSelectedBtn')?.click();
     else if (pops[k]) { e.stopPropagation(); togglePop(k, b); }
   });
@@ -210,6 +213,99 @@ export function mountChrome(app, api) {
     }
   }
 
+  // ---- studies in this view (2026-10-30): Add simulation opens a study panel over the model; Sun hours runs here and draws on the
+  // ground in 3D. The other studies keep their own page for now; their panel says so and opens it (with the version handoff).
+  const IN_VIEW = { sunhours: true }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
+  const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation');
+  const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, legend);
+  const ST = { id: null, tab: 'results', day: '03-21', res: null, key: '', at: null, busy: false, err: '' };
+  const simMenu = document.querySelector('.w2-simmenu');
+  if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { if (IN_VIEW[b.dataset.addsim]) b.insertAdjacentHTML('beforeend', ' <small class="sp-inview">in view</small>'); });
+    simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
+  const simName = (id) => (api.sims.find((x) => x.id === id) || { name: id }).name;
+  function openStudy(id) { if (ST.id !== id && ST.res && INST.persp.ready) INST.persp.ws.clearStudy?.(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', at: null, err: '', tab: IN_VIEW[id] ? 'settings' : 'results' }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; drawStudy(); }
+  function closeStudy() { studyCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; if (INST.persp.ready) INST.persp.ws.clearStudy?.(); }
+  function openPage(id) { const sel = $('#workspaceStudy'); if (sel) { sel.value = id; sel.onchange?.(); } $('#sendSim')?.click(); }
+  async function runStudy() {
+    ST.busy = true; ST.err = ''; drawStudy();
+    try { if (UI.view === 'plan') await goView('persp'); for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 30)); const w = INST.persp.ws; ST.res = w.sunStudy({ day: ST.day }); ST.key = w.model(); ST.saved = ''; ST.at = new Date(); ST.tab = 'results'; }
+    catch (e) { ST.err = e.message || String(e); ST.res = null; }
+    ST.busy = false; drawStudy();
+  }
+  // a result is kept with the saved version it was computed on: unsaved edits are saved as a version first
+  async function saveStudy() {
+    if (!ST.res || ST.busy) return; ST.busy = true; drawStudy();
+    try { if (dirty()) { const before = baseline()?.id; $('#saveV')?.click(); for (let i = 0; i < 100 && baseline()?.id === before; i++) await new Promise((r) => setTimeout(r, 100)); if (baseline()?.id === before) throw Error('The version could not be saved.'); }
+      const v = baseline(), r = ST.res; if (!v) throw Error('Save a version first.');
+      S.addRun(p, v.id, ST.id, { day: ST.day, dayName: r.dayName, method: 'workspace-ground', cell: r.cell, label: `Ground, ${r.dayName} (Workspace)` }, { ground: +r.avg.toFixed(2), ground2h: +(r.two * 100).toFixed(1), min: r.min, max: r.max, dayLength: r.dayLength, cells: r.cells, area: r.area, computedAt: ST.at.toISOString() }, 'workspace');
+      ST.saved = 'v' + v.n; ST.key = INST.persp.ws.model(); }
+    catch (e) { ST.err = e.message; }
+    ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();
+  }
+  function drawStudy() {
+    if (!ST.id) return; const id = ST.id, name = simName(id), inView = !!IN_VIEW[id], r = ST.res;
+    const stale = r && INST.persp.ready && INST.persp.ws.model() !== ST.key;
+    const status = ST.busy ? ['run', 'Running…'] : ST.err ? ['err', ST.err] : !r ? ['idle', inView ? 'Not run yet' : 'Runs on its own page for now'] : stale ? ['stale', 'The model changed after this result: run again'] : ['ok', `Up to date · ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${r.dayName}`];
+    const kv = (k, v) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`;
+    studyCard.innerHTML = `<header><b>${esc(name)}</b><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></header>
+      <p class="sp-status" data-state="${status[0]}">${esc(status[1])}</p>
+      ${inView ? `<div class="sp-tabs" role="tablist"><button type="button" role="tab" data-st-tab="results" aria-selected="${ST.tab === 'results'}">Results</button><button type="button" role="tab" data-st-tab="settings" aria-selected="${ST.tab === 'settings'}">Settings</button></div>` : ''}
+      <div class="sp-stbody">${!inView ? `<p class="sp-note">${esc(name)} does not run inside the Workspace yet. Open it on its own page: the current model is saved as a version first, and you come back here afterwards.</p><button type="button" class="btn sm primary" data-st="page">Open ${esc(name)}</button>`
+        : ST.tab === 'settings' ? `<label class="sp-field">Day<select data-st="day">${DAYS.map(([k, n]) => `<option value="${k}" ${k === ST.day ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          <p class="sp-note">Location, time zone and true north come from the project site. Shading: masses, the building (walls, and each room as a box up to its ceiling) and the surrounding buildings, on the terrain.</p>
+          <button type="button" class="btn sm primary sp-run" data-st="run" ${ST.busy ? 'disabled' : ''}>${ST.busy ? 'Running…' : r ? 'Run again' : 'Run analysis'}</button>`
+        : r ? `${kv('Average on the ground', fmt(r.avg, 1) + ' h')}${kv('Range', fmt(r.min, 1) + '–' + fmt(r.max, 1) + ' h')}${kv('Ground with ≥ 2 h of sun', fmt(r.two * 100) + '%')}${r.plot ? kv('Plot with ≥ 2 h of sun', fmt(r.plot.two * 100) + '%') : ''}${kv('Day length', fmt(r.dayLength, 1) + ' h')}
+          <h4>How this was found</h4><p class="sp-note">Sun directions through ${esc(r.dayName)} at the site; each ${fmt(r.cell, 1)} m ground cell (${fmt(r.cells)} cells, ${fmt(r.area)} m²) counts the time it sees the sun past ${fmt(r.prisms)} building parts and ${fmt(r.context)} surrounding buildings${r.terrain ? ', on the terrain' : ''}. ${fmt(r.ms)} ms in this browser. A design check for early massing, not a compliance result. ${ST.saved ? '' : 'Not saved yet: Save to results keeps it with a saved version of the model.'}</p>
+          ${ST.saved ? `<p class="sp-note">Saved to results with ${esc(ST.saved)}.</p>` : `<button type="button" class="btn sm primary" data-st="save" ${stale || ST.busy ? 'disabled' : ''}>Save to results</button>`} <button type="button" class="btn sm" data-st="clear">Clear from view</button> <button type="button" class="btn sm" data-st="page">Open the full study</button>`
+        : `<p class="sp-note">Choose the day in Settings, then run.</p><button type="button" class="btn sm primary" data-st="run">Run analysis</button>`}</div>`;
+    legend.hidden = !(inView && r); if (r) legend.innerHTML = `<b>Sun hours</b><div class="sp-ramp" style="background:linear-gradient(to top,${[0, .2, .4, .6, .8, 1].map((t) => INST.persp.ws?.sunRamp?.(t) || '#999').join(',')})"></div><div class="sp-rampl"><span>${r.scale} h</span><span>${fmt(r.scale / 2, 1)} h</span><span>0 h</span></div>`;
+  }
+  studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-st],[data-st-tab]'); if (!b) return;
+    if (b.dataset.stTab) { ST.tab = b.dataset.stTab; drawStudy(); return; }
+    const k = b.dataset.st; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'page') openPage(ST.id); else if (k === 'clear') { if (INST.persp.ready) INST.persp.ws.clearStudy(); ST.res = null; drawStudy(); } });
+  studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'day') { ST.day = e.target.value; drawStudy(); } });
+  let staleShown = false;
+
+  // ---- results and compare (2026-10-30), on the right: each saved version a column (newest first) and the current model; rows are
+  // the model's own figures and each study's saved results for that version. Values are read from the versions and saved runs.
+  const cmp = el('section', 'sp-card sp-compare'); cmp.hidden = true; cmp.setAttribute('aria-label', 'Results and compare'); root.append(cmp);
+  const figs = (st) => { st = st || {}; const ms = st.masses || []; return { gfa: ms.reduce((a, m) => a + area(m.points || []) * (m.storeys || 1), 0), fp: ms.reduce((a, m) => a + area(m.points || []), 0), masses: ms.length, levels: (st.levels || []).length, walls: (st.walls || []).length, ops: (st.ops || []).length, furn: (st.furn || []).length }; };
+  function compareData() {
+    const vs = p.versions.slice().reverse().slice(0, 4), cur = { id: 'current', title: 'Current', sub: dirty() ? 'unsaved changes' : 'same as v' + (baseline()?.n ?? ''), studio: studio() };
+    const cols = [cur, ...vs.map((v) => ({ id: v.id, title: 'v' + v.n, sub: v.note || new Date(v.created || v.at || Date.now()).toLocaleDateString(), studio: v.model?.studio, v }))];
+    const rows = [['Model', null], ['Gross floor area (masses)', (c) => fmt(figs(c.studio).gfa) + ' m²', (c) => figs(c.studio).gfa], ['Footprint (masses)', (c) => fmt(figs(c.studio).fp) + ' m²', (c) => figs(c.studio).fp], ['Masses', (c) => figs(c.studio).masses], ['Levels', (c) => figs(c.studio).levels], ['Walls', (c) => figs(c.studio).walls], ['Doors and windows', (c) => figs(c.studio).ops], ['Furniture', (c) => figs(c.studio).furn]];
+    const notes = [];
+    for (const sim of api.sims) {
+      const runs = p.runs.filter((r) => r.simId === sim.id && r.results); const live = sim.id === ST.id && ST.res && !(INST.persp.ready && INST.persp.ws.model() !== ST.key);
+      if (!runs.length && !live) continue;
+      const last = (c) => c.v ? runs.filter((r) => r.versionId === c.v.id).at(-1) : null;
+      const basis = new Set(cols.map((c) => last(c)).filter(Boolean).map((r) => r.settings?.label || r.settings?.dayName || 'full study'));
+      if (basis.size > 1) notes.push(`${sim.name}: the columns use different settings (${[...basis].join('; ')}), so compare them with care.`);
+      rows.push([sim.name, null]);
+      for (const [key, label, unit, dec] of sim.metrics || []) {
+        const val = (c) => { if (c.id === 'current') { if (!live) return null; const r = ST.res; return key === 'ground' ? r.avg : key === 'ground2h' ? r.two * 100 : null; } const r = last(c); return r && Number.isFinite(+r.results[key]) ? +r.results[key] : null; };
+        if (!cols.some((c) => val(c) !== null)) continue;
+        rows.push([label, (c) => { const v = val(c); return v === null ? '—' : fmt(v, dec) + (unit === '%' ? '%' : ' ' + unit); }, val]);
+      }
+    }
+    return { cols, rows, notes };
+  }
+  function drawCompare() {
+    const { cols, rows, notes } = compareData();
+    cmp.innerHTML = `<header><b>Results and compare</b><button type="button" class="sp-x" data-cmp="close" aria-label="Close">×</button></header>
+      <div class="sp-cmpwrap"><table class="sp-cmp"><thead><tr><th></th>${cols.map((c) => `<th><b>${esc(c.title)}</b><small>${esc(c.sub)}</small></th>`).join('')}</tr></thead>
+      <tbody>${rows.map(([label, show]) => show ? `<tr><td>${esc(label)}</td>${cols.map((c) => `<td>${esc(String(show(c)))}</td>`).join('')}</tr>` : `<tr class="sp-cmph"><td colspan="${cols.length + 1}">${esc(label)}</td></tr>`).join('')}</tbody></table></div>
+      ${notes.map((n) => `<p class="sp-note">${esc(n)}</p>`).join('')}${p.runs.length ? '' : '<p class="sp-note">No saved results yet. Add a simulation (+ on the left), run it and choose Save to results.</p>'}
+      <footer><button type="button" class="btn sm primary" data-cmp="version">Add version</button><button type="button" class="btn sm" data-cmp="csv">Export CSV</button><a class="btn sm" href="#/project/${esc(p.id)}">Report and exports</a></footer>`;
+  }
+  cmp.addEventListener('click', async (e) => { const b = e.target.closest('[data-cmp]'); if (!b) return; const k = b.dataset.cmp;
+    if (k === 'close') { cmp.hidden = true; $('[data-sp="compare"]', left)?.setAttribute('aria-pressed', 'false'); }
+    else if (k === 'version') { if (!dirty()) { b.textContent = 'No changes since v' + (baseline()?.n ?? ''); setTimeout(drawCompare, 1600); return; } const before = baseline()?.id; $('#saveV')?.click(); for (let i = 0; i < 100 && baseline()?.id === before; i++) await new Promise((r) => setTimeout(r, 100)); drawCompare(); }
+    else if (k === 'csv') { const { cols, rows } = compareData(), q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+      const csv = [['', ...cols.map((c) => `${c.title} ${c.sub}`)], ...rows.map(([label, show, val]) => show ? [label, ...cols.map((c) => { const v = val ? val(c) : show(c); return v === null || v === undefined ? '' : typeof v === 'number' ? +v.toFixed(3) : v; })] : [label])].map((r) => r.map(q).join(',')).join('\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `${p.name.replace(/[^\w-]+/g, '-')}-compare.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } });
+
   // ---- what changes while working: 2D / 3D label, saved state, undo / redo, sun after the 3D view rebuilds
   let sunOnce = false;
   const tick = () => {
@@ -218,7 +314,9 @@ export function mountChrome(app, api) {
     const saved = $('.sp-saved', tr); saved.dataset.state = d ? 'dirty' : 'saved'; saved.title = d ? 'Unsaved changes: save a version' : `Saved${v ? ' · v' + v.n : ''}`;
     $('#spSub', tl).textContent = `${v ? 'v' + v.n : 'No version yet'}${d ? ' · unsaved changes' : ''}`;
     if (!sunOnce && INST.persp.ready && sunState().on) { sunOnce = true; applySun(); }
+    if (ST.res && INST.persp.ready) { const st = INST.persp.ws.model() !== ST.key; if (st !== staleShown) { staleShown = st; drawStudy(); } }
   };
   const timer = setInterval(tick, 400); tick();
-  return () => { clearInterval(timer); document.removeEventListener('click', away); };
+  window.__wsStudy = { open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }) };   // for the browser checks
+  return () => { clearInterval(timer); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; };
 }

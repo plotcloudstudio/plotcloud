@@ -140,3 +140,37 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 /* the floating groups' gaps and labels let clicks and drags through to the model; only the controls take them */
 .w2.sp :is(.sp-tl,.sp-bottom,.sp-bl,.sp-blt){pointer-events:none}
 .w2.sp :is(.sp-tl,.sp-bottom,.sp-bl)>:not(.sp-blt){pointer-events:auto}
+
+/* a study in this view: its panel on the left, the legend bottom right */
+.w2.sp .sp-studycard{position:absolute;z-index:29;left:60px;top:64px;width:290px;max-height:calc(100vh - 140px);overflow:auto;padding:12px 14px;font:11.5px/1.45 Inter,system-ui,sans-serif;color:var(--sp-ink)}
+.w2.sp .sp-studycard[hidden],.w2.sp .sp-legend[hidden]{display:none}
+.w2.sp .sp-studycard header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}.w2.sp .sp-studycard header b{font-size:13px}
+.w2.sp .sp-studycard .sp-x{position:static}
+.w2.sp .sp-status{margin:0 0 10px;font-size:11px;color:var(--sp-sub);display:flex;gap:6px;align-items:center}
+.w2.sp .sp-status::before{content:"";width:7px;height:7px;border-radius:50%;background:#9ca3af;flex:none}
+.w2.sp .sp-status[data-state=ok]::before{background:#16a34a}.w2.sp .sp-status[data-state=stale]::before,.w2.sp .sp-status[data-state=run]::before{background:#d97706}.w2.sp .sp-status[data-state=err]::before{background:#d4322b}
+.w2.sp .sp-status[data-state=err]{color:#b42318}
+.w2.sp .sp-tabs{display:flex;gap:2px;background:#f3f4f6;border-radius:7px;padding:2px;margin-bottom:10px}
+.w2.sp .sp-tabs button{flex:1;border:0;background:none;border-radius:5px;padding:5px;font:500 11.5px Inter,system-ui,sans-serif;color:var(--sp-sub);cursor:pointer}
+.w2.sp .sp-tabs [aria-selected=true]{background:#fff;color:var(--sp-ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.w2.sp .sp-studycard h4{font:500 10.5px Inter,system-ui,sans-serif;color:var(--sp-sub);margin:12px 0 2px}
+.w2.sp .sp-field{display:flex;flex-direction:column;gap:3px;color:var(--sp-sub);font-size:10.5px}
+.w2.sp .sp-studycard .btn{margin-top:10px}.w2.sp .sp-run{width:100%}
+.w2.sp .sp-legend{position:absolute;z-index:28;right:60px;bottom:16px;padding:8px 10px;display:grid;grid-template-columns:auto auto;gap:4px 8px;font:11px Inter,system-ui,sans-serif;color:var(--sp-ink)}
+.w2.sp .sp-legend b{grid-column:1/-1;font-weight:600}
+.w2.sp .sp-ramp{width:12px;height:120px;border-radius:3px}
+.w2.sp .sp-rampl{display:flex;flex-direction:column;justify-content:space-between;color:var(--sp-sub);font-variant-numeric:tabular-nums}
+.w2-simmenu .sp-inview{font-size:10px;color:#16a34a;margin-left:4px}
+
+/* results and compare, on the right */
+.w2.sp .sp-compare{position:absolute;z-index:29;right:60px;top:104px;bottom:16px;width:min(620px,calc(100vw - 140px));display:flex;flex-direction:column;padding:12px 14px;font:11.5px/1.45 Inter,system-ui,sans-serif;color:var(--sp-ink)}
+.w2.sp .sp-compare[hidden]{display:none}
+.w2.sp .sp-compare header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.w2.sp .sp-compare header b{font-size:13px}.w2.sp .sp-compare .sp-x{position:static}
+.w2.sp .sp-cmpwrap{flex:1;min-height:0;overflow:auto}
+.w2.sp .sp-cmp{border-collapse:collapse;width:100%}
+.w2.sp .sp-cmp th,.w2.sp .sp-cmp td{padding:6px 8px;text-align:right;border-bottom:1px solid #f1f2f4;white-space:nowrap;font-variant-numeric:tabular-nums}
+.w2.sp .sp-cmp th:first-child,.w2.sp .sp-cmp td:first-child{text-align:left;position:sticky;left:0;background:#fff;color:var(--sp-sub);white-space:normal;min-width:130px}
+.w2.sp .sp-cmp thead th{position:sticky;top:0;background:#fff;vertical-align:bottom}.w2.sp .sp-cmp thead th b{display:block;font-weight:600}.w2.sp .sp-cmp thead th small{display:block;color:var(--sp-sub);font-weight:400;max-width:120px;overflow:hidden;text-overflow:ellipsis;margin-left:auto}
+.w2.sp .sp-cmp thead th:nth-child(2){color:#1d4ed8}
+.w2.sp .sp-cmph td{font:600 10.5px Inter,system-ui,sans-serif;color:var(--sp-ink)!important;background:#f9fafb!important;text-align:left}
+.w2.sp .sp-compare footer{display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--sp-line);margin-top:8px}

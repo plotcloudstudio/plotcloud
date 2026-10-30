@@ -1,0 +1,52 @@
+// The Workspace as the one place for the work (2026-10-30): nav without Workspace / Simulations / Projects & Results, a study added
+// with + runs in the view and paints the topographic site, its result is saved with a version and compared on the right, and the
+// Dashboard's list and map views. Needs network access (OpenStreetMap, terrain tiles) like mvp-new-site.
+const { chromium } = require('playwright'), assert = require('node:assert/strict'), fs = require('node:fs');
+(async () => {
+  const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    const p = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message));
+    const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
+    await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
+    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); });
+    await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-view]');
+    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('#nav [data-nav]')].map((a) => a.dataset.nav)), ['home', 'resources', 'pricing']);
+    console.log('PASS main nav: Dashboard, Resources, Pricing (the Workspace, its studies and results are reached from the Dashboard)');
+
+    await p.goto(base + '/mvp/#/new-project'); await p.waitForFunction(() => window.__newProjectMap, null, { timeout: 30000 });
+    await p.evaluate(() => window.__newProjectMap.place(49.2448, -123.0071, 'QA site'));
+    await p.waitForFunction(() => window.__newProjectMap.osm, null, { timeout: 120000 });
+    await p.click('#npStart'); await p.waitForFunction(() => location.hash.startsWith('#/workspace') && window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 180000 });
+    await p.evaluate(() => document.querySelector('.pc-start .x')?.click());
+    assert.equal(await p.locator('#sendSim').isVisible(), false, 'no Send to Simulation in view');
+
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=sunhours]');
+    assert.match(await p.locator('.sp-studycard').innerText(), /Sun hours[\s\S]*Not run yet/i);
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 120000 });
+    const st = await p.evaluate(() => window.__wsStudy.state()); assert.equal(st.err, ''); assert(st.res.cells > 1000 && st.res.context > 0 && st.res.max <= st.res.dayLength + 1e-6, JSON.stringify(st.res));
+    const painted = await p.evaluate(() => { const w = __ws2.inst.persp.win, g = w.S3._topoState?.(); return g; });
+    assert(await p.locator('.sp-legend').isVisible(), 'legend shown'); assert(painted && painted.ana && painted.cv, 'the result is painted into the topographic block');
+    console.log(`PASS Sun hours runs in the view: ${st.res.cells} ground cells, mean ${st.res.avg.toFixed(1)} h, painted into the site; legend shown`);
+
+    await p.click('[data-st=save]'); await p.waitForFunction(() => window.__wsStudy.state().saved || window.__wsStudy.state().err, null, { timeout: 30000 });
+    const saved = await p.evaluate(async () => { const A = await import('./js/app.js'), pr = A.currentProject(), r = pr.runs.at(-1); return { n: pr.versions.length, linked: r.versionId === pr.versions.at(-1).id, sim: r.simId, ground: r.results.ground, src: r.source, day: r.settings.day }; });
+    assert(saved.linked && saved.sim === 'sunhours' && saved.src === 'workspace' && saved.day === '03-21' && Math.abs(saved.ground - st.res.avg) < 0.01, JSON.stringify(saved));
+    console.log('PASS Save to results keeps the result with the saved version it was computed on');
+
+    await p.click('[data-sp=compare]'); const cmp = await p.locator('.sp-compare').innerText();
+    assert.match(cmp, /Ground, mean[\s\S]*\d\.\d h/); assert.match(cmp, /Current/); assert.match(cmp, /v2/);
+    const dl = p.waitForEvent('download'); await p.click('[data-cmp=csv]'); const csv = fs.readFileSync(await (await dl).path(), 'utf8');
+    assert.match(csv, /"Ground, mean"/); console.log('PASS Results and compare on the right, with a CSV export');
+    await p.click('[data-cmp=close]');
+
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=wind]');
+    assert.match(await p.locator('.sp-studycard').innerText(), /does not run inside the Workspace yet/); assert.equal(await p.evaluate(() => __ws2.inst.persp.win.S3._topoState().ana), null, 'the previous result is cleared');
+    console.log('PASS a study that does not run here yet says so and offers its own page; the previous result is cleared');
+
+    await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-view]');
+    await p.click('[data-view=list]'); assert.match(await p.locator('.ph-rows').innerText(), /Projects[\s\S]*Created[\s\S]*Last edited[\s\S]*QA site/);
+    await p.click('[data-view=map]'); await p.waitForSelector('.ph-col .ph-card'); await p.waitForFunction(() => document.querySelectorAll('#phMap .leaflet-interactive').length >= 1, null, { timeout: 20000 });
+    console.log('PASS Dashboard list (thumbnail rows) and map (cards beside the map with markers)');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+})().catch((e) => { console.error(e); process.exit(1); });

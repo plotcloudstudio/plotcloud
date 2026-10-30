@@ -5745,19 +5745,20 @@ window.S3 = (() => {
     return G;
   }
   // ---- the topographic block: surface (with its drawing), four sides and a base
-  const TOPO = { key: '', tex: null };
+  // the block's surface is drawn in layers, so a result can be painted into it: ground (green, roads), the result, water, contours
+  const TOPO = { key: '', tex: null, cv: null, L: null, G0: null, k: 1, ana: null };
   function topoTexture(site, G0) {
     const key = [site.origin?.lat, site.origin?.lon, G0.nx, G0.ny, G0.step, (site.roads || []).length, (site.areas || []).length].join(':'); if (TOPO.key === key && TOPO.tex) return TOPO.tex;
     const W = (G0.nx - 1) * G0.step, H = (G0.ny - 1) * G0.step, N = 2048, k = N / Math.max(W, H), cw = Math.round(W * k), ch = Math.round(H * k);
-    const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const g = cv.getContext('2d');
-    const X = (p) => (p[0] - G0.x0) * k, Y = (p) => ch - (p[1] - G0.y0) * k, path = (pts) => { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); };
-    g.fillStyle = '#f3f3f1'; g.fillRect(0, 0, cw, ch);
-    for (const a of site.areas || []) { if (a.kind === 'water' || a.pts.length < 3) continue; path(a.pts); g.closePath(); g.fillStyle = '#e9ebe5'; g.fill(); }
+    const layer = () => { const c = document.createElement('canvas'); c.width = cw; c.height = ch; return c; }, L = { ground: layer(), water: layer(), lines: layer() };
+    const X = (p) => (p[0] - G0.x0) * k, Y = (p) => ch - (p[1] - G0.y0) * k, path = (g, pts) => { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); };
+    let g = L.ground.getContext('2d'); g.fillStyle = '#f3f3f1'; g.fillRect(0, 0, cw, ch);
+    for (const a of site.areas || []) { if (a.kind === 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = '#e9ebe5'; g.fill(); }
     g.lineCap = g.lineJoin = 'round';
-    for (const r of site.roads || []) { if (r.pts.length < 2) continue; path(r.pts); g.strokeStyle = r.cls === 'path' ? '#e4e4e1' : '#e9e9e6'; g.lineWidth = Math.max(1.5, (r.width || (r.cls === 'path' ? 2 : 7)) * k); g.stroke(); }
-    for (const a of site.areas || []) { if (a.kind !== 'water' || a.pts.length < 3) continue; path(a.pts); g.closePath(); g.fillStyle = '#4c5461'; g.fill(); }
+    for (const r of site.roads || []) { if (r.pts.length < 2) continue; path(g, r.pts); g.strokeStyle = r.cls === 'path' ? '#e4e4e1' : '#e9e9e6'; g.lineWidth = Math.max(1.5, (r.width || (r.cls === 'path' ? 2 : 7)) * k); g.stroke(); }
+    g = L.water.getContext('2d'); for (const a of site.areas || []) { if (a.kind !== 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = '#4c5461'; g.fill(); }
     // contours: marching squares on the grid; every fifth line heavier
-    const z = G0.z, lo = Math.min(...z), hi = Math.max(...z), rel = hi - lo, step = rel < 8 ? 1 : rel < 40 ? 2 : rel < 100 ? 5 : 10;
+    g = L.lines.getContext('2d'); const z = G0.z, lo = Math.min(...z), hi = Math.max(...z), rel = hi - lo, step = rel < 8 ? 1 : rel < 40 ? 2 : rel < 100 ? 5 : 10;
     const at = (i, j) => z[j * G0.nx + i], P = (i, j) => [G0.x0 + i * G0.step, G0.y0 + j * G0.step];
     for (let lv = Math.ceil(lo / step) * step; lv <= hi; lv += step) {
       g.beginPath();
@@ -5768,8 +5769,23 @@ window.S3 = (() => {
       }
       const major = Math.round(lv / step) % 5 === 0; g.strokeStyle = major ? 'rgba(60,62,66,.6)' : 'rgba(60,62,66,.38)'; g.lineWidth = major ? 2.4 : 1.4; g.stroke();
     }
-    const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 8; if (TOPO.tex) TOPO.tex.dispose(); TOPO.key = key; TOPO.tex = tex; return tex;
+    if (TOPO.tex) TOPO.tex.dispose(); TOPO.cv = layer(); TOPO.L = L; TOPO.G0 = G0; TOPO.k = k; TOPO.key = key;
+    const tex = new T.CanvasTexture(TOPO.cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 8; TOPO.tex = tex; topoCompose(); return tex;
   }
+  // the final surface: ground, then the result (blurred a little so it reads as a field, fading out towards its edge), water, contours
+  function topoCompose() {
+    const cv = TOPO.cv; if (!cv) return; const g = cv.getContext('2d'), L = TOPO.L, o = TOPO.ana; g.clearRect(0, 0, cv.width, cv.height); g.drawImage(L.ground, 0, 0);
+    if (o) { const G0 = TOPO.G0, k = TOPO.k, a = document.createElement('canvas'); a.width = cv.width; a.height = cv.height; const ag = a.getContext('2d');
+      const X = (x, y) => { const q = o.toSite(x, y); return [(q[0] - G0.x0) * k, cv.height - (q[1] - G0.y0) * k]; };
+      const cx = o.X0 + o.nx * o.cell / 2, cy = o.Y0 + o.ny * o.cell / 2, R0 = Math.min(o.nx, o.ny) * o.cell / 2, sm = (p, q, x) => { const t = Math.max(0, Math.min(1, (x - p) / (q - p))); return t * t * (3 - 2 * t); };
+      for (let j = 0; j < o.ny; j++) for (let i = 0; i < o.nx; i++) { const v = o.vals[j * o.nx + i]; if (!Number.isFinite(v)) continue;
+        const x0 = o.X0 + i * o.cell, y0 = o.Y0 + j * o.cell, x1 = x0 + o.cell, y1 = y0 + o.cell, pts = [X(x0, y0), X(x1, y0), X(x1, y1), X(x0, y1)];
+        ag.globalAlpha = o.fade === false ? 0.85 : 0.88 * (1 - sm(0.45 * R0, R0, Math.hypot(x0 + o.cell / 2 - cx, y0 + o.cell / 2 - cy)));
+        ag.fillStyle = o.color(v); ag.beginPath(); pts.forEach((p, n) => (n ? ag.lineTo(p[0], p[1]) : ag.moveTo(p[0], p[1]))); ag.closePath(); ag.fill(); }
+      g.save(); g.filter = `blur(${Math.max(1, Math.round(o.cell * k * 0.6))}px)`; g.drawImage(a, 0, 0); g.restore(); }
+    g.drawImage(L.water, 0, 0); g.drawImage(L.lines, 0, 0); if (TOPO.tex) TOPO.tex.needsUpdate = true;
+  }
+  api._topoState = () => ({ cv: !!TOPO.cv, ana: TOPO.ana ? { nx: TOPO.ana.nx, ny: TOPO.ana.ny } : null });   // read-only, for the browser checks
   function topoBlock(M, T0) {
     const B = new T.Group(); B.name = 'site'; B.userData = { k: 'site', id: 'terrain' };
     const nx = T0.nx, ny = T0.ny, n = nx * ny, pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
@@ -5826,6 +5842,27 @@ window.S3 = (() => {
   api.sun = (o) => { if (!o) { SUN.on = null; sunApply(); return null; } SUN.north = o.north || 0; SUN.on = sunDir(o.lat, o.doy, o.hour); sunApply(); return { ...SUN.on }; };
   api.sunDir = sunDir;
   { const _upd = api.update; api.update = (...a) => { _upd(...a); if (SUN.on) sunApply(); }; }
+  // ---- an analysis result drawn on the ground (2026-10-30): one flat coloured cell per grid point, just above the terrain
+  const OVL = { g: null };
+  // o: { X0, Y0, cell, nx, ny, vals (per cell, NaN = no ground), color(v), ground(x, y), fade (true: strong in the middle, fading out
+  // from half the radius to the edge) }. One continuous surface through the cell centres, so the colours blend instead of tiling.
+  api.overlay = (o) => {
+    if (OVL.g) { scene.remove(OVL.g); OVL.g.geometry.dispose(); OVL.g.material.dispose(); OVL.g = null; }
+    TOPO.ana = o && o.toSite ? o : null; topoCompose();   // painted into the topographic block itself when the site has one
+    if (o && R && !(o.toSite && TOPO.cv && WM.topo)) { const { X0, Y0, cell, nx, ny, vals, color, ground } = o, fade = o.fade !== false, pos = new Float32Array(nx * ny * 3), col = new Float32Array(nx * ny * 4), c = new T.Color(), idx = [];
+      const cx = X0 + nx * cell / 2, cy = Y0 + ny * cell / 2, R0 = Math.min(nx, ny) * cell / 2, sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = j * nx + i, v = vals[k], x = X0 + (i + 0.5) * cell, y = Y0 + (j + 0.5) * cell;
+        pos[3 * k] = x; pos[3 * k + 1] = ground(x, y) + 0.15; pos[3 * k + 2] = -y;
+        if (Number.isFinite(v)) c.set(color(v)); else c.setRGB(1, 1, 1);
+        const a = !Number.isFinite(v) ? 0 : fade ? 0.92 * (1 - sm(0.5 * R0, R0, Math.hypot(x - cx, y - cy))) : 0.88;
+        col[4 * k] = c.r; col[4 * k + 1] = c.g; col[4 * k + 2] = c.b; col[4 * k + 3] = a; }
+      const ok = (k) => Number.isFinite(vals[k]);
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, d = a + nx, e = d + 1;
+        if (ok(a) && ok(b) && ok(d)) idx.push(a, b, d); if (ok(b) && ok(e) && ok(d)) idx.push(b, e, d); }
+      const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('color', new T.BufferAttribute(col, 4)); g.setIndex(idx);
+      OVL.g = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.DoubleSide, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })); OVL.g.name = 'analysis'; OVL.g.renderOrder = 2; scene.add(OVL.g); }
+    render();
+  };
   api.zoom = (k) => { if (!R) return; const v = cam.position.clone().sub(ctl.target); v.multiplyScalar(1 / k); cam.position.copy(ctl.target).add(v); ctl.update(); render(); if (window.zoomUI) window.zoomUI(); };
   api.pct = () => R ? Math.round(d0 / Math.max(1e-6, cam.position.distanceTo(ctl.target)) * 100) : 100;
   api.snap = async (M, S, o, w, h) => {   // a picture of the whole building for the overview panel
@@ -6453,7 +6490,28 @@ if (window.__WSROLE) {
     hidden: () => (M.hiddenIds || []).slice(),
     meshes: async () => (window.S3 && S3.wsMeshes ? S3.wsMeshes(M, S, { hidden: new Set(M.hiddenIds || []) }) : []),
     model: () => snapM(),
+    // Sun hours on the ground, in this view (2026-10-30): Plan Studio's own sun preview (hourly sun directions for the day at the
+    // site, shading by the masses, the building and the surrounding buildings, terrain heights). The building drawn with walls
+    // counts as its wall bodies and each room's bounding box up to its ceiling. Returns the figures; draws the result in 3D.
+    sunStudy(o = {}) {
+      if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
+      const day = SUN_DAYS[o.day] ? o.day : '03-21', pr = massList(M).map((m) => ({ outer: m.outer, h: m.h }));
+      for (const lv of M.levels) { const top = lv.z + lv.h; for (const P of wallPolys(lv.id)) pr.push({ outer: P, h: top }); }
+      if (S) for (const r of S.rooms) pr.push({ outer: [[r.bx0, r.by0], [r.bx1, r.by0], [r.bx1, r.by1], [r.bx0, r.by1]], h: r.z0 + r.h });
+      const t0 = performance.now(), sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
+      const box = pr.length ? sunBox(M, pr.map((m) => m.outer), o.pad || 40) : sunBox(M, [sq], 0); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.');
+      const g = sunGrid(M, pr, { day, box }); if (!g) throw Error('The sun could not be placed for this site.');
+      let lo = Infinity, hi = 0, n = 0, sum = 0, two = 0; for (const v of g.H) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); n++; sum += v; if (v >= 2) two++; }
+      const site = M.site, gAt = (x, y) => { if (!site.terrain) return 0; const q = siteOfM(M, [x, y]); return SITEC.groundAt(site.terrain, q[0], q[1]); };
+      const max = Math.max(1, Math.ceil(g.total)), color = (v) => sunRamp(v / max);
+      if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, vals: g.H, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) });
+      return { day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
+    },
+    clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); },
   });
+  // sun hours colours: deep blue (no sun) through teal and yellow to orange (sun all day)
+  function sunRamp(t) { const st = [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']]; t = Math.max(0, Math.min(1, t)); for (let i = 1; i < st.length; i++) if (t <= st[i][0]) { const [a, ca] = st[i - 1], [b, cb] = st[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return st.at(-1)[1]; }
+  WS.sunRamp = sunRamp;
   // a narrow pane: Plan Studio's 3D fit is made for a wide view, so it steps back by the pane's shape (display only)
   const aspectFit = () => { if (!window.S3 || !S3.on || !S3.zoom) return; const r = cv3.getBoundingClientRect(), a = r.width / Math.max(1, r.height); if (a < 1.3) S3.zoom(Math.max(0.3, a / 1.4)); };
   { const _b = birdView; birdView = async function () { await _b(); aspectFit(); }; }
