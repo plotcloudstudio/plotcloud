@@ -2,3 +2,6 @@ tests/validation/*.out.json
 tests/site-cities.out.json
 
 .qa/
+
+# screenshot written by tests/sun-period.cjs
+sun-period-check.png
