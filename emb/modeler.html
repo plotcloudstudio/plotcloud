@@ -2193,7 +2193,7 @@ async function makeThumbs() {
     R.dispose();
   } catch (e) { console.warn(e); }
 }
-const OP = { w: 1, f: 1,site:.5 };   // 3D opacity of walls and floors
+const OP = { w: 1, f: 1,site:1 };   // 3D opacity of walls and floors
 let MOREOPEN = false;   // the 'More settings' fold of the generator parameters stays as the person left it
 function drawOpGen(w, o, sel, hov) {   // a generated door or window seen from above: the generator's own plan block
   const key = o.gen.id + JSON.stringify(o.gen.vals); let bl = BLK.get(key); if (!bl) { bl = dBlocks(genModel(o.gen.id), o.gen.vals).plan; BLK.set(key, bl); if (BLK.size > 120) BLK.clear(); }
@@ -5058,7 +5058,7 @@ function floorPoints(f){return f.points||[[f.x,f.y],[f.x+f.w,f.y],[f.x+f.w,f.y+f
 function floorContains(f,p){return PCStudioGeometry.pointInPolygon(p,floorPoints(f))&&!(f.holes||[]).some(h=>PCStudioGeometry.pointInPolygon(p,h));}
 function floorPath(f){g.beginPath();for(const ring of [floorPoints(f),...(f.holes||[])]){ring.forEach((p,i)=>{const q=W2S(p);i?g.lineTo(...q):g.moveTo(...q);});g.closePath();}}
 function newSlabThickness(){return M.drawing?.slabThicknessByLevel?.[LV]||lvObj()?.slab||.22;}
-function siteOpacity(){return OP.site??.5;}
+function siteOpacity(){return OP.site??1;}
 function snapWalls(){const below=lvBelow();return lvWalls().concat(below&&$('#ghost').checked?lvWalls(below.id):[]);}
 function drawFences(){for(const f of M.fences||[]){if(f.lv!==LV||isHidden(f.id))continue;g.save();g.strokeStyle=wbSelected('fence',f.id)?C.accent:HOV?.k==='fence'&&HOV.id===f.id?C.ink:'#58606a';g.lineWidth=2*VP.d;g.beginPath();f.points.forEach((p,i)=>{const q=W2S(p);i?g.lineTo(...q):g.moveTo(...q);});g.stroke();for(const p of fencePostPoints(f)){const q=W2S(p);g.fillStyle=g.strokeStyle;g.fillRect(q[0]-3*VP.d,q[1]-3*VP.d,6*VP.d,6*VP.d);}g.restore();}}
 function fencePostPoints(f){const pts=[];for(let i=1;i<f.points.length;i++){const a=f.points[i-1],b=f.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(len/(f.spacing||1.5)));for(let j=0;j<n;j++)pts.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]);}pts.push(f.points[f.points.length-1]);return pts;}
@@ -5068,13 +5068,13 @@ function previewModel(){if(drawing?.kind!=='floor'||!drawing.b)return M;const a=
 const drawingTools=document.createElement('div');drawingTools.innerHTML='<button type="button" class="tl" data-tool="fence" data-layer="Wall" style="display:none" title="Fence polyline"><span>Fence</span></button><label for="slabThickness">New slab thickness · mm</label><input id="slabThickness" type="number" min="20" max="2000" step="10" value="220"><p class="note">Set thickness before drawing a floor. Slab top stays at the current level elevation.</p>';
 $('[data-tool="floor"]').closest('.ks-b').appendChild(drawingTools);HINT.fence='Click fence corners. Enter or double-click finishes; Escape cancels. Fence posts and rails do not form rooms.';HINT.floor='Set slab thickness, then drag a floor outline. Closed wall loops also create floors at the current level.';
 $('#slabThickness').onchange=()=>{const b=snapM();M.drawing=M.drawing||{};M.drawing.slabThicknessByLevel=M.drawing.slabThicknessByLevel||{};M.drawing.slabThicknessByLevel[LV]=STC.clamp((+$('#slabThickness').value||220)/1000,.02,2);commit(b);};
-const siteControl=document.createElement('div');siteControl.innerHTML='<label for="siteContextOpacity">Site context opacity · <span id="siteOpacityValue">50%</span></label><input id="siteContextOpacity" type="range" min="0" max="100" step="5" value="50"><p class="note">Surrounding context only. Your design keeps its own display settings.</p>';
+const siteControl=document.createElement('div');siteControl.innerHTML='<label for="siteContextOpacity">Site context opacity · <span id="siteOpacityValue">100%</span></label><input id="siteContextOpacity" type="range" min="0" max="100" step="5" value="100"><p class="note">Surrounding context only. Your design keeps its own display settings.</p>';
 $('#ghost').closest('.kv')?.appendChild(siteControl);if(!siteControl.isConnected)$('#ghost').parentElement.insertAdjacentElement('afterend',siteControl);
 $('#siteContextOpacity').oninput=()=>{OP.site=+$('#siteContextOpacity').value/100;$('#siteOpacityValue').textContent=$('#siteContextOpacity').value+'%';draw();if(S3.on)upd3D();};$('#siteContextOpacity').onchange=()=>{const b=snapM();M.siteOpacity=OP.site;commit(b);};
 const focusButton=document.createElement('button');focusButton.id='fitSelectedBtn';focusButton.type='button';focusButton.className='kb';focusButton.textContent='Zoom selected';focusButton.setAttribute('aria-label','Zoom selected');$('#fitBtn').insertAdjacentElement('afterend',focusButton);
 function focusSelected(){const o=selObj();if(!o){flash('Select an object to zoom to it.');return;}if(WALKING)walkExit();if(CAM==='3d'){if(!S3.focusObject({k:SEL.k==='end'?'wall':SEL.k,id:SEL.id}))flash('The selected object is hidden in this view.');return;}let pts;if(SEL.k==='wall'||SEL.k==='end')pts=[o.a,o.b];else if(SEL.k==='fence')pts=o.points;else if(SEL.k==='floor'||SEL.k==='void')pts=floorPoints(o);else{const F=frameOf(SEL.k,o);if(F)pts=frameCorners(F);else if(o.lx!=null)pts=[[o.lx-1,o.ly-1],[o.lx+1,o.ly+1]];}if(!pts?.length)return;const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;V.s=Math.min(400*VP.d,(VP.w-140*VP.d)/Math.max(1,Math.max(...xs)-Math.min(...xs)),(VP.h-160*VP.d)/Math.max(1,Math.max(...ys)-Math.min(...ys)));V.ox=VP.w/2-cx*V.s;V.oy=VP.h/2+cy*V.s;V.user=true;draw();}focusButton.onclick=focusSelected;
 const copyButton=document.createElement('button');copyButton.id='copyPreviousLayout';copyButton.type='button';copyButton.className='btn';copyButton.textContent='Copy previous level layout';$('#lvAdd').insertAdjacentElement('afterend',copyButton);copyButton.onclick=()=>{const below=lvBelow();if(!below){flash('There is no previous level to copy.');return;}if(lvWalls().length||M.floors.some(f=>f.lv===LV)){flash('Copy is available on an empty level. Existing geometry is preserved.');return;}const b=snapM();for(const w of lvWalls(below.id)){const nw={...JSON.parse(JSON.stringify(w)),id:STC.uid('w'),lv:LV};M.walls.push(nw);for(const o of M.ops.filter(q=>q.wall===w.id))M.ops.push({...JSON.parse(JSON.stringify(o)),id:STC.uid('o'),wall:nw.id});}for(const f of M.floors.filter(q=>q.lv===below.id&&!q.auto)){const nf={...JSON.parse(JSON.stringify(f)),id:STC.uid('fl'),lv:LV};M.floors.push(nf);}tidy();commit(b);};
-let drawingProject=null,autoFloorSignature=null;const originalDrawingChanged=changed;changed=function(){const signature=JSON.stringify([M.id,M.walls]);if(signature!==autoFloorSignature){autoFloorSignature=signature;PCStudioGeometry.upsertAutoFloors(M,{thickness:newSlabThickness()});}if(drawingProject!==M.id){drawingProject=M.id;OP.site=M.siteOpacity??.5;}const r=originalDrawingChanged.apply(this,arguments);if(document.activeElement!==$('#slabThickness'))$('#slabThickness').value=Math.round(newSlabThickness()*1000);if(document.activeElement!==$('#siteContextOpacity'))$('#siteContextOpacity').value=Math.round(siteOpacity()*100);$('#siteOpacityValue').textContent=Math.round(siteOpacity()*100)+'%';return r;};
+let drawingProject=null,autoFloorSignature=null;const originalDrawingChanged=changed;changed=function(){const signature=JSON.stringify([M.id,M.walls]);if(signature!==autoFloorSignature){autoFloorSignature=signature;PCStudioGeometry.upsertAutoFloors(M,{thickness:newSlabThickness()});}if(drawingProject!==M.id){drawingProject=M.id;OP.site=M.siteOpacity??1;}const r=originalDrawingChanged.apply(this,arguments);if(document.activeElement!==$('#slabThickness'))$('#slabThickness').value=Math.round(newSlabThickness()*1000);if(document.activeElement!==$('#siteContextOpacity'))$('#siteContextOpacity').value=Math.round(siteOpacity()*100);$('#siteOpacityValue').textContent=Math.round(siteOpacity()*100)+'%';return r;};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-type]');if(b&&['fence','balcony_rail'].includes(b.dataset.type)){FENCE_FAMILY=b.dataset.type;setTool('fence');}});
 const originalDrawingHit=hitTest;hitTest=function(p,opt={}){if(CAM!=='3d'&&VIS.Wall&&(!opt.only||LAYER==='Wall'))for(const f of M.fences||[]){if(f.lv!==LV||isHidden(f.id))continue;for(let i=1;i<f.points.length;i++){const a=f.points[i-1],b=f.points[i],dx=b[0]-a[0],dy=b[1]-a[1],t=STC.clamp(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1),0,1);if(Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)<7*VP.d/V.s)return {k:'fence',id:f.id};}}return originalDrawingHit(p,opt);};
 const originalFenceDelete=delSel;delSel=function(){if(SEL?.k!=='fence')return originalFenceDelete();const before=snapM();M.fences=M.fences.filter(f=>f.id!==SEL.id);SEL=null;commit(before);};
@@ -5640,7 +5640,7 @@ window.S3 = (() => {
     if (!cam || !ctl) return; const d = cam.position.distanceTo(ctl.target), r = WM.siteR;
     const t = Math.max(0, Math.min(1, (d - 3.5 * r) / (4 * r)));   // 0 close up (fitted view shows only the site) → 1 zoomed out
     for (const m of WM.rings) m.material.opacity = m.userData.ring === 0 ? t : m.userData.ring === 1 ? t * Math.max(0, Math.min(1, (d - 8000) / 8000)) : t * Math.max(0, Math.min(1, (d - 150000) / 150000));
-    for (const g of WM.ground) g.visible = t < 0.98;
+    for (const g of WM.ground) g.visible = t < 0.98 && !WM.topo;
     if (WM.rings.length && canvas?.parentElement) { if (!WM.credit) { WM.credit = document.createElement('div'); WM.credit.textContent = 'Map: Esri, HERE, Garmin, © OpenStreetMap contributors'; WM.credit.style.cssText = 'position:absolute;right:8px;bottom:6px;font:10px system-ui,sans-serif;color:#6b7280;background:rgba(255,255,255,.7);padding:1px 6px;border-radius:4px;pointer-events:none;z-index:2'; canvas.parentElement.append(WM.credit); } WM.credit.hidden = t <= 0; }
     const far = Math.max(2000, d * 30); if (Math.abs(cam.far - far) > far * 0.2) { cam.far = far; cam.near = Math.max(0.05, d / 4000); cam.updateProjectionMatrix(); }
   }
@@ -5718,7 +5718,7 @@ window.S3 = (() => {
         else if (L.vd) { const vd = L.vd; if (vd.v.lv !== lv.id) continue; const up = e.ab >= e.ba, c = [vd.v.x + vd.v.w / 2, vd.v.y + vd.v.d / 2], len = 0.9 + Math.min(1.8, Math.sqrt(q) / 10); col = vd.roof ? (up ? 0xD8402A : 0x2f6fa8) : 0x6b6760; const org = new T.Vector3(c[0], vd.z + (up ? -len / 2 : len / 2), -c[1]); G.add(fatArrow(new T.Vector3(0, up ? 1 : -1, 0), org, len, col, q)); }
       }
     }
-    if (o.site && o.site.length) { const SG = new T.Group(); SG.name = 'site'; const alpha=o.siteOpacity??(M.siteOpacity??.5),sm=mat('#cfccc4',{transparent:alpha<1,opacity:alpha,depthWrite:alpha>=1}),em=new T.LineBasicMaterial({color:0x55524c,transparent:true,opacity:alpha*.7});
+    if (o.site && o.site.length) { const SG = new T.Group(); SG.name = 'site'; const alpha=o.siteOpacity??(M.siteOpacity??1),sm=mat('#f4f4f2',{transparent:alpha<1,opacity:alpha,depthWrite:alpha>=1}),em=new T.LineBasicMaterial({color:0x8d8f93,transparent:true,opacity:alpha*.8});
       for (const m of o.site) { const sh = new T.Shape(m.outer.map((p) => new T.Vector2(p[0], p[1]))); for (const hr of m.holes || []) sh.holes.push(new T.Path(hr.map((p) => new T.Vector2(p[0], p[1])))); const geo = new T.ExtrudeGeometry(sh, { depth: Math.max(0.1, m.h - m.base), bevelEnabled: false }); geo.rotateX(-Math.PI / 2); const me = new T.Mesh(geo, sm); me.position.y=m.base;me.userData={k:'site',id:m.id||'context',opacity:alpha};me.add(new T.LineSegments(new T.EdgesGeometry(geo, 25), em)); SG.add(me); }
       G.add(SG); }
     // masses (Massing): extruded outlines with a line at every floor; part of the model, so the view fits them
@@ -5738,13 +5738,59 @@ window.S3 = (() => {
         const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.computeVertexNormals();
         const me = new T.Mesh(geo, mat(im.ref ? '#ddd6ca' : '#cdcac3', { side: T.DoubleSide })); me.name = 'import'; me.userData = { k: 'imp', id: im.id }; IG.add(me); }
       G.add(IG); }
-    // the ground of the site (terrain grid, plan metres; z above the site point), so the surroundings stand on it
-    if (o.terrain && o.terrain.pts && o.terrain.nx > 1 && o.terrain.ny > 1) { const T0 = o.terrain, pos = new Float32Array(T0.pts.length * 3), idx = [];
-      T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - 0.05; pos[3 * i + 2] = -p[1]; });
-      for (let j = 0; j < T0.ny - 1; j++) for (let i = 0; i < T0.nx - 1; i++) { const a = j * T0.nx + i, b = a + 1, c = a + T0.nx, d = c + 1; idx.push(a, c, b, b, c, d); }
-      const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
-      const tm = new T.Mesh(geo, mat('#dcd8cc', { side: T.DoubleSide, transparent: true, opacity: 0.85 })); tm.name = 'site'; tm.userData = { k: 'site', id: 'terrain' }; G.add(tm); }
+    // the ground of the site as a topographic block (2026-10-30): the terrain surface with contours, water, green and roads
+    // drawn on it (a texture over the terrain grid, so they follow the ground exactly), solid sides and a base
+    if (o.terrain && o.terrain.pts && o.terrain.nx > 1 && o.terrain.ny > 1) G.add(topoBlock(M, o.terrain));
+    WM.topo = !!(o.terrain && o.terrain.pts); for (const g of WM.ground) g.visible = !WM.topo;   // the block stands on its own (the world map still fades in far out)
     return G;
+  }
+  // ---- the topographic block: surface (with its drawing), four sides and a base
+  const TOPO = { key: '', tex: null };
+  function topoTexture(site, G0) {
+    const key = [site.origin?.lat, site.origin?.lon, G0.nx, G0.ny, G0.step, (site.roads || []).length, (site.areas || []).length].join(':'); if (TOPO.key === key && TOPO.tex) return TOPO.tex;
+    const W = (G0.nx - 1) * G0.step, H = (G0.ny - 1) * G0.step, N = 2048, k = N / Math.max(W, H), cw = Math.round(W * k), ch = Math.round(H * k);
+    const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const g = cv.getContext('2d');
+    const X = (p) => (p[0] - G0.x0) * k, Y = (p) => ch - (p[1] - G0.y0) * k, path = (pts) => { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); };
+    g.fillStyle = '#f3f3f1'; g.fillRect(0, 0, cw, ch);
+    for (const a of site.areas || []) { if (a.kind === 'water' || a.pts.length < 3) continue; path(a.pts); g.closePath(); g.fillStyle = '#e9ebe5'; g.fill(); }
+    g.lineCap = g.lineJoin = 'round';
+    for (const r of site.roads || []) { if (r.pts.length < 2) continue; path(r.pts); g.strokeStyle = r.cls === 'path' ? '#e4e4e1' : '#e9e9e6'; g.lineWidth = Math.max(1.5, (r.width || (r.cls === 'path' ? 2 : 7)) * k); g.stroke(); }
+    for (const a of site.areas || []) { if (a.kind !== 'water' || a.pts.length < 3) continue; path(a.pts); g.closePath(); g.fillStyle = '#4c5461'; g.fill(); }
+    // contours: marching squares on the grid; every fifth line heavier
+    const z = G0.z, lo = Math.min(...z), hi = Math.max(...z), rel = hi - lo, step = rel < 8 ? 1 : rel < 40 ? 2 : rel < 100 ? 5 : 10;
+    const at = (i, j) => z[j * G0.nx + i], P = (i, j) => [G0.x0 + i * G0.step, G0.y0 + j * G0.step];
+    for (let lv = Math.ceil(lo / step) * step; lv <= hi; lv += step) {
+      g.beginPath();
+      for (let j = 0; j < G0.ny - 1; j++) for (let i = 0; i < G0.nx - 1; i++) {
+        const c = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]], v = c.map(([a, b]) => at(a, b)), hits = [];
+        for (let e = 0; e < 4; e++) { const a = v[e], b = v[(e + 1) % 4]; if ((a < lv) !== (b < lv)) { const t = (lv - a) / (b - a), A = P(...c[e]), B = P(...c[(e + 1) % 4]); hits.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]); } }
+        for (let h = 0; h + 1 < hits.length; h += 2) { g.moveTo(X(hits[h]), Y(hits[h])); g.lineTo(X(hits[h + 1]), Y(hits[h + 1])); }
+      }
+      const major = Math.round(lv / step) % 5 === 0; g.strokeStyle = major ? 'rgba(60,62,66,.6)' : 'rgba(60,62,66,.38)'; g.lineWidth = major ? 2.4 : 1.4; g.stroke();
+    }
+    const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 8; if (TOPO.tex) TOPO.tex.dispose(); TOPO.key = key; TOPO.tex = tex; return tex;
+  }
+  function topoBlock(M, T0) {
+    const B = new T.Group(); B.name = 'site'; B.userData = { k: 'site', id: 'terrain' };
+    const nx = T0.nx, ny = T0.ny, n = nx * ny, pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
+    T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - 0.05; pos[3 * i + 2] = -p[1]; uv[2 * i] = (i % nx) / (nx - 1); uv[2 * i + 1] = Math.floor(i / nx) / (ny - 1); });
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1; idx.push(a, b, c, b, d, c); }
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+    const G0 = M.site && M.site.terrain && M.site.terrain.grid, tex = G0 && G0.nx === nx && G0.ny === ny ? topoTexture(M.site, G0) : null;
+    const top = new T.Mesh(geo, new T.MeshLambertMaterial(tex ? { map: tex, side: T.DoubleSide } : { color: 0xf3f3f1, side: T.DoubleSide })); top.name = 'site'; top.userData = { k: 'site', id: 'terrain' }; B.add(top);
+    // sides down to a flat base below the lowest point
+    let lo = Infinity, span = 0; for (const p of T0.pts) lo = Math.min(lo, p[2]); { const xs = T0.pts.map((p) => p[0]), ys = T0.pts.map((p) => p[1]); span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)); }
+    const base = lo - 0.05 - Math.max(6, span * 0.025), ring = [];
+    for (let i = 0; i < nx; i++) ring.push(i); for (let j = 1; j < ny; j++) ring.push(j * nx + nx - 1); for (let i = nx - 2; i >= 0; i--) ring.push((ny - 1) * nx + i); for (let j = ny - 2; j > 0; j--) ring.push(j * nx);
+    const sp = [], si = []; ring.forEach((v, k) => { sp.push(pos[3 * v], pos[3 * v + 1], pos[3 * v + 2], pos[3 * v], base, pos[3 * v + 2]); const a = 2 * k, b = 2 * ((k + 1) % ring.length); si.push(a, a + 1, b, b, a + 1, b + 1); });
+    const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(sp, 3)); sg.setIndex(si); sg.computeVertexNormals();
+    const side = new T.Mesh(sg, new T.MeshLambertMaterial({ color: 0xd2d3d1, side: T.DoubleSide })); side.name = 'site'; side.userData = { k: 'site', id: 'terrain' }; B.add(side);
+    const bp = []; for (const v of ring) bp.push(new T.Vector2(pos[3 * v], -pos[3 * v + 2]));
+    const bg = new T.ShapeGeometry(new T.Shape(bp)); bg.rotateX(-Math.PI / 2); const bm = new T.Mesh(bg, new T.MeshLambertMaterial({ color: 0xc6c7c5, side: T.DoubleSide })); bm.position.y = base; bm.name = 'site'; bm.userData = { k: 'site', id: 'terrain' }; B.add(bm);
+    // the top edge, a thin line as on a site model
+    const ep = []; ring.forEach((v, k) => { const w = ring[(k + 1) % ring.length]; ep.push(pos[3 * v], pos[3 * v + 1] + 0.02, pos[3 * v + 2], pos[3 * w], pos[3 * w + 1] + 0.02, pos[3 * w + 2]); });
+    const eg = new T.BufferGeometry(); eg.setAttribute('position', new T.Float32BufferAttribute(ep, 3)); B.add(new T.LineSegments(eg, new T.LineBasicMaterial({ color: 0xbfc0bd })));
+    return B;
   }
   const siteFree = (grp) => { const b = new T.Box3(); grp.children.forEach((c) => { if (c.name !== 'site') b.expandByObject(c); }); return b.isEmpty() ? new T.Box3().setFromObject(grp) : b; };
   api.update = (M, S, o) => {
@@ -5767,7 +5813,7 @@ window.S3 = (() => {
   function sunApply() {
     const L = SUN.light; if (!L || !R) return; const o = SUN.on;
     R.shadowMap.enabled = !!o; R.shadowMap.type = T.PCFSoftShadowMap; L.castShadow = !!o;
-    if (grp) grp.traverse((m) => { if (m.isMesh) { const site = m.name === 'site' || m.userData?.k === 'site'; m.castShadow = !!o && !site; m.receiveShadow = !!o; } });
+    if (grp) grp.traverse((m) => { if (m.isMesh) { const ground = m.userData?.id === 'terrain'; m.castShadow = !!o && !ground; m.receiveShadow = !!o; } });
     if (!o) { L.position.set(-14, 26, 10); L.target.position.set(0, 0, 0); L.intensity = 1.6; render(); return; }
     const b = grp ? new T.Box3().setFromObject(grp) : null, c = b && !b.isEmpty() ? b.getCenter(new T.Vector3()) : new T.Vector3(), r = b && !b.isEmpty() ? Math.max(10, b.getSize(new T.Vector3()).length() / 2) : 50;
     const D = Math.PI / 180, a = (o.az - SUN.north) * D, alt = Math.max(o.alt, 0.5) * D, v = new T.Vector3(Math.sin(a) * Math.cos(alt), Math.sin(alt), -Math.cos(a) * Math.cos(alt));
