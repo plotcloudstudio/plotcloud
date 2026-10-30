@@ -74,8 +74,8 @@ function overview(app, p) {
   app.innerHTML = `<div class="wrap pj" data-mode="${mode()}"><a href="#/home">← Projects</a>
     <span class="eyebrow" style="margin-top:20px">Project</span><h1 class="display md" id="pjName"></h1><p class="lede" id="pjSummary"></p>
     <div class="pj-mode" role="radiogroup" aria-label="Project mode"><b>Mode</b><label><input type="radio" name="pjMode" value="simple"> Simple</label><label><input type="radio" name="pjMode" value="advanced"> Advanced</label><span class="note" id="pjModeNote"></span></div>
-    <nav class="acts" style="margin-top:12px"><a class="btn" href="#/workspace/${esc(p.id)}">Workbench</a><a class="btn" href="#/project-settings/${esc(p.id)}">Site &amp; weather</a><a class="btn" href="#/simulations">Studies</a><a class="btn" href="#/tables?project=${esc(p.id)}">Tables</a><a class="btn" href="#/results/${esc(p.id)}">Results</a></nav>
-    <section class="card" id="pjReady"><h2>What can run now</h2><div class="pj-status" id="pjReadyList"></div></section>
+    <nav class="acts" aria-label="Project workflow" style="margin-top:12px"><a class="btn" href="#/project-settings/${esc(p.id)}">1 Site analysis</a><a class="btn" href="#/workspace/${esc(p.id)}">2 Plan Studio · Workbench</a><a class="btn" href="#/simulations">3 Simulation</a><a class="btn" href="#/rendering?project=${esc(p.id)}">4 Rendering</a><a class="btn" href="#/boards?project=${esc(p.id)}">5 Boards</a><a class="btn ghost" href="#/tables?project=${esc(p.id)}">Tables</a><a class="btn ghost" href="#/results/${esc(p.id)}">Results</a></nav><p class="note">Steps can be taken in any order; imported models can go straight to Simulation.</p>
+    <section class="card" id="pjReady"><h2>What can run now</h2><div class="pj-status" id="pjReadyList"></div><div class="acts" style="margin-top:12px"><button class="btn" type="button" id="pjPackage">Run default study package</button><span class="note" id="pjPackageNote"></span></div></section>
     <section class="card" id="pjDetails"><h2>Project details</h2><form id="pjForm" class="grid g2"></form></section>
     <section class="card" id="pjParams"><h2>Inputs and their sources</h2><p class="note" id="pjProv"></p><div class="pc-scroll"><table class="pc-table" id="pjParamTable"></table></div></section>
     <section class="card" id="pjUse"><h2>Use template and daylight target</h2><div id="pjUseBody"></div></section>
@@ -96,10 +96,17 @@ function overview(app, p) {
   for (const r of $$('[name=pjMode]', app)) r.onchange = () => { C.setUiMode(p, r.value); S.save(); toast(r.value === 'simple' ? 'Simple mode: nothing was changed or removed' : 'Advanced mode'); draw(); };
 
   function ready() {
+    queueMicrotask(() => { const l = packageStudies(); $('#pjPackageNote', app).textContent = l.length ? 'Ready: ' + l.map((x) => SIMS.find((s) => s.id === x)?.name || x).join(', ') + '. Runs in this page.' : 'No study in the default package is ready yet.'; });
     const v = p.versions.at(-1), c = S.conditionsOf(p), rows = [['climate', 'Climate (address + weather)'], ['sunhours', 'Building · sun and massing'], ['daylight', 'Interior · daylight'], ['structure', 'Structure']];
     $('#pjReadyList', app).innerHTML = rows.map(([sid, label]) => { const r = inspectStudy(p, v, sid, { site: c.site, defaults: c.defaults }); const e = r.errors[0], wv = r.warnings[0], state = e ? 'error' : wv ? 'warning' : 'ok';
-      return `<div data-state="${state}" data-study="${sid}"><b>${esc(label)}</b><p class="note">${esc(e ? e.title + ' — ' + e.detail : wv ? wv.title : 'Inputs found · open the study to run')}</p>${e?.href ? `<a href="${esc(e.href)}">Fix</a>` : `<a href="#/simulations/${sid}">Open</a>`}</div>`; }).join('');
+      return `<div data-state="${state}" data-study="${sid}" data-ready="${r.ready}"><b>${esc(label)}</b><p class="note">${esc(e ? e.title + ' — ' + e.detail : wv ? wv.title : 'Inputs found · open the study to run')}</p>${e?.href ? `<a href="${esc(e.href)}">Fix</a>` : `<a href="#/simulations/${sid}">Open</a>`}</div>`; }).join('');
   }
+  // default package by task (plan §6.7): only studies whose inputs are ready; never the whole catalogue
+  const PACKAGE = ['sunhours', 'radiation', 'utci', 'daylight'];
+  function packageStudies() { const v = p.versions.at(-1), c = S.conditionsOf(p); return v ? PACKAGE.filter((sid) => inspectStudy(p, v, sid, { site: c.site, defaults: c.defaults }).ready) : []; }
+  $('#pjPackage', app).onclick = () => { const v = p.versions.at(-1), list = packageStudies(); if (!v || !list.length) { $('#pjPackageNote', app).textContent = 'Nothing in the default package is ready: see the items above.'; return; }
+    const rev = C.freezePlan(p, v.id), g = { id: 'rg-pkg-' + Date.now().toString(36), planRevisionId: rev.id, baseRevisionId: null, recommendationId: null, versionId: v.id, created: new Date().toISOString(), state: 'queued', execution: 'browser-batch (page must stay open)', tasks: list.map((simId) => ({ simId, status: 'queued', runId: null, why: '' })), log: [{ at: new Date().toISOString(), event: 'default package' }] };
+    p.runGroups.push(g); S.save(); start(g.id); groups(); };
   function details() {
     const f = p.profile || {};
     $('#pjForm', app).innerHTML = `<label class="f">Name<input name="name" value="${esc(p.name)}" required></label><label class="f">Status<select name="status">${STATUS.map((s) => `<option ${s === (f.status || 'active') ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="f">Client<input name="client" value="${esc(f.client || '')}"></label><label class="f">Stage<input name="stage" value="${esc(f.stage || '')}"></label><label class="f" style="grid-column:1/-1">Description<textarea name="description" rows="2">${esc(f.description || '')}</textarea></label><div><button class="btn" type="submit">Save details</button></div>`;

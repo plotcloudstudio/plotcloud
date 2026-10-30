@@ -88,7 +88,7 @@ import json;print(json.dumps([[s.shape_type.__int__() if s.shape_type else 0,s.n
  const sec=evidence.spec.sections.find(s=>s.simId==='daylight');assert.equal(sec.runIds.b,B.run.id);assert.equal(sec.metrics.find(m=>m.key==='df').b,B.run.results.df);
  assert.ok(evidence.reportRevision.n>=2,'each export saves a new report revision');assert.deepEqual(evidence.reportRevision.changedChapters,[],'unchanged inputs → every chapter reused');
  const [rv]=await Promise.all([p.waitForEvent('download'),p.locator('[data-rep="review"]').click()]);const reviewFile=path.join(out,'review.html');await rv.saveAs(reviewFile);
- const [pdf]=await Promise.all([p.waitForEvent('download',{timeout:120000}),p.locator('[data-rep="pdf"]').click()]);const pdfFile=path.join(out,'report.pdf');await pdf.saveAs(pdfFile);assert.ok(fs.statSync(pdfFile).size>10000);
+ const [pdf]=await Promise.all([p.waitForEvent('download',{timeout:120000}),p.locator('[data-rep="pdf"]').click()]);const pdfFile=path.join(out,'report-comparison.pdf');await pdf.saveAs(pdfFile);assert.ok(fs.statSync(pdfFile).size>10000);
  try{execFileSync('soffice',['--headless','--convert-to','pdf','--outdir',out,pptx],{timeout:120000});ok('PPTX also opens in LibreOffice: '+path.join(out,'report.pdf'));}catch(e){console.log('LibreOffice conversion not run:',e.message.split('\n')[0]);}
  ok('report revisions: PPTX (editable text/table/bars, Chinese), PDF, evidence JSON, review file; same run IDs and values');
 
@@ -108,7 +108,13 @@ import json;print(json.dumps([[s.shape_type.__int__() if s.shape_type else 0,s.n
  // ---- tables read the same runs
  await p.goto(base+'/mvp/#/tables?project='+sid);await p.locator('#tbSummary tr[data-run]').first().waitFor();
  assert.ok(await p.locator(`#tbSummary tr[data-run="${B.run.id}"]`).count());ok('tables reference saved run IDs');
- await p.screenshot({path:path.join(out,'tables.png')});await p.goto(base+'/mvp/#/project/'+sid);await p.locator('#pjGroups [data-group]').first().waitFor();await p.screenshot({path:path.join(out,'project-overview.png'),fullPage:true});
+ await p.screenshot({path:path.join(out,'tables.png')});
+ // ---- 08 · a valid model runs its default package without Workbench edits (only ready studies; no EPW → no radiation/UTCI)
+ await p.goto(base+'/mvp/#/project/'+sid);await p.locator('#pjPackageNote').filter({hasText:'Ready:'}).waitFor();
+ const note=await p.locator('#pjPackageNote').innerText();assert.match(note,/Sun hours/);assert.doesNotMatch(note,/Solar radiation|thermal comfort/,'studies that need an EPW are not in the package without one');
+ const nGroups=await p.locator('#pjGroups [data-group]').count();await p.locator('#pjPackage').click();
+ await p.waitForFunction(n=>{const g=[...document.querySelectorAll('#pjGroups [data-group]')];return g.length>n&&['succeeded','partial','failed'].includes(g.at(-1).dataset.state);},nGroups,{timeout:600000});
+ assert.equal(await p.locator('#pjGroups [data-group]').last().getAttribute('data-state'),'succeeded');ok('default study package ran on the valid model: '+note);await p.goto(base+'/mvp/#/project/'+sid);await p.locator('#pjGroups [data-group]').first().waitFor();await p.screenshot({path:path.join(out,'project-overview.png'),fullPage:true});
  // phone: overview readable, no horizontal scroll
  const m=await browser.newPage({viewport:{width:390,height:844}});await m.goto(base+'/mvp/');await m.waitForFunction(()=>document.querySelector('#app h1'));
  await m.evaluate(async st=>{localStorage.setItem('pc-mvp-v1',st);},await p.evaluate(()=>localStorage.getItem('pc-mvp-v1')));await m.goto(base+'/mvp/#/project/'+sid);await m.reload();await m.locator('#pjName').waitFor();

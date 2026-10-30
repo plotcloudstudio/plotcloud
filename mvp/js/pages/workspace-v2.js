@@ -12,6 +12,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
+import * as P from '../parameters.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=light-only-20261028-1';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
@@ -434,7 +435,7 @@ export function render(app, [pid]) {
     if(showParams&&UI.sels.length){UI.tab='properties';tabsUI();}
     if (showParams && UI.sels.length > 1) return multi(propertyHost);
     const c = comp(primary());
-    if (showParams && c && PS.test(c.id)) { propsOn(true); $('#pWhat', app).textContent = `${c.name} · ${c.layer}. Plan Studio’s own parameters; changes show in all three panes.`; return; }
+    if (showParams && c && PS.test(c.id)) { propsOn(true); $('#pWhat', app).textContent = `${c.name} · ${c.layer}. Plan Studio’s own parameters; changes show in all three panes.`; const ap = $('#apHost', app) || Object.assign(document.createElement('div'), { id: 'apHost' }); $('#pWhat', app).after(ap); ap.innerHTML = analysisProps(c); bindAnalysisProps(ap, c); return; }
     if (showParams && c) return params(propertyHost, c);
     propertyHost.innerHTML='<h2>Properties</h2><p class="note">Select an object in the viewport or Layers to inspect its properties.</p>';
     if (UI.panel === 'project') return projectPanel(host);
@@ -608,13 +609,26 @@ export function render(app, [pid]) {
       <label class="f">Material<select id="pMat">${MATS.map((m) => `<option ${m === c.mat ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
       <span class="note">Position (m)</span><div class="dims">${num('x', 'x')}${num('y', 'y')}${num('z', 'z')}</div>
       <span class="note">Size (m)</span><div class="dims">${num('w', 'Width')}${num('d', 'Depth')}${num('h', 'Height')}</div>
-      <p class="note">${c.mesh ? 'Imported mesh: position can change, size stays as imported.' : 'A component kept from the earlier Workspace: it is listed and exported; Plan and Perspective draw Plan Studio’s model.'}</p></div>`;
+      <p class="note">${c.mesh ? 'Imported mesh: position can change, size stays as imported.' : 'A component kept from the earlier Workspace: it is listed and exported; Plan and Perspective draw Plan Studio’s model.'}</p>${analysisProps(c)}</div>`;
     $('#pBack', host).onclick = () => { showParams = false; rail(); panel(); };
     $('#pName', host).onchange = (e) => { c.name = e.target.value.trim() || c.name; ch(); };
     $('#pLayer', host).onchange = (e) => { c.layer = e.target.value; open.add(c.layer); ch(); };
     $('#pType', host).onchange = (e) => { c.type = e.target.value; ch(); };
     $('#pMat', host).onchange = (e) => { c.mat = e.target.value; ch(); };
     $$('[data-g]', host).forEach((i) => i.onchange = () => { const v = parseFloat(i.value); if (!Number.isFinite(v) || ('wdh'.includes(i.dataset.g) && v <= 0)) { i.value = c.g[i.dataset.g]; return; } c.g[i.dataset.g] = v; ch(); });
+    bindAnalysisProps(host, c);
+  }
+  // analysis properties: one record per object and property, shared with the project page (parameters.js, scope plan-object)
+  function bindAnalysisProps(host, c) {
+    $$('[data-ap]', host).forEach((i) => i.onchange = () => { const path = i.dataset.ap, def = P.DEFS[path], raw = i.value.trim(), msg = $('#apMsg', host);
+      try { if (raw === '') { S.restoreProjectDefault(p, { path, scope: 'plan-object', target: c.id }); msg.textContent = 'Removed; the default chain applies.'; return; } const r = S.setProjectParameter(p, { path, target: c.id }, { scope: 'plan-object', target: c.id, value: def.type === 'number' ? Number(raw) : raw, valueOrigin: 'workbench-input', acquisition: 'manual-entry' }); msg.textContent = `${path} = ${r.value} ${r.unit} · ${r.label}`; }
+      catch (er) { msg.textContent = er.message; i.value = ''; } });
+  }
+  // Separate optical, thermal, acoustic, structural and lighting fields (a render colour or texture is none of these).
+  function analysisProps(c) {
+    const kinds = { window: ['object.optical.visibleTransmittance', 'object.thermal.uValue', 'object.thermal.shgc'], wall: ['object.optical.reflectance', 'object.thermal.uValue', 'object.acoustic.absorption500', 'object.structure.section', 'object.structure.materialGrade'], slab: ['object.optical.reflectance', 'object.thermal.uValue', 'object.structure.section', 'object.structure.materialGrade'], roof: ['object.optical.reflectance', 'object.thermal.uValue'], furniture: ['object.optical.reflectance', 'object.acoustic.absorption500'], room: ['program.use'], light: ['object.lighting.watts'] };
+    const list = [...(kinds[c.type] || (/light|lamp/i.test(c.name || '') ? kinds.light : [])), 'object.analysis.include'];
+    return `<details class="w2-ap" style="margin-top:10px"><summary>Analysis properties</summary><p class="note">Saved once for this object and used wherever a study reads it. Empty = default chain. Visibility in the viewport is separate from “include in analysis”.</p>${list.map((path) => { const d = P.DEFS[path], r = P.resolve(p, { path, target: c.id }), own = r.status === 'ok' && r.scope === 'plan-object'; return `<label class="f">${esc(path.replace(/^object\./, ''))} <small>${esc(d.unit)}</small>${d.values ? `<select data-ap="${path}"><option value="">${own ? 'default' : 'default' + (r.status === 'ok' ? ' (' + esc(r.value) + ')' : '')}</option>${d.values.map((v) => `<option ${own && r.value === v ? 'selected' : ''}>${v}</option>`).join('')}</select>` : `<input data-ap="${path}" ${d.type === 'number' ? `type="number" step="any" min="${d.min}" max="${d.max}"` : ''} value="${own ? esc(r.value) : ''}" placeholder="${r.status === 'ok' ? esc(r.value) + ' · ' + esc(r.label) : 'not set'}">`}</label>`; }).join('')}<p class="note" id="apMsg" role="status"></p></details>`;
   }
 
   // ---- right: layers (Rhino-style rows), selection, versions, next
