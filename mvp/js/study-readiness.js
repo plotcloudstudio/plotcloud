@@ -4,9 +4,11 @@ const LOCATION=new Set(['sunhours','daylight','radiation','utci','shadebenefit',
 const EPW=new Set(['radiation','utci','climate','passive','shadebenefit']);
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 export function inspectStudy(project,version,id,{site=project?.sharedConditions?.site||project?.site,defaults=project?.sharedConditions?.defaults||{},draftChanged}={}){
+ // an address and weather alone are enough only for climate studies; say so plainly when that is all the project has
+ const weatherNote=site?.climate?.hash&&!['climate','passive'].includes(id)?` Weather is ready (${site.climate.name||site.climate.station||'project EPW'}); this study also calculates on your model, so it needs ${PLAN.has(id)?'rooms with walls and windows':'building massing or an imported model'}. Climate Analysis and Passive Design run on the weather alone.`:'';
  const checks=[],add=(key,state,title,detail,href)=>checks.push({key,state,title,detail,href}),workspace='#/workspace/'+encodeURIComponent(project?.id||''),conditions='#/project-settings/'+encodeURIComponent(project?.id||'');
  if(!project)add('project','error','Choose a project','Start with an example or open your own project.','#/start-study');
- if(!version?.model)add('version','error','Save a model version','Studies use a saved snapshot. Your working draft has not been saved yet.',workspace);
+ if(!version?.model)add('version','error','Save a model version','Studies use a saved snapshot. Your working draft has not been saved yet.'+weatherNote,workspace);
  else{
   const model=version.model,st=model.studio,components=model.components||[],walls=st?.walls||components.filter(c=>c.type==='wall');
   const hidden=new Set(st?.hiddenIds||[]),off=new Set((model.layers||[]).filter(l=>l.visible===false).map(l=>l.name)),imports=(st?.imports||[]).filter(o=>!hidden.has(o.id)&&!off.has(o.layer||'Imported'));
@@ -25,7 +27,7 @@ export function inspectStudy(project,version,id,{site=project?.sharedConditions?
    else add('plan','ok','Wall layout found','The engine checks closed rooms and the selected level when the model is prepared.');
    if(['daylight','vent','privacy'].includes(id)&&!(st?.ops||components.filter(c=>c.type==='window')).length)add('openings','warning','No openings recorded','Review windows and operable openings. An enclosed room can correctly return little daylight or ventilation.',workspace);
   }else if(id!=='structure'){
-   if(!walls.length&&!st?.masses?.length&&!st?.imports?.length&&!st?.site&&!components.length)add('geometry','error','Add analysis geometry','Draw or import the building or site you want to study.',workspace);
+   if(!walls.length&&!st?.masses?.length&&!st?.imports?.length&&!st?.site&&!components.length)add('geometry','error','Add analysis geometry','Draw or import the building or site you want to study.'+weatherNote,workspace);
    else add('model','ok','Model geometry found','Review the analysis extent and context in the study.');
   }
  }
