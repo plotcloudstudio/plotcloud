@@ -29,6 +29,7 @@ const P = {
   more: '<circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/>',
   settings: '<path d="M5 6h9M18 6h1M5 12h3M12 12h7M5 18h11M20 18h-1"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   chevron: '<path d="M7 10l5 5 5-5"/>',
+  assets: '<path d="M4 7.5L12 4l8 3.5-8 3.5z"/><path d="M4 7.5v9L12 20l8-3.5v-9M12 11v9"/>',
   results: '<path d="M7 3.5h7l4 4V20.5H7z"/><path d="M14 3.5v4h4M10 12h5M10 15h5M10 18h3"/>',
 };
 // icons for controls whose text the Workspace rewrites (so the icon is drawn by CSS, not inside the button)
@@ -78,6 +79,7 @@ export function mountChrome(app, api) {
   const left = el('nav', 'sp-rail sp-left'); left.setAttribute('aria-label', 'Panels');
   left.innerHTML = btn('stats', 'Statistics', 'stats', 'aria-pressed="false"');
   const tabList = $('#tabList'); left.append(tabList);
+  left.insertAdjacentHTML('beforeend', btn('assets', 'Assets: imported models and your furniture', 'assets', 'aria-pressed="false"'));
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'));
   root.append(left, add);
@@ -120,7 +122,7 @@ export function mountChrome(app, api) {
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
   // the panels card and a study panel share the left side: the card covers the study panel while it is open
-  function openCard(on) { root.classList.toggle('sp-card-open', on); if (on) { closePops(); if (!cmp.hidden) openSheet(false); } const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
+  function openCard(on) { root.classList.toggle('sp-card-open', on); if (on) { closePops(); if (!cmp.hidden) openSheet(false); if (!assetsCard.hidden) openAssets(false); } const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
   let lastTab = UI.tab;
   tabList.addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (!t) return;
     if (t.dataset.tab === 'versions') { const on = !cmp.hidden && t.getAttribute('aria-selected') === 'true'; if (on) { e.stopImmediatePropagation(); openSheet(false); return; } setTimeout(() => openSheet(true), 0); return; }   // Compare sketches
@@ -138,7 +140,7 @@ export function mountChrome(app, api) {
   }
 
   // ---- the palette (tools from the bottom bar, the Project panel from the bottom left): open and closed from its own button
-  const palOpen = (on, project = false) => { root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); };
+  const palOpen = (on, project = false) => { root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); if (on && typeof cmp !== 'undefined' && cmp && !cmp.hidden) openSheet(false); };
   palOpen(false);
   app.addEventListener('click', (e) => {
     const b = e.target.closest('[data-panel]'); if (!b) return;
@@ -158,6 +160,7 @@ export function mountChrome(app, api) {
     else if (k === 'import') openProject('import');
     else if (k === 'dim') goView(UI.view === 'plan' ? 'persp' : 'plan');
     else if (k === 'props') openProps(propsCard.hidden);
+    else if (k === 'assets') openAssets(assetsCard.hidden);
     else if (k === 'zoomSel') doc()?.getElementById('fitSelectedBtn')?.click();
     else if (pops[k]) { e.stopPropagation(); togglePop(k, b); }
   });
@@ -343,13 +346,32 @@ export function mountChrome(app, api) {
   // a sketch added here keeps a picture of the model
   const thumbT = (() => { const n0 = { n: p.versions.length }; return setInterval(() => { if (p.versions.length > n0.n) { const v = p.versions.at(-1); n0.n = p.versions.length; const u = THUMB.get('draft') || THUMB.get(v.id); if (u && !v.thumb) { v.thumb = u; S.save(); } THUMB.delete('draft'); if (!cmp.hidden) drawCompare(); } }, 500); })();
 
+  // ---- assets (left rail): the models imported into this project and your own furniture, each with its import
+  const assetsCard = el('section', 'sp-card sp-assets'); assetsCard.hidden = true; assetsCard.setAttribute('aria-label', 'Assets'); root.append(assetsCard);
+  function drawAssets() {
+    const ims = (studio()?.imports || []).filter((o) => !o.ref), mine = S.account().furniture || [];
+    assetsCard.innerHTML = `<button type="button" class="sp-x" data-as="close" aria-label="Close assets">×</button>
+      <section><h3>Imported models</h3>${ims.length ? `<ul class="sp-aslist">${ims.map((o) => `<li><button type="button" data-as-sel="${esc(o.id)}" title="Select it in the model"><b>${esc(o.name)}</b><small>${esc(o.layer || 'Imported')} · ${fmt(o.tris || 0)} triangles</small></button></li>`).join('')}</ul>`
+        : '<div class="sp-asempty"><b>No imported models</b><p>Import OBJ, STL, GLB/glTF or 3DM files. You choose whether a file joins this project or starts a new one.</p></div>'}
+        <button type="button" class="btn sm primary sp-asbtn" data-as="model">+ Import model</button></section>
+      <section><h3>My furniture</h3>${mine.length ? `<div class="sp-asgrid">${mine.slice(0, 12).map((x) => `<figure title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m">${x.thumb ? `<img src="${x.thumb}" alt="">` : ''}<figcaption>${esc(x.name)}</figcaption></figure>`).join('')}</div><p class="sp-note">${mine.length} piece${mine.length === 1 ? '' : 's'} in your account, for every project. Place them from Furniture in the bottom bar.</p>`
+        : '<div class="sp-asempty"><b>No furniture of your own yet</b><p>Import a piece (OBJ, GLB, STL, 3DM); it is kept in your account for every project.</p></div>'}
+        <button type="button" class="btn sm primary sp-asbtn" data-as="furn">+ Import furniture</button></section>`;
+  }
+  function openAssets(on) { assetsCard.hidden = !on; $('[data-sp="assets"]', root)?.setAttribute('aria-pressed', String(on)); if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); drawAssets(); } }
+  assetsCard.addEventListener('click', (e) => { const b = e.target.closest('[data-as],[data-as-sel]'); if (!b) return;
+    if (b.dataset.asSel) { select(['ps:imp:' + b.dataset.asSel]); return; }
+    const k = b.dataset.as; if (k === 'close') openAssets(false);
+    else if (k === 'model') { openAssets(false); openProject('import'); }
+    else if (k === 'furn') { openAssets(false); UI.acc.furniture = 0; saveUI(); if (!(UI.panel === 'furniture' && root.classList.contains('sp-pal-open'))) app.querySelector('.sp-tools [data-panel="furniture"]')?.click(); setTimeout(() => app.querySelector('#panelBody [data-impfurn]')?.click(), 60); } });
+
   // ---- project props (bottom left): the one place for the project's shared parameters
   const propsCard = el('section', 'sp-card sp-propscard'); propsCard.hidden = true; propsCard.setAttribute('aria-label', 'Project props'); root.append(propsCard);
   let disposeProps = null;
   const propCounts = () => { const st = studio() || {}, o = INST.plan.ready ? INST.plan.ws.objects() : []; const c = (k) => o.filter((x) => x.k === k).length;
     return { plot: st.site?.parcel?.pts?.length > 2 ? 1 : 0, building: (st.masses || []).length + (st.imports || []).length, story: (st.levels || []).length, space: c('room'), aperture: c('op'), wall: c('wall'), floor: c('floor'), furniture: c('furn'), context: (st.site?.buildings || []).filter((b) => !b.excluded).length, street: (st.site?.roads || []).length }; };
   function openProps(on) { propsCard.hidden = !on; $('[data-sp="props"]', root)?.setAttribute('aria-pressed', String(on)); disposeProps?.(); disposeProps = null;
-    if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); studyCard.hidden = true; disposeProps = mountProps(propsCard, p, { counts: propCounts, onClose: () => openProps(false) }); } else if (ST.id) studyCard.hidden = false; }
+    if (on) { document.querySelectorAll('dialog[open]').forEach((d) => d.close()); openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); studyCard.hidden = true; disposeProps = mountProps(propsCard, p, { counts: propCounts, onClose: () => openProps(false) }); } else if (ST.id) studyCard.hidden = false; }
   window.__wsProps = () => openProps(true);   // studies and the site review open these props while in the Workspace
   // links to the old project settings page (studies, the site review) open the props here instead
   app.addEventListener('click', (e) => { const a = e.target.closest('a[href^="#/project-settings"], #siteReviewEdit'); if (!a) return; e.preventDefault(); e.stopImmediatePropagation(); openProps(true); }, true);

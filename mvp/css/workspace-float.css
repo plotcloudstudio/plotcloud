@@ -245,3 +245,18 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-bl [data-sp=props][aria-pressed=true]{background:#2f5bd3}
 .w2.sp .pp-climate .btn{font:500 11.5px Inter,system-ui,sans-serif!important;padding:4px 10px!important;min-height:26px!important;margin:2px 4px 2px 0}
 .w2.sp .pp-climate .note,.w2.sp .pp-climate p{font-size:10.5px!important}
+/* the left rail is never covered: panels start beside it and the rails sit above every panel */
+.w2.sp.sp-pal-project>.w2-panel.sp-palette{left:60px!important}
+.w2.sp .sp-rail{z-index:40}
+
+/* assets (left rail) */
+.w2.sp .sp-assets{position:absolute;z-index:31;left:60px;top:64px;bottom:62px;width:320px;overflow:auto;padding:14px;font:11.5px/1.45 Inter,system-ui,sans-serif;color:var(--sp-ink)}
+.w2.sp .sp-assets[hidden]{display:none}
+.w2.sp .sp-assets>.sp-x{position:absolute;right:8px;top:8px}
+.w2.sp .sp-assets section{padding:12px 0;border-bottom:1px solid var(--sp-line)}.w2.sp .sp-assets section:last-child{border-bottom:0}
+.w2.sp .sp-assets h3{font:600 10.5px Inter,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--sp-sub);margin:0 0 8px}
+.w2.sp .sp-asempty{text-align:center;padding:10px 6px}.w2.sp .sp-asempty b{display:block;font-size:13px;margin-bottom:4px}.w2.sp .sp-asempty p{color:var(--sp-sub);margin:0}
+.w2.sp .sp-asbtn{display:block;width:100%;margin-top:10px;background:#2f5bd3!important;border-color:#2f5bd3!important;color:#fff!important;font-weight:600}
+.w2.sp .sp-aslist{list-style:none;margin:0;padding:0}.w2.sp .sp-aslist button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:0;background:none;padding:6px 8px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}
+.w2.sp .sp-aslist button:hover{background:#f5f6f7}.w2.sp .sp-aslist small{color:var(--sp-sub)}
+.w2.sp .sp-asgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.w2.sp .sp-asgrid figure{margin:0;text-align:center}.w2.sp .sp-asgrid img{width:100%;aspect-ratio:1;object-fit:contain;background:#f3f4f6;border-radius:6px}.w2.sp .sp-asgrid figcaption{font-size:10px;color:var(--sp-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
