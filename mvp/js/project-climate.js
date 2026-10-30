@@ -14,7 +14,7 @@ export async function putClimateRecord(record){
 export async function saveClimate(file,provenance={}){
  if(file.size>8*1024*1024)throw Error('EPW must be smaller than 8 MB.');
  const text=await file.text(),lines=text.trim().split(/\r?\n/),head=lines[0].split(','),check=validateEpw(text);
- if(!check.ok)throw Error('EPW not accepted: '+check.errors.join(' '));
+ if(!check.ok)throw Error('Choose a complete hourly EPW file (8 header lines and 8760 or 8784 hours). '+check.errors.join(' '));
  const hours=check.hours;
  // every current weather engine reads temperature and wind on every hour: those must be complete; other fields block per study
  if(['dryBulb','windDir','windSpeed'].some(k=>check.fields[k].missing||check.fields[k].outOfRange))throw Error('EPW has missing or invalid hourly temperature/wind data.');

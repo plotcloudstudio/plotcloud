@@ -2,7 +2,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const uri=text=>'data:text/javascript;base64,'+Buffer.from(text).toString('base64');
 (async()=>{
  const memory=new Map();global.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)};
- const data=uri(fs.readFileSync('mvp/js/data.js','utf8')),store=uri(fs.readFileSync('mvp/js/store.js','utf8').replace("'./data.js'",JSON.stringify(data))),S=await import(store);
+ // inline a module and its relative imports as data URLs (store.js imports data.js, project-contract.js and parameters.js)
+ const inline=(file,seen={})=>seen[file]||(seen[file]=uri(fs.readFileSync('mvp/js/'+file,'utf8').replace(/from '\.\/([\w-]+\.js)'/g,(_,dep)=>'from '+JSON.stringify(inline(dep,seen)))));
+ const store=inline('store.js'),S=await import(store);
  const H=await import(uri(fs.readFileSync('mvp/js/handoff.js','utf8').replace("'./store.js'",JSON.stringify(store))));
  const model={units:'m',studio:{levels:[{id:'L1'}]},components:[],layers:[]},p=S.createProject('Handoff acceptance',model),v=S.saveVersion(p,'Source');
  assert.equal(H.baselineConfirmed(p),false);p.baselineReview={signature:H.baselineSignature(p),confirmedAt:'reviewed'};assert(H.baselineConfirmed(p));
