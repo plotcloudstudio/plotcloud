@@ -29,6 +29,9 @@ jobs:
           - group: presentation
             scripts: >-
               hero/toronto.test.cjs tests/resources-native.cjs tests/compare-2d.cjs tests/workflow.cjs
+          - group: project-data
+            scripts: >-
+              tests/project-backup.cjs tests/mvp-dashboard.cjs
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,7 +42,7 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium
       - name: Verify service and shared selection contracts
-        run: node --test server/render-api.test.mjs tests/studio-tab.cjs
+        run: node --test server/render-api.test.mjs tests/studio-tab.cjs tests/replan-contracts.mjs
       - name: Serve site and run browser smoke
         env:
           TEST_BASE: http://127.0.0.1:8765

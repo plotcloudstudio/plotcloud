@@ -9,7 +9,11 @@
 //   account { user, site, defaults }                  — site and defaults every new project and run starts from
 //   project.sharedConditions { site, defaults, revision } — frozen Sun Hours/Daylight pilot conditions;
 //     Account seeds them once, while other engines retain the existing siteLinked behaviour during the pilot.
+//   Schema 2 (project-contract.js) adds contract, parameters, plans, planRevisions, assets and run lineage without rewriting
+//     the fields above; sharedConditions stays the projection the engines read, written only through parameters.js.
 import { sampleModel } from './data.js';
+import * as C from './project-contract.js';
+import * as P from './parameters.js';
 
 const KEY = 'pc-mvp-v1', MODE = 'pc-mvp-store';
 // Where it lives: IndexedDB is the store of record (room for sites, terrain and many versions). While the data is small a copy
@@ -47,6 +51,7 @@ function seed() {
   const v2 = add(sampleModel('B'), 'Larger south windows, overhang, acoustic ceiling');
   p.draft = clone(v2.model);
   p.sharedConditions={schema:1,revision:1,updated:now(),site:clone(SAMPLE_SITE),defaults:clone(DEFAULTS)};
+  C.initProject(p, { fromSample: true });
   return { projects: [p], account: { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } } };
 }
 
@@ -55,12 +60,15 @@ export function load() {
   if (DB && checked === DB) return DB;
   let fresh = false; if (!DB) { try { const raw = localStorage.getItem(KEY); fresh = !raw; DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; } }
   checked = DB;
+  // Before the first schema-2 migration, keep the untouched data as a v1 backup in IndexedDB (preMigrationBackup below).
+  if (!fresh && DB.projects?.some((p) => !(p.contract?.schema >= C.SCHEMA))) keepPreMigration(DB);
   if (!DB.account) DB.account = { user: null, site: clone(SAMPLE_SITE), defaults: { ...DEFAULTS } };
   let migrated=false;
   for (const p of DB.projects) {
     if (!p.site) p.site = clone(DB.account.site); if (p.siteLinked == null) p.siteLinked = true;
     // Pilot: freeze the currently effective conditions, without changing legacy engines or past runs.
     if(!p.sharedConditions){p.sharedConditions={schema:1,revision:1,updated:now(),site:clone(p.siteLinked===false?p.site:DB.account.site),defaults:clone(DB.account.defaults)};migrated=true;}
+    if (C.migrateProject(p)) migrated = true;
   }
   // estimates from the old prototype preview are retired: every result now comes from a PlotCloud engine
   for (const p of DB.projects) p.runs = p.runs.filter((r) => r.source !== 'prototype-mock');
@@ -96,7 +104,7 @@ export function reload() { const keep = DB; DB = null; try { if (!localStorage.g
 export const persistent = () => !memoryOnly;
 export function reset() { DB = seed(); save(); }
 // a project as it came from the cloud: replaced in place (pages that hold the object keep seeing it), or added
-export function putProject(fresh) { const P = load().projects, old = P.find((x) => x.id === fresh.id);
+export function putProject(fresh) { const P = load().projects, old = P.find((x) => x.id === fresh.id); C.migrateProject(fresh);   // a copy from a device on older code
   if (old) { for (const k of Object.keys(old)) delete old[k]; Object.assign(old, fresh); } else P.unshift(fresh); save(); return old || fresh; }
 export function dropProject(id) { load().projects = load().projects.filter((x) => x.id !== id); save(); }
 
@@ -108,6 +116,7 @@ export const siteOf = (p) => (p && p.siteLinked === false ? p.site : account().s
 export function linkSite(p, on) { if (!on) p.site = clone(account().site); p.siteLinked = !!on; p.updated = now(); save(); }
 export function createProject(name, model) {
   const p = { id: uid('p'), name: name || 'Untitled project', created: now(), updated: now(), versions: [], runs: [], draft: model, site: clone(account().site), siteLinked: true, sharedConditions:{schema:1,revision:1,updated:now(),site:clone(account().site),defaults:clone(account().defaults)} };
+  C.initProject(p, { fromSample: !!account().site?.sample });   // Account values are copied once; later Account edits never reach this project
   load().projects.unshift(p); save(); return p;
 }
 export function saveVersion(p, note) {
@@ -118,8 +127,10 @@ export function addRun(p, versionId, simId, settings, results, source = 'full-to
   const handoff=[...(p.handoffs||[])].reverse().find(h=>h.versionId===versionId&&h.study===simId&&h.baselineSignature===JSON.stringify({site:conditionsOf(p).site,defaults:conditionsOf(p).defaults}));
   settings={...settings,...(p.activeStudyConfiguration?.[simId]?{configurationName:p.activeStudyConfiguration[simId]}:{}),...(handoff?{handoff:clone(handoff)}:{})};
   const r = { id: uid('r'), versionId, simId, settings: clone(settings), results, created: now(), source };
+  // lineage: the frozen PlanRevision, the effective inputs this study subscribes to, and the recipe identity
+  try { Object.assign(r, C.runContract(p, versionId, simId, settings)); } catch (e) { r.contractError = e.message; }
   if (results && (results.thumb || results.field)) for (const o of p.runs) if (o.versionId === versionId && o.simId === simId && o.results) { delete o.results.thumb; delete o.results.field; }   // only the newest result of a version keeps its picture
-  p.runs.push(r); p.updated = now(); save(); return r;
+  p.runs.push(r); C.refreshAssets(p); p.updated = now(); save(); return r;
 }
 export function deleteRun(p, id) { p.runs = p.runs.filter((r) => r.id !== id); save(); }
 export const isSharedPilot = id => ['sunhours','radiation','utci','daylight','climate','passive','skyview','shadebenefit','solarenvelope'].includes(id);
@@ -131,8 +142,34 @@ export function conditionsSignature(p,id){
   if(id==='solarenvelope')return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north||0,tz:s.tz});
   return JSON.stringify({lat:s.lat,lon:s.lon,north:s.north??0,tz:s.tz,...(id==='sunhours'?{period:d.period}:id==='radiation'?{climate:s.climate?.hash}:id==='utci'?{terrain:s.terrain||'suburban',climate:s.climate?.hash}:id==='vent'?{terrain:s.terrain||'suburban',shelter:s.shelter||'semi',climate:s.climate?.hash}:{plane:d.plane,occStart:d.occStart,occEnd:d.occEnd,climate:s.climate?.hash})});
 }
-export function updateConditions(p,site,defaults){
-  const c=conditionsOf(p);p.sharedConditions={schema:1,revision:c.revision+1,updated:now(),site:clone(site),defaults:clone(defaults)};p.updated=now();save();return p.sharedConditions;
+// Every change to the project's conditions is recorded as parameter records (parameters.js) with its provenance.
+// keepRevision: the first setup of a brand-new project (no result can depend on the earlier values yet).
+export function updateConditions(p,site,defaults,{keepRevision=false,...provenance}={}){
+  const c=conditionsOf(p),next={schema:1,revision:c.revision+(keepRevision?0:1),updated:now(),site:clone(site),defaults:clone(defaults)};
+  P.recordConditionsChange(p,c,next,provenance);p.sharedConditions=next;C.refreshAssets(p);p.updated=now();save();return p.sharedConditions;
+}
+// Cancel an unsaved edit: the earlier conditions come back, recorded as a revert (not as new user input).
+export function revertConditions(p,snapshot){
+  P.recordConditionsChange(p,conditionsOf(p),snapshot,{event:'revert',acquisition:'rollback'});p.sharedConditions=clone(snapshot);C.refreshAssets(p);save();return p.sharedConditions;
+}
+// One entry point for a single value (parameter page, Workbench, later item 05 overrides). Returns the resolved value.
+export function setProjectParameter(p,query,opts={}){
+  const before=clone(conditionsOf(p));P.setParameter(p,{...query,mode:opts.mode??p.contract?.uiMode??null,...opts});return commitParameters(p,before,query);
+}
+export function restoreProjectDefault(p,query){
+  const before=clone(conditionsOf(p));P.restoreDefault(p,query);return commitParameters(p,before,query);
+}
+function commitParameters(p,before,query){
+  P.syncMirror(p);const c=conditionsOf(p);if(JSON.stringify({s:before.site,d:before.defaults})!==JSON.stringify({s:c.site,d:c.defaults})){c.revision=before.revision+1;c.updated=now();}
+  C.refreshAssets(p);p.updated=now();save();return P.resolve(p,query);
+}
+// Rolling back makes a new version and a new PlanRevision; later history is kept.
+export function rollbackPlan(p,revisionId){
+  const rev=C.revision(p,revisionId);if(!rev)throw Error('That plan revision is not in this project.');
+  const v=version(p,rev.versionId);if(!v)throw Error('The version of that revision is missing.');
+  if(rev.conditions&&rev.conditions!==C.UNRECORDED){const cur=conditionsOf(p),next={...clone(cur),revision:cur.revision+1,updated:now(),site:clone(rev.conditions.site),defaults:clone(rev.conditions.defaults)};P.recordConditionsChange(p,cur,next,{event:'rollback',acquisition:'rollback'});p.sharedConditions=next;}
+  p.draft=clone(v.model);const nv=saveVersion(p,`Restored from ${C.currentPlan(p).name}${rev.n} (v${v.n})`);
+  const fresh=C.freezePlan(p,nv.id,{restoredFrom:rev.id});C.refreshAssets(p);save();return fresh;
 }
 export function runConditionsStatus(p,r){
   const latest=p.versions.at(-1);if(latest&&r.versionId!==latest.id)return 'Based on v'+(version(p,r.versionId)?.n??'?')+' · model is now v'+latest.n+' · review or rerun';
@@ -159,6 +196,14 @@ export function pruneOldMedia() {
   let n = 0; for (const p of load().projects) { const last = p.versions.at(-1)?.id; for (const r of p.runs) if (r.versionId !== last && r.results && (r.results.thumb || r.results.field)) { delete r.results.thumb; delete r.results.field; r.results.mediaDropped = true; n++; } }
   save(); return n;
 }
+// ---- the data as it was before schema 2, kept once in IndexedDB as a v1 backup file (rollback path)
+const PRE = KEY + ':before-schema-2';
+function keepPreMigration(D) {
+  if (!idbOK) { D.migrationBackup = 'unavailable: IndexedDB is not available in this browser'; return; }
+  const text = JSON.stringify({ format: 'plotcloud-backup', v: 1, exported: now(), reason: 'automatic copy before PlotCloud data schema 2', account: D.account, projects: D.projects });
+  D.migrationBackup = PRE; idbGet(PRE).then((had) => had || idbPut(PRE, text)).catch(() => { });
+}
+export const preMigrationBackup = () => (idbOK ? idbGet(PRE).catch(() => null) : Promise.resolve(null));
 export function exportAll() { const D = load(); D.account.lastBackup = now(); save(); return JSON.stringify({ format: 'plotcloud-backup', v: 1, exported: now(), account: D.account, projects: D.projects }, null, 1); }
 // a backup file back in: 'merge' adds its projects (a project already here with the same id is replaced), 'replace' takes the whole file
 export function importAll(text, mode = 'merge') {
@@ -170,6 +215,9 @@ export function importAll(text, mode = 'merge') {
   else { for (const p of o.projects) { D.projects = D.projects.filter((x) => x.id !== p.id); D.projects.unshift(p); } }
   save(); reload(); return o.projects.length;
 }
+// complete backups (project-backup.js) after every check passed
+export function addRestored(p, replace = false) { const D = load(); if (replace) D.projects = D.projects.filter((x) => x.id !== p.id); else if (D.projects.some((x) => x.id === p.id)) throw new Error('A project with this ID is already here.'); C.migrateProject(p); D.projects.unshift(p); save(); return p; }
+export function replaceAll(projects, acct) { const D = load(); DB = { projects, account: { ...(acct || D.account), user: D.account.user } }; save(); reload(); }
 export function deleteAccount() { idbDel(KEY).catch(() => { }); try { localStorage.removeItem(KEY); localStorage.removeItem(MODE); for (const k of Object.keys(localStorage)) if (k.startsWith('pc-mvp') || k.startsWith('pc-psim') || k.startsWith('pc-sim')) localStorage.removeItem(k); indexedDB.deleteDatabase('pc-project-climate'); } catch (e) { } DB = null; }
 // where the person last was (Workspace, a simulation, Results), for "pick up where you left off"
 const RKEY = 'pc-mvp-recent';

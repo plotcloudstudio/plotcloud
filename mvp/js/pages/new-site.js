@@ -136,13 +136,13 @@ export async function render(app, _, params = new URLSearchParams()) {
       const psite = { label: origin.label || `${origin.lat.toFixed(5)}, ${origin.lon.toFixed(5)}`, lat: origin.lat, lon: origin.lon, north: 0, tz: env.tz, elev: data.terrain ? data.terrain.elev0 : env.elev, rain: env.rain, wind: env.wind, windDir: env.windDir, koppen: env.koppen, buildings: site.buildings.filter((b) => !b.excluded).length, year: env.year };
       if (into) {   // the project keeps its model; its site is replaced (the change shows as unsaved until a version is saved)
         if (!into.draft.studio) throw Error('Open this project in the Workspace once, then choose its site.');
-        into.draft.studio.site = site; into.draft.studio.north = 0; into.site = S.clone(psite); into.siteLinked = false; into.sharedConditions.site = S.clone(psite); into.updated = new Date().toISOString(); S.save();
+        into.draft.studio.site = site; into.draft.studio.north = 0; into.site = S.clone(psite); into.siteLinked = false; S.updateConditions(into, psite, into.sharedConditions.defaults); into.updated = new Date().toISOString(); S.save();
         if(weatherDownloadAvailable())ensureProjectClimate(into).catch(()=>{});setCurrent(into); toast(`New site for ${into.name}: save a version to keep it`); location.hash = '#/workspace/' + into.id; return;
       }
       const studio = toStudio({ layers: [], components: [] }, psite, { name }); studio.site = site; studio.north = 0; studio.name = name;
       const layers = Object.keys(LAYER_COLORS).filter((k) => k !== 'Imported' && k !== 'Context').map((n) => ({ name: n, color: LAYER_COLORS[n], visible: true, locked: n === 'Site' }));
       const p = S.createProject(name, { units: 'm', north: 0, layers, components: [], studio });
-      p.site = S.clone(psite); p.siteLinked = false; p.sharedConditions.site = S.clone(psite); S.saveVersion(p, 'Site from OpenStreetMap');
+      p.site = S.clone(psite); p.siteLinked = false; S.updateConditions(p, psite, p.sharedConditions.defaults, { keepRevision: true }); S.saveVersion(p, 'Site from OpenStreetMap');
       if(weatherDownloadAvailable())ensureProjectClimate(p).catch(()=>{});setCurrent(p); setCurrentVersion(p, p.versions.at(-1).id); toast(`${name}: ${psite.buildings} buildings around your plot`); location.hash = '#/workspace/' + p.id;
     } catch (er) { msg.textContent = er.message || 'The project could not be made.'; btn.disabled = false; }
   };

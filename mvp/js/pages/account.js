@@ -3,6 +3,7 @@ import * as S from '../store.js';
 import { geocode, enrich, mapEmbed } from '../site.js';
 import { $, $$, esc, when, toast, refreshWho } from '../app.js';
 import * as C from '../cloud.js';
+import { buildBackup, restoreBackup } from '../project-backup.js';
 
 const FIELDS = [
   ['label', 'Site', (s) => s.label, () => 'From address search'],
@@ -95,13 +96,13 @@ export async function render(app, _, params = new URLSearchParams()) {
     <section id="data" data-pane="data">
       <div class="kicker"><b>04</b>Backup &amp; data</div>
       <h2 class="display sm" style="margin-top:16px">Your data stays in this browser.</h2>
-      <p class="lede" style="margin-top:14px">A backup file holds every project, version, result and setting. Bring it back here or on another computer.</p><p class="note">Shared EPW contents are browser-local and are not included in this JSON backup. Keep the original EPW file; upload it again under Project shared conditions after restoring on another computer.</p>
+      <p class="lede" style="margin-top:14px">A backup file holds every project, version, result and setting. Bring it back here or on another computer.</p><p class="note">The backup includes the EPW weather files your projects use, plans, parameter sources and result lineage, so another browser can reopen and rerun them. Any weather file this browser no longer has is listed in the file as missing. Restoring checks the whole file first; a damaged file changes nothing.</p>
       ${A.user.cloud ? `<div class="card" id="cloudCard" style="margin-top:24px"><b>Cloud copy</b><p class="note" style="margin:6px 0 10px" id="cloudSt" role="status" aria-live="polite"></p>
         <p class="note" style="margin:0 0 12px">Every project except the sample, with its versions, results and pictures, and your site and defaults, are copied to your account and brought back on your other devices. If the same project changed on two devices, both are kept (the other one as “… (from another device)”).</p><button class="btn" id="syncNow">Sync now</button></div>` : ''}
       <div class="grid g2" style="margin-top:24px;align-items:start">
         <div class="card"><b>Back up</b><p class="note" style="margin:6px 0 12px" id="lastB"></p><button class="btn primary" id="exp">Download backup (.json)</button></div>
         <div class="card"><b>Restore</b><p class="note" style="margin:6px 0 12px">From a PlotCloud backup file.</p>
-          <label class="f">What to do with it<select id="impMode"><option value="merge">Add its projects to mine</option><option value="replace">Replace everything here</option></select></label>
+          <label class="f">What to do with it<select id="impMode"><option value="merge">Add its projects to mine (a project already here is kept; the restored one is added as a copy)</option><option value="merge-replace">Add its projects, replacing the same projects here</option><option value="replace">Replace everything here</option></select></label>
           <input type="file" id="impFile" accept=".json,application/json" hidden><button class="btn" id="imp" style="margin-top:10px">Choose a backup file…</button><p class="note" id="impMsg" role="status" style="margin-top:8px"></p></div>
         <div class="card"><b>Space</b><div class="db-meter" style="margin:10px 0 6px"><i id="useBar"></i></div><p class="note" id="useTxt"></p>
           <button class="btn sm" id="prune" style="margin-top:10px">Remove pictures of older results</button><p class="note" style="margin-top:6px">Keeps every figure; only results not on a project's latest version lose their picture and per-point values.</p></div>
@@ -178,13 +179,16 @@ export async function render(app, _, params = new URLSearchParams()) {
     $('#useBar', app).style.width = pc.toFixed(1) + '%'; $('#useTxt', app).textContent = `${size(use)} of about ${size(S.QUOTA)} used (${pc < 1 ? 'under 1' : Math.round(pc)} %) · kept in IndexedDB${S.storageMode() === 'idb' ? '' : ', with a quick copy in localStorage'} · ${S.PERSISTED ? 'the browser keeps it until you clear it' : 'the browser may clear it when the disk is full, so keep a backup'}.`;
     $('#lastB', app).textContent = A.lastBackup ? `Last backup ${when(A.lastBackup)}.` : 'No backup yet.';
   }
-  $('#exp', app).onclick = () => { const blob = new Blob([S.exportAll()], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `plotcloud-backup-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); dataUI(); toast('Backup downloaded'); };
+  $('#exp', app).onclick = async (e) => { e.target.disabled = true; const msg = $('#lastB', app); try { const b = await buildBackup(), blob = new Blob([JSON.stringify(b)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `plotcloud-backup-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); dataUI();
+    msg.textContent += ` ${b.projects.length} project${b.projects.length === 1 ? '' : 's'}, ${b.assets.length} weather file${b.assets.length === 1 ? '' : 's'} included.` + (b.missingAssets.length ? ` Not included (not in this browser): ${b.missingAssets.map((x) => x.name || x.hash.slice(0, 12)).join(', ')}.` : ''); toast('Backup downloaded'); }
+    catch (er) { msg.textContent = 'Backup failed: ' + er.message; } finally { e.target.disabled = false; } };
   $('#imp', app).onclick = () => $('#impFile', app).click();
   $('#impFile', app).onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const mode = $('#impMode', app).value, msg = $('#impMsg', app);
     if (mode === 'replace' && !confirm('Replace every project and setting in this browser with the backup?')) { e.target.value = ''; return; }
-    let n; try { n = S.importAll(await f.text(), mode); } catch (er) { msg.textContent = er.message; e.target.value = ''; return; }
+    let out; msg.textContent = 'Checking the backup…'; try { out = await restoreBackup(await f.text(), { mode: mode === 'replace' ? 'replace' : 'merge', conflicts: mode === 'merge-replace' ? 'replace' : 'copy' }); } catch (er) { msg.textContent = er.message; msg.style.whiteSpace = 'pre-line'; e.target.value = ''; return; }
     // the store was read again: draw the page from it, so later changes here go to the restored data
-    render(app, _, new URLSearchParams('tab=data')); refreshWho(); $('#impMsg', app).textContent = `Restored ${n} project${n === 1 ? '' : 's'} from ${f.name}.`; toast('Backup restored'); };
+    const n = out.restored, copies = out.projects.filter((x) => x.action === 'copy').length;
+    await render(app, _, new URLSearchParams('tab=data')); refreshWho(); $('#impMsg', app).textContent = `Restored ${n} project${n === 1 ? '' : 's'} from ${f.name}` + (out.legacy ? '. ' + out.note : `, with ${out.assetsRestored} weather file${out.assetsRestored === 1 ? '' : 's'}.`) + (copies ? ` ${copies} already existed here and ${copies === 1 ? 'was' : 'were'} added as a copy.` : '') + (out.missingAssets.length ? ` Missing weather (upload again to rerun): ${out.missingAssets.map((x) => x.name || x.hash.slice(0, 12)).join(', ')}.` : ''); toast('Backup restored'); };
   $('#prune', app).onclick = () => { const n = S.pruneOldMedia(); dataUI(); toast(n ? `Removed pictures from ${n} older result${n === 1 ? '' : 's'}` : 'Nothing to remove'); };
   $$('[data-n]', app).forEach((c) => c.onchange = () => { A.notify = { ...(A.notify || { batch: true, stale: true }), [c.dataset.n]: c.checked }; S.save(); toast('Saved'); });
   $('#reset', app).onclick = () => { if (!confirm('Remove all prototype projects and settings in this browser and restore the sample?')) return; S.reset(); location.hash = '#/'; location.reload(); };
