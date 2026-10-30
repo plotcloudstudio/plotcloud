@@ -1,33 +1,50 @@
 // The site of a new project, from open data, in the browser (no key, nothing invented):
 //   OpenStreetMap   buildings (with heights where mapped), roads, water, green areas, trees
-//                   Overpass first (three public servers in turn); the OpenStreetMap API itself as a last resort for small sites
+//                   Overpass (three public servers, started a few seconds apart); the OpenStreetMap API joins for small sites
 //   AWS Terrain Tiles (Terrarium, zoom 15, about 4.8 m a pixel at the equator, 3.1 m at 49°; SRTM, NED and others)   the ground,
 //                   read between pixel centres (bilinear, across tile edges too), so a sample is not snapped to the nearest pixel
 // The data is turned into Plan Studio's site format by Plan Studio itself (window.__SITEC in emb/modeler.html).
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
 const D = Math.PI / 180;
 export function bboxOf(lat, lon, r) { const dLat = r / 111320, dLon = r / (111320 * Math.cos(lat * D)); return [lat - dLat, lon - dLon, lat + dLat, lon + dLon]; }
-async function timed(url, opt, ms) { const c = new AbortController(), t = setTimeout(() => c.abort(), ms); try { return await fetch(url, { ...opt, signal: c.signal }); } finally { clearTimeout(t); } }
 
-export async function fetchOSM(lat, lon, r, say = () => { }) {
+// Servers are started a few seconds apart instead of one after another: the first good answer wins and the others are
+// cancelled, so one busy server costs about 3 s instead of a 45 s timeout. The server that answered last is asked first next
+// time. The OpenStreetMap API joins later and only for small sites (its usage policy). Answers are kept for the session, and
+// a download already running is shared, so checking a site and then starting the project reads it once.
+const HEDGE_MS = 3000, API_AFTER_MS = 8000, LIMIT_MS = 45000, cache = new Map();
+const lastHost = () => { try { return localStorage.getItem('pc-osm-host') || ''; } catch { return ''; } };
+export function fetchOSM(lat, lon, r, say = () => { }) {
+  const key = `${lat.toFixed(5)},${lon.toFixed(5)},${r}`;
+  if (!cache.has(key)) { const p = readOSM(lat, lon, r, (t) => cache.get(key)?.say(t)); p.say = say; cache.set(key, p); p.catch(() => cache.delete(key)); }
+  const p = cache.get(key); p.say = say; return p;
+}
+async function readOSM(lat, lon, r, say) {
   const [s, w, n, e] = bboxOf(lat, lon, r * 1.1), bb = `${s.toFixed(6)},${w.toFixed(6)},${n.toFixed(6)},${e.toFixed(6)}`, errs = [], at = new Date().toISOString();
   const q = `[out:json][timeout:40];(way["building"](${bb});relation["building"](${bb});way["building:part"](${bb});way["highway"](${bb});`
     + `way["natural"~"^(water|wood|scrub)$"](${bb});way["waterway"="riverbank"](${bb});way["leisure"~"^(park|garden|pitch)$"](${bb});`
-    + `way["landuse"~"^(grass|forest|meadow|recreation_ground|village_green|cemetery|reservoir|basin)$"](${bb});node["natural"="tree"](${bb}););out geom;`;
-  for (const url of OVERPASS) {
-    const host = new URL(url).host;
-    try { say(`Reading OpenStreetMap from ${host}…`); const res = await timed(url, { method: 'POST', body: new URLSearchParams({ data: q }) }, 45000);
-      if (!res.ok) throw Error('HTTP ' + res.status); const text = await res.text(); if (!text.trim().startsWith('{')) throw Error('busy'); JSON.parse(text);
-      return { text, provider: `OpenStreetMap via Overpass (${host})`, at }; }
-    catch (er) { errs.push(`${host}: ${er.name === 'AbortError' ? 'timed out' : er.message}`); }
-  }
+    + `way["landuse"~"^(grass|forest|meadow|recreation_ground|village_green|cemetery|reservoir|basin)$"](${bb});node["natural"="tree"](${bb}););out geom qt;`;
+  const first = lastHost(), servers = [...OVERPASS].sort((a, b) => (new URL(b).host === first) - (new URL(a).host === first));
+  const jobs = servers.map((url, k) => ({ host: new URL(url).host, delay: k * HEDGE_MS, go: async (signal) => {
+    const res = await fetch(url, { method: 'POST', body: new URLSearchParams({ data: q }), signal });
+    if (!res.ok) throw Error('HTTP ' + res.status); const text = await res.text(); if (!text.trim().startsWith('{')) throw Error('busy'); JSON.parse(text);
+    return { text, provider: `OpenStreetMap via Overpass (${new URL(url).host})`, at }; } }));
   // the OpenStreetMap API serves small areas only (its usage policy); fine for one site of up to about 400 m
-  if ((n - s) * (e - w) <= 0.25 && r <= 400) {
-    try { say('Reading OpenStreetMap from api.openstreetmap.org…'); const res = await timed(`https://api.openstreetmap.org/api/0.6/map?bbox=${w.toFixed(6)},${s.toFixed(6)},${e.toFixed(6)},${n.toFixed(6)}`, {}, 60000);
-      if (!res.ok) throw Error('HTTP ' + res.status); return { text: await res.text(), provider: 'OpenStreetMap API (api.openstreetmap.org)', at }; }
-    catch (er) { errs.push(`api.openstreetmap.org: ${er.name === 'AbortError' ? 'timed out' : er.message}`); }
-  }
-  throw Error(`OpenStreetMap could not be reached (${errs.join('; ')}). Try again in a minute, or a smaller area.`);
+  if ((n - s) * (e - w) <= 0.25 && r <= 400) jobs.push({ host: 'api.openstreetmap.org', delay: API_AFTER_MS, go: async (signal) => {
+    const res = await fetch(`https://api.openstreetmap.org/api/0.6/map?bbox=${w.toFixed(6)},${s.toFixed(6)},${e.toFixed(6)},${n.toFixed(6)}`, { signal });
+    if (!res.ok) throw Error('HTTP ' + res.status); return { text: await res.text(), provider: 'OpenStreetMap API (api.openstreetmap.org)', at }; } });
+  const stop = new AbortController(), timers = [], limit = setTimeout(() => stop.abort(), LIMIT_MS);
+  try {
+    return await new Promise((done, fail) => {
+      let left = jobs.length;
+      const start = (j) => { if (stop.signal.aborted) return; say(`Reading OpenStreetMap from ${j.host}…`);
+        j.go(stop.signal).then((v) => { try { localStorage.setItem('pc-osm-host', j.host); } catch { } stop.abort(); done(v); },
+          (er) => { errs.push(`${j.host}: ${stop.signal.aborted ? 'timed out' : er.message}`);
+            const next = jobs.find((x) => !x.started); if (next) { next.started = true; clearTimeout(next.timer); start(next); }   // a failure starts the next one at once
+            if (--left === 0) fail(Error(`OpenStreetMap could not be reached (${errs.join('; ')}). Try again in a minute, or a smaller area.`)); }); };
+      for (const j of jobs) { j.timer = setTimeout(() => { if (!j.started) { j.started = true; start(j); } }, j.delay); timers.push(j.timer); }
+    });
+  } finally { clearTimeout(limit); timers.forEach(clearTimeout); stop.abort(); }
 }
 
 // ---- terrain: Terrarium tiles decode to metres as (R × 256 + G + B / 256) − 32768
