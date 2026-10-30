@@ -24,7 +24,7 @@ function fixture() {   // two buildings (one with a mapped height), a road; site
     await p.goto(B + '#/workspace'); for (let i = 0; i < 80; i++) { await p.waitForTimeout(400); if (await p.evaluate(() => window.__ws2 && window.__ws2.ready())) break; } await p.waitForTimeout(600);
     const W = (role, fn) => p.evaluate(([role, fn]) => { const w = document.getElementById({ plan: 'fPlan', persp: 'fPersp', props: 'fProps' }[role]).contentWindow; return (new Function('w', 'return (' + fn + ')(w)'))(w); }, [role, fn.toString()]);
     const P = (x, y) => p.evaluate(([x, y]) => { const f = document.getElementById('fPlan'), w = f.contentWindow, fr = f.getBoundingClientRect(), cv = w.document.getElementById('cv').getBoundingClientRect(), q = w.__st.toPx([x, y]); return [fr.left + cv.left + q[0], fr.top + cv.top + q[1]]; }, [x, y]);
-    ok(await p.evaluate(() => !!document.querySelector('.w2-rail [data-panel="mass"]')), 'the Workspace rail has Massing');
+    ok(await p.evaluate(() => !!document.querySelector('.sp-tools [data-panel="mass"]')), 'the Workspace rail has Massing');
     ok(await p.evaluate(() => __ws2.model().layers.some((l) => l.name === 'Masses')), 'the project has a Masses layer');
     await p.click('[data-panel="mass"]'); await p.click('[data-tool="Rectangle mass"]');
     ok(await W('plan', (w) => w.__ws.state().tool) === 'massrect', 'Rectangle mass starts Plan Studio’s rectangle mass tool');

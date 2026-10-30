@@ -61,7 +61,7 @@ const path=require('node:path');
  await select('imp','gz-import');before=await model();await drag('r',Math.PI/2);after=await model();const imported=after.imports.find(o=>o.id==='gz-import'),oldImport=before.imports.find(o=>o.id==='gz-import');assert.equal(imported.rot,1);assert.equal(imported.g.w,oldImport.g.d);assert.equal(imported.g.d,oldImport.g.w);assert(Math.abs(imported.g.x+imported.g.w/2-oldImport.g.x-oldImport.g.w/2)<.002);
  console.log('PASS imported meshes, lights and ceiling panels move; imported rotation preserves its center and quarter-turn format');
  await select('wall','gz-wall');await p.click('#vBtn');await p.screenshot({path:'/workspace/artifacts/workbench-view-gumball.png'});await p.click('#vBtn');
- await select('wall','gz-wall');await p.click('[data-sw="gumball"]');assert.equal(await p.evaluate(()=>__ws2.inst.persp.win.S3.gizmo.state()),null);await p.click('[data-sw="gumball"]');assert(await p.evaluate(()=>__ws2.inst.persp.win.S3.gizmo.state()));
+ await select('wall','gz-wall');await p.click('[data-sp=snap]');await p.click('[data-sw="gumball"]');assert.equal(await p.evaluate(()=>__ws2.inst.persp.win.S3.gizmo.state()),null);await p.click('[data-sw="gumball"]');assert(await p.evaluate(()=>__ws2.inst.persp.win.S3.gizmo.state()));
  await p.evaluate(()=>{const i=__ws2.inst.persp;i.ws.setLocks(['Walls']);i.ws.select({k:'wall',id:'gz-wall'});});state=await p.evaluate(()=>__ws2.inst.persp.win.S3.gizmo.state());assert(!state?.handles);console.log('PASS Gumball switch and layer locks');
  assert.deepEqual(errors,[]);console.log('PASS no page errors');
  }finally{await b.close();}

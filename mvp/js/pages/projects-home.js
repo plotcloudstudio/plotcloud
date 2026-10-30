@@ -6,6 +6,7 @@
 import * as S from '../store.js';
 import * as C from '../cloud.js';
 import { $, $$, esc, toast, setCurrent, refreshWho } from '../app.js';
+import { suggest, resolve } from '../address-suggest.js';
 
 const I = {
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
@@ -101,11 +102,31 @@ export function render(app, [section], params) {
     const body = $('#phBody', app), L = list(); $('#phCount', app).textContent = where === 'tags' ? '' : L.length;
     if (where === 'tags') { const counts = {}; for (const p of live()) for (const t of p.tags || []) counts[t] = (counts[t] || 0) + 1;
       body.innerHTML = Object.keys(counts).length ? `<table class="ph-list"><thead><tr><th>Tag</th><th>Projects</th></tr></thead><tbody>${Object.entries(counts).sort().map(([t, n]) => `<tr><td><a href="#/home?tag=${encodeURIComponent(t)}">${esc(t)}</a></td><td>${n}</td></tr>`).join('')}</tbody></table>` : '<p class="ph-empty">No tags yet. Hover a project and choose the tag button to add categories such as “Housing” or “Competition”.</p>'; return; }
-    if (view === 'list') body.innerHTML = `${where === 'mine' ? '<p><a class="btn accent" href="#/new-project">+ Add new project</a></p>' : ''}<table class="ph-list"><thead><tr><th>Name</th><th>Location</th><th>Versions</th><th>Results</th><th>Created</th><th>Last edited</th></tr></thead><tbody>${L.map((p) => `<tr data-id="${esc(p.id)}"><td><a href="#/workspace/${esc(p.id)}" data-open="${esc(p.id)}">${esc(p.name)}</a>${p.favorite ? ' ★' : ''}</td><td>${esc((S.conditionsOf(p)?.site?.label || '—').split(',')[0])}</td><td>${p.versions.length}</td><td>${p.runs.length}</td><td>${day(p.created)}</td><td>${ago(p.updated || p.created)}</td></tr>`).join('')}</tbody></table>${L.length ? '' : '<p class="ph-empty">No projects here.</p>'}`;
-    else if (view === 'map') { body.innerHTML = '<div class="ph-mapview" id="phMap"></div><p class="ph-dates">Projects are placed at their saved site location.</p>'; leafletLoad().then((Lf) => {
-        if (!$('#phMap', app)) return; mapObj = Lf.map($('#phMap', app)).setView([30, 0], 2); Lf.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'np-light', attribution: '© OpenStreetMap contributors' }).addTo(mapObj);
-        const pts = []; for (const p of L) { const s = S.conditionsOf(p)?.site; if (!Number.isFinite(s?.lat)) continue; pts.push([s.lat, s.lon]); Lf.marker([s.lat, s.lon]).addTo(mapObj).bindPopup(`<b>${esc(p.name)}</b><br><a href="#/workspace/${esc(p.id)}">Open</a>`); }
-        if (pts.length) mapObj.fitBounds(pts, { maxZoom: 12, padding: [40, 40] }); }); }
+    body.classList.toggle('ph-body-map', view === 'map');
+    // list: a picture, the name and its versions, then dates, results and tags (categories)
+    if (view === 'list') body.innerHTML = `<table class="ph-list ph-rows"><thead><tr><th>Projects</th><th>Created</th><th>Last edited</th><th>Results</th><th>Category</th></tr></thead><tbody>${L.map((p) => { const t = thumbOf(p), del = !!p.deletedAt;
+      return `<tr data-id="${esc(p.id)}"><td><a class="ph-row" href="${del ? '#' : '#/workspace/' + esc(p.id)}" data-open="${esc(p.id)}"><span class="ph-rthumb">${t ? `<img src="${t}" alt="">` : ''}</span><span><b>${esc(p.name)}${p.favorite ? ' ★' : ''}</b><small>${p.versions.length} version${p.versions.length === 1 ? '' : 's'}</small></span></a></td><td>${day(p.created)}</td><td>${del ? 'Deleted ' + ago(p.deletedAt) : ago(p.updated || p.created)}</td><td>${p.runs.length}</td><td>${(p.tags || []).map((x) => `<span class="ph-chip">${esc(x)}</span>`).join(' ')}</td></tr>`; }).join('')}</tbody></table>${L.length ? '' : '<p class="ph-empty">No projects here.</p>'}`;
+    // map: the project cards in a column beside a light map of where each project is; hover and click link the two
+    else if (view === 'map') { body.innerHTML = `<div class="ph-split"><div class="ph-col">${L.map(card).join('') || '<p class="ph-empty">No projects here.</p>'}</div><div class="ph-mapwrap"><div class="ph-mapview" id="phMap"></div>
+        <div class="ph-mapsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input id="phLoc" type="search" placeholder="Search for a location" autocomplete="off" aria-label="Search for a location"><div class="ph-hits" id="phHits" hidden></div></div></div></div>`;
+      leafletLoad().then((Lf) => {
+        if (!$('#phMap', app)) return; mapObj = Lf.map($('#phMap', app), { zoomControl: false, worldCopyJump: true }).setView([35, -40], 3); Lf.control.zoom({ position: 'bottomright' }).addTo(mapObj);
+        Lf.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19, attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors' }).addTo(mapObj);
+        Lf.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19 }).addTo(mapObj);
+        const dots = new Map(), pts = [], dot = (on) => ({ radius: on ? 9 : 6, color: '#fff', weight: 2, fillColor: on ? '#d4322b' : '#6b7280', fillOpacity: 1 });
+        for (const p of L) { const s = S.conditionsOf(p)?.site; if (!Number.isFinite(s?.lat) || s.sample) continue; pts.push([s.lat, s.lon]);
+          const m = Lf.circleMarker([s.lat, s.lon], dot(false)).addTo(mapObj).bindTooltip(esc(p.name), { direction: 'top', offset: [0, -6] }); dots.set(p.id, m);
+          m.on('click', () => { const c = app.querySelector(`.ph-col .ph-card[data-id="${CSS.escape(p.id)}"]`); if (!c) return; c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); c.classList.add('ph-hl'); setTimeout(() => c.classList.remove('ph-hl'), 1400); }); }
+        if (pts.length) mapObj.fitBounds(pts, { maxZoom: 11, padding: [60, 60] });
+        for (const c of $$('.ph-col .ph-card', app)) { const m = dots.get(c.dataset.id); if (!m) continue; c.onmouseenter = () => { m.setStyle(dot(true)); m.bringToFront(); }; c.onmouseleave = () => m.setStyle(dot(false)); }
+        // the location search moves the map (it does not filter the projects)
+        const inp = $('#phLoc', app), hits = $('#phHits', app); let t = 0, ac = null;
+        inp.oninput = () => { clearTimeout(t); const v = inp.value.trim(); if (v.length < 3) { hits.hidden = true; return; } t = setTimeout(async () => { ac?.abort(); ac = new AbortController(); const c = mapObj.getCenter();
+          const rows = await suggest(v, { near: mapObj.getZoom() >= 6 ? { lat: c.lat, lon: c.lng } : null, signal: ac.signal }).catch(() => []); if (!rows.length) { hits.hidden = true; return; }
+          hits.innerHTML = rows.map((r, i) => `<button type="button" data-hit="${i}"><b>${esc(r.title)}</b><small>${esc(r.place)}</small></button>`).join(''); hits.hidden = false;
+          for (const b of $$('[data-hit]', hits)) b.onclick = async () => { hits.hidden = true; try { const r = await resolve(rows[+b.dataset.hit]); inp.value = r.title; mapObj.setView([r.lat, r.lon], 13); } catch (e) { toast(e.message); } }; }, 250); };
+        inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); hits.querySelector('[data-hit]')?.click(); } if (e.key === 'Escape') hits.hidden = true; };
+      }); }
     else body.innerHTML = `<div class="ph-grid">${where === 'mine' && !tag ? `<a class="ph-new" href="#/new-project"><b>+</b>Add new project</a>` : ''}${L.map(card).join('')}</div>${L.length || where === 'mine' ? '' : `<p class="ph-empty">${where === 'deleted' ? 'Nothing deleted. Deleted projects stay here until you remove them permanently.' : 'No favorites yet: use the star on a project.'}</p>`}`;
     bind();
   }

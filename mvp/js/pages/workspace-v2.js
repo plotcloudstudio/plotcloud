@@ -14,9 +14,9 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 import * as S from '../store.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
-import { mountChrome } from '../workspace-chrome.js?v=float-20261030-1';
+import { mountChrome } from '../workspace-chrome.js?v=float-20261030-2';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
-import {mountWorkbenchShell} from '../workbench-shell.js?v=light-only-20261028-1';
+import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel } from '../viewport.js';

@@ -23,7 +23,7 @@ export function mountWorkbenchShell(app,{activePane,deleteSelection,fit,center})
  if(matchMedia('(max-width:1200px)').matches)app.querySelector('#libraryToggle').click();
  const refresh=()=>{const p=activePane();const doc=p.ready?p.win.document:null;
   centerButton.disabled=!p.ready;
-  for(const [key,,selector]of commands){const b=edit.querySelector(`[data-command="${key}"]`),original=source(p,key,selector);b.disabled=!original||original.disabled;const pressed=original?.getAttribute('aria-pressed');if(pressed!==null&&pressed!==undefined)b.setAttribute('aria-pressed',pressed);}
+  for(const [key,,selector]of commands){const b=app.querySelector(`[data-command="${key}"]`),original=source(p,key,selector);b.disabled=!original||original.disabled;const pressed=original?.getAttribute('aria-pressed');if(pressed!==null&&pressed!==undefined)b.setAttribute('aria-pressed',pressed);}
   for(const[key,,selector,ceiling]of extra){const b=more.querySelector(`[data-extra="${key}"]`),original=doc?.querySelector(selector);b.hidden=ceiling&&(!p.ready||p.ws.state().view2d!=='ceiling');b.disabled=!original||original.disabled;}
   const hint=doc?.getElementById('toolHint')?.textContent?.trim()||'Select objects';const text='Command: '+hint;const line=bar.querySelector('#commandHint');if(line.textContent!==text)line.textContent=text;line.title=hint;
   const pct=doc?.getElementById('zPct')?.value;utilities.querySelector('output').textContent=(pct||'100')+'%';

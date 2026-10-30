@@ -1,5 +1,5 @@
 import * as S from '../store.js';
-import {LIVE} from '../app.js';
+import {LIVE,simBack} from '../app.js';
 // The same study layout as Sun Hours and the other engine studies (sim-engine.js): a two-row .shbar header with project,
 // version, site chip, input review and the Run study / auto-save / Save result workflow; Settings | Export tabs at the top
 // of the left panel; Results | Charts tabs on the right. Element IDs used by the study code and tests are kept.
@@ -7,7 +7,7 @@ function unify(root,kind,{settings,results,nav,heading,chartStage}){
  const pre=kind==='environment'?'env':'ss',head=root.querySelector(kind==='environment'?'.env-head':'.ss-head'),q=s=>root.querySelector(s);
  // ---- header
  const back=head.querySelector('a[href="#/simulations"]'),title=head.querySelector('strong'),proj=q('#'+pre+'-project'),ver=q('#'+pre+'-version');
- back.className='btn sm ghost';back.textContent='← Back';title.className='shname';title.textContent=title.textContent.trim();
+ back.className='btn sm ghost';back.textContent='← Back';back.href=simBack();title.className='shname';title.textContent=title.textContent.trim();
  const badge=document.createElement('span');badge.innerHTML=LIVE;
  const label=(text,el)=>{const l=document.createElement('label');l.className='shsel';l.append(text,el);return l;};
  const p=S.project(proj.value),c=p&&S.conditionsOf(p),chip=document.createElement('a');chip.className='shsite';

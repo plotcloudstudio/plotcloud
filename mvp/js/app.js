@@ -33,7 +33,8 @@ export function setCurrent(p) { try { localStorage.setItem('pc-mvp-current', p.i
 export function currentVersion(p) { let id = null; try { id = localStorage.getItem('pc-mvp-ver:' + p.id); } catch (e) { } return p.versions.find((v) => v.id === id) || p.versions.at(-1) || null; }
 export function setCurrentVersion(p, vId) { try { localStorage.setItem('pc-mvp-ver:' + p.id, vId); } catch (e) { } }
 // where "Back" on a simulation goes: the page it was entered from
-export const simBack = () => { try { return sessionStorage.getItem('pc-sim-back') || '#/simulations'; } catch (e) { return '#/simulations'; } };
+// back from a study: where it was opened from, else the Workspace (studies are opened from there since 2026-10-30)
+export const simBack = () => { try { return sessionStorage.getItem('pc-sim-back') || '#/workspace'; } catch (e) { return '#/workspace'; } };
 
 // signed in: Dashboard in the main menu and the avatar menu (Dashboard, Account settings, Log out); signed out: Log in, Start free
 // the cloud copy's state, in a few words (signed-in people only)
@@ -84,7 +85,9 @@ export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
-  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  // the Workspace, its simulations and a project's results are one place, reached from the Dashboard (2026-10-30)
+  const navKey = ['workspace', 'simulations', 'results', 'project', 'activity'].includes(key) ? 'home' : key;
+  $$('[data-nav]').forEach((a) => { if (a.dataset.nav === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
   document.querySelector('.pc-ui-context')?.remove();
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }

@@ -34,11 +34,14 @@ body.sp-full #app{padding:0;max-width:none}
 
 /* top right: saved state, undo / redo, export, import, simulation */
 .w2.sp .sp-tr{position:absolute;right:12px;top:12px;z-index:30;display:flex;align-items:center;padding:3px;color:#374151}
-.w2.sp .sp-tr .sp-b:hover:not(:disabled){background:#f3f4f6}
+.w2.sp .sp-tr :is(.sp-b,.sp-mask):hover:not(:disabled){background:#f3f4f6!important}
+.w2.sp .sp-mask:disabled{opacity:.35;cursor:default}
+.w2.sp .sp-tools .sp-mask[aria-pressed=true]{background:#eef2ff!important;color:#1d4ed8!important}
 .w2.sp .sp-saved[data-state=saved]{color:#16a34a}
 .w2.sp .sp-saved[data-state=dirty]{color:#d97706}
 .w2.sp .sp-saved[data-state=dirty] svg{display:none}
 .w2.sp .sp-saved[data-state=dirty]::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.w2.sp .sp-study{margin-left:6px;height:30px;max-width:150px;border:1px solid #e5e7eb;border-radius:7px;padding:0 6px;font:500 11.5px Inter,system-ui,sans-serif;color:#374151;background:#fff}
 .w2.sp #sendSim{margin-left:4px;min-height:30px;padding:0 12px;border-radius:7px;font:600 11.5px Inter,system-ui,sans-serif}
 
 /* dark icon rails */
@@ -134,3 +137,6 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
   .w2.sp .sp-bl .sp-blt{display:none}
   .w2.sp>.w2-right.sp-panelcard{left:56px;right:56px;width:auto}
 }
+/* the floating groups' gaps and labels let clicks and drags through to the model; only the controls take them */
+.w2.sp :is(.sp-tl,.sp-bottom,.sp-bl,.sp-blt){pointer-events:none}
+.w2.sp :is(.sp-tl,.sp-bottom,.sp-bl)>:not(.sp-blt){pointer-events:auto}

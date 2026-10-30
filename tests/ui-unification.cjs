@@ -40,7 +40,7 @@ let currentTarget='browser startup';
    await routePage.close();
   }
   const p=await context.newPage();await p.goto(base+'/mvp/#/resources');await p.waitForFunction(()=>window.PlotCloudUI?.version===1);
-  assert.equal(await p.locator('#nav [data-nav="workspace"]').count(),1);
+  assert.equal(await p.locator('#nav [data-nav="workspace"]').count(),0);   // the Workspace is reached from the Dashboard (2026-10-30)
   assert.equal(await p.locator('#nav [data-nav="workspace-v2"]').count(),0);
   assert.equal(await p.locator('#themeSeg').count(),0);
   await p.goto(base+'/index.html#/studio');

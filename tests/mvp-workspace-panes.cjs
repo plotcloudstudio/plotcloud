@@ -118,7 +118,7 @@ await W(p,'plan',(w,x)=>{},want);
 a=await P(p,bx.x,bx.y);const z3=await P(p,want,6);await p.keyboard.down('Alt');await p.mouse.move(...a);await p.mouse.down();await p.mouse.move(...z3,{steps:12});await p.mouse.up();await p.keyboard.up('Alt');await p.waitForTimeout(900);
 let B2=await bed();console.log('  parked:',JSON.stringify(B2),'want x',want.toFixed(3));
 // §1 · clearance on: the box comes from the piece and its four clearances, live
-await p.click('[data-sw="clearance"]');await p.waitForTimeout(400);
+await p.evaluate(()=>{const c=document.querySelector('.sp-pop-snap');if(c&&c.hidden)document.querySelector('[data-sp=snap]').click();});await p.click('[data-sw="clearance"]');await p.waitForTimeout(400);
 ok(await W(p,'plan',w=>w.__ws.state().clr),'Clearance switch turns Plan Studio\'s clearance on in the Plan pane');
 const cl=async()=>W(p,'plan',(w,id)=>w.__ws.clearances().find(c=>c.id===id),B0.id);
 const span=(c)=>{const xs=c.pts.map(q=>q[0]),ys=c.pts.map(q=>q[1]);return {x0:+Math.min(...xs).toFixed(3),x1:+Math.max(...xs).toFixed(3),y0:+Math.min(...ys).toFixed(3),y1:+Math.max(...ys).toFixed(3)};};
@@ -142,7 +142,7 @@ ok(Math.abs(B4.rot-90)<0.5||B4.rot===0,'turn 90° in the parameters: '+B4.rot+'�
 if(Math.abs(B4.rot-90)<0.5) ok(Math.abs((s3.x1-s3.x0)-(fr1.y1-fr1.y0))<0.02,'the clearance box turns with the piece');
 ok((await pen()).length===0,'turning never leaves it in a wall');
 // clearance off: hidden, still bound
-await p.click('[data-sw="clearance"]');await p.waitForTimeout(400);ok(!(await W(p,'plan',w=>w.__ws.state().clr))&&await p.evaluate(()=>__ws2.vp.clearanceCount())===0,'switching Clearance off hides it');
+await p.evaluate(()=>{const c=document.querySelector('.sp-pop-snap');if(c&&c.hidden)document.querySelector('[data-sp=snap]').click();});await p.click('[data-sw="clearance"]');await p.waitForTimeout(400);ok(!(await W(p,'plan',w=>w.__ws.state().clr))&&await p.evaluate(()=>__ws2.vp.clearanceCount())===0,'switching Clearance off hides it');
 ok(await W(p,'plan',(w,id)=>!!w.__ws.clearances().find(c=>c.id===id),B0.id),'…without unbinding it (still computed from the piece)');
 // §2 resize into a wall stops at the critical value: put it 0.15 m off the outer wall and ask for much more width
 await W(p,'props',w=>{const r=w.document.getElementById('pp_rot');r.value='0';r.dispatchEvent(new Event('change',{bubbles:true}));});await p.waitForTimeout(800);
@@ -188,10 +188,10 @@ if(sx){const b1=await bed();await p.mouse.move(...sx);await p.mouse.down();await
   ok(/stopped at the wall/.test(tip2)||true,'(gumball far drag) '+tip2);
 }
 // gumball snaps: Cen on → the bed centre snaps to the room centre line
-await p.click('[data-snap="Cen"]');ok(await W(p,'persp',w=>w.__ws.state().snaps.cen),'Cen in the status bar turns centre snaps on in the panes');
-await p.click('[data-snap="Cen"]');
+await p.evaluate(()=>{const c=document.querySelector('.sp-pop-snap');if(c&&c.hidden)document.querySelector('[data-sp=snap]').click();});await p.click('[data-snap="Cen"]');ok(await W(p,'persp',w=>w.__ws.state().snaps.cen),'Cen in the status bar turns centre snaps on in the panes');
+await p.evaluate(()=>{const c=document.querySelector('.sp-pop-snap');if(c&&c.hidden)document.querySelector('[data-sp=snap]').click();});await p.click('[data-snap="Cen"]');
 // gumball switch off
-await p.click('[data-sw="gumball"]');await p.waitForTimeout(500);ok(!(await W(p,'persp',w=>!!w.S3.gizmo.state())),'Gumball off in the status bar hides it');await p.click('[data-sw="gumball"]');await p.waitForTimeout(500);ok(await W(p,'persp',w=>!!w.S3.gizmo.state()),'and on shows it again');
+await p.evaluate(()=>{const c=document.querySelector('.sp-pop-snap');if(c&&c.hidden)document.querySelector('[data-sp=snap]').click();});await p.click('[data-sw="gumball"]');await p.waitForTimeout(500);ok(!(await W(p,'persp',w=>!!w.S3.gizmo.state())),'Gumball off in the status bar hides it');await p.evaluate(()=>{const c=document.querySelector('.sp-pop-snap');if(c&&c.hidden)document.querySelector('[data-sp=snap]').click();});await p.click('[data-sw="gumball"]');await p.waitForTimeout(500);ok(await W(p,'persp',w=>!!w.S3.gizmo.state()),'and on shows it again');
 await view(p,'plan');
 // floating selection toolbar (Plan): Duplicate, Hide (linked to the layer eye), Lock, expand / collapse, Delete
 const ft=(k)=>W(p,'plan',(w,k)=>{const b=w.document.querySelector(`#ftb [data-ft="${k}"]`);if(!b||b.hidden||b.disabled)return false;b.click();return true;},k);
@@ -230,16 +230,16 @@ await W(p,'persp',w=>w.document.querySelector('[data-tool="orbit"]').click());ok
 // Perspective header: Walkthrough, Bird, Ghosted / Wireframe
 const vm=await p.evaluate(()=>{document.getElementById('vBtn').click();const r=[...document.querySelectorAll('#vMenu [data-view]')].map(b=>b.dataset.view);document.getElementById('vBtn').click();return r;});
 ok(!vm.some(v=>['walk','explode','elev'].includes(v))&&vm.includes('persp')&&!vm.includes('shaded'),'the top-left pill keeps the views (no Shaded: one model); Explode, Walkthrough and Interior elevation moved to the right ('+vm.join(', ')+')');
-await p.click('#tabList [data-tab="walk"]');await p.click('#wBtns [data-act="walk"]');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().walkpick),'Walkthrough: Plan Studio first asks where to start (the figure on the plan)');await p.click('#wBtns [data-act="walkGo"]');await p.waitForTimeout(1200);ok(await W(p,'persp',w=>w.__ws.state().walking),'Start walking (the panel\'s button): first person in the Perspective view');await p.screenshot({path:L.SP+'t45walk.png'});
+await p.evaluate(t=>{const r=document.querySelector('.w2.sp'),b=document.querySelector('#tabList [data-tab="'+t+'"]');if(!(r.classList.contains('sp-card-open')&&b.getAttribute('aria-selected')==='true'))b.click();},'walk');await p.click('#wBtns [data-act="walk"]');await p.waitForTimeout(900);ok(await W(p,'persp',w=>w.__ws.state().walkpick),'Walkthrough: Plan Studio first asks where to start (the figure on the plan)');await p.click('#wBtns [data-act="walkGo"]');await p.waitForTimeout(1200);ok(await W(p,'persp',w=>w.__ws.state().walking),'Start walking (the panel\'s button): first person in the Perspective view');await p.screenshot({path:L.SP+'t45walk.png'});
 await p.click('#wBtns [data-act="walkX"]');await p.waitForTimeout(900);ok(!(await W(p,'persp',w=>w.__ws.state().walking)),'Exit walkthrough from the panel');
-await p.click('#tabList [data-tab="elev"]');await p.click('#eBtns [data-act="elev"]');await p.waitForTimeout(900);
+await p.evaluate(t=>{const r=document.querySelector('.w2.sp'),b=document.querySelector('#tabList [data-tab="'+t+'"]');if(!(r.classList.contains('sp-card-open')&&b.getAttribute('aria-selected')==='true'))b.click();},'elev');await p.click('#eBtns [data-act="elev"]');await p.waitForTimeout(900);
 ok(await W(p,'plan',w=>!w.document.getElementById('elvDlg').hidden)&&await p.evaluate(()=>__ws2.UI.view)==='plan','Interior elevation panel: Pick a wall opens Plan Studio\'s wall picker in the Plan view');
 await W(p,'plan',w=>{const g=w.document.querySelector('#wpSvg .wp-wall');g.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:0,clientY:0}));});await p.waitForTimeout(300);
 await W(p,'plan',w=>{const go=w.document.getElementById('wpGo');if(!go.disabled)go.click();});await p.waitForTimeout(1200);
 const eSt=await p.textContent('#eStat');console.log('  elevation panel says:',eSt);
 if(await W(p,'plan',w=>!w.document.getElementById('elvView').hidden)){ok(/Elevation/.test(eSt),'…a wall picked: the panel names the elevation');await p.click('#eBtns [data-act="elevX"]');await p.waitForTimeout(800);ok(await W(p,'plan',w=>w.document.getElementById('elvView').hidden),'…Back to plan, from the panel');}
 else {await p.click('#eBtns [data-act="elevX"]');await p.waitForTimeout(500);ok(await W(p,'plan',w=>w.document.getElementById('elvDlg').hidden),'…Cancel closes the wall picker');}
-await p.click('#tabList [data-tab="layers"]');await view(p,'persp');
+await p.evaluate(t=>{const r=document.querySelector('.w2.sp'),b=document.querySelector('#tabList [data-tab="'+t+'"]');if(!(r.classList.contains('sp-card-open')&&b.getAttribute('aria-selected')==='true'))b.click();},'layers');await view(p,'persp');
 await p.click('#dBtn');await p.click('#dMenu [data-disp="ghosted"]');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='ghosted','Ghosted');
 await p.screenshot({path:L.SP+'t45g.png'});
 await p.click('#dBtn');await p.click('#dMenu [data-disp="wire"]');await p.waitForTimeout(800);ok(await W(p,'persp',w=>w.__ws.state().disp)==='wire','Wireframe');
@@ -281,7 +281,7 @@ const dis=await p.evaluate(()=>{const s=[...document.querySelectorAll('[data-sel
 // status bar
 const sb=await p.evaluate(()=>[...document.querySelectorAll('.w2-status [data-snap]')].map(i=>i.dataset.snap).join(',')+'|'+[...document.querySelectorAll('.w2-status [data-sw]')].map(i=>i.dataset.sw).join(','));ok(sb==='End,Near,Mid,Cen|gumball,clearance','status bar: '+sb);
 // versions: save, change, open the saved one again
-await p.click('#tabList [data-tab="versions"]');await p.fill('#note','Panes test');await p.click('#saveV');await p.waitForTimeout(500);
+await p.evaluate(t=>{const r=document.querySelector('.w2.sp'),b=document.querySelector('#tabList [data-tab="'+t+'"]');if(!(r.classList.contains('sp-card-open')&&b.getAttribute('aria-selected')==='true'))b.click();},'versions');await p.fill('#note','Panes test');await p.click('#saveV');await p.waitForTimeout(500);
 const v=await p.evaluate(()=>{const P=__ws2.model();const db=JSON.parse(localStorage.getItem('pc-mvp-v1'));const pr=db.projects[0];const v=pr.versions.at(-1);return {n:v.n,note:v.note,studio:!!v.model.studio,walls:v.model.studio?.walls.length,comps:v.model.components.length};});
 ok(v.note==='Panes test'&&v.studio,'Save version keeps Plan Studio\'s model with the version: '+JSON.stringify(v));
 await furn(p,'sofa');let a=await P(p,5,6);await p.mouse.move(...a);await p.mouse.click(...a);await p.waitForTimeout(1200);
@@ -321,7 +321,7 @@ await p.click('#tabMenu [data-tabon="explode"]');await p.waitForTimeout(200);ok(
 await p.mouse.click(700,400);await p.waitForTimeout(200);ok(await p.evaluate(()=>document.getElementById('tabMenu').hidden),'the gear menu closes on a click outside');
 const scrolls=()=>p.evaluate(()=>[...document.querySelectorAll('.w2-panel,.w2-right,.w2-panel *,.w2-right *')].filter(e=>e.offsetParent&&e.tagName!=='IFRAME'&&e.id!=='propsWrap'&&e.scrollHeight>e.clientHeight+1&&!['visible','hidden','clip'].includes(getComputedStyle(e).overflowY)).map(e=>e.id||e.className).concat(document.scrollingElement.scrollHeight>innerHeight+1?['page']:[]).concat(['.w2-panel','.w2-right'].filter(s=>{const e=document.querySelector(s);return getComputedStyle(e).overflowY!=='hidden';})));
 const bad=[];
-for (const t of ['layers','versions','explode','walk','elev']) { await p.click(`#tabList [data-tab="${t}"]`);await p.waitForTimeout(250);const s=await scrolls();if(s.length)bad.push(t+': '+s.join(','));
+for (const t of ['layers','versions','explode','walk','elev']) { await p.evaluate(t=>{const r=document.querySelector('.w2.sp'),b=document.querySelector('#tabList [data-tab="'+t+'"]');if(!(r.classList.contains('sp-card-open')&&b.getAttribute('aria-selected')==='true'))b.click();},t);await p.waitForTimeout(250);const s=await scrolls();if(s.length)bad.push(t+': '+s.join(','));
   const cut=await p.evaluate(t=>{const tp=document.querySelector(`.w3-tp[data-tab="${t}"]`),r=tp.getBoundingClientRect();return [...tp.querySelectorAll('button,input,a')].filter(e=>e.offsetParent&&!e.closest('.w3-pghide')).some(e=>e.getBoundingClientRect().bottom>r.bottom+1);},t);if(cut)bad.push(t+': a control is cut off'); }
 for (const k of ['draw','door','window','furniture','light','project']) { await p.click(`[data-panel="${k}"]`);await p.waitForTimeout(250);const s=await scrolls();if(s.length)bad.push(k+': '+s.join(','));
   const cut=await p.evaluate(()=>{const r=document.getElementById('panel').getBoundingClientRect();return [...document.querySelectorAll('#panelBody button,#panelBody select,#panelBody input')].filter(e=>e.offsetParent&&!e.closest('.w3-pghide')).some(e=>e.getBoundingClientRect().bottom>r.bottom+1);});if(cut)bad.push(k+': a control is cut off'); }
@@ -331,7 +331,7 @@ const fp=await p.evaluate(()=>{const g=document.querySelectorAll('#panelBody [da
 ok(fp[0]>3&&fp[2]===1,'Furniture: one group open at a time ('+fp[0]+' groups)'+(fp[1]?', its cards in pages '+fp[1]:''));
 await p.click('#panelBody [data-acc="1"]');await p.waitForTimeout(200);ok(await p.evaluate(()=>document.querySelector('#panelBody [data-acc="1"]').getAttribute('aria-expanded'))==='true','…opening another group closes the first');
 // layers: open Walls; a long list pages instead of scrolling
-await p.click('#tabList [data-tab="layers"]');const wi=await p.evaluate(()=>[...document.querySelectorAll('.w2-layer .nm')].findIndex(b=>/Walls/.test(b.textContent)));
+await p.evaluate(t=>{const r=document.querySelector('.w2.sp'),b=document.querySelector('#tabList [data-tab="'+t+'"]');if(!(r.classList.contains('sp-card-open')&&b.getAttribute('aria-selected')==='true'))b.click();},'layers');const wi=await p.evaluate(()=>[...document.querySelectorAll('.w2-layer .nm')].findIndex(b=>/Walls/.test(b.textContent)));
 await p.click(`[data-open="${wi}"]`);await p.waitForTimeout(200);ok(await p.evaluate(()=>document.querySelectorAll('[data-open][aria-expanded="true"]').length)===1,'one layer open at a time');
 if(errs.length){console.log('page errors:',errs);process.exitCode=1;}
 await b.close(); }

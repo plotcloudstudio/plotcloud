@@ -28,6 +28,7 @@ const P = {
   more: '<circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/>',
   settings: '<path d="M5 6h9M18 6h1M5 12h3M12 12h7M5 18h11M20 18h-1"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   chevron: '<path d="M7 10l5 5 5-5"/>',
+  results: '<path d="M7 3.5h7l4 4V20.5H7z"/><path d="M14 3.5v4h4M10 12h5M10 15h5M10 18h3"/>',
 };
 // icons for controls whose text the Workspace rewrites (so the icon is drawn by CSS, not inside the button)
 const svgURL = (d) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'>${d}</svg>`)}")`;
@@ -62,7 +63,12 @@ export function mountChrome(app, api) {
 
   // ---- top right: saved state, undo / redo, export, import, Send to Simulation
   const tr = el('div', 'sp-card sp-tr');
-  tr.innerHTML = `<button type="button" class="sp-b sp-saved" data-sp="saved" title="Versions" aria-label="Versions">${I(P.check)}</button><span class="sp-sep"></span>${btn('undo', 'Undo (Ctrl+Z)', 'undo')}${btn('redo', 'Redo (Ctrl+Y)', 'redo')}<span class="sp-sep"></span>${btn('export', 'Export model', 'download')}${btn('import', 'Import model', 'upload')}`;
+  // the Workbench's own command buttons move here (their state and handlers stay the Workbench's); shown as icons
+  const edit = $('.wb-edit'), cmd = (k, d, title) => { const c = app.querySelector(`[data-command="${k}"]`); if (!c) return document.createComment(k); c.classList.add('sp-mask'); c.style.setProperty('--ic', svgURL(d)); if (title) c.title = title; return c; };
+  tr.innerHTML = `<button type="button" class="sp-b sp-saved" data-sp="saved" title="Versions" aria-label="Versions">${I(P.check)}</button><span class="sp-sep"></span><span class="sp-u"></span><span class="sp-sep"></span>${btn('export', 'Export model', 'download')}${btn('import', 'Import model', 'upload')}<span class="sp-c"></span>`;
+  tr.querySelector('.sp-u').replaceWith(cmd('undo', P.undo, 'Undo (Ctrl+Z)'), cmd('redo', P.redo, 'Redo (Ctrl+Y)'));
+  tr.querySelector('.sp-c').replaceWith(cmd('center', '<circle cx="12" cy="12" r="2.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', 'Center the imported building at the origin'));
+  { const st = $('#workspaceStudy'); if (st) { st.classList.add('sp-study'); tr.append(st); } }   // the study Send to Simulation sends
   tr.append($('#sendSim')); root.append(tr);
 
   // ---- left rail: statistics, the panels, spaces; Add simulation on its own below
@@ -70,6 +76,7 @@ export function mountChrome(app, api) {
   left.innerHTML = btn('stats', 'Statistics', 'stats', 'aria-pressed="false"');
   const tabList = $('#tabList'); left.append(tabList);
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
+  left.insertAdjacentHTML('beforeend', `<a class="sp-b" href="#/project/${p.id}" title="Results and reports: compare studies, export the report" aria-label="Results and reports">${I(P.results)}</a>`);
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'));
   root.append(left, add);
 
@@ -79,11 +86,7 @@ export function mountChrome(app, api) {
   const tools = el('div', 'sp-card sp-tools'); tools.setAttribute('role', 'toolbar'); tools.setAttribute('aria-label', 'Model tools');
   for (const b of [...app.querySelectorAll('.w2-rail [data-panel]')].filter((b) => b.dataset.panel !== 'project')) tools.append(b);
   tools.insertAdjacentHTML('beforeend', '<span class="sp-sep"></span>');
-  const edit = $('.wb-edit');
-  for (const [k, icon, label] of [['select', 'select', 'Select (Esc)'], ['text', 'text', 'Text label (T)'], ['delete', 'del', 'Delete (Del)']]) {
-    const proxy = el('button', 'sp-b', I(P[icon])); proxy.type = 'button'; proxy.dataset.spCmd = k; proxy.title = label; proxy.setAttribute('aria-label', label);
-    proxy.onclick = () => edit?.querySelector(`[data-command="${k}"]`)?.click(); tools.append(proxy);
-  }
+  for (const [k, icon, label] of [['select', 'select', 'Select (Esc)'], ['text', 'text', 'Text label (T)'], ['delete', 'del', 'Delete (Del)']]) tools.append(cmd(k, P[icon], label));
   const more = $('.wb-extra'); if (more) { more.querySelector('summary').innerHTML = I(P.more); more.querySelector('summary').title = 'More: clear level, ceiling items'; tools.append(more); }
   bottom.append(site, tools); root.append(bottom);
   const palette = $('#panel'); palette.classList.add('sp-card', 'sp-palette'); root.append(palette);
@@ -145,7 +148,6 @@ export function mountChrome(app, api) {
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-sp]'); if (!b) return; const k = b.dataset.sp;
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
-    else if (k === 'undo' || k === 'redo') edit?.querySelector(`[data-command="${k}"]`)?.click();
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
     else if (k === 'dim') goView(UI.view === 'plan' ? 'persp' : 'plan');
@@ -215,8 +217,6 @@ export function mountChrome(app, api) {
     const d = dirty(), v = baseline();
     const saved = $('.sp-saved', tr); saved.dataset.state = d ? 'dirty' : 'saved'; saved.title = d ? 'Unsaved changes: save a version' : `Saved${v ? ' · v' + v.n : ''}`;
     $('#spSub', tl).textContent = `${v ? 'v' + v.n : 'No version yet'}${d ? ' · unsaved changes' : ''}`;
-    for (const k of ['undo', 'redo']) { const o = edit?.querySelector(`[data-command="${k}"]`); $(`[data-sp="${k}"]`, tr).disabled = !o || o.disabled; }
-    const t = edit?.querySelector('[data-command="select"]'); $('[data-sp-cmd="select"]', tools)?.setAttribute('aria-pressed', t?.getAttribute('aria-pressed') || 'false');
     if (!sunOnce && INST.persp.ready && sunState().on) { sunOnce = true; applySun(); }
   };
   const timer = setInterval(tick, 400); tick();
