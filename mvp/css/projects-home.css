@@ -71,3 +71,6 @@
 .pc-start .chev{margin-left:auto;color:#9ca3af}.pc-start .bar{height:4px;background:#f0f1f3;border-radius:2px;margin:6px 0 8px;overflow:hidden}.pc-start .bar i{display:block;height:100%;background:#23a35a}
 .pc-start-min{position:fixed;z-index:60;right:16px;top:calc(var(--pc-ui-shell-height,64px) + 64px);border:1px solid #e3e5e8;border-radius:999px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.12);padding:6px 12px;font:600 12px var(--sans,system-ui);cursor:pointer}
 .np-light{filter:grayscale(1) brightness(1.12) contrast(.78)}
+.np-note{font-size:11px;color:#6b7280;margin:4px 0 0;line-height:1.35}.np-note:empty{display:none}
+.np-size{background:none;border:0}.np-size span{display:inline-block;transform:translate(-50%,-50%);background:#fff;border:1px solid #111827;border-radius:4px;padding:1px 6px;font:600 11px Inter,system-ui,sans-serif;white-space:nowrap}
+.np-size-left span{transform:translate(-50%,-50%) rotate(-90deg)}.np-size-bottom em{display:inline-block;transform:translate(-50%,6px);font:500 11.5px Inter,system-ui,sans-serif;font-style:normal;color:#111827;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff}

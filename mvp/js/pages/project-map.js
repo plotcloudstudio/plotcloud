@@ -3,7 +3,8 @@
 // surroundings in now or later, and Start Project. With context, the existing OpenStreetMap + terrain pipeline builds the site
 // (the same one as #/new-site); the Workspace then opens with the 3D site and the getting-started checklist.
 import * as S from '../store.js';
-import { geocode, enrich } from '../site.js';
+import { enrich } from '../site.js';
+import { suggest, resolve, placeLine } from '../address-suggest.js';
 import { fetchOSM, fetchTerrain, terrainAt } from '../sitedata.js';
 import { sitec } from '../studio-bridge.js';
 import { toStudio } from '../studio-convert.js';
@@ -18,7 +19,7 @@ const leaflet = () => window.L ? Promise.resolve(window.L) : new Promise((res, r
   if (!document.querySelector('link[data-leaflet]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = LEAFLET + 'leaflet.css'; l.dataset.leaflet = '1'; document.head.append(l); }
   const s = document.createElement('script'); s.src = LEAFLET + 'leaflet.js'; s.onload = () => res(window.L); s.onerror = () => rej(Error('The map could not load. Check the connection and reload.')); document.head.append(s);
 });
-const R = 250;   // study radius brought in with the site (m), the same default as #/new-site
+let R = 250;   // half the side of the study square (m); 250 = the #/new-site default; changeable on the location card
 
 // WGS84 → UTM (zone from longitude, Norway/Svalbard exceptions not applied). Easting/northing in metres.
 export function utm(lat, lon) {
@@ -39,10 +40,11 @@ export async function render(app) {
     <div class="np-search"><input id="npQ" class="np-input" placeholder="Search" aria-label="Search an address or place" autocomplete="off"><div id="npHits" class="np-hits" role="listbox" hidden></div></div>
     <section class="np-card np-data" id="npData" hidden aria-label="Available site data"></section>
     <div class="np-right">
-      <section class="np-card" id="npLoc"><div class="np-title"><h2>Project location</h2><span id="npOk" class="np-ok" hidden aria-label="Location set">✓</span></div><p class="np-sub" id="npPlace">Please pick a location on the map</p><div id="npCoords" hidden>
+      <section class="np-card" id="npLoc"><div class="np-title"><h2>Project location</h2><span id="npOk" class="np-ok" hidden aria-label="Location set">✓</span></div><p class="np-sub" id="npPlace">Please pick a location on the map</p><p class="np-note" id="npNote"></p><div id="npCoords" hidden>
+        <label class="np-lab">Project size<select id="npSize" class="np-sel"><option value="150">300 m × 300 m</option><option value="250" selected>500 m × 500 m</option><option value="400">800 m × 800 m</option><option value="500">1000 m × 1000 m</option></select></label>
         <label class="np-lab">Coordinate system<select id="npCrs" class="np-sel"></select></label>
         <span class="np-lab">Project origin</span><div class="np-xy"><span>E:</span><input id="npE" readonly></div><div class="np-xy"><span>N:</span><input id="npN" readonly></div></div></section>
-      <section class="np-card" id="npCtx" hidden><h2>Add site data?</h2><p class="np-sub">Automatically add roads, buildings, terrain and trees from this location (${R} m around it).</p>
+      <section class="np-card" id="npCtx" hidden><h2>Add site data?</h2><p class="np-sub">Automatically add roads, buildings, terrain and trees inside the ${2 * R} m square.</p>
         <label class="np-radio"><input type="radio" name="npCtx" value="yes" checked> Yes, I want context</label><label class="np-radio"><input type="radio" name="npCtx" value="later"> I’ll do this later</label></section>
       <section class="np-card" id="npGo" hidden><label class="np-lab">Project name<input id="npName" class="np-sel" placeholder="From the address"></label><button class="np-start" id="npStart" type="button">Start Project →</button><p class="np-sub" id="npMsg" role="status"></p></section>
     </div>
@@ -63,26 +65,39 @@ export async function render(app) {
 
   // ---- search
   let timer = 0, seq = 0;
-  $('#npQ', app).oninput = () => { clearTimeout(timer); const q = $('#npQ', app).value.trim(), box = $('#npHits', app); if (q.length < 3) { box.hidden = true; return; } timer = setTimeout(async () => { const my = ++seq;
-    try { const rows = await geocode(q); if (my !== seq) return; box.innerHTML = rows.length ? rows.map((r, i) => { const [a, ...rest] = r.label.split(','); return `<button type="button" role="option" data-i="${i}"><b>${esc(a)}</b><small>${esc(rest.join(',').trim() || a)}</small></button>`; }).join('') : '<p class="np-sub">No match. Try a fuller address.</p>'; box.hidden = false;
-      for (const b of $$('[data-i]', box)) b.onclick = () => { const r = rows[+b.dataset.i]; box.hidden = true; $('#npQ', app).value = r.label.split(',')[0]; place(r.lat, r.lon, r.label); map.setView([r.lat, r.lon], 16); }; }
-    catch (e) { if (my === seq) { box.innerHTML = `<p class="np-sub">${esc(e.message || 'Search failed.')}</p>`; box.hidden = false; } } }, 350); };
-  map.on('click', (e) => place(e.latlng.lat, e.latlng.lng, ''));
+  // location hint for suggestions: the map when zoomed in, else your most recent project's site, else your account site
+  const near = () => { const c = map.getCenter(); if (map.getZoom() >= 6) return { lat: c.lat, lon: c.lng };
+    const last = S.projects().filter((x) => !x.deletedAt && !x.sample).map((x) => S.conditionsOf(x)?.site).find((x) => Number.isFinite(x?.lat) && !x.sample), a = S.account().site;
+    return last ? { lat: last.lat, lon: last.lon } : Number.isFinite(a?.lat) ? { lat: a.lat, lon: a.lon } : null; };
+  let ctrl = null;
+  $('#npQ', app).oninput = () => { clearTimeout(timer); const q = $('#npQ', app).value.trim(), box = $('#npHits', app); if (q.length < 3) { box.hidden = true; return; } timer = setTimeout(async () => { const my = ++seq; ctrl?.abort(); ctrl = new AbortController();
+    try { const rows = await suggest(q, { near: near(), signal: ctrl.signal }); if (my !== seq) return;
+      box.innerHTML = rows.length ? rows.map((r, i) => `<button type="button" role="option" data-i="${i}"><b>${esc(r.title)}</b><small>${esc(r.place)}</small></button>`).join('') : '<p class="np-sub" style="padding:8px">No match yet. Keep typing, or click the map.</p>'; box.hidden = false;
+      for (const b of $$('[data-i]', box)) b.onclick = async () => { box.hidden = true; try { const r = await resolve(rows[+b.dataset.i], q); $('#npQ', app).value = r.place; map.setView([r.lat, r.lon], 16); place(r.lat, r.lon, r.place, r.parts, r.note); } catch (e) { $('#npPlace', app).textContent = e.message; } }; }
+    catch (e) { if (my === seq && e.name !== 'AbortError') { box.innerHTML = '<p class="np-sub" style="padding:8px">Address search is unavailable right now. Click the map instead.</p>'; box.hidden = false; } } }, 250); };
+  $('#npQ', app).onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#npHits button', app)?.click(); } if (e.key === 'Escape') $('#npHits', app).hidden = true; };
+  map.on('click', (e) => { if (e.originalEvent?.target?.closest?.('.np-search,.np-card')) return; place(e.latlng.lat, e.latlng.lng, ''); });
   pin.on('dragend', () => { const c = pin.getLatLng(); place(c.lat, c.lng, ''); });
 
   // ---- a location: card, coordinate system, live data check
-  async function place(lat, lon, name) {
-    lon = ((lon + 540) % 360) - 180; pick = { lat, lon }; label = name; osm = null; pin.setLatLng([lat, lon]).addTo(map);
+  let square = null, sizeTags = [];
+  function drawSquare() { if (!pick) return; const dLat = R / 110574, dLon = R / (111320 * Math.cos(pick.lat * Math.PI / 180)), b = [[pick.lat - dLat, pick.lon - dLon], [pick.lat + dLat, pick.lon + dLon]];
+    if (square) square.setBounds(b); else square = L.rectangle(b, { color: '#111827', weight: 1.5, fillColor: '#ffffff', fillOpacity: 0.35, interactive: false }).addTo(map);
+    for (const t of sizeTags) t.remove(); const side = `${2 * R} m`, tag = (ll, html, cls) => L.marker(ll, { interactive: false, icon: L.divIcon({ className: 'np-size ' + cls, html, iconSize: null }) }).addTo(map);
+    sizeTags = [tag([pick.lat + dLat, pick.lon], `<span>${side}</span>`, 'np-size-top'), tag([pick.lat, pick.lon - dLon], `<span>${side}</span>`, 'np-size-left'), tag([pick.lat - dLat, pick.lon], '<em>Project size can be changed below</em>', 'np-size-bottom')]; }
+  async function place(lat, lon, name, parts = null, note = '') {
+    lon = ((lon + 540) % 360) - 180; pick = { lat, lon }; label = name; osm = null; pin.setLatLng([lat, lon]).addTo(map); drawSquare();
     const u = utm(lat, lon); $('#npOk', app).hidden = false; $('#npCoords', app).hidden = false; for (const id of ['npCtx', 'npGo']) $('#' + id, app).hidden = false;
-    $('#npPlace', app).textContent = name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    $('#npPlace', app).textContent = parts ? placeLine(parts) || name : name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`; $('#npNote', app).textContent = note || (parts && name ? name : '');
     $('#npCrs', app).innerHTML = `<option value="utm">UTM Zone ${u.zone}${u.hemisphere} · EPSG:${u.epsg}</option><option value="wgs84">WGS 84 latitude / longitude</option>`;
     const show = () => { const v = $('#npCrs', app).value; $('#npE', app).value = v === 'utm' ? u.E : lon.toFixed(6); $('#npN', app).value = v === 'utm' ? u.N : lat.toFixed(6); $$('.np-xy span', app)[0].textContent = v === 'utm' ? 'E:' : 'Lon:'; $$('.np-xy span', app)[1].textContent = v === 'utm' ? 'N:' : 'Lat:'; };
     $('#npCrs', app).onchange = show; show();
     if (!$('#npName', app).dataset.typed) $('#npName', app).value = (name || '').split(',')[0];
-    if (!name) { const my = pick; reverse(lat, lon).then((n) => { if (pick === my && n) { label = n; $('#npPlace', app).textContent = n; if (!$('#npName', app).dataset.typed) $('#npName', app).value = n.split(',')[0]; } }); }
+    if (!name) { const my = pick; reverse(lat, lon).then((n) => { if (pick === my && n) { label = n; $('#npPlace', app).textContent = n.split(',').map((x) => x.trim()).reverse().slice(0, 3).join(', '); $('#npNote', app).textContent = n; if (!$('#npName', app).dataset.typed) $('#npName', app).value = n.split(',')[0]; } }); }
     dataCheck(lat, lon);
   }
   $('#npName', app).oninput = (e) => { e.target.dataset.typed = '1'; };
+  $('#npSize', app).onchange = (e) => { R = +e.target.value; drawSquare(); $('#npCtx p', app).textContent = `Automatically add roads, buildings, terrain and trees inside the ${2 * R} m square.`; if (pick) { osm = null; dataCheck(pick.lat, pick.lon); } };
 
   async function dataCheck(lat, lon) {
     const my = ++check, card = $('#npData', app); card.hidden = false;
