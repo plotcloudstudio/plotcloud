@@ -8,6 +8,7 @@
 // Nothing here is a new tool: each control is the Workspace's or Plan Studio's own, moved, so its behaviour, keyboard and tests stay.
 // The sun is the one addition: Plan Studio's 3D key light set from the site, the date and solar time, with shadows (display only).
 import * as S from './store.js';
+import { mountProps } from './project-props.js?v=props-20261030-2';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const P = {
@@ -48,6 +49,7 @@ export function mountChrome(app, api) {
   const { p, UI, saveUI, goView, activePane, dirty, baseline, select, studio, INST } = api;
   const $ = (s, r = app) => r.querySelector(s), root = $('.w2');
   root.classList.add('sp');
+  let KEEP = null; const keepEl = () => { if (!KEEP) { KEEP = document.createElement('div'); KEEP.className = 'sp-keep'; KEEP.hidden = true; root.append(KEEP); } return KEEP; };   // controls kept for their behaviour, not shown
   const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
   const btn = (key, label, icon, extra = '') => `<button type="button" class="sp-b" data-sp="${key}" title="${label}" aria-label="${label}" ${extra}>${I(P[icon] || icon)}</button>`;
   for (const [id, d] of Object.entries(MASK)) { const b = $('#' + id); if (b) { b.classList.add('sp-mask'); b.style.setProperty('--ic', svgURL(d)); } }
@@ -70,7 +72,7 @@ export function mountChrome(app, api) {
   tr.querySelector('.sp-c').replaceWith(cmd('center', '<circle cx="12" cy="12" r="2.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', 'Center the imported building at the origin'));
   // Send to Simulation is gone from view (2026-10-30): studies open in this view from Add simulation. The button and its study
   // picker stay, hidden, because a study that does not run here yet opens its own page through them (the version handoff)
-  const keep = el('div', 'sp-keep'); keep.hidden = true; keep.append(...[$('#workspaceStudy'), $('#sendSim')].filter(Boolean)); root.append(tr, keep);
+  const keep = keepEl(); keep.append(...[$('#workspaceStudy'), $('#sendSim')].filter(Boolean)); root.append(tr);
 
   // ---- left rail: statistics, the panels, spaces; Add simulation on its own below
   const left = el('nav', 'sp-rail sp-left'); left.setAttribute('aria-label', 'Panels');
@@ -94,7 +96,9 @@ export function mountChrome(app, api) {
   // ---- bottom left: project settings (the Project panel: import, export, site)
   const bl = el('div', 'sp-bl'); const projBtn = app.querySelector('.w2-rail [data-panel="project"]');
   projBtn.innerHTML = `${I(P.settings)}`; projBtn.classList.add('sp-b');
-  bl.append(projBtn); bl.insertAdjacentHTML('beforeend', `<div class="sp-blt"><b>Project</b><span>${esc(S.siteOf(p)?.label?.split(',').slice(0, 2).join(',') || 'No site yet')}</span></div>`);
+  // the Project panel (import, export, site) stays behind Export and Import at the top right; this button opens the project's props
+  keepEl().append(projBtn);
+  bl.insertAdjacentHTML('beforeend', `<button type="button" class="sp-b" data-sp="props" title="Project props: the shared parameters for every study" aria-label="Project props" aria-pressed="false">${I(P.settings)}</button><div class="sp-blt"><b>Project</b><span>${esc(S.siteOf(p)?.label?.split(',').slice(0, 2).join(',') || 'No site yet')}</span></div>`);
   root.append(bl);
 
   // ---- right rail: 2D / 3D, zoom selected, fit, camera, view tools, sun, snapping, visibility, display
@@ -153,6 +157,7 @@ export function mountChrome(app, api) {
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
     else if (k === 'dim') goView(UI.view === 'plan' ? 'persp' : 'plan');
+    else if (k === 'props') openProps(propsCard.hidden);
     else if (k === 'zoomSel') doc()?.getElementById('fitSelectedBtn')?.click();
     else if (pops[k]) { e.stopPropagation(); togglePop(k, b); }
   });
@@ -338,6 +343,17 @@ export function mountChrome(app, api) {
   // a sketch added here keeps a picture of the model
   const thumbT = (() => { const n0 = { n: p.versions.length }; return setInterval(() => { if (p.versions.length > n0.n) { const v = p.versions.at(-1); n0.n = p.versions.length; const u = THUMB.get('draft') || THUMB.get(v.id); if (u && !v.thumb) { v.thumb = u; S.save(); } THUMB.delete('draft'); if (!cmp.hidden) drawCompare(); } }, 500); })();
 
+  // ---- project props (bottom left): the one place for the project's shared parameters
+  const propsCard = el('section', 'sp-card sp-propscard'); propsCard.hidden = true; propsCard.setAttribute('aria-label', 'Project props'); root.append(propsCard);
+  let disposeProps = null;
+  const propCounts = () => { const st = studio() || {}, o = INST.plan.ready ? INST.plan.ws.objects() : []; const c = (k) => o.filter((x) => x.k === k).length;
+    return { plot: st.site?.parcel?.pts?.length > 2 ? 1 : 0, building: (st.masses || []).length + (st.imports || []).length, story: (st.levels || []).length, space: c('room'), aperture: c('op'), wall: c('wall'), floor: c('floor'), furniture: c('furn'), context: (st.site?.buildings || []).filter((b) => !b.excluded).length, street: (st.site?.roads || []).length }; };
+  function openProps(on) { propsCard.hidden = !on; $('[data-sp="props"]', root)?.setAttribute('aria-pressed', String(on)); disposeProps?.(); disposeProps = null;
+    if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); studyCard.hidden = true; disposeProps = mountProps(propsCard, p, { counts: propCounts, onClose: () => openProps(false) }); } else if (ST.id) studyCard.hidden = false; }
+  window.__wsProps = () => openProps(true);   // studies and the site review open these props while in the Workspace
+  // links to the old project settings page (studies, the site review) open the props here instead
+  app.addEventListener('click', (e) => { const a = e.target.closest('a[href^="#/project-settings"], #siteReviewEdit'); if (!a) return; e.preventDefault(); e.stopImmediatePropagation(); openProps(true); }, true);
+
   // ---- what changes while working: 2D / 3D label, saved state, undo / redo, sun after the 3D view rebuilds
   let sunOnce = false;
   const tick = () => {
@@ -350,5 +366,5 @@ export function mountChrome(app, api) {
   };
   const timer = setInterval(tick, 400); tick();
   window.__wsStudy = { open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }) };   // for the browser checks
-  return () => { closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
+  return () => { disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
 }

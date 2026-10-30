@@ -290,7 +290,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if(p.guidedStudy?.simId===sim.id&&!D.body.dataset.pcGuidedQuality){const draft=D.querySelector('#lvlSeg [data-l="draft"],#lvSeg [data-l="draft"]');if(draft){draft.click();D.body.dataset.pcGuidedQuality='true';}}
     // Distinguish the engine's startup sample from the project's applied model/settings.
     if(pilot)bindPilot();else fr.dataset.pcSettingsReady = 'true';
-    if(WEATHER.includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,shared?site:{...site,climate:S.conditionsOf(p).site.climate},sim.id,()=>{location.hash='#/project-settings/'+p.id+'?return='+sim.id;});weatherTask.then(()=>fr.contentWindow.PlotCloudSimulationFit?.refresh()).catch(error=>{if(sim.id!=='wind')weatherFailure=error;say(esc(error.message),true);fr.contentWindow.PlotCloudSimulationFit?.refresh();});}
+    if(WEATHER.includes(sim.id)&&!weatherTask){weatherTask=applyProjectClimate(fr,shared?site:{...site,climate:S.conditionsOf(p).site.climate},sim.id,()=>{(window.__wsProps?window.__wsProps():location.hash='#/project-settings/'+p.id+'?return='+sim.id);});weatherTask.then(()=>fr.contentWindow.PlotCloudSimulationFit?.refresh()).catch(error=>{if(sim.id!=='wind')weatherFailure=error;say(esc(error.message),true);fr.contentWindow.PlotCloudSimulationFit?.refresh();});}
     fr.contentWindow.PlotCloudSimulationFit?.refresh();
     revealEngine();
     for(const child of D.querySelectorAll('iframe'))try{child.contentWindow.PlotCloudSimulationFit?.refresh();}catch{}
@@ -298,7 +298,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   function bindPilot(){
     const D=doc(),box=D?.getElementById('pilotSharedSummary');if(!box){if(alive)setTimeout(bindPilot,100);return;}
     box.innerHTML=`<b>From project · revision ${shared.revision}</b><br>${esc((site.label||'Site').split(',')[0])} · ${esc(shared.defaults.buildingType||'Type unspecified')} · ${esc(site.climate?.name||'No EPW')} · north ${site.north??0}° · UTC${t.tz>=0?'+':''}${t.tz}${sim.id==='daylight'?`<br>Work plane ${A.plane} m · occupied ${A.occStart}:00–${A.occEnd}:00`:''}<br><a id="pilotEditProject" href="#">Edit shared conditions ↗</a><p id="pilotOverrideStatus" role="status">Using project values</p>`;
-    D.getElementById('pilotEditProject').onclick=e=>{e.preventDefault();location.hash='#/project-settings/'+p.id+'?return='+sim.id;};
+    D.getElementById('pilotEditProject').onclick=e=>{e.preventDefault();(window.__wsProps?window.__wsProps():location.hash='#/project-settings/'+p.id+'?return='+sim.id);};
     fr.dataset.pcSettingsReady='true';if(D.body.dataset.pcPilotBound)return;D.body.dataset.pcPilotBound='1';
     if(sim.id==='daylight'&&!fr.contentWindow.__pcAnalysisState?.().ready){const note=D.getElementById('runMsg');if(note){note.textContent='Workspace model and project inputs applied. Run this study to calculate current results.';note.className='msg';}}
     const enabled=D.getElementById('pilotOverrideEnabled'),fields=D.getElementById('pilotSharedFields'),status=()=>{D.getElementById('pilotOverrideStatus').textContent=enabled.checked?'Study-only overrides enabled · project unchanged':'Using project values';};

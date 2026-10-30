@@ -48,6 +48,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.equal(await p.evaluate(() => !!document.querySelector('.sp-host')), false); assert(await p.evaluate(() => window.__ws2.inst.plan.ready));
     console.log('PASS a full study opens inside the Workspace page (no separate page) and Back returns to the model; + lists Building and Interior');
 
+    // the project's shared parameters live in Project props (bottom left): saving makes a new shared revision
+    await p.click('[data-sp=props]'); await p.locator('.pp-form').waitFor(); assert.match(await p.locator('.sp-propscard').innerText(), /Default[\s\S]*Sun & light[\s\S]*Noise[\s\S]*Shared climate/);
+    const rev0 = await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'); return S.conditionsOf(A.currentProject()).revision; });
+    await p.fill('.pp-form [name="site.north"]', '7'); await p.click('.pp-form button[type=submit]'); await p.waitForFunction(() => /Saved revision/.test(document.querySelector('.pp-form .pp-note')?.textContent || ''));
+    assert.deepEqual(await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'), c = S.conditionsOf(A.currentProject()); return [c.site.north, c.revision]; }), [7, rev0 + 1]);
+    console.log('PASS Project props: shared parameters in one place (Default and topic tabs); saving makes a new shared revision');
+
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-view]');
     await p.click('[data-view=list]'); assert.match(await p.locator('.ph-rows').innerText(), /Projects[\s\S]*Created[\s\S]*Last edited[\s\S]*QA site/);
     await p.click('[data-view=map]'); await p.waitForSelector('.ph-col .ph-card'); await p.waitForFunction(() => document.querySelectorAll('#phMap .leaflet-interactive').length >= 1, null, { timeout: 20000 });

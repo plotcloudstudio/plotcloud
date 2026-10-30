@@ -215,3 +215,33 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-pin.on{color:#2f5bd3}
 .w2.sp .sp-sheet footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px}
 .w2.sp .sp-sk-title{font-weight:600;font-size:12px}
+
+/* Project props (bottom left): tabs, object types on the left, the props on the right */
+.w2.sp .sp-propscard{position:absolute;z-index:36;left:60px;top:64px;bottom:62px;width:min(520px,calc(100vw - 140px));display:flex;flex-direction:column;overflow:hidden;font:11.5px/1.45 Inter,system-ui,sans-serif;color:var(--sp-ink)}
+.w2.sp .sp-propscard[hidden]{display:none}
+.w2.sp .pp-tabs{display:flex;align-items:center;gap:2px;padding:8px 10px;border-bottom:1px solid var(--sp-line);flex-wrap:wrap}
+.w2.sp .pp-tabs [role=tab]{border:0;background:none;border-radius:6px;padding:4px 9px;font:500 11.5px Inter,system-ui,sans-serif;color:var(--sp-sub);cursor:pointer}
+.w2.sp .pp-tabs [aria-selected=true]{background:#f1f2f4;color:var(--sp-ink);font-weight:600}
+.w2.sp .pp-tabs .sp-x{position:static;margin-left:auto}
+.w2.sp .pp-body{flex:1;min-height:0;display:grid;grid-template-columns:150px minmax(0,1fr)}
+.w2.sp .pp-types{border-right:1px solid var(--sp-line);padding:8px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.w2.sp .pp-types hr{border:0;border-top:1px solid var(--sp-line);margin:6px 0}
+.w2.sp .pp-types button{display:flex;justify-content:space-between;align-items:center;border:0;background:none;border-radius:6px;padding:6px 8px;font:inherit;color:#374151;cursor:pointer;text-align:left}
+.w2.sp .pp-types button:hover{background:#f5f6f7}.w2.sp .pp-types [aria-pressed=true]{background:#eef0f3;font-weight:600;color:var(--sp-ink)}
+.w2.sp .pp-types i{font-style:normal;font-size:10px;background:#eef0f3;border-radius:999px;padding:0 6px;color:var(--sp-sub)}
+.w2.sp .pp-props{overflow:auto;padding:12px 14px}
+.w2.sp .pp-props h3{font:600 12.5px Inter,system-ui,sans-serif;margin:0}
+.w2.sp .pp-used{color:var(--sp-sub);font-size:10.5px;margin:2px 0 10px}
+.w2.sp .pp-form{display:grid;gap:8px}
+.w2.sp .pp-form label{display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:8px}
+.w2.sp .pp-form label span{color:#4b5563}.w2.sp .pp-form small{color:#9ca3af}
+.w2.sp .pp-form input,.w2.sp .pp-form select{min-height:28px}
+.w2.sp .pp-form .btn{justify-self:start}
+.w2.sp .pp-note{color:var(--sp-sub);font-size:10.5px;margin:6px 0 0}
+.w2.sp .pp-climate .card{padding:12px!important;margin-top:12px!important;border:1px solid var(--sp-line);border-radius:8px;box-shadow:none}
+.w2.sp .pp-climate h2{font:600 12px Inter,system-ui,sans-serif!important;margin:0 0 4px}
+.w2.sp .pp-empty{text-align:center;padding:60px 20px;color:var(--sp-sub)}.w2.sp .pp-empty b{display:block;color:var(--sp-ink);font-size:14px;margin-bottom:4px}
+.w2.sp .sp-bl [data-sp=props]{width:36px;height:36px;border-radius:8px;background:var(--sp-dark);color:#e5e7eb;box-shadow:var(--sp-shadow)}
+.w2.sp .sp-bl [data-sp=props][aria-pressed=true]{background:#2f5bd3}
+.w2.sp .pp-climate .btn{font:500 11.5px Inter,system-ui,sans-serif!important;padding:4px 10px!important;min-height:26px!important;margin:2px 4px 2px 0}
+.w2.sp .pp-climate .note,.w2.sp .pp-climate p{font-size:10.5px!important}
