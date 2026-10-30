@@ -1,84 +1,140 @@
-# Replan review handoff (Claude → Codex)
-
-## Batch 1 — items 01, 02, 03, 04
+# Replan review handoff (Claude → Codex) — complete delivery, work packages 01–16
 
 ```text
-批次与任务 ID：第一批 01 确认代码基线 · 02 项目/方案/运行数据契约 · 03 统一参数解析与来源链 · 04 完整项目备份与恢复
-工作树绝对路径：/home/user/plotcloud（云端容器；Codex 通过 GitHub 分支检查）
+整体交付范围与任务 ID：docs/claude-implementation-todo.md 工作包 01–16（逐项状态见下表）
+工作树绝对路径：/home/user/plotcloud（云端容器；Codex 从 GitHub 分支检查）
 分支：claude/adoring-mayer-bl1u41
-Base commit / Head commit：base 1e9f086（= origin/main，线上 153 个代码文件逐字节一致）+ 文档提交 9fa0148、26a5426；head 见本文件所在提交（git log -1）
-进入任务前的 dirty files：无（git status 干净）。本批改动全部在本分支的单个提交中，可用 git diff 26a5426..HEAD 区分
-改动文件与行为说明：见下文“改动”
-已完成 / 复用并验收 / 部分完成 / 阻塞：见下文“状态”
-对应完整规划 AC 编号：AC03、AC08、AC20、AC24（数据部分）、AC29；以及数据迁移与基线检查
-本地启动命令与 URL：python3 -m http.server 8765 --bind 127.0.0.1 → http://127.0.0.1:8765/mvp/
-测试命令、结果和日志/证据路径：见下文“测试”；日志 docs/replan-evidence/batch-1/
-真实求解器已执行哪些、哪些仅用测试替身：见下文“求解器与替身”
-演示模型/EPW 的来源、许可和复现步骤：示例项目 Courtyard studio (sample)（仓库自带）；EPW 为测试脚本合成的“QA Climate”，非真实站点，无许可问题
-正常路径与失败路径复现步骤：见下文“复现”
-迁移、备份、回退方式：见下文“迁移与回退”
-已知问题和未验证项：见下文
-是否提交 / 是否合并 / 是否部署：已提交并推送到 claude/adoring-mayer-bl1u41；未合并；未部署（线上仍为 1e9f086）
+Base commit / Head commit：base 1e9f086（= origin/main = 线上代码文件逐字节一致）；任务文档 9fa0148…e6c25b0；实现提交 a15988d、6ea8ca7、25b3da3 及本文件所在提交（git log 1e9f086..HEAD）
+进入任务前的 dirty files：无。全部改动均在上述提交中，可用 git diff e6c25b0..HEAD 查看
+改动文件与行为说明：见 §2
+已完成 / 复用并验收 / 部分完成 / 阻塞：见 §1
+对应完整规划 AC 编号：见 §1 每行
+本地启动命令与 URL：python3 -m http.server 8765 --bind 127.0.0.1（仓库根目录）→ http://127.0.0.1:8765/mvp/
+测试命令、结果和日志/证据路径：见 §3；日志与截图在 docs/replan-evidence/
+真实求解器已执行哪些、哪些仅用测试替身：见 §4
+演示模型/EPW 的来源、许可和复现步骤：仓库自带示例 Courtyard studio (sample)；EPW 为测试脚本合成（非真实站点），见 §4
+正常路径与失败路径复现步骤：见 §5
+迁移、备份、回退方式：见 §6
+已知问题和未验证项：见 §7
+是否提交 / 是否合并 / 是否部署：已提交并推送到 claude/adoring-mayer-bl1u41；未合并；未部署（线上仍是 1e9f086）
 ```
 
-### 改动
+## 1. Status per work package
 
-| 文件 | 行为 |
+Legend:
+
+- **Done**: implemented, with automated tests run here.
+- **Partly**: what exists works and is tested. The listed parts are missing.
+- **Blocked**: needs an external engine, service, credential or real professional input that this environment does not have.
+
+| WP | Status | What exists (tested) | Missing / blocked | AC |
+|---|---|---|---|---|
+| 01 Baseline | Done | Live site and `1e9f086` compared byte for byte (153/153 code files). 22 studies, routes and supporting features recorded in `docs/replan-implementation-status.md`. Baseline tests run on an isolated worktree of `1e9f086` | Pages source setting not readable (no GitHub settings access) | — |
+| 02 Data contract | Done (data layer) | Schema 2: Project config (template, use template, uiMode), Plans A/B/C lineage, immutable PlanRevisions, Assets, ParameterRecords, RunGroups, ReportRevisions, Feedback, run lineage. Idempotent migration, plus a pre-migration v1 copy in IndexedDB. Project isolation. Rollback creates a new revision | Recipe is recorded per run as `{id, engine, version:'unrecorded'}`; no versioned engine identity yet | AC03, AC24 |
+| 03 Parameters | Done (resolver); Partly (UI coverage) | One resolver with 7 scopes, the provenance triple, conflicts, restore default, template upgrade as a separate change, study dependency hashes and applicability. The project page, the shared-conditions page and the Workbench analysis-property pane all write the same records | Results/Simulation pages still show the existing `runConditionsStatus`, not the new `applicability()` | AC08, AC20 |
+| 04 Backup | Done | Backup v2 with EPW contents, missing-asset list, integrity hash and referential checks; damaged files are rejected with nothing changed. Restored in a separate browser profile and the restored EPW drove a real UTCI rerun | Site-page surroundings in IndexedDB `pc-site` are not included (MVP models carry their context inside the model) | AC29 |
+| 05 Projects and mode | Done | `#/project/new`: Simple needs only an address or coordinates; Advanced opens all fields. `#/project/<id>`: details, status, client, Simple/Advanced switch (no data change, tested by hash), single override and restore in both modes. Dashboard cards show mode and counts. "Create a project" on the homepage | Address search uses the existing geocoder (network; not exercised in tests — coordinates were used) | AC01, AC02 |
+| 06 Three types + registry | Done | Registry for all 22 studies (one primary category each, method, inputs, outputs, test file) plus 36 target capabilities with honest status (screening / reference / data / not connected). Catalogue filters, capability map, `#/tables` from saved run IDs. Old routes untouched | Table views are T03/T04/T05/T06/T09 over saved runs; T07 parameter sweep is not built | AC14, AC15 |
+| 07 Weather + templates | Done (checks, templates); Partly (station display) | EPW validator: 8760/8784 without truncation, continuity, duplicates, sub-hourly and partial files rejected, per-field missing values, per-study blocking (readiness shows it). Versioned office/residential/school concept templates plus an explicit generic template; schedules aligned to the EPW calendar (leap day kept); lighting area vs fixtures without double counting; room-level override | Template values are PlotCloud concept assumptions, labelled as such — not a code or regional library. Station metadata display reuses the existing project-climate panel (unchanged). Download/upload failure paths reuse existing behaviour and tests | AC05–AC07, AC09 |
+| 08 Readiness + Workbench | Partly | Readiness per study on the overview (existing `inspectStudy` plus EPW field checks). Default study package runs only ready studies (tested on the sample: Sun hours + Daylight; no EPW, so no radiation/UTCI). Workbench pane writes optical / thermal / acoustic / structural / lighting / include-in-analysis records per object | **Current browser engines do not read these new object records yet** (they read geometry and material names); adapters are not written. Viewport visibility vs include-in-analysis is recorded but not applied by engines. Structural blocking reuses the existing structure study | AC10–AC13 |
+| 09 Adopt and run Plan B | Done for one rule; Blocked for unattended runs | Daylight window rule: evidence (run, metric, target from the project brief, low-DF area), whitelisted `window.resize` patch with wall, height and neighbour-opening constraints. Adoption is one idempotent transaction and refuses a stale basis. Plan B is derived from A's fixed revision; A is unchanged. A run group reruns the affected studies already in A's package via the existing browser batch; Resume, Retry and Cancel are available. Tested with real engine runs | **Hosted queue / trusted worker not connected**: runs need the page open (stated in the UI). Shading devices and other patches are not connected (the current daylight engine has no shading-object input) | AC18, AC19, AC30 (browser part) |
+| 10 A/B | Done | B−A, relative, percentage points, zero base undefined, missing never zero, target-based verdict only when a target exists; design / scenario / not-comparable / unverified; point differences only on coinciding sensors; geometry differences listed separately; no attribution split | Synchronised dual viewports reuse the existing Results compare (unchanged) | AC21–AC23 |
+| 11 Reports, sharing, Plan C | Done (files, revisions, offline review); Blocked (hosted share) | One ReportSpec from saved runs feeds PPTX (own OOXML writer: native text, table, editable bars, saved previews with source; Chinese checked in python-pptx and LibreOffice) and the existing PDF/HTML/CSV/JSON. New revision each time with changed vs reused chapters. Review HTML file for the client → returned JSON imported as feedback bound to the report revision → Plan C via the same transaction | **Hosted share links / revocation not built** (needs a deployed backend table and policy; nothing claims a link exists). Native PowerPoint chart objects with an embedded sheet are not produced (bars are editable shapes) | AC25–AC28 |
+| 12 Regression and handoff | Done | See §3 | Mobile checks are layout and navigation only | AC31–AC33 (partial) |
+| 13 HB-Radiance | Blocked (reference DF verified) | Existing local Radiance DF reference path run here with real Radiance (pyradiance 1.3.1): open 100 %, closed 0 %, glazing scaling as expected | Annual DA/cDA/UDI, sDA/ASE, glare, electric lighting: no recipe adapter or job exporter; marked "not connected" in the registry | AC16 |
+| 14 HB-Energy | Blocked | Existing EnergyPlus file round trip (reviewed epJSON + EPW) unchanged | EnergyPlus binary unavailable here (download failed); no automatic thermal model from geometry; PMV/adaptive need a thermal model | AC17 |
+| 15 Butterfly / Dragonfly / UWG | Blocked | Registry lists them as not connected, with needs | No OpenFOAM, Dragonfly or UWG runtime or adapter | — |
+| 16 Ecosystem, Rendering, Boards | Partly | `#/rendering` client for the existing operator render service (tested against the real local service: health check, provider failure reported, nothing saved). Renders are saved as presentation-only assets. `#/boards` builds a PNG sheet from saved previews and renders with run IDs in captions | Rendering needs a deployed service plus image-model credentials (not available). HVAC, standards recipes, district energy: not connected | AC32 (entries) |
+
+## 2. Changed and added files
+
+| File | Behavior |
 |---|---|
-| `mvp/js/contract-hash.js` (new) | 同步 SHA-256（与 WebCrypto/Node 结果一致，有测试）+ canonical JSON 哈希 |
-| `mvp/js/parameters.js` (new) | 唯一解析入口 `resolve()`：study-object → plan-object → study-global → project-config → derived → template → recipe-fallback；同作用域显式优先；显式冲突返回 `status:'conflict'` 且无值，需 `chooseConflict`；`setParameter` 校验单位/范围/IANA 时区并按 path+scope+study+target 写同一记录（事件链）；`restoreDefault` 仅停用目标覆写；`valueOrigin / acquisition / modeAtAcquisition` 三字段独立，`provenanceLabel` 组合标签；`studySnapshot`/`applicability` 按研究订阅的物理输入判断旧结果；`effectiveTable` 导出最终值与来源；`recordConditionsChange` 把现有 sharedConditions 的每次变化写成记录；`syncMirror`/`mirrorMismatches` 维护投影一致性 |
-| `mvp/js/project-contract.js` (new) | schema 2：`contract{schema,uiMode,currentPlanId,config{revision,template,history}}`、`plans`（A/B/C lineage）、不可变 `planRevisions`（模型 hash、条件快照、参数表、physicalHash/inputHash、模板版本；uiMode 不进 hash）、`assets`（当前与历史引用的 EPW）、`runGroups/reportRevisions/feedback` 容器；`migrateProject`（幂等，历史条件写“unrecorded”不倒填）；`initProject`（账户值仅在新建时复制）；`freezePlan`（同输入复用、变化即新修订）、`derivePlan`、`lineage`、`runContract`、`templateDiff/upgradeTemplate`（独立变更，不改已存修订）、`integrityProblems` |
-| `mvp/js/project-backup.js` (new) | 备份 v2：项目全量 + EPW 原文 + `missingAssets` 清单 + 完整性 hash；恢复前检查格式/schema/完整性/每个资产 SHA-256/EPW 行数/引用完整性/天气引用均“包含或列为缺失”/ID 冲突；任一失败抛错，浏览器内容不变；EPW 先按内容地址写入并回读校验，再写项目；ID 冲突默认作为副本加入，可选替换；v1 文件走旧路径并说明不含天气 |
-| `mvp/js/store.js` | 载入时迁移（迁移前把原数据以 v1 备份格式存入 IndexedDB `pc-mvp-v1:before-schema-2`，仅一次）；`createProject`/`seed` 调 `initProject`；`addRun` 附加 `planRevisionId/inputs/inputHash/recipe`（失败只记 `contractError`，不阻止保存结果）；`updateConditions` 记录来源（新增 `keepRevision` 选项用于新项目初始设置）；新增 `revertConditions`、`setProjectParameter`、`restoreProjectDefault`、`rollbackPlan`、`addRestored`、`replaceAll`、`preMigrationBackup`；`putProject`（云端拉回）先迁移 |
-| `mvp/js/project-climate.js` | `putClimateRecord`（恢复时按 hash 校验后写入）；记录 `stationChosen`；说明文字改为 EPW 包含在完整备份中 |
-| `mvp/js/pages/account.js` | 备份按钮生成 v2（显示包含/缺失的天气文件）；恢复显示检查结果、副本数量、缺失天气；三种模式；修复：恢复后 `await render()` 再写消息（原代码异步 render 会覆盖消息） |
-| `mvp/js/pages/project-settings.js` | 单项目完整备份按钮；取消编辑改走 `revertConditions`（留下 revert 事件） |
-| `mvp/js/pages/start-study.js`, `new-site.js` | 原先直接改 `sharedConditions` 的三处改为经 `updateConditions` 记录来源 |
-| `tests/replan-contracts.mjs` (new) | 12 个 node:test 契约测试（02/03） |
-| `tests/project-backup.cjs` (new) | 浏览器端到端：旧数据迁移、两个独立浏览器存储间备份恢复、损坏包拒绝、真实 UTCI 重跑 |
-| `.github/workflows/browser-smoke.yml` | 契约测试加入 node --test；新增 project-data 组（project-backup、mvp-dashboard） |
-| `docs/replan-implementation-status.md` (new) | 01 基线记录 |
+| `mvp/js/contract-hash.js` | Synchronous SHA-256 and canonical JSON |
+| `mvp/js/parameters.js` | Resolver, provenance, validation, conflicts, restore, dependency hash, applicability, projection to `sharedConditions`. DEFS for site, study, program, object and target |
+| `mvp/js/project-contract.js` | Schema 2, migration, plans/revisions/lineage, assets, template and program config, stats, integrity |
+| `mvp/js/project-backup.js` | Backup v2 / checked restore |
+| `mvp/js/epw-validate.js` | EPW checks per the EnergyPlus EPW dictionary |
+| `mvp/js/use-templates.js` | Concept use templates, schedules, calendar, lighting load |
+| `mvp/js/capabilities.js` | Three-type registry and target capability status |
+| `mvp/js/compare-metrics.js` | A/B rules |
+| `mvp/js/recommendations.js` | Rule, patch whitelist, adopt transaction, run groups, feedback patch |
+| `mvp/js/zip-store.js`, `mvp/js/pptx.js` | ZIP and editable PPTX |
+| `mvp/js/report-spec.js` | ReportSpec, report revisions, PPTX slides, review file, feedback |
+| `mvp/js/pages/project.js` | Create and overview page |
+| `mvp/js/pages/tables.js` | Tables page |
+| `mvp/js/pages/rendering.js` | Rendering and Boards pages |
+| `mvp/css/project.css` | Styles for the new pages |
+| `mvp/js/store.js` | Migration hook, lineage on runs, provenance on condition changes, rollback, restore helpers |
+| `mvp/js/project-climate.js` | Uses the validator, stores quality, `putClimateRecord` |
+| `mvp/js/study-readiness.js` | Blocks a study when its EPW fields are missing |
+| `mvp/js/pages/account.js` | Backup v2 UI. Fix: `await render()` before writing the restore message (it was overwritten before) |
+| `mvp/js/pages/project-settings.js` | Per-project backup; revert through the resolver |
+| `mvp/js/pages/workspace-v2.js` | Analysis properties pane |
+| `mvp/js/pages/simulations.js` | Three categories plus the capability map |
+| `mvp/js/pages/dashboard.js` | Address-first entry; mode and counts on cards |
+| `mvp/js/pages/start-study.js`, `mvp/js/pages/new-site.js` | Condition writes go through `updateConditions` |
+| `mvp/js/app.js` | Routes: `project`, `tables`, `rendering`, `boards` |
+| `mvp/index.html` | `project.css` |
+| `mvp/home-preview.html` | "Create a project" button |
+| `.github/workflows/browser-smoke.yml` | Contract tests plus a project-data group |
+| `tests/replan-contracts.mjs`, `tests/replan-modules.mjs` | Contract tests (node) |
+| `tests/project-backup.cjs`, `tests/replan-workflow.cjs`, `tests/rendering-boards.cjs` | Browser end-to-end tests |
 
-### 状态
+## 3. Tests
 
-| 任务 | 状态 | 说明 |
-|---|---|---|
-| 01 基线 | 已完成 | 线上与 1e9f086 逐字节一致（代码文件）；22 项、天气、Workbench、比较、报告、本地计算、Rendering/Boards 现状见 status 文档；Pages 设置本身未读取（未知） |
-| 02 数据契约 | 部分完成（数据层完成） | Project 配置/PlanRevision/Asset/ParameterRecord/RunGroup/ReportRevision/Feedback 已建；Recipe 仅为 run 上的 `{id, engine, version:'unrecorded'}`，未建注册表（item 06）；无 UI 展示 Plan A/B/C（后续批次） |
-| 03 参数解析 | 部分完成 | 解析器、来源三字段、覆写/恢复/冲突、依赖 hash 与适用性、导出表已实现并测试；项目参数页（shared conditions）已写入同一记录；**Workbench 尚未调用 `setParameter`**（API 与 plan-object 作用域已就绪，接入属 item 08）；现有结果状态 UI 仍用原 `runConditionsStatus`，新 `applicability` 尚未显示在界面 |
-| 04 备份恢复 | 已完成 | 账户与单项目两入口；独立浏览器存储恢复后实际打开结果并用恢复的 EPW 真实重跑 UTCI，结果一致 |
+Environment: Node 22.22.0, Playwright 1.63.0, Chromium (`CHROMIUM_PATH=/opt/pw-browsers/chromium`), Python 3.13 with python-pptx 1.0.2, LibreOffice, pyradiance 1.3.1. Baseline = isolated `git worktree` of `1e9f086` on port 8766. Changed = this branch on port 8765.
 
-### 测试
+RESULTS_TABLE
 
-见 “测试结果” 表（由本批最终运行填写，日志在 `docs/replan-evidence/batch-1/`）。
+## 4. Real solvers vs test doubles
 
-### 求解器与替身
+- **Real browser engines** in the new tests:
+  - Daylight (A run, Plan B rerun, Plan C rerun, default package).
+  - Sun hours (default package).
+  - UTCI (backup restore rerun).
+  - Every existing test exercises its own engine as before.
+- **Real Radiance**: the local daylight-factor runner (`tests/local-compute-runner.py`) with pyradiance 1.3.1. EnergyPlus was skipped (no binary).
+- **Real render service**: started from `server/render-api.mjs` with an invalid provider key. Only the failure path is verified; no image was generated.
+- **Test doubles**:
+  - Synthetic EPW files ("QA Climate", generated in the tests — not real weather).
+  - A hand-built legacy run in the migration test.
+  - A 40×30 px preview image in the Boards test.
+  - The client review JSON is produced by the real review page in the test browser with typed text.
+- **Plan B numbers**: on the sample, the average DF stayed 2.3 % → 2.3 % at one decimal after the proposed +0.8 m window. That is the real engine result. A separate probe with a much larger window did change sDA/ASE/DF, confirming the patch reaches the solver input. No improvement is claimed.
 
-- 真实执行：浏览器 UTCI（sunhours 引擎 `measure: utci`），在 A 存储运行并保存，在 B 存储用恢复的 EPW 再次运行，KPI 一致（除计算耗时）。其余现有测试中的引擎由各自测试执行。
-- 测试替身：EPW 为合成文件（非真实气象，仅验证文件流转与引擎可读）；迁移测试中的旧版 run（`rLegacy`）是手工构造的历史记录，不是求解结果。
-- 未执行：Radiance/EnergyPlus 本地引擎、云同步（Supabase）真实往返。
+## 5. Reproduce
 
-### 复现
+- **Workflow**: run `node tests/replan-workflow.cjs`. Manually:
+  1. `#/project/new` → enter coordinates → Create.
+  2. Overview → switch the mode; Change and Restore default on an input; choose a use template.
+  3. Open the sample project overview → set a daylight target above its result → Adopt and run Plan B.
+  4. Keep the page open until the run group shows succeeded → Compare plans.
+  5. Report: Save revision + PowerPoint, PDF, Review file.
+  6. Open the review file, comment and save the JSON → import it under Feedback → "Make the next plan from this" → Adopt and run.
+- **Failure paths covered**:
+  - No target, so no suggestion.
+  - Stale basis refused.
+  - Illegal patch (outside the wall, too tall, overlapping an opening) refused with A unchanged.
+  - Repeat adoption is a no-op.
+  - Damaged, edited or broken-reference backups are refused with nothing changed.
+  - Partial, sub-hourly or duplicate EPW refused; missing radiation blocks only the studies that need it.
+  - Render without a service, and with a failing provider, saves nothing.
 
-正常路径：打开 `/mvp/` → Project shared conditions 上传 EPW → 运行 Outdoor thermal comfort 并保存 → Account → Backup & data → Download backup → 另一浏览器配置（或隐私窗口）打开 `/mvp/`、登录本地账户 → Restore 选择文件 → Results 中打开恢复的项目（与示例同 ID 时作为 “(restored 日期)” 副本出现）→ 再运行 UTCI。
+## 6. Migration, backup, rollback
 
-失败路径：修改备份中任一数值（完整性失败）；修改 EPW 内容并重算文件 hash（资产 SHA-256 失败）；把 run 的 versionId 改为不存在（引用失败）。三者均显示原因且项目数量/内容不变。自动化：`node tests/project-backup.cjs`。
+- Schema 1 → 2 only adds fields and is idempotent. The first migration stores the untouched data as a v1 backup in IndexedDB key `pc-mvp-v1:before-schema-2`.
+- To roll back the code: older code ignores the new fields. For a full data rollback, restore that v1 text through Account → Restore (Replace everything).
+- Backups v2 are restorable in any browser; v1 files still restore.
+- Cloud sync sends the new fields inside the project row. Not verified against a live Supabase.
 
-### 迁移与回退
+## 7. Known issues and not verified
 
-- 迁移是增量：旧字段（versions、runs、settings、results、sharedConditions）不改写，只新增字段；重复迁移无变化（测试覆盖）。
-- 首次迁移前，原数据以 v1 备份格式存入 IndexedDB 键 `pc-mvp-v1:before-schema-2`（`S.preMigrationBackup()` 读取）。若 IndexedDB 不可用，`DB.migrationBackup` 记录 “unavailable”。
-- 回退代码：旧代码读取 schema 2 数据时会忽略新增字段（旧代码不认识它们）；如需完全恢复迁移前数据，取出上述 v1 文本，用 Account → Restore（Replace everything）导入。
-- 云端：新增字段随项目 JSON 同步；旧设备的项目在 `putProject` 时迁移。未做真实 Supabase 验证。
-
-### 已知问题和未验证项
-
-1. `siteLinked`（默认 true）的项目，非试点引擎仍通过 `S.siteOf()` 运行时读取账户地址——与 02 “禁止运行时隐式读取账户新值” 不符。本批未改此行为（会改变现有引擎输入）；PlanRevision 冻结了实际条件，因此历史不受影响。建议在 item 05/06 统一处理。
-2. Run 的 `inputs` 记录项目级有效值；引擎页中单次研究的本地覆写仍只在 `run.settings` 中（未进入参数记录）。
-3. 引擎版本未记录（`recipe.version: 'unrecorded'`）。
-4. Workbench 未接入参数记录；对象/房间级记录目前只有 API 与契约测试。
-5. `new-site.js` 地址设置的 tz/elev 来源统一记为用户手动输入，实际 tz/elev 来自地理服务推导；待 item 07 细分。
-6. 示例项目 ID 固定为 `demo-courtyard`，在新浏览器恢复时会作为副本加入（符合冲突规则，但用户可能更希望替换未修改的示例）。
-7. 预先存在的失败（基线同样失败，与本批无关）：`tests/simulation-art.cjs`（noise 调色板缺失）、`tests/exterior-layout.cjs`（Settings 标签超时）。详见测试表。
-8. 手机：仅检查了账户备份页与项目条件页在 390 px 无横向滚动、按钮可见；未在手机上执行下载/恢复。
-9. 迁移后数据体积增加（每版本一条 PlanRevision、每次条件变化一个参数事件）；未做大项目容量测试。
+1. Projects with `siteLinked` still read the Account address at run time for non-pilot engines (pre-existing). PlanRevisions freeze what was used, so history is safe, but this contradicts “no implicit Account reads”. Proposed: switch existing projects to own-site on next save, after review.
+2. New object analysis properties are recorded but not consumed by current engines (see WP08).
+3. Unattended automatic runs need a hosted queue; browser runs stop when the page closes.
+4. Hosted share links, HB-Radiance annual and glare, HB-Energy, CFD, Dragonfly/UWG and the rendering provider are not connected.
+5. Template values are concept assumptions. A target is never assumed; the user must enter it.
+6. Address search, automatic EPW download and cloud sync were not exercised in the new tests (external services). Their existing tests are listed in §3.
+7. Mobile: overview, account backup and project conditions open at 390 px without horizontal scroll. Editing, adoption and report creation were tested on desktop only.
+8. The sample project's fixed ID makes a restore into a new browser arrive as a copy (by design of the conflict rule).
