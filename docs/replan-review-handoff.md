@@ -71,7 +71,7 @@ Legend:
 | `mvp/js/pages/account.js` | Backup v2 UI. Fix: `await render()` before writing the restore message (it was overwritten before) |
 | `mvp/js/pages/project-settings.js` | Per-project backup; revert through the resolver |
 | `mvp/js/pages/workspace-v2.js` | Analysis properties pane |
-| `mvp/js/pages/simulations.js` | Three categories plus the capability map |
+| `mvp/js/pages/simulations.js` | Catalogue grouped only by Building analysis / Interior analysis / Tables (filters All + these three; old Interior/Exterior/group filters and card subtitles removed at the user's request; `data-scope` attributes and every route kept); capability map |
 | `mvp/js/pages/dashboard.js` | Address-first entry; mode and counts on cards |
 | `mvp/js/pages/start-study.js`, `mvp/js/pages/new-site.js` | Condition writes go through `updateConditions` |
 | `mvp/js/app.js` | Routes: `project`, `tables`, `rendering`, `boards` |

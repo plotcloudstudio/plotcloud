@@ -24,7 +24,7 @@ function catalog(app, params, access) {
   const q = (s) => `#/simulations/${s.id}`;   // one route per simulation, whichever page you come from
   // three primary analysis types first (plan §4.1); the earlier scope and group filters stay for existing links and habits
   const catOf = (s) => CATEGORIES.find((c) => c.id === categoryOf(s.id))?.label;
-  const groups = ['All', ...CATEGORIES.map((c) => c.label), 'Interior', 'Exterior', ...new Set(SIMS.map((s) => s.group))];
+  const groups = ['All', ...CATEGORIES.map((c) => c.label)];   // only the three analysis types (an older saved filter falls back to All)
   let g = 'All'; try { g = groups.includes(localStorage.getItem('pc-mvp-simgroup')) ? localStorage.getItem('pc-mvp-simgroup') : 'All'; } catch (e) { }
   app.innerHTML = `<div class="wrap">
     <span class="eyebrow">Simulations</span>
@@ -43,11 +43,11 @@ function catalog(app, params, access) {
   // what each simulation needs from the open project (2026-10-25): a site or masses, or rooms
   const draftChanged=!!(p&&v&&p.draft&&JSON.stringify(p.draft)!==JSON.stringify(v.model));
   const ready=s=>{if(!p)return '<span class="rdy no">Choose a project</span>';const c=S.conditionsOf(p),r=inspectStudy(p,v,s.id,{site:S.isSharedPilot(s.id)||s.id==='vent'?c.site:S.siteOf(p),defaults:S.isSharedPilot(s.id)?c.defaults:S.account().defaults,draftChanged});return `<span class="rdy${r.ready?'':' no'}" title="${esc(r.errors.map(x=>x.title).join('; ')||'Review scope and inputs inside the study; engine geometry checks still apply')}">${r.ready?'Inputs found · review in study':esc(r.errors[0]?.title||'Review inputs')}</span>`;};
-  const draw = () => { $('#grid', app).innerHTML = SIMS.map((s, i) => [s, i]).filter(([s]) => g === 'All' || s.group === g || s.scope === g || catOf(s) === g).map(([s, i]) => `<article class="card sim" data-scope="${s.scope}" data-category="${categoryOf(s.id)}" data-sim="${s.id}">
+  const card = (s) => `<article class="card sim" data-scope="${s.scope}" data-category="${categoryOf(s.id)}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true">${thumbnail(s)}</a>
-      <div class="top2"><span>${String(i + 1).padStart(2, '0')} · ${esc(catOf(s))} · ${esc(s.group)}</span><span>${isFreeStudy(s.id) ? 'Free · ' : allowsTestingStudy(s.id)?'Test access · ':'Paid beta · '}${s.view === 'chart' ? 'Charts' : s.view === 'wire' ? 'Wireframe' : s.view === 'plan' ? 'Plan' : '3D'}</span></div>
-      <h3>${esc(({sunhours:'How many hours of direct sun?',daylight:'Is there enough daylight?',utci:'Where is outdoor heat stress?',radiation:'Where is solar exposure highest?',vent:'How well do rooms ventilate?',wind:'Where does wind accelerate?'})[s.id]||s.name)}</h3><p class="note">${esc(s.name)}</p><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
-      <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id) ? 'Enter' : 'Unlock'}</a>${LIVE}${ready(s)}</div></article>`).join('');
+      <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
+      <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id) ? 'Enter' : 'Unlock'}</a>${LIVE}${ready(s)}</div></article>`;
+  const draw = () => { $('#grid', app).innerHTML = CATEGORIES.filter((c) => g === 'All' || c.label === g).map((c) => `<h2 class="sim-cat" data-category-heading="${c.id}" style="grid-column:1/-1;margin:28px 0 4px">${esc(c.label)}</h2>${SIMS.filter((s) => categoryOf(s.id) === c.id).map(card).join('')}`).join('');
     $$('#filters button', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === g))); };
   $$('#filters button', app).forEach((b) => b.onclick = () => { g = b.dataset.g; try { localStorage.setItem('pc-mvp-simgroup', g); } catch (e) { } draw(); }); draw();
 
