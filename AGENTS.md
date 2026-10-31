@@ -39,3 +39,5 @@
 ## 首页定位补充（2026-10-31）
 
 PlotCloud 以建筑 simulation 为核心。首页优先展示日照、采光、风环境等分析图纸和方案比较；建筑体量、场地、绘图与渲染用于支持模拟任务。示意图必须与真实计算结果区分。
+
+首页主导航保留 Pricing、About、Blog、Resources、Log in 和 Get started；排版参考 Spacio。Illustration 展示优先采用室内剖切轴测、蓝色细线和加粗剖切墙顶，并检查平行投影一致性。
