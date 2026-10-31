@@ -5767,10 +5767,10 @@ window.S3 = (() => {
     if (!cam || !ctl) return; const d = cam.position.distanceTo(ctl.target), r = WM.siteR;
     const t = Math.max(0, Math.min(1, (d - 3.5 * r) / (4 * r)));   // 0 close up (fitted view shows only the site) → 1 zoomed out
     const gl = Math.max(0, Math.min(1, (d - 8e5) / 1.4e6));   // the globe takes over from the flat map far out (2026-10-31)
-    for (const m of WM.rings) m.material.opacity = (1 - gl) * (m.userData.ring === 0 ? t : m.userData.ring === 1 ? t * Math.max(0, Math.min(1, (d - 8000) / 8000)) : t * Math.max(0, Math.min(1, (d - 150000) / 150000)));
-    if (gl > 0 && !WM.globe && WM.key) globeBuild(); if (WM.globe) { WM.globe.visible = gl > 0.001; WM.globe.material.opacity = gl; }
+    if (DISP === 'illus') { for (const m of WM.rings) m.material.opacity = 0; if (WM.globe) WM.globe.visible = false; if (WM.credit) WM.credit.hidden = true; } else for (const m of WM.rings) m.material.opacity = (1 - gl) * (m.userData.ring === 0 ? t : m.userData.ring === 1 ? t * Math.max(0, Math.min(1, (d - 8000) / 8000)) : t * Math.max(0, Math.min(1, (d - 150000) / 150000)));
+    if (gl > 0 && !WM.globe && WM.key) globeBuild(); if (WM.globe) { WM.globe.visible = gl > 0.001 && DISP !== 'illus'; WM.globe.material.opacity = gl; }
     for (const g of WM.ground) g.visible = t < 0.98 && !WM.topo;
-    if (WM.rings.length && canvas?.parentElement) { if (!WM.credit) { WM.credit = document.createElement('div'); WM.credit.textContent = 'Map: Esri, HERE, Garmin, © OpenStreetMap contributors'; WM.credit.style.cssText = 'position:absolute;right:8px;bottom:6px;font:10px system-ui,sans-serif;color:#6b7280;background:rgba(255,255,255,.7);padding:1px 6px;border-radius:4px;pointer-events:none;z-index:2'; canvas.parentElement.append(WM.credit); } WM.credit.hidden = t <= 0; }
+    if (WM.rings.length && canvas?.parentElement) { if (!WM.credit) { WM.credit = document.createElement('div'); WM.credit.textContent = 'Map: Esri, HERE, Garmin, © OpenStreetMap contributors'; WM.credit.style.cssText = 'position:absolute;right:8px;bottom:6px;font:10px system-ui,sans-serif;color:#6b7280;background:rgba(255,255,255,.7);padding:1px 6px;border-radius:4px;pointer-events:none;z-index:2'; canvas.parentElement.append(WM.credit); } WM.credit.hidden = t <= 0 || DISP === 'illus'; }
     const far = Math.max(2000, d * 30); if (Math.abs(cam.far - far) > far * 0.2) { cam.far = far; cam.near = Math.max(0.05, d / 4000); cam.updateProjectionMatrix(); }
   }
 
@@ -5882,12 +5882,15 @@ window.S3 = (() => {
   function topoTexture(site, G0) {
     const key = [site.origin?.lat, site.origin?.lon, G0.nx, G0.ny, G0.step, (site.roads || []).length, (site.areas || []).length, site.version].join(':'); if (TOPO.key === key && TOPO.tex) return TOPO.tex;
     const W = (G0.nx - 1) * G0.step, H = (G0.ny - 1) * G0.step, N = 2048, k = N / Math.max(W, H), cw = Math.round(W * k), ch = Math.round(H * k);
-    const layer = () => { const c = document.createElement('canvas'); c.width = cw; c.height = ch; return c; }, L = { ground: layer(), water: layer(), lines: layer() };
+    const layer = () => { const c = document.createElement('canvas'); c.width = cw; c.height = ch; return c; }, L = { ground: layer(), water: layer(), lines: layer(), marks: layer() };
     const X = (p) => (p[0] - G0.x0) * k, Y = (p) => ch - (p[1] - G0.y0) * k, path = (g, pts) => { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); };
     let g = L.ground.getContext('2d'); g.fillStyle = '#f3f3f1'; g.fillRect(0, 0, cw, ch);
     for (const a of site.areas || []) { if (a.kind === 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = a.kind === 'paving' ? '#e2dfd8' : a.added ? '#d9e4cc' : '#e9ebe5'; g.fill(); }
     g.lineCap = g.lineJoin = 'round';
     for (const r of site.roads || []) { if (r.pts.length < 2) continue; path(g, r.pts); g.strokeStyle = r.cls === 'path' ? '#e4e4e1' : '#e9e9e6'; g.lineWidth = Math.max(1.5, (r.width || (r.cls === 'path' ? 2 : 7)) * k); g.stroke(); }
+    { const m = L.marks.getContext('2d'); m.lineCap = m.lineJoin = 'round'; for (const r of site.roads || []) { if (r.pts.length < 2) continue; path(m, r.pts); m.strokeStyle = '#000'; m.lineWidth = Math.max(1.5, (r.width || (r.cls === 'path' ? 2 : 7)) * k); m.stroke(); }
+      m.globalCompositeOperation = 'destination-out'; for (const r of site.roads || []) { if (r.pts.length < 2 || r.cls === 'path') continue; path(m, r.pts); m.lineWidth = Math.max(0.5, (r.width || 7) * k - 2.4); m.stroke(); }   // the outlines of the streets
+      m.globalCompositeOperation = 'source-over'; for (const a of site.areas || []) { if (a.pts.length < 3 || a.kind === 'water') continue; path(m, a.pts); m.closePath(); m.lineWidth = 1.2; m.setLineDash([6, 5]); m.stroke(); } m.setLineDash([]); }
     g = L.water.getContext('2d'); for (const a of site.areas || []) { if (a.kind !== 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = '#4c5461'; g.fill(); }
     // contours: marching squares on the grid; every fifth line heavier
     g = L.lines.getContext('2d'); const z = G0.z, lo = Math.min(...z), hi = Math.max(...z), rel = hi - lo, step = rel < 8 ? 1 : rel < 40 ? 2 : rel < 100 ? 5 : 10;
@@ -6346,7 +6349,32 @@ window.S3 = (() => {
 
   // ---- Workspace (2026-10-24): Ghosted and Wireframe change only the materials of what update() built; Shaded is Plan Studio's own look
   let DISP = 'shaded'; const DMAT = new Map();
+  // Illustration (2026-10-31): the model drawn in one ink on paper, like an axonometric line drawing. Faces in paper (a breath of
+  // the ink), cut wall tops in solid ink, every edge in the ink; the site and the building can each be drawn or left out.
+  const ILL = { color: '#1f3fe0', site: true, bld: true };
+  const mixHex = (a, b, t) => { const A = new T.Color(a), B = new T.Color(b); return A.lerp(B, t); };
+  function illTopo() { const L = TOPO.L; if (!L) return null; const c = document.createElement('canvas'); c.width = L.ground.width; c.height = L.ground.height; const g = c.getContext('2d'), paper = '#' + mixHex('#ffffff', ILL.color, 0.06).getHexString();
+    const inked = (src, alpha) => { const t = document.createElement('canvas'); t.width = c.width; t.height = c.height; const x = t.getContext('2d'); x.drawImage(src, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = ILL.color; x.fillRect(0, 0, t.width, t.height); g.globalAlpha = alpha; g.drawImage(t, 0, 0); g.globalAlpha = 1; };
+    g.fillStyle = paper; g.fillRect(0, 0, c.width, c.height); inked(L.water, 0.22); inked(L.marks, 0.7); inked(L.lines, 0.55);
+    const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; return tex; }
+  function illApply(G) {
+    const ink = new T.Color(ILL.color), paper = mixHex('#ffffff', ILL.color, 0.05), paperSite = mixHex('#ffffff', ILL.color, 0.09);
+    const mats = { paper: new T.MeshBasicMaterial({ color: paper, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), site: new T.MeshBasicMaterial({ color: paperSite, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+      ink: new T.MeshBasicMaterial({ color: ink, side: T.DoubleSide }), glass: new T.MeshBasicMaterial({ color: mixHex('#ffffff', ILL.color, 0.18), transparent: true, opacity: 0.55, side: T.DoubleSide, depthWrite: false }) };
+    const line = new T.LineBasicMaterial({ color: ink }), lineSite = new T.LineBasicMaterial({ color: ink, transparent: true, opacity: 0.55 });
+    const list = []; G.traverse((m) => { if ((m.isLine || m.isLineSegments || m.isLineLoop) && !m.userData.__disp) { const u = tagOf(m), st = !!u && u.k === 'site'; if ((st && !ILL.site) || (!st && !ILL.bld)) m.visible = false; } if (m.isMesh && !m.userData.__disp) list.push(m); });
+    for (const m of list) { const ud = tagOf(m), site = !!ud && ud.k === 'site';
+      if ((site && !ILL.site) || (!site && !ILL.bld)) { m.visible = false; m.userData.__disp = 1; continue; }
+      if (!m.visible) continue; const k0 = Array.isArray(m.material) ? m.material[0] : m.material, glassy = k0 && (k0.transparent && (k0.opacity ?? 1) < 0.9);
+      const topTex = site && ud.id === 'terrain' && k0 && k0.map ? (mats.topo || (mats.topo = illTopo())) : null;
+      if (!m.userData.__selected) m.material = topTex ? new T.MeshBasicMaterial({ map: topTex, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }) : m.name === 'wallcut' ? mats.ink : glassy ? mats.glass : site ? mats.site : mats.paper;
+      m.userData.__disp = 1; if ((m.geometry.attributes.position?.count || 0) > 60000) continue;
+      const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, site ? 40 : 25), m.userData.__selected ? new T.LineBasicMaterial({ color: 0xd8402a }) : site ? lineSite : line); e.raycast = () => {}; e.userData.__disp = 1; m.add(e); }
+    if (scene) scene.background = new T.Color('#ffffff');
+  }
   function dispApply(G) {
+    if (scene && DISP !== 'illus') scene.background = new T.Color(window.PlotCloudUI?.viewportColor() || '#f2f3f5');
+    if (DISP === 'illus' && G) { illApply(G); return; }
     if (DISP === 'shaded' || !G) return; const em = new T.LineBasicMaterial({ color: 0x3a3d42, transparent: true, opacity: DISP === 'wire' ? 0.85 : 0.55 });
     const list = []; G.traverse((m) => { if (m.isMesh && !m.userData.__disp && m.visible) list.push(m); });
     for (const m of list) { const k0 = Array.isArray(m.material) ? m.material[0] : m.material; if (!k0) continue; const key = k0.uuid + '|' + DISP;
@@ -6354,7 +6382,8 @@ window.S3 = (() => {
       if(!m.userData.__selected)m.material = nm; m.userData.__disp = 1; if ((m.geometry.attributes.position?.count || 0) > 60000) continue;
       const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, 30), m.userData.__selected?new T.LineBasicMaterial({color:0xd8402a}):em); e.raycast = () => {}; e.userData.__disp = 1; m.add(e); }
   }
-  api.display = (mode) => { const next = mode === 'ghosted' || mode === 'wire' ? mode : 'shaded'; if (next === DISP) return; DISP = next; if (window.upd3DNow) window.upd3DNow(); };
+  api.display = (mode) => { const next = ['ghosted', 'wire', 'illus'].includes(mode) ? mode : 'shaded'; if (next === DISP) return; DISP = next; if (next === 'shaded') dispApply(null); if (window.upd3DNow) window.upd3DNow(); };
+  api.illustration = (o) => { const was = JSON.stringify(ILL); Object.assign(ILL, o || {}); if (JSON.stringify(ILL) !== was && DISP === 'illus' && window.upd3DNow) window.upd3DNow(); return { ...ILL }; };
   api.displayMode = () => DISP;
   { const _u2 = api.update; api.update = (M, S, o) => { _u2(M, S, o); if (DISP !== 'shaded' && grp) { dispApply(grp); render(); } }; }
   // the model's meshes, grouped by object, in plan coordinates with z up (x, y, height): what the Workspace's Shaded pane draws
@@ -6631,6 +6660,7 @@ if (window.__WSROLE) {
     clearance(on) { CLR.on = !!on; clrUI(); draw(); },
     gumball(on) { WS.gb = !!on; if (window.S3 && S3.on) gizmoSync(); if (window.S3 && S3.on) upd3D();draw(); },
     display(m) { WS.disp = m; if (window.S3 && S3.display) S3.display(m); },
+    illustration(o) { return window.S3 && S3.illustration ? S3.illustration(o) : null; },
     async view(v) { if (v === 'walk') await walkEnter(); else if (v === 'bird') await birdView(); else if (v === 'explode') { if (XPL.on) explodeExit(); else await explodeEnter(); } else if (v === 'plan' || v === 'ceiling' || v === 'elev') setView2D(v); return WS.state(); },
     state: () => ({ cam: CAM, view2d: VIEW2D, walking: WALKING, walkpick: WMARK.on, explode: XPL.on, tool: TOOL, impPend: IMP_PEND ? IMP_PEND.ref : null, importSpec: IMP_PEND ? {...IMP_PEND} : null, pick: PICK, opm: OPM[TOOL] || null, light: LTOOL, lv: LV, clr: CLR.on, gumball: WS.gb, disp: window.S3 && S3.displayMode ? S3.displayMode() : 'shaded', snaps: Object.assign({}, WSNAP) }),
     tool(o) {   // a tool chosen in the Workspace's left panel: the same tile or tool Plan Studio's own panel would use

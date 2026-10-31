@@ -367,3 +367,34 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-check{display:flex;align-items:center;gap:6px;font-size:11px;margin:4px 0 8px}
 .w2.sp .sp-chips-in{margin:0 0 6px}
 .w2.sp .sp-sel{width:100%;font:11.5px Inter,system-ui,sans-serif;padding:5px 6px;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:6px}
+/* the Display panel (2026-10-31): a card per mode, Illustration's ink and switches */
+.w2.sp .sp-right .w2-menu.w3-disp{width:236px;min-width:0;padding:12px;border-radius:14px;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.14);border:1px solid #eceef1;font:12px Inter,system-ui,sans-serif;max-height:calc(100vh - 120px);overflow:auto}
+.w3-disp header{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:var(--sp-ink,#111827)}.w3-disp header b{font-size:13px;font-weight:600}
+.w3-dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.w3-dgrid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 9px;border:1px solid #e8eaee;border-radius:10px;background:#fff;cursor:pointer;color:#6b7280;font:500 11px Inter,system-ui,sans-serif;transition:border-color .12s,box-shadow .12s}
+.w3-dgrid button:hover{border-color:#c9cfd8;box-shadow:0 2px 6px rgba(15,23,42,.06)}
+.w3-dgrid button[aria-checked=true]{border:1.5px solid #2f5bd8;color:#111827;font-weight:600;box-shadow:0 0 0 3px rgba(47,91,216,.08)}
+.w3-dic svg{width:30px;height:30px;display:block}
+.w3-ill{margin-top:12px;padding-top:12px;border-top:1px solid #eef0f2;display:flex;flex-direction:column;gap:8px}
+.w3-illrow{display:flex;align-items:center;justify-content:space-between;color:#6b7280}
+.w3-illsw{display:flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:4px 8px 4px 4px;cursor:pointer}
+.w3-illsw i{width:20px;height:20px;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}.w3-illsw code{font:600 11px ui-monospace,Menlo,monospace;color:#111827}
+.w3-tog{display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:#111827}
+.w3-tog input{position:absolute;opacity:0;pointer-events:none}.w3-tog i{width:30px;height:18px;border-radius:9px;background:#d1d5db;position:relative;transition:background .15s}
+.w3-tog i::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}
+.w3-tog input:checked+i{background:#2f5bd8}.w3-tog input:checked+i::after{left:14px}.w3-tog input:focus-visible+i{outline:2px solid #2f5bd8;outline-offset:2px}
+.w3-illnote{margin:0;color:#9ca3af;font-size:10.5px;line-height:1.4}
+/* the colour picker */
+.cp{display:grid;grid-template-columns:1fr 14px;grid-template-rows:auto auto auto;gap:8px}
+.cp-sv{grid-column:1;position:relative;height:130px;border-radius:7px;cursor:crosshair;touch-action:none}
+.cp-dot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);pointer-events:none}
+.cp-hue{grid-column:2;position:relative;height:130px;border-radius:7px;cursor:ns-resize;touch-action:none;background:linear-gradient(to bottom,#f00,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00)}
+.cp-bar{position:absolute;left:-2px;right:-2px;height:4px;margin-top:-2px;border-radius:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.45);pointer-events:none}
+.cp-side{grid-column:1/-1;display:flex;flex-direction:column;gap:6px}
+.cp-sw{display:flex;height:18px;border-radius:5px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}.cp-sw span{flex:1}
+.cp-f{display:flex;align-items:center;gap:4px;color:#6b7280;font:600 10.5px Inter,system-ui,sans-serif}
+.cp-f input{width:100%;min-width:0;font:11px ui-monospace,Menlo,monospace;padding:4px 5px;border:1px solid #e5e7eb;border-radius:6px;color:#111827}
+.cp-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cp-pre{grid-column:1/-1;display:flex;gap:6px}.cp-pre button{width:20px;height:20px;border-radius:5px;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.w2.sp .sp-right .w2-menu.w3-disp{top:auto;bottom:0}
+.w2.sp .sp-right .w2-menu.w3-disp{max-height:min(560px,calc(100vh - 100px))}

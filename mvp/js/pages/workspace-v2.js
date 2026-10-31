@@ -1,3 +1,4 @@
+import { mountPicker } from '../color-picker.js?v=ill-20261031-1';
 import {inspectStudy} from '../study-readiness.js';
 import {mountHandoff,createHandoff,baselineSignature} from '../handoff.js?v=handoff-20261028-1';
 import {editStructuralProperties,structuralSummary} from '../structural-properties.js?v=structural-study-20261028-1';
@@ -18,7 +19,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=site-20261031-6';
+import { mountChrome } from '../workspace-chrome.js?v=ill-20261031-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -156,7 +157,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=site-20261031-7`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ill-20261031-3`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -238,7 +239,7 @@ export function render(app, [pid]) {
   // layer materials in the 3D view: each layer's look, which Plan Studio objects belong to which layer, and the imports' layers
   const lookSpec = () => ({ looks: LM.looks(M().layers), klayer: KLAYER, imports: Object.fromEntries((M().studio?.imports || []).map((o) => [o.id, o.layer || 'Imported'])) });
   const tellLooks = () => { for (const I2 of ready()) I2.ws.layerLooks?.(lookSpec()); };
-  function tell(I2) { const w = I2.ws;w.projectLabel?.(p.name);w.layerLooks?.(lookSpec()); if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.display(UI.disp);
+  function tell(I2) { const w = I2.ws;w.projectLabel?.(p.name);w.layerLooks?.(lookSpec()); if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.illustration?.(illOf()); w.display(UI.disp);
     const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s);w.selectMany?.(UI.sels.map(psSel).filter(Boolean)); }
   const hub = {
     ready(role, win) {
@@ -330,7 +331,34 @@ export function render(app, [pid]) {
   // ---- one view, chosen at the top left (as before): Plan (Plan Studio 2D) per level, its ceiling plan and interior
   // elevation; Perspective (Plan Studio 3D) with Walkthrough and Explode, which also draws the imports and the site.
   // The three stay loaded on top of each other, so switching is instant and every edit reaches all of them.
-  const DISPLAYS = [['shaded', 'Shaded'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe']];
+  const DISPLAYS = [['shaded', 'Default'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe'], ['illus', 'Illustration']];
+  // the Display panel (2026-10-31): a card for each mode with a small picture of it; Illustration has its own colour and switches
+  const DICON = {
+    shaded: '<svg viewBox="0 0 32 32"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#e9e7e3" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 16l11-6M16 16L5 10M16 16v12" fill="none" stroke="#3b3f45" stroke-width="1.4"/><path d="M16 16l11-6v12l-11 6z" fill="#cfccc6"/><path d="M16 16v12" stroke="#3b3f45" stroke-width="1.4"/></svg>',
+    ghosted: '<svg viewBox="0 0 32 32"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#dfe6f2" fill-opacity=".6" stroke="#8a93a3" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 16l11-6M16 16L5 10M16 16v12" fill="none" stroke="#8a93a3" stroke-width="1.2" stroke-dasharray="2 2"/></svg>',
+    wire: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.3" stroke-linejoin="round"><path d="M16 4l11 6v12l-11 6-11-6V10z"/><path d="M16 16l11-6M16 16L5 10M16 16v12M5 16l11 6 11-6M10.5 7l11 6v12M21.5 7l-11 6v12"/></svg>',
+    illus: (c) => `<svg viewBox="0 0 32 32" fill="none" stroke="${c}" stroke-linejoin="round"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#fff" stroke-width="1.4"/><path d="M5 10l11 6 11-6" stroke-width="3"/><path d="M16 16v12" stroke-width="1.2"/><path d="M9 20l4 2M19 21l4-2" stroke-width="1"/></svg>` };
+  const ILL_PRESETS = ['#1f3fe0', '#111111', '#d8402a', '#0f7b6c', '#7a3fd1', '#c27c0e'];
+  const illOf = () => ({ color: '#1f3fe0', site: true, bld: true, ...(UI.illus || {}) });
+  const illSend = () => { if (INST.persp.ready) INST.persp.ws.illustration?.(illOf()); };
+  function displayPanel(cur) {
+    const host = $('#dMenu', app), ill = illOf(), modes = UI.view === 'shaded' ? DISPLAYS.filter(([k]) => k !== 'illus') : DISPLAYS;
+    host.classList.add('w3-disp'); host.innerHTML = `<header><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="4.5" width="17" height="12" rx="1.5"/><path d="M9 20h6M12 16.5V20"/></svg><b>Display mode</b></header>
+      <div class="w3-dgrid">${modes.map(([k, n]) => `<button type="button" role="menuitemradio" data-disp="${k}" aria-checked="${cur === k}"><span class="w3-dic">${k === 'illus' ? DICON.illus(ill.color) : DICON[k]}</span><span>${n}</span></button>`).join('')}</div>
+      ${cur === 'illus' ? `<section class="w3-ill"><div class="w3-illrow"><span>Ink</span><button type="button" class="w3-illsw" data-ill="pick" aria-expanded="false"><i style="background:${ill.color}"></i><code>${ill.color.toUpperCase()}</code></button></div>
+        <div class="w3-illpick" hidden></div>
+        <label class="w3-tog"><span>Site</span><input type="checkbox" data-ill="site" ${ill.site ? 'checked' : ''}><i></i></label>
+        <label class="w3-tog"><span>Building</span><input type="checkbox" data-ill="bld" ${ill.bld ? 'checked' : ''}><i></i></label>
+        <p class="w3-illnote">One ink for the whole drawing: faces in paper, cut walls solid, edges in the ink.</p></section>` : ''}`;
+    host.querySelectorAll('[data-disp]').forEach((x) => x.onclick = (e) => { e.stopPropagation(); const d = x.dataset.disp; if (UI.view === 'shaded') { vp.setDisplay(d); closeMenus(); menus(); return; }
+      UI.disp = d; saveUI(); if (INST.persp.ready) { if (d === 'illus') illSend(); INST.persp.ws.display(d); } if (d !== 'illus') closeMenus(); displayPanel(d); menus(); });
+    const pick = host.querySelector('[data-ill="pick"]');
+    if (pick) { let mounted = null; pick.onclick = (e) => { e.stopPropagation(); const box = host.querySelector('.w3-illpick'), on = box.hidden; box.hidden = !on; pick.setAttribute('aria-expanded', String(on));
+      if (on && !mounted) mounted = mountPicker(box, illOf().color, { presets: ILL_PRESETS,
+        onInput: (hx) => { pick.querySelector('i').style.background = hx; pick.querySelector('code').textContent = hx.toUpperCase(); },
+        onChange: (hx) => { UI.illus = { ...illOf(), color: hx }; saveUI(); illSend(); const ic = host.querySelector('[data-disp="illus"] .w3-dic'); if (ic) ic.innerHTML = DICON.illus(hx); } }); }; }
+    host.querySelectorAll('input[data-ill]').forEach((x) => x.onchange = () => { UI.illus = { ...illOf(), [x.dataset.ill]: x.checked }; if (!UI.illus.site && !UI.illus.bld) { UI.illus[x.dataset.ill === 'site' ? 'bld' : 'site'] = true; } saveUI(); illSend(); displayPanel('illus'); if (x.dataset.ill === 'site') setTimeout(() => $('#fit', app)?.click(), 250); });   // the drawing framed again: the whole site, or just the building
+    host.onclick = (e) => e.stopPropagation(); }
   if (UI.view === 'shaded') UI.view = 'persp';   // the Shaded view is gone (2026-10-25): Perspective draws the imports and the site
   if (!['plan', 'persp'].includes(UI.view)) UI.view = 'plan';
   function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
@@ -357,9 +385,8 @@ export function render(app, [pid]) {
       + it('data-view="persp"', UI.view === 'persp', 'Perspective');
     const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
     $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;$('#dBtn',app).parentElement.hidden=plan;
-    $('#dMenu', app).innerHTML = DISPLAYS.map(([k, n]) => it(`data-disp="${k}"`, cur === k, n)).join('');
+    if ($('#dMenu', app).hidden) displayPanel(cur);
     $$('#vMenu [data-view]', app).forEach((x) => x.onclick = () => { closeMenus(); goView(x.dataset.view, x.dataset.level); });
-    $$('#dMenu [data-disp]', app).forEach((x) => x.onclick = () => { closeMenus(); const d = x.dataset.disp; if (UI.view === 'shaded') vp.setDisplay(d); else { UI.disp = d; saveUI(); if (INST.persp.ready) INST.persp.ws.display(d); } menus(); });
   }
   async function goView(v, level) {
       if (v === 'plan' || v === 'ceiling' || v === 'elev') { showView('plan'); if (level) for (const I2 of ready()) I2.ws.level(level); if (INST.plan.ready) await INST.plan.ws.view(v === 'ceiling' ? 'ceiling' : v === 'elev' ? 'elev' : 'plan'); }
