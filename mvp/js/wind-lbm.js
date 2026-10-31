@@ -27,9 +27,11 @@ export function speedRatio(solid, nx, ny, flow, { iters = 0, u0 = 0.08, tau = 0.
     f.set(g); for (let c = 0; c < N; c++) if (solid[c]) for (let k = 0; k < 9; k++) f[k * N + c] = W[k];
   }
   const out = new Float32Array(N), cp = new Float32Array(N), vx = new Float32Array(N), vy = new Float32Array(N); for (let c = 0; c < N; c++) { if (solid[c]) { out[c] = NaN; cp[c] = NaN; continue; } let rho = 0, ux = 0, uy = 0; for (let k = 0; k < 9; k++) { const v = f[k * N + c]; rho += v; ux += v * E[k][0]; uy += v * E[k][1]; } vx[c] = ux / rho / u0; vy[c] = uy / rho / u0; out[c] = Math.hypot(vx[c], vy[c]); cp[c] = (rho - 1) / 3 / (0.5 * u0 * u0); }
-  // pressure relative to the undisturbed wind: the mean over the fluid cells just inside the upwind edges
-  let ref = 0, nr = 0; for (let i = 1; i < nx - 1; i++) for (const [j, on] of [[1, flow[1] > 0.05], [ny - 2, flow[1] < -0.05]]) if (on && !solid[j * nx + i]) { ref += cp[j * nx + i]; nr++; }
-  for (let j = 1; j < ny - 1; j++) for (const [i, on] of [[1, flow[0] > 0.05], [nx - 2, flow[0] < -0.05]]) if (on && !solid[j * nx + i]) { ref += cp[j * nx + i]; nr++; }
+  // pressure relative to the undisturbed wind: the mean over the open cells where the wind runs at the free-stream speed (within
+  // 5 %); the cells just inside the upwind edges when there are too few of those (2026-10-31)
+  let ref = 0, nr = 0; for (let c = 0; c < N; c++) if (!solid[c] && out[c] > 0.95 && out[c] < 1.05) { ref += cp[c]; nr++; }
+  if (nr < 20) { ref = 0; nr = 0; for (let i = 1; i < nx - 1; i++) for (const [j, on] of [[1, flow[1] > 0.05], [ny - 2, flow[1] < -0.05]]) if (on && !solid[j * nx + i]) { ref += cp[j * nx + i]; nr++; }
+    for (let j = 1; j < ny - 1; j++) for (const [i, on] of [[1, flow[0] > 0.05], [nx - 2, flow[0] < -0.05]]) if (on && !solid[j * nx + i]) { ref += cp[j * nx + i]; nr++; } }
   if (nr) { ref /= nr; for (let c = 0; c < N; c++) cp[c] -= ref; }
   out.cp = cp; out.vx = vx; out.vy = vy; return out;
 }

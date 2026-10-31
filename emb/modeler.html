@@ -5360,8 +5360,8 @@ function drawCtxHandles() { if (CAM === '3d' || !SEL || SEL.k !== 'ctx' || !M.si
 { const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawWalk2(); } catch (e) { } return r; }; }   // an interior study over the rooms
 // a Workspace study result in the 2D plan (2026-10-31): the same grid and colours as in 3D, one crisp cell per grid cell
 const RAMPS_TOP = {};   // the study colour ramps (filled in below), shared with the flow animation
-function rampAtTop(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
-let ANA2 = null, SPATH2 = null, STR2 = null, GUIDE = null;
+function rampAtTop(R, t) { t = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)); for (let i = 1; i < R.length; i++) if (t <= R[i][0] + 1e-9 || i === R.length - 1) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
+let ANA2 = null, SPATH2 = null, STR2 = null, GUIDE = null; const SURF = { list: null, cell: 1 };
 function drawGuide() { if (!GUIDE || CAM === '3d') return; const p = W2S(GUIDE.p), d = VP.d || 1; g.save(); g.strokeStyle = GUIDE.axis === 'x' ? '#e2372b' : '#35a845'; g.lineWidth = 1.4 * d; g.setLineDash([7 * d, 5 * d]); g.beginPath(); if (GUIDE.axis === 'x') { g.moveTo(0, p[1]); g.lineTo(cv.width, p[1]); } else { g.moveTo(p[0], 0); g.lineTo(p[0], cv.height); } g.stroke(); g.restore(); } const _drawAgain = () => requestAnimationFrame(() => draw());
 // ---- an interior study on one level (2026-10-31): Circulation's walks as ink that builds up as the ants walk, or its density
 const WK = { o: null, cv: null, g: null, k: 1, done: null, t: 0, raf: 0, last: 0 };
@@ -5395,7 +5395,7 @@ function drawWalk2() { const o = WK.o; if (!o || CAM === '3d' || !WK.cv || (o.lv
   for (const p of o.places || []) { const q = W2S(p.p), d = VP.d || 1; g.beginPath(); g.arc(q[0], q[1], 7 * d, 0, 7); g.fillStyle = '#46148c'; g.fill(); g.lineWidth = 2 * d; g.strokeStyle = '#fff'; g.stroke(); g.fillStyle = '#fff'; g.font = `700 ${9 * d}px Inter,system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(p.letter || '', q[0], q[1] + 0.5); } }
 // ---- reading a study result under the pointer (2026-10-31): the Workspace gets the plan point and the pointer position
 let PROBE = null;
-stage.addEventListener('pointermove', (e) => { if (!PROBE) return; let p = null; if (CAM === '3d' && window.S3 && S3.on) p = S3.probe(e.clientX, e.clientY); else { const a = evP(e); p = S2W(a[0], a[1]); } PROBE(p ? { x: p[0], y: p[1], cx: e.clientX, cy: e.clientY } : null); });
+stage.addEventListener('pointermove', (e) => { if (!PROBE) return; let p = null; if (CAM === '3d' && window.S3 && S3.on) p = S3.probe(e.clientX, e.clientY); else { const a = evP(e); p = S2W(a[0], a[1]); } PROBE(p ? { x: p[0], y: p[1], cx: e.clientX, cy: e.clientY, surf: p.surf ?? null, roof: p.surf != null && SURF.list && SURF.list[p.surf] ? SURF.list[p.surf].roof : null } : null); });
 stage.addEventListener('pointerleave', () => { if (PROBE) PROBE(null); });
 // ---- flow animation (2026-10-31): particles carried by a velocity field on the study grid (m/s in plan axes), drawn as streaks:
 // on the 3D topographic block and on a layer over the 2D plan; respawned where the field is still, off the grid or old
@@ -6015,6 +6015,7 @@ window.S3 = (() => {
   const FLR = { m: null };
   // frame a plan box (an interior study's level) from above at an angle
   api.fitBox = (b, y = 0) => { if (!cam || !ctl) return; const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, r = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.85 + 4; ctl.target.set(cx, y, -cy); cam.position.set(cx + r * 0.55, y + r * 1.05, -cy + r * 0.85); cam.lookAt(ctl.target); ctl.update(); render(); };
+  api._scene = () => scene;   // read-only, for the browser checks
   api._sheet = () => (FLR.m ? { y: FLR.m.position.y, x: FLR.m.position.x, z: FLR.m.position.z, vis: FLR.m.visible } : null);   // read-only, for the browser checks
   api.floorSheet = (o) => { if (!scene) return; if (!o) { if (FLR.cut && R) { R.clippingPlanes = FLR.cut0 || []; FLR.cut = false; render(); } if (FLR.m) { scene.remove(FLR.m); FLR.m.geometry.dispose(); FLR.m.material.map?.dispose(); FLR.m.material.dispose(); FLR.m = null; render(); } return; }
     if (!FLR.m || FLR.m.userData.cv !== o.canvas) { api.floorSheet(null); const tex = new T.CanvasTexture(o.canvas); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
@@ -6070,7 +6071,7 @@ window.S3 = (() => {
   api.hits = (cx, cy) => { if (!R || !grp) return []; const out = [], seen = new Set(); for (const h of ray(cx, cy).intersectObjects(grp.children, true)) { const ud = tagOf(h.object); if (!ud) continue; const key = `${ud.k}:${ud.id}`; if (seen.has(key)) continue; seen.add(key); out.push({ ud, p: [h.point.x, -h.point.z], z: h.point.y, distance: h.distance }); } return out; };
   api.hit = (cx, cy) => api.hits(cx, cy)[0] || null;
   // the plan point under the pointer on any surface (the topographic block, roofs), for reading a study result (2026-10-31)
-  api.probe = (cx, cy) => { if (!R || !scene) return null; for (const h of ray(cx, cy).intersectObjects(scene.children, true)) { if (!h.object.isMesh) continue; let o = h.object, skip = false; while (o) { if (o.name === 'sunpath' || o.name === 'structure' || o.name === 'flowanim' || o.name === 'floorsheet') { skip = true; break; } o = o.parent; } if (!skip) return [h.point.x, -h.point.z]; } return api.plane(cx, cy, 0); };
+  api.probe = (cx, cy) => { if (!R || !scene) return null; for (const h of ray(cx, cy).intersectObjects(scene.children, true)) { if (!h.object.isMesh) continue; if (h.object.name === 'surfaceresult') { const r = [h.point.x, -h.point.z]; r.surf = SRF.idx ? SRF.idx[Math.floor(h.faceIndex / 2)] : null; return r; } let o = h.object, skip = false; while (o) { if (o.name === 'sunpath' || o.name === 'structure' || o.name === 'flowanim' || o.name === 'floorsheet') { skip = true; break; }   /* the painted building squares are read like the building: a probe hit on them returns their point */ o = o.parent; } if (!skip) return [h.point.x, -h.point.z]; } return api.plane(cx, cy, 0); };
   // moving particles as short coloured streaks just above the ground: pos Float32Array [x0,y0,z0,x1,y1,z1]… (world), col likewise
   const FLA = { g: null };
   api.flowAnim = (o) => { if (!scene) return; if (!o) { if (FLA.g) { scene.remove(FLA.g); FLA.g.geometry.dispose(); FLA.g.material.dispose(); FLA.g = null; render(); } return; }
@@ -6351,6 +6352,14 @@ window.S3 = (() => {
       if (G.children.length) { scene.add(G); HV.g = G; } }
     render();
   };
+  // ---- results on the building (2026-10-31): one coloured square per sample, just off its face
+  const SRF = { m: null };
+  api.surface = (o) => { if (!scene) return; if (SRF.m) { scene.remove(SRF.m); SRF.m.geometry.dispose(); SRF.m.material.dispose(); SRF.m = null; } if (!o) { render(); return; }
+    const L = o.list.filter((x, i) => o.cols[i]), pos = new Float32Array(L.length * 18), cl = new Float32Array(L.length * 18); let k = 0; SRF.idx = [];
+    o.list.forEach((S0, i) => { const c = o.cols[i]; if (!c) return; SRF.idx.push(i); const P = (a, b) => [S0.p[0] + a * S0.u[0] + b * S0.v[0] + S0.n[0] * 0.02, S0.p[1] + a * S0.u[1] + b * S0.v[1] + S0.n[1] * 0.02, S0.p[2] + a * S0.u[2] + b * S0.v[2] + S0.n[2] * 0.02];
+      for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]]) { const q = P(a, b); pos[k] = q[0]; pos[k + 1] = q[2]; pos[k + 2] = -q[1]; cl[k] = c[0]; cl[k + 1] = c[1]; cl[k + 2] = c[2]; k += 3; } });
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(cl, 3));
+    const m = new T.Mesh(geo, new T.MeshBasicMaterial({ vertexColors: true, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.name = 'surfaceresult'; m.renderOrder = 3; scene.add(m); SRF.m = m; render(); };
   // ---- live drag (2026-10-31, after SketchUp): while dragging, the picked objects (and the gumball) are moved on screen as they
   // are; the scene is rebuilt once, on release. keys: ['k:id'…]; liveSet takes plan metres and radians
   const LIVE = { list: null, gz: null };
@@ -6884,7 +6893,36 @@ if (window.__WSROLE) {
       if (window.S3 && S3.on && S3.sunPath) S3.sunPath({ lines, suns: (o.suns || []).map((p) => world(p.az, p.alt)), sunR: Math.max(1.5, R / 45), now: o.now && o.now.alt > 0 ? world(o.now.az, o.now.alt) : null });
       SPATH2 = { cx, cy, R, nb, plan, o }; if (CAM !== '3d') draw();
     },
-    clearStudy() { flowStop(); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    // results on the building itself (2026-10-31, as Ladybug paints a model): sample squares on every facade and roof of the
+    // design, faces inside the building left out; each has its centre, outward normal and two half-sides
+    surfaceSamples(o = {}) {
+      const pr = studyPrisms().filter((P) => !P.room && P.h - (P.b || 0) > 0.3).map((P) => Object.assign(prismOf(P.outer, P.h), { b: P.b || 0 })); if (!pr.length) { SURF.list = []; return SURF; }
+      const area = pr.reduce((a, P) => { let per = 0; for (let i = 0; i < P.outer.length; i++) { const p = P.outer[i], q = P.outer[(i + 1) % P.outer.length]; per += Math.hypot(q[0] - p[0], q[1] - p[1]); } return a + per * (P.h - P.b) + areaOf(P.outer); }, 0);
+      const cell = Math.max(0.75, Math.sqrt(area / (o.max || 7000))), list = [], inside = (q, z, self) => pr.some((P) => P !== self && z > P.b && z < P.h && q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer));
+      for (const P of pr) { const O = P.outer, ccw = polySigned(O) > 0;
+        for (let i = 0; i < O.length; i++) { const a = O[i], b = O[(i + 1) % O.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.05) continue; const d = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], n = ccw ? [d[1], -d[0]] : [-d[1], d[0]], nu = Math.max(1, Math.round(L / cell)), nv = Math.max(1, Math.round((P.h - P.b) / cell)), du = L / nu, dv = (P.h - P.b) / nv;
+          for (let u = 0; u < nu; u++) for (let v = 0; v < nv; v++) { const t = (u + 0.5) * du, z = P.b + (v + 0.5) * dv, q = [a[0] + d[0] * t + n[0] * 0.08, a[1] + d[1] * t + n[1] * 0.08]; if (inside(q, z, P)) continue;
+            list.push({ p: [q[0], q[1], z], n: [n[0], n[1], 0], u: [d[0] * du / 2, d[1] * du / 2, 0], v: [0, 0, dv / 2], roof: false }); } }
+        const nx = Math.max(1, Math.round((P.bb[2] - P.bb[0]) / cell)), ny = Math.max(1, Math.round((P.bb[3] - P.bb[1]) / cell)), cx = (P.bb[2] - P.bb[0]) / nx, cy = (P.bb[3] - P.bb[1]) / ny;
+        for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const q = [P.bb[0] + (i + 0.5) * cx, P.bb[1] + (j + 0.5) * cy]; if (!inPoly(q, O) || inside(q, P.h + 0.08, P)) continue;
+          list.push({ p: [q[0], q[1], P.h + 0.08], n: [0, 0, 1], u: [cx / 2, 0, 0], v: [0, cy / 2, 0], roof: true }); } }
+      SURF.list = list; SURF.cell = cell; return { cell, n: list.length, roofs: list.filter((x) => x.roof).length };
+    },
+    // sun hours on each sample: the day's sun directions that face it and reach it past the design and the surroundings
+    surfaceList() { return (SURF.list || []).map((x) => ({ p: x.p, n: x.n, roof: x.roof })); },
+    surfaceSun(day) {
+      const site = M.site; if (!site || !SURF.list) return null; const dirs = sunDirs({ lat: site.origin.lat, lon: site.origin.lon, tz: site.tz }, SUN_DAYS[day] ? day : '03-21', M.north || 0);
+      const pr = studyPrisms().map((P) => prismOf(P.outer, P.h)).concat(SITEC.contextMasses(site, M.north || 0).map((m) => prismOf(m.outer, m.h)));
+      return SURF.list.map((S0) => { const q = [S0.p[0], S0.p[1]], z0 = S0.p[2]; let hrs = 0;
+        for (const d of dirs) { if (!S0.roof && S0.n[0] * d.v[0] + S0.n[1] * d.v[1] <= 0.02) continue; let shade = false;
+          for (const P of pr) { if (P.h <= z0) continue; const sx = P.c[0] - q[0], sy = P.c[1] - q[1], s2 = sx * d.v[0] + sy * d.v[1]; if (s2 < -P.r) continue; if (Math.abs(sx * d.v[1] - sy * d.v[0]) > P.r) continue; if ((s2 - P.r) * d.t + z0 >= P.h) continue;
+            const din = rayEnter(q, d.v, P.outer); if (din < Infinity && z0 + din * d.t < P.h) { shade = true; break; } }
+          if (!shade) hrs += d.w; }
+        return hrs; }); },
+    surfacePaint(o) { const R = RAMPS_TOP[o && o.ramp] || RAMPS_TOP.ladybug; if (!o || !SURF.list || !SURF.list.length) { if (window.S3 && S3.surface) S3.surface(null); return; }
+      const col = (v) => { if (!Number.isFinite(v)) return null; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rampAtTop(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo))); return [m[1] / 255, m[2] / 255, m[3] / 255]; };
+      if (window.S3 && S3.on && S3.surface) S3.surface({ list: SURF.list, cols: Array.from(o.vals, col) }); },   /* Array.from: a Float32Array's map would keep only numbers */
+    clearStudy() { flowStop(); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }
@@ -6918,12 +6956,12 @@ if (window.__WSROLE) {
       for (let j = 0; j < ny; j++) for (let k = 0; k < nx; k++) { const q = j * nx + k, h = Q[q]; if (h < 0 || used[q]) continue; let w = 1; while (k + w < nx && Q[j * nx + k + w] === h && !used[j * nx + k + w]) w++;
         let d = 1; grow: while (j + d < ny) { for (let t = 0; t < w; t++) { const r = (j + d) * nx + k + t; if (Q[r] !== h || used[r]) break grow; } d++; }
         for (let jj = j; jj < j + d; jj++) for (let t = 0; t < w; t++) used[jj * nx + k + t] = 1;
-        const ax = x0 + k * c, ay = y0 + j * c; list.push({ outer: [[ax, ay], [ax + w * c, ay], [ax + w * c, ay + d * c], [ax, ay + d * c]], h: h / 2, imp: o.id }); }
+        const ax = x0 + k * c, ay = y0 + j * c; list.push({ outer: [[ax, ay], [ax + w * c, ay], [ax + w * c, ay + d * c], [ax, ay + d * c]], h: h / 2, b: o.g.z || 0, imp: o.id }); }
       IMPP.set(o.id, { key, list }); out.push(...list); }
     return out; }
-  function studyPrisms() { const pr = massList(M).map((m) => ({ outer: m.outer, h: m.h })).concat(importPrisms());
-    for (const lv of M.levels) { const top = lv.z + lv.h; for (const P of wallPolys(lv.id)) pr.push({ outer: P, h: top }); }
-    if (S) for (const r of S.rooms) pr.push({ outer: [[r.bx0, r.by0], [r.bx1, r.by0], [r.bx1, r.by1], [r.bx0, r.by1]], h: r.z0 + r.h });
+  function studyPrisms() { const pr = massList(M).map((m) => ({ outer: m.outer, h: m.h, b: m.base || 0 })).concat(importPrisms());
+    for (const lv of M.levels) { const top = lv.z + lv.h; for (const P of wallPolys(lv.id)) pr.push({ outer: P, h: top, b: lv.z }); }
+    if (S) for (const r of S.rooms) pr.push({ outer: [[r.bx0, r.by0], [r.bx1, r.by0], [r.bx1, r.by1], [r.bx0, r.by1]], h: r.z0 + r.h, b: r.z0, room: true });
     return pr; }
   // the ground studied: the building and 40 m round it, or the site square when there is no building yet
   // the study area (2026-10-31): the building and 40 m round it, scaled up round its centre (3× by default, so the surroundings

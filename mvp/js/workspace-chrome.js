@@ -12,7 +12,7 @@ import { climateFile, ensureProjectClimate } from './project-climate.js';
 import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected-20261027-3';
 import { sunPosition } from './environment/analysis.js?v=run-20261031-2';
 import * as CL from '../../emb/lib/climate.js';
-import { speedRatio } from './wind-lbm.js?v=wind-20261031-4';
+import { speedRatio } from './wind-lbm.js?v=wind-20261031-5';
 import { stormwater } from './stormwater-grid.js?v=storm-20261031-1';
 import { canUse } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
@@ -284,7 +284,7 @@ export function mountChrome(app, api) {
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
       const k = viewsOf(id).map((x) => x[0]); r.views = { [k[0]]: base };
-      if (id === 'sunhours') r.views.two = bin((v) => v >= 2, 'Ground with 2 h of sun or more', ['2 h or more', '', 'Under 2 h'], 'sun');
+      if (id === 'sunhours') { r.views.two = bin((v) => v >= 2, 'Ground with 2 h of sun or more', ['2 h or more', '', 'Under 2 h'], 'sun'); if (r.svals) { r.views.hours.svals = r.svals; r.views.two.svals = r.svals.map((v) => (v >= 2 ? 1 : 0)); } }
       if (id === 'radiation') { const vals = r.vals.map((v) => v / Math.max(1e-9, r.open) * 100); r.views.share = { vals, unit: '% of open ground', ramp: 'heat', lo: 0, hi: 100, dec: 0, avg: statsOf(vals).avg, title: r.title + ' · share of open ground' }; }
       if (id === 'skyview') r.views.low = bin((v) => v < 50, 'Ground seeing under half the sky', ['Under 50 %', '', '50 % or more']);
       if (id === 'solarenvelope') r.views.low = bin((v) => v < 10, 'Envelope under 10 m', ['Under 10 m', '', '10 m or more']);
@@ -292,24 +292,26 @@ export function mountChrome(app, api) {
         r.views.helps = { vals: pos, unit: 'K·h', ramp: 'heat', lo: 0, hi: r.hi, dec: 0, avg: statsOf(pos).avg, title: 'Shade benefit · where the shade helps' }; r.views.costs = { vals: neg, unit: 'K·h', ramp: 'risk', lo: 0, hi: r.hi, dec: 0, avg: statsOf(neg).avg, title: 'Shade benefit · where it costs warmth' }; } }
     return r; }
   const LBR = new Set(['sun', 'heat', 'sky', 'height']);
-  function applyView(r, key) { const v = r.views[key] ? key : Object.keys(r.views)[0]; Object.assign(r, r.views[v]); if (LBR.has(r.ramp) && !r.views[v].legendLabels) r.ramp = 'ladybug'; r.legendLabels = r.views[v].legendLabels || null; r.legendCols = r.views[v].legendCols || null; r.view = v; return r; }
+  function applyView(r, key) { const v = r.views[key] ? key : Object.keys(r.views)[0]; r.svals = null; Object.assign(r, r.views[v]); if (LBR.has(r.ramp) && !r.views[v].legendLabels) r.ramp = 'ladybug'; r.legendLabels = r.views[v].legendLabels || null; r.legendCols = r.views[v].legendCols || null; r.view = v; return r; }
   // the result in both views (2026-10-31): the 3D topographic block and the 2D plan, with the same grid and colours
   const views2 = () => [INST.persp, INST.plan].filter((I) => I.ready && I.ws).map((I) => I.ws);
   const clearAll = () => views2().forEach((w) => w.clearStudy?.());
   const animOn = () => ST.anim !== false;
   const animate = (r) => views2().forEach((w) => w.flowAnim?.(r && r.anim && animOn() ? { X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, ...r.anim } : null));
-  const paintRes = (r, fit) => { if (r.paint) { r.paint(r, fit); return; } animate(r); views2().forEach((w) => w.paintGrid({ X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, vals: r.vals, lo: r.lo, hi: r.hi, ramp: r.ramp, fit })); sunPathFor(ST.id); };
+  const paintRes = (r, fit) => { if (r.paint) { r.paint(r, fit); return; } animate(r); if (INST.persp.ready) INST.persp.ws.surfacePaint?.(r.svals && r.svals.length ? { vals: r.svals, ramp: r.ramp, lo: r.lo, hi: r.hi } : null); views2().forEach((w) => w.paintGrid({ X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, vals: r.vals, lo: r.lo, hi: r.hi, ramp: r.ramp, fit })); sunPathFor(ST.id); };
   // ---- what the result is at the spot under the pointer (2026-10-31), in 2D and 3D
   const probeEl = el('div', 'sp-probe'); probeEl.hidden = true; root.append(probeEl);
   const PNAME = { comfort: 'Comfort', risk: 'Hours above 15 m/s', speedup: 'Speed-up', speed: 'Wind speed', pressure: 'Pressure', flow: 'Water passing', pond: 'Ponding', runoff: 'Runoff coefficient' };
+  let q0 = null;
   function probeText(r, x, y) {
+    if (q0 && q0.surf != null && r.svals && Number.isFinite(r.svals[q0.surf])) { const v = r.svals[q0.surf], t = r.unit === 'share' ? (v ? r.legendLabels[0] : r.legendLabels[2]) : `${fmt(v, Math.max(1, r.dec))} ${r.unit}`; return `<div class="sp-kv"><span>${q0.roof ? 'Roof' : 'Facade'}</span><b>${esc(t)}</b></div>`; }
     if (r.probe) return r.probe(x, y); const i = Math.floor((x - r.X0) / r.cell), j = Math.floor((y - r.Y0) / r.cell); if (i < 0 || j < 0 || i >= r.nx || j >= r.ny) return null; const c = j * r.nx + i, names = Object.fromEntries(viewsOf(ST.id));
     const rows = Object.entries(r.views).map(([k, v]) => { const val = v.vals[c]; if (!Number.isFinite(val)) return null; let t;
       if (v.ramp === 'lawson') t = CL.LAWSON[Math.round(val)]?.[1] || ''; else if (v.unit === 'share') t = val ? v.legendLabels[0] : v.legendLabels[2]; else if (k === 'flow') t = fmt(10 ** val - 1) + ' m³'; else t = `${fmt(val, Math.max(1, v.dec))} ${v.unit}`;
       return `<div class="sp-kv"><span>${esc(names[k] || PNAME[k] || k)}</span><b>${esc(t)}</b></div>`; }).filter(Boolean);
     return rows.length ? rows.join('') : '<p class="sp-note">A building: no ground value here.</p>'; }
   function onProbe(q, frame) {
-    const r = ST.res; if (!q || !r || ST.busy || !frame) { probeEl.hidden = true; return; } const html = probeText(r, q.x, q.y); if (!html) { probeEl.hidden = true; return; }
+    const r = ST.res; if (!q || !r || ST.busy || !frame) { probeEl.hidden = true; return; } q0 = q; const html = probeText(r, q.x, q.y); if (!html) { probeEl.hidden = true; return; }
     const fr = frame.getBoundingClientRect(), rr = root.getBoundingClientRect(); probeEl.innerHTML = `<b>${esc(simName(ST.id))}</b>${html}`; probeEl.hidden = false;
     const x = fr.left - rr.left + q.cx + 16, y = fr.top - rr.top + q.cy + 16; probeEl.style.left = Math.min(x, rr.width - probeEl.offsetWidth - 8) + 'px'; probeEl.style.top = Math.min(y, rr.height - probeEl.offsetHeight - 8) + 'px'; }
   const hookProbe = () => [INST.persp, INST.plan].forEach((I) => { if (I.ready && I.ws?.onProbe && !I.__probe) { I.__probe = 1; I.ws.onProbe((q) => onProbe(q, I.win.frameElement)); } });
@@ -381,9 +383,11 @@ export function mountChrome(app, api) {
   const statsOf = (vals) => { let lo = Infinity, hi = -Infinity, n = 0, sum = 0; for (const v of vals) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); n++; sum += v; } return { lo: n ? lo : 0, hi: n ? hi : 0, n, avg: n ? sum / n : 0 }; };
   async function compute(id) {
     const w = INST.persp.ws;
-    if (id === 'sunhours') { const r = w.sunStudy({ day: ST.day }); return { ...r, ...r.grid, vals: r.grid.H, unit: 'h', ramp: 'sun', lo: 0, hi: r.scale, dec: 1, title: `Sun hours · ${r.dayName}`,
-      rows: [['Average on the ground', fmt(r.avg, 1) + ' h'], ['Range', fmt(r.min, 1) + '–' + fmt(r.max, 1) + ' h'], ['Ground with ≥ 2 h of sun', fmt(r.two * 100) + '%'], ...(r.plot ? [['Plot with ≥ 2 h of sun', fmt(r.plot.two * 100) + '%']] : []), ['Day length', fmt(r.dayLength, 1) + ' h']],
-      method: `Sun directions through ${r.dayName} at the site; each ${fmt(r.cell, 1)} m ground cell counts the time it sees the sun.`, results: { ground: +r.avg.toFixed(2), ground2h: +(r.two * 100).toFixed(1), min: r.min, max: r.max }, settings: { day: ST.day, dayName: r.dayName, label: `Ground, ${r.dayName} (Workspace)` } }; }
+    if (id === 'sunhours') { const r = w.sunStudy({ day: ST.day }); w.surfaceSamples?.(); const sv = w.surfaceSun?.(ST.day) || [], sl = w.surfaceList?.() || [], fac = sv.filter((v, i) => !sl[i].roof), roo = sv.filter((v, i) => sl[i].roof), mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
+      const surfRows = sv.length ? [['Facades, mean', fmt(mean(fac), 1) + ' h'], ['Facade with ≥ 2 h of sun', fmt(fac.filter((v) => v >= 2).length / Math.max(1, fac.length) * 100) + '%'], ...(roo.length ? [['Roofs, mean', fmt(mean(roo), 1) + ' h']] : [])] : [];
+      return { ...r, ...r.grid, svals: sv, slist: sl, surfRows, vals: r.grid.H, unit: 'h', ramp: 'sun', lo: 0, hi: r.scale, dec: 1, title: `Sun hours · ${r.dayName}`,
+      rows: [['Average on the ground', fmt(r.avg, 1) + ' h'], ['Range', fmt(r.min, 1) + '–' + fmt(r.max, 1) + ' h'], ['Ground with ≥ 2 h of sun', fmt(r.two * 100) + '%'], ...(r.plot ? [['Plot with ≥ 2 h of sun', fmt(r.plot.two * 100) + '%']] : []), ...surfRows, ['Day length', fmt(r.dayLength, 1) + ' h']],
+      method: `Sun directions through ${r.dayName} at the site; each ${fmt(r.cell, 1)} m ground cell counts the time it sees the sun${sv.length ? `, and so does each square on the design's facades and roofs (${fmt(sv.length)} of them), counting only the sun in front of a facade` : ''}.`, results: { ground: +r.avg.toFixed(2), ground2h: +(r.two * 100).toFixed(1), min: r.min, max: r.max }, settings: { day: ST.day, dayName: r.dayName, label: `Ground, ${r.dayName} (Workspace)` } }; }
     if (id === 'radiation') {
       const wx = await weather(), [, pname, m0, m1] = PERIODS.find((x) => x[0] === ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
       const bins = new Map(); let dhi = 0, hours = 0;
@@ -540,6 +544,9 @@ export function mountChrome(app, api) {
         rows: [['Runoff', fmt(r.runV) + ' m³ of ' + fmt(r.rainV) + ' m³ of rain'], ['Ponds 2 cm or deeper', fmt(wet * a2) + ' m²'], ['Deepest ponding', fmt(dmax, 2) + ' m'], ['Water held in hollows', fmt(r.pondV) + ' m³ in ' + big + (big === 1 ? ' hollow' : ' hollows') + (full ? `, ${full} filled to spilling` : '')], ['Design roofs', fmt(roofA) + ' m², runoff ' + cr + (green ? ' (green roof)' : '')], ['Roof peak flow (rational method)', fmt(qRoof, 1) + ' L/s'], ['Ground', `${cname.toLowerCase()}, runoff ${cg}`]],
         method: `${rain} mm of rain in 1 hour (a design storm you choose, not local rainfall statistics) on a ${fmt(g.cell, 1)} m grid. Runoff = rain × coefficient (ground ${cg}${drawnA ? `, and on the site's mapped or drawn areas planting 0.25, paving 0.9, water 1 (${fmt(drawnA)} m²)` : ''}, roofs ${cr}${green ? ' with a green roof layer' : ''}, surrounding buildings 0.95); roof water leaves at the building edge. Water runs downhill (D8) on the ${g.terrain ? 'terrain' : 'flat ground (this site has no ground levels, so flow paths and ponding are not shown)'}; hollows fill up to their spill level with the water that reaches them. No infiltration over time, drains, pipes or kerbs: a screening of where water goes, not a drainage design.`,
         results: { runoff: Math.round(r.runV), rain: Math.round(r.rainV), pondArea: Math.round(wet * a2), pondMax: +dmax.toFixed(2), pondVol: Math.round(r.pondV), roofPeak: +qRoof.toFixed(1) }, settings: { storm: rain, cover: ST.cover, label: `${rain} mm storm (Workspace)` } }; }
+    // a field on the ground grid read just in front of each facade square (the nearest open cell within 3 cells); roofs left out
+    const facadeField = (m, list, arr) => Float32Array.from(list, (S0) => { if (S0.roof) return NaN; const x = S0.p[0] + S0.n[0] * m.cell * 1.2, y = S0.p[1] + S0.n[1] * m.cell * 1.2, i0 = Math.floor((x - m.X0) / m.cell), j0 = Math.floor((y - m.Y0) / m.cell);
+      let best = NaN, bd = Infinity; for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) { const i = i0 + di, j = j0 + dj; if (i < 0 || j < 0 || i >= m.nx || j >= m.ny) continue; const c = j * m.nx + i; if (m.solid[c] || !Number.isFinite(arr[c])) continue; const d = di * di + dj * dj; if (d < bd) { bd = d; best = arr[c]; } } return best; });
     if (id === 'wind') {
       const R0 = await windRose(), alpha = R0.alpha, m = w.groundMask({ maxCells: 160 }), a2 = m.cell * m.cell, tn = ({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban';
       const flowTo = (from) => { const t = (from + 180 - m.north) * Math.PI / 180; return [Math.sin(t), Math.cos(t)]; };
@@ -549,11 +556,12 @@ export function mountChrome(app, api) {
         const r = speedRatio(m.solid, m.nx, m.ny, flowTo(dir)); if (ST.cancel) throw Error('Stopped.');
         const N = m.nx * m.ny, speed = new Float32Array(N), ss = []; let shel = 0, fast = 0, n = 0; for (let c = 0; c < N; c++) { speed[c] = r[c] * U; if (!Number.isFinite(r[c])) continue; n++; ss.push(r[c]); if (r[c] < 0.5) shel++; if (r[c] > 1.2) fast++; }
         ss.sort((x, y) => x - y); const p99 = ss[Math.floor(ss.length * 0.99)] || 0, st = statsOf(speed), cps = statsOf(r.cp), dn = DIR16[Math.round(dir / 22.5) % 16];
+        w.surfaceSamples?.(); const sl = w.surfaceList?.() || [], fSpeed = facadeField(m, sl, speed), fCp = facadeField(m, sl, r.cp);
         const anim = { ux: r.vx.map((v) => v * U), uy: r.vy.map((v) => v * U), lo: 0, hi: Math.max(1, 2 * U), tint: '#ffffff', ramp: 'flow', min: 0.04 * U, speed: 10 };
         return { ...m, cells: n, avg: st.avg, anim, views: {
-            speed: { vals: speed, unit: 'm/s', ramp: 'flow', lo: 0, hi: Math.max(1, 2 * U), dec: 1, avg: st.avg, title: `Wind from ${dn} · speed at 1.5 m` },
-            pressure: { vals: r.cp, unit: 'Cp', ramp: 'flow', lo: -1, hi: 1, dec: 1, avg: cps.avg, title: `Wind from ${dn} · pressure`, legendLabels: ['+1 (pushing)', '0', '−1 (suction)'] } },
-          rows: [['Wind', `from ${dn}, ${fmt(u10, 1)} m/s at 10 m`], ['Free stream at 1.5 m', fmt(U, 1) + ' m/s'], ['Mean on the ground', fmt(st.avg, 1) + ' m/s'], ['Sheltered (under half the free stream)', fmt(shel / Math.max(1, n) * 100) + '% of ground'], ['Faster than the free stream by 20 %+', fmt(fast / Math.max(1, n) * 100) + '%'], ['Speed-up, windiest 1 % of ground', fmt(p99, 2) + '×']],
+            speed: { vals: speed, svals: fSpeed, unit: 'm/s', ramp: 'flow', lo: 0, hi: Math.max(1, 2 * U), dec: 1, avg: st.avg, title: `Wind from ${dn} · speed at 1.5 m` },
+            pressure: { vals: r.cp, svals: fCp, unit: 'Cp', ramp: 'flow', lo: -1, hi: 1, dec: 1, avg: cps.avg, title: `Wind from ${dn} · pressure`, legendLabels: ['+1 (pushing)', '0', '−1 (suction)'] } },
+          rows: [['Wind', `from ${dn}, ${fmt(u10, 1)} m/s at 10 m`], ...(sl.length ? [['Facades facing the wind (Cp above 0.3)', fmt(Array.from(fCp).filter((v) => v > 0.3).length / Math.max(1, sl.filter((x) => !x.roof).length) * 100) + '%'], ['Highest pressure on a facade', 'Cp ' + fmt(Math.max(...Array.from(fCp).filter(Number.isFinite), 0), 2)]] : []), ['Free stream at 1.5 m', fmt(U, 1) + ' m/s'], ['Mean on the ground', fmt(st.avg, 1) + ' m/s'], ['Sheltered (under half the free stream)', fmt(shel / Math.max(1, n) * 100) + '% of ground'], ['Faster than the free stream by 20 %+', fmt(fast / Math.max(1, n) * 100) + '%'], ['Speed-up, windiest 1 % of ground', fmt(p99, 2) + '×']],
           method: `A 2D lattice-Boltzmann flow at pedestrian height on a ${fmt(m.cell, 1)} m grid for one wind, from ${dn} at ${fmt(u10, 1)} m/s (10 m, weather-station terrain), brought to 1.5 m for ${tn} terrain; buildings (the design and ${fmt(m.context)} surrounding buildings) block the flow. A 2D slice: no flow over roofs or down facades, so speed-up in narrow gaps is overstated; screening, not a wind tunnel or 3D CFD study.`,
           results: { dir, u10: +u10.toFixed(1), mean: +st.avg.toFixed(2), sheltered: +(shel / Math.max(1, n) * 100).toFixed(1), peak: +p99.toFixed(2) }, settings: { mode: 'single', dir, speed: u10, label: `Wind from ${dn} (Workspace)` } }; }
       const SEC = 8, sp = R0.sp8, tot = R0.tot, prev = sp.reduce((b, a, i) => (a.length > sp[b].length ? i : b), 0), R = [];
@@ -564,11 +572,12 @@ export function mountChrome(app, api) {
       for (let c = 0; c < N; c++) { if (m.solid[c]) continue; let lo = 0, hi = 40; for (let it = 0; it < 24; it++) { const x = (lo + hi) / 2; if (share(c, x) > 0.05) lo = x; else hi = x; } const u95 = hi, k = CL.LAWSON.findIndex(([t]) => u95 <= t), sh = share(c, CL.LAWSON_SAFE.speed);
         cls[c] = k; ratio[c] = R[prev] ? R[prev][c] : NaN; risk[c] = sh * 8760; let pk = 0; for (let s = 0; s < SEC; s++) if (R[s] && R[s][c] > pk) pk = R[s][c]; peaks.push(pk); n++; if (u95 > 6) windy++; if (k <= 1) sit++; if (k === 4) unc++; if (sh > CL.LAWSON_SAFE.share) unsafe++; }
       peaks.sort((x, y) => x - y); const peak = peaks[Math.floor(peaks.length * 0.99)] || 0, names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], rk = statsOf(risk);
+      w.surfaceSamples?.(); const slY = w.surfaceList?.() || [], fUp = facadeField(m, slY, ratio);
       const Up = sp[prev].length ? sp[prev].reduce((a, b) => a + b, 0) / sp[prev].length : 2, Rp = R[prev], anim = Rp ? { ux: Rp.vx.map((v) => v * Up), uy: Rp.vy.map((v) => v * Up), lo: 0, hi: Math.max(1, 2 * Up), tint: '#ffffff', ramp: 'flow', min: 0.04 * Up, speed: 10 } : null;
       return { ...m, cells: n, avg: statsOf(cls).avg, anim, views: {
           comfort: { vals: cls, unit: 'Lawson class', ramp: 'lawson', lo: 0, hi: 4, dec: 0, avg: statsOf(cls).avg, title: 'Wind comfort · Lawson', legendLabels: ['Uncomfortable', 'Standing', 'Frequent sitting'] },
           risk: { vals: risk, unit: 'h/yr above 15 m/s', ramp: 'risk', lo: 0, hi: Math.max(4, Math.ceil(rk.hi)), dec: 1, avg: rk.avg, title: 'Wind safety · hours above 15 m/s', legendLabels: [`${fmt(Math.max(4, Math.ceil(rk.hi)))} h or more`, '2 h (Lawson limit)', '0 h'] },
-          speedup: { vals: ratio, unit: '× free stream', ramp: 'flow', lo: 0, hi: 2, dec: 1, avg: statsOf(ratio).avg, title: `Wind speed-up · from ${names[prev]} (prevailing)` } },
+          speedup: { vals: ratio, svals: fUp, unit: '× free stream', ramp: 'flow', lo: 0, hi: 2, dec: 1, avg: statsOf(ratio).avg, title: `Wind speed-up · from ${names[prev]} (prevailing)` } },
         rows: [['Frequent or occasional sitting', fmt(sit / Math.max(1, n) * 100) + '% of ground'], ['Uncomfortable', fmt(unc / Math.max(1, n) * 100) + '%'], ['Windy (above walking comfort)', fmt(windy * a2) + ' m²'], ['Unsafe (15 m/s too often)', fmt(unsafe * a2) + ' m²'], ['Speed-up, windiest 1 % of ground', fmt(peak, 2) + '×'], ['Prevailing wind', `from ${names[prev]}`], ['Weather', esc(R0.station)]],
         method: `A 2D lattice-Boltzmann flow at pedestrian height for ${R.filter(Boolean).length} wind directions on a ${fmt(m.cell, 1)} m grid; buildings (the design and ${fmt(m.context)} surrounding buildings) block the flow. Hourly wind from the project weather (${esc(R0.station || 'EPW')}) at 1.5 m for ${tn} terrain sets each spot's 5 % exceeded speed, rated by the City of London Lawson criteria (2019). A 2D slice: no flow over roofs or down facades, so speed-up in narrow gaps is overstated; screening, not a wind tunnel or 3D CFD study.`,
         results: { peak: +peak.toFixed(2), windy: Math.round(windy * a2), sitting: +(sit / Math.max(1, n) * 100).toFixed(1), uncomf: +(unc / Math.max(1, n) * 100).toFixed(1), unsafe: Math.round(unsafe * a2) }, settings: { mode: 'yearly', label: 'Pedestrian wind, the year (Workspace)' } }; }
