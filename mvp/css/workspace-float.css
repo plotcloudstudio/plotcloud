@@ -269,3 +269,9 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2 .w3-matbox summary{cursor:pointer;display:flex;align-items:center;gap:6px;padding:3px 0}.w2 .w3-matbox summary i{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}.w2 .w3-matbox summary small{margin-left:auto;color:#6b7280}
 .w2 .w3-mf{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px;align-items:center;margin:4px 0}.w2 .w3-mf span{color:#4b5563}.w2 .w3-mf small{color:#9ca3af}.w2 .w3-mf input,.w2 .w3-mf select{min-width:0}
 .w2 .w3-mf input[type=color]{height:24px;padding:0 2px}
+
+/* Layers: a Material column (swatch and name) beside the count */
+.w2 .w2-lhead,.w2 .w2-lrow{grid-template-columns:12px minmax(0,1fr) 20px 86px 26px 26px auto}
+.w2 .w3-lmat{display:flex;align-items:center;gap:5px;min-width:0;border:0;background:none;padding:2px 4px;border-radius:5px;font:inherit;font-size:11px;color:#374151;cursor:pointer;text-align:left}
+.w2 .w3-lmat:hover{background:#f3f4f6}.w2 .w3-lmat i{width:10px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.18);flex:none}
+.w2 .w3-lmat span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.w2 .w3-lmat.none{color:#9ca3af}.w2 .w3-lmat.none i{border-style:dashed}
