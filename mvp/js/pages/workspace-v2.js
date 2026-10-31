@@ -18,7 +18,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=studies-20261031-15';
+import { mountChrome } from '../workspace-chrome.js?v=site-20261031-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -28,7 +28,7 @@ import {reviewImport} from '../import-review.js?v=import-feedback-20261027-1';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js?v=furniture-detail-20261027-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
-import { TOOL_ICONS } from '../tool-icons.js?v=library-icons-20261027-1';
+import { TOOL_ICONS } from '../tool-icons.js?v=landscape-20261031-1';
 import { toStudio } from '../studio-convert.js';
 
 // as in the archived Workspace
@@ -40,6 +40,9 @@ const I = (d) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" st
 const TOOLS = {
   mass: { label: 'Massing', icon: I('<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>'), sections: [
     ['Massing', ['Mass outline', 'Rectangle mass']], ['Surroundings', ['Neighbour building']]] },
+  // landscape on the site (2026-10-31): drawn while editing the site model
+  landscape: { label: 'Landscape: planting, water and paving', icon: I('<path d="M4 20h16"/><circle cx="9" cy="9" r="4"/><path d="M9 13v7"/><path d="M14 17c1.5-1 3-1 4.5 0"/>'), sections: [
+    ['Landscape', ['Planting', 'Water', 'Paving']]] },
   draw: { label: 'Draw room', icon: I('<rect x="4" y="4" width="16" height="16"/><path d="M4 12h7v8"/>'), sections: [
     ['Draw rooms', ['Straight wall', 'Rectangle room', 'Arc wall', 'Floor']],
     ['Add structure', ['Straight stair', 'L-shaped stair', 'U-shaped stair', 'Spiral stair', 'Accessible ramp', 'Floor opening']]] },
@@ -52,8 +55,9 @@ const TOOLS = {
   light: { label: 'Light', icon: I('<path d="M12 3v5"/><path d="M7 13a5 5 0 0 1 10 0z"/><path d="M10 16.5h4M12 13v1"/><path d="M8 20l1-2M16 20l-1-2M12 21v-2"/>'), sections: [
     ['Lights', ['Recessed downlight', 'Flush mount', 'Pendant', 'Track spot', 'Wall sconce', 'LED strip']]] },
 };
+const CONTEXT_TOOL = { label: 'Context', sections: [['Context', ['Context building']]] };
 // what each tile starts in Plan Studio (its own tool keys, door models and stair models)
-const TMAP = { 'Mass outline': { tool: 'mass' }, 'Rectangle mass': { tool: 'massrect' }, 'Neighbour building': { tool: 'ctxadd' }, 'Straight wall': { tool: 'wall', key: 'W' }, 'Rectangle room': { tool: 'room', key: 'R' }, 'Arc wall': { tool: 'arc', key: 'H' }, Floor: { tool: 'floor', key: 'F' }, Fence: { tool: 'fence' },
+const TMAP = { Planting: { tool: 'lsplant' }, Water: { tool: 'lswater' }, Paving: { tool: 'lspave' }, 'Context building': { tool: 'ctxadd' }, 'Mass outline': { tool: 'mass' }, 'Rectangle mass': { tool: 'massrect' }, 'Neighbour building': { tool: 'ctxadd' }, 'Straight wall': { tool: 'wall', key: 'W' }, 'Rectangle room': { tool: 'room', key: 'R' }, 'Arc wall': { tool: 'arc', key: 'H' }, Floor: { tool: 'floor', key: 'F' }, Fence: { tool: 'fence' },
   'Straight stair': { stair: 'straight' }, 'L-shaped stair': { stair: 'lshape' }, 'U-shaped stair': { stair: 'ushape' }, 'Spiral stair': { stair: 'spiral' }, 'Accessible ramp': { stair: 'ramp' }, 'Floor opening': { tool: 'void', key: 'O' },
   'Exterior door': { tool: 'door', opm: 'ext' }, 'Interior door': { tool: 'door', opm: 'int', key: 'D' }, 'Exit door': { tool: 'door', opm: 'exit' }, 'Accessible door': { tool: 'door', opm: 'acc' },
   Window: { tool: 'win', opm: 'win', key: 'N' }, 'Wall opening': { tool: 'hole', key: 'E' } };
@@ -152,7 +156,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=studies-20261031-19`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=site-20261031-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -453,7 +457,7 @@ export function render(app, [pid]) {
     if (showParams && c) return params(propertyHost, c);
     propertyHost.innerHTML='<h2>Properties</h2><p class="note">Select an object in the viewport or Layers to inspect its properties.</p>';
     if (UI.panel === 'project') return projectPanel(host);
-    const t0 = TOOLS[UI.panel], mine = UI.panel === 'furniture' ? myFurn() : null;
+    const t0 = siteMode() && UI.panel === 'mass' ? CONTEXT_TOOL : TOOLS[UI.panel], mine = UI.panel === 'furniture' ? myFurn() : null;
     const t = mine ? { ...t0, sections: [['My furniture', ['\u0000import', ...mine.map((x) => '\u0000' + x.id)]], ...t0.sections] } : t0;   // your own pieces first (2026-10-25)
     const tile = (n) => { if (n === '\u0000import') return `<button type="button" class="w2-card w3-impf" data-tool="Import furniture" data-impfurn="1" aria-pressed="false" title="Import a piece of furniture (.obj, .glb, .stl, .3dm): it joins My furniture and can be placed like the others"><span class="im"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 28v-6a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v6"/><path d="M10 30a3 3 0 0 1 6 0v4h16v-4a3 3 0 0 1 6 0v8H10z"/><path d="M24 4v10M19 9l5 5 5-5"/></svg></span><span>Import furniture</span></button>`;
       if (n[0] === '\u0000') { const x = mine.find((q) => '\u0000' + q.id === n); return `<button type="button" class="w2-card" data-tool="${esc(x.name)}" data-myfurn="${x.id}" aria-pressed="false" title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m: click it, then click in the current view to place it (R turns it)"><span class="im"><img src="${x.thumb || ''}" alt="" loading="lazy"></span><span>${esc(x.name)}<i class="w3-mfx" data-myfx="${x.id}" role="button" tabindex="0" title="Remove ${esc(x.name)} from My furniture" aria-label="Remove ${esc(x.name)} from My furniture">×</i></span></button>`; } if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the current view to place it"><span class="im"><img src="img/furniture/${m.id}.png?v=furniture-detail-20261027-1" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
@@ -749,10 +753,17 @@ export function render(app, [pid]) {
     }catch(error){toast('The current model could not be sent: '+(error.message||'storage unavailable'));button.disabled=false;button.textContent='Send to Simulation';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}
   };
   // site edit mode banner (bottom centre): the Site layer is unlocked until Done
-  function siteBanner(on) { let b = $('#siteEditBanner', app); if (!b) { b = document.createElement('div'); b.id = 'siteEditBanner'; b.className = 'wb-site-banner'; b.setAttribute('role', 'status'); b.innerHTML = '<b>Editing site</b><span>Terrain and surroundings are unlocked; changes are kept with the next saved version.</span><button type="button">Done</button>'; app.querySelector('.wb-shell').append(b); b.querySelector('button').onclick = () => editSiteGeometry(); } b.hidden = !on; app.querySelector('.wb-shell').classList.toggle('wb-site-editing', on); }
+  // editing the site model (2026-10-31): a green frame round the screen and a banner; only the site tools (Context, Landscape) work
+  const SITE_TOOLS = new Set(['mass', 'landscape']);
+  function siteMode() { return M().layers.find((l) => l.name === 'Site')?.locked === false; }
+  function siteBanner(on) { let b = $('#siteEditBanner', app); if (!b) { b = document.createElement('div'); b.id = 'siteEditBanner'; b.className = 'wb-site-banner'; b.setAttribute('role', 'status'); b.innerHTML = '<span></span><button type="button">Done</button>'; app.querySelector('.wb-shell').append(b); b.querySelector('button').onclick = () => editSiteGeometry(); }
+    const n = Math.max(1, p.versions.length); b.querySelector('span').innerHTML = `<b>Editing site model</b> · Changes will affect ${n} ${n === 1 ? 'sketch' : 'sketches'}`; b.hidden = !on; app.querySelector('.wb-shell').classList.toggle('wb-site-editing', on);
+    $$('[data-panel]', app).forEach((x) => { if (x.closest('#panel')) return; const off = on && x.dataset.panel !== 'project' && !SITE_TOOLS.has(x.dataset.panel); x.disabled = off; x.setAttribute('aria-disabled', String(off)); if (x.dataset.panel === 'mass') x.title = on ? 'Context: neighbouring buildings' : TOOLS.mass.label; });
+    if (on && !SITE_TOOLS.has(UI.panel) && UI.panel !== 'project') { UI.panel = 'mass'; }
+    if (siteBanner.was !== on) { siteBanner.was = on; try { panel(); } catch { } } }
   const editSiteGeometry = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
   const handoff=mountHandoff(app,p,{model:M,version:baseline,dirty,check:checkHandoff,locate:ref=>{const k=({Wall:'wall',Opening:'op',Furniture:'furn',Floor:'floor','Floor opening':'void'})[ref.k]||ref.k;setSel(['ps:'+k+':'+ref.id],{params:true});},onGeometryEdit:editSiteGeometry});
-  $('#editSite',app).onclick=()=>app.querySelector('#projectBaseline').click();
+  $('#editSite',app).onclick=()=>editSiteGeometry();
   $('#addLayer', app).onclick = () => { const name = prompt('Layer name'); if(name===null)return;if(!name.trim()){toast('Enter a layer name.');return;}if(M().layers.find(l=>l.name.toLowerCase()===name.trim().toLowerCase())){toast('A layer with that name already exists.');return;} M().layers.push({ name: name.trim(), color: '#cfcac0', visible: true, locked: false }); openOnly(name.trim()); saveUI(); persist(); layers(); };
   $('#saveV',app).onclick=async()=>{const button=$('#saveV',app);if(button.disabled)return;if(!dirty()&&baseline()){toast('No changes since v'+baseline().n);return;}button.disabled=true;button.textContent='Saving version…';button.setAttribute('aria-busy','true');const shell=$('.wb-shell',app);shell.inert=true;shell.setAttribute('aria-busy','true');try{await new Promise(requestAnimationFrame);await flushCurrentModel();const v=S.saveVersion(p,$('#note',app).value.trim());setCurrentVersion(p,v.id);$('#note',app).value='';state();toast('Saved v'+v.n);}catch(error){toast('The version could not be saved: '+error.message);}finally{button.disabled=false;button.textContent='Save version';button.removeAttribute('aria-busy');shell.inert=false;shell.removeAttribute('aria-busy');}};
 

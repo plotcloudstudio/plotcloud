@@ -1,5 +1,9 @@
 // Tool icons as drawn in Plan Studio (emb/modeler.html): images saved from its tiles, line icons copied as SVG.
 export const TOOL_ICONS = {
+  Planting: { svg: '<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><path d="M8 38c4-10 10-14 16-14s12 4 16 14z" fill="#b9d3a0" stroke="#5f7d4a" stroke-width="2" stroke-linejoin="round"/><circle cx="24" cy="16" r="7" fill="#9cc27f" stroke="#5f7d4a" stroke-width="2"/></svg>' },
+  Water: { svg: '<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><path d="M8 34c4-3 8-3 12 0s8 3 12 0 6-3 8-1M8 26c4-3 8-3 12 0s8 3 12 0 6-3 8-1" fill="none" stroke="#3d85c6" stroke-width="2.4" stroke-linecap="round"/></svg>' },
+  Paving: { svg: '<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><path d="M8 14h32v22H8z" fill="#e6e4df" stroke="#7b818a" stroke-width="2"/><path d="M8 25h32M19 14v11M30 25v11" stroke="#7b818a" stroke-width="1.6"/></svg>' },
+  'Context building': { svg: '<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><path d="M8 38V20l8-5 8 5v18zM24 38V14l8-5 8 5v24z" fill="#dcd8d0" stroke="#7b818a" stroke-width="2" stroke-linejoin="round"/></svg>' },
 "Mass outline": {
 "svg": "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 20l16-9 18 10-10 6-8-4-7 4 8 5-9 5-8-5z\" fill=\"#e9c39e\" stroke=\"#7d674e\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/><path d=\"M7 20v12l8 5v-12M41 21v12l-10 6-8-4v-12M31 27v12\" fill=\"none\" stroke=\"#7d674e\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/><path d=\"M7 20l16-9 18 10\" fill=\"none\" stroke=\"#d8402a\" stroke-width=\"1.8\" stroke-dasharray=\"3 2\"/><g fill=\"#d8402a\"><circle cx=\"7\" cy=\"20\" r=\"2\"/><circle cx=\"23\" cy=\"11\" r=\"2\"/><circle cx=\"41\" cy=\"21\" r=\"2\"/></g></svg>"
 },

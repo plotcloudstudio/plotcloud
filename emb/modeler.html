@@ -2415,7 +2415,7 @@ function drawSite() {
   if (bd.kind === 'polygon' && bd.pts) { g.beginPath(); bd.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.stroke(); } else { const o = P(bd.c || [0, 0]); g.beginPath(); g.arc(o[0], o[1], (bd.r || 300) * V.s, 0, Math.PI * 2); g.stroke(); }
   g.setLineDash([]);
   // the surroundings, each on its own sub-layer; buildings can be picked and edited (Massing block), the rest is only looked at
-  if (st.areas && st.areas.length && layerOn('ref.site.green')) { g.save(); for (const a of st.areas) { g.beginPath(); a.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = a.kind === 'water' ? 'rgba(120,170,215,.35)' : 'rgba(140,190,120,.28)'; g.fill(); } g.restore(); }
+  if (st.areas && st.areas.length && layerOn('ref.site.green')) { g.save(); for (const a of st.areas) { g.beginPath(); a.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = a.kind === 'water' ? 'rgba(120,170,215,.35)' : a.kind === 'paving' ? 'rgba(170,165,155,.3)' : 'rgba(140,190,120,.28)'; g.fill(); } g.restore(); }
   if (st.trees && st.trees.length && V.s > 1.2 * d && layerOn('ref.site.trees')) { g.save(); g.fillStyle = 'rgba(90,150,80,.45)'; for (const t of st.trees) { const q = P(t.xy); g.beginPath(); g.arc(q[0], q[1], Math.max(2 * d, 2.5 * V.s), 0, 7); g.fill(); } g.restore(); }
   if (st.roads && st.roads.length && layerOn('ref.site.roads')) { g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(215,205,185,.7)'; for (const r of st.roads) { g.strokeStyle = r.cls === 'path' ? 'rgba(225,218,200,.55)' : 'rgba(215,205,185,.75)'; g.lineWidth = Math.max(r.cls === 'path' ? 1 * d : 2 * d, (r.width || (r.cls === 'main' ? 9 : 5)) * V.s); g.beginPath(); r.pts.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); } g.restore(); }
   const pp = parcelPlan();
@@ -5160,7 +5160,7 @@ function massKpiUI() {
 { const _sc = setCam; setCam = async function (c) { const r = await _sc(c); massKpiUI(); return r; }; }
 // tools: two ways to draw a mass, and a missing neighbour
 RECT.add('massrect');
-Object.assign(HINT, { mass: 'Click the corners of the mass. Click the first corner again, press Enter or double-click to close it. Esc cancels.', massrect: 'Drag a rectangle for a mass.', ctxadd: 'Click the corners of a neighbouring building that is missing from the map. Enter or double-click closes it; set its height afterwards.' });
+Object.assign(HINT, { lsplant: 'Click the corners of the planted area. Click the first corner again, press Enter or double-click to close it.', lswater: 'Click the corners of the water. Click the first corner again, press Enter or double-click to close it.', lspave: 'Click the corners of the paved area. Click the first corner again, press Enter or double-click to close it.', mass: 'Click the corners of the mass. Click the first corner again, press Enter or double-click to close it. Esc cancels.', massrect: 'Drag a rectangle for a mass.', ctxadd: 'Click the corners of a neighbouring building that is missing from the map. Enter or double-click closes it; set its height afterwards.' });
 { const pane = $('[data-lp="draw"] .kl-scroll'), ic = (d) => `<svg viewBox="0 0 48 48" aria-hidden="true">${d}</svg>`;
   const T = (t, n, svg, title) => `<button type="button" class="tl" data-tool="${t}" aria-pressed="false" title="${title}">${svg}<span>${n}</span></button>`;
   if (pane) { pane.insertAdjacentHTML('afterbegin', `<section class="ks" id="ksMass"><button type="button" class="ks-h" aria-expanded="true"><b>Massing</b><i class="chev"></i></button><div class="ks-b"><div class="tls">`
@@ -5168,9 +5168,21 @@ Object.assign(HINT, { mass: 'Click the corners of the mass. Click the first corn
     + T('massrect', 'Rectangle mass', ic('<path d="M10 18l14-7 14 7v16l-14 7-14-7z" fill="#e9c39e" stroke="#6b5a48" stroke-width="2" stroke-linejoin="round"/><path d="M10 18l14 7 14-7M24 25v16M10 26l14 7 14-7" fill="none" stroke="#6b5a48" stroke-width="1.4"/>'), 'Rectangle mass: drag')
     + T('ctxadd', 'Neighbour building', ic('<path d="M12 36V18l10-6 10 6v18z" fill="#dcd8d0" stroke="#7b818a" stroke-width="2" stroke-linejoin="round"/><path d="M34 10v10M29 15h10" stroke="#D8402A" stroke-width="2.4" stroke-linecap="round"/>'), 'Add a neighbouring building that is missing from the map data')
     + '</div></div></section>');
+    pane.insertAdjacentHTML('beforeend', `<section class="ks" id="ksLand"><button type="button" class="ks-h" aria-expanded="true"><b>Landscape</b><i class="chev"></i></button><div class="ks-b"><div class="tls">`
+      + T('lsplant', 'Planting', ic('<path d="M8 38c4-10 10-14 16-14s12 4 16 14z" fill="#b9d3a0" stroke="#5f7d4a" stroke-width="2" stroke-linejoin="round"/><circle cx="24" cy="16" r="7" fill="#9cc27f" stroke="#5f7d4a" stroke-width="2"/>'), 'Planting: draw its outline')
+      + T('lswater', 'Water', ic('<path d="M8 34c4-3 8-3 12 0s8 3 12 0 6-3 8-1M8 26c4-3 8-3 12 0s8 3 12 0 6-3 8-1" fill="none" stroke="#3d85c6" stroke-width="2.4" stroke-linecap="round"/>'), 'Water: draw its outline')
+      + T('lspave', 'Paving', ic('<path d="M8 14h32v22H8z" fill="#e6e4df" stroke="#7b818a" stroke-width="2"/><path d="M8 25h32M19 14v11M30 25v11" stroke="#7b818a" stroke-width="1.6"/>'), 'Paving: draw its outline')
+      + '</div></div></section>');
     const h = $('#ksMass .ks-h'); h.addEventListener('click', () => { const s = h.closest('.ks'); s.classList.toggle('shut'); h.setAttribute('aria-expanded', String(!s.classList.contains('shut'))); }); } }
-const POLYT = new Set(['mass', 'ctxadd']);
-function finishPoly() { const D = drawing; drawing = null; typed = ''; MSNAP = null; if (!D || D.pts.length < 3) { draw(); if (D) flash('An outline needs at least three corners.'); return; } if (D.kind === 'mass') addMass(D.pts); else addCtx(D.pts); }
+const POLYT = new Set(['mass', 'ctxadd', 'lsplant', 'lswater', 'lspave']);
+// landscape on the site (2026-10-31): planting, water and paving outlines, kept with the site's areas (site metres)
+const LS_KIND = { lsplant: 'green', lswater: 'water', lspave: 'paving' }, LS_NAME = { green: 'Planting', water: 'Water', paving: 'Paving' };
+function addArea(kind, pts) {
+  if (!M.site) { flash('This project has no site yet. Choose one on the map first.'); draw(); return; }
+  let xy = pts.map((q) => siteOfM(M, q)).map((q) => [+q[0].toFixed(2), +q[1].toFixed(2)]); if (polySigned(xy) < 0) xy = xy.reverse(); if (areaOf(xy) < 1) { flash('That outline is too small.'); draw(); return; }
+  const b = snapM(); M.site.areas = M.site.areas || []; M.site.areas.push({ id: STC.uid('a_you_'), kind, name: LS_NAME[kind], pts: xy, added: true, src: { provider: 'You', ref: 'drawn by you', at: new Date().toISOString() } }); M.site.version++; commit(b);
+  flash(`${LS_NAME[kind]} added: ${Math.round(areaOf(xy))} m².`); }
+function finishPoly() { const D = drawing; drawing = null; typed = ''; MSNAP = null; if (!D || D.pts.length < 3) { draw(); if (D) flash('An outline needs at least three corners.'); return; } if (D.kind === 'mass') addMass(D.pts); else if (LS_KIND[D.kind]) addArea(LS_KIND[D.kind], D.pts); else addCtx(D.pts); }
 cv.addEventListener('pointerdown', (e) => { if ((!POLYT.has(TOOL) && TOOL !== 'massrect') || e.button !== 0 || SPACE) return; if (CAM === '3d' && !P3upd(e)) return; e.preventDefault(); e.stopImmediatePropagation(); cv.focus({ preventScroll: true });
   if (TOOL === 'massrect') { const a = massSnap(S2W(...evP(e))); drawing = { kind: 'massrect', a, b: a }; typed = ''; if(e.isTrusted)cv.setPointerCapture(e.pointerId); draw(); return; }   // Plan Studio's pointerup finishes it (finishRect)
   const p = S2W(...evP(e)), D = drawing && drawing.kind === TOOL ? drawing : null, last = D ? D.pts[D.pts.length - 1] : null, q = massSnap(p, last, e.shiftKey);
@@ -5829,12 +5841,12 @@ window.S3 = (() => {
   // the block's surface is drawn in layers, so a result can be painted into it: ground (green, roads), the result, water, contours
   const TOPO = { key: '', tex: null, cv: null, L: null, G0: null, k: 1, ana: null };
   function topoTexture(site, G0) {
-    const key = [site.origin?.lat, site.origin?.lon, G0.nx, G0.ny, G0.step, (site.roads || []).length, (site.areas || []).length].join(':'); if (TOPO.key === key && TOPO.tex) return TOPO.tex;
+    const key = [site.origin?.lat, site.origin?.lon, G0.nx, G0.ny, G0.step, (site.roads || []).length, (site.areas || []).length, site.version].join(':'); if (TOPO.key === key && TOPO.tex) return TOPO.tex;
     const W = (G0.nx - 1) * G0.step, H = (G0.ny - 1) * G0.step, N = 2048, k = N / Math.max(W, H), cw = Math.round(W * k), ch = Math.round(H * k);
     const layer = () => { const c = document.createElement('canvas'); c.width = cw; c.height = ch; return c; }, L = { ground: layer(), water: layer(), lines: layer() };
     const X = (p) => (p[0] - G0.x0) * k, Y = (p) => ch - (p[1] - G0.y0) * k, path = (g, pts) => { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); };
     let g = L.ground.getContext('2d'); g.fillStyle = '#f3f3f1'; g.fillRect(0, 0, cw, ch);
-    for (const a of site.areas || []) { if (a.kind === 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = '#e9ebe5'; g.fill(); }
+    for (const a of site.areas || []) { if (a.kind === 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = a.kind === 'paving' ? '#e2dfd8' : a.added ? '#d9e4cc' : '#e9ebe5'; g.fill(); }
     g.lineCap = g.lineJoin = 'round';
     for (const r of site.roads || []) { if (r.pts.length < 2) continue; path(g, r.pts); g.strokeStyle = r.cls === 'path' ? '#e4e4e1' : '#e9e9e6'; g.lineWidth = Math.max(1.5, (r.width || (r.cls === 'path' ? 2 : 7)) * k); g.stroke(); }
     g = L.water.getContext('2d'); for (const a of site.areas || []) { if (a.kind !== 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = '#4c5461'; g.fill(); }
@@ -6450,7 +6462,7 @@ if (window.__WSROLE) {
 
   // ---- layer locks from the Workspace: a locked layer's objects cannot be picked, and its tools do not start
   const LOCKK = { imp: 'Imported', mass: 'Masses', ctx: 'Site', wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
-  const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
+  const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', lsplant: 'Site', lswater: 'Site', lspave: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
   cv.addEventListener('pointerdown', () => { WS.down = true; setTimeout(() => { WS.down = false; }, 0); }, true);
   { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && (h.k === 'imp' ? ((M.imports || []).find((o) => o.id === h.id) || {}).layer || 'Imported' : LOCKK[h.k]); if (L && WS.locks.has(L)) { if (WS.down) say(`The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
   { const _t = setTool; setTool = function (t) { const L = TOOLK[t] || (t === 'place' && PICK && REG[PICK] && REG[PICK].kind === 'stair' ? 'Furniture' : null); if (L && WS.locks.has(L)) { say(`The ${L} layer is locked. Unlock it in Layers to draw on it.`); return; } return _t(t); }; }
@@ -6625,9 +6637,13 @@ if (window.__WSROLE) {
       const all = pr.map((m) => prismOf(m.outer, m.h)).concat(SITEC.contextMasses(M.site, M.north || 0).map((m) => prismOf(m.outer, m.h))).filter((P) => P.h > 1.5);
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = [b0.X0 + (i + 0.5) * cell, b0.Y0 + (j + 0.5) * cell]; if (all.some((P) => q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer))) solid[j * nx + i] = 1; }
       // levels (stormwater): the ground height at each cell, and which solid cells are the design (its roofs) rather than the surroundings
-      let z = null, design = null; if (o.levels) { const site = M.site; z = new Float32Array(nx * ny); design = new Uint8Array(nx * ny); const dp = pr.map((m) => prismOf(m.outer, m.h)).filter((P) => P.h > 1.5);
+      let z = null, design = null, cover = null; if (o.levels) { const site = M.site; z = new Float32Array(nx * ny); design = new Uint8Array(nx * ny); cover = new Uint8Array(nx * ny);
+        // the site's areas (mapped and drawn): 1 planting, 2 water, 3 paving, so the runoff can follow the ground cover
+        const AK = { green: 1, park: 1, grass: 1, wood: 1, water: 2, paving: 3 }; for (const a of site.areas || []) { const k = AK[a.kind]; if (!k || !a.pts || a.pts.length < 3) continue; const P = a.pts.map((q) => SITEC.siteToPlan(site, q, M.north || 0)), xs = P.map((q) => q[0]), ys = P.map((q) => q[1]);
+          const i0 = Math.max(0, Math.floor((Math.min(...xs) - b0.X0) / cell)), i1 = Math.min(nx - 1, Math.ceil((Math.max(...xs) - b0.X0) / cell)), j0 = Math.max(0, Math.floor((Math.min(...ys) - b0.Y0) / cell)), j1 = Math.min(ny - 1, Math.ceil((Math.max(...ys) - b0.Y0) / cell));
+          for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (inPoly([b0.X0 + (i + 0.5) * cell, b0.Y0 + (j + 0.5) * cell], P)) cover[j * nx + i] = k; } const dp = pr.map((m) => prismOf(m.outer, m.h)).filter((P) => P.h > 1.5);
         for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const x = b0.X0 + (i + 0.5) * cell, y = b0.Y0 + (j + 0.5) * cell, c = j * nx + i; if (site.terrain) { const q = siteOfM(M, [x, y]); z[c] = SITEC.groundAt(site.terrain, q[0], q[1]); } if (solid[c] && dp.some((P) => x >= P.bb[0] && x <= P.bb[2] && y >= P.bb[1] && y <= P.bb[3] && inPoly([x, y], P.outer))) design[c] = 1; } }
-      return { X0: b0.X0, Y0: b0.Y0, cell, nx, ny, solid, z, design, north: M.north || 0, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain };
+      return { X0: b0.X0, Y0: b0.Y0, cell, nx, ny, solid, z, design, cover, north: M.north || 0, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain };
     },
     // the solar envelope (2026-10-31): for each ground cell, the tallest height whose shadow does not reach a surrounding
     // building during the protected sun directions ([{ az, alt }]); capped at cap metres

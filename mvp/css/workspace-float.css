@@ -330,3 +330,14 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-probe[hidden]{display:none}.w2.sp .sp-probe>b{display:block;margin-bottom:3px;font-size:11.5px}
 .w2.sp .sp-acts1{grid-template-columns:1fr}
 .w2.sp .sp-playh{font-variant-numeric:tabular-nums;margin-left:4px}
+/* the bottom toolbar: Edit site and the model tools on one line, the same height (2026-10-31) */
+.w2.sp .sp-bottom{align-items:stretch}
+.w2.sp .sp-bottom>.sp-tools{height:44px;box-sizing:border-box;padding:4px;align-items:center}
+.w2.sp .sp-bottom #editSite{width:36px;height:36px;min-height:0;padding:0;margin:0;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:#374151;line-height:1;box-shadow:none}
+.w2.sp .sp-bottom #editSite svg,.w2.sp .sp-tools [data-panel] svg,.w2.sp .sp-tools .sp-b svg{display:block}
+/* editing the site model: a green frame round the screen; tools that do not edit the site are dimmed and off */
+.w2.sp.wb-site-editing::after{content:"";position:fixed;inset:0;border:4px solid #1f9d63;pointer-events:none;z-index:90}
+.w2.sp.wb-site-editing .sp-tools [data-panel][disabled]{opacity:.32;cursor:not-allowed;background:transparent!important}
+.w2.sp .wb-site-banner{position:absolute;bottom:70px;font-size:12px;padding:7px 8px 7px 14px;white-space:nowrap}
+.w2.sp .wb-site-banner b{font-weight:700}
+.w2.sp .sp-mask::before{position:absolute;inset:0;margin:auto;width:20px;height:20px}
