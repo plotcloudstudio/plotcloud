@@ -1,10 +1,11 @@
+import {simulationPresentation} from '../simulation-presentation.js';
 import {inspectStudy} from '../study-readiness.js';
 import {checkAccess, isFreeStudy,canUse} from '../beta-access.js';
 import {activateTestingCode,mountTestingAccess,testingStatus,allowsTestingStudy} from '../simulation-test-access.js?v=private-testing-20261027-1';
 import * as S from '../store.js';
 import { SIMS, simImg } from '../data.js';
 import { CATEGORIES, TARGETS, targetStatus, STATUS_LABEL, categoryOf } from '../capabilities.js';
-import { $, $$, esc, currentProject, currentVersion, LIVE, img } from '../app.js';
+import { $, $$, esc, currentProject, currentVersion, LIVE } from '../app.js';
 
 export async function render(app, [simId], params, context={}) {
   if(params.get('test-code')){const code=params.get('test-code');params.delete('test-code');history.replaceState(null,'','#/simulations'+(simId?'/'+encodeURIComponent(simId):'')+(params.toString()?'?'+params.toString():''));try{await activateTestingCode(code);}catch(error){app.innerHTML='<div class="wrap"><h1>Testing access could not be activated.</h1><p role="alert"></p><a href="#/simulations">Browse studies</a></div>';app.querySelector('[role=alert]').textContent=error.message;return;}}
@@ -19,7 +20,7 @@ export async function render(app, [simId], params, context={}) {
   return catalog(app, params, access);
 }
 
-function thumbnail(s){return `<img data-holo="${simImg(s.id)}" src="${img(simImg(s.id))}" alt="" loading="lazy">`;}
+function thumbnail(s){return `<img data-holo="${simImg(s.id)}" src="${esc(simulationPresentation(s).image)}" alt="" loading="lazy">`;}
 
 function catalog(app, params, access) {
   const p = currentProject(), v = p && currentVersion(p);

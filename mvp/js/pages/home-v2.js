@@ -3,6 +3,9 @@
 // works with no images; a card can also show a picture from mvp/img/home/ (prompts in docs/home-image-prompts.md) when one exists.
 // The earlier homepage stays at #/home-classic. Public navigation is shared with the information and authentication pages.
 import * as S from '../store.js';
+import {SIMS} from '../data.js';
+import {simulationPresentation} from '../simulation-presentation.js';
+import {mountDriftWall} from '../drift-wall.js';
 import {publicNav,bindPublicNav} from '../public-chrome.js';
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -23,11 +26,13 @@ export async function render(app, rest, params, context = {}) {
   app.innerHTML = `<div class="lp">
   ${publicNav()}
 
-  <header class="lp-hero">
+  <header class="lp-hero lp-hero-drift">
     <div class="lp-copy"><div class="lp-eyebrow">Building performance, made visible</div><h1>Understand your building.<br><span>Test every design decision.</span></h1>
       <p>Type an address and start on the terrain and the buildings around it. Mass, plan and test sun, daylight, wind and noise in one model, then compare sketches side by side.</p>
       <div class="lp-actions"><a class="lp-btn lp-big" href="${start}">Start a project</a><a class="lp-ghost" href="#lp-studies">See what it does</a></div></div>
-    <div class="lp-stage" id="lpHero" tabindex="0" role="group" aria-label="Illustrative solar shading model. Move the pointer or use left and right arrow keys to move the sun."><svg viewBox="0 0 640 420" role="img" aria-label="Illustrative solar shading model"></svg><span class="lp-preview-label">SOLAR SHADING · INTERACTIVE ILLUSTRATION</span><span class="lp-hint">Move to explore the sun · ← →</span></div>
+    <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
+    <div class="lp-drift-controls"><div class="lp-drift-caption" id="lpDriftCaption"><b>Explore all ${SIMS.length} simulations.</b><span>Hover to lift a card. Click to open its study.</span></div><button type="button" id="lpDriftPause" aria-pressed="false">Pause wall</button></div>
+    <p class="lp-drift-note">Illustrative previews · Shared with the Workspace study cards</p>
   </header>
 
   <section class="lp-intro"><div class="lp-eyebrow">Sketch. Simulate. Compare.</div><h2>See what a design change does.</h2><p>Explore sun, daylight and wind before the next design review. Keep the model, study settings and results together.</p></section>
@@ -46,7 +51,7 @@ export async function render(app, rest, params, context = {}) {
   <section class="lp-band"><h2>Screening for early design.</h2><p>Studies are estimates for comparing options, with their method and inputs kept with every result. They are not code compliance.</p><a class="lp-btn lp-big" href="${start}">Start a project</a></section>
   <footer class="lp-foot"><span>plot<b>cloud</b></span><a href="#/pricing">Pricing</a><a href="#/resources">Resources</a><a href="#/legal">Legal</a><a href="#/home-classic">Earlier homepage</a></footer>
 </div>`;
-  const stops = [hero(app), figures(app), massing(app), site(app), compare(app), studies(app), drawings(app), simulationPreview(app)];
+  const stops = [mountDriftWall(app.querySelector('#lpDriftWall'),SIMS.map(simulationPresentation),{pauseButton:app.querySelector('#lpDriftPause'),onActive:item=>{const caption=app.querySelector('#lpDriftCaption');caption.querySelector('b').textContent=item?item.title:`Explore all ${SIMS.length} simulations.`;caption.querySelector('span').textContent=item?item.question:'Hover to lift a card. Click to open its study.';}}), figures(app), massing(app), site(app), compare(app), studies(app), drawings(app), simulationPreview(app)];
   // optional pictures (generated from docs/home-image-prompts.md): shown only when the file exists
   for (const [k, file] of [['massing', 'massing'], ['site', 'site'], ['drawings', 'drawings']]) { const im = new Image(); im.onload = () => { if (!alive()) return; const v = app.querySelector(`[data-card="${k}"] .lp-vis`); if (v) { im.className = 'lp-photo'; im.alt = ''; v.prepend(im); v.classList.add('has-photo'); } }; im.src = `img/home/${file}.webp`; }
   app.querySelectorAll('a[href="#lp-studies"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();app.querySelector('#lp-studies').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}));
@@ -57,7 +62,7 @@ export async function render(app, rest, params, context = {}) {
 }
 
 function simulationPreview(app){
-  const items=[['Daylight','daylight','img/home/daylight.webp','Read how daylight reaches into a room and compare changes to openings and layout.'],['Wind flow','wind','img/home/wind.webp','Inspect pedestrian-level wind speed and sheltered areas around the massing. A horizontal 2D flow screening, with blue-to-red speed colours and flow paths.'],['Sun hours','sunhours','img/home/sunhours.webp','Compare accumulated direct sunlight across the site with a shared location, date and study period. Read the exposure grid alongside the sun path.']];
+  const items=[['Daylight','daylight',simulationPresentation(SIMS.find(s=>s.id==='daylight')).image,'Read how daylight reaches into a room and compare changes to openings and layout.'],['Wind flow','wind',simulationPresentation(SIMS.find(s=>s.id==='wind')).image,'Inspect pedestrian-level wind speed and sheltered areas around the massing. A horizontal 2D flow screening, with blue-to-red speed colours and flow paths.'],['Sun hours','sunhours',simulationPresentation(SIMS.find(s=>s.id==='sunhours')).image,'Compare accumulated direct sunlight across the site with a shared location, date and study period. Read the exposure grid alongside the sun path.']];
   const buttons=[...app.querySelectorAll('[data-study]')],image=app.querySelector('#lpStudyImage');
   const select=index=>{const [name,id,src,description]=items[index];buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));image.src=src;image.alt=`${name} — illustrative architectural study preview`;app.querySelector('#lpStudyText').textContent=description;const link=app.querySelector('#lpStudyLink');link.textContent=`Explore ${name}`;link.href=`#/simulations/${id}`;};
   buttons.forEach((button,i)=>button.addEventListener('click',()=>select(i)));
@@ -65,31 +70,6 @@ function simulationPreview(app){
   return ()=>image.removeEventListener('error',fallback);
 }
 
-// the hero: a topographic block with a building; the sun follows the pointer and the sun hours on the ground redraw
-function hero(app) {
-  const svg = app.querySelector('#lpHero svg'), N = 22, s = 12.5, ox = 320, oy = 92;
-  const ground = (i, j) => 1.1 * Math.sin(i / 5) * Math.cos(j / 6) + 0.8 * Math.sin((i + j) / 9);   // gentle relief
-  const B = [[8, 7, 4, 5, 5], [13, 9, 3, 3, 3], [6, 13, 3, 4, 2]];   // x, y, w, d, storeys (×3 units)
-  const shadeAt = (i, j, sun) => { let h = 0; for (const [x, y, w, d, st] of B) { const H = st * 1.6; for (let k = 1; k < 14; k++) { const px = i - sun[0] * k * 0.6, py = j - sun[1] * k * 0.6; if (px >= x && px <= x + w && py >= y && py <= y + d && k * 0.6 * sun[2] < H) { h++; break; } } } return h; };
-  let az = 0.6, raf = 0, tgt = 0.6;
-  function draw() {
-    const sun = [Math.cos(az), Math.sin(az), 0.55]; let out = '';
-    for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) { const z = ground(i, j), inB = B.some(([x, y, w, d]) => i >= x && i < x + w && j >= y && j < y + d); if (inB) continue;
-      const v = 1 - shadeAt(i + 0.5, j + 0.5, sun) * 0.8 - 0.15 * Math.max(0, -Math.cos(az - Math.atan2(j - N / 2, i - N / 2))), q = [iso(i, j, z, s, ox, oy), iso(i + 1, j, ground(i + 1, j), s, ox, oy), iso(i + 1, j + 1, ground(i + 1, j + 1), s, ox, oy), iso(i, j + 1, ground(i, j + 1), s, ox, oy)];
-      const fade = Math.max(0, 1 - Math.hypot(i - N / 2, j - N / 2) / (N * 0.62)); out += `<polygon points="${pts(q)}" fill="${ramp(v)}" fill-opacity="${(0.25 + 0.7 * fade).toFixed(2)}"/>`; }
-    const side = [iso(N, 0, ground(N, 0), s, ox, oy), iso(N, N, ground(N, N), s, ox, oy), iso(N, N, -3, s, ox, oy), iso(N, 0, -3, s, ox, oy)], side2 = [iso(0, N, ground(0, N), s, ox, oy), iso(N, N, ground(N, N), s, ox, oy), iso(N, N, -3, s, ox, oy), iso(0, N, -3, s, ox, oy)];
-    const bld = B.map(([x, y, w, d, st]) => box(x, y, w, d, st * 1.6 + ground(x, y), s, ox, oy, 'lp-bld')).join('');
-    const sp = iso(N / 2 + Math.cos(az) * 13, N / 2 + Math.sin(az) * 13, 12, s, ox, oy);
-    svg.innerHTML = `<polygon class="lp-side" points="${pts(side)}"/><polygon class="lp-side2" points="${pts(side2)}"/>${out}${bld}<circle cx="${sp[0].toFixed(1)}" cy="${sp[1].toFixed(1)}" r="11" class="lp-sun"/><line x1="${sp[0].toFixed(1)}" y1="${sp[1].toFixed(1)}" x2="${iso(N / 2, N / 2, 0, s, ox, oy)[0].toFixed(1)}" y2="${iso(N / 2, N / 2, 0, s, ox, oy)[1].toFixed(1)}" class="lp-ray"/>`;
-  }
-  const loop = () => { az += (tgt - az) * 0.12; draw(); if (Math.abs(tgt - az) > 0.002) raf = requestAnimationFrame(loop); else raf = 0; };
-  const go = (t) => { tgt = t; if (!raf) raf = requestAnimationFrame(loop); };
-  const stage = app.querySelector('#lpHero'), move = (e) => { const r = stage.getBoundingClientRect(); go(-0.4 + 2.6 * (e.clientX - r.left) / r.width); };
-  stage.addEventListener('pointermove', move); draw();
-  const key=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();go(tgt+(e.key==='ArrowRight'?.2:-.2));}};stage.addEventListener('keydown',key);
-  let t = 0; const idle = setInterval(() => { if (matchMedia('(prefers-reduced-motion: reduce)').matches || stage.matches(':hover') || stage.matches(':focus')) return; t += 0.05; go(0.6 + Math.sin(t) * 1.1); }, 120);
-  return () => { stage.removeEventListener('pointermove',move);stage.removeEventListener('keydown',key);clearInterval(idle); cancelAnimationFrame(raf); };
-}
 // live figures: a table whose numbers move as storeys change, and a small bar chart beside it
 function figures(app) {
   const host = app.querySelector('#lpFigures'); let st = 6, dir = 1;

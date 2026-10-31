@@ -1,0 +1,29 @@
+/* Pull a study out of the list without changing how it opens. */
+.w2-simmenu{width:224px;padding:10px;scroll-padding:10px;overscroll-behavior:contain}
+.w2-simmenu .w2-simcat{padding:9px 9px 6px;color:#7d8b9e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.w2-simmenu button{position:relative;min-height:28px;padding:6px 9px;font-size:12px;transform-origin:left center;transition:transform .18s,background .18s,box-shadow .18s,color .18s;will-change:auto}
+.w2-simmenu button:focus:not(:focus-visible){background:transparent}
+.w2-simmenu button.is-previewed,.w2-simmenu button:hover,.w2-simmenu button:focus-visible{background:#edf2f8;color:#163b61;transform:translateX(3px) scale(1.025);box-shadow:0 3px 9px #1b344d0b;z-index:1;outline:none}
+.w2-simmenu button:focus-visible{box-shadow:inset 0 0 0 1.5px #7998bf,0 3px 9px #1b344d0b}
+.w2-simmenu button.is-previewed:after{content:'↗';position:absolute;right:8px;top:50%;translate:0 -50%;font-size:11px;color:#6483a5}
+.w2-simmenu button.is-previewed{padding-right:24px}
+.sim-intent-card{position:fixed;z-index:74;width:292px;max-width:calc(100vw - 64px);font:13px/1.5 Inter,system-ui,sans-serif;color:#182c42;pointer-events:none;isolation:isolate}
+.sim-intent-card[hidden]{display:none}
+.sim-intent-card:before,.sim-intent-card:after{content:'';position:absolute;inset:5px 0 0;border:1px solid #dbe3ed;border-radius:15px;background:#f2f5f9;z-index:-1;transform-origin:bottom left}
+.sim-intent-card:before{transform:translate(8px,5px) rotate(3deg)}
+.sim-intent-card:after{transform:translate(4px,3px) rotate(1.4deg);background:#fafbfd}
+.sim-intent-front{position:relative;border:1px solid #dce4ee;border-radius:15px;padding:21px 22px 16px;background:linear-gradient(145deg,#fff 60%,#f4f7fb);box-shadow:0 16px 44px #152b4224,0 3px 8px #152b4208}
+.sim-intent-top{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#7f8da0;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.sim-intent-top [data-index]{font:10px/1.5 ui-monospace,monospace;white-space:nowrap}
+.sim-intent-glyph{height:70px;display:flex;align-items:center;margin:9px 0 2px;color:#7288a3}
+.sim-intent-glyph svg{height:60px;width:60px;overflow:visible}.sim-intent-glyph .accent{stroke:#2f5bd3}
+.sim-intent-name{margin:6px 0 8px;font-size:10px;color:#607b9c;letter-spacing:.02em}
+.sim-intent-front h3{font:600 23px/1.17 Inter,system-ui,sans-serif;letter-spacing:-.035em;margin:0;color:#182c42}
+.sim-intent-description{font-size:12px;line-height:1.6;color:#67778b;margin:13px 0 17px}
+.sim-intent-inputs{border-top:1px solid #e7ecf3;padding-top:12px;display:flex;flex-wrap:wrap;gap:5px}
+.sim-intent-inputs>span{display:block;width:100%;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#8794a5;margin-bottom:3px}
+.sim-intent-inputs b{font-weight:400;font-size:10px;line-height:1.4;max-width:100%;overflow-wrap:anywhere;background:#edf2f7;border-radius:4px;padding:4px 6px;color:#59718c}
+.sim-intent-foot{display:flex;justify-content:space-between;border-top:1px solid #e7ecf3;padding-top:12px;margin-top:16px;font-size:10px;color:#7c8ca0}
+@media(max-height:590px){.sim-intent-glyph{height:40px}.sim-intent-glyph svg{height:36px}.sim-intent-front{padding:15px 18px}.sim-intent-front h3{font-size:20px}.sim-intent-inputs{display:none}.sim-intent-description{margin:10px 0}.sim-intent-foot{margin-top:10px}}
+@media(prefers-reduced-motion:reduce){.w2-simmenu button{transition:none}.w2-simmenu button.is-previewed,.w2-simmenu button:hover,.w2-simmenu button:focus-visible{transform:none}.sim-intent-card:before,.sim-intent-card:after{transform:none}}
+.sim-intent-image{margin:14px -8px 12px;background:#f2f4f7;border-radius:9px;overflow:hidden}.sim-intent-image img{display:block;width:100%;height:130px;object-fit:contain}.sim-intent-front h3{font-size:21px}@media(max-height:640px){.sim-intent-image img{height:88px}.sim-intent-description{margin:10px 0}.sim-intent-inputs{display:none}}
