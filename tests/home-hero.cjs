@@ -11,7 +11,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   const frame=()=>page.frameLocator('[data-home-hero]');
   const current=()=>page.locator('[data-home-hero]').evaluate(el=>el.contentWindow.PlotCloudHero.state);
   const ready=async(mode)=>{await frame().locator('[data-ready=true]').waitFor();await page.waitForFunction(expected=>document.querySelector('[data-home-hero]')?.contentWindow?.PlotCloudHero?.state.mode===expected,mode)};
-  await page.goto(base+'/mvp/');await ready('sun');
+  await page.goto(base+'/mvp/#/home-classic');await ready('sun');
   assert.equal(await page.locator('.hero img[data-holo=hero]').count(),0,'Old hero image must be replaced');
   assert.equal(await page.locator('figure.home-hero-study').count(),1);
   assert(heroRequests.every(url=>url.includes('toronto-standalone.html')),'Hero must not need external style or engine files');
@@ -19,7 +19,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8765';
   await page.reload();await ready('wind');
   await page.getByRole('link',{name:'Pricing',exact:true}).first().click();
   await page.waitForFunction(()=>!document.querySelector('[data-home-hero]'));
-  await page.locator('.brand').click();await ready('wind');
+  await page.goto(base+'/mvp/#/pricing');await page.goto(base+'/mvp/#/home-classic');await ready('wind');   // the earlier homepage is at #/home-classic since 2026-10-31
   await frame().locator('canvas').click();await ready('rain');
   const remembered=await page.evaluate(()=>sessionStorage.getItem('pc-toronto-hero-mode'));assert.equal(remembered,'rain');
   await page.locator('[data-home-hero]').scrollIntoViewIfNeeded();

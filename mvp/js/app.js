@@ -62,7 +62,7 @@ const PAGES = {
   project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'), rendering:()=>import('./pages/rendering.js'),
   boards:()=>import('./pages/rendering.js').then(m=>({render:(a,r,q)=>m.render(a,['boards'],q)})),
   admin: () => import('./pages/admin.js'),
-  '': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
+  '': () => import('./pages/home-v2.js'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js'), legal:()=>import('./pages/legal.js'),
   results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
