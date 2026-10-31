@@ -150,14 +150,15 @@ export function render(app, [pid]) {
     for (const f of subs) f(ids);
   }
   // Rhino: Shift adds, Ctrl (or Cmd) removes, plain click or box replaces
-  function pick(id, { add, remove } = {}) {
+  function pick(id, { add, remove, toggle } = {}) {
+    if (toggle && id) return setSel(isSel(id) ? UI.sels.filter((x) => x !== id) : [...UI.sels, id]);
     if (remove) return setSel(UI.sels.filter((x) => x !== id));
     if (add) return id ? setSel(isSel(id) ? UI.sels : [...UI.sels, id]) : undefined;
     setSel(id ? [id] : []);
   }
-  function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
+  function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=gb-20261031-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=live-20261031-6`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -263,7 +264,7 @@ export function render(app, [pid]) {
     hist() { return INST.plan.ready ? INST.plan.ws.hist() : { u: 0, r: 0 }; },
     command(action){if(action==='delete'&&UI.sels.length)delIds([...UI.sels]);else if(action==='selectAll')activePane().ws.selectAll?.();},
     box(role, items, mods) { boxPick(items.map(psId), mods); },
-    select(role, s, mods = {}) { if (mods.add || mods.remove) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
+    select(role, s, mods = {}) { if (mods.add || mods.remove || mods.toggle) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
       if (!id) { if (UI.sels.some((x) => PS.test(x))) setSel([], { from: role }); return; }   // empty space in a pane clears a Plan Studio pick; an imported mesh picked in Shaded stays
       if (UI.sels.length === 1 && UI.sels[0] === id) return;
       if (comp(id)) setSel([id], { from: role }); else pendSel = { id, role }; },   // just made (placed, drawn): selected once it is listed

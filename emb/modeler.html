@@ -2497,8 +2497,8 @@ function drawWall(w) {
   if(w.exclude){g.save();g.strokeStyle='#aaa';g.lineWidth=1.5*VP.d;g.setLineDash([5*VP.d,4*VP.d]);const a=W2S(w.a),b=W2S(w.b);g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke();g.restore();return;}
   const d = VP.d, { L, os, solid } = wallPieces(w), dir = STC.wallDir(w), n = [-dir[1], dir[0]], t = w.t || 0.2, sel = wbSelected('wall',w.id), hov = HOV && HOV.k === 'wall' && HOV.id === w.id;
   const P = (s, k) => W2S([w.a[0] + dir[0] * s + n[0] * k, w.a[1] + dir[1] * s + n[1] * k]);
-  g.fillStyle = sel ? C.accent : (hov ? '#4a4d52' : '#6a6e75');
-  for (const [s0, s1] of solid) { const a = s0 < 1e-3 ? -t / 2 : s0, b = s1 > L - 1e-3 ? L + t / 2 : s1; const p = [P(a, -t / 2), P(b, -t / 2), P(b, t / 2), P(a, t / 2)]; g.beginPath(); g.moveTo(...p[0]); for (const q of p.slice(1)) g.lineTo(...q); g.closePath(); g.fill(); }
+  g.fillStyle = hov && !sel ? '#4a4d52' : '#6a6e75';
+  for (const [s0, s1] of solid) { const a = s0 < 1e-3 ? -t / 2 : s0, b = s1 > L - 1e-3 ? L + t / 2 : s1; const p = [P(a, -t / 2), P(b, -t / 2), P(b, t / 2), P(a, t / 2)]; g.beginPath(); g.moveTo(...p[0]); for (const q of p.slice(1)) g.lineTo(...q); g.closePath(); g.fill(); if (sel) { g.save(); g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke(); g.restore(); } }
   for (const [s0, s1, o] of (layerOn('parts.openings') ? os : [])) {
     const so = SEL && SEL.k === 'op' && SEL.id === o.id, ho = HOV && HOV.k === 'op' && HOV.id === o.id;
     // jambs
@@ -2529,7 +2529,7 @@ function drawGen(f, sel) {   // a generated piece seen from above: its parts, lo
   const poly = (pts) => { g.beginPath(); pts.forEach((q, i) => { const o = loc(q[0], q[1]); if (i) g.lineTo(o[0], o[1]); else g.moveTo(o[0], o[1]); }); g.closePath(); g.fill(); g.stroke(); };
   g.lineWidth = 0.8 * d; g.strokeStyle = 'rgba(28,27,26,.42)'; g.lineJoin = 'round';
   for (const p of r.parts.slice().sort((a, b) => top(a) - top(b))) {
-    if (p.kind === 'tube') continue; g.fillStyle = sel?'#d8402a':gColor(p.mat, vals);
+    if (p.kind === 'tube') continue; g.fillStyle = gColor(p.mat, vals);
     if (p.kind === 'box') { const hx = p.w / 2, hy = p.d / 2, cz = Math.cos(p.rotZ || 0), sz = Math.sin(p.rotZ || 0); poly([[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]].map(([a, b]) => [p.cx + a * cz - b * sz, p.cy + a * sz + b * cz])); }
     else if(p.kind==='lathe'){const rx=Math.max(...p.profile.map(q=>q[0])),zs=p.profile.map(q=>q[1]),z=Math.max(...zs),rim=p.profile.filter(q=>Math.abs(q[1]-z)<.01).map(q=>q[0]),inner=Math.min(...rim);poly(Array.from({length:48},(_,i)=>[p.cx+rx*Math.cos(i*Math.PI/24),p.cy+rx*p.depthScale*Math.sin(i*Math.PI/24)]));g.fillStyle=sel?'#d8402a':'#b0b5b8';poly(Array.from({length:48},(_,i)=>[p.cx+inner*Math.cos(i*Math.PI/24),p.cy+inner*p.depthScale*Math.sin(i*Math.PI/24)]));}
     else if (p.kind === 'cyl') { if (p.axis === 'y') poly([[p.cx - p.r, p.cy - p.h / 2], [p.cx + p.r, p.cy - p.h / 2], [p.cx + p.r, p.cy + p.h / 2], [p.cx - p.r, p.cy + p.h / 2]]); else poly(Array.from({ length: 24 }, (_, i) => [p.cx + p.r * Math.cos(i / 24 * 6.2832), p.cy + p.ry * Math.sin(i / 24 * 6.2832)])); }
@@ -2542,7 +2542,7 @@ function drawFurn(f, sel) {
   if(f.exclude){g.save();g.strokeStyle='#aaa';g.lineWidth=VP.d;g.setLineDash([5*VP.d,4*VP.d]);const pts=STC.furnCorners(f).map(W2S);g.beginPath();pts.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.closePath();g.stroke();g.restore();return;}
   if (f.gen) return drawGen(f, sel);
   const d = VP.d, P = STC.furnCorners(f).map(W2S), loc = (u, v) => { if (f.mirror) u = -u; const c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0); return W2S([f.x + u * c - v * s, f.y + u * s + v * c]); };
-  g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath(); g.fillStyle = sel?'#d8402a':'rgba(255,255,255,.92)'; g.fill(); g.strokeStyle = sel ? C.accent : '#8a867d'; g.lineWidth = (sel ? 2 : 1) * d; g.stroke();
+  g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath(); g.fillStyle = 'rgba(255,255,255,.92)'; g.fill(); g.strokeStyle = sel ? C.accent : '#8a867d'; g.lineWidth = (sel ? 2 : 1) * d; g.stroke();
   g.lineWidth = 0.8 * d; g.strokeStyle = '#a19d94'; const hw = f.w / 2, hd = f.d / 2, line = (pts) => { g.beginPath(); pts.forEach((p, i) => { const q = loc(...p); if (i) g.lineTo(...q); else g.moveTo(...q); }); g.stroke(); };
   const T = f.type;
   if (T === 'bed' || T === 'bed1') { const n = T === 'bed' ? 2 : 1, pw = (f.w - 0.2) / n; for (let k = 0; k < n; k++) { const x0 = -hw + 0.1 + k * pw; line([[x0 + 0.04, -hd + 0.08], [x0 + pw - 0.04, -hd + 0.08], [x0 + pw - 0.04, -hd + 0.4], [x0 + 0.04, -hd + 0.4], [x0 + 0.04, -hd + 0.08]]); } line([[-hw, -hd + 0.55], [hw, -hd + 0.55]]); }
@@ -4005,6 +4005,8 @@ function gzScale(D, p, e) {
   if (D.target.furn) { if (ax === 'x') f.w = +(D.target.furn.w * k).toFixed(3); else f.d = +(D.target.furn.d * k).toFixed(3); tipAt(e, `×${k.toFixed(2)} · ${ax === 'x' ? 'width' : 'depth'} ${((ax === 'x' ? f.w : f.d)).toFixed(2)} m`); return; }
   f[D.ax] = +(D.s0[ax] * k).toFixed(4); tipAt(e, `×${(f[D.ax]).toFixed(2)} along its ${ax === 'x' ? 'width (X)' : 'depth (Y)'} · ${(((ax === 'x' ? f.w : f.d)) * f[D.ax]).toFixed(2)} m`);
 }
+function liveKeys() { const list = (window.__wsSelections && window.__wsSelections.length ? window.__wsSelections : SEL ? [SEL] : []).map((x) => ({ k: x.k === 'end' ? 'wall' : x.k, id: x.id })), keys = list.map((x) => x.k + ':' + x.id), walls = new Set(list.filter((x) => x.k === 'wall').map((x) => x.id));
+  for (const o of M.ops) if (walls.has(o.wall)) keys.push('op:' + o.id); return keys; }
 function gizmoSync() {
   if (!window.S3 || !S3.on || !S3.gizmo) return;
   const target = GZD?.target || gizmoTarget();
@@ -4013,7 +4015,7 @@ function gizmoSync() {
 }
 function cancelGizmo() {
   if (!GZD) return;
-  const before = GZD.before; GZD = null; M = JSON.parse(before); tipOff(); afterLoad(false);window.__ws?.finishTransform?.();
+  const before = GZD.before; if (GZD.live && window.S3 && S3.liveEnd) S3.liveEnd(); GZD = null; M = JSON.parse(before); tipOff(); afterLoad(false);window.__ws?.finishTransform?.();
 }
 cv.addEventListener('pointercancel', e => { if (GZD) { e.stopImmediatePropagation(); cancelGizmo(); } }, true);
 addEventListener('keydown', e => { if (GZD && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); cancelGizmo(); } }, true);
@@ -4142,6 +4144,9 @@ cv.addEventListener('pointermove', (e) => {
     if (GZD.ax === 'sx' || GZD.ax === 'sy') { gzScale(GZD, p, e); }
     else if (GZD.ax === 'r') { const a = Math.atan2(p[1] - f.y, p[0] - f.x); f.rot = (((GZD.r0 + a - GZD.a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(e, `${Math.round(f.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(f.rot) * 180 / Math.PI) % 360}°`); }
     else { const dir = GZD.ax === 'x' ? [Math.cos(GZD.r0), Math.sin(GZD.r0)] : [-Math.sin(GZD.r0), Math.cos(GZD.r0)], k = wsAxisSnap(GZD, dir, (p[0] - GZD.p0[0]) * dir[0] + (p[1] - GZD.p0[1]) * dir[1]); f.x = +(GZD.x0 + dir[0] * k).toFixed(4); f.y = +(GZD.y0 + dir[1] * k).toFixed(4); tipAt(e, `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${GZD.ax === 'x' ? 'its width (X)' : 'its depth (Y)'}`); }
+    if (GZD.live == null) GZD.live = S3.liveBegin ? S3.liveBegin(liveKeys()) : false;
+    if (GZD.live) { const fu = GZD.target.furn, sx = fu ? (f.w / fu.w) : (f.sx || 1) / (GZD.s0 ? GZD.s0.x : 1), sy = fu ? (f.d / fu.d) : (f.sy || 1) / (GZD.s0 ? GZD.s0.y : 1);
+      S3.liveSet({ dx: f.x - GZD.x0, dy: f.y - GZD.y0, rot: (f.rot || 0) - GZD.r0, px: GZD.x0, py: GZD.y0, sx, sy, r0: GZD.r0 }); return; }
     GZD.target.apply(); S = STC.build(M); upd3D(); return; }
   if (CAM !== 'plan') return;
   if (NDRAG) { e.stopImmediatePropagation(); const p = evPt(e); NDRAG.n.x = +sg(p[0] + NDRAG.dx).toFixed(3); NDRAG.n.y = +sg(p[1] + NDRAG.dy).toFixed(3); NDRAG.moved = true; draw(); return; }
@@ -4154,7 +4159,7 @@ cv.addEventListener('pointermove', (e) => {
 }, true);
 cv.addEventListener('pointerup', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); WLK = null; return; }
-  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.ax === 'r') D.f.rot = (D.target.snapRotation || WBP.snapAngle)(D.f.rot); D.target.apply(); tidy(); commit(D.before); return; }
+  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.live && S3.liveEnd) S3.liveEnd(); if (D.ax === 'r') D.f.rot = (D.target.snapRotation || WBP.snapAngle)(D.f.rot); D.target.apply(); tidy(); commit(D.before); return; }
   if (NDRAG) { e.stopImmediatePropagation(); const D = NDRAG; NDRAG = null; if (D.moved) { tidy(); commit(D.before); } return; }
   if (CAM === 'plan' && VIEW2D === 'ceiling') {
     if (drag && drag.k === 'pan') return; e.stopImmediatePropagation();
@@ -4731,7 +4736,7 @@ cv.addEventListener('pointermove', (e) => {
 });
 cv.addEventListener('pointerleave', () => { if (HOVX) { HOVX = null; annotUI(); } });
 { let raf = 0, last = null; cv.addEventListener('pointermove', (e) => { if (CAM !== '3d' || !window.S3 || !S3.on || !S3.hover) return; last = e; if (raf) return; raf = requestAnimationFrame(() => { raf = 0; const ev = last;
-  if (WALKING || XPL.on || ELV3.on || GZD || (e.buttons & 7) || TOOL !== 'select') { S3.hover(null); return; } const h = S3.hit(ev.clientX, ev.clientY), ud = h && h.ud && SELK.has(h.ud.k) && !(SEL && SEL.k === h.ud.k && SEL.id === h.ud.id) ? h.ud : null; S3.hover(cycleCurrent() || ud); }); });
+  if (WALKING || XPL.on || ELV3.on || GZD || (e.buttons & 7) || TOOL !== 'select') { S3.hover(null); return; } const gax = S3.gizmo && S3.gizmo.hit(ev.clientX, ev.clientY); S3.gizmo?.hover?.(gax); cv.style.cursor = gax ? (gax === 'r' ? 'grab' : 'move') : ''; if (gax) { S3.hover(null); return; } const h = S3.hit(ev.clientX, ev.clientY), ud = h && h.ud && SELK.has(h.ud.k) && !(SEL && SEL.k === h.ud.k && SEL.id === h.ud.id) ? h.ud : null; S3.hover(cycleCurrent() || ud); }); });
   cv.addEventListener('pointerleave', () => { if (window.S3 && S3.hover) S3.hover(null); }); }
 // the wall's own blue chain line would repeat the length: the selection shows it now
 { const _sd = selDim; selDim = function (w) { if (SEL && kOf(SEL) === 'wall' && CAM === 'plan') return; _sd(w); }; }
@@ -5345,13 +5350,14 @@ function drawSun() {   // one pixel per cell on a small canvas, drawn scaled: no
     x.putImageData(im, 0, 0); R.img = c; }
   const a = W2S([R.X0, R.Y0 + R.ny * R.cell]); g.save(); g.globalAlpha = 0.62; g.imageSmoothingEnabled = false; g.drawImage(R.img, a[0], a[1], R.nx * R.cell * V.s, R.ny * R.cell * V.s); g.restore();
 }
-{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); _dm(); drawStruct2(); drawSunPath2(); drawCtxHandles(); }; }
+{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); _dm(); drawStruct2(); drawSunPath2(); drawCtxHandles(); drawGuide(); }; }
 function drawCtxHandles() { if (CAM === '3d' || !SEL || SEL.k !== 'ctx' || !M.site || (window.__ws && window.__ws.locks && window.__ws.locks.has('Site'))) return; const o = selObj(); if (!o || !o.xy) return; const d = VP.d || 1; g.save(); g.fillStyle = '#fff'; g.strokeStyle = '#d8402a'; g.lineWidth = 1.5 * d; for (const q of o.xy) { const s2 = W2S(SITEC.siteToPlan(M.site, q, M.north || 0)); g.fillRect(s2[0] - 4 * d, s2[1] - 4 * d, 8 * d, 8 * d); g.strokeRect(s2[0] - 4 * d, s2[1] - 4 * d, 8 * d, 8 * d); } g.restore(); }
 { const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawWalk2(); } catch (e) { } return r; }; }   // an interior study over the rooms
 // a Workspace study result in the 2D plan (2026-10-31): the same grid and colours as in 3D, one crisp cell per grid cell
 const RAMPS_TOP = {};   // the study colour ramps (filled in below), shared with the flow animation
 function rampAtTop(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
-let ANA2 = null, SPATH2 = null, STR2 = null; const _drawAgain = () => requestAnimationFrame(() => draw());
+let ANA2 = null, SPATH2 = null, STR2 = null, GUIDE = null;
+function drawGuide() { if (!GUIDE || CAM === '3d') return; const p = W2S(GUIDE.p), d = VP.d || 1; g.save(); g.strokeStyle = GUIDE.axis === 'x' ? '#e2372b' : '#35a845'; g.lineWidth = 1.4 * d; g.setLineDash([7 * d, 5 * d]); g.beginPath(); if (GUIDE.axis === 'x') { g.moveTo(0, p[1]); g.lineTo(cv.width, p[1]); } else { g.moveTo(p[0], 0); g.lineTo(p[0], cv.height); } g.stroke(); g.restore(); } const _drawAgain = () => requestAnimationFrame(() => draw());
 // ---- an interior study on one level (2026-10-31): Circulation's walks as ink that builds up as the ants walk, or its density
 const WK = { o: null, cv: null, g: null, k: 1, done: null, t: 0, raf: 0, last: 0 };
 function walkStop() { cancelAnimationFrame(WK.raf); WK.raf = 0; }
@@ -5934,7 +5940,7 @@ window.S3 = (() => {
   const LOOK = { spec: null, mats: new Map() };
   function lookApply() {
     const sp = LOOK.spec; if (!sp || !grp) return;
-    grp.traverse((m) => { if (!m.isMesh || m.userData.__selected) return; const ud = tagOf(m); if (!ud || ud.k === 'site') return;
+    grp.traverse((m) => { if (!m.isMesh) return; const ud = tagOf(m); if (!ud || ud.k === 'site') return;
       const layer = ud.k === 'imp' ? sp.imports[ud.id] : sp.klayer[ud.k], lk = layer && sp.looks[layer]; if (!lk) return;
       if (!m.userData.__look0) m.userData.__look0 = m.material; const o0 = m.userData.__look0, glassy = !Array.isArray(o0) && (o0.transparent || o0.opacity < 1); if (ud.k === 'op' && !glassy) return;   // doors and frames keep theirs; the glazing layer is the panes
       const key = lk.color + '|' + lk.opacity; let mt = LOOK.mats.get(key); if (!mt) { mt = new T.MeshLambertMaterial({ color: new T.Color(lk.color), transparent: lk.opacity < 1, opacity: lk.opacity, depthWrite: lk.opacity >= 1, side: T.DoubleSide }); LOOK.mats.set(key, mt); }
@@ -5967,7 +5973,7 @@ window.S3 = (() => {
   }
   const siteFree = (grp) => { const b = new T.Box3(); grp.children.forEach((c) => { if (c.name !== 'site') b.expandByObject(c); }); return b.isEmpty() ? new T.Box3().setFromObject(grp) : b; };
   api.update = (M, S, o) => {
-    if (!R) return; if (grp) { scene.remove(grp); grp.traverse((m) => { if (m.geometry) m.geometry.dispose();if(m.userData.__selected)for(const material of [m.material].flat().filter(Boolean))material.dispose(); }); }
+    if (!R) return; if (grp) { scene.remove(grp); grp.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); }
     if (M && M.site) worldBuild(M.site);
     grp = o.explode ? explodeGroup(M, S, o) : buildGroup(M, S, o); const selected=window.__wsSelections||[o.sel].filter(Boolean);for(const s of selected)highlight(grp,s); scene.add(grp);
     if (o.fit || !fitted) { fitted = true; const b = siteFree(grp), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6) * (document.documentElement.classList.contains('ws') ? 1.3 : 1) /* the Workspace's floating controls stay clear of the model */; ctl.target.copy(c); cam.position.set(c.x + r * 0.75, c.y + r * 0.85, c.z + r * 1.0); cam.near = 0.1; cam.far = r * 40; cam.updateProjectionMatrix(); ctl.update(); d0 = cam.position.distanceTo(ctl.target); }
@@ -6070,7 +6076,11 @@ window.S3 = (() => {
   api.toScreen = (x, y, z) => { const v = new T.Vector3(x, z, -y).project(cam), r = canvas.getBoundingClientRect(), k = devicePixelRatio || 1; return [(v.x + 1) / 2 * r.width * k, (1 - v.y) / 2 * r.height * k]; };
   api.target = () => ctl ? [ctl.target.x, -ctl.target.z] : [0, 0];
   api.orbitLeft = (on) => { if (ctl) ctl.mouseButtons.LEFT = on ? T.MOUSE.ROTATE : null; };
-  function highlight(G, sel) { G.traverse((m) => { if (!m.isMesh) return; const ud = tagOf(m); if (ud && ud.k === (sel.k==='ctx'?'site':sel.k) && ud.id === sel.id && m.material) {m.userData.__selected=true;const tint=original=>{const material=original.clone();material.color?.setHex(0xd8402a);material.emissive?.setHex(0x501008);material.transparent=false;material.opacity=1;material.depthWrite=true;return material;};m.material=Array.isArray(m.material)?m.material.map(tint):tint(m.material); } }); }
+  // a selected object keeps its own look and gets a red outline (2026-10-31): its edges in red, and faintly through what hides them
+  const SELM = { front: null, back: null };
+  function highlight(G, sel) { if (!SELM.front) { SELM.front = new T.LineBasicMaterial({ color: 0xe03a2a }); SELM.back = new T.LineBasicMaterial({ color: 0xe03a2a, transparent: true, opacity: 0.28, depthTest: false }); }
+    const list = []; G.traverse((m) => { if (!m.isMesh || m.userData.__outline) return; const ud = tagOf(m); if (ud && ud.k === (sel.k==='ctx'?'site':sel.k) && ud.id === sel.id && m.material) list.push(m); });
+    for (const m of list) { m.userData.__selected = true; const eg = new T.EdgesGeometry(m.geometry, 25), a = new T.LineSegments(eg, SELM.front), b = new T.LineSegments(eg, SELM.back); a.renderOrder = 10; b.renderOrder = 9; for (const l of [a, b]) { l.raycast = () => {}; l.userData.__outline = 1; l.userData.__disp = 1; m.add(l); } } }
   api.selectionPolygons=()=>{const out=new Map();if(!grp||!cam)return out;grp.updateMatrixWorld(true);const r=canvas.getBoundingClientRect(),v=new T.Vector3();grp.traverse(m=>{if(!m.isMesh||m.name==='beam')return;for(let a=m;a;a=a.parent)if(!a.visible)return;const tag=tagOf(m);if(!tag)return;const key=tag.k+':'+tag.id,polys=out.get(key)||[];out.set(key,polys);const p=m.geometry.attributes.position,ix=m.geometry.index,n=ix?ix.count:p.count;for(let i=0;i+2<n;i+=3){const tri=[];for(let j=0;j<3;j++){v.fromBufferAttribute(p,ix?ix.getX(i+j):i+j).applyMatrix4(m.matrixWorld).project(cam);tri.push([r.left+(v.x+1)*r.width/2,r.top+(1-v.y)*r.height/2]);}polys.push(tri);}});return out;};
   api.png = () => { render(); return R.domElement.toDataURL('image/png'); };
   // the whole building as OBJ: every level, roof on, no arrows
@@ -6128,7 +6138,7 @@ window.S3 = (() => {
   api.gizmo = {
     set(f, z, locked) {
       if (!R) return; if (GZ.g) { scene.remove(GZ.g); GZ.g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); GZ.g = null; GZ.hd = null; GZ.pick = []; } if (!f) { render(); return; }
-      const G = new T.Group(); G.name = 'gizmo'; G.position.set(f.x, z + 0.04, -f.y); G.rotation.y = f.rot || 0;
+      GZ.hov = null; const G = new T.Group(); G.name = 'gizmo'; G.position.set(f.x, z + 0.04, -f.y); G.rotation.y = f.rot || 0;
       const top = (m) => { m.renderOrder = 1000; return m; }, mb = (col) => new T.MeshBasicMaterial({ color: col, depthTest: false, transparent: true }), inv = new T.MeshBasicMaterial({ visible: false });
       if(!window.__WSROLE){const bx = top(new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(f.w, f.h, f.d)), new T.LineBasicMaterial({ color: 0x3498ff, depthTest: false, transparent: true }))); bx.position.y = f.h / 2; bx.name = 'gz-box'; G.add(bx);}
       if (!locked) {
@@ -6152,11 +6162,13 @@ window.S3 = (() => {
       }
       scene.add(G); GZ.g = G; render();
     },
+    hover(ax) { if (!GZ.hd || GZ.hov === ax) return; const paint = (name, on) => { const g = GZ.hd.getObjectByName(name); if (g) g.traverse((m) => { if (m.isMesh && m.material && m.material.visible !== false && m.material.color) { if (m.userData.c0 == null) m.userData.c0 = m.material.color.getHex(); m.material.color.setHex(on ? 0xffc21a : m.userData.c0); } if (m.isLine && m.material.color) { if (m.userData.c0 == null) m.userData.c0 = m.material.color.getHex(); m.material.color.setHex(on ? 0xffc21a : m.userData.c0); } }); };
+      if (GZ.hov) paint('gz-' + GZ.hov, false); GZ.hov = ax || null; if (ax) paint('gz-' + ax, true); render(); },
     hit(cx, cy) { if (!R || !GZ.g || !GZ.pick.length) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const h = ray(cx, cy).intersectObjects(GZ.pick, false); return h.length ? h[0].object.userData.gz : null; },
     state() { if (!GZ.g) return null; const arc = GZ.g.getObjectByName('gz-r'); const out = { pos: GZ.g.position.toArray(), rot: GZ.g.rotation.y, handles: !!GZ.hd, scale: GZ.hd ? GZ.hd.scale.x : 0, sweep: arc ? +(arc.geometry.parameters.arc * 180 / Math.PI).toFixed(3) : null, parts: [] }; GZ.g.traverse((o) => { if (o.name && o.name.startsWith('gz-')) out.parts.push(o.name); }); return out; },
     screen(ax) { if (!GZ.hd) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const pk = GZ.pick.find((p) => p.userData.gz === ax); if (!pk) return null; const v = new T.Vector3(); pk.getWorldPosition(v); if (ax === 'r') { const m = pk.userData.mid, q = new T.Vector3(0.46 * Math.cos(m), 0.46 * Math.sin(m), 0); pk.localToWorld(q); v.copy(q); } v.project(cam); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   };
-  api.preRender = () => { if (GZ.hd && GZ.g) { const c = WALK.on ? WALK.cam : cam; GZ.hd.scale.setScalar(Math.max(0.05, c.position.distanceTo(GZ.g.position) * 0.11)); } };
+  api.preRender = () => { if (GZ.hd && GZ.g) { const c = WALK.on ? WALK.cam : cam; GZ.hd.scale.setScalar(Math.max(0.05, c.position.distanceTo(GZ.g.position) * 0.065 * (40 / Math.max(20, c.fov || 40)))); /* about 90 px on screen, as Rhino's and SketchUp's */ } };
 
   // ---- 8 · exploded storeys: each level is its own group, lifted i × d; the model is not touched
   let XINFO = [];
@@ -6328,6 +6340,24 @@ window.S3 = (() => {
       if (G.children.length) { scene.add(G); HV.g = G; } }
     render();
   };
+  // ---- live drag (2026-10-31, after SketchUp): while dragging, the picked objects (and the gumball) are moved on screen as they
+  // are; the scene is rebuilt once, on release. keys: ['k:id'…]; liveSet takes plan metres and radians
+  const LIVE = { list: null, gz: null };
+  api.liveBegin = (keys) => { if (!grp) return false; const want = new Set(keys); LIVE.list = []; grp.updateMatrixWorld(true); const seen = new Set();
+    grp.traverse((o) => { const u = o.userData; if (!u || !u.k || seen.has(o.parent)) { if (seen.has(o.parent)) seen.add(o); return; } if (!want.has((u.k === 'site' ? 'ctx' : u.k) + ':' + u.id) && !want.has(u.k + ':' + u.id)) return; seen.add(o);
+      LIVE.list.push({ o, W0: o.matrixWorld.clone(), Pi: o.parent.matrixWorld.clone().invert() }); });
+    if (HV.g) HV.g.visible = false; LIVE.gz = GZ.g ? { p: GZ.g.position.clone(), r: GZ.g.rotation.y } : null; return LIVE.list.length > 0; };
+  api.liveSet = (o) => { if (!LIVE.list) return; const { dx = 0, dy = 0, rot = 0, px = 0, py = 0, sx = 1, sy = 1, r0 = 0 } = o, M4 = () => new T.Matrix4();
+    const L = M4().makeTranslation(px + dx, 0, -(py + dy)).multiply(M4().makeRotationY(rot)).multiply(M4().makeRotationY(r0)).multiply(M4().makeScale(sx, 1, sy)).multiply(M4().makeRotationY(-r0)).multiply(M4().makeTranslation(-px, 0, py));
+    for (const it of LIVE.list) { const W = L.clone().multiply(it.W0), loc = it.Pi.clone().multiply(W); loc.decompose(it.o.position, it.o.quaternion, it.o.scale); }
+    if (GZ.g && LIVE.gz) { GZ.g.position.set(LIVE.gz.p.x + dx, LIVE.gz.p.y, LIVE.gz.p.z - dy); GZ.g.rotation.y = LIVE.gz.r + rot; } render(); };
+  api._live = () => (LIVE.list ? LIVE.list.map((it) => [it.o.type, it.o.name, it.o.userData.k, it.o.position.toArray().map((v) => +v.toFixed(2)), it.o.matrixAutoUpdate, (() => { let q = it.o; while (q.parent) q = q.parent; return q === scene; })()]) : null);   // for the browser checks
+  api.liveEnd = () => { LIVE.list = null; LIVE.gz = null; if (HV.g) HV.g.visible = true; };
+  // a guide line along an axis through a plan point (SketchUp's inference): { p: [x, y], z, axis: 'x'|'y' } or null
+  const GDL = { g: null };
+  api.guide = (o) => { if (GDL.g) { scene.remove(GDL.g); GDL.g.geometry.dispose(); GDL.g = null; } if (o) { const L = 400, a = o.axis === 'x' ? [o.p[0] - L, o.p[1]] : [o.p[0], o.p[1] - L], b = o.axis === 'x' ? [o.p[0] + L, o.p[1]] : [o.p[0], o.p[1] + L];
+      const l = new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(a[0], o.z || 0, -a[1]), new T.Vector3(b[0], o.z || 0, -b[1])]), new T.LineDashedMaterial({ color: o.axis === 'x' ? 0xe2372b : 0x35a845, dashSize: 0.6, gapSize: 0.35, depthTest: false, transparent: true, opacity: 0.9 }));
+      l.computeLineDistances(); l.renderOrder = 998; scene.add(l); GDL.g = l; } render(); };
   api.hoverState = () => ({ key: HV.key, lines: HV.g ? HV.g.children.length : 0 });
   { const _u = api.update; api.update = (M, S, o) => { _u(M, S, o); if (HV.key) { const k = HV.key, i = k.indexOf(':'); HV.key = ''; if (HV.g) { scene.remove(HV.g); HV.g = null; } api.hover({ k: k.slice(0, i), id: k.slice(i + 1) }); } }; }
   // Camera coordinates and projection are independent of viewport resolution.
@@ -6380,7 +6410,7 @@ window.S3 = (() => {
       if ((site && !ILL.site) || (!site && !ILL.bld)) { m.visible = false; m.userData.__disp = 1; continue; }
       if (!m.visible) continue; const k0 = Array.isArray(m.material) ? m.material[0] : m.material, glassy = k0 && (k0.transparent && (k0.opacity ?? 1) < 0.9);
       const topTex = site && ud.id === 'terrain' && k0 && k0.map ? (mats.topo || (mats.topo = illTopo())) : null;
-      if (!m.userData.__selected) m.material = topTex ? new T.MeshBasicMaterial({ map: topTex, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }) : m.name === 'wallcut' ? mats.ink : glassy ? mats.glass : site ? mats.site : mats.paper;
+      m.material = topTex ? new T.MeshBasicMaterial({ map: topTex, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }) : m.name === 'wallcut' ? mats.ink : glassy ? mats.glass : site ? mats.site : mats.paper;
       m.userData.__disp = 1; if ((m.geometry.attributes.position?.count || 0) > 60000) continue;
       const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, site ? 40 : 25), m.userData.__selected ? new T.LineBasicMaterial({ color: 0xd8402a }) : site ? lineSite : line); e.raycast = () => {}; e.userData.__disp = 1; m.add(e); }
     if (scene) scene.background = new T.Color('#ffffff');
@@ -6392,7 +6422,7 @@ window.S3 = (() => {
     const list = []; G.traverse((m) => { if (m.isMesh && !m.userData.__disp && m.visible) list.push(m); });
     for (const m of list) { const k0 = Array.isArray(m.material) ? m.material[0] : m.material; if (!k0) continue; const key = k0.uuid + '|' + DISP;
       let nm = DMAT.get(key); if (!nm) { nm = k0.clone(); nm.transparent = true; nm.depthWrite = false; nm.opacity = DISP === 'wire' ? 0 : Math.min(k0.opacity ?? 1, 0.28); if (DISP === 'wire') nm.colorWrite = false; DMAT.set(key, nm); }
-      if(!m.userData.__selected)m.material = nm; m.userData.__disp = 1; if ((m.geometry.attributes.position?.count || 0) > 60000) continue;
+      m.material = nm; m.userData.__disp = 1; if ((m.geometry.attributes.position?.count || 0) > 60000) continue;
       const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, 30), m.userData.__selected?new T.LineBasicMaterial({color:0xd8402a}):em); e.raycast = () => {}; e.userData.__disp = 1; m.add(e); }
   }
   api.display = (mode) => { const next = ['ghosted', 'wire', 'illus'].includes(mode) ? mode : 'shaded'; if (next === DISP) return; DISP = next; if (next === 'shaded') dispApply(null); if (window.upd3DNow) window.upd3DNow(); };
@@ -6594,15 +6624,15 @@ if (window.__WSROLE) {
       <circle r="4.5" fill="#fff" stroke="#1f2329" stroke-width="1.6"/></g>`;}
   {const paint=draw;draw=function(){paint();drawPlanGumball();};}
   planGumball.addEventListener('pointerdown',e=>{const axis=e.target.closest('[data-group-axis]')?.dataset.groupAxis,target=gizmoTarget();if(e.button!==0||!axis||!target||target.locked)return;e.preventDefault();e.stopImmediatePropagation();cv.focus({preventScroll:true});const f=target.f;const p0=S2W(...evP(e));GZD={plan:true,ax:axis,f,z:target.z,target,p0,x0:f.x,y0:f.y,r0:f.rot||0,a0:Math.atan2(p0[1]-f.y,p0[0]-f.x),s0:{x:f.sx||1,y:f.sy||1},before:snapM()};planGumball.setPointerCapture(e.pointerId);});
-  document.addEventListener('pointermove',e=>{if(!GZD?.plan)return;e.preventDefault();e.stopImmediatePropagation();const d=GZD,p=S2W(...evP(e)),f=d.f;if(d.ax==='sx'||d.ax==='sy')gzScale(d,p,e);else if(d.ax==='r'){const a=Math.atan2(p[1]-f.y,p[0]-f.x);f.rot=(((d.r0+a-d.a0)%(2*Math.PI))+2*Math.PI)%(2*Math.PI);tipAt(e,`${Math.round(f.rot*180/Math.PI)}°`);}else{const dir=d.ax==='x'?[Math.cos(d.r0),Math.sin(d.r0)]:[-Math.sin(d.r0),Math.cos(d.r0)],k=sg((p[0]-d.p0[0])*dir[0]+(p[1]-d.p0[1])*dir[1],.01);f.x=+(d.x0+dir[0]*k).toFixed(4);f.y=+(d.y0+dir[1]*k).toFixed(4);tipAt(e,`${k>=0?'+':''}${Math.round(k*1000)} mm`);}d.target.apply();changed(true);},true);
+  document.addEventListener('pointermove',e=>{if(!GZD?.plan)return;e.preventDefault();e.stopImmediatePropagation();const d=GZD,p=S2W(...evP(e)),f=d.f;if(d.ax==='sx'||d.ax==='sy')gzScale(d,p,e);else if(d.ax==='r'){const a=Math.atan2(p[1]-f.y,p[0]-f.x);f.rot=(((d.r0+a-d.a0)%(2*Math.PI))+2*Math.PI)%(2*Math.PI);tipAt(e,`${Math.round(f.rot*180/Math.PI)}°`);}else{const dir=d.ax==='x'?[Math.cos(d.r0),Math.sin(d.r0)]:[-Math.sin(d.r0),Math.cos(d.r0)],k=sg((p[0]-d.p0[0])*dir[0]+(p[1]-d.p0[1])*dir[1],.01);f.x=+(d.x0+dir[0]*k).toFixed(4);f.y=+(d.y0+dir[1]*k).toFixed(4);tipAt(e,`${k>=0?'+':''}${Math.round(k*1000)} mm`);}d.target.apply();draw();},true);
   document.addEventListener('pointerup',e=>{if(!GZD?.plan)return;e.stopImmediatePropagation();const d=GZD;GZD=null;tipOff();if(d.ax==='r')d.f.rot=(d.target.snapRotation||WBP.snapAngle)(d.f.rot);d.target.apply();tidy();commit(d.before);draw();},true);
   planGumball.addEventListener('pointercancel',()=>{if(GZD?.plan)cancelGizmo();});
   const point=e=>CAM==='3d'?S3.plane(e.clientX,e.clientY,lvObj().z):S2W(...evP(e));
   // Capture above native per-object handles so dragging a selected wall or mesh keeps the full selection.
-  document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;if(e.button===2){tipOff();cycleClear();}pickMods={add:e.shiftKey,remove:e.ctrlKey||e.metaKey};if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
+  document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;if(e.button===2){tipOff();cycleClear();}const ck=e.ctrlKey||e.metaKey;pickMods={add:ck&&!e.shiftKey,toggle:e.shiftKey&&!ck,remove:ck&&e.shiftKey};   /* SketchUp: Ctrl adds, Shift toggles, Ctrl+Shift removes */if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
     if(CAM==='3d')P3upd(e);if(!e.altKey&&CAM==='3d'&&WS.gb&&S3.gizmo.hit(e.clientX,e.clientY))return;
     const raw=e.altKey?null:(cycleCurrent()||hitTest(S2W(...evP(e)))),hit=raw?{k:raw.k==='end'?'wall':raw.k,id:raw.id}:null,p=point(e);
-    if(hit&&(pickMods.add||pickMods.remove)){hub()?.select(WS.role,hit,pickMods);e.stopImmediatePropagation();e.preventDefault();return;}
+    if(hit&&(pickMods.add||pickMods.remove||pickMods.toggle)){hub()?.select(WS.role,hit,pickMods);e.stopImmediatePropagation();e.preventDefault();return;}
     if(hit){if(!multi.some(s=>KEY(s)===KEY(hit))){SEL=hit;WS.sel=KEY(SEL);hub()?.select(WS.role,hit);changedSel();}
       const records=multi.map(s=>({s,o:selObj(s)})).filter(r=>r.o&&!r.o.locked&&!r.o.auto&&['wall','furn','imp','floor','void','fence','mass','op','ceil','light','note','ctx'].includes(r.s.k));
       gesture={mode:'move',x:e.clientX,y:e.clientY,p,before:snapM(),records:records.map(r=>({...r,original:pc(r.o)})),moved:false};
@@ -6610,10 +6640,16 @@ if (window.__WSROLE) {
     drag=null;cycleClear();e.stopImmediatePropagation();e.preventDefault();cv.focus({preventScroll:true});if(e.isTrusted)cv.setPointerCapture(e.pointerId);
   },true);
   document.addEventListener('pointermove',e=>{if(!gesture)return;e.stopImmediatePropagation();e.preventDefault();const a=gesture;if(Math.hypot(e.clientX-a.x,e.clientY-a.y)<4&&!a.moved)return;
-    if(a.mode==='move'){const p=point(e);if(!p||!a.p||!a.records.length)return;const dx=sg(p[0]-a.p[0],.01),dy=sg(p[1]-a.p[1],.01);WS.groupMoving=true;for(const r of a.records)if(r.s.k==='ctx'){const o0=siteOfM(M,[0,0]),o1=siteOfM(M,[dx,dy]),sx=o1[0]-o0[0],sy=o1[1]-o0[1];r.o.xy=r.original.xy.map(q=>[+(q[0]+sx).toFixed(2),+(q[1]+sy).toFixed(2)]);r.o.ll=[];r.o.edited=true;M.site.version++;}else if(r.s.k!=='op')moveObject(r.o,r.original,r.s.k,dx,dy);for(const r of a.records)if(r.s.k==='op'&&!a.records.some(q=>q.s.k==='wall'&&q.s.id===r.o.wall))moveObject(r.o,r.original,'op',dx,dy,{host:wallById(r.o.wall),fixOpening:o=>STC.fixOp(M,o)});a.moved=true;changed(true);if(CAM==='3d')upd3D();return;}
+    if(a.mode==='move'){const p=point(e);if(!p||!a.p||!a.records.length)return;let rx=p[0]-a.p[0],ry=p[1]-a.p[1];
+      /* SketchUp's inference (2026-10-31): a move close to the red or green axis locks to it, with a guide line; Shift keeps the lock */
+      const len=Math.hypot(rx,ry),ang=Math.abs(Math.atan2(ry,rx)),near=Math.min(ang,Math.PI-ang),nearY=Math.abs(Math.PI/2-ang);let axis=e.shiftKey&&a.axis?a.axis:len>0.3&&near<0.12?'x':len>0.3&&nearY<0.12?'y':null;a.axis=axis;
+      if(axis==='x')ry=0;else if(axis==='y')rx=0;const dx=sg(rx,.01),dy=sg(ry,.01);GUIDE=axis?{p:a.p,axis}:null;
+      tipAt(e,`${Math.hypot(dx,dy).toFixed(2)} m${axis?` · on the ${axis==='x'?'red (X)':'green (Y)'} axis`:''}`);
+      if(CAM==='3d'&&window.S3&&S3.liveBegin){if(a.live==null)a.live=S3.liveBegin(a.records.map(r=>(r.s.k==='end'?'wall':r.s.k)+':'+r.o.id).concat(M.ops.filter(o=>a.records.some(r=>r.s.k==='wall'&&r.o.id===o.wall)).map(o=>'op:'+o.id)));S3.guide?.(GUIDE?{p:GUIDE.p,z:lvObj().z+0.05,axis:GUIDE.axis}:null);}
+      WS.groupMoving=true;for(const r of a.records)if(r.s.k==='ctx'){const o0=siteOfM(M,[0,0]),o1=siteOfM(M,[dx,dy]),sx=o1[0]-o0[0],sy=o1[1]-o0[1];r.o.xy=r.original.xy.map(q=>[+(q[0]+sx).toFixed(2),+(q[1]+sy).toFixed(2)]);r.o.ll=[];r.o.edited=true;M.site.version++;}else if(r.s.k!=='op')moveObject(r.o,r.original,r.s.k,dx,dy);for(const r of a.records)if(r.s.k==='op'&&!a.records.some(q=>q.s.k==='wall'&&q.s.id===r.o.wall))moveObject(r.o,r.original,'op',dx,dy,{host:wallById(r.o.wall),fixOpening:o=>STC.fixOp(M,o)});a.moved=true;if(CAM==='3d'&&a.live){S3.liveSet({dx,dy});return;}draw();return;}   /* live: the full update on release */
     const cross=e.clientX<a.x;Object.assign(boxOverlay.style,{display:'block',left:Math.min(a.x,e.clientX)+'px',top:Math.min(a.y,e.clientY)+'px',width:Math.abs(e.clientX-a.x)+'px',height:Math.abs(e.clientY-a.y)+'px',borderStyle:cross?'dashed':'solid',borderColor:cross?'#3b9a74':'#87919c',background:cross?'#3b9a7418':'#87919c18'});
   },true);
-  const finishGesture=(e,cancel=false)=>{if(!gesture)return;e.stopImmediatePropagation();const a=gesture;gesture=null;boxOverlay.style.display='none';if(a.mode==='move'){if(cancel&&a.moved){WS.rx=true;try{M=JSON.parse(a.before);changed(false);if(CAM==='3d')upd3D();}finally{WS.rx=false;}notify(false);}else if(a.moved){tidy();commit(a.before);}WS.groupMoving=false;C2.m=M.id;for(const f of M.furn)C2.ok.set(f.id,pc(f));return;}
+  const finishGesture=(e,cancel=false)=>{if(!gesture)return;e.stopImmediatePropagation();const a=gesture;gesture=null;boxOverlay.style.display='none';if(a.mode==='move'){GUIDE=null;tipOff();if(a.live&&S3.liveEnd)S3.liveEnd();S3?.guide?.(null);}if(a.mode==='move'){if(cancel&&a.moved){WS.rx=true;try{M=JSON.parse(a.before);changed(false);if(CAM==='3d')upd3D();}finally{WS.rx=false;}notify(false);}else if(a.moved){tidy();commit(a.before);}WS.groupMoving=false;C2.m=M.id;for(const f of M.furn)C2.ok.set(f.id,pc(f));return;}
     if(cancel)return;const rect=[Math.min(a.x,e.clientX),Math.min(a.y,e.clientY),Math.max(a.x,e.clientX),Math.max(a.y,e.clientY)],cross=e.clientX<a.x,projected=CAM==='3d'?S3.selectionPolygons():null;
     const items=Math.hypot(e.clientX-a.x,e.clientY-a.y)<4?[]:WS.objects().filter(s=>{const polygons=selectionPolygons(s,projected);return polygons&&selectedByRect(polygons,rect,cross);});hub()?.box(WS.role,items,a.mods);
   };
@@ -6783,6 +6819,7 @@ if (window.__WSROLE) {
     },
     onProbe(fn) { PROBE = fn || null; },
     _drag() { return drag ? { k: drag.k, moved: !!drag.moved } : null; },   // for the browser checks
+    _planScreen(p) { const s = W2S(p), r = cv.getBoundingClientRect(), k = cv.width / Math.max(1, r.width); return [r.left + s[0] / k, r.top + s[1] / k]; },   // for the browser checks
     _hitAt(cx, cy) { const r = cv.getBoundingClientRect(), k = cv.width / Math.max(1, r.width), p = S2W((cx - r.left) * k, (cy - r.top) * k), h = hitTest(p); return { h, locks: [...(WS.locks || [])], tool: TOOL, cam: CAM, v2: VIEW2D }; },   // for the browser checks
     // the current level for an interior study: walls with their door and wall-opening gaps, furniture edges, the rooms (2026-10-31)
     levelPlan() {
