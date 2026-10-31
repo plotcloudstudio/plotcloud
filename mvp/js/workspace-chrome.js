@@ -16,6 +16,8 @@ import { speedRatio } from './wind-lbm.js?v=wind-20261031-4';
 import { stormwater } from './stormwater-grid.js?v=storm-20261031-1';
 import { canUse } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
+import * as PRIV from './interior/privacy.js?v=priv-20261031-2';
+import { keep as PKEEP } from '../../emb/lib/plansim.js?v=1';
 import { mountProps } from './project-props.js?v=weather-20261031-1';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -232,13 +234,13 @@ export function mountChrome(app, api) {
   // with Settings | Export on the left, Results | Charts on the right and the legend; the result is painted on the site in 3D.
   // Sun hours, Solar radiation and Sky exposure run here on Plan Studio's ground grid (the same shading: masses, the building,
   // surrounding buildings, terrain). The other studies still open their study page inside the Workspace (the host below).
-  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1, stormwater: 1, structure: 1, evac: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
+  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1, stormwater: 1, structure: 1, evac: 1, privacy: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
   const ENVELOPES = [['equinox', 'Equinoxes, 9:00 to 15:00', [[3, 20], [9, 22]], 9, 15], ['winter', 'Winter solstice, 10:00 to 14:00', [[12, 21]], 10, 14], ['summer', 'Summer solstice, 8:00 to 17:00', [[6, 21]], 8, 17]];
   const PERIODS = [['year', 'Whole year', 1, 12], ['summer', 'Summer · June to August', 6, 8], ['winter', 'Winter · December to February', 12, 2]];
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
-  const ST = { id: null, day: '03-21', period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
+  const ST = { id: null, day: '03-21', period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, priv: { sides: ['top', 'bottom'], dS: 4, eye: 1.6, dO: 15, hO: 9, doors: false }, area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
   const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const AREAS = [[1, '1× · the building and 40 m round it'], [2, '2×'], [3, '3× · the default'], [4, '4×']];
   // every building study has the same card (2026-10-31): a mode where the study has one, the study area on the site before Start,
@@ -266,12 +268,15 @@ export function mountChrome(app, api) {
   // interior studies (2026-10-31) run on the level chosen in the Level menu (top left) and paint its floor, in 2D and 3D
   SPEC.evac = { mode: ['circW', [['use', 'Weighted by use'], ['same', 'Every pair the same']]], views: [['walks', 'Walks'], ['density', 'Density']], input: 'places', noArea: true, interior: true,
     about: 'Where people walk between the rooms they use on this level: the shortest routes and an ant colony’s walks, which settle on the good routes and build up as dark bands.' };
+  SPEC.privacy = { views: [['exp', 'Seen from outside'], ['need', 'Privacy need']], input: 'privacy', noArea: true, interior: true,
+    about: 'How much of each room can be seen from the street and from a building opposite, through the windows of this level.' };
+  const hexOf = (c) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join(''), stopsOf = (R) => R.map(([t, c]) => [t, hexOf(c)]);
   const USES = [['0', 'Off'], ['1.5', 'Rarely'], ['3.5', 'Now and then'], ['6.5', 'Sometimes'], ['12', 'Often'], ['20', 'Most']], CORRIDOR = /corridor|hallway|^hall$|passage|circulation|landing|走廊/i;
   const levelPlanNow = () => { try { return INST.persp.ready ? INST.persp.ws.levelPlan?.() : null; } catch { return null; } };
   const placesOf = (pl) => (pl?.rooms || []).filter((r) => r.area >= 2 && !CORRIDOR.test(r.name)).map((r, i) => ({ name: r.name, p: r.p, area: r.area, letter: String.fromCharCode(65 + (i % 26)), use: ST.circUse[r.name] != null ? +ST.circUse[r.name] : CIRC.guessUse(r.name) }));
   const STORMS = [['25', '25 mm'], ['50', '50 mm'], ['100', '100 mm']], COVERS = [['lawn', 'Mostly planted', 0.25], ['mixed', 'Mixed', 0.5], ['paved', 'Mostly paved', 0.85]];
   const viewsOf = (id) => { const v = SPEC[id]?.views; return typeof v === 'function' ? v() : v || []; };
-  const sigOf = (id) => JSON.stringify([id, ST.area, ...({ sunhours: [ST.day], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], structure: [ST.system, ST.span, ST.bearing], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
+  const sigOf = (id) => JSON.stringify([id, ST.area, ...({ sunhours: [ST.day], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], structure: [ST.system, ST.span, ST.bearing], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
   // the map views of a result: the study's own, or made here from its values
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
@@ -284,7 +289,7 @@ export function mountChrome(app, api) {
         r.views.helps = { vals: pos, unit: 'K·h', ramp: 'heat', lo: 0, hi: r.hi, dec: 0, avg: statsOf(pos).avg, title: 'Shade benefit · where the shade helps' }; r.views.costs = { vals: neg, unit: 'K·h', ramp: 'risk', lo: 0, hi: r.hi, dec: 0, avg: statsOf(neg).avg, title: 'Shade benefit · where it costs warmth' }; } }
     return r; }
   const LBR = new Set(['sun', 'heat', 'sky', 'height']);
-  function applyView(r, key) { const v = r.views[key] ? key : Object.keys(r.views)[0]; Object.assign(r, r.views[v]); if (LBR.has(r.ramp) && !r.views[v].legendLabels) r.ramp = 'ladybug'; r.legendLabels = r.views[v].legendLabels || null; r.view = v; return r; }
+  function applyView(r, key) { const v = r.views[key] ? key : Object.keys(r.views)[0]; Object.assign(r, r.views[v]); if (LBR.has(r.ramp) && !r.views[v].legendLabels) r.ramp = 'ladybug'; r.legendLabels = r.views[v].legendLabels || null; r.legendCols = r.views[v].legendCols || null; r.view = v; return r; }
   // the result in both views (2026-10-31): the 3D topographic block and the 2D plan, with the same grid and colours
   const views2 = () => [INST.persp, INST.plan].filter((I) => I.ready && I.ws).map((I) => I.ws);
   const clearAll = () => views2().forEach((w) => w.clearStudy?.());
@@ -430,6 +435,28 @@ export function mountChrome(app, api) {
         rows: [['No thermal stress (UTCI 9–26 °C)', fmt(sc.avg, 1) + '% of hours'], ['Heat stress (above 26 °C)', fmt(sh.avg, 1) + '%'], ['Cold stress (below 9 °C)', fmt(sk.avg, 1) + '%'], ['Hours counted', fmt(n) + (ST.utciHours === 'sun' ? ', sun up' : '')], ['Weather', esc(E.station || wx.station || '')]],
         method: `UTCI (Bröde et al. 2012) for every counted hour of the project weather (${esc(E.station || 'EPW')}, ${pname.toLowerCase()}), in sun and in shade at the sky view each ${fmt(g.cell, 1)} m cell has: air temperature, humidity, wind at 10 m for ${({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban'} terrain, and the radiant temperature from sun, sky and ground. Wind is not reduced by buildings here.`,
         results: { comfort: +sc.avg.toFixed(1), heat: +sh.avg.toFixed(1), cold: +sk.avg.toFixed(1) }, settings: { period: ST.period, hours: ST.utciHours, label: `Outdoor comfort, ${pname} (Workspace)` } }; }
+    if (id === 'privacy') {
+      const sc = w.planScene('privacy'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
+      if (!ST.priv.sides.length) throw Error('Pick at least one side with a street.');
+      const out = await PRIV.run(sc, { ...ST.priv }, (f) => { ST.progress = `onlookers ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; });
+      const { RES, F, SC: S2 } = out, R = RES.R, o = S2.origin || [0, 0], X0 = o[0] + R.x0, Y0 = o[1] + R.y0, N = R.W * R.H, NI = { none: 0, low: 1, medium: 2, high: 3 };
+      const need = new Float32Array(N).fill(NaN); for (const k of RES.cells) need[k] = NI[out.needOf(S2.rooms[RES.room[k]].name)];
+      const toP = (p) => [p[0] + o[0], p[1] + o[1]], B = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 }; for (const ob of RES.obs) { B.x0 = Math.min(B.x0, ob.p[0]); B.y0 = Math.min(B.y0, ob.p[1]); B.x1 = Math.max(B.x1, ob.p[0]); B.y1 = Math.max(B.y1, ob.p[1]); }
+      const box = { x0: Math.min(X0, B.x0 + o[0]) - 1, y0: Math.min(Y0, B.y0 + o[1]) - 1, x1: Math.max(X0 + R.W * R.c, B.x1 + o[0]) + 1, y1: Math.max(Y0 + R.H * R.c, B.y1 + o[1]) + 1 };
+      const seenDots = new Map(); for (const ob of RES.obs) seenDots.set(ob.p.join(','), ob);
+      const dots = [...seenDots.values()].map((ob) => ({ p: toP(ob.p), col: '#111827', r: ob.kind === 'street' ? 0.25 : 0.18 })), lines = F.wins.map(([wn]) => ({ a: toP(wn.a), b: toP(wn.b), col: '#d8402a', w: 0.22 }));
+      const needStops = [[0, '#d2d2cd'], [0.34, '#b4c878'], [0.67, '#f5a623'], [1, '#d8402a']];
+      const show = (r, fit) => views2().forEach((w2) => { w2.clearStudy?.(); w2.walkShow?.({ walks: [], T: 0, box, lv: w2.level?.(), z: S2.settings?.floorZ || 0, view: r.view, fit: !!fit, fit2: !!fit, solid: r.view === 'need', lines: r.view === 'exp' ? lines : [], dots: r.view === 'exp' ? dots : [],
+        density: { X0, Y0, cell: R.c, nx: R.W, ny: R.H, vals: r.vals, lo: r.lo, hi: r.hi }, rampStops: r.view === 'need' ? needStops : stopsOf(PRIV.EXP) }); });
+      const rooms = RES.rooms.map((x) => [`${esc(x.r.name)}${PRIV.LIMIT[x.need] != null && x.share > PRIV.LIMIT[x.need] ? ' · <b style="color:#d8402a">screen</b>' : ''}`, `${PRIV.NEEDT[x.need]} need · ${Math.round(x.share)}% seen`]);
+      return { X0, Y0, cell: R.c, nx: R.W, ny: R.H, cells: RES.cells.length, avg: F.floor, chartNote: 'Share of the floor in each band of onlookers who see it; hover a bar for its value.', foot: `${RES.obs.length} onlookers, ${RES.cells.length} spots of floor`,
+        views: { exp: { legendCols: stopsOf(PRIV.EXP).map((x) => x[1]), vals: RES.exp, unit: '% of onlookers', ramp: 'heat', lo: 0, hi: 100, dec: 0, avg: F.floor, title: 'Privacy · seen from outside', legendLabels: ['All onlookers', '', 'None'] }, need: { legendCols: needStops.map((x) => x[1]), vals: need, unit: 'privacy need', ramp: 'heat', lo: 0, hi: 3, dec: 0, avg: 0, title: 'Privacy · need of each room', legendLabels: ['High', 'Medium · Low', 'None'] } },
+        paint: (r, fit) => show(r, fit),
+        probe: (x, y) => { const i = Math.floor((x - X0) / R.c), j = Math.floor((y - Y0) / R.c); if (i < 0 || j < 0 || i >= R.W || j >= R.H) return null; const k = j * R.W + i; if (RES.room[k] < 0) return null; const rm = S2.rooms[RES.room[k]];
+          return `<div class="sp-kv"><span>Room</span><b>${esc(rm.name)}</b></div><div class="sp-kv"><span>Seen by</span><b>${Math.round(RES.exp[k])}% of onlookers</b></div><div class="sp-kv"><span>Need</span><b>${PRIV.NEEDT[out.needOf(rm.name)]}</b></div>`; },
+        rows: [['Floor seen from outside', fmt(F.floor, 1) + '%'], ['Private floor seen', F.hasPriv ? fmt(F.priv, 1) + '%' : 'no private rooms'], ['Rooms to screen', String(F.toScreen.length)], ['Windows to screen', String(F.wins.length) + (F.wins.length ? ' (red on the plan)' : '')], ['Most exposed room', F.worst && F.worst.share > 0 ? `${esc(F.worst.r.name)} ${Math.round(F.worst.share)}%` : 'none'], ...rooms],
+        method: `Onlookers walk along the street ${fmt(ST.priv.dS, 1)} m from the walls on the chosen sides at ${fmt(ST.priv.eye, 1)} m eye height${ST.priv.dO > ST.priv.dS && ST.priv.hO >= 1 ? `, and look out of a building opposite ${fmt(ST.priv.dO)} m away at every storey up to ${fmt(ST.priv.hO)} m` : ''}. For every spot of the floor (1.2 m above it, a seated or standing person) the share of them that can see it through a window, checked against each window's sill and head; furniture taller than the line of sight blocks it. A high-need room needs a screen above ${PRIV.LIMIT.high}% of its floor seen, a medium one above ${PRIV.LIMIT.medium}%. The method of the Privacy study: geometric screening (straight sight lines; curtains, frosting, planting and reflections are not modelled).`,
+        results: { floor: +F.floor.toFixed(1), priv: +F.priv.toFixed(1), rooms: F.toScreen.length, windows: F.wins.length }, settings: { ...ST.priv, label: `Privacy, ${esc(sc.name || '')} (Workspace)` } }; }
     if (id === 'evac') {
       const pl = w.levelPlan(); if (!pl.box) throw Error('No walls on this level: draw the rooms first (Draw room), or pick another level in the Level menu.');
       const places = placesOf(pl), t0 = performance.now(); ST.progress = 'routes and ant walks'; drawStudy();
@@ -548,7 +575,7 @@ export function mountChrome(app, api) {
   function exportPNG() { const u = INST.persp.ready ? INST.persp.ws.viewPNG?.() : null; if (u) download(`${p.name.replace(/[^\w-]+/g, '-')}-${ST.id}.png`, u); }
   // the distribution of values on the ground, coloured with the legend's ramp
   function chart(r) { const n = 12, cnt = Array(n).fill(0), span = Math.max(1e-9, r.hi - r.lo); let tot = 0; for (const v of r.vals) if (Number.isFinite(v)) { cnt[Math.min(n - 1, Math.floor((v - r.lo) / span * n))]++; tot++; }
-    const mx = Math.max(1, ...cnt), cols = INST.persp.ws?.rampColors?.(r.ramp) || ['#999'], col = (i) => cols[Math.min(cols.length - 1, Math.round(i / (n - 1) * (cols.length - 1)))];
+    const mx = Math.max(1, ...cnt), cols = (r.legendCols || INST.persp.ws?.rampColors?.(r.ramp)) || ['#999'], col = (i) => cols[Math.min(cols.length - 1, Math.round(i / (n - 1) * (cols.length - 1)))];
     return `<svg viewBox="0 0 260 150" class="sp-hist" role="img" aria-label="Share of the ground in each band">${cnt.map((c, i) => `<rect x="${8 + i * 20.5}" y="${120 - c / mx * 105}" width="18" height="${c / mx * 105}" fill="${col(i)}"><title>${fmt(r.lo + span * i / n, r.dec)}–${fmt(r.lo + span * (i + 1) / n, r.dec)} ${r.unit}: ${fmt(c / Math.max(1, tot) * 100, 1)}%</title></rect>`).join('')}<line x1="6" y1="120.5" x2="256" y2="120.5" stroke="#d1d5db"/><text x="8" y="136">${fmt(r.lo, r.dec)}</text><text x="252" y="136" text-anchor="end">${fmt(r.hi, r.dec)} ${esc(r.unit)}</text></svg><p class="sp-note">${r.chartNote || 'Share of the ground in each band; hover a bar for its value.'}</p>`; }
   function drawStudy() {
     if (!ST.id) return; const id = ST.id, name = simName(id), r = ST.res, sp = SPEC[id] || {}, stale = r && INST.persp.ready && INST.persp.ws.model() !== ST.key, changed = r && ST.sig !== sigOf(id);
@@ -561,6 +588,13 @@ export function mountChrome(app, api) {
       : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' : ''}</div>`;
     const inputs = { day: () => `<p class="sp-flabel">Day</p>${seg('data-st-set', 'day:' + ST.day, DAYS.map(([k, n]) => ['day:' + k, n]))}`,
       structure: () => `<p class="sp-flabel">Structure</p>${seg('data-st-set', 'system:' + systemOf(), SYSTEMS.map(([k, n]) => ['system:' + k, n]))}<p class="sp-flabel">Column grid, about</p>${seg('data-st-set', 'span:' + ST.span, [['6', '6 m'], ['7.5', '7.5 m'], ['9', '9 m']].map(([k, n]) => ['span:' + k, n]))}<p class="sp-flabel">Soil bearing (assumed until a geotechnical report)</p>${seg('data-st-set', 'bearing:' + ST.bearing, [['100', '100 kPa'], ['150', '150 kPa'], ['300', '300 kPa']].map(([k, n]) => ['bearing:' + k, n]))}<p class="sp-note"><a href="#" data-st="page">Detailed frame check, member by member</a></p>`,
+      privacy: () => { const P = ST.priv, side = (k, n) => `<button type="button" data-priv-side="${k}" aria-pressed="${P.sides.includes(k)}">${n}</button>`, num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-priv="${k}" min="${min}" max="${max}" step="${st}" value="${P[k]}"> ${u}</span></label>`;
+        let sc = null; try { sc = INST.persp.ws.planScene?.('privacy'); } catch { } const rooms = sc?.rooms || [], proj = sc?.source?.project || 'sample', nd = PKEEP.get('privacy:' + proj, {});
+        return `<p class="sp-flabel">Street on these sides of the plan</p><div class="sp-chips sp-chips-in">${side('top', 'Top')}${side('right', 'Right')}${side('bottom', 'Bottom')}${side('left', 'Left')}</div>
+          <div class="sp-two">${num('dS', 'Street from the wall', 'm', 1, 40, 0.5)}${num('eye', 'Passer-by eye', 'm', 0.5, 3, 0.1)}${num('dO', 'Building opposite at', 'm', 0, 80, 1)}${num('hO', 'Its windows up to', 'm', 0, 60, 1)}</div>
+          <label class="sp-check"><input type="checkbox" data-priv="doors" ${P.doors ? 'checked' : ''}> Interior doors are open</label>
+          ${rooms.length ? `<p class="sp-flabel">Privacy need of each room</p><div class="sp-places">${rooms.map((r) => { const v = nd[r.name] || ''; return `<label class="sp-place"><i style="background:#d8402a">${esc(r.name.slice(0, 1))}</i><span>${esc(r.name)}</span><select data-privneed="${esc(r.name)}"><option value="" ${!v ? 'selected' : ''}>From the name</option>${Object.entries(PRIV.NEEDT).map(([k, n]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`; }).join('')}</div>` : '<p class="sp-note">No rooms on this level yet.</p>'}
+          <p class="sp-note">People walk along the street at eye height and look out of the building opposite at every storey (3 m apart). Furniture taller than the line of sight blocks it.</p>`; },
       places: () => { const pl = levelPlanNow(), P = placesOf(pl); if (!pl) return '<p class="sp-note">The model is still loading.</p>';
         return `<p class="sp-flabel">${esc(pl.level)} (change the level in the Level menu, top left) · ${P.length} rooms as places</p>${P.length ? `<div class="sp-places">${P.map((q) => `<label class="sp-place"><i>${q.letter}</i><span>${esc(q.name)}</span><select data-circuse="${esc(q.name)}">${USES.map(([v, n]) => `<option value="${v}" ${Math.abs(+v - q.use) < 0.01 ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`).join('')}</div><p class="sp-note">How often each room is used weights the walks between it and the others (corridors are routes, not places).</p>` : '<p class="sp-note">No rooms on this level yet: draw walls round the rooms (Draw room), with doors between them.</p>'}`; },
       storm: () => `<p class="sp-flabel">Design storm, falling in 1 hour (your choice, not local rainfall statistics)</p>${seg('data-st-set', 'storm:' + ST.storm, STORMS.map(([k, n]) => ['storm:' + k, n]))}<p class="sp-flabel">Ground away from buildings</p>${seg('data-st-set', 'cover:' + ST.cover, COVERS.map(([k, n]) => ['cover:' + k, n]))}`,
@@ -579,12 +613,13 @@ export function mountChrome(app, api) {
     if (r) { resCard.innerHTML = `<header><b>${esc(r.title)}</b></header><div class="sp-stbody">${r.rows.map(([k, v]) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`).join('')}
         <h4>How this was found</h4><p class="sp-note">${r.method} ${r.foot || `${fmt(r.cells)} cells, ${fmt(r.prisms)} building parts and ${fmt(r.context)} surrounding buildings${r.terrain ? ', on the terrain' : ''}`}; ${fmt(r.ms)} ms in this browser. A design check for early design, not a compliance result.</p>
         ${ST.saved ? `<p class="sp-note">Saved to results with ${esc(ST.saved)}.</p>` : `<button type="button" class="btn sm primary" data-st="save" ${stale || changed || ST.busy ? 'disabled' : ''}>Save to results</button>`} <button type="button" class="btn sm" data-st="clear">Clear from view</button></div>`;
-      const cols = INST.persp.ws?.rampColors?.(r.ramp) || [];
+      const cols = (r.legendCols || INST.persp.ws?.rampColors?.(r.ramp)) || [];
       // after Ladybug's legend: ten coloured steps, the value at every step (a categorical map keeps its named classes)
       if (r.legendLabels) legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-ramp" style="background:linear-gradient(to top,${cols.join(',')})"></div><div class="sp-rampl">${r.legendLabels.map((x) => `<span>${esc(x)}</span>`).join('')}</div>`;
       else { const n = 10, at = (t) => { const k = t * (cols.length - 1), i = Math.min(cols.length - 2, Math.floor(k)), u = k - i, A = parseInt((cols[i] || '#888888').slice(1), 16), B = parseInt((cols[i + 1] || '#888888').slice(1), 16), m = (b) => Math.round(((A >> b) & 255) * (1 - u) + ((B >> b) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; };
         legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-lbsteps">${Array.from({ length: n }, (_, i) => n - 1 - i).map((i) => `<i style="background:${at((i + 0.5) / n)}"></i>`).join('')}</div><div class="sp-lblabels">${Array.from({ length: n + 1 }, (_, i) => n - i).map((i) => `<span>${fmt(r.lo + (r.hi - r.lo) * i / n, r.dec)}</span>`).join('')}</div>`; } }
   }
+  studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-priv-side]'); if (!b || ST.busy) return; const k = b.dataset.privSide, on = ST.priv.sides.includes(k); ST.priv = { ...ST.priv, sides: on ? ST.priv.sides.filter((x) => x !== k) : [...ST.priv.sides, k] }; drawStudy(); });
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st-mode], .sp-studycard [data-st-view], .sp-studycard [data-st-set], .sp-studycard [data-st-area], .sp-studycard [data-wdir]'); if (!b || ST.busy) return; const d = b.dataset;
     if (d.stMode) { const k = SPEC[ST.id].mode[0]; if (ST[k] === d.stMode) return; ST[k] = d.stMode; if (ST.id === 'wind' && ST.res) { ST.res = null; clearAll(); showArea(); } }
     else if (d.stView) { ST.view[ST.id] = d.stView; if (ST.res && ST.res.views[d.stView]) { applyView(ST.res, d.stView); paintRes(ST.res); } }
@@ -592,6 +627,8 @@ export function mountChrome(app, api) {
     else if (d.stArea) { ST.area = +d.stArea; ST.areaOpen = false; if (!ST.res) showArea(); }
     else if (d.wdir) { ST.windDir = +d.wdir * 22.5; ST.windSpeed = null; }
     drawStudy(); });
+  studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.priv; if (k) { ST.priv = { ...ST.priv, [k]: k === 'doors' ? t.checked : +t.value }; drawStudy(); return; }
+    if (t.dataset.privneed != null) { let sc = null; try { sc = INST.persp.ws.planScene('privacy'); } catch { } const key = 'privacy:' + (sc?.source?.project || 'sample'), m = PKEEP.get(key, {}); if (t.value) m[t.dataset.privneed] = t.value; else delete m[t.dataset.privneed]; PKEEP.set(key, m); ST.privNeedV = (ST.privNeedV || 0) + 1; drawStudy(); return; } });
   studyCard.addEventListener('change', (e) => { const n = e.target.dataset.circuse; if (n != null) { ST.circUse = { ...ST.circUse, [n]: e.target.value }; drawStudy(); } });
   studyCard.addEventListener('input', (e) => { if (e.target.dataset.st === 'windSpeed') { const o = studyCard.querySelector('.sp-spd'); if (o) o.textContent = fmt(+e.target.value, 1); } });
   studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'windSpeed') { ST.windSpeed = +e.target.value; drawStudy(); } });

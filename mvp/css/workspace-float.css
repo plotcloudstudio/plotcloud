@@ -362,3 +362,7 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-place span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .w2.sp .sp-place select{font:11px Inter,system-ui,sans-serif;padding:2px 4px;border:1px solid #e5e7eb;border-radius:6px}
 .w2.sp .sp-studyres{max-height:calc(100vh - 400px)}
+.w2.sp .sp-two{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:6px 0}
+.w2.sp .sp-num{display:flex;align-items:center;gap:4px;color:var(--sp-sub)}.w2.sp .sp-num input{width:100%;font:11.5px Inter,system-ui,sans-serif;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;color:var(--sp-ink)}
+.w2.sp .sp-check{display:flex;align-items:center;gap:6px;font-size:11px;margin:4px 0 8px}
+.w2.sp .sp-chips-in{margin:0 0 6px}
