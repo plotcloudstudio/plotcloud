@@ -321,3 +321,7 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-studycard>header b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
 .w2.sp .sp-pill{white-space:nowrap;flex:none}
 .w2.sp .sp-kv{gap:10px}.w2.sp .sp-kv b{text-align:right}
+/* the legend after Ladybug: ten steps, a value at each step */
+.w2.sp .sp-lbsteps{display:flex;flex-direction:column;width:14px;height:200px;margin:6px 0}
+.w2.sp .sp-lbsteps i{flex:1;border-bottom:1px solid rgba(255,255,255,.6)}
+.w2.sp .sp-lblabels{display:flex;flex-direction:column;justify-content:space-between;height:212px;font-variant-numeric:tabular-nums;color:var(--sp-sub)}

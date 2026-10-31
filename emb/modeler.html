@@ -2373,10 +2373,11 @@ function resize() {
   if (!V.user || !old) fitView(); else { V.s = oldS * d; V.ox = VP.w / 2 - old[0] * V.s; V.oy = VP.h / 2 + old[1] * V.s; }
   draw(); if (window.S3 && S3.on) S3.resize();
 }
+let FIT_BOX = null;   // a box to fit instead of the model (the Workspace study area, 2026-10-31)
 function fitView() {
   cycleClear();
   const vb = $('.vbar'), vbB = vb ? vb.getBoundingClientRect().bottom - stage.getBoundingClientRect().top : 40;
-  const B0 = STC.bounds(M), d = VP.d, wide = VP.w / d > 620, sr = M.site && !M.walls.length ? Math.min(100, (M.site.boundary && M.site.boundary.r) || 100) : 0, so = sr ? SITEC.siteToPlan(M.site, [0, 0], M.north || 0) : null, B = sr ? { x0: so[0] - sr, x1: so[0] + sr, y0: so[1] - sr, y1: so[1] + sr } : B0, ws = document.documentElement.classList.contains('ws'), padL = (ws ? 80 : 70) * d, padR = (ws ? 80 : 70) * d, padT = (ws ? 84 : 84) * d, padB = (ws ? 110 : 84) * d; void wide; void vbB;   // the Workspace's floating controls stay clear of the fitted model
+  const B0 = STC.bounds(M), d = VP.d, wide = VP.w / d > 620, sr = M.site && !M.walls.length ? Math.min(100, (M.site.boundary && M.site.boundary.r) || 100) : 0, so = sr ? SITEC.siteToPlan(M.site, [0, 0], M.north || 0) : null, B = FIT_BOX || (sr ? { x0: so[0] - sr, x1: so[0] + sr, y0: so[1] - sr, y1: so[1] + sr } : B0), ws = document.documentElement.classList.contains('ws'), padL = (ws ? 80 : 70) * d, padR = (ws ? 80 : 70) * d, padT = (ws ? 84 : 84) * d, padB = (ws ? 110 : 84) * d; void wide; void vbB;   // the Workspace's floating controls stay clear of the fitted model
   const bw = Math.max(4, B.x1 - B.x0), bh = Math.max(4, B.y1 - B.y0);
   V.s = Math.max(sr ? 1 : 4, Math.min((VP.w - padL - padR) / bw, (VP.h - padT - padB) / bh));
   V.ox = padL + (VP.w - padL - padR - bw * V.s) / 2 - B.x0 * V.s; V.oy = padT + (VP.h - padT - padB - bh * V.s) / 2 + B.y1 * V.s; V.fit = V.s;
@@ -5316,7 +5317,24 @@ function drawSun() {   // one pixel per cell on a small canvas, drawn scaled: no
     x.putImageData(im, 0, 0); R.img = c; }
   const a = W2S([R.X0, R.Y0 + R.ny * R.cell]); g.save(); g.globalAlpha = 0.62; g.imageSmoothingEnabled = false; g.drawImage(R.img, a[0], a[1], R.nx * R.cell * V.s, R.ny * R.cell * V.s); g.restore();
 }
-{ const _dm = drawMasses; drawMasses = function () { drawSun(); _dm(); }; }
+{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); _dm(); drawSunPath2(); }; }
+// a Workspace study result in the 2D plan (2026-10-31): the same grid and colours as in 3D, one crisp cell per grid cell
+let ANA2 = null, SPATH2 = null;
+function drawSunPath2() {
+  const P = SPATH2; if (!P || CAM === '3d') return; const line = (pl, col, w) => { if (pl.length < 2) return; g.beginPath(); pl.forEach((p, n) => { const q = W2S(P.plan(p.az, p.alt)); n ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
+  g.save(); const ring = []; for (let k = 0; k <= 72; k++) ring.push({ az: k * 5, alt: 0 }); line(ring, 'rgba(55,65,81,.8)', 1.2);
+  for (const [az, t] of [[0, 'N'], [90, 'E'], [180, 'S'], [270, 'W']]) { const a = az * Math.PI / 180 - P.nb, q = W2S([P.cx + P.R * 1.1 * Math.sin(a), P.cy + P.R * 1.1 * Math.cos(a)]); g.fillStyle = '#374151'; g.font = '600 12px Inter,system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, q[0], q[1]); }
+  for (const pl of P.o.hours) line(pl, 'rgba(154,161,171,.6)', 1); for (const pl of P.o.arcs) line(pl, 'rgba(208,138,44,.7)', 1); for (const pl of P.o.day || []) line(pl, '#ea4a00', 2);
+  for (const p of P.o.suns || []) { const q = W2S(P.plan(p.az, p.alt)); g.beginPath(); g.arc(q[0], q[1], 4, 0, 7); g.fillStyle = '#f2a33a'; g.fill(); }
+  g.restore();
+}
+function drawAna2() {
+  const R = ANA2; if (!R || CAM === '3d') return;
+  if (!R.img) { const c = document.createElement('canvas'); c.width = R.nx; c.height = R.ny; const x = c.getContext('2d'), im = x.createImageData(R.nx, R.ny);
+    for (let j = 0; j < R.ny; j++) for (let i = 0; i < R.nx; i++) { const v = R.vals[j * R.nx + i], o = ((R.ny - 1 - j) * R.nx + i) * 4; if (!Number.isFinite(v)) continue; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(R.color(v)) || [0, 0, 0, 0]; im.data[o] = +m[1]; im.data[o + 1] = +m[2]; im.data[o + 2] = +m[3]; im.data[o + 3] = 255; }
+    x.putImageData(im, 0, 0); R.img = c; }
+  const a = W2S([R.X0, R.Y0 + R.ny * R.cell]); g.save(); g.globalAlpha = R.alpha || 0.78; g.imageSmoothingEnabled = false; g.drawImage(R.img, a[0], a[1], R.nx * R.cell * V.s, R.ny * R.cell * V.s); g.restore();
+}
 // ---- schemes: the masses in turn; the site, walls and everything else are shared. M.schemes holds the other schemes' masses.
 function schemesOf(Mx = M) { if (!Mx.schemes || !Mx.schemes.length) { Mx.schemes = [{ id: 'A', name: 'Scheme A', masses: null }]; Mx.scheme = 'A'; } if (!Mx.schemes.some((s) => s.id === Mx.scheme)) Mx.scheme = Mx.schemes[0].id; return Mx.schemes; }
 const schemeMasses = (s) => s.id === M.scheme ? (M.masses || []) : (s.masses || []);
@@ -5801,9 +5819,9 @@ window.S3 = (() => {
       const cx = o.X0 + o.nx * o.cell / 2, cy = o.Y0 + o.ny * o.cell / 2, R0 = Math.min(o.nx, o.ny) * o.cell / 2, sm = (p, q, x) => { const t = Math.max(0, Math.min(1, (x - p) / (q - p))); return t * t * (3 - 2 * t); };
       for (let j = 0; j < o.ny; j++) for (let i = 0; i < o.nx; i++) { const v = o.vals[j * o.nx + i]; if (!Number.isFinite(v)) continue;
         const x0 = o.X0 + i * o.cell, y0 = o.Y0 + j * o.cell, x1 = x0 + o.cell, y1 = y0 + o.cell, pts = [X(x0, y0), X(x1, y0), X(x1, y1), X(x0, y1)];
-        ag.globalAlpha = o.fade === false ? (o.alpha || 0.85) : 0.88 * (1 - sm(0.65 * R0, R0, Math.hypot(x0 + o.cell / 2 - cx, y0 + o.cell / 2 - cy)));
-        ag.fillStyle = o.color(v); ag.beginPath(); pts.forEach((p, n) => (n ? ag.lineTo(p[0], p[1]) : ag.moveTo(p[0], p[1]))); ag.closePath(); ag.fill(); }
-      g.save(); g.filter = `blur(${Math.max(1, Math.round(o.cell * k * 0.6))}px)`; g.drawImage(a, 0, 0); g.restore(); }
+        ag.globalAlpha = o.fade === false ? (o.alpha || 0.85) : 0.9 * (1 - sm(0.82 * R0, 1.02 * R0, Math.hypot(x0 + o.cell / 2 - cx, y0 + o.cell / 2 - cy)));
+        ag.fillStyle = ag.strokeStyle = o.color(v); ag.lineWidth = 0.8; ag.beginPath(); pts.forEach((p, n) => (n ? ag.lineTo(p[0], p[1]) : ag.moveTo(p[0], p[1]))); ag.closePath(); ag.fill(); ag.stroke(); }
+      g.drawImage(a, 0, 0); }   // crisp cells, as an analysis mesh (2026-10-31)
     g.drawImage(L.water, 0, 0); g.drawImage(L.lines, 0, 0); if (TOPO.tex) TOPO.tex.needsUpdate = true;
   }
   // ---- layer materials (2026-10-31): each object takes its Workspace layer's material colour and opacity; selections keep theirs
@@ -5876,6 +5894,13 @@ window.S3 = (() => {
   api.sunDir = sunDir;
   { const _upd = api.update; api.update = (...a) => { _upd(...a); if (SUN.on) sunApply(); }; }
   { const _u2 = api.update; api.update = (...a) => { _u2(...a); if (LOOK.spec) { lookApply(); render(); } }; }   // layer materials after every rebuild
+  // ---- the sun path (2026-10-31, after Ladybug's sun path): lines in world coordinates [{ pts: [[x, y, z]…], color, w }], suns [[x, y, z]]
+  const SPATH = { g: null };
+  api.sunPath = (L) => { if (!scene) return; if (SPATH.g) { scene.remove(SPATH.g); SPATH.g.traverse((o) => { o.geometry && o.geometry.dispose(); o.material && o.material.dispose(); }); SPATH.g = null; } if (!L) { render(); return; }
+    const G = new T.Group(); G.name = 'sunpath';
+    for (const ln of L.lines) { const geo = new T.BufferGeometry().setFromPoints(ln.pts.map((p) => new T.Vector3(p[0], p[1], p[2]))); G.add(new T.Line(geo, new T.LineBasicMaterial({ color: new T.Color(ln.color || '#8a8f98'), transparent: true, opacity: ln.op || 0.8, depthWrite: false }))); }
+    for (const p of L.suns || []) { const me = new T.Mesh(new T.SphereGeometry(L.sunR || 2.5, 12, 8), new T.MeshBasicMaterial({ color: new T.Color('#f2a33a') })); me.position.set(p[0], p[1], p[2]); G.add(me); }
+    scene.add(G); SPATH.g = G; render(); };
   // ---- an analysis result drawn on the ground (2026-10-30): one flat coloured cell per grid point, just above the terrain
   const OVL = { g: null };
   // o: { X0, Y0, cell, nx, ny, vals (per cell, NaN = no ground), color(v), ground(x, y), fade (true: strong in the middle, fading out
@@ -6528,6 +6553,7 @@ if (window.__WSROLE) {
     // paint values on the ground: { X0, Y0, cell, nx, ny, vals, lo, hi, ramp: 'sun' | 'heat' | 'sky' }
     paintGrid(o) { const site = M.site, gAt = (x, y) => { if (!site?.terrain) return 0; const q = siteOfM(M, [x, y]); return SITEC.groundAt(site.terrain, q[0], q[1]); };
       const R = RAMPS[o.ramp] || RAMPS.sun, color = (v) => rampAt(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo));
+      ANA2 = { X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, alpha: o.fade === false ? (o.alpha || 0.5) : 0.78, img: null }; if (CAM !== '3d') { if (o.fit) { FIT_BOX = { x0: o.X0, y0: o.Y0, x1: o.X0 + o.nx * o.cell, y1: o.Y0 + o.ny * o.cell }; fitView(); FIT_BOX = null; } draw(); }
       if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]), fade: o.fade, alpha: o.alpha }); },
     viewPNG() { try { const c = [...document.querySelectorAll('canvas')].filter((x) => x.offsetParent && x.width > 200).sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (window.S3 && S3.render) S3.render(); return c ? c.toDataURL('image/png') : null; } catch (e) { return null; } },
     // a plan grid of the site for flow studies (2026-10-31): solid where a building (design or surroundings) stands taller than
@@ -6538,7 +6564,10 @@ if (window.__WSROLE) {
       const nx = Math.round((X1 - b0.X0) / cell), ny = Math.round((Y1 - b0.Y0) / cell), solid = new Uint8Array(nx * ny);
       const all = pr.map((m) => prismOf(m.outer, m.h)).concat(SITEC.contextMasses(M.site, M.north || 0).map((m) => prismOf(m.outer, m.h))).filter((P) => P.h > 1.5);
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = [b0.X0 + (i + 0.5) * cell, b0.Y0 + (j + 0.5) * cell]; if (all.some((P) => q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer))) solid[j * nx + i] = 1; }
-      return { X0: b0.X0, Y0: b0.Y0, cell, nx, ny, solid, north: M.north || 0, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain };
+      // levels (stormwater): the ground height at each cell, and which solid cells are the design (its roofs) rather than the surroundings
+      let z = null, design = null; if (o.levels) { const site = M.site; z = new Float32Array(nx * ny); design = new Uint8Array(nx * ny); const dp = pr.map((m) => prismOf(m.outer, m.h)).filter((P) => P.h > 1.5);
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const x = b0.X0 + (i + 0.5) * cell, y = b0.Y0 + (j + 0.5) * cell, c = j * nx + i; if (site.terrain) { const q = siteOfM(M, [x, y]); z[c] = SITEC.groundAt(site.terrain, q[0], q[1]); } if (solid[c] && dp.some((P) => x >= P.bb[0] && x <= P.bb[2] && y >= P.bb[1] && y <= P.bb[3] && inPoly([x, y], P.outer))) design[c] = 1; } }
+      return { X0: b0.X0, Y0: b0.Y0, cell, nx, ny, solid, z, design, north: M.north || 0, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain };
     },
     // the solar envelope (2026-10-31): for each ground cell, the tallest height whose shadow does not reach a surrounding
     // building during the protected sun directions ([{ az, alt }]); capped at cap metres
@@ -6567,7 +6596,20 @@ if (window.__WSROLE) {
       if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, vals: g.H, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) });
       return { grid: { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: g.H }, day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
     },
-    clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); },
+    sunPath(o) {
+      if (!o) { SPATH2 = null; if (window.S3 && S3.sunPath) S3.sunPath(null); if (CAM !== '3d') draw(); return; }
+      let b; try { b = studyBox(studyPrisms()); } catch (e) { return; } const cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, R = 0.42 * Math.min(b.nx, b.ny) * b.cell, nb = (M.north || 0) * Math.PI / 180, site = M.site;
+      const g0 = site && site.terrain ? (() => { const q = siteOfM(M, [cx, cy]); return SITEC.groundAt(site.terrain, q[0], q[1]); })() : 0;
+      const plan = (az, alt) => { const a = az * Math.PI / 180 - nb, r = R * Math.cos(alt * Math.PI / 180); return [cx + r * Math.sin(a), cy + r * Math.cos(a)]; }, world = (az, alt) => { const q = plan(az, alt); return [q[0], g0 + R * Math.sin(alt * Math.PI / 180), -q[1]]; };
+      const ring = []; for (let k = 0; k <= 72; k++) ring.push({ az: k * 5, alt: 0 });
+      const ticks = [0, 90, 180, 270].map((az) => [{ az, alt: 0, r: 1 }, { az, alt: 0, r: az === 0 ? 1.18 : 1.08 }]);
+      const lines = [{ pts: ring.map((p) => world(p.az, 0)), color: '#6b7280', op: 0.9 }, ...ticks.map((t) => ({ pts: t.map((p) => { const a = p.az * Math.PI / 180 - nb; return [cx + R * p.r * Math.sin(a), g0, -(cy + R * p.r * Math.cos(a))]; }), color: '#374151', op: 1 })),
+        ...o.arcs.map((pl) => ({ pts: pl.map((p) => world(p.az, p.alt)), color: '#d08a2c', op: 0.7 })), ...o.hours.map((pl) => ({ pts: pl.map((p) => world(p.az, p.alt)), color: '#9aa1ab', op: 0.55 })),
+        ...(o.day || []).map((pl) => ({ pts: pl.map((p) => world(p.az, p.alt)), color: '#ea4a00', op: 1 }))];
+      if (window.S3 && S3.on && S3.sunPath) S3.sunPath({ lines, suns: (o.suns || []).map((p) => world(p.az, p.alt)), sunR: Math.max(1.5, R / 45) });
+      SPATH2 = { cx, cy, R, nb, plan, o }; if (CAM !== '3d') draw();
+    },
+    clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }
@@ -6593,7 +6635,9 @@ if (window.__WSROLE) {
   function studyBox0(pr, pad) { const sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
     const box = pr.length ? sunBox(M, pr.map((m) => m.outer), pad) : sunBox(M, [sq], 0); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.'); return box; }
   // colour ramps for results on the ground
-  const RAMPS = { sun: [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']],
+  // Ladybug Tools' default legend colours (ladybug.color.Colorset 0), from blue through yellow to red
+  const LB = ['#4b6ba9', '#7393ca', '#aac8f7', '#c1d5d0', '#f5ef67', '#fce64a', '#ef9c15', '#ea7b00', '#ea4a00', '#ea2600'].map((c, i, a) => [i / (a.length - 1), c]);
+  const RAMPS = { ladybug: LB, sun: [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']],
     heat: [[0, '#1b1d4f'], [0.25, '#5b2a86'], [0.5, '#c2365f'], [0.75, '#f07f3c'], [1, '#fbe36a']],
     sky: [[0, '#1f2140'], [0.35, '#3a4f8a'], [0.7, '#4f8fd0'], [1, '#a9d4f2']],
     div: [[0, '#6a2c91'], [0.35, '#c39bd3'], [0.5, '#f1f1ee'], [0.65, '#8fd3c7'], [1, '#1a8a7a']],

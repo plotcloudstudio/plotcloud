@@ -18,7 +18,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=studies-20261031-6';
+import { mountChrome } from '../workspace-chrome.js?v=studies-20261031-9';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -152,7 +152,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=studies-20261031-10`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=studies-20261031-13`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}

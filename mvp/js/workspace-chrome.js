@@ -13,6 +13,7 @@ import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected
 import { sunPosition } from './environment/analysis.js?v=run-20261031-2';
 import * as CL from '../../emb/lib/climate.js';
 import { speedRatio } from './wind-lbm.js?v=wind-20261031-2';
+import { stormwater } from './stormwater-grid.js?v=storm-20261031-1';
 import { mountProps } from './project-props.js?v=weather-20261031-1';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -229,13 +230,13 @@ export function mountChrome(app, api) {
   // with Settings | Export on the left, Results | Charts on the right and the legend; the result is painted on the site in 3D.
   // Sun hours, Solar radiation and Sky exposure run here on Plan Studio's ground grid (the same shading: masses, the building,
   // surrounding buildings, terrain). The other studies still open their study page inside the Workspace (the host below).
-  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
+  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1, stormwater: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
   const ENVELOPES = [['equinox', 'Equinoxes, 9:00 to 15:00', [[3, 20], [9, 22]], 9, 15], ['winter', 'Winter solstice, 10:00 to 14:00', [[12, 21]], 10, 14], ['summer', 'Summer solstice, 8:00 to 17:00', [[6, 21]], 8, 17]];
   const PERIODS = [['year', 'Whole year', 1, 12], ['summer', 'Summer · June to August', 6, 8], ['winter', 'Winter · December to February', 12, 2]];
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
-  const ST = { id: null, day: '03-21', period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
+  const ST = { id: null, day: '03-21', period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
   const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const AREAS = [[1, '1× · the building and 40 m round it'], [2, '2×'], [3, '3× · the default'], [4, '4×']];
   // every building study has the same card (2026-10-31): a mode where the study has one, the study area on the site before Start,
@@ -250,8 +251,10 @@ export function mountChrome(app, api) {
     wind: { mode: ['windMode', [['single', 'Single direction'], ['yearly', 'Yearly comfort']]], views: () => (ST.windMode === 'single' ? [['speed', 'Wind speed'], ['pressure', 'Pressure']] : [['comfort', 'Comfort'], ['risk', 'Risk'], ['speedup', 'Speed-up']]), input: 'rose',
       about: () => (ST.windMode === 'single' ? 'Wind speed and pressure on the ground for one wind: pick its direction on the rose.' : 'Pedestrian wind comfort through the year (Lawson), from the project weather’s wind in eight directions.') },
   };
+  SPEC.stormwater = { views: [['flow', 'Flow paths'], ['pond', 'Ponding'], ['runoff', 'Runoff']], input: 'storm', about: 'Where the rain of one design storm runs over the ground and where it can collect, on the terrain.' };
+  const STORMS = [['25', '25 mm'], ['50', '50 mm'], ['100', '100 mm']], COVERS = [['lawn', 'Mostly planted', 0.25], ['mixed', 'Mixed', 0.5], ['paved', 'Mostly paved', 0.85]];
   const viewsOf = (id) => { const v = SPEC[id]?.views; return typeof v === 'function' ? v() : v || []; };
-  const sigOf = (id) => JSON.stringify([id, ST.area, ...({ sunhours: [ST.day], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
+  const sigOf = (id) => JSON.stringify([id, ST.area, ...({ sunhours: [ST.day], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
   // the map views of a result: the study's own, or made here from its values
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
@@ -263,10 +266,23 @@ export function mountChrome(app, api) {
       if (id === 'shadebenefit') { const pos = r.vals.map((v) => (Number.isFinite(v) ? Math.max(0, v) : NaN)), neg = r.vals.map((v) => (Number.isFinite(v) ? Math.max(0, -v) : NaN));
         r.views.helps = { vals: pos, unit: 'K·h', ramp: 'heat', lo: 0, hi: r.hi, dec: 0, avg: statsOf(pos).avg, title: 'Shade benefit · where the shade helps' }; r.views.costs = { vals: neg, unit: 'K·h', ramp: 'risk', lo: 0, hi: r.hi, dec: 0, avg: statsOf(neg).avg, title: 'Shade benefit · where it costs warmth' }; } }
     return r; }
-  function applyView(r, key) { const v = r.views[key] ? key : Object.keys(r.views)[0]; Object.assign(r, r.views[v]); r.legendLabels = r.views[v].legendLabels || null; r.view = v; return r; }
-  const paintRes = (r) => INST.persp.ws.paintGrid({ X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, vals: r.vals, lo: r.lo, hi: r.hi, ramp: r.ramp });
+  const LBR = new Set(['sun', 'heat', 'sky', 'height']);
+  function applyView(r, key) { const v = r.views[key] ? key : Object.keys(r.views)[0]; Object.assign(r, r.views[v]); if (LBR.has(r.ramp) && !r.views[v].legendLabels) r.ramp = 'ladybug'; r.legendLabels = r.views[v].legendLabels || null; r.view = v; return r; }
+  // the result in both views (2026-10-31): the 3D topographic block and the 2D plan, with the same grid and colours
+  const views2 = () => [INST.persp, INST.plan].filter((I) => I.ready && I.ws).map((I) => I.ws);
+  const clearAll = () => views2().forEach((w) => w.clearStudy?.());
+  const paintRes = (r, fit) => { views2().forEach((w) => w.paintGrid({ X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, vals: r.vals, lo: r.lo, hi: r.hi, ramp: r.ramp, fit })); sunPathFor(ST.id); };
+  // the sun path (after Ladybug): the 21st of every month, the hours through the year (clock time), and for Sun hours the day studied
+  const SUNLIT = new Set(['sunhours', 'radiation', 'shadebenefit', 'solarenvelope', 'utci']);
+  function sunPathFor(id) {
+    if (!SUNLIT.has(id)) { views2().forEach((w) => w.sunPath?.(null)); return; } const site = S.conditionsOf(p).site; if (!Number.isFinite(site.lat)) return; const tz = Number.isFinite(site.tz) ? site.tz : Math.round(site.lon / 15);
+    const pos = (m, d, h) => sunPosition(2026, m, d, h, site.lat, site.lon, tz), runs = (pts) => { const out = []; let cur = []; for (const q of pts) { if (q.alt > 0) cur.push(q); else if (cur.length) { out.push(cur); cur = []; } } if (cur.length) out.push(cur); return out.filter((x) => x.length > 1); };
+    const arcs = [], hours = []; for (let m = 1; m <= 12; m++) { const pts = []; for (let h = 0; h <= 24; h += 0.25) pts.push(pos(m, 21, h)); arcs.push(...runs(pts)); }
+    for (let h = 0; h < 24; h++) { const pts = []; for (let k = 0; k <= 365; k += 5) { const [m, d] = CL.monthDay(Math.min(364, k)); pts.push(pos(m, d, h)); } hours.push(...runs(pts)); }
+    let day = [], suns = []; if (id === 'sunhours') { const [m, d] = ST.day.split('-').map(Number), pts = []; for (let h = 0; h <= 24; h += 0.25) pts.push(pos(m, d, h)); day = runs(pts); for (let h = 0; h < 24; h++) { const q = pos(m, d, h); if (q.alt > 0) suns.push(q); } }
+    views2().forEach((w) => w.sunPath?.({ arcs, hours, day, suns })); }
   // the study area on the site before a run: a frame on the topographic block
-  function showArea() { if (!ST.id || ST.res || ST.busy || !INST.persp.ready || !INST.persp.ws.studyArea) return; try { ST.areaInfo = INST.persp.ws.studyArea(ST.area, { show: true }); } catch { ST.areaInfo = null; } }
+  function showArea() { if (!ST.id || ST.res || ST.busy || !INST.persp.ready || !INST.persp.ws.studyArea) return; try { views2().forEach((w) => w.sunPath?.(null)); ST.areaInfo = INST.persp.ws.studyArea(ST.area, { show: true }); INST.plan.ready && INST.plan.ws.studyArea?.(ST.area, { show: true }); } catch { ST.areaInfo = null; } }
   // the wind of the project weather: 16 directions (share of the hours, mean speed at 10 m) for the rose, and the year's hourly
   // speeds at 1.5 m in eight directions for the comfort study
   const ROSE = { key: '', v: null };
@@ -301,8 +317,8 @@ export function mountChrome(app, api) {
   function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }
   const el2 = (tag, cls) => { const e = document.createElement(tag); e.className = cls; return e; };
   window.__wsHost = { open: openHost, close: closeHost, id: () => HOST.id };
-  function openStudy(id) { if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res && INST.persp.ready) INST.persp.ws.clearStudy?.(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', sig: '', at: null, err: '', saved: '', exp: false, areaOpen: false, stopped: false }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; showArea(); loadRose(); drawStudy(); }
-  function closeStudy() { studyCard.hidden = true; resCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; if (INST.persp.ready) INST.persp.ws.clearStudy?.(); }
+  function openStudy(id) { if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res) clearAll(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', sig: '', at: null, err: '', saved: '', exp: false, areaOpen: false, stopped: false }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; showArea(); loadRose(); drawStudy(); }
+  function closeStudy() { studyCard.hidden = true; resCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; clearAll(); }
   function openPage(id) { const sel = $('#workspaceStudy'); if (sel) { sel.value = id; sel.onchange?.(); } $('#sendSim')?.click(); }
   // the sky seen from a ground cell: 6 rings × 24 patches, weighted for a horizontal surface (sum 1): the sky view factor
   const SKY = (() => { const out = []; for (let i = 0; i < 6; i++) { const alt = 7.5 + i * 15, w0 = Math.sin(alt * Math.PI / 180) * Math.cos(alt * Math.PI / 180); for (let j = 0; j < 24; j++) out.push({ az: j * 15 + 7.5, alt, w: w0 }); } const t = out.reduce((a, d) => a + d.w, 0); out.forEach((d) => d.w /= t); return out; })();
@@ -374,6 +390,20 @@ export function mountChrome(app, api) {
         rows: [['No thermal stress (UTCI 9–26 °C)', fmt(sc.avg, 1) + '% of hours'], ['Heat stress (above 26 °C)', fmt(sh.avg, 1) + '%'], ['Cold stress (below 9 °C)', fmt(sk.avg, 1) + '%'], ['Hours counted', fmt(n) + (ST.utciHours === 'sun' ? ', sun up' : '')], ['Weather', esc(E.station || wx.station || '')]],
         method: `UTCI (Bröde et al. 2012) for every counted hour of the project weather (${esc(E.station || 'EPW')}, ${pname.toLowerCase()}), in sun and in shade at the sky view each ${fmt(g.cell, 1)} m cell has: air temperature, humidity, wind at 10 m for ${({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban'} terrain, and the radiant temperature from sun, sky and ground. Wind is not reduced by buildings here.`,
         results: { comfort: +sc.avg.toFixed(1), heat: +sh.avg.toFixed(1), cold: +sk.avg.toFixed(1) }, settings: { period: ST.period, hours: ST.utciHours, label: `Outdoor comfort, ${pname} (Workspace)` } }; }
+    if (id === 'stormwater') {
+      const g = w.groundMask({ maxCells: 160, levels: true }), N = g.nx * g.ny, a2 = g.cell * g.cell, rain = +ST.storm, [, cname, cg] = COVERS.find((x) => x[0] === ST.cover), green = (api.layers?.() || []).some((l) => l.visible !== false && l.material === 'green-roof'), cr = green ? 0.5 : 0.95;
+      const C = new Float32Array(N); for (let c = 0; c < N; c++) C[c] = g.solid[c] ? (g.design[c] ? cr : 0.95) : cg;
+      const r = stormwater(g, C, rain), flow = new Float32Array(N).fill(NaN), pond = new Float32Array(N).fill(NaN), coef = new Float32Array(N).fill(NaN); let fmax = 0, wet = 0, dmax = 0, roofA = 0, n = 0;
+      for (let c = 0; c < N; c++) { if (g.solid[c]) { if (g.design[c]) roofA += a2; continue; } n++; coef[c] = C[c]; const f = Math.log10(1 + r.acc[c]); flow[c] = f; fmax = Math.max(fmax, f); if (r.pond[c] >= 0.02) { pond[c] = r.pond[c]; wet++; dmax = Math.max(dmax, r.pond[c]); } }
+      const qRoof = cr * rain * roofA / 3600, full = r.hollows.filter((h) => h.full && h.vol > 1).length, big = r.hollows.filter((h) => h.vol > 1).length;
+      if (!g.terrain) for (let c = 0; c < N; c++) if (!g.solid[c]) flow[c] = NaN;
+      return { ...g, cells: n, avg: r.runV / Math.max(1, r.rainV) * 100, views: {
+          flow: { vals: flow, unit: 'm³ passing (log)', ramp: 'water', lo: 0, hi: Math.max(1, fmax), dec: 0, avg: statsOf(flow).avg, title: `Stormwater · flow paths, ${rain} mm`, legendLabels: [`${fmt(10 ** Math.max(1, fmax) - 1)} m³`, `${fmt(10 ** (Math.max(1, fmax) / 2) - 1)} m³`, '0 m³'] },
+          pond: { vals: pond, unit: 'm deep', ramp: 'water', lo: 0, hi: Math.max(0.1, Math.ceil(dmax * 10) / 10), dec: 2, avg: dmax, title: `Stormwater · ponding, ${rain} mm` },
+          runoff: { vals: coef, unit: 'runoff coefficient', ramp: 'risk', lo: 0, hi: 1, dec: 1, avg: cg, title: 'Stormwater · runoff coefficient' } },
+        rows: [['Runoff', fmt(r.runV) + ' m³ of ' + fmt(r.rainV) + ' m³ of rain'], ['Ponds 2 cm or deeper', fmt(wet * a2) + ' m²'], ['Deepest ponding', fmt(dmax, 2) + ' m'], ['Water held in hollows', fmt(r.pondV) + ' m³ in ' + big + (big === 1 ? ' hollow' : ' hollows') + (full ? `, ${full} filled to spilling` : '')], ['Design roofs', fmt(roofA) + ' m², runoff ' + cr + (green ? ' (green roof)' : '')], ['Roof peak flow (rational method)', fmt(qRoof, 1) + ' L/s'], ['Ground', `${cname.toLowerCase()}, runoff ${cg}`]],
+        method: `${rain} mm of rain in 1 hour (a design storm you choose, not local rainfall statistics) on a ${fmt(g.cell, 1)} m grid. Runoff = rain × coefficient (ground ${cg}, roofs ${cr}${green ? ' with a green roof layer' : ''}, surrounding buildings 0.95); roof water leaves at the building edge. Water runs downhill (D8) on the ${g.terrain ? 'terrain' : 'flat ground (this site has no ground levels, so flow paths and ponding are not shown)'}; hollows fill up to their spill level with the water that reaches them. No infiltration over time, drains, pipes or kerbs: a screening of where water goes, not a drainage design.`,
+        results: { runoff: Math.round(r.runV), rain: Math.round(r.rainV), pondArea: Math.round(wet * a2), pondMax: +dmax.toFixed(2), pondVol: Math.round(r.pondV), roofPeak: +qRoof.toFixed(1) }, settings: { storm: rain, cover: ST.cover, label: `${rain} mm storm (Workspace)` } }; }
     if (id === 'wind') {
       const R0 = await windRose(), alpha = R0.alpha, m = w.groundMask({ maxCells: 160 }), a2 = m.cell * m.cell, tn = ({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban';
       const flowTo = (from) => { const t = (from + 180 - m.north) * Math.PI / 180; return [Math.sin(t), Math.cos(t)]; };
@@ -409,13 +439,13 @@ export function mountChrome(app, api) {
   async function runStudy() {
     if (ST.busy) return; ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; drawStudy();
     const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed`; }, 1000);
-    try { if (UI.view === 'plan') await goView('persp'); for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
+    try { for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
       INST.persp.ws.studyArea?.(ST.area); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
       if (ST.cancel) throw Error('Stopped.');
-      addViews(id, r); applyView(r, ST.view[id]); paintRes(r);
+      addViews(id, r); applyView(r, ST.view[id]); paintRes(r, true);
       r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = w.model(); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); }
     catch (e) { ST.res = null; ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); ST.stopped = e.message === 'Stopped.'; }
-    clearInterval(tick); ST.busy = false; ST.progress = ''; if (!ST.res) { INST.persp.ws?.clearStudy?.(); showArea(); } drawStudy();
+    clearInterval(tick); ST.busy = false; ST.progress = ''; if (!ST.res) { clearAll(); showArea(); } drawStudy();
   }
   // a result is kept with the saved version it was computed on: unsaved edits are saved as a version first
   async function saveStudy() {
@@ -445,6 +475,7 @@ export function mountChrome(app, api) {
       : !r ? `<div class="sp-stage"><h3>Click ▶ Start to begin</h3><p class="sp-note">${esc(about)}</p><p class="sp-note">Study area: ${esc(area[0] + '×')}${ST.areaInfo ? `, about ${fmt(ST.areaInfo.w)} × ${fmt(ST.areaInfo.h)} m (blue on the site)` : ''}. Change area makes it smaller or larger.</p></div>`
       : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' : ''}</div>`;
     const inputs = { day: () => `<p class="sp-flabel">Day</p>${seg('data-st-set', 'day:' + ST.day, DAYS.map(([k, n]) => ['day:' + k, n]))}`,
+      storm: () => `<p class="sp-flabel">Design storm, falling in 1 hour (your choice, not local rainfall statistics)</p>${seg('data-st-set', 'storm:' + ST.storm, STORMS.map(([k, n]) => ['storm:' + k, n]))}<p class="sp-flabel">Ground away from buildings</p>${seg('data-st-set', 'cover:' + ST.cover, COVERS.map(([k, n]) => ['cover:' + k, n]))}`,
       period: () => `<p class="sp-flabel">Period</p>${seg('data-st-set', 'period:' + ST.period, PERIODS.map(([k, n]) => ['period:' + k, n.split(' · ')[0]]))}`,
       envelope: () => `<p class="sp-flabel">Protected sun</p><div class="sp-optlist">${ENVELOPES.map(([k, n]) => `<button type="button" data-st-set="envelope:${k}" aria-pressed="${ST.envelope === k}">${esc(n)}</button>`).join('')}</div>`,
       rose: () => { if (ST.roseErr) return `<p class="sp-note sp-errtext">${esc(ST.roseErr)}</p>`; if (!ST.rose) return '<p class="sp-note">Reading the wind of the project weather…</p>'; const R = ST.rose, single = ST.windMode === 'single', dir = ST.windDir ?? R.prevailing, i = Math.round(dir / 22.5) % 16, spd = ST.windSpeed ?? R.sec[i].mean;
@@ -460,10 +491,14 @@ export function mountChrome(app, api) {
     if (r) { resCard.innerHTML = `<header><b>${esc(r.title)}</b></header><div class="sp-stbody">${r.rows.map(([k, v]) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`).join('')}
         <h4>How this was found</h4><p class="sp-note">${r.method} ${fmt(r.cells)} cells, ${fmt(r.prisms)} building parts and ${fmt(r.context)} surrounding buildings${r.terrain ? ', on the terrain' : ''}; ${fmt(r.ms)} ms in this browser. A design check for early design, not a compliance result.</p>
         ${ST.saved ? `<p class="sp-note">Saved to results with ${esc(ST.saved)}.</p>` : `<button type="button" class="btn sm primary" data-st="save" ${stale || changed || ST.busy ? 'disabled' : ''}>Save to results</button>`} <button type="button" class="btn sm" data-st="clear">Clear from view</button></div>`;
-      const cols = INST.persp.ws?.rampColors?.(r.ramp) || []; legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-ramp" style="background:linear-gradient(to top,${cols.join(',')})"></div><div class="sp-rampl">${(r.legendLabels || [fmt(r.hi, r.dec), fmt((r.lo + r.hi) / 2, r.dec), fmt(r.lo, r.dec)]).map((x) => `<span>${esc(x)}</span>`).join('')}</div>`; }
+      const cols = INST.persp.ws?.rampColors?.(r.ramp) || [];
+      // after Ladybug's legend: ten coloured steps, the value at every step (a categorical map keeps its named classes)
+      if (r.legendLabels) legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-ramp" style="background:linear-gradient(to top,${cols.join(',')})"></div><div class="sp-rampl">${r.legendLabels.map((x) => `<span>${esc(x)}</span>`).join('')}</div>`;
+      else { const n = 10, at = (t) => { const k = t * (cols.length - 1), i = Math.min(cols.length - 2, Math.floor(k)), u = k - i, A = parseInt((cols[i] || '#888888').slice(1), 16), B = parseInt((cols[i + 1] || '#888888').slice(1), 16), m = (b) => Math.round(((A >> b) & 255) * (1 - u) + ((B >> b) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; };
+        legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-lbsteps">${Array.from({ length: n }, (_, i) => n - 1 - i).map((i) => `<i style="background:${at((i + 0.5) / n)}"></i>`).join('')}</div><div class="sp-lblabels">${Array.from({ length: n + 1 }, (_, i) => n - i).map((i) => `<span>${fmt(r.lo + (r.hi - r.lo) * i / n, r.dec)}</span>`).join('')}</div>`; } }
   }
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st-mode], .sp-studycard [data-st-view], .sp-studycard [data-st-set], .sp-studycard [data-st-area], .sp-studycard [data-wdir]'); if (!b || ST.busy) return; const d = b.dataset;
-    if (d.stMode) { const k = SPEC[ST.id].mode[0]; if (ST[k] === d.stMode) return; ST[k] = d.stMode; if (ST.id === 'wind' && ST.res) { ST.res = null; INST.persp.ws?.clearStudy?.(); showArea(); } }
+    if (d.stMode) { const k = SPEC[ST.id].mode[0]; if (ST[k] === d.stMode) return; ST[k] = d.stMode; if (ST.id === 'wind' && ST.res) { ST.res = null; clearAll(); showArea(); } }
     else if (d.stView) { ST.view[ST.id] = d.stView; if (ST.res && ST.res.views[d.stView]) { applyView(ST.res, d.stView); paintRes(ST.res); } }
     else if (d.stSet) { const [k, v] = d.stSet.split(':'); ST[k] = v; }
     else if (d.stArea) { ST.area = +d.stArea; ST.areaOpen = false; if (!ST.res) showArea(); }
@@ -474,7 +509,7 @@ export function mountChrome(app, api) {
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
     const k = b.dataset.st; if (k === 'stop') { ST.cancel = true; ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
-    else if (k === 'clear') { if (INST.persp.ready) INST.persp.ws.clearStudy(); ST.res = null; showArea(); drawStudy(); } });
+    else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false;
 
   // ---- Compare sketches (2026-10-30): a sheet over the lower half of the view. Each saved version is a sketch (a column with its
