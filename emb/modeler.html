@@ -3923,7 +3923,7 @@ function gizmoTarget() {
   const layer = kind === 'imp' ? o.layer || 'Imported' : ({ ctx: 'Site', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', mass: 'Masses', furn: 'Furniture', light: 'Lighting', ceil: 'Lighting' })[kind];
   const locked = !!o.locked || !!o.auto || !!window.__ws?.locks.has(layer);
   const level = lvObj(o.lv || LV) || { z: 0, h: 3 };
-  if (kind === 'furn') return { kind, f: o, z: level.z, locked, apply() {} };
+  if (kind === 'furn') { Object.defineProperty(o, 'axes', { value: ['x', 'y', 'r', 'sx', 'sy'], configurable: true, enumerable: false, writable: true });   /* not saved with the piece */ return { kind, f: o, z: level.z, locked, furn: { w: o.w, d: o.d }, apply() {} }; }
   const original = JSON.parse(JSON.stringify(o));
   let F = kind === 'ctx' ? null : frameOf(kind, o), points = null, h = o.h || .15, z = level.z;
   if (['floor', 'void', 'fence', 'mass', 'ctx'].includes(kind)) {
@@ -3951,13 +3951,14 @@ function gizmoTarget() {
   if (!F) return null;
   const f = { id: o.id, lv: o.lv || LV, x: F.c[0], y: F.c[1], rot: F.th || 0, w: Math.max(.08, F.hw * 2), d: Math.max(.08, F.hd * 2), h: Math.max(.04, h) };
   // Openings slide along their host; ceiling panels have no rotation in the model.
-  f.axes = kind === 'op' ? ['x'] : kind === 'ceil' || kind === 'light' && isWallType(o.type, o.p) ? ['x', 'y'] : ['x', 'y', 'r'];
+  f.axes = kind === 'op' ? ['x'] : kind === 'ceil' || kind === 'light' && isWallType(o.type, o.p) ? ['x', 'y'] : ['floor', 'void', 'fence', 'mass', 'ctx'].includes(kind) ? ['x', 'y', 'r', 'sx', 'sy'] : ['x', 'y', 'r'];
+  f.sx = 1; f.sy = 1;
   const origin = { x: f.x, y: f.y, rot: f.rot };
   const sourcePoints = points?.map(p => p.slice());
   const followers = kind === 'wall' ? M.walls.filter(w => w !== o && w.lv === o.lv && !w.locked).flatMap(w => ['a', 'b'].filter(e => near(w[e], original.a, .02) || near(w[e], original.b, .02)).map(e => ({ w, e, p: w[e].slice() }))) : [];
-  const transform = p => {
-    const a = f.rot - origin.rot, c = Math.cos(a), sn = Math.sin(a), x = p[0] - origin.x, y = p[1] - origin.y;
-    return [+(f.x + x * c - y * sn).toFixed(4), +(f.y + x * sn + y * c).toFixed(4)];
+  const transform = p => {   // into the object's own frame, scaled along its X and Y, then turned and moved
+    const x = p[0] - origin.x, y = p[1] - origin.y, c0 = Math.cos(-origin.rot), s0 = Math.sin(-origin.rot), u = (x * c0 - y * s0) * (f.sx || 1), v = (x * s0 + y * c0) * (f.sy || 1), c = Math.cos(f.rot), sn = Math.sin(f.rot);
+    return [+(f.x + u * c - v * sn).toFixed(4), +(f.y + u * sn + v * c).toFixed(4)];
   };
   const bounds = pts => {
     const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
@@ -3996,6 +3997,13 @@ function gizmoTarget() {
       }
     }
   };
+}
+// scaling with a gumball square (3D and plan): the object's own X or Y, about its centre, snapped to 5 %
+function gzScale(D, p, e) {
+  const f = D.f, ax = D.ax === 'sx' ? 'x' : 'y', dir = ax === 'x' ? [Math.cos(D.r0), Math.sin(D.r0)] : [-Math.sin(D.r0), Math.cos(D.r0)], d0 = (D.p0[0] - D.x0) * dir[0] + (D.p0[1] - D.y0) * dir[1], d = (p[0] - D.x0) * dir[0] + (p[1] - D.y0) * dir[1];
+  if (Math.abs(d0) < 1e-6) return; let k = Math.max(0.05, d / d0); if (!e.altKey) k = Math.max(0.05, Math.round(k * 20) / 20);
+  if (D.target.furn) { if (ax === 'x') f.w = +(D.target.furn.w * k).toFixed(3); else f.d = +(D.target.furn.d * k).toFixed(3); tipAt(e, `×${k.toFixed(2)} · ${ax === 'x' ? 'width' : 'depth'} ${((ax === 'x' ? f.w : f.d)).toFixed(2)} m`); return; }
+  f[D.ax] = +(D.s0[ax] * k).toFixed(4); tipAt(e, `×${(f[D.ax]).toFixed(2)} along its ${ax === 'x' ? 'width (X)' : 'depth (Y)'} · ${(((ax === 'x' ? f.w : f.d)) * f[D.ax]).toFixed(2)} m`);
 }
 function gizmoSync() {
   if (!window.S3 || !S3.on || !S3.gizmo) return;
@@ -4109,7 +4117,7 @@ cv.addEventListener('pointerdown', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); e.preventDefault(); WLK = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); return; }
   if (CAM === '3d' && XPL.on) { if (e.button === 0 && TOOL !== 'orbit') setTool('orbit'); return; }
   if (CAM === '3d' && e.button === 0 && !SPACE && TOOL === 'select' && (SEL||window.__wsSelections?.length) && S3.gizmo) { const target = gizmoTarget(), f = target?.f, ax = target && !target.locked ? S3.gizmo.hit(e.clientX, e.clientY) : null;
-    if (ax) { e.stopImmediatePropagation(); e.preventDefault(); cv.focus({ preventScroll: true }); const z = target.z, p = S3.plane(e.clientX, e.clientY, z); if (!p) return; GZD = { ax, f, z, target, p0: p, x0: f.x, y0: f.y, r0: f.rot || 0, a0: Math.atan2(p[1] - f.y, p[0] - f.x), before: snapM() }; cv.setPointerCapture(e.pointerId); ftbUI(); return; } }
+    if (ax) { e.stopImmediatePropagation(); e.preventDefault(); cv.focus({ preventScroll: true }); const z = target.z, p = S3.plane(e.clientX, e.clientY, z); if (!p) return; GZD = { ax, f, z, target, p0: p, x0: f.x, y0: f.y, r0: f.rot || 0, a0: Math.atan2(p[1] - f.y, p[0] - f.x), s0: { x: f.sx || 1, y: f.sy || 1 }, before: snapM() }; cv.setPointerCapture(e.pointerId); ftbUI(); return; } }
   if (CAM !== 'plan') return;
   if (VIEW2D === 'ceiling') {
     if (e.button !== 0 || SPACE) return;   // middle / right / space: the plan's own pan
@@ -4131,7 +4139,8 @@ cv.addEventListener('pointerdown', () => { if (drag && drag.k === 'furn' && drag
 cv.addEventListener('pointermove', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); if (WLK) { S3.walk.look(e.clientX - WLK.x, e.clientY - WLK.y); WLK = { x: e.clientX, y: e.clientY }; } return; }
   if (GZD) { e.stopImmediatePropagation(); const p = S3.plane(e.clientX, e.clientY, GZD.z); if (!p) return; const f = GZD.f;
-    if (GZD.ax === 'r') { const a = Math.atan2(p[1] - f.y, p[0] - f.x); f.rot = (((GZD.r0 + a - GZD.a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(e, `${Math.round(f.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(f.rot) * 180 / Math.PI) % 360}°`); }
+    if (GZD.ax === 'sx' || GZD.ax === 'sy') { gzScale(GZD, p, e); }
+    else if (GZD.ax === 'r') { const a = Math.atan2(p[1] - f.y, p[0] - f.x); f.rot = (((GZD.r0 + a - GZD.a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(e, `${Math.round(f.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(f.rot) * 180 / Math.PI) % 360}°`); }
     else { const dir = GZD.ax === 'x' ? [Math.cos(GZD.r0), Math.sin(GZD.r0)] : [-Math.sin(GZD.r0), Math.cos(GZD.r0)], k = wsAxisSnap(GZD, dir, (p[0] - GZD.p0[0]) * dir[0] + (p[1] - GZD.p0[1]) * dir[1]); f.x = +(GZD.x0 + dir[0] * k).toFixed(4); f.y = +(GZD.y0 + dir[1] * k).toFixed(4); tipAt(e, `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${GZD.ax === 'x' ? 'its width (X)' : 'its depth (Y)'}`); }
     GZD.target.apply(); S = STC.build(M); upd3D(); return; }
   if (CAM !== 'plan') return;
@@ -6124,24 +6133,28 @@ window.S3 = (() => {
       if(!window.__WSROLE){const bx = top(new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(f.w, f.h, f.d)), new T.LineBasicMaterial({ color: 0x3498ff, depthTest: false, transparent: true }))); bx.position.y = f.h / 2; bx.name = 'gz-box'; G.add(bx);}
       if (!locked) {
         const hd = new T.Group(); hd.name = 'gz-handles'; hd.position.y = 0.02;
-        const arrow = (col, ax) => { const a = new T.Group(); const sh = top(new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.72, 10), mb(col))); sh.position.y = 0.36; const cone = top(new T.Mesh(new T.ConeGeometry(0.065, 0.2, 18), mb(col))); cone.position.y = 0.82;
-          const pk = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 0.96, 8), inv); pk.position.y = 0.48; pk.userData.gz = ax; a.add(sh, cone, pk); if (ax === 'x') a.rotation.z = -Math.PI / 2; else a.rotation.x = -Math.PI / 2; a.name = 'gz-' + ax; hd.add(a); GZ.pick.push(pk); };
-        if (!f.axes || f.axes.includes('x')) arrow(0xF1C40F, 'x'); if (!f.axes || f.axes.includes('y')) arrow(0x2ECC71, 'y');
-        if (!f.axes || f.axes.includes('r')) {
-        // v131: the arc is a quarter turn (ARC_SWEEP), on the side away from the two arrows, so each handle can be grabbed on its own
-        const SW = ARC_SWEEP * Math.PI / 180, A0 = Math.PI - SW / 2, A1 = A0 + SW, tg = new T.TorusGeometry(0.6, 0.018, 8, 72, SW); tg.rotateZ(A0);
-        const arc = top(new T.Mesh(tg, mb(0x3498FF))); arc.rotation.x = Math.PI / 2; arc.name = 'gz-r';
-        const head = top(new T.Mesh(new T.ConeGeometry(0.06, 0.18, 16), mb(0x3498FF))); head.position.set(0.6 * Math.cos(A1), 0.6 * Math.sin(A1), 0); head.rotation.z = A1; arc.add(head);
-        const head2 = top(new T.Mesh(new T.ConeGeometry(0.06, 0.18, 16), mb(0x3498FF))); head2.position.set(0.6 * Math.cos(A0), 0.6 * Math.sin(A0), 0); head2.rotation.z = A0 + Math.PI; arc.add(head2);
-        const pg = new T.TorusGeometry(0.6, 0.08, 6, 36, SW); pg.rotateZ(A0); const pk = new T.Mesh(pg, inv); pk.rotation.x = Math.PI / 2; pk.userData.gz = 'r'; pk.userData.mid = A0 + SW / 2; hd.add(arc, pk); GZ.pick.push(pk);
+        // after Rhino's gumball (2026-10-31): thin red X and green Y arrows, a blue quarter arc to turn (between -X and -Y), square
+        // handles on dotted lines on the -X and -Y sides to scale along the object's own axes, and a white dot at the centre
+        const RX = 0xe2372b, GY = 0x35a845, BZ = 0x2a5bd7, has = (k) => !f.axes || f.axes.includes(k);
+        const arrow = (col, ax) => { const a = new T.Group(); const sh = top(new T.Mesh(new T.CylinderGeometry(0.011, 0.011, 0.74, 8), mb(col))); sh.position.y = 0.37; const cone = top(new T.Mesh(new T.ConeGeometry(0.045, 0.17, 16), mb(col))); cone.position.y = 0.82;
+          const pk = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 0.96, 8), inv); pk.position.y = 0.5; pk.userData.gz = ax; a.add(sh, cone, pk); if (ax === 'x') a.rotation.z = -Math.PI / 2; else a.rotation.x = -Math.PI / 2; a.name = 'gz-' + ax; hd.add(a); GZ.pick.push(pk); };
+        const square = (col, ax) => { const end = ax === 'sx' ? new T.Vector3(-0.72, 0, 0) : new T.Vector3(0, 0, 0.72), g = new T.Group(); g.name = 'gz-' + ax;
+          const dl = new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), end]), new T.LineDashedMaterial({ color: col, dashSize: 0.035, gapSize: 0.03, depthTest: false, transparent: true })); dl.computeLineDistances(); dl.renderOrder = 1000; g.add(dl);
+          const sq = top(new T.Mesh(new T.BoxGeometry(0.065, 0.065, 0.065), mb(col))); sq.position.copy(end); g.add(sq); const pk = new T.Mesh(new T.BoxGeometry(0.17, 0.17, 0.17), inv); pk.position.copy(end); pk.userData.gz = ax; g.add(pk); GZ.pick.push(pk); hd.add(g); };
+        if (has('x')) arrow(RX, 'x'); if (has('y')) arrow(GY, 'y'); if (f.axes && f.axes.includes('sx')) square(RX, 'sx'); if (f.axes && f.axes.includes('sy')) square(GY, 'sy');
+        if (has('r')) {
+          const SW = ARC_SWEEP * Math.PI / 180, A0 = Math.PI / 2, tg = new T.TorusGeometry(0.46, 0.011, 8, 48, SW); tg.rotateZ(A0);
+          const arc = top(new T.Mesh(tg, mb(BZ))); arc.rotation.x = Math.PI / 2; arc.name = 'gz-r';
+          const pg = new T.TorusGeometry(0.46, 0.07, 6, 30, SW); pg.rotateZ(A0); const pk = new T.Mesh(pg, inv); pk.rotation.x = Math.PI / 2; pk.userData.gz = 'r'; pk.userData.mid = A0 + SW / 2; hd.add(arc, pk); GZ.pick.push(pk);
         }
+        const dot = top(new T.Mesh(new T.SphereGeometry(0.032, 16, 12), mb(0xffffff))), ring = top(new T.Mesh(new T.TorusGeometry(0.032, 0.008, 6, 24), mb(0x1f2329))); ring.rotation.x = Math.PI / 2; dot.name = 'gz-o'; hd.add(dot, ring);
         G.add(hd); GZ.hd = hd;
       }
       scene.add(G); GZ.g = G; render();
     },
     hit(cx, cy) { if (!R || !GZ.g || !GZ.pick.length) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const h = ray(cx, cy).intersectObjects(GZ.pick, false); return h.length ? h[0].object.userData.gz : null; },
     state() { if (!GZ.g) return null; const arc = GZ.g.getObjectByName('gz-r'); const out = { pos: GZ.g.position.toArray(), rot: GZ.g.rotation.y, handles: !!GZ.hd, scale: GZ.hd ? GZ.hd.scale.x : 0, sweep: arc ? +(arc.geometry.parameters.arc * 180 / Math.PI).toFixed(3) : null, parts: [] }; GZ.g.traverse((o) => { if (o.name && o.name.startsWith('gz-')) out.parts.push(o.name); }); return out; },
-    screen(ax) { if (!GZ.hd) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const pk = GZ.pick.find((p) => p.userData.gz === ax); if (!pk) return null; const v = new T.Vector3(); pk.getWorldPosition(v); if (ax === 'r') { const m = pk.userData.mid, q = new T.Vector3(0.6 * Math.cos(m), 0.6 * Math.sin(m), 0); pk.localToWorld(q); v.copy(q); } v.project(cam); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
+    screen(ax) { if (!GZ.hd) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const pk = GZ.pick.find((p) => p.userData.gz === ax); if (!pk) return null; const v = new T.Vector3(); pk.getWorldPosition(v); if (ax === 'r') { const m = pk.userData.mid, q = new T.Vector3(0.46 * Math.cos(m), 0.46 * Math.sin(m), 0); pk.localToWorld(q); v.copy(q); } v.project(cam); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   };
   api.preRender = () => { if (GZ.hd && GZ.g) { const c = WALK.on ? WALK.cam : cam; GZ.hd.scale.setScalar(Math.max(0.05, c.position.distanceTo(GZ.g.position) * 0.11)); } };
 
@@ -6570,11 +6583,19 @@ if (window.__WSROLE) {
 
   // Plan uses the same target and transform adapter as Perspective, with screen-size handles.
   const planGumball=document.createElementNS('http://www.w3.org/2000/svg','svg');planGumball.setAttribute('aria-label','Selection Gumball');planGumball.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;overflow:visible';stage.append(planGumball);
-  function drawPlanGumball(){if(CAM!=='plan'||VIEW2D!=='plan'||TOOL!=='select'||!WS.gb||!multi.length||WALKING||XPL.on){planGumball.innerHTML='';return;}const target=GZD?.target||gizmoTarget();if(!target||target.locked){planGumball.innerHTML='';return;}const q=W2S([target.f.x,target.f.y]),x=q[0]/VP.d,y=q[1]/VP.d;planGumball.innerHTML=`<g transform="translate(${x} ${y})"><g data-group-axis="x" style="pointer-events:stroke;cursor:ew-resize" stroke="#e34a36" stroke-width="5" fill="#e34a36"><path d="M0 0H64"/><path d="M64 0l-10-5v10z" stroke-width="1"/></g><g data-group-axis="y" style="pointer-events:stroke;cursor:ns-resize" stroke="#3fb982" stroke-width="5" fill="#3fb982"><path d="M0 0V-64"/><path d="M0-64l-5 10h10z" stroke-width="1"/></g><circle r="5" fill="#fff" stroke="#53606c" stroke-width="2"/></g>`;}
+  function drawPlanGumball(){if(CAM!=='plan'||VIEW2D!=='plan'||TOOL!=='select'||!WS.gb||!multi.length||WALKING||XPL.on){planGumball.innerHTML='';return;}const target=GZD?.target||gizmoTarget();if(!target||target.locked){planGumball.innerHTML='';return;}const t=target.f,q=W2S([t.x,t.y]),x=q[0]/VP.d,y=q[1]/VP.d,has=k=>!t.axes||t.axes.includes(k),deg=-(t.rot||0)*180/Math.PI,R='#e2372b',Gn='#35a845',B='#2a5bd7',hit='stroke="transparent" stroke-width="14" fill="none"';
+    // after Rhino's gumball (2026-10-31): red X and green Y arrows, the blue quarter arc to turn, squares on dotted lines to scale, a white dot
+    planGumball.innerHTML=`<g transform="translate(${x} ${y}) rotate(${deg})">
+      ${has('r')?`<g data-group-axis="r" style="pointer-events:stroke;cursor:grab"><path d="M-40 0A40 40 0 0 0 0 40" ${hit}/><path d="M-40 0A40 40 0 0 0 0 40" stroke="${B}" stroke-width="2" fill="none"/></g>`:''}
+      ${t.axes&&t.axes.includes('sx')?`<g data-group-axis="sx" style="pointer-events:all;cursor:ew-resize"><path d="M0 0H-70" stroke="${R}" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/><rect x="-75" y="-5" width="10" height="10" fill="#fff" stroke="${R}" stroke-width="2"/><rect x="-82" y="-12" width="24" height="24" fill="transparent"/></g>`:''}
+      ${t.axes&&t.axes.includes('sy')?`<g data-group-axis="sy" style="pointer-events:all;cursor:ns-resize"><path d="M0 0V70" stroke="${Gn}" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/><rect x="-5" y="65" width="10" height="10" fill="#fff" stroke="${Gn}" stroke-width="2"/><rect x="-12" y="58" width="24" height="24" fill="transparent"/></g>`:''}
+      ${has('x')?`<g data-group-axis="x" style="pointer-events:stroke;cursor:ew-resize"><path d="M8 0H70" ${hit}/><path d="M0 0H62" stroke="${R}" stroke-width="2.2"/><path d="M74 0l-13-5.5v11z" fill="${R}" stroke="${R}" stroke-width="1"/></g>`:''}
+      ${has('y')?`<g data-group-axis="y" style="pointer-events:stroke;cursor:ns-resize"><path d="M0-8V-70" ${hit}/><path d="M0 0V-62" stroke="${Gn}" stroke-width="2.2"/><path d="M0-74l-5.5 13h11z" fill="${Gn}" stroke="${Gn}" stroke-width="1"/></g>`:''}
+      <circle r="4.5" fill="#fff" stroke="#1f2329" stroke-width="1.6"/></g>`;}
   {const paint=draw;draw=function(){paint();drawPlanGumball();};}
-  planGumball.addEventListener('pointerdown',e=>{const axis=e.target.closest('[data-group-axis]')?.dataset.groupAxis,target=gizmoTarget();if(e.button!==0||!axis||!target||target.locked)return;e.preventDefault();e.stopImmediatePropagation();cv.focus({preventScroll:true});const f=target.f;GZD={plan:true,ax:axis,f,z:target.z,target,p0:S2W(...evP(e)),x0:f.x,y0:f.y,r0:0,before:snapM()};planGumball.setPointerCapture(e.pointerId);});
-  document.addEventListener('pointermove',e=>{if(!GZD?.plan)return;e.preventDefault();e.stopImmediatePropagation();const d=GZD,p=S2W(...evP(e));d.f.x=d.x0+(d.ax==='x'?sg(p[0]-d.p0[0],.01):0);d.f.y=d.y0+(d.ax==='y'?sg(p[1]-d.p0[1],.01):0);d.target.apply();changed(true);},true);
-  document.addEventListener('pointerup',e=>{if(!GZD?.plan)return;e.stopImmediatePropagation();const d=GZD;GZD=null;d.target.apply();tidy();commit(d.before);draw();},true);
+  planGumball.addEventListener('pointerdown',e=>{const axis=e.target.closest('[data-group-axis]')?.dataset.groupAxis,target=gizmoTarget();if(e.button!==0||!axis||!target||target.locked)return;e.preventDefault();e.stopImmediatePropagation();cv.focus({preventScroll:true});const f=target.f;const p0=S2W(...evP(e));GZD={plan:true,ax:axis,f,z:target.z,target,p0,x0:f.x,y0:f.y,r0:f.rot||0,a0:Math.atan2(p0[1]-f.y,p0[0]-f.x),s0:{x:f.sx||1,y:f.sy||1},before:snapM()};planGumball.setPointerCapture(e.pointerId);});
+  document.addEventListener('pointermove',e=>{if(!GZD?.plan)return;e.preventDefault();e.stopImmediatePropagation();const d=GZD,p=S2W(...evP(e)),f=d.f;if(d.ax==='sx'||d.ax==='sy')gzScale(d,p,e);else if(d.ax==='r'){const a=Math.atan2(p[1]-f.y,p[0]-f.x);f.rot=(((d.r0+a-d.a0)%(2*Math.PI))+2*Math.PI)%(2*Math.PI);tipAt(e,`${Math.round(f.rot*180/Math.PI)}°`);}else{const dir=d.ax==='x'?[Math.cos(d.r0),Math.sin(d.r0)]:[-Math.sin(d.r0),Math.cos(d.r0)],k=sg((p[0]-d.p0[0])*dir[0]+(p[1]-d.p0[1])*dir[1],.01);f.x=+(d.x0+dir[0]*k).toFixed(4);f.y=+(d.y0+dir[1]*k).toFixed(4);tipAt(e,`${k>=0?'+':''}${Math.round(k*1000)} mm`);}d.target.apply();changed(true);},true);
+  document.addEventListener('pointerup',e=>{if(!GZD?.plan)return;e.stopImmediatePropagation();const d=GZD;GZD=null;tipOff();if(d.ax==='r')d.f.rot=(d.target.snapRotation||WBP.snapAngle)(d.f.rot);d.target.apply();tidy();commit(d.before);draw();},true);
   planGumball.addEventListener('pointercancel',()=>{if(GZD?.plan)cancelGizmo();});
   const point=e=>CAM==='3d'?S3.plane(e.clientX,e.clientY,lvObj().z):S2W(...evP(e));
   // Capture above native per-object handles so dragging a selected wall or mesh keeps the full selection.
