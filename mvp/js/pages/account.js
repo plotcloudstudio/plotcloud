@@ -24,14 +24,16 @@ const DEF = [
   ['eye', 'Eye height (m)', 'number', 'Isovist'], ['code', 'Structural code', ['NBC 2020'], 'Structural analysis (the code it checks)'],
 ];
 
-const TABS = [['profile', 'Profile'], ['site', 'Site & defaults'], ['plan', 'Plan'], ['data', 'Backup & data'], ['notify', 'Notifications']];
+// Site & defaults left Account (2026-10-31): a project's site and shared parameters are set in its Project props in the Workspace.
+// The sections stay in the page, hidden, so the values that seed new projects keep working.
+const TABS = [['profile', 'Profile'], ['plan', 'Plan'], ['data', 'Backup & data'], ['notify', 'Notifications']];
 const size = (b) => b > 1073741824 ? `${(b / 1073741824).toFixed(1)} GB` : b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
 
 export async function render(app, _, params = new URLSearchParams()) {
   const betaAccess = await checkAccess();
   const A = S.account();
   if (!A.user) { location.hash = '#/login?next=account'; return; }
-  let site = S.clone(A.site), loading = false, tab = TABS.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'site';
+  let site = S.clone(A.site), loading = false, tab = TABS.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'profile';
   const N = A.notify || { batch: true, stale: true };
 
   app.innerHTML = `<div class="acct">

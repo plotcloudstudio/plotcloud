@@ -1,5 +1,5 @@
 import {inspectStudy} from '../study-readiness.js';
-import {mountHandoff,createHandoff} from '../handoff.js?v=handoff-20261028-1';
+import {mountHandoff,createHandoff,baselineSignature} from '../handoff.js?v=handoff-20261028-1';
 import {editStructuralProperties,structuralSummary} from '../structural-properties.js?v=structural-study-20261028-1';
 // The Workspace (#/workspace): Plan Studio in one view (chosen at the top left), with the Workspace's own tools, Rhino-style panels on the
 // right (Properties, Layers, Versions; additional views under View tools) and the status bar.
@@ -14,7 +14,10 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 import * as S from '../store.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
-import { mountChrome } from '../workspace-chrome.js?v=assets-20261030-1';
+import { ensureProjectClimate } from '../project-climate.js';
+import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
+import { studyInputs } from '../parameters.js';
+import { mountChrome } from '../workspace-chrome.js?v=weather-20261031-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -718,10 +721,12 @@ export function render(app, [pid]) {
   $('#sendSim', app).onclick = async () => {
     const button=$('#sendSim',app),pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready){toast('The model is still loading.');return;}button.disabled=true;button.textContent='Preparing simulation…';button.setAttribute('aria-busy','true');shell.inert=true;shell.setAttribute('aria-busy','true');
     try{
+      // a study that reads weather gets it from the project's address first (2026-10-31): the nearest station, fetched now
+      if(studyInputs(studyChoice.value).includes('weather.epw')&&!S.conditionsOf(p).site.climate&&weatherDownloadAvailable()){button.textContent='Getting the weather for this address…';toast('Getting the weather for this address…');try{await ensureProjectClimate(p);}catch(error){}}
       // Flush the active model and its derived geometry before freezing the version.
       await flushCurrentModel(pane);
       preflightKey='';const checks=checkHandoff();if(checks.errors.length){shell.inert=false;button.removeAttribute('aria-busy');handoff.refresh();app.querySelector('#geometryHealth').click();throw Error('Resolve the pre-flight issues in Workbench first.');}
-      shell.inert=false;button.removeAttribute('aria-busy');if(!await handoff.review()){button.disabled=false;button.textContent='Send to Simulation';shell.removeAttribute('aria-busy');return;}shell.inert=true;
+      p.baselineReview={signature:baselineSignature(p),confirmedAt:new Date().toISOString(),automatic:true};S.save();   // no confirmation step (2026-10-31): the study shows these inputs
       const v=dirty()||!baseline()?S.saveVersion(p,'Sent from Workspace'):baseline();
       const record=createHandoff(p,v,studyChoice.value,checkHandoff().checks);p.handoffs=[...(p.handoffs||[]),record];S.save();setCurrent(p);setCurrentVersion(p,v.id);
       const levels=pane.ws.levels(),selected=levels.list.find(l=>l.id===levels.lv),level=levelsOf(v.model).find(l=>Math.abs(l.z-(selected?.z??0))<.001);
@@ -765,6 +770,7 @@ export function render(app, [pid]) {
   }});
   // the floating layout (workspace-chrome.js): the model fills the window, the controls above move onto cards and rails
   document.body.classList.add('sp-full');
+  { const site = S.conditionsOf(p).site; if (weatherDownloadAvailable() && !site.sample && !site.climate && Number.isFinite(site.lat)) ensureProjectClimate(p).catch(() => { }); }   // weather from the address, ready before a study needs it
   const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers, sims: SIMS });
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);

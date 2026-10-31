@@ -49,7 +49,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS a full study opens inside the Workspace page (no separate page) and Back returns to the model; + lists Building and Interior');
 
     // the project's shared parameters live in Project props (bottom left): saving makes a new shared revision
-    await p.click('[data-sp=props]'); await p.locator('.pp-form').waitFor(); assert.match(await p.locator('.sp-propscard').innerText(), /Default[\s\S]*Sun & light[\s\S]*Noise[\s\S]*Shared climate/);
+    await p.click('[data-sp=props]'); await p.locator('.pp-form').waitFor(); assert.match(await p.locator('.sp-propscard').innerText(), /Default[\s\S]*Sun & light[\s\S]*Noise[\s\S]*Weather[\s\S]*Advanced/);
     const rev0 = await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'); return S.conditionsOf(A.currentProject()).revision; });
     await p.fill('.pp-form [name="site.north"]', '7'); await p.click('.pp-form button[type=submit]'); await p.waitForFunction(() => /Saved revision/.test(document.querySelector('.pp-form .pp-note')?.textContent || ''));
     assert.deepEqual(await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'), c = S.conditionsOf(A.currentProject()); return [c.site.north, c.revision]; }), [7, rev0 + 1]);

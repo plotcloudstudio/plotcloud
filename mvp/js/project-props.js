@@ -27,6 +27,8 @@ const TAB_TYPES = { Default: TYPES.map(([k]) => k), 'Sun & light': ['building', 
 export function mountProps(host, p, { counts = () => ({}), onClose = () => { } } = {}) {
   let tab = 'Default', type = 'project', note = '', disposeClimate = null;
   const usedBy = (paths) => SIMS.filter((s) => studyInputs(s.id).some((x) => paths.includes(x) || (paths.includes('weather.epw') && x === 'weather.epw'))).map((s) => s.name);
+  // the weather in use: matched from the project's address automatically; Advanced changes it
+  function weatherLine() { const w = S.conditionsOf(p).site.climate; return w ? esc(`${w.station || w.name}${Number.isFinite(w.distanceKm) ? ` · ${w.distanceKm.toFixed(1)} km from the site` : ''} · ${w.automatic ? 'matched from the address' : 'your file'}`) + (w.representativenessWarning ? `<small>${esc(w.representativenessWarning)}</small>` : '') : 'Matched from the project address when a study needs it.'; }
   function value([, , [k, n]]) { const c = S.conditionsOf(p); return c[k]?.[n]; }
   function draw() {
     disposeClimate?.(); disposeClimate = null;
@@ -37,7 +39,7 @@ export function mountProps(host, p, { counts = () => ({}), onClose = () => { } }
       <section class="pp-props">${type === 'project' ? `<h3>Project · ${esc(tab)}</h3><p class="pp-used">${used.length ? 'Used by ' + esc(used.join(', ')) : 'Used by no study yet'}</p>
         <form class="pp-form">${fields.map((f) => { const [path, label, , input, unit] = f, v = value(f);
           return `<label><span>${esc(label)}${unit ? ` <small>${esc(unit)}</small>` : ''}</span>${Array.isArray(input) ? `<select name="${path}">${input.map((o) => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>` : `<input name="${path}" type="${input}" ${input === 'number' ? 'step="any"' : ''} value="${esc(v ?? '')}">`}</label>`; }).join('')}
-          <button type="submit" class="btn sm primary">Save</button><p class="pp-note" role="status">${esc(note)}</p></form>${shared ? '<div class="pp-climate"><div id="sharedForm"></div></div>' : ''}
+          <button type="submit" class="btn sm primary">Save</button><p class="pp-note" role="status">${esc(note)}</p></form>${shared ? `<p class="pp-weather"><b>Weather</b> ${weatherLine()}</p><details class="pp-adv"><summary>Advanced · upload EPW, choose a station, terrain and shelter</summary><div class="pp-climate"><div id="sharedForm"></div></div></details>` : ''}
         <p class="pp-note">Saving makes a new shared revision. Results saved with earlier values keep them and are marked for rerun.</p>`
         : `<div class="pp-empty"><b>No props here</b><p>No shared props for “${esc(TYPES.find(([q]) => q === type)[1])}” in ${esc(tab)}. ${n[type] ? `This model has ${n[type]}. Select` : 'Select'} one in the model to set its own properties.</p></div>`}</section></div>`;
     if (type === 'project' && shared) { const c = host.querySelector('.pp-climate'); disposeClimate = mountProjectClimate(c, p); c.querySelector('#sharedForm')?.remove(); }

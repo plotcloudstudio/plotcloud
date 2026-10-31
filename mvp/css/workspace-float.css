@@ -260,3 +260,6 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-aslist{list-style:none;margin:0;padding:0}.w2.sp .sp-aslist button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:0;background:none;padding:6px 8px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}
 .w2.sp .sp-aslist button:hover{background:#f5f6f7}.w2.sp .sp-aslist small{color:var(--sp-sub)}
 .w2.sp .sp-asgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.w2.sp .sp-asgrid figure{margin:0;text-align:center}.w2.sp .sp-asgrid img{width:100%;aspect-ratio:1;object-fit:contain;background:#f3f4f6;border-radius:6px}.w2.sp .sp-asgrid figcaption{font-size:10px;color:var(--sp-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.w2.sp .pp-weather{margin:14px 0 4px;display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px}.w2.sp .pp-weather b{font-weight:400;color:#4b5563}.w2.sp .pp-weather small{grid-column:2;display:block;color:#b45309}
+.w2.sp .pp-adv summary{cursor:pointer;color:#2f5bd3;font-size:11px;margin:6px 0}

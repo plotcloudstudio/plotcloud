@@ -14,7 +14,8 @@ export function solarMeshScene(raw,model,{name,site,versionId,projectId,context=
   meshes.push({id:m.id,kind:m.k,role,name:im?.name||m.id,positions,glass:!!m.glass,outer:[[lo[0],lo[1]],[hi[0],lo[1]],[hi[0],hi[1]],[lo[0],hi[1]]],base:lo[2],h:hi[2],boundsForLabelsOnly:true});
  }
  const missing=[...imports.values()].filter(o=>!meshes.some(m=>m.kind==='imp'&&String(m.id)===String(o.id)));if(missing.length)throw Error('Missing mesh geometry: '+missing.map(o=>o.name||o.id).join(', ')+'. Reimport these objects before simulation.');
- if(!meshes.length)throw Error('No visible surface geometry to analyze. Show the required layers or import the model again.');
+ // a site with no building of its own yet is still a study: its surroundings and terrain (2026-10-31)
+ if(!meshes.length&&!(context.length&&!off.has('Site'))&&!(terrain&&!off.has('Site')))throw Error('No visible surface geometry to analyze. Show the required layers or import the model again.');
  const masses=off.has('Site')?[]:context;for(const m of masses)for(const p of m.outer||[]){extend(p[0],p[1],m.base);extend(p[0],p[1],m.h);}
  if(terrain&&!off.has('Site'))for(const p of terrain.pts||[])extend(...p);
  return{format:'plotcloud-scene',v:1,kind:'masses',name,app:'plotcloud-workspace',north:-(site?.north||0),loc:site&&Number.isFinite(site.lat)?{lat:site.lat,lon:site.lon,label:site.label,tz:site.utcOffset??Math.round(site.lon/15),dst:0}:null,
