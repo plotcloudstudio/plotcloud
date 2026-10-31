@@ -18,7 +18,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=way-20261031-2';
+import { mountChrome } from '../workspace-chrome.js?v=site-20261031-6';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -65,10 +65,10 @@ const ON_WALL = new Set(['door', 'win', 'hole']);
 const FURN_BY_NAME = new Map(MODELS.map((m) => [m.en, m]));
 
 // Plan Studio objects ↔ Workspace layers. A Workspace layer's eye and lock act on these Plan Studio layers in every pane.
-const KLAYER = { imp: 'Imported', mass: 'Masses', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
+const KLAYER = { ctx: 'Site', imp: 'Imported', mass: 'Masses', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
 const LMAP = { Walls: ['parts.walls'], Glazing: ['parts.openings'], Structure: ['parts.floors'], Furniture: ['soft', 'custom'], Rooms: ['roomNames', 'roomArea'], Lighting: ['lighting', 'lighting.fix', 'ceiling', 'ceiling.lights', 'ceiling.panels', 'ceiling.vents'], Site: ['ref.site'], Masses: ['mass'] };
-const KTYPE = { imp: 'imported', mass: 'mass', wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
-const KMAT = { imp: 'Imported', mass: 'Concrete', wall: 'Plaster', fence: 'Timber', floor: 'Concrete', void: 'Concrete', stair: 'Concrete', furn: 'Timber', light: 'Imported', ceil: 'Gypsum', roof: 'Concrete' };
+const KTYPE = { ctx: 'context', imp: 'imported', mass: 'mass', wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
+const KMAT = { ctx: 'Concrete', imp: 'Imported', mass: 'Concrete', wall: 'Plaster', fence: 'Timber', floor: 'Concrete', void: 'Concrete', stair: 'Concrete', furn: 'Timber', light: 'Imported', ceil: 'Gypsum', roof: 'Concrete' };
 const PS = /^ps:([a-z]+):(.*)$/;
 const psId = (s) => `ps:${s.k === 'end' ? 'wall' : s.k}:${s.id}`;
 const psSel = (id) => { const m = PS.exec(id || ''); return m ? { k: m[1], id: m[2] } : null; };
@@ -156,7 +156,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=way-20261031-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=site-20261031-7`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -232,7 +232,8 @@ export function render(app, [pid]) {
   const any = () => INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : INST.props.ready ? INST.props.ws : null;
   const importState={busy:false,file:null,asNew:true,message:'Choose a file to import into a new project.',error:false};
   const layerVis = () => { const map = { parts: true, ref: true }; for (const [L, ids] of Object.entries(LMAP)) { const l = M().layers.find((x) => x.name === L), on = l ? l.visible !== false : true; for (const id of ids) map[id] = on; } return map; };
-  const lockList = () => M().layers.filter((l) => l.locked).map((l) => l.name);
+  // while the site model is edited, every other layer is locked (2026-10-31): only the site and its context and landscape change
+  const lockList = () => siteMode() ? [...new Set([...M().layers.map((l) => l.name), ...Object.values(KLAYER)])].filter((n) => n !== 'Site') : M().layers.filter((l) => l.locked).map((l) => l.name);
   const offLayers = () => M().layers.filter((l) => l.visible === false).map((l) => l.name);
   // layer materials in the 3D view: each layer's look, which Plan Studio objects belong to which layer, and the imports' layers
   const lookSpec = () => ({ looks: LM.looks(M().layers), klayer: KLAYER, imports: Object.fromEntries((M().studio?.imports || []).map((o) => [o.id, o.layer || 'Imported'])) });
@@ -261,7 +262,7 @@ export function render(app, [pid]) {
     hist() { return INST.plan.ready ? INST.plan.ws.hist() : { u: 0, r: 0 }; },
     command(action){if(action==='delete'&&UI.sels.length)delIds([...UI.sels]);else if(action==='selectAll')activePane().ws.selectAll?.();},
     box(role, items, mods) { boxPick(items.map(psId), mods); },
-    select(role, s, mods = {}) { if (s && s.k === 'ctx') { ctxProps(role, s.id); return; } if (mods.add || mods.remove) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
+    select(role, s, mods = {}) { if (mods.add || mods.remove) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
       if (!id) { if (UI.sels.some((x) => PS.test(x))) setSel([], { from: role }); return; }   // empty space in a pane clears a Plan Studio pick; an imported mesh picked in Shaded stays
       if (UI.sels.length === 1 && UI.sels[0] === id) return;
       if (comp(id)) setSel([id], { from: role }); else pendSel = { id, role }; },   // just made (placed, drawn): selected once it is listed
@@ -294,6 +295,7 @@ export function render(app, [pid]) {
     for (const o of objs) {
       const L = lvZ.get(o.lv), k = o.k === 'furn' && o.stair ? 'stair' : o.k, m = by.get(o.k + ':' + o.id); by.delete(o.k + ':' + o.id);
       const base = { name: o.name, type: o.k === 'op' ? (o.kind === 'door' ? 'door' : 'window') : KTYPE[k] || 'furniture', layer: o.layer || KLAYER[k] || 'Imported', mat: o.mat || (o.k === 'op' ? (o.kind === 'door' ? 'Timber' : 'Glass') : KMAT[k] || 'Imported') };
+      if (o.k === 'ctx') { base.g = { x: +o.bb[0].toFixed(3), y: +o.bb[1].toFixed(3), z: +(o.z0 || 0).toFixed(3), w: +Math.max(0.01, o.bb[2] - o.bb[0]).toFixed(3), d: +Math.max(0.01, o.bb[3] - o.bb[1]).toFixed(3), h: +(o.h || 9).toFixed(3) }; put(psId(o), base, null); continue; }
       if (o.k === 'room') { base.g = { x: +o.bb[0].toFixed(3), y: +o.bb[1].toFixed(3), z: +(o.z0 ?? (L ? L.z : 0)).toFixed(3), w: +(o.bb[2] - o.bb[0]).toFixed(3), d: +(o.bb[3] - o.bb[1]).toFixed(3), h: +(o.h || (L ? L.h : 2.7)).toFixed(3) }; base.room = { floor: 'Timber', ceiling: 'Gypsum' }; put(psId(o), base, null); continue; }
       put(psId(o), base, HIDDEN.has(o.id) ? null : m);
       if (!out.find((c) => c.id === psId(o)) && L) out.push({ ...base, id: psId(o), ps: 1, g: { x: 0, y: 0, z: L.z, w: 0.01, d: 0.01, h: 0.01 } });   // hidden: listed, not drawn
@@ -755,28 +757,13 @@ export function render(app, [pid]) {
   // site edit mode banner (bottom centre): the Site layer is unlocked until Done
   // editing the site model (2026-10-31): a green frame round the screen and a banner; only the site tools (Context, Landscape) work
   const SITE_TOOLS = new Set(['mass', 'landscape']);
-  // a neighbouring building picked while editing the site model: its name and height, or leave it out (delete)
-  function ctxProps(role, id) { const pane = INST[role], w = pane?.ws, b = w?.ctx?.(id); if (!b) return; const host = $('#propertyBody', app); UI.tab = 'properties'; tabsUI(); propsOn(false); host.hidden = false;
-    host.innerHTML = `<h2>Context building</h2><p class="note">${esc(b.added ? 'Drawn by you' : 'From ' + (b.src || 'the map'))}${b.hSource ? ` · height ${b.hSource === 'user' ? 'set by you' : 'from ' + esc(b.hSource)}` : ''} · ${Math.round(b.area || 0)} m² footprint</p>
-      <label class="w3-f">Name<input id="ctxName" value="${esc(b.name)}" placeholder="Building"></label>
-      <label class="w3-f">Height (m)<input id="ctxH" type="number" min="2" max="600" step="0.5" value="${b.h ?? ''}"></label>
-      <label class="w3-f">Storeys (3 m each)<input id="ctxSt" type="number" min="1" max="200" step="1" value="${b.h ? Math.max(1, Math.round(b.h / 3)) : ''}"></label>
-      <div class="w3-row"><button type="button" class="btn sm" id="ctxDel">Delete building</button></div>
-      <p class="note">Changes are kept with the site, shared by every sketch; studies use the new heights.</p>`;
-    const set = (o) => w.ctxSet(id, o);   // the other panes follow through the model, as with any edit
-    host.querySelector('#ctxName').onchange = (e) => set({ name: e.target.value });
-    host.querySelector('#ctxH').onchange = (e) => { set({ h: +e.target.value }); host.querySelector('#ctxSt').value = Math.max(1, Math.round(+e.target.value / 3)); };
-    host.querySelector('#ctxSt').onchange = (e) => { const h = Math.max(1, +e.target.value) * 3; set({ h, levels: +e.target.value }); host.querySelector('#ctxH').value = h; };
-    host.querySelector('#ctxDel').onclick = () => { set({ excluded: true }); host.innerHTML = '<h2>Properties</h2><p class="note">The building was deleted from the site.</p>'; };
-    openCardFromWS(); }
-  const openCardFromWS = () => { try { window.__wsOpenCard?.(true); } catch { } };
   function siteMode() { return M().layers.find((l) => l.name === 'Site')?.locked === false; }
   function siteBanner(on) { let b = $('#siteEditBanner', app); if (!b) { b = document.createElement('div'); b.id = 'siteEditBanner'; b.className = 'wb-site-banner'; b.setAttribute('role', 'status'); b.innerHTML = '<span></span><button type="button">Done</button>'; app.querySelector('.wb-shell').append(b); b.querySelector('button').onclick = () => editSiteGeometry(); }
     const n = Math.max(1, p.versions.length); b.querySelector('span').innerHTML = `<b>Editing site model</b> · Changes will affect ${n} ${n === 1 ? 'sketch' : 'sketches'}`; b.hidden = !on; app.querySelector('.wb-shell').classList.toggle('wb-site-editing', on);
     $$('[data-panel]', app).forEach((x) => { if (x.closest('#panel')) return; const off = x.dataset.panel === 'landscape' || x.dataset.panel === 'mass' ? !on : on && x.dataset.panel !== 'project' && !SITE_TOOLS.has(x.dataset.panel); x.setAttribute('aria-disabled', String(off)); x.classList.toggle('sp-off', off); if (x.dataset.panel === 'mass') x.title = on ? 'Context' : 'Context (in Edit site model)'; if (x.dataset.panel === 'landscape') x.title = on ? TOOLS.landscape.label : 'Landscape: planting, water and paving (in Edit site model)'; });
     if (!on && SITE_TOOLS.has(UI.panel)) UI.panel = 'draw';
     if (on && !SITE_TOOLS.has(UI.panel) && UI.panel !== 'project') { UI.panel = 'mass'; }
-    if (siteBanner.was !== on) { siteBanner.was = on; try { panel(); } catch { } } }
+    if (siteBanner.was !== on) { siteBanner.was = on; if (on && UI.sels.length) setSel([], { params: false }); for (const I2 of ready()) I2.ws.setLocks?.(lockList()); try { derive(false); } catch { } try { panel(); } catch { } } }
   const editSiteGeometry = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };
   const handoff=mountHandoff(app,p,{model:M,version:baseline,dirty,check:checkHandoff,locate:ref=>{const k=({Wall:'wall',Opening:'op',Furniture:'furn',Floor:'floor','Floor opening':'void'})[ref.k]||ref.k;setSel(['ps:'+k+':'+ref.id],{params:true});},onGeometryEdit:editSiteGeometry});
   $('#editSite',app).onclick=()=>editSiteGeometry();

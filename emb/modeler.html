@@ -2422,7 +2422,7 @@ function drawSite() {
   if (pp) { g.save(); g.beginPath(); pp.forEach((p, i) => { const q = W2S(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.fillStyle = 'rgba(251,237,232,.55)'; g.fill(); g.clip();
     const xs = pp.map((p) => p[0]), ys = pp.map((p) => p[1]), y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs); g.strokeStyle = 'rgba(216,64,42,.25)'; g.lineWidth = d; g.beginPath();   // a 5 m grid, only inside the boundary
     for (let x = Math.ceil(x0 / 5) * 5; x <= x1; x += 5) { const a = W2S([x, y0]), b = W2S([x, y1]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } for (let y = Math.ceil(y0 / 5) * 5; y <= y1; y += 5) { const a = W2S([x0, y]), b = W2S([x1, y]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); g.restore(); }
-  if (layerOn('ref.site.bld')) for (const b of st.buildings) { if (!b.xy || !b.xy.length) continue; const has = b.valid && b.h != null, on = SEL && SEL.k === 'ctx' && SEL.id === b.id, hv = HOV && HOV.k === 'ctx' && HOV.id === b.id;
+  if (layerOn('ref.site.bld')) for (const b of st.buildings) { if (!b.xy || !b.xy.length) continue; const has = b.valid && b.h != null, on = wbSelected('ctx', b.id), hv = HOV && HOV.k === 'ctx' && HOV.id === b.id;
     g.beginPath(); b.xy.forEach((p, i) => { const q = P(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath();
     if (b.excluded) { if (b.auto) continue; g.setLineDash([3 * d, 3 * d]); g.strokeStyle = on ? C.accent : 'rgba(80,76,70,.35)'; g.lineWidth = (on ? 2 : 1) * d; g.stroke(); g.setLineDash([]); continue; }   // left out by the person: a faint outline, so it can be put back
     g.fillStyle = has ? (b.hSource === 'estimate' ? 'rgba(217,164,0,.16)' : 'rgba(120,116,108,.20)') : 'rgba(179,38,30,.05)'; g.fill();
@@ -3913,25 +3913,26 @@ function gizmoTarget() {
   const s = SEL, o = selObj();
   if (!s || !o || isHidden(o.id)) return null;
   const kind = s.k === 'end' ? 'wall' : s.k;
-  if (!['furn', 'wall', 'op', 'floor', 'void', 'fence', 'mass', 'imp', 'light', 'ceil'].includes(kind)) return null;
+  if (!['furn', 'wall', 'op', 'floor', 'void', 'fence', 'mass', 'imp', 'light', 'ceil', 'ctx'].includes(kind)) return null;
   if (LAYER_OF[kind] && !VIS[LAYER_OF[kind]]) return null;
   if (kind === 'furn' && !furnOk(o, '3d')) return null;
   if (kind === 'imp' && !impOn(o, '3d')) return null;
   if (kind === 'mass' && !layerOn('mass', '3d')) return null;
   if (kind === 'light' && !layerOn('lighting.fix', '3d')) return null;
   if (kind === 'ceil' && !layerOn('ceiling', '3d')) return null;
-  const layer = kind === 'imp' ? o.layer || 'Imported' : ({ wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', mass: 'Masses', furn: 'Furniture', light: 'Lighting', ceil: 'Lighting' })[kind];
+  const layer = kind === 'imp' ? o.layer || 'Imported' : ({ ctx: 'Site', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', mass: 'Masses', furn: 'Furniture', light: 'Lighting', ceil: 'Lighting' })[kind];
   const locked = !!o.locked || !!o.auto || !!window.__ws?.locks.has(layer);
   const level = lvObj(o.lv || LV) || { z: 0, h: 3 };
   if (kind === 'furn') return { kind, f: o, z: level.z, locked, apply() {} };
   const original = JSON.parse(JSON.stringify(o));
-  let F = frameOf(kind, o), points = null, h = o.h || .15, z = level.z;
-  if (['floor', 'void', 'fence', 'mass'].includes(kind)) {
-    points = kind === 'floor' || kind === 'void' ? floorPoints(o) : o.points;
+  let F = kind === 'ctx' ? null : frameOf(kind, o), points = null, h = o.h || .15, z = level.z;
+  if (['floor', 'void', 'fence', 'mass', 'ctx'].includes(kind)) {
+    points = kind === 'floor' || kind === 'void' ? floorPoints(o) : kind === 'ctx' ? o.xy.map((q) => SITEC.siteToPlan(M.site, q, M.north || 0)) : o.points;
     const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
     const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
     F = { c: [(x0 + x1) / 2, (y0 + y1) / 2], th: 0, hw: (x1 - x0) / 2, hd: (y1 - y0) / 2 };
     if (kind === 'mass') { h = massH(o); z = o.z || 0; }
+    if (kind === 'ctx') { h = o.h || 9; z = o.base || 0; }
     if (kind === 'floor') { h = o.thickness || level.slab || .22; z -= h; }
     if (kind === 'void') h = .08;
   } else if (kind === 'imp') {
@@ -3971,6 +3972,8 @@ function gizmoTarget() {
       } else if (kind === 'op') {
         const w = wallById(o.wall); if (!w) return;
         const d = STC.wallDir(w); o.pos = (f.x - w.a[0]) * d[0] + (f.y - w.a[1]) * d[1]; STC.fixOp(M, o);
+      } else if (sourcePoints && kind === 'ctx') {
+        o.xy = sourcePoints.map(transform).map((q) => siteOfM(M, q)).map((q) => [+q[0].toFixed(2), +q[1].toFixed(2)]); o.ll = []; o.edited = true; M.site.version++;
       } else if (sourcePoints) {
         o.points = sourcePoints.map(transform);
         if (kind === 'floor' || kind === 'void') {
@@ -6516,7 +6519,7 @@ if (window.__WSROLE) {
   const LOCKK = { imp: 'Imported', mass: 'Masses', ctx: 'Site', wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
   const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', lsplant: 'Site', lswater: 'Site', lspave: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
   cv.addEventListener('pointerdown', () => { WS.down = true; setTimeout(() => { WS.down = false; }, 0); }, true);
-  { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && (h.k === 'imp' ? ((M.imports || []).find((o) => o.id === h.id) || {}).layer || 'Imported' : LOCKK[h.k]); if (L && WS.locks.has(L)) { if (WS.down) say(`The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
+  { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && (h.k === 'imp' ? ((M.imports || []).find((o) => o.id === h.id) || {}).layer || 'Imported' : LOCKK[h.k]); if (L && WS.locks.has(L)) { if (WS.down) say(L !== 'Site' && !WS.locks.has('Site') ? 'Editing the site model: only the site changes. Press Done to edit the design.' : `The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
   { const _t = setTool; setTool = function (t) { const L = TOOLK[t] || (t === 'place' && PICK && REG[PICK] && REG[PICK].kind === 'stair' ? 'Furniture' : null); if (L && WS.locks.has(L)) { say(`The ${L} layer is locked. Unlock it in Layers to draw on it.`); return; } return _t(t); }; }
   // Rhino Combo selection: window rightwards, crossing leftwards; Alt forces a box over geometry.
   const boxOverlay = document.createElement('div');
@@ -6549,16 +6552,15 @@ if (window.__WSROLE) {
   document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;if(e.button===2){tipOff();cycleClear();}pickMods={add:e.shiftKey,remove:e.ctrlKey||e.metaKey};if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
     if(CAM==='3d')P3upd(e);if(!e.altKey&&CAM==='3d'&&WS.gb&&S3.gizmo.hit(e.clientX,e.clientY))return;
     const raw=e.altKey?null:(cycleCurrent()||hitTest(S2W(...evP(e)))),hit=raw?{k:raw.k==='end'?'wall':raw.k,id:raw.id}:null,p=point(e);
-    if(raw&&raw.k==='ctx'&&!(pickMods.add||pickMods.remove)){hub()?.select(WS.role,{k:'ctx',id:raw.id});return;}   // a neighbouring building (Edit site model): Plan Studio's own drag moves it or a corner
     if(hit&&(pickMods.add||pickMods.remove)){hub()?.select(WS.role,hit,pickMods);e.stopImmediatePropagation();e.preventDefault();return;}
     if(hit){if(!multi.some(s=>KEY(s)===KEY(hit))){SEL=hit;WS.sel=KEY(SEL);hub()?.select(WS.role,hit);changedSel();}
-      const records=multi.map(s=>({s,o:selObj(s)})).filter(r=>r.o&&!r.o.locked&&!r.o.auto&&['wall','furn','imp','floor','void','fence','mass','op','ceil','light','note'].includes(r.s.k));
+      const records=multi.map(s=>({s,o:selObj(s)})).filter(r=>r.o&&!r.o.locked&&!r.o.auto&&['wall','furn','imp','floor','void','fence','mass','op','ceil','light','note','ctx'].includes(r.s.k));
       gesture={mode:'move',x:e.clientX,y:e.clientY,p,before:snapM(),records:records.map(r=>({...r,original:pc(r.o)})),moved:false};
     }else gesture={mode:'box',x:e.clientX,y:e.clientY,mods:pickMods};
     drag=null;cycleClear();e.stopImmediatePropagation();e.preventDefault();cv.focus({preventScroll:true});if(e.isTrusted)cv.setPointerCapture(e.pointerId);
   },true);
   document.addEventListener('pointermove',e=>{if(!gesture)return;e.stopImmediatePropagation();e.preventDefault();const a=gesture;if(Math.hypot(e.clientX-a.x,e.clientY-a.y)<4&&!a.moved)return;
-    if(a.mode==='move'){const p=point(e);if(!p||!a.p||!a.records.length)return;const dx=sg(p[0]-a.p[0],.01),dy=sg(p[1]-a.p[1],.01);WS.groupMoving=true;for(const r of a.records)if(r.s.k!=='op')moveObject(r.o,r.original,r.s.k,dx,dy);for(const r of a.records)if(r.s.k==='op'&&!a.records.some(q=>q.s.k==='wall'&&q.s.id===r.o.wall))moveObject(r.o,r.original,'op',dx,dy,{host:wallById(r.o.wall),fixOpening:o=>STC.fixOp(M,o)});a.moved=true;changed(true);if(CAM==='3d')upd3D();return;}
+    if(a.mode==='move'){const p=point(e);if(!p||!a.p||!a.records.length)return;const dx=sg(p[0]-a.p[0],.01),dy=sg(p[1]-a.p[1],.01);WS.groupMoving=true;for(const r of a.records)if(r.s.k==='ctx'){const o0=siteOfM(M,[0,0]),o1=siteOfM(M,[dx,dy]),sx=o1[0]-o0[0],sy=o1[1]-o0[1];r.o.xy=r.original.xy.map(q=>[+(q[0]+sx).toFixed(2),+(q[1]+sy).toFixed(2)]);r.o.ll=[];r.o.edited=true;M.site.version++;}else if(r.s.k!=='op')moveObject(r.o,r.original,r.s.k,dx,dy);for(const r of a.records)if(r.s.k==='op'&&!a.records.some(q=>q.s.k==='wall'&&q.s.id===r.o.wall))moveObject(r.o,r.original,'op',dx,dy,{host:wallById(r.o.wall),fixOpening:o=>STC.fixOp(M,o)});a.moved=true;changed(true);if(CAM==='3d')upd3D();return;}
     const cross=e.clientX<a.x;Object.assign(boxOverlay.style,{display:'block',left:Math.min(a.x,e.clientX)+'px',top:Math.min(a.y,e.clientY)+'px',width:Math.abs(e.clientX-a.x)+'px',height:Math.abs(e.clientY-a.y)+'px',borderStyle:cross?'dashed':'solid',borderColor:cross?'#3b9a74':'#87919c',background:cross?'#3b9a7418':'#87919c18'});
   },true);
   const finishGesture=(e,cancel=false)=>{if(!gesture)return;e.stopImmediatePropagation();const a=gesture;gesture=null;boxOverlay.style.display='none';if(a.mode==='move'){if(cancel&&a.moved){WS.rx=true;try{M=JSON.parse(a.before);changed(false);if(CAM==='3d')upd3D();}finally{WS.rx=false;}notify(false);}else if(a.moved){tidy();commit(a.before);}WS.groupMoving=false;C2.m=M.id;for(const f of M.furn)C2.ok.set(f.id,pc(f));return;}
@@ -6655,6 +6657,9 @@ if (window.__WSROLE) {
       for (const l of M.lights || []) out.push({ k: 'light', id: l.id, lv: l.lv, name: (WBF.TYPES[l.type] || { name: 'Light' }).name, level: L(l.lv) });
       for (const c of M.ceil || []) out.push({ k: 'ceil', id: c.id, lv: c.lv, name: (CEIL_NAME && CEIL_NAME[c.kind]) || 'Ceiling item', level: L(c.lv) });
       if (S) for (const r of S.rooms) out.push({ k: 'room', id: r.key, lv: r.lv, name: r.name, level: L(r.lv), area: r.area, lx: r.lx, ly: r.ly, bb: [r.bx0, r.by0, r.bx1, r.by1], z0: r.z0, h: r.h });
+      // the site's neighbouring buildings, while the site model is edited (2026-10-31): selected, moved and turned like the rest
+      if (M.site && !WS.locks.has('Site')) for (const b of M.site.buildings) { if (b.excluded || !b.xy || b.xy.length < 3) continue; const P = b.xy.map((q) => SITEC.siteToPlan(M.site, q, M.north || 0)), xs = P.map((q) => q[0]), ys = P.map((q) => q[1]);
+        out.push({ k: 'ctx', id: b.id, lv: null, name: b.name || 'Context building', level: 'Site', bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], z0: b.base || 0, h: b.h || 9 }); }
       return out; },
     clearances() { return M.furn.filter((f) => !isHidden(f.id)).map((f) => { const c = clearanceOf(f); if (!c) return null; const hw = f.w / 2, hd = f.d / 2, cs = Math.cos(f.rot || 0), sn = Math.sin(f.rot || 0);
       return { id: f.id, z: (lvObj(f.lv) || { z: 0 }).z, pts: [[-hw - c.left, -hd - c.back], [hw + c.right, -hd - c.back], [hw + c.right, hd + c.front], [-hw - c.left, hd + c.front]].map(([u, v]) => [f.x + u * cs - v * sn, f.y + u * sn + v * cs]) }; }).filter(Boolean); },

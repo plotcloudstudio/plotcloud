@@ -785,7 +785,6 @@ export function mountChrome(app, api) {
     tip.style.left = Math.max(6, Math.min(rr.width - w - 6, x)) + 'px'; tip.style.top = Math.max(6, y) + 'px'; tip.style.setProperty('--ax', (cx - Math.max(6, Math.min(rr.width - w - 6, x))) + 'px'); });
   root.addEventListener('pointerout', (e) => { const b = e.target.closest(TIPS); if (b && !b.contains(e.relatedTarget)) tip.hidden = true; });
   root.addEventListener('pointerdown', () => { tip.hidden = true; }, true);
-  window.__wsOpenCard = (on) => openCard(on);
   window.__wsStudy = { open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }) };   // for the browser checks
   return () => { disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
 }
