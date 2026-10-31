@@ -2834,6 +2834,7 @@ cv.addEventListener('pointerdown', (e) => {
   else if (h.k === 'end') { const w = wallById(h.id), pt = w[h.e].slice(), fol = []; for (const q of lvWalls()) for (const e2 of ['a', 'b']) if ((q !== w || e2 !== h.e) && near(q[e2], pt)) fol.push([q, e2]); drag = { k: 'end', w, e: h.e, fol, b }; }
   else if(h.k==='fence'){const f=selObj();drag={k:'fence',f,p0:p,points:f.points.map(q=>q.slice()),b};}
   else if (h.k === 'mass') { const m = selObj(); SEL = { k: 'mass', id: m.id }; drag = h.v != null ? { k: 'massv', m, v: h.v, b } : { k: 'mass', m, p0: p, points: m.points.map((q) => q.slice()), b }; }
+  else if (h.k === 'ctx') { const o = selObj(); if (o && o.xy) drag = h.v != null ? { k: 'ctxv', o, v: h.v, b } : { k: 'ctx', o, p0: siteOfM(M, p), xy: o.xy.map((q) => q.slice()), b }; }   // site context (Edit site model, 2026-10-31)
   else if (h.k === 'op') { drag = { k: 'op', o: selObj(), b }; }
   else if (h.k === 'furn') { const f = selObj(); drag = { k: 'furn', f, dx: f.x - p[0], dy: f.y - p[1], b }; }
   else if (h.k === 'void' || h.k === 'floor') { const v=selObj();if(v.auto){flash('This floor follows its walls. Move the walls to change its outline.');return;}drag={k:'void',v,points:v.points?.map(p=>p.slice()),holes:v.holes?.map(h=>h.map(p=>p.slice())),x0:v.x,y0:v.y, dx: v.x - p[0], dy: v.y - p[1], b }; }
@@ -2846,6 +2847,8 @@ cv.addEventListener('pointermove', (e) => {
     drag.moved = true;
     if (drag.k === 'wall') { const k = stickK(drag, sg((p[0] - drag.p0[0]) * drag.n[0] + (p[1] - drag.p0[1]) * drag.n[1])), w = drag.w; w.a = [drag.a0[0] + drag.n[0] * k, drag.a0[1] + drag.n[1] * k]; w.b = [drag.b0[0] + drag.n[0] * k, drag.b0[1] + drag.n[1] * k]; for (const [q, e2, pt] of drag.fol) q[e2] = [pt[0] + drag.n[0] * k, pt[1] + drag.n[1] * k]; tipAt(e, `Moved ${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm`); }
     else if (drag.k === 'end') { const other = drag.w[drag.e === 'a' ? 'b' : 'a'], q = snapPt(p, other, e.shiftKey); drag.w[drag.e] = q; for (const [w2, e2] of drag.fol) w2[e2] = q.slice(); tipAt(e, `${Math.round(STC.wallLen(drag.w) * 1000)} mm`); }
+    else if (drag.k === 'ctx') { const q = siteOfM(M, p), dx = q[0] - drag.p0[0], dy = q[1] - drag.p0[1]; drag.o.xy = drag.xy.map((r) => [+(r[0] + dx).toFixed(2), +(r[1] + dy).toFixed(2)]); drag.o.edited = true; drag.o.ll = []; M.site.version++; tipAt(e, `Moved ${Math.hypot(dx, dy).toFixed(2)} m`); }
+    else if (drag.k === 'ctxv') { const q = siteOfM(M, p); drag.o.xy[drag.v] = [+q[0].toFixed(2), +q[1].toFixed(2)]; drag.o.area = +areaOf(drag.o.xy).toFixed(1); drag.o.edited = true; drag.o.ll = []; M.site.version++; tipAt(e, `${fmtA(drag.o.area)} m² footprint`); }
     else if(drag.k==='fence'){const dx=sg(p[0]-drag.p0[0]),dy=sg(p[1]-drag.p0[1]);drag.f.points=drag.points.map(q=>[q[0]+dx,q[1]+dy]);}
     else if (drag.k === 'mass') { const dx = sg(p[0] - drag.p0[0]), dy = sg(p[1] - drag.p0[1]); drag.m.points = drag.points.map((q) => [+(q[0] + dx).toFixed(3), +(q[1] + dy).toFixed(3)]); tipAt(e, `Moved ${dx.toFixed(2)}, ${dy.toFixed(2)} m`); }
     else if (drag.k === 'massv') { const q = massSnap(p, null, e.shiftKey, drag.m.id); drag.m.points[drag.v] = [+q[0].toFixed(3), +q[1].toFixed(3)]; tipAt(e, `${fmtA(massArea(drag.m))} m² footprint`); }
@@ -5205,6 +5208,7 @@ addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('i
 { const _ht = hitTest; hitTest = function (p, opt = {}) {
   if (CAM === '3d') { const h = _ht(p, opt); if (h && h.k === 'site') return h.id && h.id !== 'terrain' && M.site && M.site.buildings.some((b) => b.id === h.id) ? { k: 'ctx', id: h.id } : null; return h; }
   if (VIEW2D !== 'plan') return _ht(p, opt);
+  if (SEL && SEL.k === 'ctx' && M.site) { const o = selObj(); if (o && o.xy) { const tv = 7 * VP.d / V.s, i = o.xy.findIndex((q) => { const r = SITEC.siteToPlan(M.site, q, M.north || 0); return Math.hypot(r[0] - p[0], r[1] - p[1]) < tv; }); if (i >= 0) return { k: 'ctx', id: o.id, v: i }; } }
   if (SEL && SEL.k === 'mass' && layerOn('mass')) { const m = selObj(); if (m) { const tv = 7 * VP.d / V.s, i = m.points.findIndex((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < tv); if (i >= 0) return { k: 'mass', id: m.id, v: i }; } }
   const h = _ht(p, opt); if (h && h.k !== 'room') return h;
   if (layerOn('mass')) for (const m of (M.masses || []).slice().reverse()) if (!isHidden(m.id) && inPoly(p, m.points)) return { k: 'mass', id: m.id };
@@ -5329,11 +5333,35 @@ function drawSun() {   // one pixel per cell on a small canvas, drawn scaled: no
     x.putImageData(im, 0, 0); R.img = c; }
   const a = W2S([R.X0, R.Y0 + R.ny * R.cell]); g.save(); g.globalAlpha = 0.62; g.imageSmoothingEnabled = false; g.drawImage(R.img, a[0], a[1], R.nx * R.cell * V.s, R.ny * R.cell * V.s); g.restore();
 }
-{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); _dm(); drawStruct2(); drawSunPath2(); }; }
+{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); _dm(); drawStruct2(); drawSunPath2(); drawCtxHandles(); }; }
+function drawCtxHandles() { if (CAM === '3d' || !SEL || SEL.k !== 'ctx' || !M.site || (window.__ws && window.__ws.locks && window.__ws.locks.has('Site'))) return; const o = selObj(); if (!o || !o.xy) return; const d = VP.d || 1; g.save(); g.fillStyle = '#fff'; g.strokeStyle = '#d8402a'; g.lineWidth = 1.5 * d; for (const q of o.xy) { const s2 = W2S(SITEC.siteToPlan(M.site, q, M.north || 0)); g.fillRect(s2[0] - 4 * d, s2[1] - 4 * d, 8 * d, 8 * d); g.strokeRect(s2[0] - 4 * d, s2[1] - 4 * d, 8 * d, 8 * d); } g.restore(); }
+{ const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawWalk2(); } catch (e) { } return r; }; }   // an interior study over the rooms
 // a Workspace study result in the 2D plan (2026-10-31): the same grid and colours as in 3D, one crisp cell per grid cell
 const RAMPS_TOP = {};   // the study colour ramps (filled in below), shared with the flow animation
 function rampAtTop(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
-let ANA2 = null, SPATH2 = null, STR2 = null;
+let ANA2 = null, SPATH2 = null, STR2 = null; const _drawAgain = () => requestAnimationFrame(() => draw());
+// ---- an interior study on one level (2026-10-31): Circulation's walks as ink that builds up as the ants walk, or its density
+const WK = { o: null, cv: null, g: null, k: 1, done: null, t: 0, raf: 0, last: 0 };
+function walkStop() { cancelAnimationFrame(WK.raf); WK.raf = 0; }
+function walkShow(o) {
+  walkStop(); WK.o = o; if (!o) { if (window.S3 && S3.floorSheet) S3.floorSheet(null); if (CAM !== '3d') draw(); return; }
+  const b = o.box, w = b.x1 - b.x0, h = b.y1 - b.y0, k = Math.min(60, 2600 / Math.max(w, h)); if (!WK.cv || WK.cv.width !== Math.round(w * k) || WK.cv.height !== Math.round(h * k)) { WK.cv = document.createElement('canvas'); WK.cv.width = Math.round(w * k); WK.cv.height = Math.round(h * k); WK.g = WK.cv.getContext('2d'); }
+  WK.k = k; WK.done = new Float32Array(o.walks.length); WK.t = o.play ? 0 : o.T; WK.g.clearRect(0, 0, WK.cv.width, WK.cv.height);
+  if (o.view === 'density') { const D = o.density, R = RAMPS_TOP[o.ramp || 'violet']; for (let j = 0; j < D.ny; j++) for (let i = 0; i < D.nx; i++) { const v = D.vals[j * D.nx + i]; if (!Number.isFinite(v)) continue; WK.g.fillStyle = rampAtTop(R, Math.min(1, v / D.hi)); WK.g.globalAlpha = Math.min(0.92, 0.25 + 0.75 * Math.min(1, v / D.hi)); const x = (D.X0 + i * D.cell - b.x0) * k, y = (b.y1 - (D.Y0 + (j + 1) * D.cell)) * k; WK.g.fillRect(x, y, D.cell * k + 0.6, D.cell * k + 0.6); } WK.g.globalAlpha = 1; walkFrame(); return; }
+  walkInk(); walkFrame(); if (o.play) { WK.last = performance.now(); const tick = (t) => { const dt = Math.min(0.1, (t - WK.last) / 1000); WK.last = t; WK.t = Math.min(o.T, WK.t + dt * (o.speed || 8)); walkInk(); walkFrame(); if (o.onTime) o.onTime(WK.t / o.T); if (WK.t < o.T) WK.raf = requestAnimationFrame(tick); else WK.raf = 0; }; WK.raf = requestAnimationFrame(tick); }
+}
+function walkInk() {   // each walk stroked only up to where its ant has got; translucent strokes add up into dark bands
+  const o = WK.o, g2 = WK.g, k = WK.k, b = o.box, V2 = (p) => [(p[0] - b.x0) * k, (b.y1 - p[1]) * k]; g2.lineCap = 'butt'; g2.lineJoin = 'round'; g2.lineWidth = Math.max(1, 0.03 * k);
+  for (let i = 0; i < o.walks.length; i++) { const w = o.walks[i], d1 = Math.min(w.len, Math.max(0, (WK.t - w.t0) * 1.3)), d0 = WK.done[i]; if (d1 <= d0 + 1e-6) continue;
+    let acc = 0; g2.strokeStyle = w.col; g2.globalAlpha = w.al; g2.beginPath(); let started = false;
+    for (let q = 1; q < w.pts.length; q++) { const a = w.pts[q - 1], c = w.pts[q], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (acc + L >= d0 && acc <= d1) { const t0 = Math.max(0, (d0 - acc) / (L || 1)), t1 = Math.min(1, (d1 - acc) / (L || 1)), p0 = V2([a[0] + (c[0] - a[0]) * t0, a[1] + (c[1] - a[1]) * t0]), p1 = V2([a[0] + (c[0] - a[0]) * t1, a[1] + (c[1] - a[1]) * t1]); if (!started) { g2.moveTo(p0[0], p0[1]); started = true; } g2.lineTo(p1[0], p1[1]); } acc += L; if (acc > d1) break; }
+    g2.stroke(); WK.done[i] = d1; }
+  g2.globalAlpha = 1;
+}
+function walkFrame() { const o = WK.o; if (!o) return;
+  if (o.ground == null) { o.ground = -Infinity; const site = M.site; if (site && site.terrain) for (let i = 0; i <= 16; i++) for (let j = 0; j <= 16; j++) { const q = siteOfM(M, [o.box.x0 + (o.box.x1 - o.box.x0) * i / 16, o.box.y0 + (o.box.y1 - o.box.y0) * j / 16]); o.ground = Math.max(o.ground, SITEC.groundAt(site.terrain, q[0], q[1])); } } if (o.fit && window.S3 && S3.on && S3.fitBox) { o.fit = false; S3.fitBox(o.box, o.z || 0); } if (window.S3 && S3.on && S3.floorSheet) S3.floorSheet({ canvas: WK.cv, x0: o.box.x0, y0: o.box.y0, w: o.box.x1 - o.box.x0, h: o.box.y1 - o.box.y0, z: o.z || 0, lv: o.lv, ground: o.ground }); if (CAM !== '3d') draw(); }
+function drawWalk2() { const o = WK.o; if (!o || CAM === '3d' || !WK.cv || (o.lv && o.lv !== LV)) return; if (o.fit2) { o.fit2 = false; FIT_BOX = { ...o.box }; fitView(); FIT_BOX = null; _drawAgain(); return; } const a = W2S([o.box.x0, o.box.y1]), bb = W2S([o.box.x1, o.box.y0]); g.save(); g.globalAlpha = 0.95; g.drawImage(WK.cv, a[0], a[1], bb[0] - a[0], bb[1] - a[1]); g.restore();
+  for (const p of o.places || []) { const q = W2S(p.p), d = VP.d || 1; g.beginPath(); g.arc(q[0], q[1], 7 * d, 0, 7); g.fillStyle = '#46148c'; g.fill(); g.lineWidth = 2 * d; g.strokeStyle = '#fff'; g.stroke(); g.fillStyle = '#fff'; g.font = `700 ${9 * d}px Inter,system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(p.letter || '', q[0], q[1] + 0.5); } }
 // ---- reading a study result under the pointer (2026-10-31): the Workspace gets the plan point and the pointer position
 let PROBE = null;
 stage.addEventListener('pointermove', (e) => { if (!PROBE) return; let p = null; if (CAM === '3d' && window.S3 && S3.on) p = S3.probe(e.clientX, e.clientY); else { const a = evP(e); p = S2W(a[0], a[1]); } PROBE(p ? { x: p[0], y: p[1], cx: e.clientX, cy: e.clientY } : null); });
@@ -5949,6 +5977,22 @@ window.S3 = (() => {
   api.sunDir = sunDir;
   { const _upd = api.update; api.update = (...a) => { _upd(...a); if (SUN.on) sunApply(); }; }
   { const _u2 = api.update; api.update = (...a) => { _u2(...a); if (LOOK.spec) { lookApply(); render(); } }; }   // layer materials after every rebuild
+  // ---- an interior study on the floor of one level (2026-10-31): a sheet just above the floor with the study's canvas
+  const FLR = { m: null };
+  // frame a plan box (an interior study's level) from above at an angle
+  api.fitBox = (b, y = 0) => { if (!cam || !ctl) return; const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, r = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.85 + 4; ctl.target.set(cx, y, -cy); cam.position.set(cx + r * 0.55, y + r * 1.05, -cy + r * 0.85); cam.lookAt(ctl.target); ctl.update(); render(); };
+  api._sheet = () => (FLR.m ? { y: FLR.m.position.y, x: FLR.m.position.x, z: FLR.m.position.z, vis: FLR.m.visible } : null);   // read-only, for the browser checks
+  api.floorSheet = (o) => { if (!scene) return; if (!o) { if (FLR.cut && R) { R.clippingPlanes = FLR.cut0 || []; FLR.cut = false; render(); } if (FLR.m) { scene.remove(FLR.m); FLR.m.geometry.dispose(); FLR.m.material.map?.dispose(); FLR.m.material.dispose(); FLR.m = null; render(); } return; }
+    if (!FLR.m || FLR.m.userData.cv !== o.canvas) { api.floorSheet(null); const tex = new T.CanvasTexture(o.canvas); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+      const m = new T.Mesh(new T.PlaneGeometry(o.w, o.h), new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; m.name = 'floorsheet'; m.userData.cv = o.canvas; scene.add(m); FLR.m = m; }
+    let y = o.z; try { const st = api.storeys().find((x) => x.id === o.lv && !x.roof); if (st) y = st.y; } catch (e) { }
+    // just above the floor's top: the highest floor surface under the sheet's middle
+    try { const rc = new T.Raycaster(new T.Vector3(o.x0 + o.w / 2, y + 2.5, -(o.y0 + o.h / 2)), new T.Vector3(0, -1, 0)); const hs = rc.intersectObjects(grp ? grp.children : [], true).filter((h) => h.object.isMesh && h.point.y < y + 1.2); if (hs.length) y = Math.max(y, hs[0].point.y); } catch (e) { }
+    if (Number.isFinite(o.ground) && o.ground > y && o.z <= 0.5) y = o.ground + 0.25;   // a ground floor the terrain rises over: the sheet on the ground
+    FLR.m.position.set(o.x0 + o.w / 2, y + 0.12, -(o.y0 + o.h / 2)); FLR.m.material.map.needsUpdate = true;
+    // a cutaway, as a floor plan in 3D: everything above 1.2 m over this floor is cut away, so the floor and its result show
+    if (R && !EL.on) { if (!FLR.cut) { FLR.cut0 = R.clippingPlanes; FLR.cut = true; } R.clippingPlanes = [new T.Plane(new T.Vector3(0, -1, 0), y + 1.2)]; }
+    render(); };
   // ---- the sun path (2026-10-31, after Ladybug's sun path): lines in world coordinates [{ pts: [[x, y, z]…], color, w }], suns [[x, y, z]]
   const SPATH = { g: null };
   api.sunPath = (L) => { if (!scene) return; if (SPATH.g) { scene.remove(SPATH.g); SPATH.g.traverse((o) => { o.geometry && o.geometry.dispose(); o.material && o.material.dispose(); }); SPATH.g = null; } if (!L) { render(); return; }
@@ -5992,7 +6036,7 @@ window.S3 = (() => {
   api.hits = (cx, cy) => { if (!R || !grp) return []; const out = [], seen = new Set(); for (const h of ray(cx, cy).intersectObjects(grp.children, true)) { const ud = tagOf(h.object); if (!ud) continue; const key = `${ud.k}:${ud.id}`; if (seen.has(key)) continue; seen.add(key); out.push({ ud, p: [h.point.x, -h.point.z], z: h.point.y, distance: h.distance }); } return out; };
   api.hit = (cx, cy) => api.hits(cx, cy)[0] || null;
   // the plan point under the pointer on any surface (the topographic block, roofs), for reading a study result (2026-10-31)
-  api.probe = (cx, cy) => { if (!R || !scene) return null; for (const h of ray(cx, cy).intersectObjects(scene.children, true)) { if (!h.object.isMesh) continue; let o = h.object, skip = false; while (o) { if (o.name === 'sunpath' || o.name === 'structure' || o.name === 'flowanim') { skip = true; break; } o = o.parent; } if (!skip) return [h.point.x, -h.point.z]; } return api.plane(cx, cy, 0); };
+  api.probe = (cx, cy) => { if (!R || !scene) return null; for (const h of ray(cx, cy).intersectObjects(scene.children, true)) { if (!h.object.isMesh) continue; let o = h.object, skip = false; while (o) { if (o.name === 'sunpath' || o.name === 'structure' || o.name === 'flowanim' || o.name === 'floorsheet') { skip = true; break; } o = o.parent; } if (!skip) return [h.point.x, -h.point.z]; } return api.plane(cx, cy, 0); };
   // moving particles as short coloured streaks just above the ground: pos Float32Array [x0,y0,z0,x1,y1,z1]… (world), col likewise
   const FLA = { g: null };
   api.flowAnim = (o) => { if (!scene) return; if (!o) { if (FLA.g) { scene.remove(FLA.g); FLA.g.geometry.dispose(); FLA.g.material.dispose(); FLA.g = null; render(); } return; }
@@ -6497,6 +6541,7 @@ if (window.__WSROLE) {
   document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;if(e.button===2){tipOff();cycleClear();}pickMods={add:e.shiftKey,remove:e.ctrlKey||e.metaKey};if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
     if(CAM==='3d')P3upd(e);if(!e.altKey&&CAM==='3d'&&WS.gb&&S3.gizmo.hit(e.clientX,e.clientY))return;
     const raw=e.altKey?null:(cycleCurrent()||hitTest(S2W(...evP(e)))),hit=raw?{k:raw.k==='end'?'wall':raw.k,id:raw.id}:null,p=point(e);
+    if(raw&&raw.k==='ctx'&&!(pickMods.add||pickMods.remove)){hub()?.select(WS.role,{k:'ctx',id:raw.id});return;}   // a neighbouring building (Edit site model): Plan Studio's own drag moves it or a corner
     if(hit&&(pickMods.add||pickMods.remove)){hub()?.select(WS.role,hit,pickMods);e.stopImmediatePropagation();e.preventDefault();return;}
     if(hit){if(!multi.some(s=>KEY(s)===KEY(hit))){SEL=hit;WS.sel=KEY(SEL);hub()?.select(WS.role,hit);changedSel();}
       const records=multi.map(s=>({s,o:selObj(s)})).filter(r=>r.o&&!r.o.locked&&!r.o.auto&&['wall','furn','imp','floor','void','fence','mass','op','ceil','light','note'].includes(r.s.k));
@@ -6673,6 +6718,22 @@ if (window.__WSROLE) {
       return { grid: { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: g.H }, day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
     },
     onProbe(fn) { PROBE = fn || null; },
+    _drag() { return drag ? { k: drag.k, moved: !!drag.moved } : null; },   // for the browser checks
+    _hitAt(cx, cy) { const r = cv.getBoundingClientRect(), k = cv.width / Math.max(1, r.width), p = S2W((cx - r.left) * k, (cy - r.top) * k), h = hitTest(p); return { h, locks: [...(WS.locks || [])], tool: TOOL, cam: CAM, v2: VIEW2D }; },   // for the browser checks
+    // the current level for an interior study: walls with their door and wall-opening gaps, furniture edges, the rooms (2026-10-31)
+    levelPlan() {
+      const lv = LV, L = (M.levels || []).find((x) => x.id === lv) || { id: lv, name: lv, z: 0, h: 3 }, segs = [], xs = [], ys = [];
+      for (const w of M.walls) { if (w.lv !== lv) continue; const len = STC.wallLen(w); if (len < 0.01) continue; const d = STC.wallDir(w), gaps = [];
+        for (const o of M.ops) if (o.wall === w.id && (o.kind === 'door' || o.hole)) gaps.push([Math.max(0, o.pos - o.w / 2), Math.min(len, o.pos + o.w / 2)]);
+        gaps.sort((a, b) => a[0] - b[0]); let t = 0; const at = (u) => [w.a[0] + d[0] * u, w.a[1] + d[1] * u];
+        for (const [g0, g1] of gaps) { if (g0 > t + 0.01) segs.push({ a: at(t), b: at(g0) }); t = Math.max(t, g1); } if (len > t + 0.01) segs.push({ a: at(t), b: at(len) }); xs.push(w.a[0], w.b[0]); ys.push(w.a[1], w.b[1]); }
+      for (const f of M.furn || []) { if (f.lv !== lv || !f.w || !f.d) continue; const c = STC.furnCorners(f); for (let i = 0; i < 4; i++) segs.push({ a: c[i], b: c[(i + 1) % 4] }); }
+      const SB = S || STC.build(M), rooms = (SB.rooms || []).filter((r) => r.lv === lv).map((r) => ({ name: r.name, p: [r.lx, r.ly], area: r.area }));
+      if (!xs.length) return { lv, level: L.name, z: L.z || 0, segs, rooms, box: null };
+      return { lv, level: L.name, z: L.z || 0, segs, rooms, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } }; },
+    walkShow(o) { walkShow(o); },
+    _walkPNG() { return WK.cv ? WK.cv.toDataURL() : null; },   // for the browser checks
+    level() { return LV; },
     // a neighbouring building (site context) for the Workspace's Properties, and its edits (2026-10-31: Edit site model)
     ctx(id) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return null; return { id: b.id, name: b.name || '', h: b.h, levels: b.levels, area: b.area, excluded: !!b.excluded, src: (b.src && b.src.provider) || '', hSource: b.hSource || '', added: !!b.added }; },
     ctxSet(id, o) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return false; const s0 = snapM();
@@ -6708,7 +6769,7 @@ if (window.__WSROLE) {
       if (window.S3 && S3.on && S3.sunPath) S3.sunPath({ lines, suns: (o.suns || []).map((p) => world(p.az, p.alt)), sunR: Math.max(1.5, R / 45), now: o.now && o.now.alt > 0 ? world(o.now.az, o.now.alt) : null });
       SPATH2 = { cx, cy, R, nb, plan, o }; if (CAM !== '3d') draw();
     },
-    clearStudy() { flowStop(); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    clearStudy() { flowStop(); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }
@@ -6745,6 +6806,7 @@ if (window.__WSROLE) {
     wind: [[0, '#2b3a67'], [0.3, '#3f88c5'], [0.5, '#9fd3c7'], [0.7, '#f4d35e'], [1, '#d1495b']],
     flow: [[0, '#2f6db3'], [0.25, '#8fbbe0'], [0.5, '#f1f1ee'], [0.75, '#efa58a'], [1, '#c8423a']],
     risk: [[0, '#f1f1ee'], [0.4, '#f4c26b'], [0.7, '#e2703a'], [1, '#a3242b']],
+    violet: [[0, '#f4a0c9'], [0.3, '#e268b2'], [0.6, '#b140b6'], [0.85, '#7628aa'], [1, '#46148c']],
     frame: [[0, '#9cc3e6'], [0.5, '#9cc3e6'], [1, '#2f6db3']],
     water: [[0, '#e8f4fb'], [0.3, '#9cc9e8'], [0.65, '#3d85c6'], [1, '#14365e']] });
   function rampAt(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }

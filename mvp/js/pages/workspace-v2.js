@@ -18,7 +18,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=site-20261031-3';
+import { mountChrome } from '../workspace-chrome.js?v=circ-20261031-3';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -38,7 +38,7 @@ const MATS = ['Concrete', 'Plaster', 'Gypsum', 'Glass', 'Timber', 'Carpet', 'Aco
 // Tool lists, names exactly as in Plan Studio (emb/modeler.html). Each one starts Plan Studio's own tool in the Plan pane.
 const I = (d) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const TOOLS = {
-  mass: { label: 'Massing', icon: I('<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>'), sections: [
+  mass: { label: 'Context', icon: I('<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>'), sections: [
     ['Massing', ['Mass outline', 'Rectangle mass']]] },   // neighbouring buildings: Context, in Edit site model
   // landscape on the site (2026-10-31): drawn while editing the site model
   landscape: { label: 'Landscape: planting, water and paving', icon: I('<path d="M4 20h16"/><circle cx="9" cy="9" r="4"/><path d="M9 13v7"/><path d="M14 17c1.5-1 3-1 4.5 0"/>'), sections: [
@@ -156,7 +156,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=site-20261031-3`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=circ-20261031-18`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -443,7 +443,7 @@ export function render(app, [pid]) {
   let LIGHTS = null;
   function rail() { const k = UI.panel; $$('[data-panel]', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.panel === k)));
     // the next step, from what the model has (2026-10-25): an empty model starts with Massing; masses and no walls go on to Make floors
-    const st = M().studio || {}, walls = (st.walls || []).length, ms = (st.masses || []).length, next = !walls && !ms ? 'mass' : !walls ? 'draw' : null;
+    const st = M().studio || {}, walls = (st.walls || []).length, ms = (st.masses || []).length, next = !walls ? 'draw' : null;
     $$('.w2-rail [data-panel]', app).forEach((b) => { const t = TOOLS[b.dataset.panel]; b.classList.toggle('w2-next', b.dataset.panel === next); if (t) b.title = b.dataset.panel === next ? (next === 'mass' ? `${t.label} · start here: draw masses on the site` : `${t.label} · next: select a mass and use Make floors in its panel, or draw rooms`) : t.label; }); }
   $$('[data-panel]', app).forEach((b) => b.onclick = () => { if (b.getAttribute('aria-disabled') === 'true') return; UI.panel = b.dataset.panel; saveUI(); showParams = false; rail(); panel(); });
   const propsOn = (on) => { $('#propsWrap', app).dataset.off = String(!on); $('#propertyBody',app).hidden=on; };
@@ -773,8 +773,8 @@ export function render(app, [pid]) {
   function siteMode() { return M().layers.find((l) => l.name === 'Site')?.locked === false; }
   function siteBanner(on) { let b = $('#siteEditBanner', app); if (!b) { b = document.createElement('div'); b.id = 'siteEditBanner'; b.className = 'wb-site-banner'; b.setAttribute('role', 'status'); b.innerHTML = '<span></span><button type="button">Done</button>'; app.querySelector('.wb-shell').append(b); b.querySelector('button').onclick = () => editSiteGeometry(); }
     const n = Math.max(1, p.versions.length); b.querySelector('span').innerHTML = `<b>Editing site model</b> · Changes will affect ${n} ${n === 1 ? 'sketch' : 'sketches'}`; b.hidden = !on; app.querySelector('.wb-shell').classList.toggle('wb-site-editing', on);
-    $$('[data-panel]', app).forEach((x) => { if (x.closest('#panel')) return; const off = x.dataset.panel === 'landscape' ? !on : on && x.dataset.panel !== 'project' && !SITE_TOOLS.has(x.dataset.panel); x.setAttribute('aria-disabled', String(off)); x.classList.toggle('sp-off', off); if (x.dataset.panel === 'mass') x.title = on ? 'Context' : TOOLS.mass.label; if (x.dataset.panel === 'landscape') x.title = on ? TOOLS.landscape.label : 'Landscape: planting, water and paving (in Edit site model)'; });
-    if (!on && UI.panel === 'landscape') UI.panel = 'mass';
+    $$('[data-panel]', app).forEach((x) => { if (x.closest('#panel')) return; const off = x.dataset.panel === 'landscape' || x.dataset.panel === 'mass' ? !on : on && x.dataset.panel !== 'project' && !SITE_TOOLS.has(x.dataset.panel); x.setAttribute('aria-disabled', String(off)); x.classList.toggle('sp-off', off); if (x.dataset.panel === 'mass') x.title = on ? 'Context' : 'Context (in Edit site model)'; if (x.dataset.panel === 'landscape') x.title = on ? TOOLS.landscape.label : 'Landscape: planting, water and paving (in Edit site model)'; });
+    if (!on && SITE_TOOLS.has(UI.panel)) UI.panel = 'draw';
     if (on && !SITE_TOOLS.has(UI.panel) && UI.panel !== 'project') { UI.panel = 'mass'; }
     if (siteBanner.was !== on) { siteBanner.was = on; try { panel(); } catch { } } }
   const editSiteGeometry = () => { const l = M().layers.find(l => l.name === 'Site'); if (!l) return; l.locked = !l.locked; $('#editSite', app).textContent = l.locked ? 'Edit site' : 'Finish site editing'; persist(); for (const i of ready()) i.ws.setLocks(lockList()); layers(); };

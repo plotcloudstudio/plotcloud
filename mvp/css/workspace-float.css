@@ -355,3 +355,10 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp.wb-site-editing>.w2-panel.sp-palette{bottom:112px}
 .w2 .w3-f{display:flex;flex-direction:column;gap:3px;margin:8px 0;font:500 11px Inter,system-ui,sans-serif;color:#6b7280}
 .w2 .w3-f input{font:12px Inter,system-ui,sans-serif;padding:6px 8px;border:1px solid #e5e7eb;border-radius:7px;color:#111827}
+/* interior studies: the places (rooms) list */
+.w2.sp .sp-places{display:flex;flex-direction:column;gap:3px;max-height:180px;overflow:auto;margin-bottom:4px}
+.w2.sp .sp-place{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:6px;font-size:11px}
+.w2.sp .sp-place i{width:16px;height:16px;border-radius:50%;background:#46148c;color:#fff;font:700 9px/16px Inter,system-ui,sans-serif;text-align:center;font-style:normal}
+.w2.sp .sp-place span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.w2.sp .sp-place select{font:11px Inter,system-ui,sans-serif;padding:2px 4px;border:1px solid #e5e7eb;border-radius:6px}
+.w2.sp .sp-studyres{max-height:calc(100vh - 400px)}
