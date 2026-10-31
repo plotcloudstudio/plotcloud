@@ -32,6 +32,7 @@ export const DEFS = {
   'study.plane': { unit: 'm', type: 'number', min: 0, max: 1.5, physical: true, mirror: ['defaults', 'plane'] },
   'study.occStart': { unit: 'h', type: 'number', min: 0, max: 23, physical: true, mirror: ['defaults', 'occStart'] },
   'study.occEnd': { unit: 'h', type: 'number', min: 1, max: 24, physical: true, mirror: ['defaults', 'occEnd'] },
+  'study.grid': { unit: 'm', type: 'enum', values: ['Auto', '0.25', '0.5', '1', '2', '4'], physical: true, mirror: ['defaults', 'grid'] },
   'study.radius': { unit: 'm', type: 'number', min: 0, max: 5000, physical: true, mirror: ['defaults', 'radius'] },
   'study.rain': { unit: 'mm/h', type: 'number', min: 0, max: 500, physical: true, mirror: ['defaults', 'rain'] },
   'study.duration': { unit: 'min', type: 'number', min: 1, max: 1440, physical: true, mirror: ['defaults', 'duration'] },

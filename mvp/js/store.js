@@ -42,7 +42,7 @@ let DB = null, memoryOnly = false;
 // The sample site. Real sites come from address search and live data on the Account page.
 export const SAMPLE_SITE = { label: 'Vancouver, British Columbia, Canada', lat: 49.2827, lon: -123.1207, north: 0, tz: 'America/Vancouver',
   elev: 12, rain: 1189, wind: 3.6, windDir: 'E', koppen: 'Csb · warm-summer Mediterranean', buildings: 214, year: 2024, sample: true };
-export const DEFAULTS = { units: 'Metric', radius: 250, plane: 0.8, occStart: 8, occEnd: 18, period: 'Equinox', rain: 50, duration: 60, band: '500 Hz', eye: 1.2, code: 'NBC 2020' };
+export const DEFAULTS = { units: 'Metric', grid: 'Auto', radius: 250, plane: 0.8, occStart: 8, occEnd: 18, period: 'Equinox', rain: 50, duration: 60, band: '500 Hz', eye: 1.2, code: 'NBC 2020' };
 
 function seed() {
   const p = { id: 'demo-courtyard', name: 'Courtyard studio (sample)', created: now(), updated: now(), versions: [], runs: [], sample: true, site: clone(SAMPLE_SITE) };
