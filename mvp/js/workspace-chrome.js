@@ -12,7 +12,7 @@ import { climateFile, ensureProjectClimate } from './project-climate.js';
 import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected-20261027-3';
 import { sunPosition } from './environment/analysis.js?v=run-20261031-2';
 import * as CL from '../../emb/lib/climate.js';
-import { speedRatio } from './wind-lbm.js?v=wind-20261031-2';
+import { speedRatio } from './wind-lbm.js?v=wind-20261031-4';
 import { stormwater } from './stormwater-grid.js?v=storm-20261031-1';
 import { canUse } from './beta-access.js';
 import { mountProps } from './project-props.js?v=weather-20261031-1';
@@ -281,16 +281,39 @@ export function mountChrome(app, api) {
   // the result in both views (2026-10-31): the 3D topographic block and the 2D plan, with the same grid and colours
   const views2 = () => [INST.persp, INST.plan].filter((I) => I.ready && I.ws).map((I) => I.ws);
   const clearAll = () => views2().forEach((w) => w.clearStudy?.());
-  const paintRes = (r, fit) => { if (r.paint) { r.paint(r, fit); return; } views2().forEach((w) => w.paintGrid({ X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, vals: r.vals, lo: r.lo, hi: r.hi, ramp: r.ramp, fit })); sunPathFor(ST.id); };
+  const animOn = () => ST.anim !== false;
+  const animate = (r) => views2().forEach((w) => w.flowAnim?.(r && r.anim && animOn() ? { X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, ...r.anim } : null));
+  const paintRes = (r, fit) => { if (r.paint) { r.paint(r, fit); return; } animate(r); views2().forEach((w) => w.paintGrid({ X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, vals: r.vals, lo: r.lo, hi: r.hi, ramp: r.ramp, fit })); sunPathFor(ST.id); };
+  // ---- what the result is at the spot under the pointer (2026-10-31), in 2D and 3D
+  const probeEl = el('div', 'sp-probe'); probeEl.hidden = true; root.append(probeEl);
+  const PNAME = { comfort: 'Comfort', risk: 'Hours above 15 m/s', speedup: 'Speed-up', speed: 'Wind speed', pressure: 'Pressure', flow: 'Water passing', pond: 'Ponding', runoff: 'Runoff coefficient' };
+  function probeText(r, x, y) {
+    if (r.probe) return r.probe(x, y); const i = Math.floor((x - r.X0) / r.cell), j = Math.floor((y - r.Y0) / r.cell); if (i < 0 || j < 0 || i >= r.nx || j >= r.ny) return null; const c = j * r.nx + i, names = Object.fromEntries(viewsOf(ST.id));
+    const rows = Object.entries(r.views).map(([k, v]) => { const val = v.vals[c]; if (!Number.isFinite(val)) return null; let t;
+      if (v.ramp === 'lawson') t = CL.LAWSON[Math.round(val)]?.[1] || ''; else if (v.unit === 'share') t = val ? v.legendLabels[0] : v.legendLabels[2]; else if (k === 'flow') t = fmt(10 ** val - 1) + ' m³'; else t = `${fmt(val, Math.max(1, v.dec))} ${v.unit}`;
+      return `<div class="sp-kv"><span>${esc(names[k] || PNAME[k] || k)}</span><b>${esc(t)}</b></div>`; }).filter(Boolean);
+    return rows.length ? rows.join('') : '<p class="sp-note">A building: no ground value here.</p>'; }
+  function onProbe(q, frame) {
+    const r = ST.res; if (!q || !r || ST.busy || !frame) { probeEl.hidden = true; return; } const html = probeText(r, q.x, q.y); if (!html) { probeEl.hidden = true; return; }
+    const fr = frame.getBoundingClientRect(), rr = root.getBoundingClientRect(); probeEl.innerHTML = `<b>${esc(simName(ST.id))}</b>${html}`; probeEl.hidden = false;
+    const x = fr.left - rr.left + q.cx + 16, y = fr.top - rr.top + q.cy + 16; probeEl.style.left = Math.min(x, rr.width - probeEl.offsetWidth - 8) + 'px'; probeEl.style.top = Math.min(y, rr.height - probeEl.offsetHeight - 8) + 'px'; }
+  const hookProbe = () => [INST.persp, INST.plan].forEach((I) => { if (I.ready && I.ws?.onProbe && !I.__probe) { I.__probe = 1; I.ws.onProbe((q) => onProbe(q, I.win.frameElement)); } });
+  // ---- the day played through (Sun hours): the sun moves along the day's arc, with its shadows in 3D
+  const PLAY = { t: 0, h: 0 };
+  function playDay() { if (PLAY.t) { clearInterval(PLAY.t); PLAY.t = 0; drawStudy(); return; } const site = S.conditionsOf(p).site, tz = Number.isFinite(site.tz) ? site.tz : Math.round(site.lon / 15), [m, d] = ST.day.split('-').map(Number); let h = 4;
+    const step = () => { h += 0.1; while (h < 22 && sunPosition(2026, m, d, h, site.lat, site.lon, tz).alt <= 0) h += 0.1; if (h >= 22) h = 4; PLAY.h = h; const sp = sunPosition(2026, m, d, h, site.lat, site.lon, tz);
+      try { localStorage.setItem(SUNK, JSON.stringify({ ...sunState(), on: true, m, d, h })); } catch { } applySun(); sunPathFor(ST.id, sp); const lab = studyCard.querySelector('.sp-playh'); if (lab) lab.textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60) % 60).padStart(2, '0')}`; };
+    PLAY.t = setInterval(step, 80); step(); drawStudy(); }
+  const stopPlay = () => { if (PLAY.t) { clearInterval(PLAY.t); PLAY.t = 0; } };
   // the sun path (after Ladybug): the 21st of every month, the hours through the year (clock time), and for Sun hours the day studied
   const SUNLIT = new Set(['sunhours', 'radiation', 'shadebenefit', 'solarenvelope', 'utci']);
-  function sunPathFor(id) {
+  function sunPathFor(id, now) {
     if (!SUNLIT.has(id)) { views2().forEach((w) => w.sunPath?.(null)); return; } const site = S.conditionsOf(p).site; if (!Number.isFinite(site.lat)) return; const tz = Number.isFinite(site.tz) ? site.tz : Math.round(site.lon / 15);
     const pos = (m, d, h) => sunPosition(2026, m, d, h, site.lat, site.lon, tz), runs = (pts) => { const out = []; let cur = []; for (const q of pts) { if (q.alt > 0) cur.push(q); else if (cur.length) { out.push(cur); cur = []; } } if (cur.length) out.push(cur); return out.filter((x) => x.length > 1); };
     const arcs = [], hours = []; for (let m = 1; m <= 12; m++) { const pts = []; for (let h = 0; h <= 24; h += 0.25) pts.push(pos(m, 21, h)); arcs.push(...runs(pts)); }
     for (let h = 0; h < 24; h++) { const pts = []; for (let k = 0; k <= 365; k += 5) { const [m, d] = CL.monthDay(Math.min(364, k)); pts.push(pos(m, d, h)); } hours.push(...runs(pts)); }
     let day = [], suns = []; if (id === 'sunhours') { const [m, d] = ST.day.split('-').map(Number), pts = []; for (let h = 0; h <= 24; h += 0.25) pts.push(pos(m, d, h)); day = runs(pts); for (let h = 0; h < 24; h++) { const q = pos(m, d, h); if (q.alt > 0) suns.push(q); } }
-    views2().forEach((w) => w.sunPath?.({ arcs, hours, day, suns })); }
+    views2().forEach((w) => w.sunPath?.({ arcs, hours, day, suns, now })); }
   // the study area on the site before a run: a frame on the topographic block
   function showArea() { if (!ST.id || SPEC[ST.id]?.noArea || ST.res || ST.busy || !INST.persp.ready || !INST.persp.ws.studyArea) return; try { views2().forEach((w) => w.sunPath?.(null)); ST.areaInfo = INST.persp.ws.studyArea(ST.area, { show: true }); INST.plan.ready && INST.plan.ws.studyArea?.(ST.area, { show: true }); } catch { ST.areaInfo = null; } }
   // the wind of the project weather: 16 directions (share of the hours, mean speed at 10 m) for the rose, and the year's hourly
@@ -327,8 +350,8 @@ export function mountChrome(app, api) {
   function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }
   const el2 = (tag, cls) => { const e = document.createElement(tag); e.className = cls; return e; };
   window.__wsHost = { open: openHost, close: closeHost, id: () => HOST.id };
-  function openStudy(id) { if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res) clearAll(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', sig: '', at: null, err: '', saved: '', exp: false, areaOpen: false, stopped: false }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; showArea(); loadRose(); drawStudy(); }
-  function closeStudy() { studyCard.hidden = true; resCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; clearAll(); }
+  function openStudy(id) { if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res) clearAll(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', sig: '', at: null, err: '', saved: '', exp: false, areaOpen: false, stopped: false }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; hookProbe(); showArea(); loadRose(); drawStudy(); }
+  function closeStudy() { studyCard.hidden = true; resCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; stopPlay(); probeEl.hidden = true; clearAll(); }
   function openPage(id) { const sel = $('#workspaceStudy'); if (sel) { sel.value = id; sel.onchange?.(); } $('#sendSim')?.click(); }
   // the sky seen from a ground cell: 6 rings × 24 patches, weighted for a horizontal surface (sum 1): the sky view factor
   const SKY = (() => { const out = []; for (let i = 0; i < 6; i++) { const alt = 7.5 + i * 15, w0 = Math.sin(alt * Math.PI / 180) * Math.cos(alt * Math.PI / 180); for (let j = 0; j < 24; j++) out.push({ az: j * 15 + 7.5, alt, w: w0 }); } const t = out.reduce((a, d) => a + d.w, 0); out.forEach((d) => d.w /= t); return out; })();
@@ -428,9 +451,11 @@ export function mountChrome(app, api) {
       const C = new Float32Array(N); for (let c = 0; c < N; c++) C[c] = g.solid[c] ? (g.design[c] ? cr : 0.95) : cg;
       const r = stormwater(g, C, rain), flow = new Float32Array(N).fill(NaN), pond = new Float32Array(N).fill(NaN), coef = new Float32Array(N).fill(NaN); let fmax = 0, wet = 0, dmax = 0, roofA = 0, n = 0;
       for (let c = 0; c < N; c++) { if (g.solid[c]) { if (g.design[c]) roofA += a2; continue; } n++; coef[c] = C[c]; const f = Math.log10(1 + r.acc[c]); flow[c] = f; fmax = Math.max(fmax, f); if (r.pond[c] >= 0.02) { pond[c] = r.pond[c]; wet++; dmax = Math.max(dmax, r.pond[c]); } }
+      const ux = new Float32Array(N), uy = new Float32Array(N); for (let c = 0; c < N; c++) { const d = r.to[c]; if (d < 0 || g.solid[c] || r.acc[c] < 1 || !g.terrain) continue; const dx = (d % g.nx) - (c % g.nx), dy = ((d / g.nx) | 0) - ((c / g.nx) | 0), L = Math.hypot(dx, dy) || 1, v = 0.3 + Math.log10(1 + r.acc[c]); ux[c] = dx / L * v; uy[c] = dy / L * v; }
+      const anim = g.terrain ? { ux, uy, lo: 0, hi: 0.3 + Math.max(1, fmax), tint: '#ffffff', ramp: 'water', min: 0.2, speed: 6, lift: 0.4, arrows: false, life: 6 } : null;
       const qRoof = cr * rain * roofA / 3600, full = r.hollows.filter((h) => h.full && h.vol > 1).length, big = r.hollows.filter((h) => h.vol > 1).length;
       if (!g.terrain) for (let c = 0; c < N; c++) if (!g.solid[c]) flow[c] = NaN;
-      return { ...g, cells: n, avg: r.runV / Math.max(1, r.rainV) * 100, views: {
+      return { ...g, cells: n, avg: r.runV / Math.max(1, r.rainV) * 100, anim, views: {
           flow: { vals: flow, unit: 'm³ passing (log)', ramp: 'water', lo: 0, hi: Math.max(1, fmax), dec: 0, avg: statsOf(flow).avg, title: `Stormwater · flow paths, ${rain} mm`, legendLabels: [`${fmt(10 ** Math.max(1, fmax) - 1)} m³`, `${fmt(10 ** (Math.max(1, fmax) / 2) - 1)} m³`, '0 m³'] },
           pond: { vals: pond, unit: 'm deep', ramp: 'water', lo: 0, hi: Math.max(0.1, Math.ceil(dmax * 10) / 10), dec: 2, avg: dmax, title: `Stormwater · ponding, ${rain} mm` },
           runoff: { vals: coef, unit: 'runoff coefficient', ramp: 'risk', lo: 0, hi: 1, dec: 1, avg: cg, title: 'Stormwater · runoff coefficient' } },
@@ -446,7 +471,8 @@ export function mountChrome(app, api) {
         const r = speedRatio(m.solid, m.nx, m.ny, flowTo(dir)); if (ST.cancel) throw Error('Stopped.');
         const N = m.nx * m.ny, speed = new Float32Array(N), ss = []; let shel = 0, fast = 0, n = 0; for (let c = 0; c < N; c++) { speed[c] = r[c] * U; if (!Number.isFinite(r[c])) continue; n++; ss.push(r[c]); if (r[c] < 0.5) shel++; if (r[c] > 1.2) fast++; }
         ss.sort((x, y) => x - y); const p99 = ss[Math.floor(ss.length * 0.99)] || 0, st = statsOf(speed), cps = statsOf(r.cp), dn = DIR16[Math.round(dir / 22.5) % 16];
-        return { ...m, cells: n, avg: st.avg, views: {
+        const anim = { ux: r.vx.map((v) => v * U), uy: r.vy.map((v) => v * U), lo: 0, hi: Math.max(1, 2 * U), tint: '#ffffff', ramp: 'flow', min: 0.04 * U, speed: 10 };
+        return { ...m, cells: n, avg: st.avg, anim, views: {
             speed: { vals: speed, unit: 'm/s', ramp: 'flow', lo: 0, hi: Math.max(1, 2 * U), dec: 1, avg: st.avg, title: `Wind from ${dn} · speed at 1.5 m` },
             pressure: { vals: r.cp, unit: 'Cp', ramp: 'flow', lo: -1, hi: 1, dec: 1, avg: cps.avg, title: `Wind from ${dn} · pressure`, legendLabels: ['+1 (pushing)', '0', '−1 (suction)'] } },
           rows: [['Wind', `from ${dn}, ${fmt(u10, 1)} m/s at 10 m`], ['Free stream at 1.5 m', fmt(U, 1) + ' m/s'], ['Mean on the ground', fmt(st.avg, 1) + ' m/s'], ['Sheltered (under half the free stream)', fmt(shel / Math.max(1, n) * 100) + '% of ground'], ['Faster than the free stream by 20 %+', fmt(fast / Math.max(1, n) * 100) + '%'], ['Speed-up, windiest 1 % of ground', fmt(p99, 2) + '×']],
@@ -460,7 +486,8 @@ export function mountChrome(app, api) {
       for (let c = 0; c < N; c++) { if (m.solid[c]) continue; let lo = 0, hi = 40; for (let it = 0; it < 24; it++) { const x = (lo + hi) / 2; if (share(c, x) > 0.05) lo = x; else hi = x; } const u95 = hi, k = CL.LAWSON.findIndex(([t]) => u95 <= t), sh = share(c, CL.LAWSON_SAFE.speed);
         cls[c] = k; ratio[c] = R[prev] ? R[prev][c] : NaN; risk[c] = sh * 8760; let pk = 0; for (let s = 0; s < SEC; s++) if (R[s] && R[s][c] > pk) pk = R[s][c]; peaks.push(pk); n++; if (u95 > 6) windy++; if (k <= 1) sit++; if (k === 4) unc++; if (sh > CL.LAWSON_SAFE.share) unsafe++; }
       peaks.sort((x, y) => x - y); const peak = peaks[Math.floor(peaks.length * 0.99)] || 0, names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], rk = statsOf(risk);
-      return { ...m, cells: n, avg: statsOf(cls).avg, views: {
+      const Up = sp[prev].length ? sp[prev].reduce((a, b) => a + b, 0) / sp[prev].length : 2, Rp = R[prev], anim = Rp ? { ux: Rp.vx.map((v) => v * Up), uy: Rp.vy.map((v) => v * Up), lo: 0, hi: Math.max(1, 2 * Up), tint: '#ffffff', ramp: 'flow', min: 0.04 * Up, speed: 10 } : null;
+      return { ...m, cells: n, avg: statsOf(cls).avg, anim, views: {
           comfort: { vals: cls, unit: 'Lawson class', ramp: 'lawson', lo: 0, hi: 4, dec: 0, avg: statsOf(cls).avg, title: 'Wind comfort · Lawson', legendLabels: ['Uncomfortable', 'Standing', 'Frequent sitting'] },
           risk: { vals: risk, unit: 'h/yr above 15 m/s', ramp: 'risk', lo: 0, hi: Math.max(4, Math.ceil(rk.hi)), dec: 1, avg: rk.avg, title: 'Wind safety · hours above 15 m/s', legendLabels: [`${fmt(Math.max(4, Math.ceil(rk.hi)))} h or more`, '2 h (Lawson limit)', '0 h'] },
           speedup: { vals: ratio, unit: '× free stream', ramp: 'flow', lo: 0, hi: 2, dec: 1, avg: statsOf(ratio).avg, title: `Wind speed-up · from ${names[prev]} (prevailing)` } },
@@ -475,7 +502,7 @@ export function mountChrome(app, api) {
     try { for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
       INST.persp.ws.studyArea?.(ST.area); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
       if (ST.cancel) throw Error('Stopped.');
-      addViews(id, r); applyView(r, ST.view[id]); paintRes(r, true);
+      addViews(id, r); applyView(r, ST.view[id]); hookProbe(); paintRes(r, true);
       r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = w.model(); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); }
     catch (e) { ST.res = null; ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); ST.stopped = e.message === 'Stopped.'; }
     clearInterval(tick); ST.busy = false; ST.progress = ''; if (!ST.res) { clearAll(); showArea(); } drawStudy();
@@ -518,7 +545,7 @@ export function mountChrome(app, api) {
       ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}</div>` : ''}
       ${sp.mode ? seg('data-st-mode', ST[sp.mode[0]], sp.mode[1]) : ''}${stage}
       ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}
-      <div class="sp-acts">${ST.busy ? '<button type="button" class="btn sm" data-st="stop">Stop</button>' : `<button type="button" class="btn sm primary" data-st="run">▶ ${r ? 'Start again' : 'Start'}</button>`}${sp.noArea ? '' : `<button type="button" class="btn sm" data-st="area" aria-expanded="${ST.areaOpen}" ${ST.busy ? 'disabled' : ''}>Change area</button>`}</div>
+      ${r && (r.anim || id === 'sunhours') ? `<div class="sp-acts sp-acts1">${r.anim ? `<button type="button" class="btn sm" data-st="anim">${animOn() ? '❚❚ Pause the flow' : '▶ Show the flow'}</button>` : `<button type="button" class="btn sm" data-st="play">${PLAY.t ? '❚❚ Stop' : '▶ Play the day'} <span class="sp-playh"></span></button>`}</div>` : ''}<div class="sp-acts">${ST.busy ? '<button type="button" class="btn sm" data-st="stop">Stop</button>' : `<button type="button" class="btn sm primary" data-st="run">▶ ${r ? 'Start again' : 'Start'}</button>`}${sp.noArea ? '' : `<button type="button" class="btn sm" data-st="area" aria-expanded="${ST.areaOpen}" ${ST.busy ? 'disabled' : ''}>Change area</button>`}</div>
       ${ST.areaOpen ? `<div class="sp-optlist">${AREAS.map(([k, n]) => `<button type="button" data-st-area="${k}" aria-pressed="${ST.area === k}">${esc(n)}</button>`).join('')}</div>` : ''}
       <div class="sp-foot">${sp.input ? inputs[sp.input]() : ''}<p class="sp-note">Location, time zone, true north${['radiation', 'shadebenefit', 'utci', 'wind'].includes(id) ? ' and weather' : ''} come from Project props. ${id === 'wind' ? 'Wind is blocked by' : 'Shade from'} the masses, the building and the surrounding buildings, on the terrain.</p></div>`;
     resCard.hidden = !r; legend.hidden = !r;
@@ -542,7 +569,7 @@ export function mountChrome(app, api) {
   studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'windSpeed') { ST.windSpeed = +e.target.value; drawStudy(); } });
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
-    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'stop') { ST.cancel = true; ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
+    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'stop') { ST.cancel = true; ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false;
 
