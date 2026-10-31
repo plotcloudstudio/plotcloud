@@ -5785,6 +5785,17 @@ window.S3 = (() => {
       g.save(); g.filter = `blur(${Math.max(1, Math.round(o.cell * k * 0.6))}px)`; g.drawImage(a, 0, 0); g.restore(); }
     g.drawImage(L.water, 0, 0); g.drawImage(L.lines, 0, 0); if (TOPO.tex) TOPO.tex.needsUpdate = true;
   }
+  // ---- layer materials (2026-10-31): each object takes its Workspace layer's material colour and opacity; selections keep theirs
+  const LOOK = { spec: null, mats: new Map() };
+  function lookApply() {
+    const sp = LOOK.spec; if (!sp || !grp) return;
+    grp.traverse((m) => { if (!m.isMesh || m.userData.__selected) return; const ud = tagOf(m); if (!ud || ud.k === 'site') return;
+      const layer = ud.k === 'imp' ? sp.imports[ud.id] : sp.klayer[ud.k], lk = layer && sp.looks[layer]; if (!lk) return;
+      if (!m.userData.__look0) m.userData.__look0 = m.material; const o0 = m.userData.__look0, glassy = !Array.isArray(o0) && (o0.transparent || o0.opacity < 1); if (ud.k === 'op' && !glassy) return;   // doors and frames keep theirs; the glazing layer is the panes
+      const key = lk.color + '|' + lk.opacity; let mt = LOOK.mats.get(key); if (!mt) { mt = new T.MeshLambertMaterial({ color: new T.Color(lk.color), transparent: lk.opacity < 1, opacity: lk.opacity, depthWrite: lk.opacity >= 1, side: T.DoubleSide }); LOOK.mats.set(key, mt); }
+      m.material = mt; });
+  }
+  api.layerLooks = (spec) => { LOOK.spec = spec; lookApply(); render(); };
   api._topoState = () => ({ cv: !!TOPO.cv, ana: TOPO.ana ? { nx: TOPO.ana.nx, ny: TOPO.ana.ny } : null });   // read-only, for the browser checks
   function topoBlock(M, T0) {
     const B = new T.Group(); B.name = 'site'; B.userData = { k: 'site', id: 'terrain' };
@@ -5842,6 +5853,7 @@ window.S3 = (() => {
   api.sun = (o) => { if (!o) { SUN.on = null; sunApply(); return null; } SUN.north = o.north || 0; SUN.on = sunDir(o.lat, o.doy, o.hour); sunApply(); return { ...SUN.on }; };
   api.sunDir = sunDir;
   { const _upd = api.update; api.update = (...a) => { _upd(...a); if (SUN.on) sunApply(); }; }
+  { const _u2 = api.update; api.update = (...a) => { _u2(...a); if (LOOK.spec) { lookApply(); render(); } }; }   // layer materials after every rebuild
   // ---- an analysis result drawn on the ground (2026-10-30): one flat coloured cell per grid point, just above the terrain
   const OVL = { g: null };
   // o: { X0, Y0, cell, nx, ny, vals (per cell, NaN = no ground), color(v), ground(x, y), fade (true: strong in the middle, fading out
@@ -6509,6 +6521,7 @@ if (window.__WSROLE) {
     },
     clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); },
     thumb: () => verThumb(),   // a small picture of the model (the Compare sketches cards)
+    layerLooks(spec) { if (window.S3 && S3.layerLooks) S3.layerLooks(spec); },   // layer materials (Workspace Layers) in the 3D view
   });
   // sun hours colours: deep blue (no sun) through teal and yellow to orange (sun all day)
   function sunRamp(t) { const st = [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']]; t = Math.max(0, Math.min(1, t)); for (let i = 1; i < st.length; i++) if (t <= st[i][0]) { const [a, ca] = st[i - 1], [b, cb] = st[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return st.at(-1)[1]; }

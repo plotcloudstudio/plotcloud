@@ -55,6 +55,15 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.deepEqual(await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'), c = S.conditionsOf(A.currentProject()); return [c.site.north, c.revision]; }), [7, rev0 + 1]);
     console.log('PASS Project props: shared parameters in one place (Default and topic tabs); saving makes a new shared revision');
 
+    // layer materials: a preset on a layer, the structure study's material follows, rendering requests get the words
+    await p.click('[data-pp=close]'); await p.click('#tabList [data-tab=layers]'); await p.evaluate(() => [...document.querySelectorAll('#layers [data-open]')].find((b) => /Structure/.test(b.textContent)).click());
+    await p.click('.w3-matbox summary'); await p.selectOption('[data-layer-mat]', 'glulam');
+    await p.fill('[data-mat-prop=rw]', '44'); await p.locator('[data-mat-prop=rw]').dispatchEvent('change');
+    assert.equal(await p.evaluate(() => __ws2.model().layers.find((x) => x.name === 'Structure').props.rw), 44, 'a value is set by the person');
+    assert.deepEqual(await p.evaluate(() => { const l = __ws2.model().layers.find((x) => x.name === 'Structure'); return [l.material, l.structural?.material]; }), ['glulam', 'glulam']);
+    assert.match(await p.evaluate(async () => (await import('./js/layer-materials.js')).describe(__ws2.model().layers)), /Structure: warm Douglas fir glulam timber/);
+    console.log('PASS layer materials: chosen per layer, its values editable (Rw), the structure study material and the rendering words follow');
+
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-view]');
     await p.click('[data-view=list]'); assert.match(await p.locator('.ph-rows').innerText(), /Projects[\s\S]*Created[\s\S]*Last edited[\s\S]*QA site/);
     await p.click('[data-view=map]'); await p.waitForSelector('.ph-col .ph-card'); await p.waitForFunction(() => document.querySelectorAll('#phMap .leaflet-interactive').length >= 1, null, { timeout: 20000 });

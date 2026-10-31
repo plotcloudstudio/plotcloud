@@ -2,6 +2,7 @@
 // service's URL and operator token, and the service needs its own image-model credentials); without them this page says so and
 // creates nothing. Renders are saved as project assets marked "not performance evidence". Boards compose already saved
 // material — engine previews, metrics and saved renders — into one sheet, without asking for another upload.
+import { describe as describeMaterials } from '../layer-materials.js?v=mat-20261031-2';
 import * as S from '../store.js';
 import { SIMS } from '../data.js';
 import { $, $$, esc, currentProject, setCurrent, toast } from '../app.js';
@@ -30,7 +31,7 @@ function rendering(app, p) {
     <section class="card"><h2>Render service</h2><p class="note" id="rsStatus" role="status">Requires the PlotCloud render service (server/) run by an operator, with its own image-model credentials. Not connected in this browser yet.</p>
       <div class="grid g2"><label class="f">Service URL<input id="rsUrl" value="${esc(c.url || '')}" placeholder="https://render.example.org"></label><label class="f">Operator token<input id="rsToken" type="password" value="${esc(c.token || '')}"></label></div><button class="btn" type="button" id="rsCheck">Save and check service</button></section>
     <section class="card"><h2>Request</h2><div class="grid g2"><label class="f">View of your model (PNG/JPEG)<input type="file" id="rsSource" accept="image/png,image/jpeg"></label><label class="f">Furniture / material references (up to 3)<input type="file" id="rsRefs" accept="image/png,image/jpeg" multiple></label>
-      <label class="f">Scene<select id="rsScene">${['Interior', 'Living room', 'Bedroom', 'Kitchen / dining', 'Office interior', 'Hospitality interior'].map((s) => `<option>${s}</option>`).join('')}</select></label><label class="f">Description<textarea id="rsPrompt" rows="2" placeholder="e.g. warm timber, the referenced sofa by the window"></textarea></label></div>
+      <label class="f">Scene<select id="rsScene">${['Interior', 'Living room', 'Bedroom', 'Kitchen / dining', 'Office interior', 'Hospitality interior'].map((s) => `<option>${s}</option>`).join('')}</select></label><label class="f">Description<textarea id="rsPrompt" rows="2" placeholder="e.g. warm timber, the referenced sofa by the window"></textarea></label>${describeMaterials(p.draft?.layers) ? `<p class="note">Added to the request from the model's layers: ${esc(describeMaterials(p.draft?.layers))}.</p>` : '<p class="note">Choose layer materials in the Workspace (Layers) and they are added to the request.</p>'}</div>
       <button class="btn accent" type="button" id="rsGo">Render</button><p class="note" id="rsMsg" role="status"></p></section>
     <section class="card"><h2>Saved renders</h2><div id="rsList"></div></section></div>`;
   const list = () => { $('#rsList', app).innerHTML = p.renders.map((r, i) => `<figure style="margin:0 0 14px"><img src="${esc(r.image)}" alt="Render ${i + 1}" style="max-width:100%;max-height:320px"><figcaption class="note">${esc(r.created.slice(0, 16).replace('T', ' '))} · ${esc(r.provider || '')} ${esc(r.model || '')} · ${esc(r.prompt)} · not performance evidence</figcaption></figure>`).join('') || '<p class="note">No renders yet.</p>'; };
@@ -43,8 +44,8 @@ function rendering(app, p) {
     if (!s.url || !s.token) { msg.textContent = 'Connect a render service first. Nothing was generated.'; return; }
     if (!src) { msg.textContent = 'Choose a view of your model as the source image.'; return; }
     msg.textContent = 'Rendering…';
-    try { const refs = await Promise.all([...$('#rsRefs', app).files].slice(0, 3).map(fileURL)), prompt = $('#rsPrompt', app).value.trim() || 'Photorealistic interior keeping the geometry of the source view';
-      const out = await requestRender(s, { request_id: 'pc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), scene: $('#rsScene', app).value, edit_mode: 'full', source_image: await fileURL(src), reference_images: refs, prompt, ...(refs.length ? { interior_workflow: { schema: 1, intent: 'atmosphere', reference_bindings: refs.map((_, i) => ({ reference_index: i, purpose: 'atmosphere' })) } } : {}) });
+    try { const refs = await Promise.all([...$('#rsRefs', app).files].slice(0, 3).map(fileURL)), prompt = $('#rsPrompt', app).value.trim() || 'Photorealistic interior keeping the geometry of the source view', materials = describeMaterials(p.draft?.layers);
+      const out = await requestRender(s, { request_id: 'pc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), scene: $('#rsScene', app).value, edit_mode: 'full', source_image: await fileURL(src), reference_images: refs, prompt: materials ? `${prompt}. Materials from the model layers: ${materials}.` : prompt, ...(refs.length ? { interior_workflow: { schema: 1, intent: 'atmosphere', reference_bindings: refs.map((_, i) => ({ reference_index: i, purpose: 'atmosphere' })) } } : {}) });
       p.renders.push({ id: 'render-' + Date.now().toString(36), image: out.image_data_url, prompt, provider: out.provider, model: out.model, requestId: out.request_id, created: out.created_at || new Date().toISOString(), evidence: 'presentation only — not performance evidence' }); S.save(); msg.textContent = 'Saved to this project.'; list(); }
     catch (e) { msg.textContent = e.message + ' Nothing was saved.'; } };
 }
