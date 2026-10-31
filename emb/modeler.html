@@ -5691,7 +5691,8 @@ window.S3 = (() => {
       const W0 = (lonW - o.lon) * kx, E0 = (lonE - o.lon) * kx, N0 = (latN - o.lat) * ky, S0 = (latS - o.lat) * ky;
       const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
       const m = new T.Mesh(new T.PlaneGeometry(E0 - W0, N0 - S0), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
-      m.rotation.x = -Math.PI / 2; m.position.set((W0 + E0) / 2, (WM.topoBase ?? 0) - 0.6 - i * 0.6, -(N0 + S0) / 2);   // under the topographic block when there is one m.renderOrder = -10 + i; m.name = 'world-map'; m.userData = { k: 'world', ring: i };
+      m.rotation.x = -Math.PI / 2; m.position.set((W0 + E0) / 2, (WM.topoBase ?? 0) - 0.6 - i * 0.6, -(N0 + S0) / 2);   // under the topographic block when there is one
+      m.renderOrder = -10 + i; m.name = 'world-map'; m.userData = { k: 'world', ring: i };
       scene.add(m); WM.rings.push(m);
     }
     render();
