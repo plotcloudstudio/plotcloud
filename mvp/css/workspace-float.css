@@ -341,3 +341,17 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .wb-site-banner{position:absolute;bottom:70px;font-size:12px;padding:7px 8px 7px 14px;white-space:nowrap}
 .w2.sp .wb-site-banner b{font-weight:700}
 .w2.sp .sp-mask::before{position:absolute;inset:0;margin:auto;width:20px;height:20px}
+/* icon names on hover (2026-10-31) */
+.w2.sp .sp-tip{position:absolute;z-index:95;pointer-events:none;background:#111827;color:#fff;font:600 12px/1 Inter,system-ui,sans-serif;padding:7px 10px;border-radius:7px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.w2.sp .sp-tip[hidden]{display:none}
+.w2.sp .sp-tip::after{content:"";position:absolute;width:8px;height:8px;background:#111827;transform:rotate(45deg)}
+.w2.sp .sp-tip[data-side=top]::after{left:calc(var(--ax) - 4px);bottom:-4px}
+.w2.sp .sp-tip[data-side=bottom]::after{left:calc(var(--ax) - 4px);top:-4px}
+.w2.sp .sp-tip[data-side=left]::after{right:-4px;top:calc(50% - 4px)}
+.w2.sp .sp-tip[data-side=right]::after{left:-4px;top:calc(50% - 4px)}
+/* tools that do not work in this mode */
+.w2.sp .sp-tools [data-panel].sp-off{opacity:.32;cursor:not-allowed;background:transparent!important}
+/* while editing the site model the banner sits above the toolbar and the tool palette above the banner */
+.w2.sp.wb-site-editing>.w2-panel.sp-palette{bottom:112px}
+.w2 .w3-f{display:flex;flex-direction:column;gap:3px;margin:8px 0;font:500 11px Inter,system-ui,sans-serif;color:#6b7280}
+.w2 .w3-f input{font:12px Inter,system-ui,sans-serif;padding:6px 8px;border:1px solid #e5e7eb;border-radius:7px;color:#111827}

@@ -6673,6 +6673,13 @@ if (window.__WSROLE) {
       return { grid: { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: g.H }, day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
     },
     onProbe(fn) { PROBE = fn || null; },
+    // a neighbouring building (site context) for the Workspace's Properties, and its edits (2026-10-31: Edit site model)
+    ctx(id) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return null; return { id: b.id, name: b.name || '', h: b.h, levels: b.levels, area: b.area, excluded: !!b.excluded, src: (b.src && b.src.provider) || '', hSource: b.hSource || '', added: !!b.added }; },
+    ctxSet(id, o) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return false; const s0 = snapM();
+      if (o.name != null) b.name = String(o.name); if (o.h != null && isFinite(o.h) && o.h > 0) { b.h = +(+o.h).toFixed(2); b.hSource = 'user'; b.hNote = 'set by you'; b.levels = o.levels != null ? o.levels : b.levels; }
+      if (o.excluded != null) { b.excluded = !!o.excluded; b.why = o.excluded ? 'left out by you' : ''; b.auto = false; }
+      b.edited = true; M.site.version++; commit(s0); return true; },
+    screenOfSite(q) { const p = SITEC.siteToPlan(M.site, q, M.north || 0), s = W2S(p), r = cv.getBoundingClientRect(), k = cv.width / Math.max(1, r.width); return [r.left + s[0] / k, r.top + s[1] / k]; },   // for the browser checks
     flowAnim(o) { if (o) flowStart(o); else flowStop(); },
     structGrid(o = {}) {
       const span = o.span || 7.5, out = [];

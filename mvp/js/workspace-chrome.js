@@ -677,6 +677,19 @@ export function mountChrome(app, api) {
   const timer = setInterval(tick, 400); tick();
   // a study asked for from another page (an old study link): its card opens once the 3D view is ready
   { let want = null; try { want = sessionStorage.getItem('pc-ws-open-study'); sessionStorage.removeItem('pc-ws-open-study'); } catch { } if (want && IN_VIEW[want]) { const t = setInterval(() => { if (INST.persp.ready) { clearInterval(t); openStudy(want); } }, 300); setTimeout(() => clearInterval(t), 60000); } }
+  // ---- the name of an icon on hover (2026-10-31): a dark label with a small arrow, above the bottom tools, beside the rails,
+  // below the top bar; it takes over from the browser's own tooltip
+  const tip = el('div', 'sp-tip'); tip.hidden = true; root.append(tip);
+  const TIPS = '.sp-tools :is(button,summary), .sp-rail :is(button,summary), .sp-tr :is(button,summary), .sp-bl button, .sp-tl button';
+  root.addEventListener('pointerover', (e) => { const b = e.target.closest(TIPS); if (!b || !root.contains(b)) return; const t0 = b.getAttribute('title'); if (t0) { b.dataset.tip = t0; b.removeAttribute('title'); }
+    const t = b.dataset.tip || b.getAttribute('aria-label'); if (!t) return; tip.textContent = t; tip.hidden = false; const r = b.getBoundingClientRect(), rr = root.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    const side = b.closest('.sp-bottom, .sp-bl') ? 'top' : b.closest('.sp-right') ? 'left' : b.closest('.sp-rail') ? 'right' : 'bottom'; tip.dataset.side = side;
+    const cx = r.left + r.width / 2 - rr.left, cy = r.top + r.height / 2 - rr.top;
+    const [x, y] = side === 'top' ? [cx - w / 2, r.top - rr.top - h - 10] : side === 'bottom' ? [cx - w / 2, r.bottom - rr.top + 10] : side === 'left' ? [r.left - rr.left - w - 10, cy - h / 2] : [r.right - rr.left + 10, cy - h / 2];
+    tip.style.left = Math.max(6, Math.min(rr.width - w - 6, x)) + 'px'; tip.style.top = Math.max(6, y) + 'px'; tip.style.setProperty('--ax', (cx - Math.max(6, Math.min(rr.width - w - 6, x))) + 'px'); });
+  root.addEventListener('pointerout', (e) => { const b = e.target.closest(TIPS); if (b && !b.contains(e.relatedTarget)) tip.hidden = true; });
+  root.addEventListener('pointerdown', () => { tip.hidden = true; }, true);
+  window.__wsOpenCard = (on) => openCard(on);
   window.__wsStudy = { open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }) };   // for the browser checks
   return () => { disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
 }
