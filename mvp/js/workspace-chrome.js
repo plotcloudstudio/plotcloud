@@ -17,6 +17,7 @@ import { stormwater } from './stormwater-grid.js?v=storm-20261031-1';
 import { canUse } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261031-2';
+import * as WAY from './interior/wayfinding.js?v=way-20261031-2';
 import { keep as PKEEP } from '../../emb/lib/plansim.js?v=1';
 import { mountProps } from './project-props.js?v=weather-20261031-1';
 
@@ -234,13 +235,13 @@ export function mountChrome(app, api) {
   // with Settings | Export on the left, Results | Charts on the right and the legend; the result is painted on the site in 3D.
   // Sun hours, Solar radiation and Sky exposure run here on Plan Studio's ground grid (the same shading: masses, the building,
   // surrounding buildings, terrain). The other studies still open their study page inside the Workspace (the host below).
-  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1, stormwater: 1, structure: 1, evac: 1, privacy: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
+  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1, stormwater: 1, structure: 1, evac: 1, privacy: 1, wayfinding: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
   const ENVELOPES = [['equinox', 'Equinoxes, 9:00 to 15:00', [[3, 20], [9, 22]], 9, 15], ['winter', 'Winter solstice, 10:00 to 14:00', [[12, 21]], 10, 14], ['summer', 'Summer solstice, 8:00 to 17:00', [[6, 21]], 8, 17]];
   const PERIODS = [['year', 'Whole year', 1, 12], ['summer', 'Summer · June to August', 6, 8], ['winter', 'Winter · December to February', 12, 2]];
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
-  const ST = { id: null, day: '03-21', period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, priv: { sides: ['top', 'bottom'], dS: 4, eye: 1.6, dO: 15, hO: 9, doors: false }, area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
+  const ST = { id: null, day: '03-21', period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, priv: { sides: ['top', 'bottom'], dS: 4, eye: 1.6, dO: 15, hO: 9, doors: false }, wayEye: '1.6', wayStart: '', wayFurn: true, area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
   const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const AREAS = [[1, '1× · the building and 40 m round it'], [2, '2×'], [3, '3× · the default'], [4, '4×']];
   // every building study has the same card (2026-10-31): a mode where the study has one, the study area on the site before Start,
@@ -270,13 +271,15 @@ export function mountChrome(app, api) {
     about: 'Where people walk between the rooms they use on this level: the shortest routes and an ant colony’s walks, which settle on the good routes and build up as dark bands.' };
   SPEC.privacy = { views: [['exp', 'Seen from outside'], ['need', 'Privacy need']], input: 'privacy', noArea: true, interior: true,
     about: 'How much of each room can be seen from the street and from a building opposite, through the windows of this level.' };
+  SPEC.wayfinding = { mode: ['wayEye', [['1.6', 'Standing 1.6 m'], ['1.2', 'Wheelchair 1.2 m']]], views: [['depth', 'Visual depth'], ['routes', 'Routes']], input: 'wayfinding', noArea: true, interior: true,
+    about: 'How easily each room is found from the start: the walk to its door, the decision points on the way, where a sign helps, and how many look-arounds each spot needs.' };
   const hexOf = (c) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join(''), stopsOf = (R) => R.map(([t, c]) => [t, hexOf(c)]);
   const USES = [['0', 'Off'], ['1.5', 'Rarely'], ['3.5', 'Now and then'], ['6.5', 'Sometimes'], ['12', 'Often'], ['20', 'Most']], CORRIDOR = /corridor|hallway|^hall$|passage|circulation|landing|走廊/i;
   const levelPlanNow = () => { try { return INST.persp.ready ? INST.persp.ws.levelPlan?.() : null; } catch { return null; } };
   const placesOf = (pl) => (pl?.rooms || []).filter((r) => r.area >= 2 && !CORRIDOR.test(r.name)).map((r, i) => ({ name: r.name, p: r.p, area: r.area, letter: String.fromCharCode(65 + (i % 26)), use: ST.circUse[r.name] != null ? +ST.circUse[r.name] : CIRC.guessUse(r.name) }));
   const STORMS = [['25', '25 mm'], ['50', '50 mm'], ['100', '100 mm']], COVERS = [['lawn', 'Mostly planted', 0.25], ['mixed', 'Mixed', 0.5], ['paved', 'Mostly paved', 0.85]];
   const viewsOf = (id) => { const v = SPEC[id]?.views; return typeof v === 'function' ? v() : v || []; };
-  const sigOf = (id) => JSON.stringify([id, ST.area, ...({ sunhours: [ST.day], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], structure: [ST.system, ST.span, ST.bearing], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
+  const sigOf = (id) => JSON.stringify([id, ST.area, ...({ sunhours: [ST.day], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : ''], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], structure: [ST.system, ST.span, ST.bearing], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
   // the map views of a result: the study's own, or made here from its values
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
@@ -435,6 +438,29 @@ export function mountChrome(app, api) {
         rows: [['No thermal stress (UTCI 9–26 °C)', fmt(sc.avg, 1) + '% of hours'], ['Heat stress (above 26 °C)', fmt(sh.avg, 1) + '%'], ['Cold stress (below 9 °C)', fmt(sk.avg, 1) + '%'], ['Hours counted', fmt(n) + (ST.utciHours === 'sun' ? ', sun up' : '')], ['Weather', esc(E.station || wx.station || '')]],
         method: `UTCI (Bröde et al. 2012) for every counted hour of the project weather (${esc(E.station || 'EPW')}, ${pname.toLowerCase()}), in sun and in shade at the sky view each ${fmt(g.cell, 1)} m cell has: air temperature, humidity, wind at 10 m for ${({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban'} terrain, and the radiant temperature from sun, sky and ground. Wind is not reduced by buildings here.`,
         results: { comfort: +sc.avg.toFixed(1), heat: +sh.avg.toFixed(1), cold: +sk.avg.toFixed(1) }, settings: { period: ST.period, hours: ST.utciHours, label: `Outdoor comfort, ${pname} (Workspace)` } }; }
+    if (id === 'wayfinding') {
+      const sc = w.planScene('wayfinding'); if (!sc.walls.length || !(sc.rooms || []).length) throw Error('No rooms on this level: draw the rooms first, or pick another level in the Level menu.');
+      const out = await WAY.run(sc, { start: ST.wayStart, furn: ST.wayFurn, eye: +ST.wayEye }, (f) => { ST.progress = `looking around ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; });
+      const { RES, F, SC: S2 } = out, R = RES.R, o = S2.origin || [0, 0], X0 = o[0] + R.x0, Y0 = o[1] + R.y0, toP = (p) => [p[0] + o[0], p[1] + o[1]];
+      const box = { x0: X0, y0: Y0, x1: X0 + R.W * R.c, y1: Y0 + R.H * R.c }, vis = RES.rooms.filter((x) => !x.skip);
+      const dots = [{ p: toP(RES.start.p), col: '#111', r: 0.45, label: 'S', ring: true }, ...(RES.startHidden.length ? [{ p: toP([RES.start.p[0] + 0.7, RES.start.p[1] + 0.7]), col: '#d8402a', r: 0.3, square: true, label: 'i', al: 1 }] : []),
+        ...RES.decisions.flatMap((d, i) => [{ p: toP(d.p), col: '#f39c12', r: 0.4, label: String(i + 1), ink: '#111', ring: true, al: 1 }, ...(d.hidden.length ? [{ p: toP([d.p[0] + 0.65, d.p[1] + 0.65]), col: '#d8402a', r: 0.28, square: true, label: 'i', al: 1 }] : [])]),
+        ...vis.filter((x) => x.door).map((x) => ({ p: toP(x.door), col: '#3b6fb6', r: 0.16, al: 1 }))];
+      const show = (r, fit) => views2().forEach((w2) => { w2.clearStudy?.(); w2.walkShow?.({ walks: [], T: 0, box, lv: w2.level?.(), z: S2.settings?.floorZ || 0, view: r.view, fit: !!fit, fit2: !!fit, solid: false,
+        paths: vis.filter((x) => x.pts).map((x) => ({ pts: x.pts.map(toP), col: r.view === 'routes' ? '#3b6fb6' : '#1e1e1e', w: r.view === 'routes' ? 0.1 : 0.06, al: r.view === 'routes' ? 0.85 : 0.45 })), dots,
+        density: { X0, Y0, cell: R.c, nx: R.W, ny: R.H, vals: r.view === 'depth' ? RES.depth : new Float32Array(R.W * R.H).fill(NaN), lo: 0, hi: 3 }, rampStops: stopsOf(WAY.DEPTH) }); });
+      const dtxt = (d) => (Number.isFinite(d) ? String(d) : '—');
+      return { X0, Y0, cell: R.c, nx: R.W, ny: R.H, cells: R.W * R.H, avg: F.md, chartNote: 'Share of the floor at each visual depth from the start; hover a bar for its value.', foot: `${vis.length} rooms routed from ${esc(RES.start.name)}, ${RES.decisions.length} decision points`,
+        views: { depth: { legendCols: stopsOf(WAY.DEPTH).map((x) => x[1]), vals: RES.depth, unit: 'look-arounds', ramp: 'heat', lo: 0, hi: 3, dec: 0, avg: F.md, title: 'Wayfinding · visual depth from the start', legendLabels: ['3 or more', '1 · 2', '0 · in sight'] },
+          routes: { legendCols: ['#3b6fb6', '#3b6fb6'], vals: RES.depth, unit: 'walk to each door', ramp: 'heat', lo: 0, hi: 3, dec: 0, avg: F.md, title: 'Wayfinding · routes to each room', legendLabels: ['Route to a door', '', 'Orange: decision point · red: sign'] } },
+        paint: (r, fit) => show(r, fit),
+        probe: (x, y) => { const i = Math.floor((x - X0) / R.c), j = Math.floor((y - Y0) / R.c); if (i < 0 || j < 0 || i >= R.W || j >= R.H) return null; const k = j * R.W + i, d = RES.depth[k], wk = RES.D[k];
+          return `<div class="sp-kv"><span>Visual depth</span><b>${Number.isFinite(d) ? d + (d === 0 ? ' · in sight of the start' : ' look-around' + (d === 1 ? '' : 's')) : '—'}</b></div>${Number.isFinite(wk) ? `<div class="sp-kv"><span>Walk from the start</span><b>${fmt(wk, 1)} m</b></div>` : ''}`; },
+        rows: [['Decision points', String(RES.decisions.length)], ['Signs suggested', String(F.signs)], ['Rooms seen from the start', `${F.seen} of ${F.vis.length}`], ['Mean visual depth', fmt(F.md, 1)], ['Longest route', F.longest ? `${esc(F.longest.r.name)}, ${fmt(F.longest.len, 1)} m` : '—'], ['Hard to find', F.hard.length ? esc(F.hard.map((x) => x.r.name).join(', ')) : 'none'],
+          ...vis.map((x) => [esc(x.r.name), x.unreached ? 'no way in' : `${fmt(x.len, 1)} m · ${x.turns} turns · depth ${dtxt(x.depth)}`]),
+          ...RES.decisions.map((d, i) => [`Decision point ${i + 1}`, `${d.ways} ways · ${d.hidden.length ? 'sign for ' + esc(d.hidden.join(', ')) : 'the way on is in sight'}`])],
+        method: `From ${esc(RES.start.name)}: the shortest walk to every room's door (${fmt(R.c, 2)} m grid, 8 directions, no cutting corners${ST.wayFurn ? ', furniture in the way' : ''}), pulled tight; where routes split, a decision point, and a sign wherever a room's door is not in sight from there (eye ${ST.wayEye} m; furniture taller than the eye blocks the view). Visual depth: 0 where the start sees, 1 where a spot seen from it sees, and so on. The method of the Wayfinding study, for early layout; signage design and lighting are not modelled.`,
+        results: { decisions: RES.decisions.length, signs: F.signs, depth: +F.md.toFixed(2), seen: F.seen }, settings: { start: RES.start.name, eye: +ST.wayEye, furniture: ST.wayFurn, label: `Wayfinding from ${esc(RES.start.name)} (Workspace)` } }; }
     if (id === 'privacy') {
       const sc = w.planScene('privacy'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
       if (!ST.priv.sides.length) throw Error('Pick at least one side with a street.');
@@ -588,6 +614,10 @@ export function mountChrome(app, api) {
       : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' : ''}</div>`;
     const inputs = { day: () => `<p class="sp-flabel">Day</p>${seg('data-st-set', 'day:' + ST.day, DAYS.map(([k, n]) => ['day:' + k, n]))}`,
       structure: () => `<p class="sp-flabel">Structure</p>${seg('data-st-set', 'system:' + systemOf(), SYSTEMS.map(([k, n]) => ['system:' + k, n]))}<p class="sp-flabel">Column grid, about</p>${seg('data-st-set', 'span:' + ST.span, [['6', '6 m'], ['7.5', '7.5 m'], ['9', '9 m']].map(([k, n]) => ['span:' + k, n]))}<p class="sp-flabel">Soil bearing (assumed until a geotechnical report)</p>${seg('data-st-set', 'bearing:' + ST.bearing, [['100', '100 kPa'], ['150', '150 kPa'], ['300', '300 kPa']].map(([k, n]) => ['bearing:' + k, n]))}<p class="sp-note"><a href="#" data-st="page">Detailed frame check, member by member</a></p>`,
+      wayfinding: () => { let sc = null; try { sc = INST.persp.ws.planScene?.('wayfinding'); } catch { } const S0 = sc ? WAY.startsOf(sc) : [];
+        return `<p class="sp-flabel">Start (${esc(sc?.name?.split(' · ').pop() || 'this level')}, change the level in the Level menu)</p>${S0.length ? `<select class="sp-sel" data-way="start">${S0.map((x) => `<option value="${esc(x.id)}" ${x.id === ST.wayStart ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '<p class="sp-note">No rooms on this level yet.</p>'}
+          <label class="sp-check"><input type="checkbox" data-way="furn" ${ST.wayFurn ? 'checked' : ''}> Furniture is in the way when walking</label>
+          <p class="sp-note">Furniture taller than the eye blocks the view; lower pieces are seen over. Doors count as open passages. Corridors, halls, lobbies, landings and stairs are walked through, not destinations.</p>`; },
       privacy: () => { const P = ST.priv, side = (k, n) => `<button type="button" data-priv-side="${k}" aria-pressed="${P.sides.includes(k)}">${n}</button>`, num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-priv="${k}" min="${min}" max="${max}" step="${st}" value="${P[k]}"> ${u}</span></label>`;
         let sc = null; try { sc = INST.persp.ws.planScene?.('privacy'); } catch { } const rooms = sc?.rooms || [], proj = sc?.source?.project || 'sample', nd = PKEEP.get('privacy:' + proj, {});
         return `<p class="sp-flabel">Street on these sides of the plan</p><div class="sp-chips sp-chips-in">${side('top', 'Top')}${side('right', 'Right')}${side('bottom', 'Bottom')}${side('left', 'Left')}</div>
@@ -627,6 +657,7 @@ export function mountChrome(app, api) {
     else if (d.stArea) { ST.area = +d.stArea; ST.areaOpen = false; if (!ST.res) showArea(); }
     else if (d.wdir) { ST.windDir = +d.wdir * 22.5; ST.windSpeed = null; }
     drawStudy(); });
+  studyCard.addEventListener('change', (e) => { const wk = e.target.dataset.way; if (wk) { if (wk === 'start') ST.wayStart = e.target.value; else ST.wayFurn = e.target.checked; drawStudy(); } });
   studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.priv; if (k) { ST.priv = { ...ST.priv, [k]: k === 'doors' ? t.checked : +t.value }; drawStudy(); return; }
     if (t.dataset.privneed != null) { let sc = null; try { sc = INST.persp.ws.planScene('privacy'); } catch { } const key = 'privacy:' + (sc?.source?.project || 'sample'), m = PKEEP.get(key, {}); if (t.value) m[t.dataset.privneed] = t.value; else delete m[t.dataset.privneed]; PKEEP.set(key, m); ST.privNeedV = (ST.privNeedV || 0) + 1; drawStudy(); return; } });
   studyCard.addEventListener('change', (e) => { const n = e.target.dataset.circuse; if (n != null) { ST.circUse = { ...ST.circUse, [n]: e.target.value }; drawStudy(); } });

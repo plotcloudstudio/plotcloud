@@ -34,6 +34,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=privacy]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     const pr = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows }; }); assert.equal(pr.err, ''); assert.match(pr.rows[0][1], /%$/); assert.match(JSON.stringify(pr.rows), /Bedroom[\s\S]*High need/);
     assert(await pf.evaluate(() => (window.__ws._walkPNG() || '').length > 5000), 'privacy drawn over the plan'); console.log(`PASS Privacy on Level 1: ${pr.rows[0][1]} of the floor seen from outside, windows to screen ${pr.rows[3][1]}`);
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=wayfinding]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
+    const wf = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows }; }); assert.equal(wf.err, ''); assert.deepEqual(wf.rows[2], ['Rooms seen from the start', '5 of 5']); assert.doesNotMatch(JSON.stringify(wf.rows), /no way in/);
+    console.log(`PASS Wayfinding on Level 1: every room reached (doorways walkable), ${wf.rows[0][1]} decision points`);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });
