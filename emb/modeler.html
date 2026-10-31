@@ -5801,7 +5801,7 @@ window.S3 = (() => {
       const cx = o.X0 + o.nx * o.cell / 2, cy = o.Y0 + o.ny * o.cell / 2, R0 = Math.min(o.nx, o.ny) * o.cell / 2, sm = (p, q, x) => { const t = Math.max(0, Math.min(1, (x - p) / (q - p))); return t * t * (3 - 2 * t); };
       for (let j = 0; j < o.ny; j++) for (let i = 0; i < o.nx; i++) { const v = o.vals[j * o.nx + i]; if (!Number.isFinite(v)) continue;
         const x0 = o.X0 + i * o.cell, y0 = o.Y0 + j * o.cell, x1 = x0 + o.cell, y1 = y0 + o.cell, pts = [X(x0, y0), X(x1, y0), X(x1, y1), X(x0, y1)];
-        ag.globalAlpha = o.fade === false ? 0.85 : 0.88 * (1 - sm(0.45 * R0, R0, Math.hypot(x0 + o.cell / 2 - cx, y0 + o.cell / 2 - cy)));
+        ag.globalAlpha = o.fade === false ? (o.alpha || 0.85) : 0.88 * (1 - sm(0.65 * R0, R0, Math.hypot(x0 + o.cell / 2 - cx, y0 + o.cell / 2 - cy)));
         ag.fillStyle = o.color(v); ag.beginPath(); pts.forEach((p, n) => (n ? ag.lineTo(p[0], p[1]) : ag.moveTo(p[0], p[1]))); ag.closePath(); ag.fill(); }
       g.save(); g.filter = `blur(${Math.max(1, Math.round(o.cell * k * 0.6))}px)`; g.drawImage(a, 0, 0); g.restore(); }
     g.drawImage(L.water, 0, 0); g.drawImage(L.lines, 0, 0); if (TOPO.tex) TOPO.tex.needsUpdate = true;
@@ -6520,7 +6520,7 @@ if (window.__WSROLE) {
     // dirSets: [[{ az (° from true north), alt (°), w }]]. Same shading as Sun hours (masses, the building, surroundings, terrain).
     rayGrid(dirSets, o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
-      const pr = studyPrisms(), box = studyBox(pr, o.pad || 40), out = [], t0 = performance.now(), nb = M.north || 0;
+      const pr = studyPrisms(), box = studyBox(pr, o.pad), out = [], t0 = performance.now(), nb = M.north || 0;
       let g = null; for (const set of dirSets) { const dirs = set.filter((d) => d.alt > 0.5 && d.w > 0).map((d) => { const a = (d.az - nb) * Math.PI / 180; return { v: [Math.sin(a), Math.cos(a)], t: Math.tan(d.alt * Math.PI / 180), w: d.w }; });
         g = sunGrid(M, o.withoutDesign ? [] : pr, { box, dirs }); out.push(g.H); }   // withoutDesign: only the surroundings and terrain shade (Shade benefit)
       return { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: out, cells: [...g.H].filter(Number.isFinite).length, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain, ms: Math.round(performance.now() - t0) };
@@ -6528,13 +6528,13 @@ if (window.__WSROLE) {
     // paint values on the ground: { X0, Y0, cell, nx, ny, vals, lo, hi, ramp: 'sun' | 'heat' | 'sky' }
     paintGrid(o) { const site = M.site, gAt = (x, y) => { if (!site?.terrain) return 0; const q = siteOfM(M, [x, y]); return SITEC.groundAt(site.terrain, q[0], q[1]); };
       const R = RAMPS[o.ramp] || RAMPS.sun, color = (v) => rampAt(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo));
-      if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) }); },
+      if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]), fade: o.fade, alpha: o.alpha }); },
     viewPNG() { try { const c = [...document.querySelectorAll('canvas')].filter((x) => x.offsetParent && x.width > 200).sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (window.S3 && S3.render) S3.render(); return c ? c.toDataURL('image/png') : null; } catch (e) { return null; } },
     // a plan grid of the site for flow studies (2026-10-31): solid where a building (design or surroundings) stands taller than
     // 1.5 m; at most maxCells along the longer side
     groundMask(o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
-      const pr = studyPrisms(), b0 = studyBox(pr, o.pad || 80), X1 = b0.X0 + b0.nx * b0.cell, Y1 = b0.Y0 + b0.ny * b0.cell, cell = Math.max(1.5, Math.max(X1 - b0.X0, Y1 - b0.Y0) / (o.maxCells || 130));
+      const pr = studyPrisms(), b0 = studyBox(pr, o.pad), X1 = b0.X0 + b0.nx * b0.cell, Y1 = b0.Y0 + b0.ny * b0.cell, cell = Math.max(1.5, Math.max(X1 - b0.X0, Y1 - b0.Y0) / (o.maxCells || 130));
       const nx = Math.round((X1 - b0.X0) / cell), ny = Math.round((Y1 - b0.Y0) / cell), solid = new Uint8Array(nx * ny);
       const all = pr.map((m) => prismOf(m.outer, m.h)).concat(SITEC.contextMasses(M.site, M.north || 0).map((m) => prismOf(m.outer, m.h))).filter((P) => P.h > 1.5);
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = [b0.X0 + (i + 0.5) * cell, b0.Y0 + (j + 0.5) * cell]; if (all.some((P) => q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer))) solid[j * nx + i] = 1; }
@@ -6544,7 +6544,7 @@ if (window.__WSROLE) {
     // building during the protected sun directions ([{ az, alt }]); capped at cap metres
     solarEnvelope(dirs, o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
-      const pr = studyPrisms(), box = studyBox(pr, o.pad || 40), cap = o.cap || 100, nb = M.north || 0, t0 = performance.now();
+      const pr = studyPrisms(), box = studyBox(pr, o.pad), cap = o.cap || 100, nb = M.north || 0, t0 = performance.now();
       const ctx = SITEC.contextMasses(M.site, M.north || 0).map((m) => prismOf(m.outer, m.h)); if (!ctx.length) throw Error('There are no surrounding buildings on this site to protect, so the envelope is not limited.');
       const D = dirs.filter((d) => d.alt > 1).map((d) => { const a = (d.az - nb) * Math.PI / 180; return { v: [-Math.sin(a), -Math.cos(a)], t: Math.tan(d.alt * Math.PI / 180) }; });   // shadows fall away from the sun
       const { X0, Y0, cell, nx, ny } = box, H = new Float32Array(nx * ny).fill(NaN);
@@ -6559,7 +6559,7 @@ if (window.__WSROLE) {
     sunStudy(o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
       const day = SUN_DAYS[o.day] ? o.day : '03-21', pr = studyPrisms();
-      const t0 = performance.now(), box = studyBox(pr, o.pad || 40); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.');
+      const t0 = performance.now(), box = studyBox(pr, o.pad); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.');
       const g = sunGrid(M, pr, { day, box }); if (!g) throw Error('The sun could not be placed for this site.');
       let lo = Infinity, hi = 0, n = 0, sum = 0, two = 0; for (const v of g.H) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); n++; sum += v; if (v >= 2) two++; }
       const site = M.site, gAt = (x, y) => { if (!site.terrain) return 0; const q = siteOfM(M, [x, y]); return SITEC.groundAt(site.terrain, q[0], q[1]); };
@@ -6568,6 +6568,10 @@ if (window.__WSROLE) {
       return { grid: { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: g.H }, day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
     },
     clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); },
+    // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
+    studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
+      if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }
+      return { scale: STUDY_SCALE, w: Math.round(b.nx * b.cell), h: Math.round(b.ny * b.cell) }; },
     thumb: () => verThumb(),   // a small picture of the model (the Compare sketches cards)
     layerLooks(spec) { if (window.S3 && S3.layerLooks) S3.layerLooks(spec); },   // layer materials (Workspace Layers) in the 3D view
   });
@@ -6580,7 +6584,13 @@ if (window.__WSROLE) {
     if (S) for (const r of S.rooms) pr.push({ outer: [[r.bx0, r.by0], [r.bx1, r.by0], [r.bx1, r.by1], [r.bx0, r.by1]], h: r.z0 + r.h });
     return pr; }
   // the ground studied: the building and 40 m round it, or the site square when there is no building yet
-  function studyBox(pr, pad) { const sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
+  // the study area (2026-10-31): the building and 40 m round it, scaled up round its centre (3× by default, so the surroundings
+  // that shade or channel wind are in it), at most 600 m a side; set from the study card (Change area). Cells up to 5 m.
+  let STUDY_SCALE = 3;
+  function studyBox(pr, pad = 40) { const b = studyBox0(pr, pad), sc = STUDY_SCALE; if (sc === 1 || !pr.length) return b;   // with no building the site square is studied as it is
+    const w = Math.min(600, b.nx * b.cell * sc), h = Math.min(600, b.ny * b.cell * sc), cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, cell = Math.max(2, Math.min(5, Math.sqrt(w * h / 9000)));
+    return { X0: cx - w / 2, Y0: cy - h / 2, cell, nx: Math.max(1, Math.round(w / cell)), ny: Math.max(1, Math.round(h / cell)) }; }
+  function studyBox0(pr, pad) { const sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
     const box = pr.length ? sunBox(M, pr.map((m) => m.outer), pad) : sunBox(M, [sq], 0); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.'); return box; }
   // colour ramps for results on the ground
   const RAMPS = { sun: [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']],
@@ -6590,6 +6600,9 @@ if (window.__WSROLE) {
     height: [[0, '#3b1f5e'], [0.3, '#7b3f8f'], [0.6, '#d1675f'], [0.85, '#f2a65a'], [1, '#f7e3a1']],
     lawson: [[0, '#3d85c6'], [0.25, '#4eb0a0'], [0.5, '#9cc95a'], [0.75, '#ecc94b'], [1, '#d9482c']],
     wind: [[0, '#2b3a67'], [0.3, '#3f88c5'], [0.5, '#9fd3c7'], [0.7, '#f4d35e'], [1, '#d1495b']],
+    flow: [[0, '#2f6db3'], [0.25, '#8fbbe0'], [0.5, '#f1f1ee'], [0.75, '#efa58a'], [1, '#c8423a']],
+    risk: [[0, '#f1f1ee'], [0.4, '#f4c26b'], [0.7, '#e2703a'], [1, '#a3242b']],
+    frame: [[0, '#9cc3e6'], [0.5, '#9cc3e6'], [1, '#2f6db3']],
     water: [[0, '#e8f4fb'], [0.3, '#9cc9e8'], [0.65, '#3d85c6'], [1, '#14365e']] };
   function rampAt(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
   // a narrow pane: Plan Studio's 3D fit is made for a wide view, so it steps back by the pane's shape (display only)

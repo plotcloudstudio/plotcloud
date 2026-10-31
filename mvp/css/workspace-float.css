@@ -283,3 +283,41 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-studyres .btn{margin-top:10px}
 .w2.sp .sp-hist{width:100%;height:auto;display:block;margin-top:4px}.w2.sp .sp-hist text{font:10px Inter,system-ui,sans-serif;fill:#6b7280}
 .w2.sp .sp-studycard .sp-tabs,.w2.sp .sp-studyres .sp-tabs{margin-bottom:10px}
+/* one card for every building study (2026-10-31): mode, stage, map views, Start / Change area, the study's input at the foot */
+.w2.sp .sp-studycard{width:300px;padding:0;display:flex;flex-direction:column}
+.w2.sp .sp-studycard>header{padding:12px 14px 6px;gap:8px;justify-content:flex-start}
+.w2.sp .sp-studycard>header b{flex:none}
+.w2.sp .sp-pill{font-size:10.5px;color:var(--sp-sub);display:inline-flex;align-items:center;gap:5px}
+.w2.sp .sp-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#9ca3af}
+.w2.sp .sp-pill[data-state=ok]::before{background:#16a34a}.w2.sp .sp-pill[data-state=run]::before{background:#d97706;animation:spPulse 1s infinite alternate}.w2.sp .sp-pill[data-state=stale]::before{background:#d97706}.w2.sp .sp-pill[data-state=err]::before{background:#d4322b}
+@keyframes spPulse{to{opacity:.3}}
+.w2.sp .sp-hbtns{margin-left:auto;display:flex;gap:4px}
+.w2.sp .sp-ib{width:24px;height:24px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;line-height:1;color:var(--sp-ink)}
+.w2.sp .sp-studycard>.sp-tabs,.w2.sp .sp-studycard>.sp-exp{margin:4px 14px 8px}
+.w2.sp .sp-exp{display:flex;flex-wrap:wrap;gap:6px}.w2.sp .sp-exp .btn{margin:0}
+.w2.sp .sp-stage{margin:0 14px;padding:12px;border:1px solid #eef0f2;border-radius:10px;min-height:150px}
+.w2.sp .sp-stage h3{margin:0 0 6px;font:600 17px/1.25 Inter,system-ui,sans-serif;color:#9aa1ab}
+.w2.sp .sp-stage.run h3{color:var(--sp-ink);font-size:14px}
+.w2.sp .sp-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}.w2.sp .sp-head span{color:var(--sp-sub)}.w2.sp .sp-head b{font-size:15px}
+.w2.sp .sp-warn{color:#b45309}.w2.sp .sp-errtext{color:#b42318}
+.w2.sp .sp-chips{display:flex;flex-wrap:wrap;gap:5px;margin:10px 14px 0}
+.w2.sp .sp-chips button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:3px 10px;font:500 11px Inter,system-ui,sans-serif;color:var(--sp-ink);cursor:pointer}
+.w2.sp .sp-chips [aria-pressed=true]{background:#111827;border-color:#111827;color:#fff}
+.w2.sp .sp-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 14px 0}.w2.sp .sp-acts .btn{margin:0;width:100%;justify-content:center;padding:7px 0}
+.w2.sp .sp-optlist{display:flex;flex-direction:column;gap:4px;margin:8px 14px 0}
+.w2.sp .sp-foot .sp-optlist{margin:0}
+.w2.sp .sp-optlist button{text-align:left;border:1px solid #e5e7eb;background:#fff;border-radius:7px;padding:5px 8px;font:11px Inter,system-ui,sans-serif;color:var(--sp-ink);cursor:pointer}
+.w2.sp .sp-optlist [aria-pressed=true]{border-color:#3f88c5;background:#eef5fb}
+.w2.sp .sp-foot{margin-top:12px;padding:10px 14px 12px;background:#f7f8f9;border-top:1px solid #eef0f2;border-radius:0 0 12px 12px}
+.w2.sp .sp-foot .sp-tabs{background:#eceef1;margin-bottom:4px}
+.w2.sp .sp-flabel{margin:0 0 6px;color:var(--sp-sub);font-size:10.5px}
+.w2.sp .sp-rose{display:block;width:190px;margin:0 auto 6px}
+.w2.sp .sp-rose text{font:600 9px Inter,system-ui,sans-serif;fill:#6b7280}
+.w2.sp .sp-rose path{stroke:#fff;stroke-width:1}.w2.sp .sp-rose path[data-wdir]{cursor:pointer}.w2.sp .sp-rose path[data-wdir]:hover{opacity:.8}
+.w2.sp .sp-rose path.on{stroke:#d1495b;stroke-width:2}
+.w2.sp .sp-foot input[type=range]{width:100%}
+.w2.sp .sp-studycard>*{flex:none}
+.w2.sp .sp-spdrow{display:block;color:var(--sp-sub);font-size:10.5px}
+.w2.sp .sp-studycard>header b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+.w2.sp .sp-pill{white-space:nowrap;flex:none}
+.w2.sp .sp-kv{gap:10px}.w2.sp .sp-kv b{text-align:right}

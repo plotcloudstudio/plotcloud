@@ -4,7 +4,8 @@
 // facades, so it screens where buildings channel and shelter the wind (and overstates speed-up in narrow gaps, where real wind
 // also goes over the roofs); it is not a 3D CFD result.
 const E = [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [-1, -1], [1, -1]], W = [4 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 36, 1 / 36, 1 / 36, 1 / 36], OPP = [0, 3, 4, 1, 2, 7, 8, 5, 6];
-// solid: Uint8Array (1 = building); flow: [ux, uy] unit vector in grid axes (i to the east, j to the north); returns Float32Array ratio
+// solid: Uint8Array (1 = building); flow: [ux, uy] unit vector in grid axes (i to the east, j to the north); returns Float32Array ratio,
+// with .cp the pressure coefficient at every cell ((p - p∞) / ½ρu∞²; NaN on solid)
 export function speedRatio(solid, nx, ny, flow, { iters = 0, u0 = 0.08, tau = 0.7 } = {}) {
   const N = nx * ny, f = new Float32Array(9 * N), g = new Float32Array(9 * N), ux0 = flow[0] * u0, uy0 = flow[1] * u0, om = 1 / tau;
   const feq = (k, rho, ux, uy) => { const eu = E[k][0] * ux + E[k][1] * uy, uu = ux * ux + uy * uy; return W[k] * rho * (1 + 3 * eu + 4.5 * eu * eu - 1.5 * uu); };
@@ -23,6 +24,6 @@ export function speedRatio(solid, nx, ny, flow, { iters = 0, u0 = 0.08, tau = 0.
     for (let j = 0; j < ny; j++) for (const i of [0, nx - 1]) { const c = j * nx + i; for (let k = 0; k < 9; k++) g[k * N + c] = F0[k]; }
     f.set(g); for (let c = 0; c < N; c++) if (solid[c]) for (let k = 0; k < 9; k++) f[k * N + c] = W[k];
   }
-  const out = new Float32Array(N); for (let c = 0; c < N; c++) { if (solid[c]) { out[c] = NaN; continue; } let rho = 0, ux = 0, uy = 0; for (let k = 0; k < 9; k++) { const v = f[k * N + c]; rho += v; ux += v * E[k][0]; uy += v * E[k][1]; } out[c] = Math.hypot(ux, uy) / rho / u0; }
-  return out;
+  const out = new Float32Array(N), cp = new Float32Array(N); for (let c = 0; c < N; c++) { if (solid[c]) { out[c] = NaN; cp[c] = NaN; continue; } let rho = 0, ux = 0, uy = 0; for (let k = 0; k < 9; k++) { const v = f[k * N + c]; rho += v; ux += v * E[k][0]; uy += v * E[k][1]; } out[c] = Math.hypot(ux, uy) / rho / u0; cp[c] = (rho - 1) / 3 / (0.5 * u0 * u0); }
+  out.cp = cp; return out;
 }
