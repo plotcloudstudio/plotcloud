@@ -3699,14 +3699,14 @@ annot.addEventListener('pointerdown', (e) => {
   if (rot) HDRAG = { kind: 'rot', f, before };
   else { const su = +h.dataset.su, sv = +h.dataset.sv, c = Math.cos(f.rot || 0), s = Math.sin(f.rot || 0), au = -su * f.w / 2, av = -sv * f.d / 2; HDRAG = { kind: 'size', f, before, su, sv, anchor: [f.x + au * c - av * s, f.y + au * s + av * c], c, s, w0: f.w, d0: f.d }; }
   const mv = (ev) => { if (!HDRAG) return; const p = pt(ev), F = HDRAG.f;
-    if (HDRAG.kind === 'rot') { const a = Math.atan2(p[1] - F.y, p[0] - F.x) - Math.PI / 2; F.rot = ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(ev, `${Math.round(F.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(F.rot) * 180 / Math.PI) % 360}°`); }
+    if (HDRAG.kind === 'rot') { const a = Math.atan2(p[1] - F.y, p[0] - F.x) - Math.PI / 2, st = (ev.shiftKey ? 15 : 1) * Math.PI / 180; F.rot = ((Math.round(a / st) * st % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(ev, `${Math.round(F.rot * 180 / Math.PI) % 360}°${ev.shiftKey ? ' · 15° steps' : ' · Shift for 15° steps'}`); }
     else { const { su, sv, anchor, c, s } = HDRAG, dx = p[0] - anchor[0], dy = p[1] - anchor[1], u = dx * c + dy * s, v = -dx * s + dy * c;
       setGenSize(F, su ? Math.max(0.2, Math.abs(u)) : null, sv ? Math.max(0.2, Math.abs(v)) : null, null);
       // the opposite corner (or edge) stays put: the center is half the new size away from it
       const ou = su * F.w / 2, ov = sv * F.d / 2; F.x = +(anchor[0] + ou * c - ov * s).toFixed(4); F.y = +(anchor[1] + ou * s + ov * c).toFixed(4);
       tipAt(ev, `${Math.round(F.w * 1000)} × ${Math.round(F.d * 1000)} mm`); }
     changed(true, true); if (window.S3 && S3.on) upd3D(); };
-  const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); if (!HDRAG) return; const D = HDRAG; HDRAG = null; tipOff(); if (D.kind === 'rot') D.f.rot = WBP.snapAngle(D.f.rot); tidy(); commit(D.before); };
+  const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); if (!HDRAG) return; const D = HDRAG; HDRAG = null; tipOff(); tidy(); commit(D.before); };
   addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
 });
 
@@ -3999,6 +3999,11 @@ function gizmoTarget() {
   };
 }
 // scaling with a gumball square (3D and plan): the object's own X or Y, about its centre, snapped to 5 %
+function gzTurn(D, p, e) {
+  const f = D.f, a = Math.atan2(p[1] - f.y, p[0] - f.x), raw = D.r0 + a - D.a0, quarter = D.target.kind === 'imp' || (D.target.snapRotation && D.target.snapRotation(Math.PI / 4.1) === Math.PI / 2 && D.target.kind === 'group');
+  const st = (quarter ? 90 : e.shiftKey ? 15 : 1) * Math.PI / 180, rot = Math.round(raw / st) * st; f.rot = ((rot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const turn = Math.round((rot - D.r0) * 180 / Math.PI); tipAt(e, `${turn >= 0 ? '+' : ''}${turn}° · ${Math.round(f.rot * 180 / Math.PI) % 360}°${quarter ? ' (quarter turns)' : e.shiftKey ? ' · 15° steps' : ' · Shift for 15° steps'}`);
+}
 function gzScale(D, p, e) {
   const f = D.f, ax = D.ax === 'sx' ? 'x' : 'y', dir = ax === 'x' ? [Math.cos(D.r0), Math.sin(D.r0)] : [-Math.sin(D.r0), Math.cos(D.r0)], d0 = (D.p0[0] - D.x0) * dir[0] + (D.p0[1] - D.y0) * dir[1], d = (p[0] - D.x0) * dir[0] + (p[1] - D.y0) * dir[1];
   if (Math.abs(d0) < 1e-6) return; let k = Math.max(0.05, d / d0); if (!e.altKey) k = Math.max(0.05, Math.round(k * 20) / 20);
@@ -4142,7 +4147,7 @@ cv.addEventListener('pointermove', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); if (WLK) { S3.walk.look(e.clientX - WLK.x, e.clientY - WLK.y); WLK = { x: e.clientX, y: e.clientY }; } return; }
   if (GZD) { e.stopImmediatePropagation(); const p = S3.plane(e.clientX, e.clientY, GZD.z); if (!p) return; const f = GZD.f;
     if (GZD.ax === 'sx' || GZD.ax === 'sy') { gzScale(GZD, p, e); }
-    else if (GZD.ax === 'r') { const a = Math.atan2(p[1] - f.y, p[0] - f.x); f.rot = (((GZD.r0 + a - GZD.a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); tipAt(e, `${Math.round(f.rot * 180 / Math.PI)}° · snaps to ${Math.round(WBP.snapAngle(f.rot) * 180 / Math.PI) % 360}°`); }
+    else if (GZD.ax === 'r') gzTurn(GZD, p, e);
     else { const dir = GZD.ax === 'x' ? [Math.cos(GZD.r0), Math.sin(GZD.r0)] : [-Math.sin(GZD.r0), Math.cos(GZD.r0)], k = wsAxisSnap(GZD, dir, (p[0] - GZD.p0[0]) * dir[0] + (p[1] - GZD.p0[1]) * dir[1]); f.x = +(GZD.x0 + dir[0] * k).toFixed(4); f.y = +(GZD.y0 + dir[1] * k).toFixed(4); tipAt(e, `${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm along ${GZD.ax === 'x' ? 'its width (X)' : 'its depth (Y)'}`); }
     if (GZD.live == null) GZD.live = S3.liveBegin ? S3.liveBegin(liveKeys()) : false;
     if (GZD.live) { const fu = GZD.target.furn, sx = fu ? (f.w / fu.w) : (f.sx || 1) / (GZD.s0 ? GZD.s0.x : 1), sy = fu ? (f.d / fu.d) : (f.sy || 1) / (GZD.s0 ? GZD.s0.y : 1);
@@ -4159,7 +4164,7 @@ cv.addEventListener('pointermove', (e) => {
 }, true);
 cv.addEventListener('pointerup', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); WLK = null; return; }
-  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.live && S3.liveEnd) S3.liveEnd(); if (D.ax === 'r') D.f.rot = (D.target.snapRotation || WBP.snapAngle)(D.f.rot); D.target.apply(); tidy(); commit(D.before); return; }
+  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.live && S3.liveEnd) S3.liveEnd();  D.target.apply(); tidy(); commit(D.before); return; }
   if (NDRAG) { e.stopImmediatePropagation(); const D = NDRAG; NDRAG = null; if (D.moved) { tidy(); commit(D.before); } return; }
   if (CAM === 'plan' && VIEW2D === 'ceiling') {
     if (drag && drag.k === 'pan') return; e.stopImmediatePropagation();
@@ -6075,6 +6080,12 @@ window.S3 = (() => {
   api.plane = (cx, cy, z) => { if (!R) return null; const rc = ray(cx, cy), o = rc.ray.origin, d = rc.ray.direction; if (Math.abs(d.y) < 1e-6) return null; const t = (z - o.y) / d.y; if (t < 0) return null; return [o.x + d.x * t, -(o.z + d.z * t)]; };
   api.toScreen = (x, y, z) => { const v = new T.Vector3(x, z, -y).project(cam), r = canvas.getBoundingClientRect(), k = devicePixelRatio || 1; return [(v.x + 1) / 2 * r.width * k, (1 - v.y) / 2 * r.height * k]; };
   api.target = () => ctl ? [ctl.target.x, -ctl.target.z] : [0, 0];
+  // the view as the plan sees it (2026-10-31): the plan point in the middle and the metres across the view at that point;
+  // camSet keeps the direction the camera looks from and moves it so the same width shows round the same point
+  const halfTan = () => { const r = canvas.getBoundingClientRect(), asp = r.width / Math.max(1, r.height); return Math.tan(cam.fov * Math.PI / 360) * asp; };
+  api.camGet = () => { if (!cam || !ctl || !cam.isPerspectiveCamera) return null; const d = cam.position.distanceTo(ctl.target); return { cx: ctl.target.x, cy: -ctl.target.z, z: ctl.target.y, span: 2 * d * halfTan() }; };
+  api.camSet = (o) => { if (!cam || !ctl || !o || !cam.isPerspectiveCamera) return; const dir = cam.position.clone().sub(ctl.target).normalize(), d = Math.max(2, (o.span / 2) / halfTan()), t = new T.Vector3(o.cx, o.z ?? ctl.target.y, -o.cy);
+    ctl.target.copy(t); cam.position.copy(t).add(dir.multiplyScalar(d)); cam.updateProjectionMatrix(); ctl.update(); render(); };
   api.orbitLeft = (on) => { if (ctl) ctl.mouseButtons.LEFT = on ? T.MOUSE.ROTATE : null; };
   // a selected object keeps its own look and gets a red outline (2026-10-31): its edges in red, and faintly through what hides them
   const SELM = { front: null, back: null };
@@ -6624,8 +6635,8 @@ if (window.__WSROLE) {
       <circle r="4.5" fill="#fff" stroke="#1f2329" stroke-width="1.6"/></g>`;}
   {const paint=draw;draw=function(){paint();drawPlanGumball();};}
   planGumball.addEventListener('pointerdown',e=>{const axis=e.target.closest('[data-group-axis]')?.dataset.groupAxis,target=gizmoTarget();if(e.button!==0||!axis||!target||target.locked)return;e.preventDefault();e.stopImmediatePropagation();cv.focus({preventScroll:true});const f=target.f;const p0=S2W(...evP(e));GZD={plan:true,ax:axis,f,z:target.z,target,p0,x0:f.x,y0:f.y,r0:f.rot||0,a0:Math.atan2(p0[1]-f.y,p0[0]-f.x),s0:{x:f.sx||1,y:f.sy||1},before:snapM()};planGumball.setPointerCapture(e.pointerId);});
-  document.addEventListener('pointermove',e=>{if(!GZD?.plan)return;e.preventDefault();e.stopImmediatePropagation();const d=GZD,p=S2W(...evP(e)),f=d.f;if(d.ax==='sx'||d.ax==='sy')gzScale(d,p,e);else if(d.ax==='r'){const a=Math.atan2(p[1]-f.y,p[0]-f.x);f.rot=(((d.r0+a-d.a0)%(2*Math.PI))+2*Math.PI)%(2*Math.PI);tipAt(e,`${Math.round(f.rot*180/Math.PI)}°`);}else{const dir=d.ax==='x'?[Math.cos(d.r0),Math.sin(d.r0)]:[-Math.sin(d.r0),Math.cos(d.r0)],k=sg((p[0]-d.p0[0])*dir[0]+(p[1]-d.p0[1])*dir[1],.01);f.x=+(d.x0+dir[0]*k).toFixed(4);f.y=+(d.y0+dir[1]*k).toFixed(4);tipAt(e,`${k>=0?'+':''}${Math.round(k*1000)} mm`);}d.target.apply();draw();},true);
-  document.addEventListener('pointerup',e=>{if(!GZD?.plan)return;e.stopImmediatePropagation();const d=GZD;GZD=null;tipOff();if(d.ax==='r')d.f.rot=(d.target.snapRotation||WBP.snapAngle)(d.f.rot);d.target.apply();tidy();commit(d.before);draw();},true);
+  document.addEventListener('pointermove',e=>{if(!GZD?.plan)return;e.preventDefault();e.stopImmediatePropagation();const d=GZD,p=S2W(...evP(e)),f=d.f;if(d.ax==='sx'||d.ax==='sy')gzScale(d,p,e);else if(d.ax==='r')gzTurn(d,p,e);else{const dir=d.ax==='x'?[Math.cos(d.r0),Math.sin(d.r0)]:[-Math.sin(d.r0),Math.cos(d.r0)],k=sg((p[0]-d.p0[0])*dir[0]+(p[1]-d.p0[1])*dir[1],.01);f.x=+(d.x0+dir[0]*k).toFixed(4);f.y=+(d.y0+dir[1]*k).toFixed(4);tipAt(e,`${k>=0?'+':''}${Math.round(k*1000)} mm`);}d.target.apply();draw();},true);
+  document.addEventListener('pointerup',e=>{if(!GZD?.plan)return;e.stopImmediatePropagation();const d=GZD;GZD=null;tipOff();d.target.apply();tidy();commit(d.before);draw();},true);
   planGumball.addEventListener('pointercancel',()=>{if(GZD?.plan)cancelGizmo();});
   const point=e=>CAM==='3d'?S3.plane(e.clientX,e.clientY,lvObj().z):S2W(...evP(e));
   // Capture above native per-object handles so dragging a selected wall or mesh keeps the full selection.
@@ -6833,6 +6844,8 @@ if (window.__WSROLE) {
       if (!xs.length) return { lv, level: L.name, z: L.z || 0, segs, rooms, box: null };
       return { lv, level: L.name, z: L.z || 0, segs, rooms, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } }; },
     walkShow(o) { walkShow(o); },
+    camGet() { if (CAM === '3d') return window.S3 && S3.camGet ? S3.camGet() : null; const c = S2W(VP.w / 2, VP.h / 2); return { cx: c[0], cy: c[1], span: VP.w / V.s, z: (lvObj() || { z: 0 }).z }; },
+    camSet(o) { if (!o || !isFinite(o.cx) || !isFinite(o.span) || o.span <= 0) return; if (CAM === '3d') { if (window.S3 && S3.camSet) S3.camSet(o); return; } V.s = VP.w / o.span; V.ox = VP.w / 2 - o.cx * V.s; V.oy = VP.h / 2 + o.cy * V.s; V.user = true; draw(); },
     planScene(tool) { return STC.planScene(M, S || STC.build(M), LV, tool); },   // the plan engines' scene of the current level (local metres, .origin)
     _walkPNG() { return WK.cv ? WK.cv.toDataURL() : null; },   // for the browser checks
     level() { return LV; },

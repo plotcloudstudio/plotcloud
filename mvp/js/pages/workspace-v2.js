@@ -159,7 +159,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=live-20261031-6`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=rot-20261031-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -390,7 +390,13 @@ export function render(app, [pid]) {
     if ($('#dMenu', app).hidden) displayPanel(cur);
     $$('#vMenu [data-view]', app).forEach((x) => x.onclick = () => { closeMenus(); goView(x.dataset.view, x.dataset.level); });
   }
+  // 2D and 3D show the same place (2026-10-31): the view switched to starts from the one left, same centre and the same width
   async function goView(v, level) {
+      const from = UI.view === 'plan' ? INST.plan : UI.view === 'persp' ? INST.persp : null, toPlan = v === 'plan' || v === 'ceiling' || v === 'elev', to = toPlan ? INST.plan : v === 'persp' ? INST.persp : null;
+      let camv = null; try { if (from && to && from !== to && from.ready) camv = from.ws.camGet?.(); } catch { }
+      await goView0(v, level);
+      if (camv && to.ready) requestAnimationFrame(() => { try { to.ws.camSet?.(camv); } catch { } }); }
+  async function goView0(v, level) {
       if (v === 'plan' || v === 'ceiling' || v === 'elev') { showView('plan'); if (level) for (const I2 of ready()) I2.ws.level(level); if (INST.plan.ready) await INST.plan.ws.view(v === 'ceiling' ? 'ceiling' : v === 'elev' ? 'elev' : 'plan'); }
       else if (v === 'persp' || v === 'walk' || v === 'explode') { showView('persp'); if (INST.persp.ready) { const st = INST.persp.ws.state(); if (v === 'persp') await INST.persp.ws.view('bird'); else if (v === 'walk' && !st.walking && !st.walkpick) await INST.persp.ws.view('walk'); else if (v === 'explode' && !st.explode) await INST.persp.ws.view('explode'); } }
       else showView('shaded');
