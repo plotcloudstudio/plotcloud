@@ -5317,9 +5317,12 @@ function drawSun() {   // one pixel per cell on a small canvas, drawn scaled: no
     x.putImageData(im, 0, 0); R.img = c; }
   const a = W2S([R.X0, R.Y0 + R.ny * R.cell]); g.save(); g.globalAlpha = 0.62; g.imageSmoothingEnabled = false; g.drawImage(R.img, a[0], a[1], R.nx * R.cell * V.s, R.ny * R.cell * V.s); g.restore();
 }
-{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); _dm(); drawSunPath2(); }; }
+{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); _dm(); drawStruct2(); drawSunPath2(); }; }
 // a Workspace study result in the 2D plan (2026-10-31): the same grid and colours as in 3D, one crisp cell per grid cell
-let ANA2 = null, SPATH2 = null;
+let ANA2 = null, SPATH2 = null, STR2 = null;
+function drawStruct2() { const o = STR2; if (!o || CAM === '3d') return; g.save();
+  for (const c of o.cols) { const px = Math.max(9, c.s * V.s), a = W2S([c.x, c.y]); g.fillStyle = c.color; g.strokeStyle = '#1f2937'; g.lineWidth = 1; g.fillRect(a[0] - px / 2, a[1] - px / 2, px, px); g.strokeRect(a[0] - px / 2, a[1] - px / 2, px, px); }
+  g.restore(); }
 function drawSunPath2() {
   const P = SPATH2; if (!P || CAM === '3d') return; const line = (pl, col, w) => { if (pl.length < 2) return; g.beginPath(); pl.forEach((p, n) => { const q = W2S(P.plan(p.az, p.alt)); n ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
   g.save(); const ring = []; for (let k = 0; k <= 72; k++) ring.push({ az: k * 5, alt: 0 }); line(ring, 'rgba(55,65,81,.8)', 1.2);
@@ -5901,6 +5904,14 @@ window.S3 = (() => {
     for (const ln of L.lines) { const geo = new T.BufferGeometry().setFromPoints(ln.pts.map((p) => new T.Vector3(p[0], p[1], p[2]))); G.add(new T.Line(geo, new T.LineBasicMaterial({ color: new T.Color(ln.color || '#8a8f98'), transparent: true, opacity: ln.op || 0.8, depthWrite: false }))); }
     for (const p of L.suns || []) { const me = new T.Mesh(new T.SphereGeometry(L.sunR || 2.5, 12, 8), new T.MeshBasicMaterial({ color: new T.Color('#f2a33a') })); me.position.set(p[0], p[1], p[2]); G.add(me); }
     scene.add(G); SPATH.g = G; render(); };
+  // ---- structure preview (2026-10-31): columns as boxes [{ x, y (plan), s (m), z0, z1, color }], and design masses tinted { id: color }
+  const STRP = { g: null, tint: null };
+  function tintApply() { if (!grp) return; grp.traverse((m) => { if (!m.isMesh) return; const ud = m.userData; if (!ud || ud.k !== 'mass') return; if (!m.userData.__tint0) m.userData.__tint0 = m.material;
+      const c = STRP.tint && STRP.tint[ud.id]; m.material = c ? new T.MeshLambertMaterial({ color: new T.Color(c), transparent: true, opacity: 0.38, depthWrite: false, side: T.DoubleSide }) : m.userData.__tint0; }); }
+  api.structure = (o) => { if (!scene) return; if (STRP.g) { scene.remove(STRP.g); STRP.g.traverse((x) => { x.geometry && x.geometry.dispose(); x.material && x.material.dispose(); }); STRP.g = null; } STRP.tint = o ? o.tint : null; tintApply();
+    if (o) { const G = new T.Group(); G.name = 'structure'; for (const c of o.cols) { const h = Math.max(0.5, c.z1 - c.z0), me = new T.Mesh(new T.BoxGeometry(c.s, h, c.s), new T.MeshLambertMaterial({ color: new T.Color(c.color) })); me.position.set(c.x, c.z0 + h / 2, -c.y); G.add(me); } scene.add(G); STRP.g = G; }
+    render(); };
+  { const _u3 = api.update; api.update = (...a) => { _u3(...a); if (STRP.tint) { tintApply(); render(); } }; }
   // ---- an analysis result drawn on the ground (2026-10-30): one flat coloured cell per grid point, just above the terrain
   const OVL = { g: null };
   // o: { X0, Y0, cell, nx, ny, vals (per cell, NaN = no ground), color(v), ground(x, y), fade (true: strong in the middle, fading out
@@ -6596,6 +6607,20 @@ if (window.__WSROLE) {
       if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, vals: g.H, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) });
       return { grid: { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: g.H }, day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
     },
+    structGrid(o = {}) {
+      const span = o.span || 7.5, out = [];
+      for (const m of massList(M)) { const P = m.outer; if (!P || P.length < 3) continue; const n = P.length; let best = 0, ang = 0;
+        for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L > best) { best = L; ang = Math.atan2(b[1] - a[1], b[0] - a[0]); } }
+        const ca = Math.cos(ang), sa = Math.sin(ang), loc = (q) => [q[0] * ca + q[1] * sa, -q[0] * sa + q[1] * ca], glob = (u) => [u[0] * ca - u[1] * sa, u[0] * sa + u[1] * ca], L = P.map(loc);
+        const u0 = Math.min(...L.map((q) => q[0])), u1 = Math.max(...L.map((q) => q[0])), v0 = Math.min(...L.map((q) => q[1])), v1 = Math.max(...L.map((q) => q[1])), nu = Math.max(1, Math.ceil((u1 - u0) / span - 1e-6)), nv = Math.max(1, Math.ceil((v1 - v0) / span - 1e-6)), du = (u1 - u0) / nu, dv = (v1 - v0) / nv;
+        const near = (q) => inPoly(q, L) || L.some((a, i) => { const b = L[(i + 1) % L.length], dx = b[0] - a[0], dy = b[1] - a[1], t = Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / (dx * dx + dy * dy || 1))); return Math.hypot(a[0] + t * dx - q[0], a[1] + t * dy - q[1]) < 0.3; });
+        const cols = []; for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) { const q = [u0 + i * du, v0 + j * dv]; if (near(q)) cols.push({ u: q, trib: 0, edge: i === 0 || j === 0 || i === nu || j === nv }); }
+        if (!cols.length) continue; const st = 0.5; let area = 0;   // tributary area: each 0.5 m sample of the floor goes to the nearest column
+        for (let u = u0 + st / 2; u < u1; u += st) for (let v = v0 + st / 2; v < v1; v += st) { if (!inPoly([u, v], L)) continue; area += st * st; let k = 0, d0 = Infinity; for (let c = 0; c < cols.length; c++) { const d = (cols[c].u[0] - u) ** 2 + (cols[c].u[1] - v) ** 2; if (d < d0) { d0 = d; k = c; } } cols[k].trib += st * st; }
+        out.push({ id: m.id, name: m.name, use: m.use, storeys: m.storeys || Math.max(1, Math.round((m.h - m.base) / (m.fh || 3))), fh: m.fh || 3, base: m.base, top: m.h, area, spans: [du, dv], cols: cols.filter((c) => c.trib > 0.01).map((c) => { const g2 = glob(c.u); return { x: g2[0], y: g2[1], trib: c.trib, edge: c.edge }; }) }); }
+      return out;
+    },
+    structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = o.cols.map((c) => c.x), ys = o.cols.map((c) => c.y); FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
     sunPath(o) {
       if (!o) { SPATH2 = null; if (window.S3 && S3.sunPath) S3.sunPath(null); if (CAM !== '3d') draw(); return; }
       let b; try { b = studyBox(studyPrisms()); } catch (e) { return; } const cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, R = 0.42 * Math.min(b.nx, b.ny) * b.cell, nb = (M.north || 0) * Math.PI / 180, site = M.site;
@@ -6609,7 +6634,7 @@ if (window.__WSROLE) {
       if (window.S3 && S3.on && S3.sunPath) S3.sunPath({ lines, suns: (o.suns || []).map((p) => world(p.az, p.alt)), sunR: Math.max(1.5, R / 45) });
       SPATH2 = { cx, cy, R, nb, plan, o }; if (CAM !== '3d') draw();
     },
-    clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }

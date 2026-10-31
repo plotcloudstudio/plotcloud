@@ -47,13 +47,15 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('[data-cmp=close]'); assert(await p.locator('.sp-sheet').isHidden());
 
     // every other study opens inside this page too: the full study page, after the handoff, without leaving the Workspace
-    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=structure]'); await p.waitForFunction(() => window.__wsHost?.id() || document.querySelector('#handoffDialog[open]'), null, { timeout: 60000 });
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=structure]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 60000 });
+    const stc = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, n: s.res?.cells }; }); console.log('structure (no mass on this site):', JSON.stringify(stc));
+    await p.click('[data-st=page]'); await p.waitForFunction(() => window.__wsHost?.id() || document.querySelector('#handoffDialog[open]'), null, { timeout: 60000 });
     if (await p.locator('#handoffConfirm').isVisible().catch(() => false)) await p.click('#handoffConfirm');
     await p.waitForFunction(() => window.__wsHost?.id() === 'structure', null, { timeout: 60000 }); await p.locator('.sp-host .shbar').waitFor({ state: 'attached', timeout: 60000 });
     assert.match(await p.evaluate(() => location.hash), /^#\/workspace/); assert.equal(await p.evaluate(() => [...document.querySelectorAll('.w2-simmenu .w2-simcat')].map((x) => x.textContent).join('|')), 'Building|Interior');
     await p.evaluate(() => [...document.querySelectorAll('.sp-host a')].find((a) => /Back/.test(a.textContent)).click());
     assert.equal(await p.evaluate(() => !!document.querySelector('.sp-host')), false); assert(await p.evaluate(() => window.__ws2.inst.plan.ready));
-    console.log('PASS a study that does not run on the ground yet (Structure) opens inside the Workspace page and Back returns to the model; + lists Building and Interior');
+    console.log('PASS a study that does not run on the ground yet (the detailed Structure frame check) opens inside the Workspace page and Back returns to the model; + lists Building and Interior');
 
     // the project's shared parameters live in Project props (bottom left): saving makes a new shared revision
     await p.click('[data-sp=props]'); await p.locator('.pp-form').waitFor(); assert.match(await p.locator('.sp-propscard').innerText(), /Default[\s\S]*Sun & light[\s\S]*Noise[\s\S]*Weather[\s\S]*Advanced/);

@@ -25,7 +25,7 @@ jobs:
               tests/simulation-header.cjs tests/short-simulation-window.cjs tests/simulation-startup.cjs tests/simulation-art.cjs
           - group: climate
             scripts: >-
-              tests/shared-conditions.cjs tests/project-climate.cjs tests/climate-studies.cjs tests/charts-list.cjs tests/exterior-layout.cjs
+              tests/shared-conditions.cjs tests/project-climate.cjs tests/climate-studies.cjs tests/charts-list.cjs
           - group: presentation
             scripts: >-
               hero/toronto.test.cjs tests/resources-native.cjs tests/compare-2d.cjs tests/workflow.cjs

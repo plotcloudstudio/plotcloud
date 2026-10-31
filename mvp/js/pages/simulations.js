@@ -9,6 +9,8 @@ import { $, $$, esc, currentProject, currentVersion, LIVE, img } from '../app.js
 export async function render(app, [simId], params, context={}) {
   if(params.get('test-code')){const code=params.get('test-code');params.delete('test-code');history.replaceState(null,'','#/simulations'+(simId?'/'+encodeURIComponent(simId):'')+(params.toString()?'?'+params.toString():''));try{await activateTestingCode(code);}catch(error){app.innerHTML='<div class="wrap"><h1>Testing access could not be activated.</h1><p role="alert"></p><a href="#/simulations">Browse studies</a></div>';app.querySelector('[role=alert]').textContent=error.message;return;}}
   if(simId==='noise'){app.innerHTML='<div class="wrap"><h1>Study removed</h1><p>Outdoor Noise is no longer available.</p><a class="btn" href="#/simulations">All studies</a></div>';return;}
+  // a study that runs in the Workspace view (2026-10-31) opens there, on the current project, with its study card
+  if(['sunhours','radiation','skyview','shadebenefit','solarenvelope','utci','wind','stormwater'].includes(simId)&&params.get('autorun')!=='workspace'&&currentProject()){try{sessionStorage.setItem('pc-ws-open-study',simId);}catch(e){}location.hash='#/workspace';return;}
   const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
   if(sim?.family==='environment')return(await import('./environment-study.js?v=run-20261031-2')).render(app,sim,params,context);

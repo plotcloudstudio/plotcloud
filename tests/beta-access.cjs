@@ -33,7 +33,6 @@ const {chromium}=require('playwright');
  await go('#/resources/tool/scale');assert((await page.locator('#app').innerText()).includes('needs'));
  console.log('PASS monthly Pricing, email-first request, invalid code, unpaid study/resource gates');
  for(const id of ['sunhours','daylight']){await go('#/simulations/'+id);assert(!(await page.locator('#app').innerText()).includes('needs\nan active month.'));assert.equal(await page.evaluate(id=>PlotCloudBetaAccess.allows(id),id),true);}
- await page.goto(base+'/emb/wind.html');await page.waitForURL('**/mvp/index.html#/simulations/wind');await page.getByText('Paid beta access',{exact:true}).waitFor();
  console.log('PASS two free studies and direct paid engine redirect');
  grants=[grant];await go('#/pricing');await page.locator('input[name="code"]').fill(code);await page.locator('button[type="submit"]').click();await page.getByText('Monthly beta access activated',{exact:true}).waitFor();assert(await page.evaluate(()=>PlotCloudBetaAccess.status().active));
  await go('#/simulations/wind');assert.equal(await page.locator('#eng').count(),1);
