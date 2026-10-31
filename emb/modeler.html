@@ -16,7 +16,7 @@ html.ws .kj-top,html.ws .kl-left,html.ws .kj-status,html.ws .kbl,html.ws #draftB
 html.ws:not(.ws-props) .kj-right{display:none!important}
 html.ws .kj{position:relative}
 html.ws:not(.ws-props) .stage{position:absolute!important;inset:0!important;grid-area:auto!important;width:auto!important;height:auto!important;min-height:0!important}
-html.ws .thint,html.ws #toolBar,html.ws .kbr{display:none!important}
+html.ws .thint,html.ws #toolBar,html.ws .kbr,html.ws .mkpi{display:none!important}
 html.ws .annot .an-box{display:none!important}
 html.ws-props .stage{position:fixed!important;left:-4000px;top:0;width:640px;height:420px;visibility:hidden}
 html.ws-props .kj-right{display:flex!important;flex-direction:column;grid-column:1!important;grid-row:1!important;border:0!important;width:auto!important;min-width:0}
@@ -5758,6 +5758,9 @@ window.S3 = (() => {
     // the ground of the site as a topographic block (2026-10-30): the terrain surface with contours, water, green and roads
     // drawn on it (a texture over the terrain grid, so they follow the ground exactly), solid sides and a base
     if (o.terrain && o.terrain.pts && o.terrain.nx > 1 && o.terrain.ny > 1) G.add(topoBlock(M, o.terrain));
+    else if (M.site && M.site.origin && !M.site.terrain && o.site !== undefined) { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), n = 11, st = 2 * r / (n - 1), G0 = { x0: -r, y0: -r, step: st, nx: n, ny: n, z: new Array(n * n).fill(0) }, pts = [];
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const q = SITEC.siteToPlan(M.site, [G0.x0 + i * st, G0.y0 + j * st], M.north || 0); pts.push([q[0], q[1], 0]); }
+      G.add(topoBlock(M, { nx: n, ny: n, pts }, G0)); o = Object.assign({}, o, { terrain: { pts } }); }   // no terrain data: a flat block of the site square
     WM.topo = !!(o.terrain && o.terrain.pts); for (const g of WM.ground) g.visible = !WM.topo;   // the block stands on its own (the world map still fades in far out)
     return G;
   }
@@ -5815,13 +5818,13 @@ window.S3 = (() => {
   }
   api.layerLooks = (spec) => { LOOK.spec = spec; lookApply(); render(); };
   api._topoState = () => ({ cv: !!TOPO.cv, ana: TOPO.ana ? { nx: TOPO.ana.nx, ny: TOPO.ana.ny } : null });   // read-only, for the browser checks
-  function topoBlock(M, T0) {
+  function topoBlock(M, T0, G1) {
     const B = new T.Group(); B.name = 'site'; B.userData = { k: 'site', id: 'terrain' };
     const nx = T0.nx, ny = T0.ny, n = nx * ny, pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
     T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - 0.05; pos[3 * i + 2] = -p[1]; uv[2 * i] = (i % nx) / (nx - 1); uv[2 * i + 1] = Math.floor(i / nx) / (ny - 1); });
     for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1; idx.push(a, b, c, b, d, c); }
     const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
-    const G0 = M.site && M.site.terrain && M.site.terrain.grid, tex = G0 && G0.nx === nx && G0.ny === ny ? topoTexture(M.site, G0) : null;
+    const G0 = G1 || (M.site && M.site.terrain && M.site.terrain.grid), tex = G0 && G0.nx === nx && G0.ny === ny ? topoTexture(M.site, G0) : null;
     const top = new T.Mesh(geo, new T.MeshLambertMaterial(tex ? { map: tex, side: T.DoubleSide } : { color: 0xf3f3f1, side: T.DoubleSide })); top.name = 'site'; top.userData = { k: 'site', id: 'terrain' }; B.add(top);
     // sides down to a flat base below the lowest point
     let lo = Infinity, span = 0; for (const p of T0.pts) lo = Math.min(lo, p[2]); { const xs = T0.pts.map((p) => p[0]), ys = T0.pts.map((p) => p[1]); span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)); }
@@ -5880,18 +5883,7 @@ window.S3 = (() => {
   api.overlay = (o) => {
     if (OVL.g) { scene.remove(OVL.g); OVL.g.geometry.dispose(); OVL.g.material.dispose(); OVL.g = null; }
     TOPO.ana = o && o.toSite ? o : null; topoCompose();   // painted into the topographic block itself when the site has one
-    if (o && R && !(o.toSite && TOPO.cv && WM.topo)) { const { X0, Y0, cell, nx, ny, vals, color, ground } = o, fade = o.fade !== false, pos = new Float32Array(nx * ny * 3), col = new Float32Array(nx * ny * 4), c = new T.Color(), idx = [];
-      const cx = X0 + nx * cell / 2, cy = Y0 + ny * cell / 2, R0 = Math.min(nx, ny) * cell / 2, sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = j * nx + i, v = vals[k], x = X0 + (i + 0.5) * cell, y = Y0 + (j + 0.5) * cell;
-        pos[3 * k] = x; pos[3 * k + 1] = ground(x, y) + 0.15; pos[3 * k + 2] = -y;
-        if (Number.isFinite(v)) c.set(color(v)); else c.setRGB(1, 1, 1);
-        const a = !Number.isFinite(v) ? 0 : fade ? 0.92 * (1 - sm(0.5 * R0, R0, Math.hypot(x - cx, y - cy))) : 0.88;
-        col[4 * k] = c.r; col[4 * k + 1] = c.g; col[4 * k + 2] = c.b; col[4 * k + 3] = a; }
-      const ok = (k) => Number.isFinite(vals[k]);
-      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, d = a + nx, e = d + 1;
-        if (ok(a) && ok(b) && ok(d)) idx.push(a, b, d); if (ok(b) && ok(e) && ok(d)) idx.push(b, e, d); }
-      const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('color', new T.BufferAttribute(col, 4)); g.setIndex(idx);
-      OVL.g = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.DoubleSide, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })); OVL.g.name = 'analysis'; OVL.g.renderOrder = 2; scene.add(OVL.g); }
+    // results are painted only into the topographic block (2026-10-31): no flat surface of their own
     render();
   };
   api.zoom = (k) => { if (!R) return; const v = cam.position.clone().sub(ctl.target); v.multiplyScalar(1 / k); cam.position.copy(ctl.target).add(v); ctl.update(); render(); if (window.zoomUI) window.zoomUI(); };
@@ -6530,7 +6522,7 @@ if (window.__WSROLE) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
       const pr = studyPrisms(), box = studyBox(pr, o.pad || 40), out = [], t0 = performance.now(), nb = M.north || 0;
       let g = null; for (const set of dirSets) { const dirs = set.filter((d) => d.alt > 0.5 && d.w > 0).map((d) => { const a = (d.az - nb) * Math.PI / 180; return { v: [Math.sin(a), Math.cos(a)], t: Math.tan(d.alt * Math.PI / 180), w: d.w }; });
-        g = sunGrid(M, pr, { box, dirs }); out.push(g.H); }
+        g = sunGrid(M, o.withoutDesign ? [] : pr, { box, dirs }); out.push(g.H); }   // withoutDesign: only the surroundings and terrain shade (Shade benefit)
       return { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: out, cells: [...g.H].filter(Number.isFinite).length, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain, ms: Math.round(performance.now() - t0) };
     },
     // paint values on the ground: { X0, Y0, cell, nx, ny, vals, lo, hi, ramp: 'sun' | 'heat' | 'sky' }
@@ -6538,6 +6530,21 @@ if (window.__WSROLE) {
       const R = RAMPS[o.ramp] || RAMPS.sun, color = (v) => rampAt(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo));
       if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) }); },
     viewPNG() { try { const c = [...document.querySelectorAll('canvas')].filter((x) => x.offsetParent && x.width > 200).sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (window.S3 && S3.render) S3.render(); return c ? c.toDataURL('image/png') : null; } catch (e) { return null; } },
+    // the solar envelope (2026-10-31): for each ground cell, the tallest height whose shadow does not reach a surrounding
+    // building during the protected sun directions ([{ az, alt }]); capped at cap metres
+    solarEnvelope(dirs, o = {}) {
+      if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
+      const pr = studyPrisms(), box = studyBox(pr, o.pad || 40), cap = o.cap || 100, nb = M.north || 0, t0 = performance.now();
+      const ctx = SITEC.contextMasses(M.site, M.north || 0).map((m) => prismOf(m.outer, m.h)); if (!ctx.length) throw Error('There are no surrounding buildings on this site to protect, so the envelope is not limited.');
+      const D = dirs.filter((d) => d.alt > 1).map((d) => { const a = (d.az - nb) * Math.PI / 180; return { v: [-Math.sin(a), -Math.cos(a)], t: Math.tan(d.alt * Math.PI / 180) }; });   // shadows fall away from the sun
+      const { X0, Y0, cell, nx, ny } = box, H = new Float32Array(nx * ny).fill(NaN);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = [X0 + (i + 0.5) * cell, Y0 + (j + 0.5) * cell];
+        if (ctx.some((P) => q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer))) continue;   // on a surrounding building
+        let h = cap; for (const d of D) for (const P of ctx) { const sx = P.c[0] - q[0], sy = P.c[1] - q[1], s = sx * d.v[0] + sy * d.v[1]; if (s < -P.r) continue; if (Math.abs(sx * d.v[1] - sy * d.v[0]) > P.r) continue; if ((s - P.r) * d.t >= h) continue;
+          const din = rayEnter(q, d.v, P.outer); if (din < Infinity) h = Math.min(h, din * d.t); }
+        H[j * nx + i] = h; }
+      return { X0, Y0, cell, nx, ny, H, cells: [...H].filter(Number.isFinite).length, prisms: pr.length, context: ctx.length, terrain: !!M.site.terrain, ms: Math.round(performance.now() - t0) };
+    },
     rampColors(name) { return (RAMPS[name] || RAMPS.sun).map((x) => x[1]); },
     sunStudy(o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
@@ -6568,7 +6575,9 @@ if (window.__WSROLE) {
   // colour ramps for results on the ground
   const RAMPS = { sun: [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']],
     heat: [[0, '#1b1d4f'], [0.25, '#5b2a86'], [0.5, '#c2365f'], [0.75, '#f07f3c'], [1, '#fbe36a']],
-    sky: [[0, '#1f2140'], [0.35, '#3a4f8a'], [0.7, '#4f8fd0'], [1, '#a9d4f2']] };
+    sky: [[0, '#1f2140'], [0.35, '#3a4f8a'], [0.7, '#4f8fd0'], [1, '#a9d4f2']],
+    div: [[0, '#6a2c91'], [0.35, '#c39bd3'], [0.5, '#f1f1ee'], [0.65, '#8fd3c7'], [1, '#1a8a7a']],
+    height: [[0, '#3b1f5e'], [0.3, '#7b3f8f'], [0.6, '#d1675f'], [0.85, '#f2a65a'], [1, '#f7e3a1']] };
   function rampAt(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
   // a narrow pane: Plan Studio's 3D fit is made for a wide view, so it steps back by the pane's shape (display only)
   const aspectFit = () => { if (!window.S3 || !S3.on || !S3.zoom) return; const r = cv3.getBoundingClientRect(), a = r.width / Math.max(1, r.height); if (a < 1.3) S3.zoom(Math.max(0.3, a / 1.4)); };

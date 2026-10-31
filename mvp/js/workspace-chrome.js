@@ -227,12 +227,13 @@ export function mountChrome(app, api) {
   // with Settings | Export on the left, Results | Charts on the right and the legend; the result is painted on the site in 3D.
   // Sun hours, Solar radiation and Sky exposure run here on Plan Studio's ground grid (the same shading: masses, the building,
   // surrounding buildings, terrain). The other studies still open their study page inside the Workspace (the host below).
-  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
+  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
+  const ENVELOPES = [['equinox', 'Equinoxes, 9:00 to 15:00', [[3, 20], [9, 22]], 9, 15], ['winter', 'Winter solstice, 10:00 to 14:00', [[12, 21]], 10, 14], ['summer', 'Summer solstice, 8:00 to 17:00', [[6, 21]], 8, 17]];
   const PERIODS = [['year', 'Whole year', 1, 12], ['summer', 'Summer · June to August', 6, 8], ['winter', 'Winter · December to February', 12, 2]];
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
-  const ST = { id: null, ltab: 'settings', rtab: 'results', day: '03-21', period: 'year', res: null, key: '', at: null, busy: false, err: '', saved: '' };
+  const ST = { id: null, ltab: 'settings', rtab: 'results', day: '03-21', period: 'year', envelope: 'equinox', res: null, key: '', at: null, busy: false, err: '', saved: '' };
   const simMenu = document.querySelector('.w2-simmenu');
   if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { void b; });
     simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
@@ -261,7 +262,7 @@ export function mountChrome(app, api) {
     let c = S.conditionsOf(p).site.climate; if (!c?.hash && weatherDownloadAvailable()) { await ensureProjectClimate(p); c = S.conditionsOf(p).site.climate; }
     const rec = c?.hash ? await climateFile(c.hash) : null; if (!rec?.text) throw Error('The weather for this address could not be fetched. Check the connection, or add an EPW in Project props › Default › Advanced.');
     const lines = rec.text.trim().split(/\r?\n/), h = lines[0].split(','), rows = [];
-    for (const line of lines.slice(8)) { const a = line.split(','); rows.push({ m: +a[1], d: +a[2], h: +a[3], dni: Math.max(0, +a[14] || 0), dhi: Math.max(0, +a[15] || 0) }); }
+    for (const line of lines.slice(8)) { const a = line.split(','); rows.push({ m: +a[1], d: +a[2], h: +a[3], t: +a[6], dni: Math.max(0, +a[14] || 0), dhi: Math.max(0, +a[15] || 0) }); }
     return { station: c.station || c.name, lat: +h[6], lon: +h[7], tz: +h[8], rows };
   }
   const statsOf = (vals) => { let lo = Infinity, hi = -Infinity, n = 0, sum = 0; for (const v of vals) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); n++; sum += v; } return { lo: n ? lo : 0, hi: n ? hi : 0, n, avg: n ? sum / n : 0 }; };
@@ -285,6 +286,26 @@ export function mountChrome(app, api) {
       return { ...g, vals, unit: '%', ramp: 'sky', lo: Math.floor(st.lo), hi: 100, avg: st.avg, dec: 0, title: 'Sky exposure',
         rows: [['Mean sky view', fmt(st.avg, 1) + '%'], ['Range', fmt(st.lo) + '–' + fmt(st.hi) + '%'], ['Ground under 50% sky', fmt(vals.filter((v) => v < 50).length / Math.max(1, st.n) * 100) + '%']],
         method: `The share of the sky each ${fmt(g.cell, 1)} m ground cell sees past buildings and terrain (144 sky patches, weighted for a horizontal surface).`, results: { value: +st.avg.toFixed(2), min: st.lo, max: st.hi }, settings: { label: 'Ground sky view (Workspace)' } }; }
+    if (id === 'shadebenefit') {
+      const wx = await weather(), lower = 18, upper = 26, help = new Map(), harm = new Map(), add = (M0, k, v) => M0.set(k, (M0.get(k) || 0) + v);
+      for (const r of wx.rows) { if (!(r.dni > 0) || !Number.isFinite(r.t)) continue; const sp = sunPosition(2026, r.m, r.d, r.h - 0.5, wx.lat, wx.lon, wx.tz); if (sp.alt <= 0) continue; const k = Math.floor(sp.az / 15) + '|' + Math.min(8, Math.floor(sp.alt / 10));
+        if (r.t > upper) add(help, k, r.t - upper); else if (r.t < lower) add(harm, k, lower - r.t); }
+      const dirs = (M0) => [...M0].map(([k, v]) => { const [a, l] = k.split('|').map(Number); return { az: a * 15 + 7.5, alt: Math.min(85, l * 10 + 5), w: v }; });
+      const H = dirs(help), C = dirs(harm), withD = w.rayGrid([H, C]), without = w.rayGrid([H, C], { withoutDesign: true });
+      const vals = withD.H[0].map((v, k) => (Number.isFinite(v) ? (without.H[0][k] - v) - (without.H[1][k] - withD.H[1][k]) : NaN)), st = statsOf(vals), abs = [...vals].filter(Number.isFinite).map(Math.abs).sort((x, y) => x - y), m = Math.max(1, abs[Math.floor(abs.length * 0.95)] || 1);   // the scale from the 95th percentile, so a few extreme cells do not wash out the rest
+      const pos = vals.filter((v) => v > 0.5).length, neg = vals.filter((v) => v < -0.5).length;
+      return { ...withD, vals, unit: 'K·h', ramp: 'div', lo: -m, hi: m, avg: st.avg, dec: 0, title: 'Shade benefit · the design',
+        rows: [['Mean net benefit', fmt(st.avg, 1) + ' K·h'], ['Ground where the design’s shade helps', fmt(pos / Math.max(1, st.n) * 100) + '%'], ['Ground where it costs warmth', fmt(neg / Math.max(1, st.n) * 100) + '%'], ['Weather', esc(wx.station || '')]],
+        method: `What the design's shade does to the ground around it, over a year of the project weather (${esc(wx.station || 'EPW')}): an hour of shade counts for each degree above ${upper} °C and against for each degree below ${lower} °C, compared with the site without the design.`,
+        results: { value: +st.avg.toFixed(2), min: st.lo, max: st.hi }, settings: { lower, upper, label: 'Design shade on the ground (Workspace)' } }; }
+    if (id === 'solarenvelope') {
+      const site = S.conditionsOf(p).site, [, pname, days, h0, h1] = ENVELOPES.find((x) => x[0] === ST.envelope), dirs = [];
+      for (const [m, d] of days) for (let hr = h0; hr <= h1 + 1e-9; hr += 0.5) { const sp = sunPosition(2026, m, d, hr, site.lat, site.lon, site.lon / 15); if (sp.alt > 1) dirs.push(sp); }
+      const g = w.solarEnvelope(dirs, { cap: 100 }), vals = g.H, st = statsOf(vals);
+      return { ...g, vals, unit: 'm', ramp: 'height', lo: 0, hi: Math.max(10, Math.ceil(st.hi)), avg: st.avg, dec: 0, title: `Solar envelope · ${pname}`,
+        rows: [['Mean envelope height', fmt(st.avg, 1) + ' m'], ['Range', fmt(st.lo, 1) + '–' + fmt(st.hi, 1) + ' m'], ['Ground under 10 m', fmt(vals.filter((v) => v < 10).length / Math.max(1, st.n) * 100) + '%'], ['Protected', `${g.context} surrounding buildings`]],
+        method: `The tallest a building could be at each ${fmt(g.cell, 1)} m cell without its shadow reaching a surrounding building, for ${dirs.length} sun positions (${pname}, solar time). Heights above the ground, capped at 100 m.`,
+        results: { value: +st.avg.toFixed(2), min: st.lo, max: st.hi }, settings: { envelope: ST.envelope, label: `Envelope, ${pname} (Workspace)` } }; }
     throw Error('This study does not run here yet.');
   }
   async function runStudy() {
@@ -319,10 +340,12 @@ export function mountChrome(app, api) {
     const status = ST.busy ? ['run', 'Running…'] : ST.err ? ['err', ST.err] : !r ? ['idle', 'Not run yet'] : stale ? ['stale', 'The model changed after this result: run again'] : ['ok', `Up to date · ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`];
     const tabs = (side, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" data-st-${side}="${k}" aria-selected="${cur === k}">${n}</button>`).join('')}</div>`;
     const settings = id === 'sunhours' ? `<label class="sp-field">Day<select data-st="day">${DAYS.map(([k, n]) => `<option value="${k}" ${k === ST.day ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`
-      : id === 'radiation' ? `<label class="sp-field">Period<select data-st="period">${PERIODS.map(([k, n]) => `<option value="${k}" ${k === ST.period ? 'selected' : ''}>${n}</option>`).join('')}</select></label>` : '';
+      : id === 'radiation' ? `<label class="sp-field">Period<select data-st="period">${PERIODS.map(([k, n]) => `<option value="${k}" ${k === ST.period ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`
+      : id === 'solarenvelope' ? `<label class="sp-field">Protected sun<select data-st="envelope">${ENVELOPES.map(([k, n]) => `<option value="${k}" ${k === ST.envelope ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`
+      : id === 'shadebenefit' ? '<p class="sp-note">Shade helps above 26 °C and costs warmth below 18 °C, from the project weather.</p>' : '';
     studyCard.innerHTML = `<header><b>${esc(name)}</b><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></header>
       <p class="sp-status" data-state="${status[0]}">${esc(status[1])}</p>${tabs('l', ST.ltab, [['settings', 'Settings'], ['export', 'Export']])}
-      <div class="sp-stbody">${ST.ltab === 'settings' ? `${settings}<p class="sp-note">Location, time zone, true north${id === 'radiation' ? ' and weather' : ''} come from Project props. Shading: masses, the building (walls, and each room as a box up to its ceiling) and the surrounding buildings, on the terrain.</p>
+      <div class="sp-stbody">${ST.ltab === 'settings' ? `${settings}<p class="sp-note">Location, time zone, true north${['radiation', 'shadebenefit'].includes(id) ? ' and weather' : ''} come from Project props. Shading: masses, the building (walls, and each room as a box up to its ceiling) and the surrounding buildings, on the terrain.</p>
         <button type="button" class="btn sm primary sp-run" data-st="run" ${ST.busy ? 'disabled' : ''}>${ST.busy ? 'Running…' : r ? 'Run again' : 'Run analysis'}</button>`
         : `<p class="sp-note">${r ? 'The result on the ground as a table, or the view as a picture.' : 'Run the study first.'}</p><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button> <button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>`}</div>`;
     resCard.hidden = !r; legend.hidden = !r;
@@ -335,7 +358,7 @@ export function mountChrome(app, api) {
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
     const k = b.dataset.st; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { if (INST.persp.ready) INST.persp.ws.clearStudy(); ST.res = null; drawStudy(); } });
-  studyCard.addEventListener('change', (e) => { const k = e.target.dataset.st; if (k === 'day' || k === 'period') { ST[k] = e.target.value; drawStudy(); } });
+  studyCard.addEventListener('change', (e) => { const k = e.target.dataset.st; if (k === 'day' || k === 'period' || k === 'envelope') { ST[k] = e.target.value; drawStudy(); } });
   let staleShown = false;
 
   // ---- Compare sketches (2026-10-30): a sheet over the lower half of the view. Each saved version is a sketch (a column with its
