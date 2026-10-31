@@ -780,7 +780,7 @@ export function render(app, [pid]) {
   }});
   // the floating layout (workspace-chrome.js): the model fills the window, the controls above move onto cards and rails
   document.body.classList.add('sp-full');
-  { const site = S.conditionsOf(p).site; if (weatherDownloadAvailable() && !site.sample && !site.climate && Number.isFinite(site.lat)) ensureProjectClimate(p).catch(() => { }); }   // weather from the address, ready before a study needs it
+  { const site = S.conditionsOf(p).site; if (weatherDownloadAvailable() && !site.climate && Number.isFinite(site.lat)) ensureProjectClimate(p).catch(() => { }); }   // weather from the address, ready before a study needs it
   const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers, sims: SIMS });
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
