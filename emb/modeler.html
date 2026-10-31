@@ -6896,7 +6896,32 @@ if (window.__WSROLE) {
   function sunRamp(t) { const st = [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']]; t = Math.max(0, Math.min(1, t)); for (let i = 1; i < st.length; i++) if (t <= st[i][0]) { const [a, ca] = st[i - 1], [b, cb] = st[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return st.at(-1)[1]; }
   WS.sunRamp = sunRamp;
   // what shades the ground in the in-view studies: masses, the building (wall bodies, each room as a box up to its ceiling)
-  function studyPrisms() { const pr = massList(M).map((m) => ({ outer: m.outer, h: m.h }));
+  // imported models in the studies (2026-10-31): each visible import (furniture aside) as blocks from its own mesh. The mesh is
+  // laid on a grid of about 1 m; each cell takes the top of the triangles over it, and cells of the same height (to 0.5 m) are
+  // merged into rectangles, so an L, a court or a tower on a podium keeps its shape. Kept until the import moves or changes.
+  const IMPP = new Map();
+  function importPrisms() {
+    const out = [];
+    for (const o of M.imports || []) {
+      if (o.ref || (o.layer || '') === 'Furniture' || (typeof impOn === 'function' && !impOn(o, '3d'))) continue; const m = meshOf(o); if (!m || m.length < 9) continue;
+      const key = [o.id, o.g.x, o.g.y, o.g.z, o.g.w, o.g.d, o.g.h, o.rot || 0, m.length].join('|'); let pr = IMPP.get(o.id); if (pr && pr.key === key) { out.push(...pr.list); continue; }
+      const P = new Float64Array(m.length / 3 * 3); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i + 2 < m.length; i += 3) { const q = impXY(o, m[i], m[i + 1]); P[i] = q[0]; P[i + 1] = q[1]; P[i + 2] = o.g.z + m[i + 2]; x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
+      const c = Math.min(2, Math.max(0.5, Math.max(x1 - x0, y1 - y0) / 80)), nx = Math.max(1, Math.ceil((x1 - x0) / c)), ny = Math.max(1, Math.ceil((y1 - y0) / c)), H = new Float32Array(nx * ny).fill(-Infinity);
+      for (let i = 0; i + 8 < P.length; i += 9) { const ax = P[i], ay = P[i + 1], bx = P[i + 3], by = P[i + 4], cx = P[i + 6], cy = P[i + 7], top = Math.max(P[i + 2], P[i + 5], P[i + 8]), den = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
+        const i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - x0) / c)), i1 = Math.min(nx - 1, Math.floor((Math.max(ax, bx, cx) - x0) / c)), j0 = Math.max(0, Math.floor((Math.min(ay, by, cy) - y0) / c)), j1 = Math.min(ny - 1, Math.floor((Math.max(ay, by, cy) - y0) / c));
+        if (Math.abs(den) < 1e-9) { for (let j = j0; j <= j1; j++) for (let k = i0; k <= i1; k++) { const q = j * nx + k; if (top > H[q] && (i1 - i0 <= 1 || j1 - j0 <= 1)) H[q] = top; } continue; }   // a wall seen edge on: the cells along it
+        for (let j = j0; j <= j1; j++) for (let k = i0; k <= i1; k++) { const px = x0 + (k + 0.5) * c, py = y0 + (j + 0.5) * c, l1 = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / den, l2 = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / den;
+          if (l1 >= -0.02 && l2 >= -0.02 && l1 + l2 <= 1.02) { const q = j * nx + k; if (top > H[q]) H[q] = top; } } }
+      // equal heights (0.5 m) merged greedily into rectangles
+      const Q = Int32Array.from(H, (v) => (Number.isFinite(v) && v > (o.g.z || 0) + 0.3 ? Math.round(v * 2) : -1)), used = new Uint8Array(nx * ny), list = [];
+      for (let j = 0; j < ny; j++) for (let k = 0; k < nx; k++) { const q = j * nx + k, h = Q[q]; if (h < 0 || used[q]) continue; let w = 1; while (k + w < nx && Q[j * nx + k + w] === h && !used[j * nx + k + w]) w++;
+        let d = 1; grow: while (j + d < ny) { for (let t = 0; t < w; t++) { const r = (j + d) * nx + k + t; if (Q[r] !== h || used[r]) break grow; } d++; }
+        for (let jj = j; jj < j + d; jj++) for (let t = 0; t < w; t++) used[jj * nx + k + t] = 1;
+        const ax = x0 + k * c, ay = y0 + j * c; list.push({ outer: [[ax, ay], [ax + w * c, ay], [ax + w * c, ay + d * c], [ax, ay + d * c]], h: h / 2, imp: o.id }); }
+      IMPP.set(o.id, { key, list }); out.push(...list); }
+    return out; }
+  function studyPrisms() { const pr = massList(M).map((m) => ({ outer: m.outer, h: m.h })).concat(importPrisms());
     for (const lv of M.levels) { const top = lv.z + lv.h; for (const P of wallPolys(lv.id)) pr.push({ outer: P, h: top }); }
     if (S) for (const r of S.rooms) pr.push({ outer: [[r.bx0, r.by0], [r.bx1, r.by0], [r.bx1, r.by1], [r.bx0, r.by1]], h: r.z0 + r.h });
     return pr; }
@@ -6908,7 +6933,7 @@ if (window.__WSROLE) {
     const w = Math.min(600, b.nx * b.cell * sc), h = Math.min(600, b.ny * b.cell * sc), cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, cell = Math.max(2, Math.min(5, Math.sqrt(w * h / 9000)));
     return { X0: cx - w / 2, Y0: cy - h / 2, cell, nx: Math.max(1, Math.round(w / cell)), ny: Math.max(1, Math.round(h / cell)) }; }
   function studyBox0(pr, pad) { const sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
-    const box = pr.length ? sunBox(M, pr.map((m) => m.outer), pad) : sunBox(M, [sq], 0); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.'); return box; }
+    const box = pr.length ? sunBox({ ...M, site: { ...M.site, parcel: null } }, pr.map((m) => m.outer), pad) : sunBox(M, [sq], 0);   /* centred on the design (2026-10-31), wherever it stands on the site */ if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.'); return box; }
   // colour ramps for results on the ground
   // Ladybug Tools' default legend colours (ladybug.color.Colorset 0), from blue through yellow to red
   const LB = ['#4b6ba9', '#7393ca', '#aac8f7', '#c1d5d0', '#f5ef67', '#fce64a', '#ef9c15', '#ea7b00', '#ea4a00', '#ea2600'].map((c, i, a) => [i / (a.length - 1), c]);
