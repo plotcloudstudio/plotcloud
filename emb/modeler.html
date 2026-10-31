@@ -5282,7 +5282,7 @@ function sunBox(Mx, outers, pad = 25) { const site = Mx.site, pp = site && site.
   const cell = Math.min(4, Math.max(2, Math.sqrt((X1 - X0) * (Y1 - Y0) / 4500))); return { X0, Y0, cell, nx: Math.max(1, Math.round((X1 - X0) / cell)), ny: Math.max(1, Math.round((Y1 - Y0) / cell)) }; }
 function sunGrid(Mx, masses, opt = {}) {
   const site = Mx.site, loc = site ? { lat: site.origin.lat, lon: site.origin.lon, tz: site.tz } : null; if (!loc) return null;
-  const dirs = sunDirs(loc, opt.day || SUNP.day, Mx.north || 0), pp = site.parcel && site.parcel.pts && site.parcel.pts.length > 2 ? site.parcel.pts.map((p) => SITEC.siteToPlan(site, p, Mx.north || 0)) : null;
+  const dirs = opt.dirs || sunDirs(loc, opt.day || SUNP.day, Mx.north || 0), pp = site.parcel && site.parcel.pts && site.parcel.pts.length > 2 ? site.parcel.pts.map((p) => SITEC.siteToPlan(site, p, Mx.north || 0)) : null;
   const pr = masses.map((m) => Object.assign(prismOf(m.outer, m.h), { mass: true })).concat(SITEC.contextMasses(site, Mx.north || 0).map((m) => prismOf(m.outer, m.h)));
   const box = opt.box || sunBox(Mx, masses.map((m) => m.outer)); if (!box) return null; const { X0, Y0, cell, nx, ny } = box;
   const H = new Float32Array(nx * ny).fill(NaN), inPlot = new Uint8Array(nx * ny), total = dirs.reduce((s, d) => s + d.w, 0);
@@ -5631,7 +5631,7 @@ window.S3 = (() => {
       const W0 = (lonW - o.lon) * kx, E0 = (lonE - o.lon) * kx, N0 = (latN - o.lat) * ky, S0 = (latS - o.lat) * ky;
       const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
       const m = new T.Mesh(new T.PlaneGeometry(E0 - W0, N0 - S0), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
-      m.rotation.x = -Math.PI / 2; m.position.set((W0 + E0) / 2, -0.6 - i * 0.6, -(N0 + S0) / 2); m.renderOrder = -10 + i; m.name = 'world-map'; m.userData = { k: 'world', ring: i };
+      m.rotation.x = -Math.PI / 2; m.position.set((W0 + E0) / 2, (WM.topoBase ?? 0) - 0.6 - i * 0.6, -(N0 + S0) / 2);   // under the topographic block when there is one m.renderOrder = -10 + i; m.name = 'world-map'; m.userData = { k: 'world', ring: i };
       scene.add(m); WM.rings.push(m);
     }
     render();
@@ -5649,7 +5649,7 @@ window.S3 = (() => {
     const m = new T.Mesh(new T.SphereGeometry(Rg, 128, 64), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: true }));
     const phi = (lon + 180) / 180 * Math.PI, th = (90 - lat) / 180 * Math.PI, dir = new T.Vector3(-Math.cos(phi) * Math.sin(th), Math.cos(th), Math.sin(phi) * Math.sin(th)), north = new T.Vector3(Math.cos(phi) * Math.cos(th), Math.sin(th), -Math.sin(phi) * Math.cos(th));
     const q = new T.Quaternion().setFromUnitVectors(dir, new T.Vector3(0, 1, 0)), nn = north.applyQuaternion(q); const spin = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), Math.atan2(nn.x, -nn.z));
-    m.quaternion.copy(spin.multiply(q)); m.position.set(0, -Rg - 1, 0); m.name = 'world-globe'; m.renderOrder = -20; m.visible = false; scene.add(m); WM.globe = m; WM.globeLoading = false; render();
+    m.quaternion.copy(spin.multiply(q)); m.position.set(0, -Rg + (WM.topoBase ?? 0) - 1, 0); m.name = 'world-globe'; m.renderOrder = -20; m.visible = false; scene.add(m); WM.globe = m; WM.globeLoading = false; render();
   }
   function worldFade() {
     if (!cam || !ctl) return; const d = cam.position.distanceTo(ctl.target), r = WM.siteR;
@@ -5781,6 +5781,7 @@ window.S3 = (() => {
       g.beginPath();
       for (let j = 0; j < G0.ny - 1; j++) for (let i = 0; i < G0.nx - 1; i++) {
         const c = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]], v = c.map(([a, b]) => at(a, b)), hits = [];
+        if (Math.max(...v) - Math.min(...v) < step * 0.08) continue;   // flat ground sitting on a contour level would draw a grid of tiny crossings
         for (let e = 0; e < 4; e++) { const a = v[e], b = v[(e + 1) % 4]; if ((a < lv) !== (b < lv)) { const t = (lv - a) / (b - a), A = P(...c[e]), B = P(...c[(e + 1) % 4]); hits.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]); } }
         for (let h = 0; h + 1 < hits.length; h += 2) { g.moveTo(X(hits[h]), Y(hits[h])); g.lineTo(X(hits[h + 1]), Y(hits[h + 1])); }
       }
@@ -5825,6 +5826,7 @@ window.S3 = (() => {
     // sides down to a flat base below the lowest point
     let lo = Infinity, span = 0; for (const p of T0.pts) lo = Math.min(lo, p[2]); { const xs = T0.pts.map((p) => p[0]), ys = T0.pts.map((p) => p[1]); span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)); }
     const base = lo - 0.05 - Math.max(6, span * 0.025), ring = [];
+    WM.topoBase = base; for (const r of WM.rings) r.position.y = base - 0.6 - r.userData.ring * 0.6; if (WM.globe) WM.globe.position.y = -6371000 + base - 1;   // the world map never cuts through the block
     for (let i = 0; i < nx; i++) ring.push(i); for (let j = 1; j < ny; j++) ring.push(j * nx + nx - 1); for (let i = nx - 2; i >= 0; i--) ring.push((ny - 1) * nx + i); for (let j = ny - 2; j > 0; j--) ring.push(j * nx);
     const sp = [], si = []; ring.forEach((v, k) => { sp.push(pos[3 * v], pos[3 * v + 1], pos[3 * v + 2], pos[3 * v], base, pos[3 * v + 2]); const a = 2 * k, b = 2 * ((k + 1) % ring.length); si.push(a, a + 1, b, b, a + 1, b + 1); });
     const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(sp, 3)); sg.setIndex(si); sg.computeVertexNormals();
@@ -6522,19 +6524,31 @@ if (window.__WSROLE) {
     // Sun hours on the ground, in this view (2026-10-30): Plan Studio's own sun preview (hourly sun directions for the day at the
     // site, shading by the masses, the building and the surrounding buildings, terrain heights). The building drawn with walls
     // counts as its wall bodies and each room's bounding box up to its ceiling. Returns the figures; draws the result in 3D.
+    // directions from a ground cell to the sky, each with a weight: what each ground cell sees of each set (2026-10-31).
+    // dirSets: [[{ az (° from true north), alt (°), w }]]. Same shading as Sun hours (masses, the building, surroundings, terrain).
+    rayGrid(dirSets, o = {}) {
+      if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
+      const pr = studyPrisms(), box = studyBox(pr, o.pad || 40), out = [], t0 = performance.now(), nb = M.north || 0;
+      let g = null; for (const set of dirSets) { const dirs = set.filter((d) => d.alt > 0.5 && d.w > 0).map((d) => { const a = (d.az - nb) * Math.PI / 180; return { v: [Math.sin(a), Math.cos(a)], t: Math.tan(d.alt * Math.PI / 180), w: d.w }; });
+        g = sunGrid(M, pr, { box, dirs }); out.push(g.H); }
+      return { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: out, cells: [...g.H].filter(Number.isFinite).length, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain, ms: Math.round(performance.now() - t0) };
+    },
+    // paint values on the ground: { X0, Y0, cell, nx, ny, vals, lo, hi, ramp: 'sun' | 'heat' | 'sky' }
+    paintGrid(o) { const site = M.site, gAt = (x, y) => { if (!site?.terrain) return 0; const q = siteOfM(M, [x, y]); return SITEC.groundAt(site.terrain, q[0], q[1]); };
+      const R = RAMPS[o.ramp] || RAMPS.sun, color = (v) => rampAt(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo));
+      if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) }); },
+    viewPNG() { try { const c = [...document.querySelectorAll('canvas')].filter((x) => x.offsetParent && x.width > 200).sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (window.S3 && S3.render) S3.render(); return c ? c.toDataURL('image/png') : null; } catch (e) { return null; } },
+    rampColors(name) { return (RAMPS[name] || RAMPS.sun).map((x) => x[1]); },
     sunStudy(o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
-      const day = SUN_DAYS[o.day] ? o.day : '03-21', pr = massList(M).map((m) => ({ outer: m.outer, h: m.h }));
-      for (const lv of M.levels) { const top = lv.z + lv.h; for (const P of wallPolys(lv.id)) pr.push({ outer: P, h: top }); }
-      if (S) for (const r of S.rooms) pr.push({ outer: [[r.bx0, r.by0], [r.bx1, r.by0], [r.bx1, r.by1], [r.bx0, r.by1]], h: r.z0 + r.h });
-      const t0 = performance.now(), sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
-      const box = pr.length ? sunBox(M, pr.map((m) => m.outer), o.pad || 40) : sunBox(M, [sq], 0); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.');
+      const day = SUN_DAYS[o.day] ? o.day : '03-21', pr = studyPrisms();
+      const t0 = performance.now(), box = studyBox(pr, o.pad || 40); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.');
       const g = sunGrid(M, pr, { day, box }); if (!g) throw Error('The sun could not be placed for this site.');
       let lo = Infinity, hi = 0, n = 0, sum = 0, two = 0; for (const v of g.H) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); n++; sum += v; if (v >= 2) two++; }
       const site = M.site, gAt = (x, y) => { if (!site.terrain) return 0; const q = siteOfM(M, [x, y]); return SITEC.groundAt(site.terrain, q[0], q[1]); };
       const max = Math.max(1, Math.ceil(g.total)), color = (v) => sunRamp(v / max);
       if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, vals: g.H, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) });
-      return { day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
+      return { grid: { X0: g.X0, Y0: g.Y0, cell: g.cell, nx: g.nx, ny: g.ny, H: g.H }, day, dayName: SUN_DAYS[day], cell: g.cell, cells: n, area: Math.round(n * g.cell * g.cell), avg: n ? sum / n : 0, min: n ? lo : 0, max: hi, dayLength: g.total, two: n ? two / n : 0, plot: g.plot, ms: Math.round(performance.now() - t0), scale: max, prisms: pr.length, context: SITEC.contextMasses(site, M.north || 0).length, terrain: !!site.terrain };
     },
     clearStudy() { if (window.S3 && S3.overlay) S3.overlay(null); },
     thumb: () => verThumb(),   // a small picture of the model (the Compare sketches cards)
@@ -6543,6 +6557,19 @@ if (window.__WSROLE) {
   // sun hours colours: deep blue (no sun) through teal and yellow to orange (sun all day)
   function sunRamp(t) { const st = [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']]; t = Math.max(0, Math.min(1, t)); for (let i = 1; i < st.length; i++) if (t <= st[i][0]) { const [a, ca] = st[i - 1], [b, cb] = st[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return st.at(-1)[1]; }
   WS.sunRamp = sunRamp;
+  // what shades the ground in the in-view studies: masses, the building (wall bodies, each room as a box up to its ceiling)
+  function studyPrisms() { const pr = massList(M).map((m) => ({ outer: m.outer, h: m.h }));
+    for (const lv of M.levels) { const top = lv.z + lv.h; for (const P of wallPolys(lv.id)) pr.push({ outer: P, h: top }); }
+    if (S) for (const r of S.rooms) pr.push({ outer: [[r.bx0, r.by0], [r.bx1, r.by0], [r.bx1, r.by1], [r.bx0, r.by1]], h: r.z0 + r.h });
+    return pr; }
+  // the ground studied: the building and 40 m round it, or the site square when there is no building yet
+  function studyBox(pr, pad) { const sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
+    const box = pr.length ? sunBox(M, pr.map((m) => m.outer), pad) : sunBox(M, [sq], 0); if (!box) throw Error('Nothing to analyse yet: draw masses or a building, or pick a site.'); return box; }
+  // colour ramps for results on the ground
+  const RAMPS = { sun: [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']],
+    heat: [[0, '#1b1d4f'], [0.25, '#5b2a86'], [0.5, '#c2365f'], [0.75, '#f07f3c'], [1, '#fbe36a']],
+    sky: [[0, '#1f2140'], [0.35, '#3a4f8a'], [0.7, '#4f8fd0'], [1, '#a9d4f2']] };
+  function rampAt(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
   // a narrow pane: Plan Studio's 3D fit is made for a wide view, so it steps back by the pane's shape (display only)
   const aspectFit = () => { if (!window.S3 || !S3.on || !S3.zoom) return; const r = cv3.getBoundingClientRect(), a = r.width / Math.max(1, r.height); if (a < 1.3) S3.zoom(Math.max(0.3, a / 1.4)); };
   { const _b = birdView; birdView = async function () { await _b(); aspectFit(); }; }
