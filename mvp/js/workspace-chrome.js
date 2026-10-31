@@ -11,6 +11,8 @@ import * as S from './store.js';
 import { climateFile, ensureProjectClimate } from './project-climate.js';
 import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected-20261027-3';
 import { sunPosition } from './environment/analysis.js?v=run-20261031-2';
+import * as CL from '../../emb/lib/climate.js';
+import { speedRatio } from './wind-lbm.js?v=wind-20261031-1';
 import { mountProps } from './project-props.js?v=weather-20261031-1';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -227,13 +229,13 @@ export function mountChrome(app, api) {
   // with Settings | Export on the left, Results | Charts on the right and the legend; the result is painted on the site in 3D.
   // Sun hours, Solar radiation and Sky exposure run here on Plan Studio's ground grid (the same shading: masses, the building,
   // surrounding buildings, terrain). The other studies still open their study page inside the Workspace (the host below).
-  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
+  const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
   const ENVELOPES = [['equinox', 'Equinoxes, 9:00 to 15:00', [[3, 20], [9, 22]], 9, 15], ['winter', 'Winter solstice, 10:00 to 14:00', [[12, 21]], 10, 14], ['summer', 'Summer solstice, 8:00 to 17:00', [[6, 21]], 8, 17]];
   const PERIODS = [['year', 'Whole year', 1, 12], ['summer', 'Summer · June to August', 6, 8], ['winter', 'Winter · December to February', 12, 2]];
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
-  const ST = { id: null, ltab: 'settings', rtab: 'results', day: '03-21', period: 'year', envelope: 'equinox', res: null, key: '', at: null, busy: false, err: '', saved: '' };
+  const ST = { id: null, ltab: 'settings', rtab: 'results', day: '03-21', period: 'year', envelope: 'equinox', utciHours: 'sun', utciShow: 'comfort', windShow: 'comfort', res: null, key: '', at: null, busy: false, err: '', saved: '' };
   const simMenu = document.querySelector('.w2-simmenu');
   if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { void b; });
     simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
@@ -263,7 +265,7 @@ export function mountChrome(app, api) {
     const rec = c?.hash ? await climateFile(c.hash) : null; if (!rec?.text) throw Error('The weather for this address could not be fetched. Check the connection, or add an EPW in Project props › Default › Advanced.');
     const lines = rec.text.trim().split(/\r?\n/), h = lines[0].split(','), rows = [];
     for (const line of lines.slice(8)) { const a = line.split(','); rows.push({ m: +a[1], d: +a[2], h: +a[3], t: +a[6], dni: Math.max(0, +a[14] || 0), dhi: Math.max(0, +a[15] || 0) }); }
-    return { station: c.station || c.name, lat: +h[6], lon: +h[7], tz: +h[8], rows };
+    return { station: c.station || c.name, lat: +h[6], lon: +h[7], tz: +h[8], rows, text: rec.text };
   }
   const statsOf = (vals) => { let lo = Infinity, hi = -Infinity, n = 0, sum = 0; for (const v of vals) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); n++; sum += v; } return { lo: n ? lo : 0, hi: n ? hi : 0, n, avg: n ? sum / n : 0 }; };
   async function compute(id) {
@@ -306,10 +308,46 @@ export function mountChrome(app, api) {
         rows: [['Mean envelope height', fmt(st.avg, 1) + ' m'], ['Range', fmt(st.lo, 1) + '–' + fmt(st.hi, 1) + ' m'], ['Ground under 10 m', fmt(vals.filter((v) => v < 10).length / Math.max(1, st.n) * 100) + '%'], ['Protected', `${g.context} surrounding buildings`]],
         method: `The tallest a building could be at each ${fmt(g.cell, 1)} m cell without its shadow reaching a surrounding building, for ${dirs.length} sun positions (${pname}, solar time). Heights above the ground, capped at 100 m.`,
         results: { value: +st.avg.toFixed(2), min: st.lo, max: st.hi }, settings: { envelope: ST.envelope, label: `Envelope, ${pname} (Workspace)` } }; }
+    if (id === 'utci') {
+      const wx = await weather(), E = CL.parseEPW(wx.text), [, pname, m0, m1] = PERIODS.find((x) => x[0] === ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
+      const alpha = ({ open: 0.14, suburban: 0.22, city: 0.33 })[S.conditionsOf(p).site.terrain] || 0.22, hrs = [], binIx = new Map(), binDirs = [];
+      for (let k = 0; k < 8760; k++) { const [m, d] = CL.monthDay(Math.floor(k / 24)); if (!inP(m)) continue; const sp = sunPosition(2026, m, d, (k % 24) + 0.5, E.lat, E.lon, E.tz); if (ST.utciHours === 'sun' && sp.alt <= 0) continue;
+        let b = -1; if (sp.alt > 1 && E.DNR[k] > 0) { const key = Math.floor(sp.az / 15) + '|' + Math.min(8, Math.floor(sp.alt / 10)); if (!binIx.has(key)) { binIx.set(key, binDirs.length); const [a, l] = key.split('|').map(Number); binDirs.push({ az: a * 15 + 7.5, alt: Math.min(85, l * 10 + 5), w: 1 }); } b = binIx.get(key); }
+        hrs.push({ k, alt: sp.alt, b }); }
+      if (!hrs.length) throw Error('No hours to count in this period.');
+      const g = w.rayGrid([SKY, ...binDirs.map((d) => [d])]), svf = g.H[0], n = hrs.length, LUT = new Float32Array(n * 22);
+      hrs.forEach((h, j) => { const k = h.k, ta = E.T[k], va = CL.siteWind(E.WS[k], 10, alpha), tsky = CL.skyTemp(E, k);
+        for (let sl = 0; sl < 2; sl++) for (let l = 0; l <= 10; l++) LUT[j * 22 + sl * 11 + l] = CL.utci(ta, CL.mrtOutdoor({ ta, tsky, svf: l / 10, sunlit: sl === 1, alt: h.alt, dnr: E.DNR[k], dhr: E.DHR[k] }), va, E.RH[k]); });
+      const N = svf.length, comfort = new Float32Array(N).fill(NaN), heat = new Float32Array(N).fill(NaN), cold = new Float32Array(N).fill(NaN);
+      for (let c = 0; c < N; c++) { if (!Number.isFinite(svf[c])) continue; const f = Math.min(1, svf[c]) * 10, l0 = Math.min(9, Math.floor(f)), t = f - l0; let ok = 0, hot = 0;
+        for (let j = 0; j < n; j++) { const b = hrs[j].b, lit = b >= 0 && g.H[1 + b][c] > 0, x = j * 22 + (lit ? 11 : 0) + l0, u = LUT[x] + (LUT[x + 1] - LUT[x]) * t; if (u > 26) hot++; else if (u >= 9) ok++; }
+        comfort[c] = 100 * ok / n; heat[c] = 100 * hot / n; cold[c] = 100 * (n - ok - hot) / n; }
+      const sc = statsOf(comfort), sh = statsOf(heat), sk = statsOf(cold), show = { comfort: [comfort, 'No thermal stress', 'sun'], heat: [heat, 'Heat stress', 'heat'], cold: [cold, 'Cold stress', 'sky'] }[ST.utciShow], ss = statsOf(show[0]);
+      return { ...g, vals: show[0], unit: '% of hours', ramp: show[2], lo: Math.floor(ss.lo), hi: Math.max(Math.floor(ss.lo) + 1, Math.ceil(ss.hi)), avg: ss.avg, dec: 0, title: `Outdoor comfort · ${show[1]}`,
+        rows: [['No thermal stress (UTCI 9–26 °C)', fmt(sc.avg, 1) + '% of hours'], ['Heat stress (above 26 °C)', fmt(sh.avg, 1) + '%'], ['Cold stress (below 9 °C)', fmt(sk.avg, 1) + '%'], ['Hours counted', fmt(n) + (ST.utciHours === 'sun' ? ', sun up' : '')], ['Weather', esc(E.station || wx.station || '')]],
+        method: `UTCI (Bröde et al. 2012) for every counted hour of the project weather (${esc(E.station || 'EPW')}, ${pname.toLowerCase()}), in sun and in shade at the sky view each ${fmt(g.cell, 1)} m cell has: air temperature, humidity, wind at 10 m for ${({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban'} terrain, and the radiant temperature from sun, sky and ground. Wind is not reduced by buildings here.`,
+        results: { comfort: +sc.avg.toFixed(1), heat: +sh.avg.toFixed(1), cold: +sk.avg.toFixed(1) }, settings: { period: ST.period, hours: ST.utciHours, label: `Outdoor comfort, ${pname} (Workspace)` } }; }
+    if (id === 'wind') {
+      const wx = await weather(), E = CL.parseEPW(wx.text), alpha = ({ open: 0.14, suburban: 0.22, city: 0.33 })[S.conditionsOf(p).site.terrain] || 0.22, m = w.groundMask({ maxCells: 120 });
+      const SEC = 8, sp = Array.from({ length: SEC }, () => []); let tot = 0;
+      for (let k = 0; k < 8760; k++) { if (!Number.isFinite(E.WS[k])) continue; tot++; const u = CL.siteWind(E.WS[k], 1.5, alpha); if (E.WS[k] < 0.5) continue; sp[Math.round(((E.WD[k] % 360) + 360) % 360 / (360 / SEC)) % SEC].push(u); }
+      sp.forEach((a) => a.sort((x, y) => x - y)); const prev = sp.reduce((b, a, i) => (a.length > sp[b].length ? i : b), 0), R = [];
+      for (let s = 0; s < SEC; s++) { if (!sp[s].length) { R.push(null); continue; } const toward = (s * 360 / SEC + 180 - m.north) * Math.PI / 180; R.push(speedRatio(m.solid, m.nx, m.ny, [Math.sin(toward), Math.cos(toward)])); ST.progress = `${s + 1} of ${SEC} wind directions`; drawStudy(); await new Promise((r) => setTimeout(r, 0)); }
+      const above = (arr, x) => { let lo = 0, hi = arr.length; while (lo < hi) { const md = (lo + hi) >> 1; if (arr[md] > x) hi = md; else lo = md + 1; } return arr.length - lo; };
+      const share = (c, x) => { let n = 0; for (let s = 0; s < SEC; s++) if (R[s] && R[s][c] > 0) n += above(sp[s], x / R[s][c]); return n / tot; };
+      const N = m.nx * m.ny, cls = new Float32Array(N).fill(NaN), ratio = new Float32Array(N).fill(NaN); const peaks = []; let windy = 0, sit = 0, unc = 0, unsafe = 0, n = 0;
+      for (let c = 0; c < N; c++) { if (m.solid[c]) continue; let lo = 0, hi = 40; for (let it = 0; it < 24; it++) { const x = (lo + hi) / 2; if (share(c, x) > 0.05) lo = x; else hi = x; } const u95 = hi, k = CL.LAWSON.findIndex(([t]) => u95 <= t);
+        cls[c] = k; ratio[c] = R[prev] ? R[prev][c] : NaN; let pk = 0; for (let s = 0; s < SEC; s++) if (R[s] && R[s][c] > pk) pk = R[s][c]; peaks.push(pk); n++; if (u95 > 6) windy++; if (k <= 1) sit++; if (k === 4) unc++; if (share(c, CL.LAWSON_SAFE.speed) > CL.LAWSON_SAFE.share) unsafe++; }
+      peaks.sort((x, y) => x - y); const peak = peaks[Math.floor(peaks.length * 0.99)] || 0, a2 = m.cell * m.cell, names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], comfortMap = ST.windShow === 'comfort';
+      return { ...m, cells: n, vals: comfortMap ? cls : ratio, unit: comfortMap ? 'Lawson class' : '× free stream', ramp: comfortMap ? 'lawson' : 'wind', lo: 0, hi: comfortMap ? 4 : 1.6, avg: statsOf(comfortMap ? cls : ratio).avg, dec: comfortMap ? 0 : 1, title: comfortMap ? 'Wind comfort · Lawson' : `Wind speed-up · from ${names[prev]}`,
+        legendLabels: comfortMap ? ['Uncomfortable', 'Standing', 'Frequent sitting'] : null,
+        rows: [['Frequent or occasional sitting', fmt(sit / Math.max(1, n) * 100) + '% of ground'], ['Uncomfortable', fmt(unc / Math.max(1, n) * 100) + '%'], ['Windy (above walking comfort)', fmt(windy * a2) + ' m²'], ['Unsafe (15 m/s too often)', fmt(unsafe * a2) + ' m²'], ['Speed-up, windiest 1 % of ground', fmt(peak, 2) + '×'], ['Prevailing wind', `from ${names[prev]}`], ['Weather', esc(E.station || '')]],
+        method: `A 2D lattice-Boltzmann flow at pedestrian height for ${R.filter(Boolean).length} wind directions on a ${fmt(m.cell, 1)} m grid; buildings (the design and ${fmt(m.context)} surrounding buildings) block the flow. Hourly wind from the project weather (${esc(E.station || 'EPW')}) at 1.5 m for ${({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban'} terrain sets each spot's 5 % exceeded speed, rated by the City of London Lawson criteria (2019). A 2D slice: no flow over roofs or down facades, so speed-up in narrow gaps is overstated; screening, not a wind tunnel or 3D CFD study.`,
+        results: { peak: +peak.toFixed(2), windy: Math.round(windy * a2), sitting: +(sit / Math.max(1, n) * 100).toFixed(1), uncomf: +(unc / Math.max(1, n) * 100).toFixed(1), unsafe: Math.round(unsafe * a2) }, settings: { show: ST.windShow, label: 'Pedestrian wind (Workspace)' } }; }
     throw Error('This study does not run here yet.');
   }
   async function runStudy() {
-    ST.busy = true; ST.err = ''; drawStudy();
+    ST.busy = true; ST.err = ''; ST.progress = ''; drawStudy();
     try { if (UI.view === 'plan') await goView('persp'); for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
       await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), r = await compute(ST.id), w = INST.persp.ws;
       if (ST.id !== 'sunhours') w.paintGrid({ X0: r.X0, Y0: r.Y0, cell: r.cell, nx: r.nx, ny: r.ny, vals: r.vals, lo: r.lo, hi: r.hi, ramp: r.ramp });
@@ -337,28 +375,30 @@ export function mountChrome(app, api) {
     return `<svg viewBox="0 0 260 150" class="sp-hist" role="img" aria-label="Share of the ground in each band">${cnt.map((c, i) => `<rect x="${8 + i * 20.5}" y="${120 - c / mx * 105}" width="18" height="${c / mx * 105}" fill="${col(i)}"><title>${fmt(r.lo + span * i / n, r.dec)}–${fmt(r.lo + span * (i + 1) / n, r.dec)} ${r.unit}: ${fmt(c / Math.max(1, tot) * 100, 1)}%</title></rect>`).join('')}<line x1="6" y1="120.5" x2="256" y2="120.5" stroke="#d1d5db"/><text x="8" y="136">${fmt(r.lo, r.dec)}</text><text x="252" y="136" text-anchor="end">${fmt(r.hi, r.dec)} ${esc(r.unit)}</text></svg><p class="sp-note">Share of the ground in each band; hover a bar for its value.</p>`; }
   function drawStudy() {
     if (!ST.id) return; const id = ST.id, name = simName(id), r = ST.res, stale = r && INST.persp.ready && INST.persp.ws.model() !== ST.key;
-    const status = ST.busy ? ['run', 'Running…'] : ST.err ? ['err', ST.err] : !r ? ['idle', 'Not run yet'] : stale ? ['stale', 'The model changed after this result: run again'] : ['ok', `Up to date · ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`];
+    const status = ST.busy ? ['run', ST.progress ? `Running · ${ST.progress}` : 'Running…'] : ST.err ? ['err', ST.err] : !r ? ['idle', 'Not run yet'] : stale ? ['stale', 'The model changed after this result: run again'] : ['ok', `Up to date · ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`];
     const tabs = (side, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" data-st-${side}="${k}" aria-selected="${cur === k}">${n}</button>`).join('')}</div>`;
     const settings = id === 'sunhours' ? `<label class="sp-field">Day<select data-st="day">${DAYS.map(([k, n]) => `<option value="${k}" ${k === ST.day ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`
       : id === 'radiation' ? `<label class="sp-field">Period<select data-st="period">${PERIODS.map(([k, n]) => `<option value="${k}" ${k === ST.period ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`
       : id === 'solarenvelope' ? `<label class="sp-field">Protected sun<select data-st="envelope">${ENVELOPES.map(([k, n]) => `<option value="${k}" ${k === ST.envelope ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`
+      : id === 'utci' ? `<label class="sp-field">Period<select data-st="period">${PERIODS.map(([k, n]) => `<option value="${k}" ${k === ST.period ? 'selected' : ''}>${n}</option>`).join('')}</select></label><label class="sp-field">Hours<select data-st="utciHours"><option value="sun" ${ST.utciHours === 'sun' ? 'selected' : ''}>Hours with the sun up</option><option value="all" ${ST.utciHours === 'all' ? 'selected' : ''}>All hours</option></select></label><label class="sp-field">Map shows<select data-st="utciShow">${[['comfort', 'No thermal stress (UTCI 9–26 °C)'], ['heat', 'Heat stress'], ['cold', 'Cold stress']].map(([k, n]) => `<option value="${k}" ${k === ST.utciShow ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`
+      : id === 'wind' ? `<label class="sp-field">Map shows<select data-st="windShow"><option value="comfort" ${ST.windShow === 'comfort' ? 'selected' : ''}>Comfort (Lawson)</option><option value="speedup" ${ST.windShow === 'speedup' ? 'selected' : ''}>Speed-up, prevailing wind</option></select></label><p class="sp-note">Eight wind directions, about a second each.</p>`
       : id === 'shadebenefit' ? '<p class="sp-note">Shade helps above 26 °C and costs warmth below 18 °C, from the project weather.</p>' : '';
     studyCard.innerHTML = `<header><b>${esc(name)}</b><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></header>
       <p class="sp-status" data-state="${status[0]}">${esc(status[1])}</p>${tabs('l', ST.ltab, [['settings', 'Settings'], ['export', 'Export']])}
-      <div class="sp-stbody">${ST.ltab === 'settings' ? `${settings}<p class="sp-note">Location, time zone, true north${['radiation', 'shadebenefit'].includes(id) ? ' and weather' : ''} come from Project props. Shading: masses, the building (walls, and each room as a box up to its ceiling) and the surrounding buildings, on the terrain.</p>
+      <div class="sp-stbody">${ST.ltab === 'settings' ? `${settings}<p class="sp-note">Location, time zone, true north${['radiation', 'shadebenefit', 'utci', 'wind'].includes(id) ? ' and weather' : ''} come from Project props. ${id === 'wind' ? 'Wind is blocked by' : 'Shading:'} masses, the building (walls, and each room as a box up to its ceiling) and the surrounding buildings, on the terrain.</p>
         <button type="button" class="btn sm primary sp-run" data-st="run" ${ST.busy ? 'disabled' : ''}>${ST.busy ? 'Running…' : r ? 'Run again' : 'Run analysis'}</button>`
         : `<p class="sp-note">${r ? 'The result on the ground as a table, or the view as a picture.' : 'Run the study first.'}</p><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button> <button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>`}</div>`;
     resCard.hidden = !r; legend.hidden = !r;
     if (r) { resCard.innerHTML = `<header><b>${esc(r.title)}</b></header>${tabs('r', ST.rtab, [['results', 'Results'], ['charts', 'Charts']])}<div class="sp-stbody">${ST.rtab === 'results' ? `${r.rows.map(([k, v]) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`).join('')}
         <h4>How this was found</h4><p class="sp-note">${r.method} ${fmt(r.cells)} cells, ${fmt(r.prisms)} building parts and ${fmt(r.context)} surrounding buildings${r.terrain ? ', on the terrain' : ''}; ${fmt(r.ms)} ms in this browser. A design check for early design, not a compliance result.</p>
         ${ST.saved ? `<p class="sp-note">Saved to results with ${esc(ST.saved)}.</p>` : `<button type="button" class="btn sm primary" data-st="save" ${stale || ST.busy ? 'disabled' : ''}>Save to results</button>`} <button type="button" class="btn sm" data-st="clear">Clear from view</button>` : chart(r)}</div>`;
-      const cols = INST.persp.ws?.rampColors?.(r.ramp) || []; legend.innerHTML = `<b>${esc(name)} · ${esc(r.unit)}</b><div class="sp-ramp" style="background:linear-gradient(to top,${cols.join(',')})"></div><div class="sp-rampl"><span>${fmt(r.hi, r.dec)}</span><span>${fmt((r.lo + r.hi) / 2, r.dec)}</span><span>${fmt(r.lo, r.dec)}</span></div>`; }
+      const cols = INST.persp.ws?.rampColors?.(r.ramp) || []; legend.innerHTML = `<b>${esc(name)} · ${esc(r.unit)}</b><div class="sp-ramp" style="background:linear-gradient(to top,${cols.join(',')})"></div><div class="sp-rampl">${(r.legendLabels || [fmt(r.hi, r.dec), fmt((r.lo + r.hi) / 2, r.dec), fmt(r.lo, r.dec)]).map((x) => `<span>${esc(x)}</span>`).join('')}</div>`; }
   }
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
     const k = b.dataset.st; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { if (INST.persp.ready) INST.persp.ws.clearStudy(); ST.res = null; drawStudy(); } });
-  studyCard.addEventListener('change', (e) => { const k = e.target.dataset.st; if (k === 'day' || k === 'period' || k === 'envelope') { ST[k] = e.target.value; drawStudy(); } });
+  studyCard.addEventListener('change', (e) => { const k = e.target.dataset.st; if (['day', 'period', 'envelope', 'utciHours', 'utciShow', 'windShow'].includes(k)) { ST[k] = e.target.value; drawStudy(); } });
   let staleShown = false;
 
   // ---- Compare sketches (2026-10-30): a sheet over the lower half of the view. Each saved version is a sketch (a column with its
@@ -397,6 +437,7 @@ export function mountChrome(app, api) {
       <div class="sp-sk-add"><button type="button" class="btn sm primary" id="spAddSketch">Add sketch</button><small>Add sketch to compare metrics</small></div></div>`;
     const body = groups.map(([g, rows]) => `<div class="sp-sk-row sp-sk-grp"><button type="button" class="sp-sk-lab" data-grp="${g}" aria-expanded="${!closed.has(g)}">${g.toUpperCase()} <i>${closed.has(g) ? '›' : '⌄'}</i></button>${cols.map(() => '<div></div>').join('')}</div>`
       + (closed.has(g) ? '' : rows.length ? rows.map(([l, get, u, d]) => `<div class="sp-sk-row"><div class="sp-sk-lab"><button type="button" class="sp-pin${P.has(l) ? ' on' : ''}" data-pin="${esc(l)}" title="${P.has(l) ? 'Unpin' : 'Pin to the top'}" aria-label="${P.has(l) ? 'Unpin' : 'Pin'} ${esc(l)}">${P.has(l) ? '●' : '○'}</button>${esc(l)}</div>${cols.map((c) => `<div class="sp-sk-v${c.current ? ' cur' : ''}">${N(get(c), u || '', d || 0)}</div>`).join('')}</div>`).join('') : g === 'Pinned' ? `<div class="sp-sk-row"><div class="sp-sk-lab sp-sk-empty">Pin a row to keep it here</div></div>` : '')).join('');
+    parkSave();   // a redraw must not take the Save version button with it
     cmp.innerHTML = `<div class="sp-sk-grip" aria-hidden="true"></div><button type="button" class="sp-x" data-cmp="close" aria-label="Close Compare sketches">×</button>
       <div class="sp-sk-scroll">${head}${body}${notes.map((n) => `<p class="sp-note">${esc(n)}</p>`).join('')}</div>
       <footer><span class="sp-sk-title">Compare sketches</span><button type="button" class="btn sm" data-cmp="csv" title="A CSV file that Excel opens">Export to Excel</button></footer>`;
@@ -406,7 +447,8 @@ export function mountChrome(app, api) {
     // pictures: the model as it is now, once per opening; a version keeps the picture taken when it was added here
     if (INST.persp.ready && INST.persp.ws.thumb) { const key = cols.find((c) => c.current)?.id; if (key && !THUMB.has(key)) { try { const u = await INST.persp.ws.thumb(); if (u) { THUMB.set(key, u); const im = cmp.querySelector(`[data-sketch="${CSS.escape(key)}"] .sp-sk-pic`); if (im) im.innerHTML = `<img src="${u}" alt="">`; } } catch { } } }
   }
-  function openSheet(on) { cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else { const sec = app.querySelector('section[data-tab="versions"]'); const sv = $('#saveV'), note = $('#note'); if (sec && sv && note && !sec.contains(sv)) { sec.querySelector('#dirty')?.after(note, sv); sv.textContent = 'Save version'; } } }
+  function parkSave() { const sec = app.querySelector('section[data-tab="versions"]'), sv = $('#saveV'), note = $('#note'); if (sec && sv && note && !sec.contains(sv)) { sec.querySelector('#dirty')?.after(note, sv); sv.textContent = 'Save version'; } }
+  function openSheet(on) { cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else parkSave(); }
   cmp.addEventListener('click', async (e) => {
     const g = e.target.closest('[data-grp]'), pin = e.target.closest('[data-pin]'), sk = e.target.closest('[data-sketch]'), b = e.target.closest('[data-cmp]');
     if (g) { const x = shut(); x.has(g.dataset.grp) ? x.delete(g.dataset.grp) : x.add(g.dataset.grp); setShut(x); drawCompare(); return; }

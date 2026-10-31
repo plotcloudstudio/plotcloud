@@ -6530,6 +6530,16 @@ if (window.__WSROLE) {
       const R = RAMPS[o.ramp] || RAMPS.sun, color = (v) => rampAt(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo));
       if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]) }); },
     viewPNG() { try { const c = [...document.querySelectorAll('canvas')].filter((x) => x.offsetParent && x.width > 200).sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (window.S3 && S3.render) S3.render(); return c ? c.toDataURL('image/png') : null; } catch (e) { return null; } },
+    // a plan grid of the site for flow studies (2026-10-31): solid where a building (design or surroundings) stands taller than
+    // 1.5 m; at most maxCells along the longer side
+    groundMask(o = {}) {
+      if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
+      const pr = studyPrisms(), b0 = studyBox(pr, o.pad || 80), X1 = b0.X0 + b0.nx * b0.cell, Y1 = b0.Y0 + b0.ny * b0.cell, cell = Math.max(1.5, Math.max(X1 - b0.X0, Y1 - b0.Y0) / (o.maxCells || 130));
+      const nx = Math.round((X1 - b0.X0) / cell), ny = Math.round((Y1 - b0.Y0) / cell), solid = new Uint8Array(nx * ny);
+      const all = pr.map((m) => prismOf(m.outer, m.h)).concat(SITEC.contextMasses(M.site, M.north || 0).map((m) => prismOf(m.outer, m.h))).filter((P) => P.h > 1.5);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = [b0.X0 + (i + 0.5) * cell, b0.Y0 + (j + 0.5) * cell]; if (all.some((P) => q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer))) solid[j * nx + i] = 1; }
+      return { X0: b0.X0, Y0: b0.Y0, cell, nx, ny, solid, north: M.north || 0, prisms: pr.length, context: SITEC.contextMasses(M.site, M.north || 0).length, terrain: !!M.site.terrain };
+    },
     // the solar envelope (2026-10-31): for each ground cell, the tallest height whose shadow does not reach a surrounding
     // building during the protected sun directions ([{ az, alt }]); capped at cap metres
     solarEnvelope(dirs, o = {}) {
@@ -6577,7 +6587,10 @@ if (window.__WSROLE) {
     heat: [[0, '#1b1d4f'], [0.25, '#5b2a86'], [0.5, '#c2365f'], [0.75, '#f07f3c'], [1, '#fbe36a']],
     sky: [[0, '#1f2140'], [0.35, '#3a4f8a'], [0.7, '#4f8fd0'], [1, '#a9d4f2']],
     div: [[0, '#6a2c91'], [0.35, '#c39bd3'], [0.5, '#f1f1ee'], [0.65, '#8fd3c7'], [1, '#1a8a7a']],
-    height: [[0, '#3b1f5e'], [0.3, '#7b3f8f'], [0.6, '#d1675f'], [0.85, '#f2a65a'], [1, '#f7e3a1']] };
+    height: [[0, '#3b1f5e'], [0.3, '#7b3f8f'], [0.6, '#d1675f'], [0.85, '#f2a65a'], [1, '#f7e3a1']],
+    lawson: [[0, '#3d85c6'], [0.25, '#4eb0a0'], [0.5, '#9cc95a'], [0.75, '#ecc94b'], [1, '#d9482c']],
+    wind: [[0, '#2b3a67'], [0.3, '#3f88c5'], [0.5, '#9fd3c7'], [0.7, '#f4d35e'], [1, '#d1495b']],
+    water: [[0, '#e8f4fb'], [0.3, '#9cc9e8'], [0.65, '#3d85c6'], [1, '#14365e']] };
   function rampAt(R, t) { t = Math.max(0, Math.min(1, t)); for (let i = 1; i < R.length; i++) if (t <= R[i][0]) { const [a, ca] = R[i - 1], [b, cb] = R[i], u = (t - a) / (b - a), A = parseInt(ca.slice(1), 16), B = parseInt(cb.slice(1), 16), m = (k) => Math.round(((A >> k) & 255) * (1 - u) + ((B >> k) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; } return R.at(-1)[1]; }
   // a narrow pane: Plan Studio's 3D fit is made for a wide view, so it steps back by the pane's shape (display only)
   const aspectFit = () => { if (!window.S3 || !S3.on || !S3.zoom) return; const r = cv3.getBoundingClientRect(), a = r.width / Math.max(1, r.height); if (a < 1.3) S3.zoom(Math.max(0.3, a / 1.4)); };
