@@ -20,7 +20,7 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
         <div class="ipv-size" data-ipv-size></div>
         <label>Units<select data-ipv-unit>${UNITS.map(([v, n]) => `<option value="${v}">${n}${v === 'auto' && audit.sourceUnit ? ` (${esc(audit.sourceUnit)})` : ''}</option>`).join('')}</select></label>
         <label>Up axis<select data-ipv-up><option value="z">Z up</option><option value="y">Y up</option></select></label>
-        <p data-ipv-msg>Check the size against the 1.8 m figure. Change the units if it is far off.</p></section>
+        <p data-ipv-msg>Check the size against the red figure, a person 1.8 m tall. Change the units if it is far off.</p></section>
       <p class="ipv-hint">Drag to orbit · right-drag to pan · scroll to zoom</p></div>`;
     document.body.append(root);
     const q = (s) => root.querySelector(s), cv = q('.ipv-cv'), up0 = audit.importedUp === 'y' ? 'y' : 'z'; q('[data-ipv-up]').value = up0;
@@ -41,10 +41,18 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
       const b = importBounds(current), [W, D, H] = b.size, span = Math.max(W, D, H, 2);
       // ground grid and a person for scale beside the model
       const grid = new THREE.GridHelper(Math.ceil(span * 1.6 / 10) * 10 || 10, Math.min(80, Math.max(10, Math.round(span * 1.6))), 0xb8bec8, 0xd9dde3); grid.position.set(W / 2, 0, -D / 2); model.add(grid);
-      const person = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.8, 16), new THREE.MeshStandardMaterial({ color: '#2f5bd8' })); person.position.set(W + Math.max(1, span * 0.04), 0.9, -D / 2); model.add(person);
+      // a person 1.8 m tall, in red, beside the model: head, body, arms and legs, with the height written over it
+      const person = new THREE.Group(), red = new THREE.MeshStandardMaterial({ color: '#d8402a', roughness: 0.6 }), part = (geo, x, y, z = 0) => { const m = new THREE.Mesh(geo, red); m.position.set(x, y, z); person.add(m); };
+      part(new THREE.SphereGeometry(0.11, 20, 14), 0, 1.69); part(new THREE.CylinderGeometry(0.17, 0.14, 0.62, 16), 0, 1.25);
+      part(new THREE.CylinderGeometry(0.045, 0.04, 0.6, 10), -0.22, 1.22); part(new THREE.CylinderGeometry(0.045, 0.04, 0.6, 10), 0.22, 1.22);
+      part(new THREE.CylinderGeometry(0.07, 0.055, 0.94, 12), -0.08, 0.47); part(new THREE.CylinderGeometry(0.07, 0.055, 0.94, 12), 0.08, 0.47);
+      { const c = document.createElement('canvas'); c.width = 256; c.height = 96; const g = c.getContext('2d'); g.fillStyle = '#d8402a'; g.font = '700 60px Inter,system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1.8 m', 128, 50);
+        const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest: false, toneMapped: false })), k = Math.max(0.6, span * 0.035); sp.scale.set(k * 2.6, k, 1); sp.position.set(0, 1.8 + k * 0.9, 0); sp.renderOrder = 9; person.add(sp); }
+      { const tick = new THREE.LineBasicMaterial({ color: '#d8402a' }), pts = [[-0.35, 0], [0.35, 0], [0, 0], [0, 1.8], [-0.35, 1.8], [0.35, 1.8]].map(([x, y]) => new THREE.Vector3(x + 0.45, y, 0)); const g2 = new THREE.BufferGeometry().setFromPoints([pts[0], pts[1], pts[2], pts[3], pts[4], pts[5]]); person.add(new THREE.LineSegments(g2, tick)); }
+      person.position.set(W + Math.max(1.2, span * 0.05), 0, -D / 2); model.add(person);
       scene.add(model);
       q('[data-ipv-size]').innerHTML = `<b>${W.toFixed(2)} × ${D.toFixed(2)} × ${H.toFixed(2)} m</b><span>${current.components.length} object${current.components.length === 1 ? '' : 's'} · ${Math.round(tris).toLocaleString('en-CA')} triangles</span>`;
-      const big = Math.max(W, D, H); q('[data-ipv-msg]').textContent = big > 3000 ? 'Over 3 km across: the units are probably wrong (try Millimetres).' : big < 0.5 ? 'Under half a metre across: the units are probably wrong (try Metres).' : 'Check the size against the 1.8 m figure (blue). Change the units if it is far off.';
+      const big = Math.max(W, D, H); q('[data-ipv-msg]').textContent = big > 3000 ? 'Over 3 km across: the units are probably wrong (try Millimetres).' : big < 0.5 ? 'Under half a metre across: the units are probably wrong (try Metres).' : 'Check the size against the red figure, a person 1.8 m tall. Change the units if it is far off.';
       ctl.target.set(W / 2, H / 3, -D / 2); cam.position.set(W / 2 + span * 1.1, H / 2 + span * 0.8, -D / 2 + span * 1.3); cam.near = span / 2000; cam.far = span * 50; cam.updateProjectionMatrix(); ctl.update(); }
     const loop = () => { raf = requestAnimationFrame(loop); ctl.update(); R.render(scene, cam); };
     const finish = (value) => { cancelAnimationFrame(raf); removeEventListener('resize', size); removeEventListener('keydown', key, true); removeEventListener('hashchange', cancel); if (model) model.traverse((o) => { o.geometry?.dispose(); }); R.dispose(); root.remove(); resolve(value); };

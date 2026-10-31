@@ -25,7 +25,7 @@ import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel } from '../viewport.js';
-import { previewImport } from '../import-preview.js?v=ipv-20261031-2';
+import { previewImport } from '../import-preview.js?v=ipv-20261031-4';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js?v=furniture-detail-20261027-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
