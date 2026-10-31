@@ -1,8 +1,9 @@
 // The public homepage (2026-10-31): a floating pill nav, a short direct headline over an interactive site model, and a grid of
 // cards that each show one thing PlotCloud does, animated and answering the pointer. Every card is drawn in code (SVG), so it
 // works with no images; a card can also show a picture from mvp/img/home/ (prompts in docs/home-image-prompts.md) when one exists.
-// The earlier homepage stays at #/home-classic. Signed in, the nav offers the Dashboard; signed out, Log in and Get started.
+// The earlier homepage stays at #/home-classic. Public navigation is shared with the information and authentication pages.
 import * as S from '../store.js';
+import {publicNav,bindPublicNav} from '../public-chrome.js';
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const RAMP = ['#26306b', '#2f6db3', '#3fa6a0', '#9ccf6b', '#f2d44a', '#f08a2c'];
@@ -20,9 +21,7 @@ export async function render(app, rest, params, context = {}) {
   document.body.classList.add('lp-full');
   const start = user ? '#/new-project' : '#/login?next=new-project';
   app.innerHTML = `<div class="lp">
-  <nav class="lp-nav" aria-label="Main"><a class="lp-logo" href="#/">plot<b>cloud</b></a>
-    <button type="button" class="lp-menu" aria-expanded="false" aria-controls="lpNavLinks">Menu</button><div class="lp-links" id="lpNavLinks"><a href="#/pricing">Pricing</a><a href="#/about">About</a><a href="#/blog">Blog</a><a href="#/resources">Resources</a></div>
-    <div class="lp-cta"><a class="lp-login" href="#/login">Log in</a><a class="lp-btn" href="${start}">Get started</a></div></nav>
+  ${publicNav()}
 
   <header class="lp-hero">
     <div class="lp-copy"><div class="lp-eyebrow">Building performance, made visible</div><h1>Understand your building.<br><span>Test every design decision.</span></h1>
@@ -52,8 +51,7 @@ export async function render(app, rest, params, context = {}) {
   for (const [k, file] of [['massing', 'massing'], ['site', 'site'], ['drawings', 'drawings']]) { const im = new Image(); im.onload = () => { if (!alive()) return; const v = app.querySelector(`[data-card="${k}"] .lp-vis`); if (v) { im.className = 'lp-photo'; im.alt = ''; v.prepend(im); v.classList.add('has-photo'); } }; im.src = `img/home/${file}.webp`; }
   app.querySelectorAll('a[href="#lp-studies"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();app.querySelector('#lp-studies').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}));
   const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('lp-visible');observer.unobserve(e.target);}}),{threshold:.08});
-  const nav=app.querySelector('.lp-nav'),menu=app.querySelector('.lp-menu'),onScroll=()=>nav.classList.toggle('is-scrolled',scrollY>40);onScroll();addEventListener('scroll',onScroll,{passive:true});menu.addEventListener('click',()=>{const open=nav.classList.toggle('is-open');menu.setAttribute('aria-expanded',String(open));});
-  nav.addEventListener('keydown',e=>{if(e.key==='Escape'&&nav.classList.contains('is-open')){nav.classList.remove('is-open');menu.setAttribute('aria-expanded','false');menu.focus();}});
+  const nav=bindPublicNav(app),onScroll=()=>nav.classList.toggle('is-scrolled',scrollY>40);onScroll();addEventListener('scroll',onScroll,{passive:true});
   app.querySelectorAll('.lp-card,.lp-simulation,.lp-illustration,.lp-intro,.lp-band').forEach(el=>{el.classList.add('lp-reveal');observer.observe(el);});
   return () => { removeEventListener('scroll',onScroll);observer.disconnect();stops.forEach((f) => f?.()); document.body.classList.remove('lp-full'); };
 }

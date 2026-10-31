@@ -1,0 +1,77 @@
+/* Public pages share Home's typography, navigation and quiet architectural palette. */
+body.pc-public>header.top{display:none}
+body.pc-public #app{padding:0;max-width:none}
+.lp-public{--ink:#142335;--ink2:#5b6879;--sub:#5b6879;--mut:#66758a;--muted:#66758a;--line:#e3e8ee;--line2:#d2dbe6;--card:#fff;--paper:#f4f5f7;--accent:#2f5bd3;--btn:#142335;--inv:#142335;--invfg:#fff;min-height:100vh;padding-bottom:0;background:#f4f5f7}
+.lp-nav.lp-nav-light{color:#142335;background:rgba(255,255,255,.96);border-color:#e7ebf0;box-shadow:0 4px 24px #14233508;backdrop-filter:blur(14px)}
+.lp-nav.lp-nav-light .lp-btn{color:#fff!important;background:#142335}
+.lp-nav a[aria-current=page]{font-weight:650;text-decoration:underline;text-underline-offset:7px;text-decoration-thickness:1px}
+.lp-public .wrap{max-width:1240px!important;padding:66px 20px 76px}
+.lp-public .display,.lp-public h1{font-family:Inter,system-ui,sans-serif;font-size:clamp(38px,4.5vw,60px);font-weight:650;line-height:1.06;letter-spacing:-.04em;color:#142335}
+.lp-public .display span{color:#788ba1}
+.lp-public .display.sm{font-size:clamp(28px,3vw,40px);line-height:1.15}
+.lp-public h2{font-size:clamp(24px,2.4vw,31px);line-height:1.2;letter-spacing:-.025em;font-weight:600}
+.lp-public h3{font-size:19px;line-height:1.35;letter-spacing:-.015em}
+.lp-public p{line-height:1.65}
+.lp-public .lede{font-size:17px;color:#5b6879;line-height:1.65}
+.lp-public .eyebrow{font:600 10px/1.5 Inter,system-ui,sans-serif;letter-spacing:.14em;color:#64758b}
+.lp-public .card,.lp-public .pplan{border:1px solid #e3e8ee;border-radius:12px;background:#fff;box-shadow:0 3px 7px #14233504;padding:30px}
+.lp-public .card p{color:#5b6879;margin:16px 0}
+.lp-public .card a:not(.btn){font-size:14px;font-weight:600;color:#294966}
+.lp-public .btn{border-radius:7px;border-color:#d2dbe6;background:#fff;color:#142335;transition:background .2s,box-shadow .2s;white-space:normal;text-align:center}
+.lp-public .btn:hover{border-color:#91a5ba;box-shadow:0 3px 12px #1423350b}
+.lp-public .btn.accent,.lp-public .btn.primary{background:#142335;border-color:#142335;color:#fff}
+.lp-public input,.lp-public select{border-radius:7px;border-color:#d2dbe6;background:#fff;color:#142335;font-family:inherit}
+.lp-public :is(a,button,input,select):focus-visible{outline:3px solid #93afe4;outline-offset:3px}
+.lp-public .note{font-size:12px;line-height:1.65;color:#66758a}
+.lp-public-footer{max-width:1240px;margin:auto;border-top:1px solid #dde4ec;padding:34px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:16px 30px;color:#5b6879}
+.lp-public-footer .lp-logo{font-size:21px;color:#142335}.lp-public-footer p{margin:0;font-size:12px}.lp-public-footer>div{margin-left:auto;display:flex;flex-wrap:wrap;gap:24px;font-size:12px}
+/* Plans retain their current prices, availability and activation controls. */
+.lp-public-pricing .wrap>div:first-child{max-width:850px;margin:0 auto}
+.lp-public-pricing .wrap>.grid.g2{max-width:1000px;margin-left:auto;margin-right:auto;gap:24px}
+.lp-public-pricing .pplan{padding:34px;gap:18px}
+.lp-public-pricing .pplan:nth-child(2){border-color:#8fa7c2!important;box-shadow:0 8px 30px #1c344b0a}
+.lp-public-pricing .pplan .price{font-size:48px;font-weight:650;letter-spacing:-.04em}
+.lp-public-pricing .pplan ul{font-size:14px;color:#526276;line-height:1.85}
+.lp-public-pricing .pplan .ribbon{border-radius:5px;background:#e8eef6;color:#294966;font-size:10px;padding:5px 9px}
+/* Editorial pages use the same images and card treatment as Home. */
+.lp-public-about .wrap>header,.lp-public-blog .wrap>header{text-align:center;margin:16px auto 56px!important;max-width:840px}
+.lp-public-about .wrap>header .lede,.lp-public-blog .wrap>header .lede{margin-left:auto!important;margin-right:auto!important}
+.public-feature{display:grid;grid-template-columns:1.2fr 1fr;align-items:center;gap:40px;background:#fff;border:1px solid #e3e8ee;border-radius:12px;padding:32px;margin-bottom:24px}
+.public-feature img{width:100%;height:310px;object-fit:contain}.public-feature p{color:#5b6879}
+.public-article{display:grid;grid-template-columns:.85fr 1.15fr;gap:34px;align-items:center;margin-bottom:24px}
+.public-article>img{width:100%;height:300px;object-fit:contain;border-radius:8px;background:#f4f5f7}
+.public-article h2{margin-top:14px}
+/* Catalog behaviour stays in resources.js; these rules only change its presentation. */
+.lp-public-resources .split{display:block;text-align:center;max-width:850px;margin:18px auto 0}
+.lp-public-resources .resource-page>.eyebrow{display:block;text-align:center}
+.lp-public-resources .split .lede{margin:24px auto 0}
+.lp-public-resources .resource-nav{justify-content:center;margin:34px 0 54px;gap:12px}
+.lp-public-resources .resource-tools{gap:18px}
+.lp-public-resources .resource-tools>a{border-radius:12px;padding:28px;background:#fff;transition:transform .2s,box-shadow .2s}
+.lp-public-resources .resource-tools>a:hover{transform:translateY(-3px);box-shadow:0 8px 24px #1423350a}
+.lp-public-resources .resource-tools h3{font-size:18px}
+.lp-public-resources .resource-card{padding:12px 12px 20px;background:#fff;border:1px solid #e3e8ee;border-radius:12px}
+.lp-public-resources .resource-card figure{border:0;background:#f4f5f7;margin-bottom:20px}
+.lp-public-resources .resource-card svg,.lp-public-resources .resource-detail svg{background:#f4f5f7}
+.lp-public-resources .resource-detail{padding:30px;background:#fff;border:1px solid #e3e8ee;border-radius:12px}
+.lp-public-resources .resource-detail h1{font-size:clamp(30px,3vw,44px)}
+.lp-public-resources .resource-filter{padding:24px;background:#eaf0f5;border-radius:10px}
+/* Both auth modes render inside this container, so changing tabs keeps the shared shell. */
+.lp-public-login .auth{max-width:1120px;margin:64px auto 80px;padding:0 12px;display:grid;grid-template-columns:1.05fr 1fr;gap:58px;align-items:start}
+.lp-public-login .auth>div:first-child{max-width:none!important;min-width:0;padding:36px 0}
+.lp-public-login .auth h1{font-size:clamp(36px,3.7vw,52px);line-height:1.1}
+.lp-public-login .auth .lede{font-size:15px;max-width:440px}
+.lp-public-login .auth>form{max-width:none!important;min-width:0;padding:32px!important;gap:18px!important;box-shadow:0 12px 40px #14233508}
+.lp-public-login .numlist{margin-top:36px!important}.lp-public-login .numlist b{font-weight:500;font-size:13px;color:#526276}.lp-public-login .numlist li>span:first-child{color:#7d91a9}
+.lp-public-login .seg{border:0;background:#eef2f6;padding:4px;border-radius:8px;gap:4px}
+.lp-public-login .seg button{border:0;border-radius:5px;background:transparent;color:#64758b;font-size:13px;min-height:38px}
+.lp-public-login .seg button[aria-pressed=true]{background:#fff;color:#142335;box-shadow:0 2px 5px #1423350a}
+.lp-public-login label.f{font-size:12px;font-weight:500;color:#526276}
+.lp-public-login .f input{padding:12px;min-height:44px}
+.lp-public-login #authMsg:empty{display:none}
+@media(max-width:900px){.public-feature,.public-article{gap:24px}.lp-public-login .auth{gap:30px}.lp-public-login .auth>form{padding:24px!important}}
+@media(max-width:700px){.lp-public .wrap{padding:46px 6px 60px}.lp-public .display,.lp-public h1{font-size:39px}.lp-public .display.sm{font-size:30px}.public-feature,.public-article,.lp-public-login .auth{grid-template-columns:1fr}.public-feature{padding:22px}.public-feature img,.public-article>img{height:240px}.lp-public .card,.lp-public .pplan{padding:24px}.lp-public-login .auth{margin-top:30px;gap:24px;padding:0 4px}.lp-public-login .auth>div:first-child{padding:18px 0}.lp-public-login .auth h1{font-size:37px}.lp-public-login .numlist{display:none}.lp-public-footer>div{margin-left:0;width:100%;gap:20px}.lp-public-resources .resource-detail{padding:20px}.lp-public-resources .resource-filter{padding:18px}}
+@media(prefers-reduced-motion:reduce){.lp-public *{transition:none!important}}
+.lp-public .public-article h2{font-size:26px;line-height:1.22;font-weight:600;letter-spacing:-.025em}.lp-public-about .wrap>a:first-child,.lp-public-blog .wrap>a:first-child{display:none}
+
+.lp-public .resource-engine{height:calc(100dvh - 96px);margin-top:16px;background:#fff;border:1px solid #e3e8ee;border-radius:10px;overflow:hidden}.lp-public:has(.resource-engine) .lp-public-footer{display:none}.lp-public .resource-engine>header{padding:10px 18px}.lp-public .resource-engine h1{font-size:18px}
