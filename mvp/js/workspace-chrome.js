@@ -736,7 +736,7 @@ export function mountChrome(app, api) {
     const ims = (studio()?.imports || []).filter((o) => !o.ref), mine = S.account().furniture || [];
     assetsCard.innerHTML = `<button type="button" class="sp-x" data-as="close" aria-label="Close assets">×</button>
       <section><h3>Imported models</h3>${ims.length ? `<ul class="sp-aslist">${ims.map((o) => `<li><button type="button" data-as-sel="${esc(o.id)}" title="Select it in the model"><b>${esc(o.name)}</b><small>${esc(o.layer || 'Imported')} · ${fmt(o.tris || 0)} triangles</small></button></li>`).join('')}</ul>`
-        : '<div class="sp-asempty"><b>No imported models</b><p>Import OBJ, STL, GLB/glTF or 3DM files. You choose whether a file joins this project or starts a new one.</p></div>'}
+        : '<div class="sp-asempty"><b>No imported models</b><p>Import OBJ, STL, GLB/glTF or 3DM files. Each opens in a preview first, then joins this project.</p></div>'}
         <button type="button" class="btn sm primary sp-asbtn" data-as="model">+ Import model</button></section>
       <section><h3>My furniture</h3>${mine.length ? `<div class="sp-asgrid">${mine.slice(0, 12).map((x) => `<figure title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m">${x.thumb ? `<img src="${x.thumb}" alt="">` : ''}<figcaption>${esc(x.name)}</figcaption></figure>`).join('')}</div><p class="sp-note">${mine.length} piece${mine.length === 1 ? '' : 's'} in your account, for every project. Place them from Furniture in the bottom bar.</p>`
         : '<div class="sp-asempty"><b>No furniture of your own yet</b><p>Import a piece (OBJ, GLB, STL, 3DM); it is kept in your account for every project.</p></div>'}
@@ -746,7 +746,7 @@ export function mountChrome(app, api) {
   assetsCard.addEventListener('click', (e) => { const b = e.target.closest('[data-as],[data-as-sel]'); if (!b) return;
     if (b.dataset.asSel) { select(['ps:imp:' + b.dataset.asSel]); return; }
     const k = b.dataset.as; if (k === 'close') openAssets(false);
-    else if (k === 'model') { openAssets(false); openProject('import'); }
+    else if (k === 'model') { openAssets(false); openProject('import'); setTimeout(() => $('#file')?.click(), 60); }   // straight to choosing the file; the preview follows
     else if (k === 'furn') { openAssets(false); UI.acc.furniture = 0; saveUI(); if (!(UI.panel === 'furniture' && root.classList.contains('sp-pal-open'))) app.querySelector('.sp-tools [data-panel="furniture"]')?.click(); setTimeout(() => app.querySelector('#panelBody [data-impfurn]')?.click(), 60); } });
 
   // ---- project props (bottom left): the one place for the project's shared parameters

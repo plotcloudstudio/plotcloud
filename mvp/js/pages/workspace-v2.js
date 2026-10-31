@@ -19,13 +19,13 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=ill-20261031-1';
+import { mountChrome } from '../workspace-chrome.js?v=ipv-20261031-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel } from '../viewport.js';
-import {reviewImport} from '../import-review.js?v=import-feedback-20261027-1';
+import { previewImport } from '../import-preview.js?v=ipv-20261031-2';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js?v=furniture-detail-20261027-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
@@ -157,7 +157,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (add) setSel([...UI.sels, ...ids]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ill-20261031-3`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ipv-20261031-2`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -570,9 +570,9 @@ export function render(app, [pid]) {
       <p class="note">Site: ${esc(S.siteOf(p)?.label || '—')}${S.siteOf(p)?.sample ? ' (sample)' : ''} · north ${S.siteOf(p)?.north ?? 0}° · ${p.siteLinked === false ? 'this project\'s own site' : '<a href="#/account">from Account</a>'}</p><p class="note">${p.sample ? 'Sample project. Edits are kept in this browser.' : 'Stored in this browser.'}</p>
       <p class="note">Plan and Perspective show the one model (Plan Studio’s): walls, masses, the site and imported meshes. Edit here, then run simulations on a saved version.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
-      <label class="f">Import destination<select id="importMode"><option value="new">New project (keeps this project)</option><option value="add">Add to current project</option></select></label><div class="drop" id="drop"><button class="btn sm" id="pick">Choose model for a new project</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
+      <select id="importMode" hidden><option value="add" selected>Add to current project</option></select><div class="drop" id="drop"><button class="btn sm" id="pick">Choose model to import</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm" hidden>
-      <input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note" id="importDestinationNote">A new project keeps the current model unchanged. Choose Add only when you intend to combine models.</p><p class="note">Maximum file size: 25 MiB. Maximum geometry: 80,000 triangles. OBJ, STL, GLB, glTF and Rhino 3DM are supported.</p><p><a href="examples/building-metres.obj" download="PlotCloud-example-10x8x6m.obj">Download example building · 10 × 8 × 6 m · Z up</a></p>
+      <input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note" id="importDestinationNote">The model opens in a preview first; Confirm import adds it to this project, Cancel leaves the project as it is.</p><p class="note">Maximum file size: 25 MiB. Maximum geometry: 80,000 triangles. OBJ, STL, GLB, glTF and Rhino 3DM are supported.</p><p><a href="examples/building-metres.obj" download="PlotCloud-example-10x8x6m.obj">Download example building · 10 × 8 × 6 m · Z up</a></p>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="auto">Read file metadata / review scale</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status" aria-live="polite"></p><button type="button" class="btn sm" id="retryImport" hidden>Retry last import</button>
@@ -600,12 +600,12 @@ export function render(app, [pid]) {
     for(const note of host.querySelectorAll('.note'))note.title=note.textContent;
     const mode=$('#importMode',host),pickButton=$('#pick',host),retry=$('#retryImport',host);
     const report=(message,error=false)=>{importState.message=message;importState.error=error;const msg=$('#impMsg',app);if(msg){msg.textContent=message;msg.title=message;msg.setAttribute('role',error?'alert':'status');}const retry=$('#retryImport',app);if(retry)retry.hidden=!error||!importState.file;};
-    const modeUI=()=>{const add=mode.value==='add';pickButton.textContent=importState.busy?'Importing…':add?'Choose model to add':'Choose model for a new project';pickButton.disabled=importState.busy;pickButton.setAttribute('aria-busy',String(importState.busy));mode.disabled=importState.busy;for(const el of [$('#unit',host),$('#up',host)])if(el)el.disabled=importState.busy;$('#importDestinationNote',host).textContent=add?(p.sample?'You are adding geometry to a sample project. The scale review will ask you to confirm this explicitly.':'Adds geometry to '+p.name+'. Existing geometry stays; choose New project to keep models separate.'):'Creates a separate project. This project and its geometry are kept.';};
+    const modeUI=()=>{const add=mode.value==='add';pickButton.textContent=importState.busy?'Importing…':'Choose model to import';pickButton.disabled=importState.busy;pickButton.setAttribute('aria-busy',String(importState.busy));mode.disabled=importState.busy;for(const el of [$('#unit',host),$('#up',host)])if(el)el.disabled=importState.busy;void add;};
     mode.value=importState.asNew?'new':'add';mode.onchange=()=>{importState.asNew=mode.value==='new';modeUI();};report(importState.message,importState.error);modeUI();
-    const doImport=async(f,asNew=mode.value==='new')=>{
+    const doImport=async(f,asNew=false)=>{   // into the current project, after the full-screen preview (2026-10-31)
       if(importState.busy){toast('An import is already in progress. Please wait for its status.');return;}
       importState.file=f;importState.asNew=asNew;importState.busy=true;importState.error=false;report('Reading '+f.name+'…');modeUI();retry.disabled=true;
-      try{const initial=await importModel(f,{unit:$('#unit',host)?.value||'auto',up:$('#up',host)?.value||'auto'});if(dead)return;report('Review the file units, dimensions and import destination.');const r=await reviewImport(initial,{name:f.name,destination:{label:asNew?'New project: '+f.name.replace(/\.[^.]+$/,''):'Add to current project: '+p.name,sample:!asNew&&!!p.sample}}),by={};if(!r){report('Import cancelled. The existing model is unchanged.');return;}if(dead)return;
+      try{const initial=await importModel(f,{unit:$('#unit',host)?.value||'auto',up:$('#up',host)?.value||'auto'});if(dead)return;report('Preview the model, then confirm or cancel the import.');const r=await previewImport(initial,{name:f.name,destination:'Into this project: '+p.name}),by={};if(!r){report('Import cancelled. The existing model is unchanged.');return;}if(dead)return;
         report('Preparing '+r.components.length+' imported component'+(r.components.length===1?'':'s')+'…');
         if (!asNew&&!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
         const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...classify(c),...(srcLayer?{layer:srcLayer}:{}) }));
@@ -617,11 +617,11 @@ export function render(app, [pid]) {
         UI.open = [...open]; saveUI(); persist(); refresh(true);
         report(`${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`); }
       catch(error){const message='Import did not finish: '+(error.message||'Unknown reader error')+' Retry the import or choose the file again.';report(message,true);toast(message);}
-      finally{importState.busy=false;retry.disabled=false;if(!dead){const pick=$('#pick',app),mode=$('#importMode',app),again=$('#retryImport',app);if(pick){pick.disabled=false;pick.setAttribute('aria-busy','false');pick.textContent=mode?.value==='add'?'Choose model to add':'Choose model for a new project';}for(const el of [mode,$('#unit',app),$('#up',app),again])if(el)el.disabled=false;}}
+      finally{importState.busy=false;retry.disabled=false;if(!dead){const pick=$('#pick',app),mode=$('#importMode',app),again=$('#retryImport',app);if(pick){pick.disabled=false;pick.setAttribute('aria-busy','false');pick.textContent='Choose model to import';}for(const el of [mode,$('#unit',app),$('#up',app),again])if(el)el.disabled=false;}}
     };
     retry.onclick=()=>{if(importState.file)doImport(importState.file,importState.asNew);};
-    pickButton.onclick=()=>{report(mode.value==='new'?'Choose a model file for a separate project. Cancel keeps the current model.':'Choose a model file to add to '+p.name+'.');$('#file',host).click();};
-    $('#newModelFile',host).onchange=e=>{const file=e.target.files[0];if(file){mode.value='new';doImport(file,true);}e.target.value='';};
+    pickButton.onclick=()=>{report('Choose a model file: it opens in a preview before it joins '+p.name+'.');$('#file',host).click();};
+    $('#newModelFile',host).onchange=e=>{const file=e.target.files[0];if(file)doImport(file);e.target.value='';};
     $('#file',host).onchange=e=>{const file=e.target.files[0];if(file)doImport(file);else report('No file selected. The current model is unchanged.');e.target.value='';};
     for(const input of [$('#file',host),$('#newModelFile',host)])input.addEventListener('cancel',()=>report('No file selected. The current model is unchanged.'));
     const drop = $('#drop', host);
