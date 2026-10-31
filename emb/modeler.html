@@ -5607,7 +5607,7 @@ window.S3 = (() => {
     cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); cam.position.set(18, 16, 22);
     ctl = new OC(cam, ev || canvas); ctl.mouseButtons = { LEFT: null, MIDDLE: window.__WSROLE?T.MOUSE.PAN:T.MOUSE.ROTATE, RIGHT: window.__WSROLE?T.MOUSE.ROTATE:T.MOUSE.PAN }; ctl.zoomToCursor = true; ctl.enableDamping = false; ctl.maxPolarAngle = Math.PI * 0.49; ctl.addEventListener('change', () => { render(); if (window.zoomUI) window.zoomUI(); if (window.ov3) window.ov3(); });
     const ground = new T.Mesh(new T.PlaneGeometry(400, 400), new T.MeshLambertMaterial({ color: window.PlotCloudUI?.viewportColor() || 0xeff1f4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.16; scene.add(ground);
-    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); WM.ground = [ground, grid]; ctl.maxDistance = 4e6; addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
+    const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); WM.ground = [ground, grid]; ctl.maxDistance = 2.6e7; addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
   function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); R.render(scene, WALK.on ? WALK.cam : cam); } }
@@ -5618,7 +5618,7 @@ window.S3 = (() => {
   async function worldBuild(site) {
     const o = site && site.origin; if (!T || !o || !isFinite(o.lat) || !isFinite(o.lon)) return;
     const key = o.lat.toFixed(5) + ',' + o.lon.toFixed(5); if (WM.key === key) return; WM.key = key;
-    for (const r of WM.rings) { scene.remove(r); r.geometry.dispose(); r.material.map?.dispose(); r.material.dispose(); } WM.rings = [];
+    for (const r of WM.rings) { scene.remove(r); r.geometry.dispose(); r.material.map?.dispose(); r.material.dispose(); } WM.rings = []; if (WM.globe) { scene.remove(WM.globe); WM.globe.geometry.dispose(); WM.globe.material.map?.dispose(); WM.globe.material.dispose(); WM.globe = null; }
     WM.siteR = (site.boundary && site.boundary.r) || 300;
     const kx = 111320 * Math.cos(o.lat * Math.PI / 180), ky = 110574, toLat = (y, n) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
     for (const [i, z, span] of [[0, 13, 5], [1, 8, 5], [2, 3, 8]]) {
@@ -5636,10 +5636,27 @@ window.S3 = (() => {
     }
     render();
   }
+  // ---- the Earth when zoomed right out (2026-10-31): a sphere of the Earth's radius touching the site, with the same grey map
+  // reprojected to latitude/longitude, turned so the site is on top and north matches the model
+  async function globeBuild() {
+    if (WM.globeLoading) return; WM.globeLoading = true; const key = WM.key, [lat, lon] = key.split(',').map(Number), z = 3, n = 8, Rg = 6371000;
+    const merc = document.createElement('canvas'); merc.width = merc.height = n * 256; const mg = merc.getContext('2d'); mg.fillStyle = '#e9ebee'; mg.fillRect(0, 0, merc.width, merc.height);
+    const ims = await Promise.all([...Array(n * n)].map((_, k) => wmTile(z, k % n, Math.floor(k / n)))); if (WM.key !== key) { WM.globeLoading = false; return; }
+    mg.filter = 'grayscale(1) brightness(1.04)'; ims.forEach((im, k) => { if (im) mg.drawImage(im, (k % n) * 256, Math.floor(k / n) * 256); });
+    const eq = document.createElement('canvas'); eq.width = 2048; eq.height = 1024; const eg = eq.getContext('2d'); eg.fillStyle = '#f1f2f4'; eg.fillRect(0, 0, 2048, 1024);
+    for (let y = 0; y < 1024; y++) { const la = 90 - (y + 0.5) / 1024 * 180; if (Math.abs(la) > 85) continue; const my = (1 - Math.log(Math.tan(Math.PI / 4 + la * Math.PI / 360)) / Math.PI) / 2 * merc.height; eg.drawImage(merc, 0, Math.max(0, Math.min(merc.height - 1, my)), merc.width, 1, 0, y, 2048, 1); }
+    const tex = new T.CanvasTexture(eq); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+    const m = new T.Mesh(new T.SphereGeometry(Rg, 128, 64), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: true }));
+    const phi = (lon + 180) / 180 * Math.PI, th = (90 - lat) / 180 * Math.PI, dir = new T.Vector3(-Math.cos(phi) * Math.sin(th), Math.cos(th), Math.sin(phi) * Math.sin(th)), north = new T.Vector3(Math.cos(phi) * Math.cos(th), Math.sin(th), -Math.sin(phi) * Math.cos(th));
+    const q = new T.Quaternion().setFromUnitVectors(dir, new T.Vector3(0, 1, 0)), nn = north.applyQuaternion(q); const spin = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), Math.atan2(nn.x, -nn.z));
+    m.quaternion.copy(spin.multiply(q)); m.position.set(0, -Rg - 1, 0); m.name = 'world-globe'; m.renderOrder = -20; m.visible = false; scene.add(m); WM.globe = m; WM.globeLoading = false; render();
+  }
   function worldFade() {
     if (!cam || !ctl) return; const d = cam.position.distanceTo(ctl.target), r = WM.siteR;
     const t = Math.max(0, Math.min(1, (d - 3.5 * r) / (4 * r)));   // 0 close up (fitted view shows only the site) → 1 zoomed out
-    for (const m of WM.rings) m.material.opacity = m.userData.ring === 0 ? t : m.userData.ring === 1 ? t * Math.max(0, Math.min(1, (d - 8000) / 8000)) : t * Math.max(0, Math.min(1, (d - 150000) / 150000));
+    const gl = Math.max(0, Math.min(1, (d - 8e5) / 1.4e6));   // the globe takes over from the flat map far out (2026-10-31)
+    for (const m of WM.rings) m.material.opacity = (1 - gl) * (m.userData.ring === 0 ? t : m.userData.ring === 1 ? t * Math.max(0, Math.min(1, (d - 8000) / 8000)) : t * Math.max(0, Math.min(1, (d - 150000) / 150000)));
+    if (gl > 0 && !WM.globe && WM.key) globeBuild(); if (WM.globe) { WM.globe.visible = gl > 0.001; WM.globe.material.opacity = gl; }
     for (const g of WM.ground) g.visible = t < 0.98 && !WM.topo;
     if (WM.rings.length && canvas?.parentElement) { if (!WM.credit) { WM.credit = document.createElement('div'); WM.credit.textContent = 'Map: Esri, HERE, Garmin, © OpenStreetMap contributors'; WM.credit.style.cssText = 'position:absolute;right:8px;bottom:6px;font:10px system-ui,sans-serif;color:#6b7280;background:rgba(255,255,255,.7);padding:1px 6px;border-radius:4px;pointer-events:none;z-index:2'; canvas.parentElement.append(WM.credit); } WM.credit.hidden = t <= 0; }
     const far = Math.max(2000, d * 30); if (Math.abs(cam.far - far) > far * 0.2) { cam.far = far; cam.near = Math.max(0.05, d / 4000); cam.updateProjectionMatrix(); }
