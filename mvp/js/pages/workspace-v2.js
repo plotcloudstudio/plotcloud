@@ -1,3 +1,4 @@
+import {mountSimulationPreview} from '../simulation-picker-preview.js';
 import { mountPicker } from '../color-picker.js?v=ill-20261031-1';
 import {inspectStudy} from '../study-readiness.js';
 import {mountHandoff,createHandoff,baselineSignature} from '../handoff.js?v=handoff-20261028-1';
@@ -758,12 +759,13 @@ export function render(app, [pid]) {
   const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
   simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>categoryOf(x.id)===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}">${esc(x.name)}</button>`).join('')).join('');
   document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
+  const disposeSimPreview=mountSimulationPreview(simMenu,addSim,SIMS);
   const placeMenu=()=>{const r=addSim.getBoundingClientRect(),h=Math.min(simMenu.scrollHeight,innerHeight*0.7);simMenu.style.left=(r.right+8)+'px';simMenu.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top-h/2))+'px';};
   const closeMenu=()=>{simMenu.hidden=true;addSim.setAttribute('aria-expanded','false');};
   addSim.onclick=e=>{e.stopPropagation();if(simMenu.hidden){simMenu.hidden=false;placeMenu();addSim.setAttribute('aria-expanded','true');simMenu.querySelector('button')?.focus();}else closeMenu();};
   simMenu.onclick=e=>{const b=e.target.closest('[data-addsim]');if(!b)return;closeMenu();studyChoice.value=b.dataset.addsim;studyChoice.onchange();$('#sendSim',app).click();};
   simMenu.onkeydown=e=>{if(e.key==='Escape'){closeMenu();addSim.focus();}};
-  document.addEventListener('click',e=>{if(!simMenu.hidden&&!simMenu.contains(e.target)&&e.target!==addSim)closeMenu();});
+  const simOutside=e=>{if(!simMenu.hidden&&!simMenu.contains(e.target)&&!addSim.contains(e.target))closeMenu();};document.addEventListener('click',simOutside);
   $('#sendSim', app).onclick = async () => {
     const button=$('#sendSim',app),pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready){toast('The model is still loading.');return;}button.disabled=true;button.textContent='Preparing simulation…';button.setAttribute('aria-busy','true');shell.inert=true;shell.setAttribute('aria-busy','true');
     try{
@@ -833,5 +835,5 @@ export function render(app, [pid]) {
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; disposeSimPreview();document.removeEventListener('click',simOutside);disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

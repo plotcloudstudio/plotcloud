@@ -1,5 +1,6 @@
 // Hash router, theme, sign-in state and small helpers shared by the pages.
 import * as S from './store.js';
+import {publicPage} from './public-chrome.js';
 import {SIMS,MODEL_TOOLS,RESOURCES} from './data.js';
 import * as C from './cloud.js';
 import {checkAccess, canUse, renderGate} from './beta-access.js';
@@ -62,11 +63,11 @@ const PAGES = {
   project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'), rendering:()=>import('./pages/rendering.js'),
   boards:()=>import('./pages/rendering.js').then(m=>({render:(a,r,q)=>m.render(a,['boards'],q)})),
   admin: () => import('./pages/admin.js'),
-  '': () => import('./pages/home-v2.js'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=inview-20261031-1'), legal:()=>import('./pages/legal.js'),
-  results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
+  '': () => import('./pages/home-v2.js?v=drift-wall-20261031-6'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=drift-wall-20261031-6'), legal:()=>import('./pages/legal.js'),
+  about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { project:'Project', tables:'Tables', rendering:'Rendering', boards:'Boards', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
+const TITLES = { about:'About', blog:'Blog', project:'Project', tables:'Tables', rendering:'Rendering', boards:'Boards', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab
@@ -85,12 +86,14 @@ export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
+  const publicRoute=['pricing','about','blog','login','resources'].includes(key);
   // the Workspace, its simulations and a project's results are one place, reached from the Dashboard (2026-10-30)
   const navKey = ['workspace', 'simulations', 'results', 'project', 'activity'].includes(key) ? 'home' : key;
   $$('[data-nav]').forEach((a) => { if (a.dataset.nav === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
   document.querySelector('.pc-ui-context')?.remove();
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
+  document.body.classList.toggle('pc-public',publicRoute);
   who();
   const app = $('#app'); app.innerHTML = '';
   const study = key === 'simulations' ? rest[0]?.split('?')[0] : key === 'batch-run' ? params.get('sim') : null;
@@ -101,17 +104,18 @@ export async function route() {
     await checkAccess(); if (!isCurrent()) return;
     if (!canUse(feature)) {
       const toolName=[...MODEL_TOOLS,...RESOURCES.utilities,...RESOURCES.refs].find(t=>t.tool===resource)?.name||({stairs3d:'Stair generator',doors3d:'Door generator'})[resource];
-      renderGate(app, toolName || 'This tool');
+      renderGate(publicRoute?publicPage(app,key,params):app, toolName || 'This tool');
       if (key === 'batch-run' && params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Paid beta access required.'},location.origin);
       document.title = 'Beta access · PlotCloud'; return;
     }
   }
   const recover=error=>{app.innerHTML=`<div class="wrap"><h1 class="display md">This page could not finish loading.</h1><p>Your saved projects and results are kept. Reload to try again, or return to Workspace.</p><details><summary>Technical details</summary><p>${esc(error.message||'Page unavailable')}</p></details><button type="button" class="btn accent" id="retryPageLoad">Reload page</button> <a class="btn" href="#/workspace">Open Workspace</a> <a class="btn" href="#/simulations">Browse studies</a></div>`;$('#retryPageLoad',app).onclick=()=>location.reload();document.title='Page recovery · PlotCloud';};
-  let mod;try{mod=await PAGES[key]();}catch(error){if(isCurrent())recover(error);return;}
+  let mod;try{mod=await PAGES[key]();}catch(error){if(isCurrent()){document.body.classList.remove('pc-public');recover(error);}return;}
 
   if(!isCurrent())return;
+  const renderTarget=publicRoute?publicPage(app,key,params):app;
   let nextCleanup;
-  try{nextCleanup=await mod.render(app,rest.map(x=>decodeURIComponent(x.split('?')[0])),params,{isCurrent});}catch(error){if(isCurrent())recover(error);return;}
+  try{nextCleanup=await mod.render(renderTarget,rest.map(x=>decodeURIComponent(x.split('?')[0])),params,{isCurrent});}catch(error){if(isCurrent()){document.body.classList.remove('pc-public');recover(error);}return;}
   if(!isCurrent()){if(typeof nextCleanup==='function')nextCleanup();return;}
   cleanup=nextCleanup||null;
   // where the person was, for the Dashboard's “pick up where you left off”
@@ -127,7 +131,7 @@ export async function route() {
       refreshProjectContext(project);
     }
   }
-  document.title = 'PlotCloud — ' + TITLES[key];
+  document.title = 'PlotCloud — ' + (key==='login'&&params.has('signup')?'Get started':TITLES[key]);
   window.scrollTo(0, 0);
 }
 export const refreshWho = who;

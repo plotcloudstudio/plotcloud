@@ -8,6 +8,8 @@ export function render(app, _, params) {
   const next = params.get('next') || 'home';   // the Dashboard, unless the person was on their way somewhere
   const draw = () => {
     const up = mode === 'signup';
+    const nav=app.closest('.lp-public')?.querySelector('.lp-nav');if(nav){nav.querySelectorAll('.lp-login,.lp-btn').forEach(a=>a.removeAttribute('aria-current'));nav.querySelector(up?'.lp-btn':'.lp-login')?.setAttribute('aria-current','page');}
+    document.title='PlotCloud — '+(up?'Get started':'Log in');
     app.innerHTML = `<div class="auth">
       <div style="flex:1 1 420px;max-width:520px">
         <h1 class="display md">${up ? 'Start free.' : 'Welcome back.'}<br><span>${up ? 'Keep it together.' : 'Pick up where you left off.'}</span></h1>
