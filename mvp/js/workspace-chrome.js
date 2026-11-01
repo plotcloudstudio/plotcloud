@@ -19,7 +19,7 @@ import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261031-2';
 import * as WAY from './interior/wayfinding.js?v=way-20261031-2';
 import { keep as PKEEP } from '../../emb/lib/plansim.js?v=1';
-import { mountProps } from './project-props.js?v=weather-20261031-1';
+import { mountProps } from './project-props.js?v=grids-20261101-1';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const P = {
@@ -247,6 +247,21 @@ export function mountChrome(app, api) {
   const ST = { id: null, day: '03-21', sunH0: 0, sunH1: 24, sunStep: 15, period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', snowCm: '30', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, priv: { sides: ['top', 'bottom'], dS: 4, eye: 1.6, dO: 15, hO: 9, doors: false }, wayEye: '1.6', wayStart: '', wayFurn: true, area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
   // the project's analysis grid (Project props › Default): 0 = automatic
   const gridOf = () => { const g = S.conditionsOf(p).defaults?.grid; return g && g !== 'Auto' ? +g || 0 : 0; };
+  // the building surface grid and the detail of the flow studies (Project props › Default, 2026-11-01)
+  const surfOf = () => { const g = S.conditionsOf(p).defaults?.surfGrid; return g && g !== 'Auto' ? +g || 0 : 0; };
+  const flowOf = () => ({ Fine: 260, 'Very fine': 400 })[S.conditionsOf(p).defaults?.flowDetail] || 160;
+  // a time estimate before a run (2026-11-01): milliseconds per ground cell (a) and per building square (b) for each study,
+  // measured in a desktop browser; flow studies (lattice-Boltzmann) grow faster than the cell count. Each run corrects its
+  // study's factor on this computer, so the estimate learns the machine.
+  const COST = { sunhours: [0.03, 0.1], radiation: [0.2, 0.55], skyview: [0.15, 0.4], shadebenefit: [0.2, 0.45], solarenvelope: [0.03, 0.02], utci: [0.3, 0.02], stormwater: [0.025, 0.02], wind: [0.55, 0.02, 1], snow: [0.12, 0.02, 1] };
+  const SPEEDK = 'pc-study-speed', speed = () => { try { return JSON.parse(localStorage.getItem(SPEEDK)) || {}; } catch { return {}; } };
+  function estimate(id) { const c = COST[id]; if (!c || !INST.persp.ready || !INST.persp.ws.studySize) return null; let z = null; try { INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf()); z = INST.persp.ws.studySize({ maxCells: flowOf() }); } catch { } if (!z) return null;
+    const flow = !!c[2], n = flow ? z.flowCells : z.cells, side = flow ? z.flowSide : 0, mode = id === 'wind' && ST.windMode !== 'yearly' ? 0.15 : 1, sunK = id === 'sunhours' ? Math.max(0.2, (ST.sunH1 - ST.sunH0) / 24 * 15 / Math.max(1, ST.sunStep)) : 1;
+    const ms = (c[0] * n * (flow ? Math.max(1, side / 160) : 1) * mode + c[1] * z.samples) * sunK * (speed()[id] || 1);
+    return { ms, ...z, flow }; }
+  const dur = (ms) => (ms < 1500 ? 'about a second' : ms < 60000 ? `about ${Math.round(ms / 1000)} s` : ms < 3600000 ? `about ${Math.round(ms / 60000)} min` : 'over an hour');
+  function learn(id, actual) { const e = ST.estAtRun; if (!e || !e.ms || !actual) return; const S0 = speed(), k = (S0[id] || 1) * actual / e.ms; S0[id] = +Math.max(0.05, Math.min(20, 0.6 * (S0[id] || 1) + 0.4 * k)).toFixed(3); try { localStorage.setItem(SPEEDK, JSON.stringify(S0)); } catch { } }
+  const estLine = (e) => e ? `<p class="sp-note sp-est"><b>Estimated time: ${dur(e.ms)}</b> · ${e.flow ? `flow grid ${fmt(e.flowCells)} cells at ${fmt(e.flowCell, 1)} m` : `ground ${fmt(e.cells)} cells at ${fmt(e.cell, 2)} m`}${e.samples ? ` · building ${fmt(e.samples)} squares at ${fmt(e.surfCell, 2)} m` : ''}. Grids: Project props › Default.${e.ms > 120000 ? ' <span class="sp-warn">Long: a coarser grid or a smaller area is quicker.</span>' : ''}</p>` : '';
   const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const AREAS = [[1, '1× · the building and 40 m round it'], [2, '2×'], [3, '3× · the default'], [4, '4×']];
   // every building study has the same card (2026-10-31): a mode where the study has one, the study area on the site before Start,
@@ -287,7 +302,7 @@ export function mountChrome(app, api) {
   const SNOWS = [['10', '10 cm'], ['30', '30 cm'], ['60', '60 cm']];
   const STORMS = [['25', '25 mm'], ['50', '50 mm'], ['100', '100 mm']], COVERS = [['lawn', 'Mostly planted', 0.25], ['mixed', 'Mixed', 0.5], ['paved', 'Mostly paved', 0.85]];
   const viewsOf = (id) => { const v = SPEC[id]?.views; return typeof v === 'function' ? v() : v || []; };
-  const sigOf = (id) => JSON.stringify([id, ST.area, ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : ''], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], structure: [ST.system, ST.span, ST.bearing], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
+  const sigOf = (id) => JSON.stringify([id, ST.area, gridOf(), surfOf(), flowOf(), ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : ''], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], structure: [ST.system, ST.span, ST.bearing], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
   // the map views of a result: the study's own, or made here from its values
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, svals: r.svals, slo: r.slo, shi: r.shi, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
@@ -341,6 +356,9 @@ export function mountChrome(app, api) {
     let day = [], suns = []; if (id === 'sunhours') { const [m, d] = ST.day.split('-').map(Number), pts = []; for (let h = 0; h <= 24; h += 0.25) pts.push(pos(m, d, h)); day = runs(pts); for (let h = 0; h < 24; h++) { const q = pos(m, d, h); if (q.alt > 0) suns.push(q); } }
     views2().forEach((w) => w.sunPath?.({ arcs, hours, day, suns, now })); }
   // the study area on the site before a run: a frame on the topographic block
+  // the estimate, kept until the study, its area, the grids or the model change
+  function estFor() { if (!ST.id || !INST.persp.ready) return null; let mk = ''; try { mk = String(INST.persp.ws.model()).length; } catch { } const key = JSON.stringify([ST.id, ST.area, gridOf(), surfOf(), flowOf(), ST.windMode, ST.sunStep, ST.sunH0, ST.sunH1, mk]);
+    if (ST.estKey !== key) { ST.estKey = key; ST.est = estimate(ST.id); } return ST.est; }
   function showArea() { if (!ST.id || SPEC[ST.id]?.noArea || ST.res || ST.busy || !INST.persp.ready || !INST.persp.ws.studyArea) return; try { views2().forEach((w) => w.sunPath?.(null)); ST.areaInfo = INST.persp.ws.studyArea(ST.area, { show: true }); INST.plan.ready && INST.plan.ws.studyArea?.(ST.area, { show: true }); } catch { ST.areaInfo = null; } }
   // the wind of the project weather: 16 directions (share of the hours, mean speed at 10 m) for the rose, and the year's hourly
   // speeds at 1.5 m in eight directions for the comfort study
@@ -558,7 +576,7 @@ export function mountChrome(app, api) {
         method: `${sname}: ${sdesc}. A column grid at about ${span} m in every mass (along its longest side); each column carries the floor nearest to it. Loads: floor dead load ${fmt(deadOf(span), 1)} kPa with finishes and partitions, occupancy loads by use (NBC 2020 typical: residential 1.9, office 2.4, retail 4.8 kPa), roof snow 1.0 kPa assumed; factored 1.25 D + 1.5 L for the columns, service D + L for the ground. The soil bearing is assumed (${qa} kPa) until a geotechnical report. Rules of thumb for early design, to be checked by a structural engineer; no lateral (wind, seismic) design.`,
         results: { colMax: Math.round(nMax), size: sys === 'steel' ? null : Math.round(big * 1000), depth: Math.round(depth * 1000), pressure: Math.round(pMax), columns: cols.length }, settings: { system: sys, span, bearing: qa, label: `${sname}, ${span} m grid (Workspace)` } }; }
     if (id === 'stormwater') {
-      const g = w.groundMask({ maxCells: 160, levels: true }), N = g.nx * g.ny, a2 = g.cell * g.cell, rain = +ST.storm, [, cname, cg] = COVERS.find((x) => x[0] === ST.cover), green = (api.layers?.() || []).some((l) => l.visible !== false && l.material === 'green-roof'), cr = green ? 0.5 : 0.95;
+      const g = w.groundMask({ maxCells: flowOf(), levels: true }), N = g.nx * g.ny, a2 = g.cell * g.cell, rain = +ST.storm, [, cname, cg] = COVERS.find((x) => x[0] === ST.cover), green = (api.layers?.() || []).some((l) => l.visible !== false && l.material === 'green-roof'), cr = green ? 0.5 : 0.95;
       const CK = [cg, 0.25, 1, 0.9], C = new Float32Array(N); let drawnA = 0; for (let c = 0; c < N; c++) { C[c] = g.solid[c] ? (g.design[c] ? cr : 0.95) : CK[g.cover?.[c] || 0]; if (!g.solid[c] && g.cover?.[c]) drawnA += g.cell * g.cell; }
       const r = stormwater(g, C, rain), flow = new Float32Array(N).fill(NaN), pond = new Float32Array(N).fill(NaN), coef = new Float32Array(N).fill(NaN); let fmax = 0, wet = 0, dmax = 0, roofA = 0, n = 0;
       for (let c = 0; c < N; c++) { if (g.solid[c]) { if (g.design[c]) roofA += a2; continue; } n++; coef[c] = C[c]; const f = Math.log10(1 + r.acc[c]); flow[c] = f; fmax = Math.max(fmax, f); if (r.pond[c] >= 0.02) { pond[c] = r.pond[c]; wet++; dmax = Math.max(dmax, r.pond[c]); } }
@@ -604,7 +622,7 @@ export function mountChrome(app, api) {
       // the drifting wind: the strongest tenth of the below-freezing hours (when snow moves); its most frequent direction and mean speed
       const sp = hrs.map((k) => E.WS[k]).sort((a, b) => a - b), p90 = sp[Math.floor(sp.length * 0.9)]; for (const k of hrs) { if (E.WS[k] < p90) continue; const b = sec[Math.round((((E.WD[k] % 360) + 360) % 360) / 22.5) % 16]; b.n++; b.s += E.WS[k]; }
       const top = sec.reduce((b, x, i) => (x.n > sec[b].n ? i : b), 0), dir = top * 22.5, u10 = sec[top].s / Math.max(1, sec[top].n), U = CL.siteWind(u10, 1.5, alpha), dn = DIR16[top];
-      const m = w.groundMask({ maxCells: 160 }), a2 = m.cell * m.cell, t = (dir + 180 - m.north) * Math.PI / 180; ST.progress = 'solving the winter wind'; drawStudy(); await new Promise((r) => setTimeout(r, 0));
+      const m = w.groundMask({ maxCells: flowOf() }), a2 = m.cell * m.cell, t = (dir + 180 - m.north) * Math.PI / 180; ST.progress = 'solving the winter wind'; drawStudy(); await new Promise((r) => setTimeout(r, 0));
       const r = speedRatio(m.solid, m.nx, m.ny, [Math.sin(t), Math.cos(t)]), N = m.nx * m.ny, cm = +ST.snowCm, depth = new Float32Array(N).fill(NaN), drift = new Float32Array(N).fill(NaN);
       // drifting: snow moves once the local wind passes about 4 m/s at 1.5 m (fresh dry snow) and settles where the wind slows down
       const k0 = Math.max(0, Math.min(1, (U * 1.3 - 2.5) / 3)); let deep = 0, bare = 0, n = 0, dmax = 0, dsum = 0;
@@ -620,7 +638,7 @@ export function mountChrome(app, api) {
         method: `One snowfall of ${cm} cm (density ${rho} kg/m³) is moved by the project weather's drifting wind (${esc(E.station || 'EPW')}: the strongest tenth of the hours at or below 0 °C, from ${dn}, their most frequent direction, ${fmt(u10, 1)} m/s at 10 m, ${fmt(U, 1)} m/s at 1.5 m for ${({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban'} terrain). A 2D lattice-Boltzmann flow at pedestrian height gives the wind round the design and the ${fmt(m.context)} surrounding buildings; where it slows the snow settles deeper, where it speeds up the ground is scoured (up to 2.4 × or down to 0.1 × the fall), scaled by how often the winter wind is strong enough to move snow. Roofs carry 0.8 × the ground load, a basic flat-roof factor; roof steps, parapets and sliding are not modelled. Screening for early design, not a snow load calculation to a code.`,
         results: { cm, deep: Math.round(deep * a2), bare: Math.round(bare * a2), max: Math.round(dmax), roof: +roof.toFixed(2) }, settings: { snow: cm, dir, label: `${cm} cm snow, wind from ${dn} (Workspace)` } }; }
     if (id === 'wind') {
-      const R0 = await windRose(), alpha = R0.alpha, m = w.groundMask({ maxCells: 160 }), a2 = m.cell * m.cell, tn = ({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban';
+      const R0 = await windRose(), alpha = R0.alpha, m = w.groundMask({ maxCells: flowOf() }), a2 = m.cell * m.cell, tn = ({ 0.14: 'open', 0.22: 'suburban', 0.33: 'city' })[alpha] || 'suburban';
       const flowTo = (from) => { const t = (from + 180 - m.north) * Math.PI / 180; return [Math.sin(t), Math.cos(t)]; };
       if (ST.windMode === 'single') {
         const dir = ST.windDir ?? R0.prevailing, u10 = ST.windSpeed ?? R0.sec[Math.round(dir / 22.5) % 16].mean, U = CL.siteWind(u10, 1.5, alpha);
@@ -657,12 +675,12 @@ export function mountChrome(app, api) {
   }
   async function runStudy() {
     if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; drawStudy();
-    const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed`; }, 1000);
+    const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; }, 1000);
     try { for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
-      INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
+      ST.estAtRun = estimate(ST.id); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf()); drawStudy(); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
       if (ST.cancel) throw Error('Stopped.');
       addViews(id, r); applyView(r, ST.view[id]); hookProbe(); paintRes(r, true);
-      r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = w.model(); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); logRun(id, r); }
+      r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = w.model(); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); logRun(id, r); learn(id, r.ms); }
     catch (e) { ST.res = null; ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); ST.stopped = e.message === 'Stopped.'; }
     clearInterval(tick); ST.busy = false; ST.progress = ''; if (!ST.res) { clearAll(); showArea(); } drawStudy();
   }
@@ -689,10 +707,10 @@ export function mountChrome(app, api) {
     const status = ST.busy ? ['run', 'Solving'] : ST.err ? ['err', 'Could not run'] : ST.stopped && !r ? ['idle', 'Stopped'] : !r ? ['idle', 'Not run yet'] : stale ? ['stale', 'Model changed'] : changed ? ['stale', 'Settings changed'] : ['ok', `Up to date ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`];
     const seg = (attr, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" ${attr}="${k}" aria-selected="${cur === k}">${esc(n)}</button>`).join('')}</div>`;
     const about = typeof sp.about === 'function' ? sp.about() : sp.about || '', views = viewsOf(id), cur = r ? r.view : ST.view[id] || views[0]?.[0], area = AREAS.find((a) => a[0] === ST.area) || AREAS[0];
-    const stage = ST.busy ? `<div class="sp-stage run"><h3>Solving…</h3><p class="sp-note">${esc(ST.progress || 'Working on the ground grid')}</p><p class="sp-note sp-elapsed">${Math.round((Date.now() - ST.t0) / 1000)} s elapsed</p></div>`
+    const stage = ST.busy ? `<div class="sp-stage run"><h3>Solving…</h3><p class="sp-note">${esc(ST.progress || 'Working on the ground grid')}</p><p class="sp-note sp-elapsed">${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}</p></div>`
       : ST.err ? `<div class="sp-stage"><h3>Could not run</h3><p class="sp-note sp-errtext">${esc(ST.err)}</p></div>`
-      : !r ? `<div class="sp-stage"><h3>Click ▶ Start to begin</h3><p class="sp-note">${esc(about)}</p>${sp.noArea ? '' : `<p class="sp-note">Study area: ${esc(area[0] + '×')}${ST.areaInfo ? `, about ${fmt(ST.areaInfo.w)} × ${fmt(ST.areaInfo.h)} m (blue on the site)` : ''}. Change area makes it smaller or larger.</p>`}</div>`
-      : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' : ''}</div>`;
+      : !r ? `<div class="sp-stage"><h3>Click ▶ Start to begin</h3><p class="sp-note">${esc(about)}</p>${sp.noArea ? '' : `<p class="sp-note">Study area: ${esc(area[0] + '×')}${ST.areaInfo ? `, about ${fmt(ST.areaInfo.w)} × ${fmt(ST.areaInfo.h)} m (blue on the site)` : ''}. Change area makes it smaller or larger.</p>`}${sp.noArea ? '' : estLine(estFor())}</div>`
+      : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' + estLine(estFor()) : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' + estLine(estFor()) : ''}</div>`;
     const hh = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
     const inputs = { day: () => `<p class="sp-flabel">Day</p>${seg('data-st-set', 'day:' + ST.day, DAYS.map(([k, n]) => ['day:' + k, n]))}
         <div class="sp-two"><label class="sp-field">Date<input type="date" data-sun="date" value="2026-${ST.day}" min="2026-01-01" max="2026-12-31"></label>

@@ -465,3 +465,6 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .w3-vacts button{width:100%;height:auto;justify-content:flex-start;color:#1f2430;display:flex;align-items:center;gap:8px;padding:7px 8px;border:0;border-radius:8px;background:none;cursor:pointer;font:500 12px Inter,system-ui,sans-serif;color:#1f2430;text-align:left}
 .w3-vacts button:hover{background:#f3f4f6}
 .w3-dgrid button:last-child:nth-child(odd){grid-column:1/-1}
+.w2.sp .sp-est{margin-top:6px;padding:7px 9px;border-radius:8px;background:#f5f8ff;color:#374151}
+.w2.sp .sp-est b{color:#1f2430;font-weight:600}
+.w2.sp .sp-est .sp-warn{color:#b45309}

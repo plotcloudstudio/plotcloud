@@ -6851,7 +6851,7 @@ if (window.__WSROLE) {
     // 1.5 m; at most maxCells along the longer side
     groundMask(o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
-      const pr = studyPrisms(), b0 = studyBox(pr, o.pad), X1 = b0.X0 + b0.nx * b0.cell, Y1 = b0.Y0 + b0.ny * b0.cell, cell = Math.max(1.5, Math.max(X1 - b0.X0, Y1 - b0.Y0) / (o.maxCells || 130));
+      const pr = studyPrisms(), b0 = studyBox(pr, o.pad), X1 = b0.X0 + b0.nx * b0.cell, Y1 = b0.Y0 + b0.ny * b0.cell, cell = Math.max(STUDY_CELL ? Math.max(0.5, STUDY_CELL) : 1.5, Math.max(X1 - b0.X0, Y1 - b0.Y0) / (o.maxCells || 130));   /* the project grid where set, at most maxCells along the longer side */
       const nx = Math.round((X1 - b0.X0) / cell), ny = Math.round((Y1 - b0.Y0) / cell), solid = new Uint8Array(nx * ny);
       const all = pr.map((m) => prismOf(m.outer, m.h)).concat(SITEC.contextMasses(M.site, M.north || 0).map((m) => prismOf(m.outer, m.h))).filter((P) => P.h > 1.5);
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = [b0.X0 + (i + 0.5) * cell, b0.Y0 + (j + 0.5) * cell]; if (all.some((P) => q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer))) solid[j * nx + i] = 1; }
@@ -6953,7 +6953,7 @@ if (window.__WSROLE) {
     surfaceSamples(o = {}) {
       const T = importTris(), pr = studyPrisms().filter((P) => !P.room && !P.imp && P.h - (P.b || 0) > 0.3).map((P) => Object.assign(prismOf(P.outer, P.h), { b: P.b || 0 })); if (!pr.length && !T) { SURF.list = []; return SURF; }
       const area = pr.reduce((a, P) => { let per = 0; for (let i = 0; i < P.outer.length; i++) { const p = P.outer[i], q = P.outer[(i + 1) % P.outer.length]; per += Math.hypot(q[0] - p[0], q[1] - p[1]); } return a + per * (P.h - P.b) + areaOf(P.outer); }, 0);
-      const cell = STUDY_CELL ? Math.max(0.25, STUDY_CELL) : Math.max(0.75, Math.sqrt((area + (T ? T.n * 2 : 0)) / (o.max || 7000))), list = [], inside = (q, z, self) => pr.some((P) => P !== self && z > P.b && z < P.h && q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer));
+      const cell = SURF_CELL ? Math.max(0.2, SURF_CELL) : STUDY_CELL ? Math.max(0.25, STUDY_CELL) : Math.max(0.5, Math.sqrt((area + (T ? T.n * 2 : 0)) / (o.max || 20000))), list = [], inside = (q, z, self) => pr.some((P) => P !== self && z > P.b && z < P.h && q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer));
       for (const P of pr) { const O = P.outer, ccw = polySigned(O) > 0;
         for (let i = 0; i < O.length; i++) { const a = O[i], b = O[(i + 1) % O.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.05) continue; const d = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], n = ccw ? [d[1], -d[0]] : [-d[1], d[0]], nu = Math.max(1, Math.round(L / cell)), nv = Math.max(1, Math.round((P.h - P.b) / cell)), du = L / nu, dv = (P.h - P.b) / nv;
           for (let u = 0; u < nu; u++) for (let v = 0; v < nv; v++) { const t = (u + 0.5) * du, z = P.b + (v + 0.5) * dv, q = [a[0] + d[0] * t + n[0] * 0.08, a[1] + d[1] * t + n[1] * 0.08]; if (inside(q, z, P)) continue;
@@ -6976,6 +6976,12 @@ if (window.__WSROLE) {
       STM2 = o || null; if (CAM !== '3d') draw(); if (!(window.S3 && S3.on && S3.streams)) return; if (!o) { S3.streams(null); return; }
       S3.streams({ lines: o.lines.map((L) => ({ ...L, pts: L.pts.map((q) => [q[0], q[1], gz(q) + 0.35]) })), heads: (o.heads || []).map((H) => ({ ...H, p: [H.p[0], H.p[1], gz(H.p) + 0.4] })) }); },
     studyCell(c) { STUDY_CELL = c > 0 ? Math.max(0.25, +c) : 0; return STUDY_CELL; },
+    surfaceCell(c) { SURF_CELL = c > 0 ? Math.max(0.2, +c) : 0; return SURF_CELL; },
+    // the size of a run before it starts (2026-11-01), for the time estimate: ground cells and their size, the flow grid for a
+    // given cap, and the squares on the building's facades and roofs
+    studySize(o = {}) { if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
+      const span = Math.max(b.nx, b.ny) * b.cell, fc = Math.max(STUDY_CELL ? Math.max(0.5, STUDY_CELL) : 1.5, span / (o.maxCells || 160)), sv = this.surfaceSamples();
+      return { cells: b.nx * b.ny, cell: b.cell, flowCells: Math.round(b.nx * b.cell / fc) * Math.round(b.ny * b.cell / fc), flowCell: fc, flowSide: Math.round(span / fc), samples: sv ? sv.n || 0 : 0, surfCell: SURF.cell || 0, imports: !!importTris() }; },
     surfaceList() { return (SURF.list || []).map((x) => ({ p: x.p, n: x.n, roof: x.roof })); },
     surfaceSun(day, o = {}) {
       const site = M.site; if (!site || !SURF.list) return null; const dirs = sunDirs({ lat: site.origin.lat, lon: site.origin.lon, tz: site.tz }, /^\d\d-\d\d$/.test(day || '') ? day : '03-21', M.north || 0, o.step || 15, o.h0 ?? 0, o.h1 ?? 24), T = importTris();
@@ -7067,7 +7073,7 @@ if (window.__WSROLE) {
   // the ground studied: the building and 40 m round it, or the site square when there is no building yet
   // the study area (2026-10-31): the building and 40 m round it, scaled up round its centre (3× by default, so the surroundings
   // that shade or channel wind are in it), at most 600 m a side; set from the study card (Change area). Cells up to 5 m.
-  let STUDY_SCALE = 3, STUDY_CELL = 0;   // STUDY_CELL: the project's analysis grid in metres (0: automatic)
+  let STUDY_SCALE = 3, STUDY_CELL = 0, SURF_CELL = 0;   // SURF_CELL: the building surface grid in metres (0: automatic)   // STUDY_CELL: the project's analysis grid in metres (0: automatic)
   function studyBox(pr, pad = 40) { const b = studyBox0(pr, pad), sc = STUDY_SCALE; if (sc === 1 || !pr.length) return cellFix(b);   // with no building the site square is studied as it is
     const w = Math.min(600, b.nx * b.cell * sc), h = Math.min(600, b.ny * b.cell * sc), cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, cell = STUDY_CELL ? Math.max(STUDY_CELL, Math.sqrt(w * h / 600000)) : Math.max(2, Math.min(5, Math.sqrt(w * h / 9000)));   /* a set grid, at most 600,000 cells */
     return { X0: cx - w / 2, Y0: cy - h / 2, cell, nx: Math.max(1, Math.round(w / cell)), ny: Math.max(1, Math.round(h / cell)) }; }

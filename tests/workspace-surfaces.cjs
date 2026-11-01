@@ -34,6 +34,22 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
       assert.equal(await p.locator('.sp-legend').isVisible(), true);
       console.log(`PASS ${id}: imported tower ${r.impFin} of ${r.imp} facade squares; ${r.fin} of ${r.n} building squares with values (${r.lo.toFixed(2)}–${r.hi.toFixed(2)}), ${r.ms} ms; ${r.rows.filter((x) => /Facade|Roof|Building|building|facade/.test(x)).join(' | ')}`);
       if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/surf-${id}.png` }); }
+    // finer grids from Project props (2026-11-01): the building surface grid, the ground grid and the flow detail; the card gives a
+    // time estimate before Start and counts it during the run, and the result uses the finer grids
+    const before = await p.evaluate(() => window.__wsStudy.state().res.slist?.length || __ws2.inst.persp.ws.surfaceList().length);
+    await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'), pr = A.currentProject(), c = S.conditionsOf(pr); S.updateConditions(pr, { ...c.site }, { ...c.defaults, grid: '2', surfGrid: '0.25', flowDetail: 'Fine' }); S.save(); });
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=sunhours]'); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });
+    const est = await p.locator('.sp-studycard .sp-est').innerText(); assert.match(est, /Estimated time: .*ground [\d,]+ cells at 2(\.00)? m.*building [\d,]+ squares at 0\.25 m/, est);
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
+    const fine = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, n: s.res.svals.length, cell: s.res.cell, ms: s.res.ms, est: s.estAtRun?.ms }; });
+    assert(!fine.err && fine.n > before * 2.5 && Math.abs(fine.cell - 2) < 0.01, JSON.stringify({ before, ...fine }));
+    assert(fine.est > fine.ms / 8 && fine.est < fine.ms * 8, `estimate in the right range: ${JSON.stringify(fine)}`);
+    console.log(`PASS finer grids from Project props: building ${before} → ${fine.n} squares at 0.25 m, ground cells at ${fine.cell} m; estimated ${Math.round(fine.est)} ms, took ${fine.ms} ms`);
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=wind]'); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 }); const west = await p.locator('.sp-studycard .sp-est').innerText();
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 600000 });
+    const wf = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, cell: s.res.cell, nx: s.res.nx, ms: s.res.ms, est: s.estAtRun?.ms }; });
+    assert(!wf.err && wf.cell <= 2.01 && wf.nx > 160, JSON.stringify(wf)); assert(wf.est > wf.ms / 8 && wf.est < wf.ms * 8, `wind estimate in range ${JSON.stringify(wf)}`);
+    console.log(`PASS wind on the Fine flow grid: ${wf.nx} cells across at ${wf.cell.toFixed(2)} m; estimated ${Math.round(wf.est)} ms (${west.split('·')[0].trim()}), took ${wf.ms} ms`);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });
