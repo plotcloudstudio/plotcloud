@@ -51,7 +51,7 @@ export async function render(app, rest, params, context = {}) {
   </section>
 
   <section class="lp-band"><h2>Screening for early design.</h2><p>Studies are estimates for comparing options, with their method and inputs kept with every result. They are not code compliance.</p><a class="lp-btn lp-big" href="${start}">Start a project</a></section>
-  <footer class="lp-foot"><span>plot<b>cloud</b></span><a href="#/pricing">Pricing</a><a href="#/resources">Resources</a><a href="#/legal">Legal</a><a href="#/home-classic">Earlier homepage</a></footer>
+  <footer class="lp-foot"><span>plot<b>cloud</b></span><a href="#/pricing">Pricing</a><a href="#/resources">Resources</a><a href="#/legal">Legal</a></footer>
 </div>`;
   const stops = [mountDriftWall(app.querySelector('#lpDriftWall'),SIMS.map(simulationPresentation),{pauseButton:app.querySelector('#lpDriftPause'),onActive:item=>{const caption=app.querySelector('#lpDriftCaption');caption.querySelector('b').textContent=item?item.title:`Explore all ${SIMS.length} simulations.`;caption.querySelector('span').textContent=item?item.question:'Hover to lift a card. Click to open its study.';}}), figures(app), massing(app), site(app), compare(app), studies(app), drawings(app), simulationPreview(app)];
   // optional pictures (generated from docs/home-image-prompts.md): shown only when the file exists

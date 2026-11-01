@@ -130,7 +130,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   if(sim.id==='structure')return(await import('./structure-study.js?v=run-20261031-1')).render(app,sim,params,context);
   if (!canUse(sim.id)) {
     renderGate(app, sim.name);
-    if (params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Paid beta access required.'},location.origin);
+    if (params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Active membership required.'},location.origin);
     return;
   }
   // batch: Results runs this page in a hidden frame for one simulation of a batch (#/batch-run?…): the project, version,
