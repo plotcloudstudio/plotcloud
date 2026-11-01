@@ -6781,7 +6781,7 @@ if (window.__WSROLE) {
     renameLevel(name){name=String(name||'').trim();if(!name||name.length>80){flash('Use a level name between 1 and 80 characters.');return false;}if(M.levels.some(l=>l.id!==LV&&l.name.toLowerCase()===name.toLowerCase())){flash('A level with that name already exists.');return false;}const before=snapM();lvObj().name=name;commit(before);return true;},
     levelRemovalProblem(id){const names={walls:'Walls',ops:'Glazing',floors:'Structure',voids:'Structure',fences:'Walls',furn:'Furniture',lights:'Lighting',ceil:'Lighting',names:'Rooms',masses:'Masses',imports:'Imported'};for(const {kind,object} of levelContents(id)){const layer=kind==='imports'?(object.layer||'Imported'):names[kind];if(object.locked||WS.locks.has(layer))return 'Unlock the '+(layer||'affected')+' layer and its elements before removing this level.';}return '';},
     removeLevel(id){return removeLevel(id||LV);},
-    level(id) { if (!M.levels.some((l) => l.id === id) || id === LV) return; WS.rx = true; try { WS.lv = id; gotoLevel(id); WS.sel = KEY(SEL); } finally { WS.rx = false; } },
+    level(id) { if (id === undefined) return LV; if (!M.levels.some((l) => l.id === id) || id === LV) return LV; WS.rx = true; try { WS.lv = id; gotoLevel(id); WS.sel = KEY(SEL); } finally { WS.rx = false; } },
     pushUndo(b) { UNDO.push(b); if (UNDO.length > 120) UNDO.shift(); REDO.length = 0; histUI(); },
     flash(t) { flash(t); },
     undo() { undo(); }, redo() { redo(); }, hist: () => ({ u: UNDO.length, r: REDO.length }), histUI,
@@ -6912,7 +6912,7 @@ if (window.__WSROLE) {
     camSet(o) { if (!o || !isFinite(o.cx) || !isFinite(o.span) || o.span <= 0) return; if (CAM === '3d') { if (window.S3 && S3.camSet) S3.camSet(o); return; } V.s = VP.w / o.span; V.ox = VP.w / 2 - o.cx * V.s; V.oy = VP.h / 2 + o.cy * V.s; V.user = true; draw(); },
     planScene(tool) { return STC.planScene(M, S || STC.build(M), LV, tool); },   // the plan engines' scene of the current level (local metres, .origin)
     _walkPNG() { return WK.cv ? WK.cv.toDataURL() : null; },   // for the browser checks
-    level() { return LV; },
+    /* level(): see level(id) above; with no id it returns the current level (a second definition here used to replace the setter, 2026-11-01) */
     // a neighbouring building (site context) for the Workspace's Properties, and its edits (2026-10-31: Edit site model)
     ctx(id) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return null; return { id: b.id, name: b.name || '', h: b.h, levels: b.levels, area: b.area, excluded: !!b.excluded, src: (b.src && b.src.provider) || '', hSource: b.hSource || '', added: !!b.added }; },
     ctxSet(id, o) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return false; const s0 = snapM();

@@ -141,6 +141,7 @@ export function mountChrome(app, api) {
     if (t.dataset.tab === 'properties' && !UI.sels.length) { e.stopImmediatePropagation(); openData(dat.hidden); return; }   // Project data
     if (t.dataset.tab === 'versions') { const on = !cmp.hidden && t.getAttribute('aria-selected') === 'true'; if (on) { e.stopImmediatePropagation(); openSheet(false); return; } setTimeout(() => openSheet(true), 0); return; }   // Compare sketches
     if (root.classList.contains('sp-card-open') && t.getAttribute('aria-selected') === 'true') { e.stopImmediatePropagation(); openCard(false); return; }
+    if (!dat.hidden) openData(false);   // one panel at a time (2026-11-01): opening Layers and the like closes Project data
     openCard(true); }, true);
   // a selection switches the card to Properties (Workspace): show it
   new MutationObserver(() => { if (UI.tab !== lastTab) { lastTab = UI.tab; if (UI.tab === 'properties' && UI.sels.length) openCard(true); else if (!['layers', 'versions', 'properties'].includes(UI.tab)) openCard(true); } }).observe(tabList, { childList: true });
@@ -149,7 +150,7 @@ export function mountChrome(app, api) {
   function togglePop(k, anchor) {
     const c = pops[k], on = c.hidden; closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
     if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis();
-    if (['stats', 'spaces'].includes(k)) openCard(false);
+    if (['stats', 'spaces'].includes(k)) { openCard(false); if (!dat.hidden) openData(false); if (!cmp.hidden) openSheet(false); }
     const r = anchor.getBoundingClientRect(); c.style.top = '64px'; requestAnimationFrame(() => { const h = c.offsetHeight; c.style.top = Math.max(64, Math.min(innerHeight - h - 12, r.top - 8)) + 'px'; });
   }
 
