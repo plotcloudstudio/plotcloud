@@ -5745,7 +5745,7 @@ window.S3 = (() => {
     const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); WM.ground = [ground, grid]; ctl.maxDistance = 2.6e7; addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
-  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); R.render(scene, WALK.on ? WALK.cam : cam); } }
+  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ R.render(scene, WALK.on ? WALK.cam : cam); } }
   // ---- the world around the site: OpenStreetMap tiles in three rings (about 24 km, 780 km and the world) under the site.
   // Hidden close up (only the site shows); fades in as the camera pulls back. Tiles: Esri Light Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors).
   const WM = { key: '', rings: [], siteR: 300, ground: [] };
@@ -5788,14 +5788,14 @@ window.S3 = (() => {
     m.quaternion.copy(spin.multiply(q)); m.position.set(0, -Rg + (WM.topoBase ?? 0) - 1, 0); m.name = 'world-globe'; m.renderOrder = -20; m.visible = false; scene.add(m); WM.globe = m; WM.globeLoading = false; render();
   }
   function worldFade() {
-    if (!cam || !ctl) return; const d = cam.position.distanceTo(ctl.target), r = WM.siteR;
+    if (!cam || !ctl) return; const dR = cam.position.distanceTo(ctl.target), d = dR * lensK(), r = WM.siteR;   /* d: the distance a 38° lens would stand at for this view (isometric uses a narrow lens far away) */
     const t = Math.max(0, Math.min(1, (d - 3.5 * r) / (4 * r)));   // 0 close up (fitted view shows only the site) → 1 zoomed out
     const gl = Math.max(0, Math.min(1, (d - 8e5) / 1.4e6));   // the globe takes over from the flat map far out (2026-10-31)
     if (DISP === 'illus') { for (const m of WM.rings) m.material.opacity = 0; if (WM.globe) WM.globe.visible = false; if (WM.credit) WM.credit.hidden = true; } else for (const m of WM.rings) m.material.opacity = (1 - gl) * (m.userData.ring === 0 ? t : m.userData.ring === 1 ? t * Math.max(0, Math.min(1, (d - 8000) / 8000)) : t * Math.max(0, Math.min(1, (d - 150000) / 150000)));
     if (gl > 0 && !WM.globe && WM.key) globeBuild(); if (WM.globe) { WM.globe.visible = gl > 0.001 && DISP !== 'illus'; WM.globe.material.opacity = gl; }
     for (const g of WM.ground) g.visible = t < 0.98 && !WM.topo;
     if (WM.rings.length && canvas?.parentElement) { if (!WM.credit) { WM.credit = document.createElement('div'); WM.credit.textContent = 'Map: Esri, HERE, Garmin, © OpenStreetMap contributors'; WM.credit.style.cssText = 'position:absolute;right:8px;bottom:6px;font:10px system-ui,sans-serif;color:#6b7280;background:rgba(255,255,255,.7);padding:1px 6px;border-radius:4px;pointer-events:none;z-index:2'; canvas.parentElement.append(WM.credit); } WM.credit.hidden = t <= 0 || DISP === 'illus'; }
-    const far = Math.max(2000, d * 30); if (Math.abs(cam.far - far) > far * 0.2) { cam.far = far; cam.near = Math.max(0.05, d / 4000); cam.updateProjectionMatrix(); }
+    const far = ISO.dir ? dR * 2 + 4000 : Math.max(2000, dR * 30), near = ISO.dir ? Math.max(0.05, dR * 0.3) : Math.max(0.05, dR / 4000); if (Math.abs(cam.far - far) > far * 0.2 || Math.abs(cam.near - near) > near * 0.5) { cam.far = far; cam.near = near; cam.updateProjectionMatrix(); }   /* isometric: the camera stands far off, so the near plane can too (no depth flicker) */
   }
 
   // ---- geometry ----
@@ -5985,7 +5985,7 @@ window.S3 = (() => {
     if (!R) return; if (grp) { scene.remove(grp); grp.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); }
     if (M && M.site) worldBuild(M.site);
     grp = o.explode ? explodeGroup(M, S, o) : buildGroup(M, S, o); const selected=window.__wsSelections||[o.sel].filter(Boolean);for(const s of selected)highlight(grp,s); scene.add(grp);
-    if (o.fit || !fitted) { fitted = true; const b = siteFree(grp), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6) * (document.documentElement.classList.contains('ws') ? 1.3 : 1) /* the Workspace's floating controls stay clear of the model */; ctl.target.copy(c); cam.position.set(c.x + r * 0.75, c.y + r * 0.85, c.z + r * 1.0); cam.near = 0.1; cam.far = r * 40; cam.updateProjectionMatrix(); ctl.update(); d0 = cam.position.distanceTo(ctl.target); }
+    if (o.fit || !fitted) { fitted = true; const b = siteFree(grp), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6) * (document.documentElement.classList.contains('ws') ? 1.3 : 1) /* the Workspace's floating controls stay clear of the model */; ctl.target.copy(c); if (ISO.dir) { const rb = canvas.getBoundingClientRect(); isoPlace(ISO.dir, c, 2 * r * 1.51 * Math.tan(PERSP_FOV * Math.PI / 360) * rb.width / Math.max(1, rb.height)); } else { cam.position.set(c.x + r * 0.75, c.y + r * 0.85, c.z + r * 1.0); cam.near = 0.1; cam.far = r * 40; } cam.updateProjectionMatrix(); ctl.update(); d0 = cam.position.distanceTo(ctl.target); }
     render();
   };
   // ---- the sun at a date and solar time (2026-10-30): the key light points from the sun and casts shadows. Display only:
@@ -6077,7 +6077,7 @@ window.S3 = (() => {
   // the plan point under the pointer on any surface (the topographic block, roofs), for reading a study result (2026-10-31)
   api.probe = (cx, cy) => { if (!R || !scene) return null; for (const h of ray(cx, cy).intersectObjects(scene.children, true)) { if (!h.object.isMesh) continue; if (h.object.name === 'surfaceresult') { const r = [h.point.x, -h.point.z]; r.surf = SRF.idx ? SRF.idx[Math.floor(h.faceIndex / 2)] : null; return r; } let o = h.object, skip = false; while (o) { if (o.name === 'sunpath' || o.name === 'structure' || o.name === 'flowanim' || o.name === 'floorsheet' || o.name === 'streams') { skip = true; break; }   /* the painted building squares are read like the building: a probe hit on them returns their point */ o = o.parent; } if (!skip) return [h.point.x, -h.point.z]; } return api.plane(cx, cy, 0); };
   // moving particles as short coloured streaks just above the ground: pos Float32Array [x0,y0,z0,x1,y1,z1]… (world), col likewise
-  const FLA = { g: null };
+  const FLA = { g: null }, ISO = { dir: null };
   api.flowAnim = (o) => { if (!scene) return; if (!o) { if (FLA.g) { scene.remove(FLA.g); FLA.g.geometry.dispose(); FLA.g.material.dispose(); FLA.g = null; render(); } return; }
     if (!FLA.g || FLA.g.geometry.attributes.position.count !== o.pos.length / 3) { if (FLA.g) { scene.remove(FLA.g); FLA.g.geometry.dispose(); FLA.g.material.dispose(); } const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(new Float32Array(o.pos.length), 3)); geo.setAttribute('color', new T.BufferAttribute(new Float32Array(o.pos.length), 3));
       FLA.g = new T.LineSegments(geo, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false })); FLA.g.name = 'flowanim'; FLA.g.frustumCulled = false; FLA.g.renderOrder = 5; scene.add(FLA.g); }
@@ -6091,6 +6091,17 @@ window.S3 = (() => {
   api.camGet = () => { if (!cam || !ctl || !cam.isPerspectiveCamera) return null; const d = cam.position.distanceTo(ctl.target); return { cx: ctl.target.x, cy: -ctl.target.z, z: ctl.target.y, span: 2 * d * halfTan() }; };
   api.camSet = (o) => { if (!cam || !ctl || !o || !cam.isPerspectiveCamera) return; const dir = cam.position.clone().sub(ctl.target).normalize(), d = Math.max(2, (o.span / 2) / halfTan()), t = new T.Vector3(o.cx, o.z ?? ctl.target.y, -o.cy);
     ctl.target.copy(t); cam.position.copy(t).add(dir.multiplyScalar(d)); cam.updateProjectionMatrix(); ctl.update(); render(); };
+  // isometric views (2026-11-01): the camera at the true isometric angle (35.26° up) from NE, SE, SW or NW, with a 2° lens from far
+  // away so the view is all but parallel; Perspective puts the 38° lens back and keeps the point and the width in view
+  const ISO_DIRS = { ne: 45, se: 135, sw: 225, nw: 315 }, ISO_FOV = 2, PERSP_FOV = 38;
+  function lensK() { return cam ? Math.tan(cam.fov * Math.PI / 360) / Math.tan(PERSP_FOV * Math.PI / 360) : 1; }
+  function isoPlace(dir, t, span) { const az = (ISO_DIRS[dir] - ((typeof M !== 'undefined' && M.north) || 0)) * Math.PI / 180, el = Math.atan(1 / Math.SQRT2), d = Math.max(2, (span / 2) / halfTan());
+    cam.position.set(t.x + Math.sin(az) * Math.cos(el) * d, t.y + Math.sin(el) * d, t.z - Math.cos(az) * Math.cos(el) * d); cam.near = Math.max(0.05, d * 0.3); cam.far = d * 2 + 4000; cam.lookAt(t); }
+  api.iso = (dir) => { if (!cam || !ctl) return null; const g = api.camGet(), t = ctl.target.clone();
+    if (dir && ISO_DIRS[dir] !== undefined) { ISO.dir = dir; cam.fov = ISO_FOV; cam.updateProjectionMatrix(); isoPlace(dir, t, g ? g.span : 60); }
+    else { ISO.dir = null; const back = cam.position.clone().sub(t).normalize(); cam.fov = PERSP_FOV; cam.updateProjectionMatrix(); const d = Math.max(2, ((g ? g.span : 60) / 2) / halfTan()); cam.position.copy(t).add(back.multiplyScalar(d)); cam.near = Math.max(0.05, d / 4000); cam.far = Math.max(2000, d * 30); }
+    cam.updateProjectionMatrix(); ctl.update(); render(); return ISO.dir; };
+  api.isoDir = () => ISO.dir;
   api.orbitLeft = (on) => { if (ctl) ctl.mouseButtons.LEFT = on ? T.MOUSE.ROTATE : null; };
   // a selected object keeps its own look and gets a red outline (2026-10-31): its edges in red, and faintly through what hides them
   const SELM = { front: null, back: null };
@@ -6184,7 +6195,7 @@ window.S3 = (() => {
     state() { if (!GZ.g) return null; const arc = GZ.g.getObjectByName('gz-r'); const out = { pos: GZ.g.position.toArray(), rot: GZ.g.rotation.y, handles: !!GZ.hd, scale: GZ.hd ? GZ.hd.scale.x : 0, sweep: arc ? +(arc.geometry.parameters.arc * 180 / Math.PI).toFixed(3) : null, parts: [] }; GZ.g.traverse((o) => { if (o.name && o.name.startsWith('gz-')) out.parts.push(o.name); }); return out; },
     screen(ax) { if (!GZ.hd) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const pk = GZ.pick.find((p) => p.userData.gz === ax); if (!pk) return null; const v = new T.Vector3(); pk.getWorldPosition(v); if (ax === 'r') { const m = pk.userData.mid, q = new T.Vector3(0.46 * Math.cos(m), 0.46 * Math.sin(m), 0); pk.localToWorld(q); v.copy(q); } v.project(cam); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   };
-  api.preRender = () => { if (GZ.hd && GZ.g) { const c = WALK.on ? WALK.cam : cam; GZ.hd.scale.setScalar(Math.max(0.05, c.position.distanceTo(GZ.g.position) * 0.065 * (40 / Math.max(20, c.fov || 40)))); /* about 90 px on screen, as Rhino's and SketchUp's */ } };
+  api.preRender = () => { if (GZ.hd && GZ.g) { const c = WALK.on ? WALK.cam : cam; GZ.hd.scale.setScalar(Math.max(0.05, c.position.distanceTo(GZ.g.position) * 0.068 * (Math.tan(Math.max(0.5, c.fov || 38) * Math.PI / 360) / Math.tan(19 * Math.PI / 180)))); /* about 90 px on screen, as Rhino's and SketchUp's */ } };
 
   // ---- 8 · exploded storeys: each level is its own group, lifted i × d; the model is not touched
   let XINFO = [];
@@ -6451,8 +6462,35 @@ window.S3 = (() => {
       const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, site ? 40 : 25), m.userData.__selected ? new T.LineBasicMaterial({ color: 0xd8402a }) : site ? lineSite : line); e.raycast = () => {}; e.userData.__disp = 1; m.add(e); }
     if (scene) scene.background = new T.Color('#ffffff');
   }
+  // Rendered (2026-11-01): a material preview for presentation. Every face takes a physically based material from its colour or its
+  // layer material (glass clear and glossy, ground matt), lit by a sky (image-based light) and the sun with soft shadows, with
+  // filmic tone mapping. Not a render of the external rendering service: no textures, no bounced light from the ground.
+  const REND = { env: null, mats: new Map(), hemi: null };
+  function rendSky() { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#9fc3ea'); gr.addColorStop(0.48, '#dfeaf5'); gr.addColorStop(0.52, '#e9e5dc'); gr.addColorStop(1, '#bdb6a8'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; }
+  function rendEnv() { if (REND.env || !R) return REND.env; const es = new T.Scene(), geo = new T.SphereGeometry(10, 32, 16), tx = rendSky();
+    es.add(new T.Mesh(geo, new T.MeshBasicMaterial({ map: tx, side: T.BackSide }))); const sun = new T.Mesh(new T.SphereGeometry(0.7, 12, 8), new T.MeshBasicMaterial({ color: new T.Color(6, 5.6, 5) })); sun.position.set(-5, 7, 4); es.add(sun);
+    const pm = new T.PMREMGenerator(R); REND.env = pm.fromScene(es, 0.02).texture; pm.dispose(); return REND.env; }
+  function rendMat(m, k0) { const key = k0.uuid; let nm = REND.mats.get(key); if (nm) return nm;
+    const ud = tagOf(m), ground = !!ud && ud.k === 'site', solidK = !!ud && ['mass', 'ctx', 'imp', 'wall', 'floor', 'room'].includes(ud.k), glassy = !solidK && (k0.transparent && (k0.opacity ?? 1) < 0.9);   /* masses and walls are see-through in the model views; in Rendered they are solid */
+    nm = new T.MeshStandardMaterial({ color: k0.color ? k0.color.clone() : new T.Color('#d9d6d0'), map: k0.map || null, side: k0.side ?? T.FrontSide, transparent: glassy, opacity: glassy ? 0.3 : 1, depthWrite: !glassy,
+      roughness: glassy ? 0.04 : ground ? 0.95 : 0.6, metalness: glassy ? 0.1 : 0, envMapIntensity: glassy ? 1.4 : 0.55, polygonOffset: !!k0.polygonOffset, polygonOffsetFactor: k0.polygonOffsetFactor || 0, polygonOffsetUnits: k0.polygonOffsetUnits || 0 });
+    REND.mats.set(key, nm); return nm; }
+  function rendShadows(on) { const L = SUN.light; if (!L || !R) return;
+    if (SUN.on) { sunApply(); return; }   /* the sun at the project's date and time sets the shadows */
+    R.shadowMap.enabled = on; R.shadowMap.type = T.PCFSoftShadowMap; L.castShadow = on; if (!on) { L.intensity = 1.6; return; }
+    const c = ctl ? ctl.target.clone() : new T.Vector3(), r = Math.min(400, Math.max(30, (cam ? cam.position.distanceTo(c) * lensK() : 100) * 0.9));   /* shadows round what is in view */
+    L.target.position.copy(c); L.position.copy(c).addScaledVector(new T.Vector3(-0.45, 0.78, 0.43).normalize(), r * 2); L.intensity = 3.2;
+    const sc = L.shadow.camera; sc.left = sc.bottom = -r; sc.right = sc.top = r; sc.near = 0.5; sc.far = r * 4; sc.updateProjectionMatrix(); L.shadow.mapSize.set(2048, 2048); L.shadow.bias = -0.0004; L.shadow.normalBias = 0.02; if (L.shadow.map) { L.shadow.map.dispose(); L.shadow.map = null; } }
+  function rendApply(G) {
+    scene.background = REND.bg || (REND.bg = rendSky()); scene.environment = rendEnv(); if ('environmentIntensity' in scene) scene.environmentIntensity = 0.45;
+    R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = 1; if (!REND.hemi) REND.hemi = scene.children.find((x) => x.isHemisphereLight) || null; if (REND.hemi) { REND.hemi.userData.i0 ??= REND.hemi.intensity; REND.hemi.intensity = 0.25; }
+    G.traverse((m) => { if (!m.isMesh || m.userData.__disp || !m.visible) return; const k0 = Array.isArray(m.material) ? m.material[0] : m.material; if (!k0 || k0.isShaderMaterial) return; m.material = rendMat(m, k0); m.userData.__disp = 1; const ground = m.userData?.id === 'terrain'; m.castShadow = !ground; m.receiveShadow = true; });
+    rendShadows(true); }
+  function rendOff() { if (!R) return; R.toneMapping = T.NoToneMapping; scene.environment = null; if (REND.hemi && REND.hemi.userData.i0 !== undefined) REND.hemi.intensity = REND.hemi.userData.i0; rendShadows(false); if (SUN.on) sunApply(); else { R.shadowMap.enabled = false; if (grp) grp.traverse((m) => { if (m.isMesh) { m.castShadow = false; m.receiveShadow = false; } }); } REND.mats.clear(); }
   function dispApply(G) {
-    if (scene && DISP !== 'illus') scene.background = new T.Color(window.PlotCloudUI?.viewportColor() || '#f2f3f5');
+    if (scene && DISP !== 'illus' && DISP !== 'rendered') scene.background = new T.Color(window.PlotCloudUI?.viewportColor() || '#f2f3f5');
+    if (DISP === 'rendered' && G) { rendApply(G); return; }
     if (DISP === 'illus' && G) { illApply(G); return; }
     if (DISP === 'shaded' || !G) return; const em = new T.LineBasicMaterial({ color: 0x3a3d42, transparent: true, opacity: DISP === 'wire' ? 0.85 : 0.55 });
     const list = []; G.traverse((m) => { if (m.isMesh && !m.userData.__disp && m.visible) list.push(m); });
@@ -6461,7 +6499,7 @@ window.S3 = (() => {
       m.material = nm; m.userData.__disp = 1; if ((m.geometry.attributes.position?.count || 0) > 60000) continue;
       const e = new T.LineSegments(new T.EdgesGeometry(m.geometry, 30), m.userData.__selected?new T.LineBasicMaterial({color:0xd8402a}):em); e.raycast = () => {}; e.userData.__disp = 1; m.add(e); }
   }
-  api.display = (mode) => { const next = ['ghosted', 'wire', 'illus'].includes(mode) ? mode : 'shaded'; if (next === DISP) return; DISP = next; if (next === 'shaded') dispApply(null); if (window.upd3DNow) window.upd3DNow(); };
+  api.display = (mode) => { const next = ['ghosted', 'wire', 'illus', 'rendered'].includes(mode) ? mode : 'shaded'; if (next === DISP) return; if (DISP === 'rendered') rendOff(); DISP = next; if (next === 'shaded') dispApply(null); if (window.upd3DNow) window.upd3DNow(); };
   api.illustration = (o) => { const was = JSON.stringify(ILL); Object.assign(ILL, o || {}); if (JSON.stringify(ILL) !== was && DISP === 'illus' && window.upd3DNow) window.upd3DNow(); return { ...ILL }; };
   api.displayMode = () => DISP;
   { const _u2 = api.update; api.update = (M, S, o) => { _u2(M, S, o); if (DISP !== 'shaded' && grp) { dispApply(grp); render(); } }; }
@@ -6869,6 +6907,7 @@ if (window.__WSROLE) {
       if (!xs.length) return { lv, level: L.name, z: L.z || 0, segs, rooms, box: null };
       return { lv, level: L.name, z: L.z || 0, segs, rooms, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } }; },
     walkShow(o) { walkShow(o); },
+    iso(dir) { return window.S3 && S3.iso ? S3.iso(dir) : null; }, isoDir() { return window.S3 && S3.isoDir ? S3.isoDir() : null; },
     camGet() { if (CAM === '3d') return window.S3 && S3.camGet ? S3.camGet() : null; const c = S2W(VP.w / 2, VP.h / 2); return { cx: c[0], cy: c[1], span: VP.w / V.s, z: (lvObj() || { z: 0 }).z }; },
     camSet(o) { if (!o || !isFinite(o.cx) || !isFinite(o.span) || o.span <= 0) return; if (CAM === '3d') { if (window.S3 && S3.camSet) S3.camSet(o); return; } V.s = VP.w / o.span; V.ox = VP.w / 2 - o.cx * V.s; V.oy = VP.h / 2 + o.cy * V.s; V.user = true; draw(); },
     planScene(tool) { return STC.planScene(M, S || STC.build(M), LV, tool); },   // the plan engines' scene of the current level (local metres, .origin)

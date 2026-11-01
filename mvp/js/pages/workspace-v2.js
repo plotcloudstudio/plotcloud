@@ -20,7 +20,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=surf-20261101-1';
+import { mountChrome } from '../workspace-chrome.js?v=view-20261101-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -159,7 +159,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=surf-20261101-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=view-20261101-5`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -333,12 +333,13 @@ export function render(app, [pid]) {
   // ---- one view, chosen at the top left (as before): Plan (Plan Studio 2D) per level, its ceiling plan and interior
   // elevation; Perspective (Plan Studio 3D) with Walkthrough and Explode, which also draws the imports and the site.
   // The three stay loaded on top of each other, so switching is instant and every edit reaches all of them.
-  const DISPLAYS = [['shaded', 'Default'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe'], ['illus', 'Illustration']];
+  const DISPLAYS = [['shaded', 'Default'], ['ghosted', 'Ghosted'], ['wire', 'Wireframe'], ['illus', 'Illustration'], ['rendered', 'Rendered']];
   // the Display panel (2026-10-31): a card for each mode with a small picture of it; Illustration has its own colour and switches
   const DICON = {
     shaded: '<svg viewBox="0 0 32 32"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#e9e7e3" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 16l11-6M16 16L5 10M16 16v12" fill="none" stroke="#3b3f45" stroke-width="1.4"/><path d="M16 16l11-6v12l-11 6z" fill="#cfccc6"/><path d="M16 16v12" stroke="#3b3f45" stroke-width="1.4"/></svg>',
     ghosted: '<svg viewBox="0 0 32 32"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#dfe6f2" fill-opacity=".6" stroke="#8a93a3" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 16l11-6M16 16L5 10M16 16v12" fill="none" stroke="#8a93a3" stroke-width="1.2" stroke-dasharray="2 2"/></svg>',
     wire: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.3" stroke-linejoin="round"><path d="M16 4l11 6v12l-11 6-11-6V10z"/><path d="M16 16l11-6M16 16L5 10M16 16v12M5 16l11 6 11-6M10.5 7l11 6v12M21.5 7l-11 6v12"/></svg>',
+    rendered: '<svg viewBox="0 0 32 32"><defs><linearGradient id="w3rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4efe6"/><stop offset="1" stop-color="#b9b2a6"/></linearGradient></defs><ellipse cx="17" cy="27" rx="11" ry="2.4" fill="#000" opacity=".14"/><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="url(#w3rg)"/><path d="M16 16l11-6v12l-11 6z" fill="#9c958a"/><path d="M5 10l11 6 11-6" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1"/><path d="M19.5 19.5l5-2.8v4l-5 2.8z" fill="#bcd6ee" opacity=".9"/></svg>',
     illus: (c) => `<svg viewBox="0 0 32 32" fill="none" stroke="${c}" stroke-linejoin="round"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#fff" stroke-width="1.4"/><path d="M5 10l11 6 11-6" stroke-width="3"/><path d="M16 16v12" stroke-width="1.2"/><path d="M9 20l4 2M19 21l4-2" stroke-width="1"/></svg>` };
   const ILL_PRESETS = ['#1f3fe0', '#111111', '#d8402a', '#0f7b6c', '#7a3fd1', '#c27c0e'];
   const illOf = () => ({ color: '#1f3fe0', site: true, bld: true, ...(UI.illus || {}) });
@@ -364,6 +365,31 @@ export function render(app, [pid]) {
   if (UI.view === 'shaded') UI.view = 'persp';   // the Shaded view is gone (2026-10-25): Perspective draws the imports and the site
   if (!['plan', 'persp'].includes(UI.view)) UI.view = 'plan';
   function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
+  // the View panel (2026-11-01): every way to look at the model behind one button, as the Display panel: Plan, Ceiling plan,
+  // Perspective and Isometric (from NE, SE, SW or NW: an all but parallel view at the true isometric angle), then Zoom selected
+  // and Fit the model
+  const VICON = {
+    plan: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4"><rect x="5" y="6" width="22" height="20" rx="1" fill="#f1efea"/><path d="M5 15h10V6M15 15v11M15 19h12"/></svg>',
+    ceiling: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4"><rect x="5" y="6" width="22" height="20" rx="1" fill="#f1efea"/><path d="M5 12h22M5 20h22M12 6v20M20 6v20" stroke-dasharray="1.6 1.6" stroke-width="1"/><circle cx="12" cy="12" r="1.6" fill="#3b3f45"/><circle cx="20" cy="20" r="1.6" fill="#3b3f45"/></svg>',
+    persp: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"><path d="M7 11l9-6 9 6v13l-9 4-9-4z" fill="#e9e7e3"/><path d="M7 11l9 4 9-4M16 15v13"/><path d="M16 15l9-4v13l-9 4z" fill="#cfccc6"/></svg>',
+    iso: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#e9e7e3"/><path d="M5 10l11 6 11-6M16 16v12"/><path d="M16 16l11-6v12l-11 6z" fill="#cfccc6"/></svg>' };
+  const ISOS = [['nw', 'NW'], ['ne', 'NE'], ['sw', 'SW'], ['se', 'SE']];   // laid out as on a compass, north up
+  function viewPanel() {
+    const host = $('#vMenu', app), a = INST.plan.ready ? INST.plan.ws.state() : null, iso = UI.view === 'persp' && INST.persp.ready ? INST.persp.ws.isoDir?.() : null;
+    const cur = UI.view === 'plan' ? (a?.view2d === 'ceiling' ? 'ceiling' : 'plan') : iso ? 'iso' : 'persp';
+    host.classList.add('w3-disp', 'w3-views');
+    host.innerHTML = `<header><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><path d="M12 8l4 2v4l-4 2-4-2v-4z"/></svg><b>View</b></header>
+      <div class="w3-dgrid">${[['plan', 'Plan'], ['ceiling', 'Ceiling plan'], ['persp', 'Perspective'], ['iso', 'Isometric']].map(([k, n]) => `<button type="button" role="menuitemradio" data-view="${k}" aria-checked="${cur === k}"><span class="w3-dic">${VICON[k]}</span><span>${n}</span></button>`).join('')}</div>
+      ${cur === 'iso' ? `<section class="w3-iso"><p>Look from</p><div class="w3-isogrid" role="group" aria-label="Isometric direction">${ISOS.map(([k, n]) => `<button type="button" data-iso="${k}" aria-pressed="${iso === k}" title="Isometric from the ${n}"><span aria-hidden="true">${({ nw: '↖', ne: '↗', sw: '↙', se: '↘' })[k]}</span> ${n}</button>`).join('')}</div><p class="w3-illnote">A parallel view at the isometric angle. Orbit to leave it; Perspective puts the normal lens back.</p></section>` : ''}
+      <div class="w3-vacts"><button type="button" data-vact="sel">${'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><rect x="9" y="9" width="6" height="6"/></svg>'}Zoom selected</button><button type="button" data-vact="fit">${'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>'}Fit the model</button></div>`;
+    host.onclick = (e) => e.stopPropagation();
+    host.querySelectorAll('[data-view]').forEach((x) => x.onclick = async () => { const k = x.dataset.view;
+      if (k === 'iso') { if (UI.view !== 'persp') { goView('persp'); for (let i = 0; i < 40 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); await new Promise((r) => setTimeout(r, 150)); } INST.persp.ws.iso?.(INST.persp.ws.isoDir?.() || UI.iso || 'se'); viewPanel(); menus(); return; }
+      if (k === 'persp' && UI.view === 'persp' && INST.persp.ready) INST.persp.ws.iso?.(null);
+      closeMenus(); goView(k); });
+    host.querySelectorAll('[data-iso]').forEach((x) => x.onclick = () => { UI.iso = x.dataset.iso; saveUI(); INST.persp.ws.iso?.(x.dataset.iso); viewPanel(); });
+    host.querySelectorAll('[data-vact]').forEach((x) => x.onclick = () => { closeMenus(); if (x.dataset.vact === 'fit') $('#fit', app)?.click(); else { const pane = activePane(); pane.ready && pane.win.document.getElementById('fitSelectedBtn')?.click(); } });
+  }
   function viewName() {
     const st = INST.plan.ready ? INST.plan.ws.state() : null;
     return UI.view === 'plan' ? (st?.view2d === 'ceiling' ? 'Ceiling plan' : 'Plan') : 'Perspective';
@@ -371,7 +397,7 @@ export function render(app, [pid]) {
   function menus() {
     const L = (INST.plan.ready ? INST.plan.ws : any())?.levels(), a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null;
     const it = (attrs, on, label, small = '') => `<button role="menuitemradio" ${attrs} aria-checked="${on}">${label}${small ? `<small>${small}</small>` : ''}</button>`;
-    $('#vBtn', app).textContent = viewName() + ' ▾';
+    $('#vBtn', app).textContent = viewName() + ' ▾'; { const iso = UI.view === 'persp' && INST.persp.ready ? INST.persp.ws.isoDir?.() : null; if (iso) $('#vBtn', app).textContent = 'Isometric ' + iso.toUpperCase() + ' ▾'; }
     const current = L?.list.find(l => l.id === L.lv);
     $('#levelBtn', app).textContent = current ? `Level · ${current.short} ▾` : 'Level ▾';
     $('#levelBtn', app).title = current ? `${current.name} · ${current.z.toFixed(2)} m` : 'Choose level';
@@ -382,13 +408,10 @@ export function render(app, [pid]) {
     $('#removeLevel',app).disabled=!L||L.list.length<2;
     $('#removeLevel',app).title=L?.list.length<2?'Keep at least one level':'Delete current level';
     $$('#levelMenu [data-level]', app).forEach(x => x.onclick = () => { closeMenus(); setSel([], { params: false }); for (const pane of ready()) pane.ws.level(x.dataset.level); menus(); });
-    $('#vMenu', app).innerHTML = it('data-view="plan"', UI.view === 'plan' && a?.view2d !== 'ceiling', 'Plan')
-      + it('data-view="ceiling"', UI.view === 'plan' && a?.view2d === 'ceiling', 'Ceiling plan')
-      + it('data-view="persp"', UI.view === 'persp', 'Perspective');
+    if ($('#vMenu', app).hidden) viewPanel();
     const plan = UI.view === 'plan', cur = UI.view === 'shaded' ? vp.display : (b?.disp || UI.disp);
     $('#dBtn', app).textContent = plan ? 'Plan drawing' : (DISPLAYS.find(([k]) => k === cur) || DISPLAYS[0])[1] + ' ▾'; $('#dBtn', app).disabled = plan;$('#dBtn',app).parentElement.hidden=plan;
     if ($('#dMenu', app).hidden) displayPanel(cur);
-    $$('#vMenu [data-view]', app).forEach((x) => x.onclick = () => { closeMenus(); goView(x.dataset.view, x.dataset.level); });
   }
   // 2D and 3D show the same place (2026-10-31): the view switched to starts from the one left, same centre and the same width
   async function goView(v, level) {
