@@ -2,6 +2,7 @@
 import * as S from './store.js';
 import {publicPage} from './public-chrome.js';
 import {SIMS,MODEL_TOOLS,RESOURCES} from './data.js';
+import {simulationPresentation} from './simulation-presentation.js';
 import * as C from './cloud.js';
 import {checkAccess, canUse, renderGate} from './beta-access.js';
 
@@ -22,7 +23,10 @@ export const MOCK = '<span class="tag mock" title="Prototype estimate from simpl
 export const LIVE = '<span class="tag live" title="Computed by the PlotCloud simulation engine">Engine</span>';
 
 // Fixed light artwork; project data is independent of interface appearance.
-export const img = (name) => `img/${name}-day.jpg${['analysis-climate','analysis-passive','analysis-skyview','analysis-shadebenefit','analysis-solarenvelope'].includes(name)?'?v=study-unified-20261028-1':['analysis-noise','analysis-wayfinding','analysis-privacy'].includes(name)?'?v=engine-20261024-1':''}`;
+export const img = (name) => {
+  const sim=SIMS.find(s=>name===`analysis-${s.id}`);
+  return sim?simulationPresentation(sim).image:`img/${name}-day.jpg`;
+};
 
 // the project people are working on, remembered between pages
 export function currentProject() {
@@ -63,7 +67,7 @@ const PAGES = {
   project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'), rendering:()=>import('./pages/rendering.js'),
   boards:()=>import('./pages/rendering.js').then(m=>({render:(a,r,q)=>m.render(a,['boards'],q)})),
   admin: () => import('./pages/admin.js'),
-  '': () => import('./pages/home-v2.js?v=drift-wall-20261031-6'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=drift-wall-20261031-6'), legal:()=>import('./pages/legal.js'),
+  '': () => import('./pages/home-v2.js?v=master-models-snow-20261031-3'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=master-models-snow-20261031-5'), legal:()=>import('./pages/legal.js'),
   about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };

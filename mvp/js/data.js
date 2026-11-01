@@ -24,9 +24,6 @@ export const SIMS = [
   { id: 'vent', group: 'Climate', name: 'Natural ventilation', tool: 'vent', view: 'shaded',
     blurb: 'Air changes from operable openings, wind and stack effect.', inputs: ['Rooms', 'Operable windows', 'Climate'],
     metrics: [['ach', 'Air changes per hour, first room', 'ACH', 1, /./]] },
-  { id: 'snow', group: 'Climate', name: 'Snow drifting', tool: 'snow', view: 'shaded',
-    blurb: 'Where a snowfall drifts deep and where the wind scours the ground bare, and the snow load on roofs.', inputs: ['Site model', 'Project weather (winter wind)', 'Snowfall'],
-    metrics: [['drift', 'Drifted deeper', 'm²', 0, /drift/i], ['roof', 'Roof snow load', 'kPa', 2, /roof/i]] },
   { id: 'stormwater', group: 'Climate', name: 'Stormwater & waterlogging', tool: 'stormwater', view: 'shaded',
     blurb: 'Runoff paths, ponding and detention on the site surface.', inputs: ['Terrain or site model', 'Design storm'],
     metrics: [['peak', 'Peak depth', 'm', 3, /peak depth/i], ['flood', 'Deeper than 0.05 m', 'm²', 0, /deeper than/i]] },
@@ -63,6 +60,11 @@ SIMS.push(
  {id:'shadebenefit',family:'environment',group:'Climate & passive design',scope:'Exterior',name:'Shade Benefit',tool:'shadebenefit',view:'shaded',blurb:'Compare actual shade objects against the unchanged context using temperature-weighted sun benefit and harm.',inputs:['Shared project EPW','Selected shade objects','Confirmed evaluation region'],metrics:[['value','Mean net shade benefit','K·h',2,/net shade benefit/i]]},
  {id:'solarenvelope',family:'environment',group:'Climate & passive design',scope:'Exterior',name:'Solar Envelope',tool:'solarenvelope',view:'shaded',blurb:'Sampled solar-rights and solar-collection boundaries with recorded receptors, dates and opaque source geometry.',inputs:['Project coordinates and standard time zone','Confirmed receptor / collection region'],metrics:[['value','Mean envelope elevation','m',2,/envelope elevation/i]]}
 );
+
+SIMS.push({id:'snow',group:'Climate',scope:'Exterior',name:'Snow accumulation',tool:'snow',view:'shaded',
+ blurb:'Estimate a given snowfall on ground and roof/model surfaces, or open winter-wind drift screening with project weather.',
+ inputs:['Saved surface geometry','Snowfall depth (cm) and new-snow density','Reviewed region and fallback ground elevation'],
+ metrics:[['drift','Drifted deeper','m²',0,/drift/i],['roof','Roof snow load','kPa',2,/roof/i],['volumeM3','Total deposited snow','m³',2,/total deposited snow/i],['groundVolumeM3','Ground snow volume','m³',2,/ground snow volume/i],['surfaceVolumeM3','Roof / model-surface snow volume','m³',2,/surface snow volume/i],['massKg','Total snow mass','kg',1,/total snow mass/i],['waterEquivalentMm','Snow water equivalent','mm',1,/water equivalent/i]]});
 
 // Spatial scope is independent of discipline: Climate contains both indoor and outdoor studies.
 for(const sim of SIMS) sim.scope=sim.scope||(['sunhours','radiation','utci','wind','stormwater','noise'].includes(sim.id)?'Exterior':sim.id==='structure'?'Building':'Interior');

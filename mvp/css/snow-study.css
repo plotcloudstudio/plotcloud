@@ -1,0 +1,10 @@
+/* Desktop uses the shared study shell. Narrow screens stack the same controls,
+   model and results without changing the analysis or hiding required inputs. */
+@media(max-width:800px){
+ .snow-study .env-body{display:flex!important;flex-direction:column;overflow:auto;gap:8px}
+ .snow-study .study-settings,.snow-study .study-main,.snow-study .study-results{width:100%;min-width:0;box-sizing:border-box;grid-area:auto!important}
+ .snow-study .study-settings{flex:0 0 auto;max-height:55dvh;overflow:auto}
+ .snow-study .study-main{flex:0 0 340px;min-height:300px}
+ .snow-study .study-results{flex:0 0 auto;max-height:none;overflow:visible}
+ .snow-study .env-head{max-width:100%}
+}

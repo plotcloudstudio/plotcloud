@@ -28,7 +28,7 @@ export async function render(app, rest, params, context = {}) {
 
   <header class="lp-hero lp-hero-drift">
     <div class="lp-copy"><div class="lp-eyebrow">Building performance, made visible</div><h1>Understand your building.<br><span>Test every design decision.</span></h1>
-      <p>Type an address and start on the terrain and the buildings around it. Mass, plan and test sun, daylight, wind and noise in one model, then compare sketches side by side.</p>
+      <p>Type an address and start on the terrain and the buildings around it. Mass, plan and test sun, daylight, wind and snow in one model, then compare sketches side by side.</p>
       <div class="lp-actions"><a class="lp-btn lp-big" href="${start}">Start a project</a><a class="lp-ghost" href="#lp-studies">See what it does</a></div></div>
     <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
     <div class="lp-drift-controls"><div class="lp-drift-caption" id="lpDriftCaption"><b>Explore all ${SIMS.length} simulations.</b><span>Hover to lift a card. Click to open its study.</span></div><button type="button" id="lpDriftPause" aria-pressed="false">Pause wall</button></div>
@@ -66,8 +66,8 @@ function simulationPreview(app){
   const buttons=[...app.querySelectorAll('[data-study]')],image=app.querySelector('#lpStudyImage');
   const select=index=>{const [name,id,src,description]=items[index];buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));image.src=src;image.alt=`${name} — illustrative architectural study preview`;app.querySelector('#lpStudyText').textContent=description;const link=app.querySelector('#lpStudyLink');link.textContent=`Explore ${name}`;link.href=`#/simulations/${id}`;};
   buttons.forEach((button,i)=>button.addEventListener('click',()=>select(i)));
-  const fallback=()=>{const index=buttons.findIndex(b=>b.getAttribute('aria-pressed')==='true'),id=items[Math.max(0,index)][1],src=`img/analysis-${id}-day.jpg`;if(!image.src.endsWith(src))image.src=src;};image.addEventListener('error',fallback);
-  return ()=>image.removeEventListener('error',fallback);
+  select(0);
+  return ()=>{};
 }
 
 // live figures: a table whose numbers move as storeys change, and a small bar chart beside it
