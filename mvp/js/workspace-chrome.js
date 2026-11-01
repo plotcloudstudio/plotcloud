@@ -874,6 +874,10 @@ export function mountChrome(app, api) {
     else if (k === 'csv') { const { cols, groups, N } = compareData(), q = (v) => `"${String(v).replace(/"/g, '""')}"`;
       const csv = [['', ...cols.map((c) => `${c.title} (${c.current ? 'current' : c.sub})`)], ...groups.filter(([g]) => g !== 'Pinned').flatMap(([g, rows]) => [[g], ...rows.map(([l, get, u, d]) => [l, ...cols.map((c) => { const v = get(c); return v === null || v === undefined ? '' : +(+v).toFixed(3); })])])].map((r) => r.map(q).join(',')).join('\n');
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' })); a.download = `${p.name.replace(/[^\w-]+/g, '-')}-compare-sketches.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } });
+  // Getting started › Compare two options, and the project overview's Compare plans, open this sheet (2026-11-01)
+  const startCompare = (e) => { const a = e.target.closest('.pc-start [data-step="compare"] a'); if (!a) return; e.preventDefault(); e.stopPropagation(); openSheet(true); };
+  document.addEventListener('click', startCompare, true);
+  { let want = false; try { want = sessionStorage.getItem('pc-ws-open-compare') === '1'; sessionStorage.removeItem('pc-ws-open-compare'); } catch { } if (want) setTimeout(() => openSheet(true), 600); }
   // a sketch added here keeps a picture of the model
   const thumbT = (() => { const n0 = { n: p.versions.length }; return setInterval(() => { if (p.versions.length > n0.n) { const v = p.versions.at(-1); n0.n = p.versions.length; const u = THUMB.get('draft') || THUMB.get(v.id); if (u && !v.thumb) { v.thumb = u; S.save(); } THUMB.delete('draft'); if (!cmp.hidden) drawCompare(); } }, 500); })();
 
@@ -1081,5 +1085,5 @@ export function mountChrome(app, api) {
   root.addEventListener('pointerout', (e) => { const b = e.target.closest(TIPS); if (b && !b.contains(e.relatedTarget)) tip.hidden = true; });
   root.addEventListener('pointerdown', () => { tip.hidden = true; }, true);
   window.__wsStudy = { open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }) };   // for the browser checks
-  return () => { disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
+  return () => { document.removeEventListener('click', startCompare, true); disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
 }

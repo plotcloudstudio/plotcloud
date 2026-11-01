@@ -159,20 +159,10 @@ function overview(app, p) {
     for (const b of $$('[data-cancel]', app)) b.onclick = () => { batch?.dispose(); batch = null; cancelGroup(S, p, b.dataset.cancel); draw(); };
   }
   // ---- 10
-  function compare() {
-    const vs = p.versions, box = $('#pjCompareBody', app);
-    if (vs.length < 2) { box.innerHTML = '<p class="note">Save two versions (or adopt a suggestion) to compare plans.</p>'; return; }
-    const opt = (sel) => vs.map((v) => `<option value="${esc(v.id)}" ${v.id === sel ? 'selected' : ''}>v${v.n} · ${esc(v.note)}</option>`).join('');
-    const studies = [...new Set(p.runs.map((r) => r.simId))];
-    box.innerHTML = `<div class="grid g3"><label class="f">A<select id="cmpA">${opt(vs.at(-2).id)}</select></label><label class="f">B<select id="cmpB">${opt(vs.at(-1).id)}</select></label><label class="f">Study<select id="cmpSim">${studies.map((s) => `<option value="${esc(s)}">${esc(SIMS.find((x) => x.id === s)?.name || s)}</option>`).join('')}</select></label></div><div id="cmpOut"></div>`;
-    const go = () => { const a = $('#cmpA', app).value, b = $('#cmpB', app).value, sid = $('#cmpSim', app).value, sim = SIMS.find((x) => x.id === sid), A = S.lastRun(p, a, sid), B = S.lastRun(p, b, sid), out = $('#cmpOut', app);
-      if (!A || !B) { out.innerHTML = `<p class="note">${!A ? 'A' : 'B'} has no saved ${esc(sim?.name || sid)} result.</p>`; return; }
-      const c = comparability(A, B), t = P.resolve(p, { path: 'target.daylight.meanDF' }), rows = metricRows(sim, A, B, t.status === 'ok' ? { 'daylight.df': { min: t.value, source: t.label } } : {}), fd = fieldDiff(A.results?.field, B.results?.field), dm = S.diffModels(S.version(p, a).model, S.version(p, b).model);
-      out.innerHTML = `<p data-comparability="${c.kind}" class="${c.kind === 'design' ? 'pj-good' : c.kind === 'not-comparable' ? 'pj-bad' : 'pj-warn'}">${esc(c.text)}</p>${c.diffs.length ? `<ul class="note">${c.diffs.map((d) => `<li>${esc(d.key)}: ${esc(JSON.stringify(d.a))} → ${esc(JSON.stringify(d.b))}</li>`).join('')}</ul>` : ''}
-        <div class="pc-scroll"><table class="pc-table" id="cmpTable"><thead><tr><th>Metric</th><th>A</th><th>B</th><th>Change</th><th>Target</th></tr></thead><tbody>${rows.map((r) => `<tr data-metric="${esc(r.key)}"><td>${esc(r.label)} (${esc(r.unit)})</td><td>${fmt(r.a, r.dec)}</td><td>${fmt(r.b, r.dec)}</td><td>${esc(describe(r))}</td><td>${esc(r.judge.text)}</td></tr>`).join('')}</tbody></table></div>
-        <p class="note" id="cmpField">${fd.status === 'ok' ? `Point difference on ${fd.matched} matching sensors: mean ${fmt(fd.mean, 2)} ${esc(fd.unit)}, range ${fmt(fd.min, 2)} to ${fmt(fd.max, 2)}${fd.onlyA || fd.onlyB ? `; ${fd.onlyA} only in A and ${fd.onlyB} only in B are left out (no reliable match)` : ''}.` : 'No point difference map: ' + esc(fd.reason)}</p>
-        <p class="note">Design differences (geometry, not results): ${dm.added.length} added, ${dm.removed.length} removed, ${dm.changed.length} changed${dm.changed.length ? ' — ' + esc(dm.changed.slice(0, 5).map((x) => x.name || x.id).join(', ')) : ''}. Several changes at once are shown together; their separate contributions are not estimated.</p>`; };
-    for (const id of ['cmpA', 'cmpB', 'cmpSim']) $('#' + id, app).onchange = go; go();
+  function compare() {   // 2026-11-01: comparing lives in the Workspace (Compare sketches); the old comparison table is retired
+    const box = $('#pjCompareBody', app);
+    box.innerHTML = `<p class="note">Compare the project's sketches side by side, with every figure and the saved study results, in the Workspace. Generate report there makes a comparison report of two sketches.</p><a class="btn accent" href="#/workspace/${esc(p.id)}" id="pjOpenCompare">Open Compare sketches</a>`;
+    $('#pjOpenCompare', app).onclick = () => { try { sessionStorage.setItem('pc-ws-open-compare', '1'); } catch (e) { } };
   }
   // ---- 11
   function report() {
