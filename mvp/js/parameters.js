@@ -20,6 +20,14 @@ const EXPLICIT = new Set(['workbench-input', 'user-override', 'source-confirmed'
 
 // Parameters the existing project conditions carry. physical:false never enters a result's dependency hash.
 export const DEFS = {
+  'snow.snowCm':{unit:'cm',type:'number',min:0,max:1000,physical:true},
+  'snow.density':{unit:'kg/m³',type:'number',min:10,max:600,physical:true},
+  'snow.spacing':{unit:'m',type:'number',min:.1,max:100000,physical:true},
+  'snow.groundZ':{unit:'m',type:'number',physical:true},
+  'snow.x0':{unit:'m',type:'number',physical:true},
+  'snow.x1':{unit:'m',type:'number',physical:true},
+  'snow.y0':{unit:'m',type:'number',physical:true},
+  'snow.y1':{unit:'m',type:'number',physical:true},
   'site.lat': { unit: '°', type: 'number', min: -90, max: 90, physical: true, mirror: ['site', 'lat'] },
   'site.lon': { unit: '°', type: 'number', min: -180, max: 180, physical: true, mirror: ['site', 'lon'] },
   'site.north': { unit: '° clockwise', type: 'number', min: -360, max: 360, physical: true, mirror: ['site', 'north'] },
@@ -71,6 +79,7 @@ export const RECIPE_FALLBACKS = { 'site.north': 0, 'site.terrain': 'suburban', '
 // Which inputs each existing study subscribes to; mirrors store.conditionsSignature so legacy staleness and the new hash agree.
 const SITE = ['site.lat', 'site.lon'], SUNPOS = [...SITE, 'site.north', 'site.tz'];
 export function studyInputs(study) {
+  if(study==='snow-event')return ['snow.snowCm','snow.density','snow.spacing','snow.groundZ','snow.x0','snow.x1','snow.y0','snow.y1'];
   if (['climate', 'passive'].includes(study)) return [...SITE, 'weather.epw'];
   if (study === 'shadebenefit') return [...SITE, 'site.north', 'weather.epw'];
   if (['skyview', 'solarenvelope'].includes(study)) return SUNPOS;
@@ -182,7 +191,7 @@ export function studySnapshot(p, study, { target = null } = {}) {
 // Is a saved result still valid for the current inputs? Only the inputs that study subscribes to matter.
 export function applicability(p, run) {
   const used = run?.inputs; if (!used || !used.values) return { status: 'unrecorded', changed: [] };
-  const now = studySnapshot(p, run.simId), changed = [...new Set([...Object.keys(used.values), ...Object.keys(now.values)])].filter((k) => !same(used.values[k], now.values[k]));
+  const now = studySnapshot(p, used.study || run.simId), changed = [...new Set([...Object.keys(used.values), ...Object.keys(now.values)])].filter((k) => !same(used.values[k], now.values[k]));
   return { status: changed.length ? 'stale' : 'current', changed };
 }
 // Every effective parameter for export (T09 audit table) — final value plus its source.

@@ -1,12 +1,14 @@
-// Shared imagery and intent for Home DriftWall and Workspace preview cards.
+// Two user-approved fixed masters: white urban massing and white apartment cutaway.
+// Only the analysis overlay varies; these are illustrative previews, never project results.
+// Home, Workspace, catalog and legacy thumbnail helpers share this asset source.
 const INTENTS={
+  snow:['Where does a given snowfall land?','Estimate snow volume on the topmost roof and ground surfaces, with an explicit depth and density.','snow'],
   sunhours:['Where does direct sun reach?','Compare sunlight on the ground and building surfaces.','sun'],
   radiation:['Where does solar energy land?','Compare exposure before choosing shading or solar-panel locations.','sun'],
   utci:['Where might people feel too hot or cold?','Screen outdoor comfort using sun, shade and project weather.','comfort'],
   daylight:['How far does daylight reach indoors?','Compare windows and room layouts on the work-plane grid.','room'],
   wind:['Where does wind accelerate or shelter?','Inspect pedestrian-level flow around your building masses.','wind'],
   vent:['Can openings help air move through?','Explore airflow from wind and temperature differences.','wind'],
-  snow:['Where will snow drift and pile up?','Find drifts, scoured ground and roof snow load from the winter wind.','water'],
   stormwater:['Where could rainwater collect?','Trace runoff and low spots under a chosen design storm.','water'],
   acoustics:['Will a room sound too reverberant?','Compare room finishes against a reverberation target.','sound'],
   spacesyntax:['Which spaces connect the plan?','Read visibility, connectivity and spatial integration.','network'],
@@ -26,6 +28,5 @@ const INTENTS={
 };
 export function simulationPresentation(sim){
  const [question,description]=INTENTS[sim.id]||['What does this study help you decide?',sim.blurb];
- const images={sunhours:'img/home/sunhours.webp',wind:'img/home/wind.webp',daylight:'img/home/daylight.webp'};
- return {...sim,title:sim.name,question,description,image:images[sim.id]||`img/analysis-${sim.id}-day.jpg`,href:`#/simulations/${sim.id}`};
+ return {...sim,title:sim.name,question,description,image:`img/home/${sim.id}.webp?v=master-models-snow-20261031-2`,href:`#/simulations/${sim.id}`};
 }

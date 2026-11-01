@@ -142,7 +142,7 @@ export function lineage(p, revisionId) { const out = []; let r = revision(p, rev
 
 // Run metadata: which revision, which effective inputs, which recipe. Settings stay exactly as the engine wrote them.
 export function runContract(p, versionId, simId, settings = {}) {
-  const rev = freezePlan(p, versionId), inputs = P.studySnapshot(p, simId);
+  const rev = freezePlan(p, versionId), inputs = P.studySnapshot(p, simId === 'snow' && settings.snowMode === 'vertical' ? 'snow-event' : simId);
   return { planRevisionId: rev.id, inputs, inputHash: hashOf({ modelHash: rev.modelHash, inputs: inputs.hash }), recipe: { id: simId, engine: settings.engine || (settings.localCompute ? 'local-reference' : 'browser'), version: settings.engineVersion || UNRECORDED } };
 }
 
