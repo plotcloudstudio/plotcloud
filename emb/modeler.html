@@ -2441,7 +2441,7 @@ function draw() {
   if (!S) return; if (CAM === '3d') return drawOverlay3D(); if (CAM === 'section') return drawSection();
   const d = VP.d; LB = []; g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = C.view; g.fillRect(0, 0, VP.w, VP.h);
   // a 1 m grid, faint
-  { const a = S2W(0, VP.h), b = S2W(VP.w, 0), step = V.s / d < 14 ? 5 : 1; g.strokeStyle = 'rgba(0,0,0,.045)'; g.lineWidth = 1; g.beginPath();
+  { const a = S2W(0, VP.h), b = S2W(VP.w, 0), step = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000].find((v) => v * V.s / d >= 14) || 100000; g.strokeStyle = 'rgba(0,0,0,.045)'; g.lineWidth = 1; g.beginPath();
     for (let x = Math.ceil(a[0] / step) * step; x <= b[0]; x += step) { const X = Math.round(W2S([x, 0])[0]) + 0.5; g.moveTo(X, 0); g.lineTo(X, VP.h); }
     for (let y = Math.ceil(a[1] / step) * step; y <= b[1]; y += step) { const Y = Math.round(W2S([0, y])[1]) + 0.5; g.moveTo(0, Y); g.lineTo(VP.w, Y); } g.stroke(); }
   // the site context from Site Context: read-only, on no layer, never edited here
@@ -2632,10 +2632,10 @@ function hud() {   // north, wind and a scale bar, bottom left
   const nv = vec(0); g.fillStyle = C.ink; g.beginPath(); g.moveTo(x + nv[0] * 17 * d, y + nv[1] * 17 * d); g.lineTo(x - nv[1] * 5 * d, y + nv[0] * 5 * d); g.lineTo(x + nv[1] * 5 * d, y - nv[0] * 5 * d); g.closePath(); g.fill();
   g.font = `700 ${9 * d}px ${FB}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = C.muted; g.fillText('N', x - nv[0] * 11 * d, y - nv[1] * 11 * d);
   // scale
-  const m = [1, 2, 5, 10, 20].find((k) => k * V.s > 60 * d) || 20, sx = x + 34 * d, sy = y + 14 * d;
+  const m = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000].find((k) => k * V.s > 60 * d) || 5000, sx = x + 34 * d, sy = y + 14 * d;
   g.fillStyle = 'rgba(243,243,241,.85)'; g.fillRect(sx - 4 * d, sy - 16 * d, m * V.s + 40 * d, 22 * d); LB.push({ x: sx - 4 * d, y: sy - 16 * d, w: m * V.s + 40 * d, h: 22 * d });
   g.strokeStyle = C.ink; g.lineWidth = 1.5 * d; g.beginPath(); g.moveTo(sx, sy - 4 * d); g.lineTo(sx, sy); g.lineTo(sx + m * V.s, sy); g.lineTo(sx + m * V.s, sy - 4 * d); g.stroke();
-  g.font = `500 ${10 * d}px ${FM}`; g.fillStyle = C.muted; g.textAlign = 'left'; g.fillText(`${m} m`, sx + m * V.s + 6 * d, sy - 2 * d);
+  g.font = `500 ${10 * d}px ${FM}`; g.fillStyle = C.muted; g.textAlign = 'left'; g.fillText(m >= 1000 ? `${m / 1000} km` : `${m} m`, sx + m * V.s + 6 * d, sy - 2 * d);
   g.textAlign = 'center'; g.fillText(`${lvObj().name}`, sx + m * V.s / 2, sy - 10 * d);
 }
 
@@ -2881,7 +2881,7 @@ cv.addEventListener('pointerup', (e) => {
 cv.addEventListener('dblclick', () => { if (drawing && drawing.kind === 'wall') finishWall(); });
 cv.addEventListener('contextmenu', (e) => e.preventDefault());
 cv.addEventListener('pointerleave', () => { cycleClear(); cycleSelection.pointer = null; PREV = null; if (drawing && drawing.kind === 'op') { drawing = null; draw(); } });
-cv.addEventListener('wheel', (e) => { cycleClear(); if (CAM !== 'plan' && CAM !== 'split') return; e.preventDefault(); const [sx, sy] = evP(e), p = S2W(sx, sy), k = Math.exp(-e.deltaY * 0.0015); V.s = Math.max(3 * VP.d, Math.min(400 * VP.d, V.s * k)); V.ox = sx - p[0] * V.s; V.oy = sy + p[1] * V.s; V.user = true; draw(); }, { passive: false });
+cv.addEventListener('wheel', (e) => { cycleClear(); if (CAM !== 'plan' && CAM !== 'split') return; e.preventDefault(); const [sx, sy] = evP(e), p = S2W(sx, sy), k = Math.exp(-e.deltaY * 0.0015); V.s = Math.max(0.01 * VP.d, Math.min(400 * VP.d, V.s * k)); V.ox = sx - p[0] * V.s; V.oy = sy + p[1] * V.s; V.user = true; draw(); }, { passive: false });
 function cutAt(sy) { if (!INSET) return; const { y, h, k, B } = INSET; SECY = STC.clamp(B.y0 + (y + h - 8 * VP.d - sy) / k, B.y0, B.y1); draw(); }
 function tipAt(e, t) { if (!t) return tipOff(); const r = stage.getBoundingClientRect(); tipEl.textContent = t; tipEl.style.display = 'block'; const x = e.clientX - r.left + 14, y = e.clientY - r.top + 16; tipEl.style.left = Math.min(x, r.width - tipEl.offsetWidth - 8) + 'px'; tipEl.style.top = Math.min(y, r.height - 40) + 'px'; tipEl.style.right = 'auto'; tipEl.style.bottom = 'auto'; }
 function tipOff() { tipEl.style.display = 'none'; }
@@ -3479,7 +3479,7 @@ $$('.ks-h').forEach((h) => h.addEventListener('click', () => { const s = h.close
 $('#klImport').addEventListener('click', () => $('#file').click());
 function zoomUI() { const el = $('#zPct'); if (!el) return; el.value = CAM === '3d' ? (window.S3 && S3.on ? S3.pct() : 100) : Math.round(V.s / (V.fit || V.s) * 100); }
 window.zoomUI = zoomUI;
-function zoomBy(k) { if (CAM === '3d') { if (window.S3 && S3.on) S3.zoom(k); return; } const p = S2W(VP.w / 2, VP.h / 2); V.user = true; V.s = Math.max(3 * VP.d, Math.min(400 * VP.d, V.s * k)); V.ox = VP.w / 2 - p[0] * V.s; V.oy = VP.h / 2 + p[1] * V.s; draw(); }
+function zoomBy(k) { if (CAM === '3d') { if (window.S3 && S3.on) S3.zoom(k); return; } const p = S2W(VP.w / 2, VP.h / 2); V.user = true; V.s = Math.max(0.01 * VP.d, Math.min(400 * VP.d, V.s * k)); V.ox = VP.w / 2 - p[0] * V.s; V.oy = VP.h / 2 + p[1] * V.s; draw(); }
 const refit = () => { if (CAM === '3d') upd3D(true); else { V.user = false; fitView(); draw(); } };
 $('#zIn').addEventListener('click', () => zoomBy(1.25)); $('#zOut').addEventListener('click', () => zoomBy(0.8));
 $('#fitBtn').addEventListener('click', refit); $('#homeBtn').addEventListener('click', refit);
@@ -3787,7 +3787,7 @@ $('#ceilFurn').addEventListener('change', (e) => { CEILF.on = e.target.checked; 
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-ct]'); if (!b) return; CTOOL = b.dataset.ct; CDRAW = null; viewUI(); });
 function drawCeiling() {
   const d = VP.d; LB = []; g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#f7f7f5'; g.fillRect(0, 0, VP.w, VP.h);
-  { const a = S2W(0, VP.h), b = S2W(VP.w, 0), step = V.s / d < 14 ? 5 : 1; g.strokeStyle = 'rgba(0,0,0,.04)'; g.lineWidth = 1; g.beginPath();
+  { const a = S2W(0, VP.h), b = S2W(VP.w, 0), step = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000].find((v) => v * V.s / d >= 14) || 100000; g.strokeStyle = 'rgba(0,0,0,.04)'; g.lineWidth = 1; g.beginPath();
     for (let x = Math.ceil(a[0] / step) * step; x <= b[0]; x += step) { const X = Math.round(W2S([x, 0])[0]) + 0.5; g.moveTo(X, 0); g.lineTo(X, VP.h); }
     for (let y = Math.ceil(a[1] / step) * step; y <= b[1]; y += step) { const Y = Math.round(W2S([0, y])[1]) + 0.5; g.moveTo(0, Y); g.lineTo(VP.w, Y); } g.stroke(); }
   if (M.site && layerOn('ref.site')) drawSite();

@@ -40,11 +40,38 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert(saved.linked && saved.sim === 'sunhours' && saved.src === 'workspace' && saved.day === '03-21' && Math.abs(saved.ground - st.res.avg) < 0.01, JSON.stringify(saved));
     console.log('PASS Save to results keeps the result with the saved version it was computed on');
 
-    await p.click('#tabList [data-tab=versions]'); await p.locator('.sp-sheet .sp-sk-card').first().waitFor(); const cmp = await p.locator('.sp-sheet').innerText();
-    assert.match(cmp, /Sun hours · Ground, mean[\s\S]*\d\.\d h/); assert.match(cmp, /Current/); assert.match(cmp, /BUILDING[\s\S]*SITE[\s\S]*SPACE[\s\S]*ELEMENT[\s\S]*RESULTS/); await p.locator('.sp-sheet #saveV').waitFor({ timeout: 10000 });   // Add sketch saves a version
+    await p.click('#tabList [data-tab=versions]'); await p.locator('.sp-sheet:not(.sp-datasheet) .sp-sk-card').first().waitFor(); const cmp = await p.locator('.sp-sheet:not(.sp-datasheet)').innerText();
+    assert.match(cmp, /Sun hours · Ground, mean[\s\S]*\d\.\d h/); assert.match(cmp, /Current/); assert.match(cmp, /BUILDING[\s\S]*SITE[\s\S]*SPACE[\s\S]*ELEMENT[\s\S]*RESULTS/); await p.locator('.sp-sheet:not(.sp-datasheet) #saveV').waitFor({ timeout: 10000 });   // Add sketch saves a version
     const dl = p.waitForEvent('download'); await p.click('[data-cmp=csv]'); const csv = fs.readFileSync(await (await dl).path(), 'utf8');
     assert.match(csv, /"Sun hours · Ground, mean"/); console.log('PASS Compare sketches: sketch columns, grouped rows with the saved study result, Add sketch, Export to Excel (CSV)');
-    await p.click('[data-cmp=close]'); assert(await p.locator('.sp-sheet').isHidden());
+    await p.click('[data-cmp=close]'); assert(await p.locator('.sp-sheet:not(.sp-datasheet)').isHidden());
+
+    // a report on two sketches (2026-11-01): Generate report, choose A and B, the report opens with every figure and the change
+    await p.click('#tabList [data-tab=versions]'); await p.locator('.sp-sheet:not(.sp-datasheet) .sp-sk-card').first().waitFor();
+    await p.evaluate(() => { document.querySelector('#note').value = 'Sketch B'; document.querySelector('#saveV').click(); }); await p.waitForTimeout(800);
+    await p.click('[data-cmp=report]'); await p.locator('.sp-rpick select[data-rp=a]').waitFor();
+    const pop = p.waitForEvent('popup'); await p.click('[data-cmp=rgo]'); const rp = await pop; await rp.waitForLoadState();
+    const rtxt = await rp.locator('main').innerText(); assert.match(rtxt, /comparison report[\s\S]*Main changes from A to B[\s\S]*BUILDING[\s\S]*Gross floor area[\s\S]*Change %/i); await rp.close();
+    console.log('PASS Compare sketches › Generate report: two sketches chosen, a report with both, every figure, the change and notes');
+    // the sheet's grip: drag up to enlarge, down to close
+    const sh = p.locator('.sp-sheet:not(.sp-datasheet)'), g = sh.locator('.sp-sk-grip'), gb = await g.boundingBox(), h0 = (await sh.boundingBox()).height;
+    await p.mouse.move(gb.x + gb.width / 2, gb.y + 8); await p.mouse.down(); await p.mouse.move(gb.x + gb.width / 2, gb.y - 120, { steps: 6 }); await p.mouse.up();
+    const h1 = (await sh.boundingBox()).height; assert(h1 > h0 + 100, `taller after dragging up: ${h0} → ${h1}`);
+    const gb2 = await g.boundingBox(); await p.mouse.move(gb2.x + gb2.width / 2, gb2.y + 8); await p.mouse.down(); await p.mouse.move(gb2.x + gb2.width / 2, 890, { steps: 8 }); await p.mouse.up();
+    assert(await sh.isHidden(), 'dragged down to the bottom: closed');
+    console.log(`PASS the sheet grip: dragged up ${Math.round(h0)} → ${Math.round(h1)} px, dragged down it closes`);
+    // Project data (the Properties button with nothing selected): objects with figures and every simulation run here
+    await p.keyboard.press('Escape');
+    await p.click('#tabList [data-tab=properties]'); await p.locator('.sp-datasheet').waitFor();
+    const dtxt = await p.locator('.sp-datasheet').innerText();
+    assert.match(dtxt, /DESIGN[\s\S]*SPACES[\s\S]*SITE[\s\S]*Surrounding buildings[\s\S]*SIMULATIONS[\s\S]*Sun hours[\s\S]*Solar radiation|SIMULATIONS[\s\S]*Sun hours/i); assert.match(dtxt, /Snow|snow/);
+    const dl2 = p.waitForEvent('download'); await p.click('[data-dat=csv]'); const csv2 = fs.readFileSync(await (await dl2).path(), 'utf8'); assert.match(csv2, /SIMULATIONS[\s\S]*Sun hours/);
+    await p.click('[data-dat=close]'); assert(await p.locator('.sp-datasheet').isHidden());
+    console.log('PASS Project data: design, spaces, site and every simulation run here (with key results and whether it matches the model); Export to Excel');
+    // back to the Dashboard from the top right, and the 2D plan zooms out as far as 3D
+    assert.equal(await p.getAttribute('.sp-tr .sp-home', 'href'), '#/home');
+    if (process.env.SHOTS) { await p.click('[data-sp=dim]'); await p.waitForTimeout(600); const box = await p.locator('.w2').boundingBox(); await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      for (let i = 0; i < 40; i++) await p.mouse.wheel(0, 400); await p.waitForTimeout(400); await p.screenshot({ path: process.env.SHOTS + '/zoomout2d.png' }); await p.click('[data-sp=dim]'); }
 
     // every other study opens inside this page too: the full study page, after the handoff, without leaving the Workspace
     await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=structure]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 60000 });

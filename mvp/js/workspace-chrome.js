@@ -82,6 +82,8 @@ export function mountChrome(app, api) {
   tr.innerHTML = `<button type="button" class="sp-b sp-saved" data-sp="saved" title="Versions" aria-label="Versions">${I(P.check)}</button><span class="sp-sep"></span><span class="sp-u"></span><span class="sp-sep"></span>${btn('export', 'Export model', 'download')}${btn('import', 'Import model', 'upload')}<span class="sp-c"></span>`;
   tr.querySelector('.sp-u').replaceWith(cmd('undo', P.undo, 'Undo (Ctrl+Z)'), cmd('redo', P.redo, 'Redo (Ctrl+Y)'));
   tr.querySelector('.sp-c').replaceWith(cmd('center', '<circle cx="12" cy="12" r="2.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', 'Center the imported building at the origin'));
+  // back to the Dashboard (2026-11-01): the last button on the right; the project is kept as it is (unsaved changes stay in the draft)
+  tr.insertAdjacentHTML('beforeend', `<span class="sp-sep"></span><a class="sp-b sp-home" href="#/home" title="Dashboard: all projects" aria-label="Back to the Dashboard"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg></a>`);
   // Send to Simulation is gone from view (2026-10-30): studies open in this view from Add simulation. The button and its study
   // picker stay, hidden, because a study that does not run here yet opens its own page through them (the version handoff)
   const keep = keepEl(); keep.append(...[$('#workspaceStudy'), $('#sendSim')].filter(Boolean)); root.append(tr);
@@ -136,6 +138,7 @@ export function mountChrome(app, api) {
   function openCard(on) { root.classList.toggle('sp-card-open', on); if (on) { closePops(); if (!cmp.hidden) openSheet(false); if (!assetsCard.hidden) openAssets(false); } const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
   let lastTab = UI.tab;
   tabList.addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (!t) return;
+    if (t.dataset.tab === 'properties' && !UI.sels.length) { e.stopImmediatePropagation(); openData(dat.hidden); return; }   // Project data
     if (t.dataset.tab === 'versions') { const on = !cmp.hidden && t.getAttribute('aria-selected') === 'true'; if (on) { e.stopImmediatePropagation(); openSheet(false); return; } setTimeout(() => openSheet(true), 0); return; }   // Compare sketches
     if (root.classList.contains('sp-card-open') && t.getAttribute('aria-selected') === 'true') { e.stopImmediatePropagation(); openCard(false); return; }
     openCard(true); }, true);
@@ -151,7 +154,7 @@ export function mountChrome(app, api) {
   }
 
   // ---- the palette (tools from the bottom bar, the Project panel from the bottom left): open and closed from its own button
-  const palOpen = (on, project = false) => { root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); if (on && typeof cmp !== 'undefined' && cmp && !cmp.hidden) openSheet(false); };
+  const palOpen = (on, project = false) => { root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); if (on && typeof cmp !== 'undefined' && cmp && !cmp.hidden) openSheet(false); if (on && typeof dat !== 'undefined' && dat && !dat.hidden) openData(false); };
   palOpen(false);
   app.addEventListener('click', (e) => {
     const b = e.target.closest('[data-panel]'); if (!b) return;
@@ -635,7 +638,7 @@ export function mountChrome(app, api) {
       INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
       if (ST.cancel) throw Error('Stopped.');
       addViews(id, r); applyView(r, ST.view[id]); hookProbe(); paintRes(r, true);
-      r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = w.model(); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); }
+      r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = w.model(); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); logRun(id, r); }
     catch (e) { ST.res = null; ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); ST.stopped = e.message === 'Stopped.'; }
     clearInterval(tick); ST.busy = false; ST.progress = ''; if (!ST.res) { clearAll(); showArea(); } drawStudy();
   }
@@ -645,7 +648,7 @@ export function mountChrome(app, api) {
     try { if (dirty()) { const before = baseline()?.id; $('#saveV')?.click(); for (let i = 0; i < 100 && baseline()?.id === before; i++) await new Promise((r) => setTimeout(r, 100)); if (baseline()?.id === before) throw Error('The version could not be saved.'); }
       const v = baseline(), r = ST.res; if (!v) throw Error('Save a version first.');
       S.addRun(p, v.id, ST.id, { ...r.settings, method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString() }, 'workspace');
-      ST.saved = 'v' + v.n; ST.key = INST.persp.ws.model(); }
+      ST.saved = 'v' + v.n; ST.key = INST.persp.ws.model(); logRun(ST.id, r, 'v' + v.n); }
     catch (e) { ST.err = e.message; }
     ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();
   }
@@ -736,6 +739,7 @@ export function mountChrome(app, api) {
   // picture and name; the one the model is on says Current); rows are grouped (Pinned, Building, Site, Space, Element, Results) and
   // read from the versions and the saved study results. Add sketch saves the model as a version; Export to Excel writes a CSV.
   const cmp = el('section', 'sp-card sp-sheet'); cmp.hidden = true; cmp.setAttribute('aria-label', 'Compare sketches'); root.append(cmp);
+  const dat = el('section', 'sp-card sp-sheet sp-datasheet'); dat.hidden = true; dat.setAttribute('aria-label', 'Project data'); root.append(dat);
   const PINK = 'pc-ws-pins', GRPK = 'pc-ws-sheetgroups', THUMB = new Map();
   const pins = () => { try { return new Set(JSON.parse(localStorage.getItem(PINK)) || []); } catch { return new Set(); } }, setPins = (x) => { try { localStorage.setItem(PINK, JSON.stringify([...x])); } catch { } };
   const shut = () => { try { return new Set(JSON.parse(localStorage.getItem(GRPK)) || []); } catch { return new Set(); } }, setShut = (x) => { try { localStorage.setItem(GRPK, JSON.stringify([...x])); } catch { } };
@@ -754,8 +758,8 @@ export function mountChrome(app, api) {
       ['Space', [['Rooms', (c) => (c.draft || c.current) && INST.plan.ready ? INST.plan.ws.objects().filter((o) => o.k === 'room').length : null], ['Room area', (c) => (c.draft || c.current) && INST.plan.ready ? INST.plan.ws.objects().filter((o) => o.k === 'room').reduce((a, r) => a + (r.area || 0), 0) : null, ' m²', 1]]],
       ['Element', [['Walls', (c) => figs(c.studio).walls], ['Doors and windows', (c) => figs(c.studio).ops], ['Floor slabs', (c) => figs(c.studio).floors], ['Furniture', (c) => figs(c.studio).furn], ['Lights', (c) => figs(c.studio).lights]]]];
     const notes = [], res = [];
-    for (const sim of api.sims) { const runs = p.runs.filter((r) => r.simId === sim.id && r.results); if (!runs.length) continue;
-      const last = (c) => c.v ? runs.filter((r) => r.versionId === c.v.id).at(-1) : null;
+    for (const sim of api.sims) { const runs = p.runs.filter((r) => r.simId === sim.id && r.results); if (!runs.length && !simLog()[sim.id]?.results) continue;
+      const lg = simLog()[sim.id], now = lg && lg.results && lg.key === modelHash() ? { results: lg.results, settings: { label: lg.settings } } : null, last = (c) => (c.v ? runs.filter((r) => r.versionId === c.v.id).at(-1) : null) || (c.current && now) || null;
       const basis = new Set(cols.map(last).filter(Boolean).map((r) => r.settings?.label || r.settings?.dayName || 'full study')); if (basis.size > 1) notes.push(`${sim.name}: the sketches use different settings (${[...basis].join('; ')}), so compare with care.`);
       for (const [key, label, unit, dec] of sim.metrics || []) { const get = (c) => { const r = last(c); return r && Number.isFinite(+r.results[key]) ? +r.results[key] : null; }; if (cols.some((c) => get(c) !== null)) res.push([`${sim.name} · ${label}`, get, unit === '%' ? '%' : ' ' + unit, dec]); } }
     if (res.length) G.push(['Results', res]);
@@ -769,9 +773,10 @@ export function mountChrome(app, api) {
     const body = groups.map(([g, rows]) => `<div class="sp-sk-row sp-sk-grp"><button type="button" class="sp-sk-lab" data-grp="${g}" aria-expanded="${!closed.has(g)}">${g.toUpperCase()} <i>${closed.has(g) ? '›' : '⌄'}</i></button>${cols.map(() => '<div></div>').join('')}</div>`
       + (closed.has(g) ? '' : rows.length ? rows.map(([l, get, u, d]) => `<div class="sp-sk-row"><div class="sp-sk-lab"><button type="button" class="sp-pin${P.has(l) ? ' on' : ''}" data-pin="${esc(l)}" title="${P.has(l) ? 'Unpin' : 'Pin to the top'}" aria-label="${P.has(l) ? 'Unpin' : 'Pin'} ${esc(l)}">${P.has(l) ? '●' : '○'}</button>${esc(l)}</div>${cols.map((c) => `<div class="sp-sk-v${c.current ? ' cur' : ''}">${N(get(c), u || '', d || 0)}</div>`).join('')}</div>`).join('') : g === 'Pinned' ? `<div class="sp-sk-row"><div class="sp-sk-lab sp-sk-empty">Pin a row to keep it here</div></div>` : '')).join('');
     parkSave();   // a redraw must not take the Save version button with it
-    cmp.innerHTML = `<div class="sp-sk-grip" aria-hidden="true"></div><button type="button" class="sp-x" data-cmp="close" aria-label="Close Compare sketches">×</button>
+    cmp.innerHTML = `${GRIP}<button type="button" class="sp-x" data-cmp="close" aria-label="Close Compare sketches">×</button>
       <div class="sp-sk-scroll">${head}${body}${notes.map((n) => `<p class="sp-note">${esc(n)}</p>`).join('')}</div>
-      <footer><span class="sp-sk-title">Compare sketches</span><button type="button" class="btn sm" data-cmp="csv" title="A CSV file that Excel opens">Export to Excel</button></footer>`;
+      <footer><span class="sp-sk-title">Compare sketches</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-cmp="csv" title="A CSV file that Excel opens">Export to Excel</button><button type="button" class="btn sm primary" data-cmp="report" title="Choose two sketches and make a comparison report"${cols.length < 2 ? ' disabled' : ''}>Generate report</button></span></footer>
+      <div class="sp-rpick" hidden></div>`;
     // Add sketch: the current model becomes the next sketch (version) of this project, named Sketch N; nothing else comes along
     const sv = $('#saveV'), note = $('#note'); if (sv && note) { const add = cmp.querySelector('.sp-sk-add'); add.querySelector('#spAddSketch').replaceWith(sv); sv.textContent = 'Add sketch'; sv.classList.add('btn', 'sm', 'primary');
       if (!sv.dataset.spSketch) { sv.dataset.spSketch = '1'; sv.addEventListener('click', () => { if (cmp.contains(sv) && !note.value.trim()) note.value = 'Sketch ' + (p.versions.length + 1); }, true); } }
@@ -779,7 +784,7 @@ export function mountChrome(app, api) {
     if (INST.persp.ready && INST.persp.ws.thumb) { const key = cols.find((c) => c.current)?.id; if (key && !THUMB.has(key)) { try { const u = await INST.persp.ws.thumb(); if (u) { THUMB.set(key, u); const im = cmp.querySelector(`[data-sketch="${CSS.escape(key)}"] .sp-sk-pic`); if (im) im.innerHTML = `<img src="${u}" alt="">`; } } catch { } } }
   }
   function parkSave() { const sec = app.querySelector('section[data-tab="versions"]'), sv = $('#saveV'), note = $('#note'); if (sec && sv && note && !sec.contains(sv)) { sec.querySelector('#dirty')?.after(note, sv); sv.textContent = 'Save version'; } }
-  function openSheet(on) { cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else parkSave(); }
+  function openSheet(on) { if (on && !dat.hidden) openData(false); cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else parkSave(); }
   cmp.addEventListener('click', async (e) => {
     const g = e.target.closest('[data-grp]'), pin = e.target.closest('[data-pin]'), sk = e.target.closest('[data-sketch]'), b = e.target.closest('[data-cmp]');
     if (g) { const x = shut(); x.has(g.dataset.grp) ? x.delete(g.dataset.grp) : x.add(g.dataset.grp); setShut(x); drawCompare(); return; }
@@ -787,11 +792,162 @@ export function mountChrome(app, api) {
     if (sk) { if (sk.dataset.sketch === 'draft') return; const ld = app.querySelector(`#versions [data-load="${CSS.escape(sk.dataset.sketch)}"]`); if (ld) { ld.click(); setTimeout(drawCompare, 300); } return; }
     if (!b) return; const k = b.dataset.cmp;
     if (k === 'close') openSheet(false);
+    else if (k === 'report') reportPick();
+    else if (k === 'rgo') makeReport();
+    else if (k === 'rx') cmp.querySelector('.sp-rpick').hidden = true;
     else if (k === 'csv') { const { cols, groups, N } = compareData(), q = (v) => `"${String(v).replace(/"/g, '""')}"`;
       const csv = [['', ...cols.map((c) => `${c.title} (${c.current ? 'current' : c.sub})`)], ...groups.filter(([g]) => g !== 'Pinned').flatMap(([g, rows]) => [[g], ...rows.map(([l, get, u, d]) => [l, ...cols.map((c) => { const v = get(c); return v === null || v === undefined ? '' : +(+v).toFixed(3); })])])].map((r) => r.map(q).join(',')).join('\n');
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' })); a.download = `${p.name.replace(/[^\w-]+/g, '-')}-compare-sketches.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } });
   // a sketch added here keeps a picture of the model
   const thumbT = (() => { const n0 = { n: p.versions.length }; return setInterval(() => { if (p.versions.length > n0.n) { const v = p.versions.at(-1); n0.n = p.versions.length; const u = THUMB.get('draft') || THUMB.get(v.id); if (u && !v.thumb) { v.thumb = u; S.save(); } THUMB.delete('draft'); if (!cmp.hidden) drawCompare(); } }, 500); })();
+
+  // ---- the sheets' height (2026-11-01): drag the grip up to make a sheet taller, down to make it shorter; let go low enough and
+  // it closes. The height is kept for the next opening. Arrow keys on the grip do the same.
+  const SHK = 'pc-ws-sheet-h', sheetH = () => { try { const h = +localStorage.getItem(SHK); return h > 0 ? h : 0; } catch { return 0; } };
+  const setSheetH = (h) => { if (h) root.style.setProperty('--sp-sheet-h', Math.round(h) + 'px'); else root.style.removeProperty('--sp-sheet-h'); };
+  setSheetH(sheetH());
+  const GRIP = '<div class="sp-sk-grip" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="Drag up to enlarge, down to shrink or close" title="Drag up to enlarge, down to close"><i></i></div>';
+  function gripDrag(sheet, close) {
+    const maxH = () => Math.max(200, root.clientHeight - 80), MIN = 150, SHUT = 110;
+    sheet.addEventListener('pointerdown', (e) => { const g = e.target.closest('.sp-sk-grip'); if (!g || e.button !== 0) return; e.preventDefault();
+      const y0 = e.clientY, h0 = sheet.getBoundingClientRect().height; let h = h0; g.setPointerCapture(e.pointerId); root.classList.add('sp-sheet-drag');
+      const mv = (ev) => { h = Math.min(maxH(), h0 - (ev.clientY - y0)); setSheetH(Math.max(60, h)); sheet.classList.toggle('sp-closing', h < SHUT); };
+      const up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); root.classList.remove('sp-sheet-drag'); sheet.classList.remove('sp-closing');
+        if (h < SHUT) { setSheetH(sheetH()); close(); return; } h = Math.max(MIN, h); setSheetH(h); try { localStorage.setItem(SHK, String(Math.round(h))); } catch { } };
+      g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); });
+    sheet.addEventListener('keydown', (e) => { if (!e.target.closest?.('.sp-sk-grip') || !['ArrowUp', 'ArrowDown'].includes(e.key)) return; e.preventDefault();
+      const h = sheet.getBoundingClientRect().height + (e.key === 'ArrowUp' ? 40 : -40); if (h < SHUT) { close(); return; } const v = Math.min(maxH(), Math.max(MIN, h)); setSheetH(v); try { localStorage.setItem(SHK, String(Math.round(v))); } catch { } });
+  }
+  gripDrag(cmp, () => openSheet(false));
+  function syncTabs() { root.classList.toggle('sp-cmp-open', !cmp.hidden); root.classList.toggle('sp-data-open', !dat.hidden); root.classList.toggle('sp-sheet-open', !cmp.hidden || !dat.hidden); }
+
+  // ---- the simulations run in this project (2026-11-01): the last run of each study, kept in this browser with the model it was
+  // run on (a fingerprint), so Project data and Compare sketches can say whether it still matches the model
+  const LOGK = 'pc-ws-simlog:' + p.id;
+  const hashOf = (s) => { s = String(s ?? ''); let h = 5381; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36) + '.' + s.length.toString(36); };
+  const modelHash = () => { try { return INST.persp.ready ? hashOf(INST.persp.ws.model()) : null; } catch { return null; } };
+  const simLog = () => { try { return JSON.parse(localStorage.getItem(LOGK)) || {}; } catch { return {}; } };
+  const plain = (h) => { const d = document.createElement('div'); d.innerHTML = String(h ?? ''); return d.textContent.trim(); };
+  function logRun(id, r, saved) {
+    const L = simLog(), prev = L[id]; if (saved && prev) { prev.saved = saved; prev.key = modelHash() || prev.key; }
+    else L[id] = { id, name: simName(id), title: plain(r.title), at: (ST.at || new Date()).toISOString(), key: modelHash(), version: baseline()?.n ?? null, draft: dirty(),
+      rows: (r.rows || []).map(([k, v]) => [plain(k), plain(v)]), results: r.results || null, settings: r.settings?.label || '', cell: r.cell, cells: r.cells, ms: r.ms, saved: '' };
+    try { localStorage.setItem(LOGK, JSON.stringify(L)); } catch { }
+    if (!dat.hidden) drawData();
+  }
+
+  // ---- Project data (2026-11-01): the Properties button with nothing selected opens a sheet listing the project's objects with
+  // their figures (the design, spaces, the site) and every simulation run here, with its key results and whether it still
+  // matches the model. Rows open what they describe; Export to Excel writes the whole table.
+  gripDrag(dat, () => openData(false));
+  const DGK = 'pc-ws-datagroups', dshut = () => { try { return new Set(JSON.parse(localStorage.getItem(DGK)) || []); } catch { return new Set(); } }, setDshut = (x) => { try { localStorage.setItem(DGK, JSON.stringify([...x])); } catch { } };
+  const ago = (t) => { const s = (Date.now() - new Date(t)) / 1000; return s < 60 ? 'just now' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : new Date(t).toLocaleDateString('en-CA', { day: 'numeric', month: 'short', year: 'numeric' }); };
+  function projectData() {
+    const st = studio() || {}, ms = st.masses || [], ims = (st.imports || []).filter((o) => !o.ref), site = st.site || {}, objs = INST.plan.ready ? INST.plan.ws.objects() : [];
+    const groups = [];
+    // the design: masses and imported models
+    const dRows = ms.map((m) => { const fp = area(m.points || []), n = m.storeys || 1, fh = m.fh || 3.2, h = n * fh;
+      return { sel: 'ps:mass:' + m.id, cells: [m.name || 'Mass', 'Mass', m.use || '—', n, fp, fp * n, h, fp * h] }; });
+    for (const o of ims) { const cs = o.components || [], b = cs.length ? cs.reduce((a, c) => { const g = c.g || {}; return [Math.min(a[0], g.x ?? 0), Math.min(a[1], g.y ?? 0), Math.min(a[2], g.z ?? 0), Math.max(a[3], (g.x ?? 0) + (g.w ?? 0)), Math.max(a[4], (g.y ?? 0) + (g.d ?? 0)), Math.max(a[5], (g.z ?? 0) + (g.h ?? 0))]; }, [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity]) : null;
+      const W = b ? b[3] - b[0] : null, D = b ? b[4] - b[1] : null, H = b ? b[5] - b[2] : null;
+      dRows.push({ sel: 'ps:imp:' + o.id, cells: [o.name || 'Imported model', 'Imported model', o.layer || '—', null, W && D ? W * D : null, null, H, null], note: `${fmt(o.tris || 0)} triangles; footprint is the bounding box` }); }
+    const tot = (i) => dRows.reduce((a, r) => a + (+r.cells[i] || 0), 0);
+    if (dRows.length) dRows.push({ total: true, cells: ['Total', `${ms.length} mass${ms.length === 1 ? '' : 'es'}${ims.length ? `, ${ims.length} imported` : ''}`, '', ms.reduce((a, m) => Math.max(a, m.storeys || 1), 0) || null, tot(4), tot(5), Math.max(0, ...dRows.map((r) => +r.cells[6] || 0)), tot(7)] });
+    groups.push({ k: 'Design', head: ['Object', 'Type', 'Use / layer', 'Storeys', 'Footprint m²', 'Gross floor area m²', 'Height m', 'Volume m³'], dec: [0, 0, 0, 0, 0, 0, 1, 0], rows: dRows, empty: 'No masses or imported models yet: draw a mass or import a model.' });
+    // spaces and elements on the plan
+    const rooms = objs.filter((o) => o.k === 'room'), c = (k) => objs.filter((o) => o.k === k).length;
+    const sRows = rooms.map((r) => ({ sel: 'ps:room:' + r.id, cells: [r.name || 'Room', 'Space', r.level || r.lv || '—', r.area ?? null] }));
+    if (rooms.length) sRows.push({ total: true, cells: ['Total', `${rooms.length} space${rooms.length === 1 ? '' : 's'}`, '', rooms.reduce((a, r) => a + (r.area || 0), 0)] });
+    for (const [k, n] of [['wall', 'Walls'], ['op', 'Doors and windows'], ['floor', 'Floor slabs'], ['furn', 'Furniture']]) if (c(k)) sRows.push({ cells: [n, 'Elements', '', null], count: c(k) });
+    groups.push({ k: 'Spaces', head: ['Object', 'Type', 'Level', 'Area m²', 'Count'], dec: [0, 0, 0, 1, 0], rows: sRows.map((r) => ({ ...r, cells: [...r.cells, r.count ?? (r.total ? null : '')] })), empty: INST.plan.ready ? 'No rooms on the plan yet.' : 'The plan is still loading.' });
+    // the site
+    const ctx = (site.buildings || []).filter((b) => !b.excluded), ctxA = ctx.reduce((a, b) => a + area(b.pts || b.points || []), 0);
+    const tRows = []; if (site.parcel?.pts?.length > 2) tRows.push({ cells: ['Plot', 'Site boundary', area(site.parcel.pts), 1] });
+    for (const [kind, n] of [['green', 'Planting'], ['water', 'Water'], ['paving', 'Paving']]) { const a = (site.areas || []).filter((x) => x.kind === kind); if (a.length) tRows.push({ cells: [n, 'Landscape', a.reduce((s, x) => s + area(x.pts || []), 0), a.length] }); }
+    if (ctx.length) tRows.push({ cells: ['Surrounding buildings', 'Context', ctxA || null, ctx.length] });
+    if ((site.roads || []).length) tRows.push({ cells: ['Roads and paths', 'Context', null, site.roads.length] });
+    const z = site.terrain?.grid?.z || []; if (z.length) tRows.push({ cells: ['Terrain', `relief ${fmt(Math.max(...z) - Math.min(...z), 1)} m`, null, null] });
+    groups.push({ k: 'Site', head: ['Object', 'Type', 'Area m²', 'Count'], dec: [0, 0, 0, 0], rows: tRows, empty: 'No site yet: choose one on the map (Edit site).' });
+    // simulations: the last run here of each study, and the results saved with versions
+    const L = simLog(), now = modelHash(), simIds = new Set([...Object.keys(L), ...p.runs.filter((r) => r.results).map((r) => r.simId)]);
+    const mRows = [...simIds].map((id) => { const g = L[id], saved = p.runs.filter((r) => r.simId === id && r.results), vs = [...new Set(saved.map((r) => p.versions.find((v) => v.id === r.versionId)).filter(Boolean).map((v) => 'v' + v.n))];
+      const at = g?.at || saved.at(-1)?.results?.computedAt || saved.at(-1)?.createdAt || saved.at(-1)?.at;
+      const state = g ? (now && g.key === now ? 'Matches the model' : 'Model changed since') : 'Saved result';
+      const key = g ? g.rows.slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' · ') : (() => { const sim = api.sims.find((s) => s.id === id), r = saved.at(-1); return (sim?.metrics || []).filter(([k]) => Number.isFinite(+r?.results?.[k])).slice(0, 3).map(([k, l, u, d]) => `${l}: ${fmt(+r.results[k], d || 0)}${u === '%' ? '%' : ' ' + u}`).join(' · '); })();
+      return { study: id, stale: g && state !== 'Matches the model', cells: [g?.name || simName(id), g?.settings || saved.at(-1)?.settings?.label || '—', at ? ago(at) : '—', state, key || '—', vs.join(', ') || (g?.saved || 'Not saved')], at: at ? +new Date(at) : 0, rowsAll: g?.rows || [] }; }).sort((a, b) => b.at - a.at);
+    groups.push({ k: 'Simulations', head: ['Study', 'Settings', 'Computed', 'Model', 'Key results', 'Saved with'], dec: [], rows: mRows, empty: 'No simulations yet: open Add simulation and press Start. Each run is listed here with its key results.' });
+    return groups;
+  }
+  const cellText = (v, d = 0) => v === null || v === undefined || v === '' ? '—' : typeof v === 'number' ? fmt(v, d) : String(v);
+  function drawData() {
+    const G = projectData(), closed = dshut(); parkSave();
+    dat.innerHTML = `${GRIP}<button type="button" class="sp-x" data-dat="close" aria-label="Close Project data">×</button>
+      <div class="sp-sk-scroll sp-dt-scroll">${G.map((g) => `<section class="sp-dt-grp" data-dgrp="${g.k}">
+        <button type="button" class="sp-dt-gh" data-dt-grp="${g.k}" aria-expanded="${!closed.has(g.k)}"><span>${g.k.toUpperCase()}</span><small>${g.rows.filter((r) => !r.total && !(r.count >= 0 && g.k === 'Spaces' && r.cells[1] === 'Elements')).length || ''}</small><i>${closed.has(g.k) ? '›' : '⌄'}</i></button>
+        ${closed.has(g.k) ? '' : g.rows.length ? `<table class="sp-dt${g.k === 'Simulations' ? ' sp-dt-sim' : ''}"><thead><tr>${g.head.map((h, i) => `<th${i > 1 && g.k !== 'Simulations' ? ' class="n"' : ''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>
+          ${g.rows.map((r) => `<tr class="${r.total ? 'tot' : ''}${r.stale ? ' stale' : ''}${r.sel || r.study ? ' go' : ''}"${r.sel ? ` data-dt-sel="${esc(r.sel)}" title="Select it in the model"` : r.study ? ` data-dt-study="${esc(r.study)}" title="Open this simulation"` : ''}>${r.cells.map((v, i) => `<td${i > 1 && g.k !== 'Simulations' ? ' class="n"' : ''}${g.k === 'Simulations' && i === 3 ? ` class="sp-dt-st${r.stale ? ' old' : ''}"` : ''}>${esc(cellText(v, g.dec[i] || 0))}</td>`).join('')}</tr>${r.note ? '' : ''}`).join('')}</tbody></table>` : `<p class="sp-dt-empty">${esc(g.empty)}</p>`}</section>`).join('')}
+        <p class="sp-note">Figures come from the model as it is now (heights from storeys × storey height). Simulation results are the last run of each study in this view; “Model changed since” means the model was edited after that run, so run it again before relying on it. Design checks, not compliance results.</p></div>
+      <footer><span class="sp-sk-title">Project data</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-dat="csv" title="A CSV file that Excel opens">Export to Excel</button></span></footer>`;
+  }
+  function openData(on) { if (on && !cmp.hidden) openSheet(false); dat.hidden = !on; syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); if (!assetsCard.hidden) openAssets(false); drawData(); } }
+  dat.addEventListener('click', (e) => {
+    const g = e.target.closest('[data-dt-grp]'), sel = e.target.closest('[data-dt-sel]'), sk = e.target.closest('[data-dt-study]'), b = e.target.closest('[data-dat]');
+    if (g) { const x = dshut(); x.has(g.dataset.dtGrp) ? x.delete(g.dataset.dtGrp) : x.add(g.dataset.dtGrp); setDshut(x); drawData(); return; }
+    if (sel) { select([sel.dataset.dtSel]); return; }
+    if (sk) { if (IN_VIEW[sk.dataset.dtStudy]) { openData(false); openStudy(sk.dataset.dtStudy); } return; }
+    if (!b) return; if (b.dataset.dat === 'close') openData(false);
+    else if (b.dataset.dat === 'csv') { const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`, G = projectData();
+      const rows = G.flatMap((g) => [[g.k.toUpperCase()], g.head, ...g.rows.map((r) => r.cells.map((v, i) => typeof v === 'number' ? +v.toFixed(g.dec[i] ? 2 : 1) : v ?? '')), ...(g.k === 'Simulations' ? g.rows.flatMap((r) => r.rowsAll.length ? [[`${r.cells[0]}: all results`], ...r.rowsAll.map(([k, v]) => ['', k, v])] : []) : []), []]);
+      download(`${p.name.replace(/[^\w-]+/g, '-')}-project-data.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\n'), 'text/csv'); } });
+  function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+
+  // ---- a report on two sketches (2026-11-01): Generate report in Compare sketches; choose the two sketches, and a report opens in a
+  // new tab with both pictures, every figure side by side with the difference, the simulation results each was saved with, notes
+  // on settings that differ, and the main changes in words. Print it or save it as PDF from that tab.
+  function reportPick() {
+    const { cols } = compareData(), pk = cmp.querySelector('.sp-rpick'); if (cols.length < 2) return;
+    const cur = cols.findIndex((c) => c.current), b = cur >= 0 ? cur : 0, a = cols.findIndex((c, i) => i !== b);
+    const opt = (sel) => cols.map((c) => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.title)} (${esc(c.current ? 'current' : c.sub)})</option>`).join('');
+    pk.innerHTML = `<b>Comparison report</b><p class="sp-note">Choose two sketches. The report sets every figure side by side, with the change from A to B.</p>
+      <label>A · before<select data-rp="a">${opt(cols[a].id)}</select></label><label>B · after<select data-rp="b">${opt(cols[b].id)}</select></label>
+      <div class="sp-rp-acts"><button type="button" class="btn sm" data-cmp="rx">Cancel</button><button type="button" class="btn sm primary" data-cmp="rgo">Create report</button></div><p class="sp-rp-msg" role="status"></p>`;
+    pk.hidden = false; pk.querySelector('select').focus();
+  }
+  function makeReport() {
+    const pk = cmp.querySelector('.sp-rpick'), ia = pk.querySelector('[data-rp="a"]').value, ib = pk.querySelector('[data-rp="b"]').value, msg = pk.querySelector('.sp-rp-msg');
+    if (ia === ib) { msg.textContent = 'Choose two different sketches.'; return; }
+    const html = reportHTML2(ia, ib), w = window.open('', '_blank');
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); msg.textContent = 'The report opened in a new tab.'; }
+    else { download(`${p.name.replace(/[^\w-]+/g, '-')}-comparison-report.html`, html, 'text/html'); msg.textContent = 'Pop-ups are blocked here, so the report was downloaded instead.'; }
+    window.__wsLastReport = html; pk.hidden = true;
+  }
+  function reportHTML2(ia, ib) {
+    const { cols, groups, notes } = compareData(), A = cols.find((c) => c.id === ia), B = cols.find((c) => c.id === ib), site = S.siteOf(p)?.label || 'No site chosen';
+    const N = (v, u, d) => v === null || v === undefined || !Number.isFinite(+v) ? '—' : fmt(v, d || 0) + (u || ''); const changes = [];
+    const table = groups.filter(([g, rows]) => g !== 'Pinned' && rows.length).map(([g, rows]) => { const body = rows.map(([l, get, u, d]) => { const a = get(A), b = get(B), ok = Number.isFinite(+a) && Number.isFinite(+b) && a !== null && b !== null;
+        const df = ok ? b - a : null, pc = ok && a ? df / Math.abs(a) * 100 : null; if (ok && df) changes.push({ l, a, b, u, d, pc, g });
+        return `<tr><td>${esc(l)}</td><td class="n">${N(a, u, d)}</td><td class="n">${N(b, u, d)}</td><td class="n ${ok && df ? (df > 0 ? 'up' : 'dn') : ''}">${ok ? (df > 0 ? '+' : df < 0 ? '−' : '±') + N(Math.abs(df), u, d) : '—'}</td><td class="n">${ok && !df ? '0%' : pc === null ? '—' : (pc > 0 ? '+' : '−') + fmt(Math.abs(pc), 1) + '%'}</td></tr>`; }).join('');
+      return `<h2>${esc(g)}</h2><table><thead><tr><th>Figure</th><th class="n">A · ${esc(A.title)}</th><th class="n">B · ${esc(B.title)}</th><th class="n">Change</th><th class="n">Change %</th></tr></thead><tbody>${body}</tbody></table>`; }).join('');
+    const top = changes.filter((c) => c.pc !== null).sort((x, y) => Math.abs(y.pc) - Math.abs(x.pc)).slice(0, 6);
+    const words = top.length ? top.map((c) => `<li><b>${esc(c.l)}</b> ${c.b > c.a ? 'rises' : 'falls'} by ${fmt(Math.abs(c.pc), 1)}% (${N(c.a, c.u, c.d)} → ${N(c.b, c.u, c.d)}).</li>`).join('') : '<li>No figure differs between the two sketches.</li>';
+    const resNote = groups.some(([g]) => g === 'Results') ? '' : '<p class="note">Neither sketch has saved simulation results. Run a study and press Save to results (it is kept with the version) to compare results here.</p>';
+    const pic = (c) => c.thumb ? `<img src="${c.thumb}" alt="${esc(c.title)}">` : '<div class="nopic">No picture</div>';
+    const when = (c) => c.draft ? 'The model as it is now (unsaved)' : `${esc(c.sub)}${c.v?.created ? ' · saved ' + new Date(c.v.created).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }) : ''}${c.current ? ' · current' : ''}`;
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(p.name)} · comparison report</title><style>
+      body{margin:0;background:#f4f5f7;color:#1f2430;font:13px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:900px;margin:24px auto;background:#fff;padding:36px 44px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+      h1{font-size:22px;margin:0 0 4px}h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#4b5563;margin:26px 0 8px}.meta{color:#6b7280;margin:0 0 18px}
+      .pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pair figure{margin:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}.pair img,.nopic{width:100%;height:220px;object-fit:cover;background:#e7e7e3;display:grid;place-items:center;color:#9ca3af}.pair figcaption{padding:8px 12px}.pair figcaption b{display:block}.pair figcaption small{color:#6b7280}
+      .tag{display:inline-block;background:#2f5bd3;color:#fff;border-radius:4px;padding:0 6px;margin-right:6px;font-weight:600}
+      table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid #eef0f3;text-align:left}th{font-weight:600;color:#6b7280;font-size:11.5px}.n{text-align:right;font-variant-numeric:tabular-nums}.up{color:#0f7b4b}.dn{color:#b42318}
+      ul{margin:0;padding-left:20px}.note{color:#6b7280;font-size:12px}.bar{max-width:900px;margin:16px auto 0;display:flex;justify-content:flex-end;gap:8px}.bar button{font:inherit;padding:6px 14px;border-radius:6px;border:1px solid #cfd4dc;background:#fff;cursor:pointer}.bar button.p{background:#2f5bd3;color:#fff;border-color:#2f5bd3}
+      @media print{body{background:#fff}.bar{display:none}main{box-shadow:none;margin:0;max-width:none;padding:0}}</style></head><body>
+      <div class="bar"><button type="button" class="p" onclick="print()">Print or save as PDF</button></div>
+      <main><h1>${esc(p.name)} · comparison report</h1><p class="meta">${esc(site)} · made ${new Date().toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' })} in PlotCloud</p>
+      <div class="pair"><figure>${pic(A)}<figcaption><b><span class="tag">A</span>${esc(A.title)}</b><small>${when(A)}</small></figcaption></figure><figure>${pic(B)}<figcaption><b><span class="tag">B</span>${esc(B.title)}</b><small>${when(B)}</small></figcaption></figure></div>
+      <h2>Main changes from A to B</h2><ul>${words}</ul>
+      ${table}${resNote}${notes.length ? `<h2>Read with care</h2><ul>${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+      <h2>About these figures</h2><p class="note">Floor areas and footprints come from each sketch's masses (gross floor area = footprint × storeys); rooms are counted for the sketch the model is on. Simulation results are those saved with each version${A.current || B.current ? ', or the last run on the model as it is now for the current sketch' : ''}; they are early-design checks computed in the browser, not compliance results or certified calculations. Compare results only where the settings match.</p></main></body></html>`;
+  }
 
   // ---- assets (left rail): the models imported into this project and your own furniture, each with its import
   const assetsCard = el('section', 'sp-card sp-assets'); assetsCard.hidden = true; assetsCard.setAttribute('aria-label', 'Assets'); root.append(assetsCard);
@@ -805,7 +961,7 @@ export function mountChrome(app, api) {
         : '<div class="sp-asempty"><b>No furniture of your own yet</b><p>Import a piece (OBJ, GLB, STL, 3DM); it is kept in your account for every project.</p></div>'}
         <button type="button" class="btn sm primary sp-asbtn" data-as="furn">+ Import furniture</button></section>`;
   }
-  function openAssets(on) { assetsCard.hidden = !on; $('[data-sp="assets"]', root)?.setAttribute('aria-pressed', String(on)); if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); drawAssets(); } }
+  function openAssets(on) { assetsCard.hidden = !on; $('[data-sp="assets"]', root)?.setAttribute('aria-pressed', String(on)); if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); drawAssets(); } }
   assetsCard.addEventListener('click', (e) => { const b = e.target.closest('[data-as],[data-as-sel]'); if (!b) return;
     if (b.dataset.asSel) { select(['ps:imp:' + b.dataset.asSel]); return; }
     const k = b.dataset.as; if (k === 'close') openAssets(false);
@@ -818,7 +974,7 @@ export function mountChrome(app, api) {
   const propCounts = () => { const st = studio() || {}, o = INST.plan.ready ? INST.plan.ws.objects() : []; const c = (k) => o.filter((x) => x.k === k).length;
     return { plot: st.site?.parcel?.pts?.length > 2 ? 1 : 0, building: (st.masses || []).length + (st.imports || []).length, story: (st.levels || []).length, space: c('room'), aperture: c('op'), wall: c('wall'), floor: c('floor'), furniture: c('furn'), context: (st.site?.buildings || []).filter((b) => !b.excluded).length, street: (st.site?.roads || []).length }; };
   function openProps(on) { propsCard.hidden = !on; $('[data-sp="props"]', root)?.setAttribute('aria-pressed', String(on)); disposeProps?.(); disposeProps = null;
-    if (on) { document.querySelectorAll('dialog[open]').forEach((d) => d.close()); openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); studyCard.hidden = true; disposeProps = mountProps(propsCard, p, { counts: propCounts, onClose: () => openProps(false) }); } else if (ST.id) studyCard.hidden = false; }
+    if (on) { document.querySelectorAll('dialog[open]').forEach((d) => d.close()); openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); studyCard.hidden = true; disposeProps = mountProps(propsCard, p, { counts: propCounts, onClose: () => openProps(false) }); } else if (ST.id) studyCard.hidden = false; }
   window.__wsProps = () => openProps(true);   // studies and the site review open these props while in the Workspace
   // links to the old project settings page (studies, the site review) open the props here instead
   app.addEventListener('click', (e) => { const a = e.target.closest('a[href^="#/project-settings"], #siteReviewEdit'); if (!a) return; e.preventDefault(); e.stopImmediatePropagation(); openProps(true); }, true);
