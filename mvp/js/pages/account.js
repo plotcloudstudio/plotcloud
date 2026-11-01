@@ -50,14 +50,14 @@ export async function render(app, _, params = new URLSearchParams()) {
         <label class="f">Time zone of this computer<input disabled value="${esc(Intl.DateTimeFormat().resolvedOptions().timeZone || '—')}"></label>
         <div style="align-self:end"><button class="btn primary">Save profile</button></div>
       </form>
-      <p class="note" style="margin-top:10px">Member since ${A.user.since ? when(A.user.since) : 'today'}. ${A.user.cloud ? 'Signed in with your PlotCloud cloud account: your projects are kept in this browser and copied to your account (Backup &amp; data shows the sync).' : C.configured() ? 'This account lives in this browser only. Log out and log in with a cloud account to keep your projects on your other devices too.' : 'Prototype: cloud accounts are not switched on yet, so your account lives in this browser and no password is stored.'}</p>
+      <p class="note" style="margin-top:10px">Member since ${A.user.since ? when(A.user.since) : 'today'}. ${A.user.cloud ? 'Signed in with your PlotCloud cloud account: your projects are kept in this browser and copied to your account (Backup &amp; data shows the sync).' : C.configured() ? 'This account lives in this browser only. Log out and log in with a cloud account to keep your projects on your other devices too.' : 'Cloud accounts are not connected. This profile is saved in this browser; no password is stored.'}</p>
       <div class="card" style="margin-top:36px;max-width:720px;border-color:var(--red)"><b>Delete account</b><p class="note" style="margin:6px 0 12px">Removes your account, every project, version and result, and your settings from this browser. Download a backup first if you may want them back.</p><button class="btn sm danger" id="delAcct">Delete my account…</button></div>
     </section>
 
     <section id="site" data-pane="site">
       <div class="kicker"><b>02</b>Site</div>
       <h1 class="display md" style="margin-top:16px">Where is the project?</h1>
-      <p class="lede" style="margin-top:14px">Defaults for new projects. Sun Hours and Daylight keep a project snapshot; edit Shared conditions on a project to change their site. Other studies retain the existing linked-site behaviour during this pilot.</p>
+      <p class="lede" style="margin-top:14px">Defaults for new projects. Sun Hours and Daylight keep a project snapshot; edit Shared conditions on a project to change their site. Other studies retain the existing linked-site behaviour.</p>
       <form id="find" style="display:flex;gap:8px;margin-top:24px;max-width:720px"><label for="q" class="sr" style="position:absolute;left:-9999px">Address, place or coordinates</label>
         <input id="q" class="inp round" placeholder="An address, a place or “lat, lon” — e.g. Shibuya Station, Tokyo" autocomplete="street-address"><button class="btn accent lg" style="min-height:48px">Find</button></form>
       <div class="results" id="hits"></div>
@@ -74,7 +74,7 @@ export async function render(app, _, params = new URLSearchParams()) {
     <section id="defaults" data-pane="site">
       <div class="kicker"><b>02</b>Simulation defaults</div>
       <h2 class="display sm" style="margin-top:16px">Defaults for new projects.</h2>
-      <p class="lede" style="margin-top:14px">Sun Hours and Daylight copy these into each project once. Existing projects keep their saved shared conditions. Edit Project shared conditions to update a project, or use study-only overrides for one run. Other simulations retain their existing settings during this pilot.</p>
+      <p class="lede" style="margin-top:14px">Sun Hours and Daylight copy these into each project once. Existing projects keep their saved shared conditions. Edit Project shared conditions to update a project, or use study-only overrides for one run. Other simulations retain their existing settings.</p>
       <div class="grid g3" id="defs" style="margin-top:24px"></div>
       <button class="btn primary" id="saveDefs" style="margin-top:18px">Save defaults</button>
     </section>
@@ -88,7 +88,7 @@ export async function render(app, _, params = new URLSearchParams()) {
     <section id="plan" data-pane="plan">
       <div class="kicker"><b>03</b>Plan</div>
       <div class="pplan pro" style="margin-top:20px;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between">
-        <div><span class="eyebrow">Current plan</span><p style="font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:6px">${betaAccess.active ? 'Monthly beta access' : 'Free access'}</p>
+        <div><span class="eyebrow">Current plan</span><p style="font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:6px">${betaAccess.active ? 'Monthly access' : 'Free access'}</p>
           <p class="muted" id="trialLeft"></p>
           <p class="muted">CAD 16.99 per calendar month, plus applicable taxes. E-transfer payments are reviewed manually. Renew only when you choose; no automatic charge.</p></div>
         <a class="btn accent lg" href="#/pricing">See plans</a></div>
@@ -175,7 +175,7 @@ export async function render(app, _, params = new URLSearchParams()) {
   $('#delAcct', app).onclick = async () => { if (prompt(A.user?.cloud ? 'Delete everything: your projects in this browser and in your cloud account? Type DELETE to confirm.' : 'Delete your account and everything in this browser? Type DELETE to confirm.') !== 'DELETE') return;
     if (A.user?.cloud) { try { await C.wipe(); await C.signOut(); } catch (er) { toast('Could not remove the cloud copy: ' + er.message); return; } toast('Your projects were removed from the cloud. To close the login itself, write to us.'); }
     S.deleteAccount(); location.hash = '#/'; location.reload(); };
-  $('#trialLeft', app).textContent = betaAccess.active ? (betaAccess.accessType==='permanent'?'Permanent access':'Active until ' + accessDate(betaAccess.expiresAt)) : C.configured()?'No active monthly membership. Your saved projects and results remain available.':'No active beta code. Your saved local projects and results remain available.';
+  $('#trialLeft', app).textContent = betaAccess.active ? (betaAccess.accessType==='permanent'?'Permanent access':'Active until ' + accessDate(betaAccess.expiresAt)) : C.configured()?'No active monthly membership. Your saved projects and results remain available.':'No active access code. Your saved local projects and results remain available.';
   function dataUI() {
     const use = S.storageUse(), pc = Math.min(100, 100 * use / S.QUOTA);
     $('#useBar', app).style.width = pc.toFixed(1) + '%'; $('#useTxt', app).textContent = `${size(use)} of about ${size(S.QUOTA)} used (${pc < 1 ? 'under 1' : Math.round(pc)} %) · kept in IndexedDB${S.storageMode() === 'idb' ? '' : ', with a quick copy in localStorage'} · ${S.PERSISTED ? 'the browser keeps it until you clear it' : 'the browser may clear it when the disk is full, so keep a backup'}.`;
@@ -193,7 +193,7 @@ export async function render(app, _, params = new URLSearchParams()) {
     await render(app, _, new URLSearchParams('tab=data')); refreshWho(); $('#impMsg', app).textContent = `Restored ${n} project${n === 1 ? '' : 's'} from ${f.name}` + (out.legacy ? '. ' + out.note : `, with ${out.assetsRestored} weather file${out.assetsRestored === 1 ? '' : 's'}.`) + (copies ? ` ${copies} already existed here and ${copies === 1 ? 'was' : 'were'} added as a copy.` : '') + (out.missingAssets.length ? ` Missing weather (upload again to rerun): ${out.missingAssets.map((x) => x.name || x.hash.slice(0, 12)).join(', ')}.` : ''); toast('Backup restored'); };
   $('#prune', app).onclick = () => { const n = S.pruneOldMedia(); dataUI(); toast(n ? `Removed pictures from ${n} older result${n === 1 ? '' : 's'}` : 'Nothing to remove'); };
   $$('[data-n]', app).forEach((c) => c.onchange = () => { A.notify = { ...(A.notify || { batch: true, stale: true }), [c.dataset.n]: c.checked }; S.save(); toast('Saved'); });
-  $('#reset', app).onclick = () => { if (!confirm('Remove all prototype projects and settings in this browser and restore the sample?')) return; S.reset(); location.hash = '#/'; location.reload(); };
+  $('#reset', app).onclick = () => { if (!confirm('Remove all projects and settings in this browser and restore the sample?')) return; S.reset(); location.hash = '#/'; location.reload(); };
   show(tab);
   facts(); plist();
 }

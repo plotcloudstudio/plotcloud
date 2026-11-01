@@ -19,7 +19,7 @@ export function refreshProjectContext(project=currentProject()){
 }
 export const when = (iso) => new Date(iso).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 export function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
-export const MOCK = '<span class="tag mock" title="Prototype estimate from simple model quantities. Not the PlotCloud simulation engine.">Mock</span>';
+export const MOCK = '<span class="tag mock" title="Illustrative estimate from model quantities; not a calculated simulation result.">Estimate</span>';
 export const LIVE = '<span class="tag live" title="Computed by the PlotCloud simulation engine">Engine</span>';
 
 // Fixed light artwork; project data is independent of interface appearance.
@@ -67,7 +67,7 @@ const PAGES = {
   project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'), rendering:()=>import('./pages/rendering.js'),
   boards:()=>import('./pages/rendering.js').then(m=>({render:(a,r,q)=>m.render(a,['boards'],q)})),
   admin: () => import('./pages/admin.js'),
-  '': () => import('./pages/home-v2.js?v=home-report-20261031-2'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=master-models-snow-20261031-5'), legal:()=>import('./pages/legal.js'),
+  '': () => import('./pages/home-v2.js?v=public-launch-20261031-1'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=master-models-snow-20261031-5'), legal:()=>import('./pages/legal.js'),
   about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
@@ -90,7 +90,7 @@ export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
-  const publicRoute=['pricing','about','blog','login','resources'].includes(key);
+  const publicRoute=['pricing','about','blog','login','resources','legal'].includes(key);
   // the Workspace, its simulations and a project's results are one place, reached from the Dashboard (2026-10-30)
   const navKey = ['workspace', 'simulations', 'results', 'project', 'activity'].includes(key) ? 'home' : key;
   $$('[data-nav]').forEach((a) => { if (a.dataset.nav === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -109,8 +109,8 @@ export async function route() {
     if (!canUse(feature)) {
       const toolName=[...MODEL_TOOLS,...RESOURCES.utilities,...RESOURCES.refs].find(t=>t.tool===resource)?.name||({stairs3d:'Stair generator',doors3d:'Door generator'})[resource];
       renderGate(publicRoute?publicPage(app,key,params):app, toolName || 'This tool');
-      if (key === 'batch-run' && params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Paid beta access required.'},location.origin);
-      document.title = 'Beta access · PlotCloud'; return;
+      if (key === 'batch-run' && params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Active membership required.'},location.origin);
+      document.title = 'Membership access · PlotCloud'; return;
     }
   }
   const recover=error=>{app.innerHTML=`<div class="wrap"><h1 class="display md">This page could not finish loading.</h1><p>Your saved projects and results are kept. Reload to try again, or return to Workspace.</p><details><summary>Technical details</summary><p>${esc(error.message||'Page unavailable')}</p></details><button type="button" class="btn accent" id="retryPageLoad">Reload page</button> <a class="btn" href="#/workspace">Open Workspace</a> <a class="btn" href="#/simulations">Browse studies</a></div>`;$('#retryPageLoad',app).onclick=()=>location.reload();document.title='Page recovery · PlotCloud';};

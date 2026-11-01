@@ -1,4 +1,5 @@
 /* Public pages share Home's typography, navigation and quiet architectural palette. */
+.lp.lp-public-legal .wrap{max-width:900px!important}.lp-policy-links{display:flex;flex-wrap:wrap;gap:12px 24px;border-block:1px solid #dde4ec;padding:18px 0;margin:24px 0 36px;font-size:13px;color:#294966}.lp-policy-links a[aria-current=page]{font-weight:650;text-decoration:underline;text-underline-offset:5px}.lp-public-legal h2{margin-top:36px}
 body.pc-public>header.top{display:none}
 body.pc-public #app{padding:0;max-width:none}
 .lp-public{--ink:#142335;--ink2:#5b6879;--sub:#5b6879;--mut:#66758a;--muted:#66758a;--line:#e3e8ee;--line2:#d2dbe6;--card:#fff;--paper:#f4f5f7;--accent:#2f5bd3;--btn:#142335;--inv:#142335;--invfg:#fff;min-height:100vh;padding-bottom:0;background:#f4f5f7}
