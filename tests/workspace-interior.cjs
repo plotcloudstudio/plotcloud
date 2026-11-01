@@ -73,6 +73,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert(!vw.err && vw.view === 'quality' && vw.n > 50 && /%/.test(vw.rows[0][1]) && /LEED/.test(vw.rows[2][0]), 'views ' + JSON.stringify(vw));
     if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/views.png` });
     console.log(`PASS views in the Workspace: ${vw.n} spots; ${vw.rows.slice(0, 3).map((x) => x.join(' ')).join(' · ')}`);
+    // Camera coverage (2026-11-01): the study page's DORI camera search in the Workspace
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=cameras]'); await p.locator('.sp-studycard [data-cam=camLevel]').waitFor({ timeout: 30000 });
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
+    const cm = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, rows: s.res?.rows, views: Object.keys(s.res?.views || {}) }; });
+    assert(!cm.err && cm.view === 'count' && /%/.test(cm.rows[0][1]) && /^4 /.test(cm.rows[1][1]), 'cameras ' + JSON.stringify(cm));
+    if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/cameras.png` });
+    console.log(`PASS cameras in the Workspace: ${cm.rows.slice(0, 3).map((x) => x.join(' ')).join(' · ')}`);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });

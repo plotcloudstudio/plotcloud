@@ -123,7 +123,7 @@ function sunField(w, sc, label, unit) {
     const out = []; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = j * nx + i; if (cnt[q]) out.push(r2(x0 + (i + 0.5) * cs), r2(y0 + (j + 0.5) * cs), r2(sum[q] / cnt[q])); }
     return { label, unit, step: r2(cs), pts: out };
 }
-export const IN_WORKSPACE = ['evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views'];
+export const IN_WORKSPACE = ['evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views', 'cameras'];
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {

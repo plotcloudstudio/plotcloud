@@ -455,7 +455,7 @@
     "discrete": true
   },
   "cameras": {
-    "source": "emb/cameras.html",
+    "source": "mvp/js/interior/cameras.js",
     "definition": "CAMCOL",
     "stops": [
       [
