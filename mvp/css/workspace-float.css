@@ -414,3 +414,4 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .ipv-size{display:flex;flex-direction:column}.ipv-size b{font-size:15px}.ipv-size span{color:#6b7280;font-size:11px}
 .ipv-card p{margin:0;color:#6b7280;font-size:11px;line-height:1.4}
 .ipv-hint{position:absolute;right:16px;bottom:14px;margin:0;color:#6b7280;font-size:11px;background:rgba(255,255,255,.8);padding:4px 8px;border-radius:6px}
+.w2-simmenu .w2-simsec[hidden]{display:none}

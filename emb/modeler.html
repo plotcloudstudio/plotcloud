@@ -3019,7 +3019,7 @@ function setLayer(L, keepSel) {
 
 // ---------- keys ----------
 addEventListener('keydown', (e) => {
-  const tg = e.target; if (tg && (tg.matches('input, select, textarea') || tg.isContentEditable)) return;
+  const tg = e.target; if (tg && tg.matches && (tg.matches('input, select, textarea') || tg.isContentEditable)) return;
   if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey && TOOL === 'select' && !drag && !drawing && !SPACE && cycleSelection.pointer && (CAM === '3d' || (CAM === 'plan' && VIEW2D === 'plan'))) { cycleRefresh(cycleSelection.pointer); if (cycleSelection.active) { e.preventDefault(); cycleStep(e.shiftKey ? -1 : 1); return; } }
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
@@ -3965,7 +3965,7 @@ function gizmoTarget() {
     o.x = Math.min(...xs); o.y = Math.min(...ys); o.w = Math.max(...xs) - o.x; o.d = Math.max(...ys) - o.y;
   };
   return { kind, f, z, locked,
-    snapRotation: kind === 'imp' ? a => Math.round(a / (Math.PI / 2)) * Math.PI / 2 : WBP.snapAngle,
+    snapRotation: WBP.snapAngle,
     apply() {
       if (kind === 'wall') {
         o.a = transform(original.a); o.b = transform(original.b);
@@ -3982,12 +3982,7 @@ function gizmoTarget() {
           bounds(o.points);
         }
       } else if (kind === 'imp') {
-        const turn = Math.round((f.rot - origin.rot) / (Math.PI / 2)), odd = Math.abs(turn % 2) === 1;
-        o.rot = (((original.rot || 0) + turn) % 4 + 4) % 4;
-        o.w0 = original.w0 != null ? original.w0 : ((original.rot || 0) & 1 ? original.g.d : original.g.w);
-        o.d0 = original.d0 != null ? original.d0 : ((original.rot || 0) & 1 ? original.g.w : original.g.d);
-        o.g.w = odd ? original.g.d : original.g.w; o.g.d = odd ? original.g.w : original.g.d;
-        o.g.x = +(f.x - o.g.w / 2).toFixed(4); o.g.y = +(f.y - o.g.d / 2).toFixed(4);
+        Object.assign(o, JSON.parse(JSON.stringify(original))); setImpAng(o, impAng(original) + (f.rot - origin.rot), f.x, f.y);   // any angle (2026-11-01)
       } else {
         const p = transform([original.x, original.y]); o.x = p[0]; o.y = p[1];
         if (kind === 'light') {
@@ -4000,7 +3995,7 @@ function gizmoTarget() {
 }
 // scaling with a gumball square (3D and plan): the object's own X or Y, about its centre, snapped to 5 %
 function gzTurn(D, p, e) {
-  const f = D.f, a = Math.atan2(p[1] - f.y, p[0] - f.x), raw = D.r0 + a - D.a0, quarter = D.target.kind === 'imp' || (D.target.snapRotation && D.target.snapRotation(Math.PI / 4.1) === Math.PI / 2 && D.target.kind === 'group');
+  const f = D.f, a = Math.atan2(p[1] - f.y, p[0] - f.x), raw = D.r0 + a - D.a0, quarter = false;
   const st = (quarter ? 90 : e.shiftKey ? 15 : 1) * Math.PI / 180, rot = Math.round(raw / st) * st; f.rot = ((rot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
   const turn = Math.round((rot - D.r0) * 180 / Math.PI); tipAt(e, `${turn >= 0 ? '+' : ''}${turn}° · ${Math.round(f.rot * 180 / Math.PI) % 360}°${quarter ? ' (quarter turns)' : e.shiftKey ? ' · 15° steps' : ' · Shift for 15° steps'}`);
 }
@@ -4180,7 +4175,7 @@ cv.addEventListener('pointerleave', () => { if (WALKING) WLK = null; });
 
 // ---------- keys ----------
 addEventListener('keydown', (e) => {
-  const tg = e.target; if (tg && (tg.matches('input, select, textarea') || tg.isContentEditable)) return;
+  const tg = e.target; if (tg && tg.matches && (tg.matches('input, select, textarea') || tg.isContentEditable)) return;
   if (WALKING) { if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); walkExit(); return; }
     if (/^(Key[WASD]|Arrow(Up|Down|Left|Right)|Shift(Left|Right))$/.test(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); S3.walk.key(e.code, true); return; }
     if (!(e.ctrlKey || e.metaKey)) { e.stopImmediatePropagation(); } return; }
@@ -5514,7 +5509,13 @@ let IMP_OFF = new Set(); const IMP_MESH = new Map(); const meshOf = (o) => o.mes
 const impOn = (o, view) => layerOn('imports', view) && !isHidden(o.id) && !IMP_OFF.has(o.layer);
 const impLv = (o) => !o.lv || o.lv === LV || !M.levels.some((l) => l.id === o.lv);   // a piece placed on a level shows in the plan of that level only
 // a point of the mesh (its own footprint coordinates) in the plan, after the piece's quarter turns
-const impXY = (o, x, y) => { const k = (o.rot || 0) & 3, W = o.w0 != null ? o.w0 : o.g.w, D = o.d0 != null ? o.d0 : o.g.d, q = k === 1 ? [D - y, x] : k === 2 ? [W - x, D - y] : k === 3 ? [y, W - x] : [x, y]; return [o.g.x + q[0], o.g.y + q[1]]; };
+// imported meshes turn freely (2026-11-01): o.ang (radians) about the footprint's centre; files from before, with quarter turns in
+// o.rot (0–3), read the same. o.w0, o.d0: the unturned footprint; o.g: the turned footprint's bounding box
+const impAng = (o) => (o.ang != null ? o.ang : ((o.rot || 0) & 3) * Math.PI / 2);
+const impXY = (o, x, y) => { const a = impAng(o), W = o.w0 != null ? o.w0 : o.g.w, D = o.d0 != null ? o.d0 : o.g.d, c = Math.cos(a), s2 = Math.sin(a), u = x - W / 2, v = y - D / 2; return [o.g.x + o.g.w / 2 + u * c - v * s2, o.g.y + o.g.d / 2 + u * s2 + v * c]; };
+function setImpAng(o, ang, cx, cy) { if (o.w0 == null) { const odd = ((o.rot || 0) & 1) && o.ang == null; o.w0 = odd ? o.g.d : o.g.w; o.d0 = odd ? o.g.w : o.g.d; }
+  const a = ((ang % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI), c = Math.abs(Math.cos(a)), s2 = Math.abs(Math.sin(a)), w = o.w0 * c + o.d0 * s2, d = o.w0 * s2 + o.d0 * c; cx = cx ?? o.g.x + o.g.w / 2; cy = cy ?? o.g.y + o.g.d / 2;
+  o.ang = +a.toFixed(6); const q = Math.round(a / (Math.PI / 2)); o.rot = Math.abs(a - q * Math.PI / 2) < 1e-6 ? q & 3 : 0; o.g.w = +w.toFixed(4); o.g.d = +d.toFixed(4); o.g.x = +(cx - w / 2).toFixed(4); o.g.y = +(cy - d / 2).toFixed(4); }
 function drawImports() { if (!(M.imports || []).length || CAM === '3d') return; const d = VP.d;
   for (const o of M.imports) { if (!impOn(o) || !impLv(o)) continue; const a = W2S([o.g.x, o.g.y + o.g.d]), sel = wbSelected('imp',o.id), hov = HOV && HOV.k === 'imp' && HOV.id === o.id;
     g.save(); if(!sel){g.fillStyle = 'rgba(120,124,132,.10)'; g.fillRect(a[0], a[1], o.g.w * V.s, o.g.d * V.s); g.setLineDash([5 * d, 3 * d]); g.strokeStyle = hov ? C.ink : '#7b818a'; g.lineWidth = 1.2 * d; g.strokeRect(a[0], a[1], o.g.w * V.s, o.g.d * V.s); g.setLineDash([]);}
@@ -5538,9 +5539,7 @@ function drawImports() { if (!(M.imports || []).length || CAM === '3d') return; 
   $('#pi_turn', box).addEventListener('click', () => ed(() => { turnImport(o); }));
   for (const k of ['x', 'y', 'z']) $('#pi_' + k, box).addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (!Number.isFinite(v)) { e.target.value = o.g[k]; return; } ed(() => { o.g[k] = +v.toFixed(3); }); });
   $('#pp_x', box).addEventListener('click', () => { SEL = null; changedSel(); }); $('#pp_del', box).addEventListener('click', delSel); }; }
-function turnImport(o) {   // a quarter turn about the centre of its footprint
-  if (o.w0 == null) { o.w0 = o.g.w; o.d0 = o.g.d; } const cx = o.g.x + o.g.w / 2, cy = o.g.y + o.g.d / 2, w = o.g.d, d = o.g.w;
-  o.rot = ((o.rot || 0) + 1) & 3; o.g.w = w; o.g.d = d; o.g.x = +(cx - w / 2).toFixed(3); o.g.y = +(cy - d / 2).toFixed(3); }
+function turnImport(o) { setImpAng(o, impAng(o) + Math.PI / 2); }   // a quarter turn about the centre of its footprint
 // placing a piece from "My furniture": click in the plan (on the current level), as many as wanted; Esc or R (turn the next one)
 let IMP_PEND = null, IMP_AT = null;
 { const _st = setTool; setTool = function (t) { if (t !== 'select') { IMP_PEND = null; IMP_AT = null; } return _st(t); }; }
@@ -6615,7 +6614,7 @@ if (window.__WSROLE) {
   gizmoTarget=function(){if(multi.length<2)return baseTarget();const saved=SEL,entries=[];try{for(const s of multi){if(!editableSelection(s))continue;const o=selObj(s);if(o.auto||s.k==='op'&&multi.some(w=>w.k==='wall'&&w.id===o.wall))continue;SEL=s;const target=baseTarget();if(target&&!target.locked)entries.push({s,target,start:{x:target.f.x,y:target.f.y,rot:target.f.rot||0}});}}finally{SEL=saved;}if(!entries.length)return null;
     const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(const {target}of entries){const f=target.f,c=Math.abs(Math.cos(f.rot||0)),s=Math.abs(Math.sin(f.rot||0)),w=(f.w*c+f.d*s)/2,d=(f.w*s+f.d*c)/2;lo[0]=Math.min(lo[0],f.x-w);lo[1]=Math.min(lo[1],f.y-d);lo[2]=Math.min(lo[2],target.z);hi[0]=Math.max(hi[0],f.x+w);hi[1]=Math.max(hi[1],f.y+d);hi[2]=Math.max(hi[2],target.z+f.h);}
     const f={id:'workspace-selection',x:(lo[0]+hi[0])/2,y:(lo[1]+hi[1])/2,rot:0,w:hi[0]-lo[0],d:hi[1]-lo[1],h:hi[2]-lo[2],axes:entries.some(e=>!e.target.f.axes?.includes('r')&&e.s.k!=='furn')?['x','y']:['x','y','r']},origin={x:f.x,y:f.y};
-    return{kind:'group',f,z:lo[2],locked:false,snapRotation:entries.some(e=>e.s.k==='imp')?a=>Math.round(a/(Math.PI/2))*Math.PI/2:WBP.snapAngle,apply(){WS.groupMoving=true;const c=Math.cos(f.rot),s=Math.sin(f.rot);for(const e of entries){const x=e.start.x-origin.x,y=e.start.y-origin.y;e.target.f.x=f.x+x*c-y*s;e.target.f.y=f.y+x*s+y*c;e.target.f.rot=e.start.rot+f.rot;e.target.apply();}}};
+    return{kind:'group',f,z:lo[2],locked:false,snapRotation:WBP.snapAngle,apply(){WS.groupMoving=true;const c=Math.cos(f.rot),s=Math.sin(f.rot);for(const e of entries){const x=e.start.x-origin.x,y=e.start.y-origin.y;e.target.f.x=f.x+x*c-y*s;e.target.f.y=f.y+x*s+y*c;e.target.f.rot=e.start.rot+f.rot;e.target.apply();}}};
   };
   {const cm=commit;commit=function(before){try{return cm(before);}finally{if(!GZD){WS.groupMoving=false;primePositions();}}};const cancel=cancelGizmo;cancelGizmo=function(){try{return cancel();}finally{WS.groupMoving=false;primePositions();}};}
   // selection and level: watched every frame (Plan Studio sets SEL and LV in many places)

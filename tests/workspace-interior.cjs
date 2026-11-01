@@ -20,7 +20,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     Wn(top, 4.5); Wn(top, 13.5); D(c1, 3); D(c1, 9); D(c1, 15); D(c2, 4); D(c2, 14); const ent = M.walls.find((w) => w.a[0] === X && w.a[1] === Y + 12); D(ent, 6);
     M.names = [{ lv, x: X + 3, y: Y + 2.5, name: 'Bedroom' }, { lv, x: X + 9, y: Y + 2.5, name: 'Bathroom' }, { lv, x: X + 15, y: Y + 2.5, name: 'Study' }, { lv, x: X + 4.5, y: Y + 9.5, name: 'Living' }, { lv, x: X + 13.5, y: Y + 9.5, name: 'Kitchen' }, { lv, x: X + 9, y: Y + 6, name: 'Corridor' }];
     const snap = JSON.stringify(M); ws.apply(snap, false); __ws2.hub.change('plan', snap, false); }); await p.waitForTimeout(2500);
-    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=evac]'); await p.waitForTimeout(800);
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=evac]'); await p.waitForTimeout(800);
     const card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Circulation[\s\S]*Level 1[\s\S]*5 rooms as places[\s\S]*Living/); assert.doesNotMatch(card, /Corridor/);
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view }; });
@@ -31,10 +31,10 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('[data-sp=dim]'); await p.waitForTimeout(2500); await p.click('[data-st-view=density]'); await p.waitForTimeout(500);
     const pf = p.frames().find((f) => f.url().includes('ws=plan')); assert(await pf.evaluate(() => (window.__ws._walkPNG() || '').length > 5000), 'density drawn over the plan');
     console.log('PASS the same study over the 2D plan; Density view');
-    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=privacy]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=privacy]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     const pr = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows }; }); assert.equal(pr.err, ''); assert.match(pr.rows[0][1], /%$/); assert.match(JSON.stringify(pr.rows), /Bedroom[\s\S]*High need/);
     assert(await pf.evaluate(() => (window.__ws._walkPNG() || '').length > 5000), 'privacy drawn over the plan'); console.log(`PASS Privacy on Level 1: ${pr.rows[0][1]} of the floor seen from outside, windows to screen ${pr.rows[3][1]}`);
-    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=wayfinding]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=wayfinding]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     const wf = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows }; }); assert.equal(wf.err, ''); assert.deepEqual(wf.rows[2], ['Rooms seen from the start', '5 of 5']); assert.doesNotMatch(JSON.stringify(wf.rows), /no way in/);
     console.log(`PASS Wayfinding on Level 1: every room reached (doorways walkable), ${wf.rows[0][1]} decision points`);
     assert.deepEqual(errs, []);

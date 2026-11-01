@@ -92,7 +92,7 @@ export function mountChrome(app, api) {
   const tabList = $('#tabList'); left.append(tabList);
   left.insertAdjacentHTML('beforeend', btn('assets', 'Assets: imported models and your furniture', 'assets', 'aria-pressed="false"'));
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
-  const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'));
+  const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'), $('#addSimInt'));
   root.append(left, add);
 
   // ---- bottom: Edit site | the model tools | select, text, delete, more
@@ -356,7 +356,7 @@ export function mountChrome(app, api) {
 
   const simMenu = document.querySelector('.w2-simmenu');
   if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { void b; });
-    simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
+    simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); $('#addSimInt')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
   const simName = (id) => (api.sims.find((x) => x.id === id) || { name: id }).name;
   // ---- every study in this page (2026-10-30): a study that does not run in the Workspace panel itself mounts its own study page
   // here, beside the left rail, after the usual handoff (pre-flight, site review, the version it runs on). Its "Back" returns to

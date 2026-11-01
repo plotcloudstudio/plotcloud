@@ -20,7 +20,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=snow-20261031-2';
+import { mountChrome } from '../workspace-chrome.js?v=rot2-20261101-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -159,11 +159,11 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=snow-20261031-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=rot2-20261101-2`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
-    <button type="button" id="addSimBtn" class="w2-addsim" title="Add simulation" aria-label="Add simulation" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" id="addSimBtn" class="w2-addsim" title="Building simulations" aria-label="Building simulations" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 20V9l6-4 6 4v11z"/><path d="M16 20v-7h4v7M2.5 20h19M8 12h4M8 16h4"/></svg></button><button type="button" id="addSimInt" class="w2-addsim" title="Interior simulations" aria-label="Interior simulations" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15"/><path d="M3.5 12h8V4.5M11.5 15.5v4M15 12h5.5"/></svg></button>
     <span class="sp"></span>
     <button type="button" data-panel="project" title="Project" aria-label="Project">${PROJECT_ICON}</button>
   </nav>
@@ -763,15 +763,17 @@ export function render(app, [pid]) {
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
   // "Add simulation" on the left rail: pick a study, then the same pre-flight and handoff as Send to Simulation
   const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
-  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>categoryOf(x.id)===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}">${esc(x.name)}</button>`).join('')).join('');
+  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>categoryOf(x.id)===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}">${esc(x.name)}</button>`).join('')+'</div>').join('');
+  const addInt=$('#addSimInt',app);let menuBtn=addSim;   // two entries (2026-11-01): Building simulations and Interior simulations, each with its own list
   document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
   const disposeSimPreview=mountSimulationPreview(simMenu,addSim,SIMS);
-  const placeMenu=()=>{const r=addSim.getBoundingClientRect(),h=Math.min(simMenu.scrollHeight,innerHeight*0.7);simMenu.style.left=(r.right+8)+'px';simMenu.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top-h/2))+'px';};
-  const closeMenu=()=>{simMenu.hidden=true;addSim.setAttribute('aria-expanded','false');};
-  addSim.onclick=e=>{e.stopPropagation();if(simMenu.hidden){simMenu.hidden=false;placeMenu();addSim.setAttribute('aria-expanded','true');simMenu.querySelector('button')?.focus();}else closeMenu();};
+  const placeMenu=()=>{const r=menuBtn.getBoundingClientRect(),h=Math.min(simMenu.scrollHeight,innerHeight*0.7);simMenu.style.left=(r.right+8)+'px';simMenu.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top-h/2))+'px';};
+  const closeMenu=()=>{simMenu.hidden=true;addSim.setAttribute('aria-expanded','false');addInt.setAttribute('aria-expanded','false');};
+  const openFor=(btn,cat)=>e=>{e.stopPropagation();const same=!simMenu.hidden&&menuBtn===btn;closeMenu();if(same)return;menuBtn=btn;simMenu.querySelectorAll('[data-cat]').forEach(x=>x.hidden=x.dataset.cat!==cat);simMenu.hidden=false;placeMenu();btn.setAttribute('aria-expanded','true');simMenu.querySelector(`[data-cat="${cat}"] button`)?.focus();};
+  addSim.onclick=openFor(addSim,'building');addInt.onclick=openFor(addInt,'interior');
   simMenu.onclick=e=>{const b=e.target.closest('[data-addsim]');if(!b)return;closeMenu();studyChoice.value=b.dataset.addsim;studyChoice.onchange();$('#sendSim',app).click();};
   simMenu.onkeydown=e=>{if(e.key==='Escape'){closeMenu();addSim.focus();}};
-  const simOutside=e=>{if(!simMenu.hidden&&!simMenu.contains(e.target)&&!addSim.contains(e.target))closeMenu();};document.addEventListener('click',simOutside);
+  const simOutside=e=>{if(!simMenu.hidden&&!simMenu.contains(e.target)&&!addSim.contains(e.target)&&!addInt.contains(e.target))closeMenu();};document.addEventListener('click',simOutside);
   $('#sendSim', app).onclick = async () => {
     const button=$('#sendSim',app),pane=activePane(),shell=$('.wb-shell',app);if(!pane.ready){toast('The model is still loading.');return;}button.disabled=true;button.textContent='Preparing simulation…';button.setAttribute('aria-busy','true');shell.inert=true;shell.setAttribute('aria-busy','true');
     try{
