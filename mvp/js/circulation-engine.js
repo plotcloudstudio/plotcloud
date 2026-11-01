@@ -1,4 +1,4 @@
-// Circulation (2026-10-31): the method of the Circulation study (emb/evac.html), for the Workspace. Places on one level; between
+// Circulation (2026-10-31): the method of the Circulation study (the former emb/evac.html, retired 2026-11-01), for the Workspace. Places on one level; between
 // every pair, the shortest walkable route and an ant colony's walks (rounds of ants that settle on the good routes), each walk
 // a slightly wobbling line, so the walks along one corridor read as a band; the metres walked through each spot make the
 // density. The functions below are the study's own, unchanged (EV, wobble, densify, chaikin, guessUse); run() strings them

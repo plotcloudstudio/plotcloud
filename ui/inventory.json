@@ -37,11 +37,6 @@
       "url": "/emb/doors3d.html"
     },
     {
-      "file": "emb/evac.html",
-      "surface": "tool",
-      "url": "/emb/evac.html"
-    },
-    {
       "file": "emb/facade.html",
       "surface": "tool",
       "url": "/emb/facade.html"
@@ -60,11 +55,6 @@
       "file": "emb/modeler.html",
       "surface": "tool",
       "url": "/emb/modeler.html"
-    },
-    {
-      "file": "emb/spacesyntax.html",
-      "surface": "tool",
-      "url": "/emb/spacesyntax.html"
     },
     {
       "file": "emb/stairs3d.html",

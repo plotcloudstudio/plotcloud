@@ -43,6 +43,16 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=wayfinding]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     const wf = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows }; }); assert.equal(wf.err, ''); assert.deepEqual(wf.rows[2], ['Rooms seen from the start', '5 of 5']); assert.doesNotMatch(JSON.stringify(wf.rows), /no way in/);
     console.log(`PASS Wayfinding on Level 1: every room reached (doorways walkable), ${wf.rows[0][1]} decision points`);
+    // Space syntax and Movement depth (2026-11-01): the study page's visibility graph, in the Workspace, on the floor of this level
+    for (const [id, view] of [['spacesyntax', 'integ'], ['movementdepth', 'flowdepth']]) {
+      await p.click('#addSimInt'); await p.click(`.w2-simmenu [data-addsim=${id}]`); await p.locator('.sp-studycard [data-st-set="ssLevel:draft"]').waitFor({ timeout: 30000 });
+      assert.match(await p.locator('.sp-studycard').innerText(), /Draft[\s\S]*Standard[\s\S]*Fine[\s\S]*Estimated time/);
+      await p.click('[data-st-set="ssLevel:draft"]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
+      const ss = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, n: s.res?.cells, rows: s.res?.rows, fin: s.res ? Array.from(s.res.vals).filter(Number.isFinite).length : 0, views: Object.keys(s.res?.views || {}) }; });
+      assert(!ss.err && ss.view === view && ss.n > 30 && ss.fin === ss.n, id + ' ' + JSON.stringify(ss));
+      const fr2 = p.frames().find((f) => f.url().includes('ws=persp')); assert((await fr2.evaluate(() => S3._sheet()))?.vis, id + ': drawn on the floor in 3D');
+      if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/${id}.png` });
+      console.log(`PASS ${id} in the Workspace: ${ss.n} nodes, views ${ss.views.join(', ')}; ${ss.rows.slice(0, 2).map((x) => x.join(' ')).join(' · ')}`); }
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });

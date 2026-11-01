@@ -1,4 +1,4 @@
-// Privacy (2026-10-31): the analysis of the Privacy study (emb/privacy.html), unchanged, for the Workspace: onlookers along the
+// Privacy (2026-10-31): the analysis of the Privacy study (the former emb/privacy.html, retired 2026-11-01), unchanged, for the Workspace: onlookers along the
 // street and in the windows of a building opposite; for every spot of the floor (1.2 m up), the share of them that see it through
 // a window, checked against each window's sill and head and furniture taller than the line of sight.
 import { clamp, r1, raster, centre, sliced, keep, ROOM_SKIP, sceneBounds, wallBox, segCross, dist } from '../../../emb/lib/plansim.js?v=1';

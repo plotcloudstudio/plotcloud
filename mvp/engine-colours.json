@@ -184,7 +184,7 @@
     ]
   },
   "spacesyntax": {
-    "source": "emb/spacesyntax.html",
+    "source": "mvp/js/interior/spacesyntax.js",
     "definition": "SPEC",
     "stops": [
       [
@@ -238,7 +238,7 @@
     ]
   },
   "movementdepth": {
-    "source": "emb/spacesyntax.html",
+    "source": "mvp/js/interior/spacesyntax.js",
     "definition": "DEPTHMAP_SPEC",
     "stops": [
       [
@@ -284,7 +284,7 @@
     ]
   },
   "evac": {
-    "source": "emb/evac.html",
+    "source": "mvp/js/circulation-engine.js",
     "definition": "RAMPV",
     "stops": [
       [

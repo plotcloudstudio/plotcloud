@@ -1,4 +1,4 @@
-// Wayfinding (2026-10-31): the analysis of the Wayfinding study (emb/wayfinding.html), for the Workspace, unchanged but for one marked fix
+// Wayfinding (2026-10-31): the analysis of the Wayfinding study (the former emb/wayfinding.html, retired 2026-11-01), for the Workspace, unchanged but for one marked fix
 // (doorways walkable whatever the grid): from a start
 // (a door to outside or a room), the shortest walk to every room's door, the decision points where routes split, whether each door
 // is in sight there (else a sign), and the visual depth of the floor: 0 where the start sees, 1 one look-around on, and so on.
