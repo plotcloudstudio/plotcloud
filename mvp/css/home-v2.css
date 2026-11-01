@@ -110,6 +110,12 @@ body.lp-full #app{padding:0;max-width:none}
 .lp-study-tabs button[aria-pressed=true]{color:#1b344d;border-bottom-color:#2f5bd3}.lp-study-tabs button span{opacity:0;transition:opacity .2s}.lp-study-tabs button[aria-pressed=true] span{opacity:1}
 .lp-study-figure{margin:0;min-width:0}.lp-study-figure img{display:block;width:100%;height:390px;object-fit:contain;background:#f4f5f7;border-radius:10px;transition:filter .3s}
 .lp-study-figure figcaption{font-size:11px;color:var(--sub);padding:12px 0 0}
+.lp-study-canvas{position:relative;isolation:isolate;border-radius:10px;transition:box-shadow .25s;--shadow-x:0px;--shadow-y:18px;--spot-x:50%;--spot-y:50%}
+.lp-study-canvas::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:radial-gradient(ellipse 190px 140px at var(--spot-x) var(--spot-y),#17365420,transparent 100%);opacity:0;transition:opacity .25s}
+.lp-study-canvas.is-tracking{box-shadow:var(--shadow-x) var(--shadow-y) 38px -14px #183c6752}
+.lp-study-canvas.is-tracking::after{opacity:1}
+.lp-simulation:focus-within .lp-study-canvas:not(.is-tracking){box-shadow:0 12px 28px -16px #183c673d}
+@media(prefers-reduced-motion:reduce){.lp-study-canvas.is-tracking{box-shadow:none}.lp-study-canvas::after{display:none}}
 .lp-card{border-radius:12px;box-shadow:0 3px 5px #0f111508;min-height:410px;padding:20px 24px 28px}
 .lp-card:hover{transform:translateY(-5px);box-shadow:0 14px 28px #1b344d12}
 .lp-photo{object-fit:contain;pointer-events:none;transition:transform .7s,opacity .4s;background:#f4f5f7}
