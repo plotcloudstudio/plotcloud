@@ -24,3 +24,7 @@ Validation: tests/snow-analysis.test.mjs covers overlapping receivers, mass/volu
 ## Snow illustration prompt
 
 Built-in imagegen edit, fixed exterior master mvp/img/home/wind.webp, saved as mvp/img/home/snow.webp. Preserve all architecture and the camera. Replace wind paths and field with a uniform pale icy-blue sampling overlay on exposed ground and horizontal roof tops. No snow beneath solid footprints, invented drifts, variable depth, snow piles, weather forecast or structural claims. White opaque facades remain unchanged; a small unnumbered blue key only. Like the other catalog assets, this is illustrative artwork and not a computed project result.
+
+The catalog keeps one Snow accumulation study. Its default page is the uniform-event mode; the mode selector opens the pre-existing Workspace winter-wind drift screening. Workspace drift settings link back to uniform-event quantities. Existing drift calculations and historical runs are preserved. Uniform-event parameter snapshots use the snow-event dependency namespace, so changing density does not alter winter-wind input hashes.
+
+During integration, the remotely added study.grid default was missing from the fixed contract template. A new template version carries Auto; historical pinned templates remain unchanged. The contract and handoff tests verify compatibility.

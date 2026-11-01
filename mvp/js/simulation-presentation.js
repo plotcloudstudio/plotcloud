@@ -28,5 +28,5 @@ const INTENTS={
 };
 export function simulationPresentation(sim){
  const [question,description]=INTENTS[sim.id]||['What does this study help you decide?',sim.blurb];
- return {...sim,title:sim.name,question,description,image:`img/home/${sim.id}.webp?v=master-models-snow-20261031-2`,href:`#/simulations/${sim.id}`};
+ return {...sim,title:sim.name,question,description,image:`img/home/${sim.id}.webp?v=master-models-snow-20261031-3`,href:`#/simulations/${sim.id}`};
 }

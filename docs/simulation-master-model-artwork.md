@@ -1,10 +1,10 @@
 # Simulation artwork: two fixed masters
 
-Architects and students comparing studies should recognize the same model across cards. The user's approved exterior master is `mvp/img/home/wind.webp`; the interior master is `mvp/img/home/daylight.webp`. Retain these originals. Twenty sibling images were edited with the built-in imagegen tool, changing only the illustrative analysis overlay. These are not calculated project results. No engine, project model, saved result or simulation setting is changed by this asset update.
+Architects and students comparing studies should recognize the same model across cards. The user's approved exterior master is `mvp/img/home/wind.webp`; the interior master is `mvp/img/home/daylight.webp`. Retain these originals. Twenty existing-study sibling images were edited with the built-in imagegen tool, changing only the illustrative analysis overlay. These are not calculated project results. No engine, project model, saved result or simulation setting is changed by this asset update.
 
 Exterior variants preserve the original urban block composition; interior variants preserve the furnished apartment composition. Climate and passive strategy images use weather diagrams rather than imply a calculated building response. Stormwater on this flat master uses a runoff-coefficient overlay rather than inventing terrain or pond depth. Existing study methods and palettes were checked against `mvp/engine-colours.json`, engine screens and implementation.
 
-All 22 types use the same registry in Home DriftWall, Home's study switcher, Workspace preview cards, the simulation catalog and the legacy Dashboard thumbnail helper. Old JPEG assets remain for rollback, with no fallback to those images in these interfaces.
+All 23 types use the same registry in Home DriftWall, Home's study switcher, Workspace preview cards, the simulation catalog and the legacy Dashboard thumbnail helper. Old JPEG assets remain for rollback, with no fallback to those images in these interfaces.
 
 ## Prompt set
 
@@ -127,3 +127,5 @@ Precise image edit for PlotCloud simulation marketing preview. Reference image i
 Master: interior. Output: `mvp/img/home/cameras.webp`.
 
 Precise image edit for PlotCloud simulation marketing preview. Reference image is the REQUIRED fixed master white apartment cutaway model, NOT loose inspiration. LOCK exact image dimensions/aspect, orthographic camera, framing, every solid outline, positions, dimensions, heights, footprint, walls, doors, glazing, furniture, lighting, shadows, white materials and background. Do not redesign or rearrange ANY geometry. Change ONLY colored analysis overlays and the small bottom-right colour key. Remove daylight layer. Overlay geometric camera coverage using three tiny mounting-point symbols on existing walls, translucent flat blue amber and green coverage sectors on existing floor clipped by solid walls and furniture, grey blind zones. No sci-fi cones through walls, no extra architecture. White walls and furniture unchanged. Small three-colour unnumbered key. Remove any inherited previous-analysis symbols. No text, no numeric values, no logos, watermarks, UI, certification badges. These are illustrative overlays matching existing software study types, not claimed calculated project results. Preserve the reference pixels outside analysis-overlay areas as closely as possible. Output one full-frame landscape image.
+
+Snow accumulation adds a twenty-first derivative from the exterior master; its prompt and the implemented uniform-event calculation are documented in snow-accumulation.md.
