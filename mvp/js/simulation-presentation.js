@@ -6,6 +6,7 @@ const INTENTS={
   daylight:['How far does daylight reach indoors?','Compare windows and room layouts on the work-plane grid.','room'],
   wind:['Where does wind accelerate or shelter?','Inspect pedestrian-level flow around your building masses.','wind'],
   vent:['Can openings help air move through?','Explore airflow from wind and temperature differences.','wind'],
+  snow:['Where will snow drift and pile up?','Find drifts, scoured ground and roof snow load from the winter wind.','water'],
   stormwater:['Where could rainwater collect?','Trace runoff and low spots under a chosen design storm.','water'],
   acoustics:['Will a room sound too reverberant?','Compare room finishes against a reverberation target.','sound'],
   spacesyntax:['Which spaces connect the plan?','Read visibility, connectivity and spatial integration.','network'],

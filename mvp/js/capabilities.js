@@ -18,6 +18,7 @@ export const STUDIES = {
   radiation: { category: 'building', covers: ['B03'], method: 'PlotCloud sky-patch incident radiation from EPW (browser, no reflections) — not HB-Radiance', test: 'tests/climate-studies.cjs' },
   utci: { category: 'building', covers: ['B09'], method: 'UTCI polynomial with PlotCloud solar MRT estimate (browser)', test: 'tests/climate-studies.cjs' },
   wind: { category: 'building', covers: ['B07', 'B08'], method: 'PlotCloud GPU lattice flow screening (browser) — not OpenFOAM CFD', test: 'tests/climate-studies.cjs' },
+  snow: { category: 'building', covers: [], extension: 'Snow drift screening', method: 'PlotCloud snow drift screening: 2D flow of the prevailing winter wind (project weather), snow settling where it slows', test: 'tests/workspace-in-view.cjs' },
   stormwater: { category: 'building', covers: [], extension: 'Site drainage screening', method: 'PlotCloud runoff screening with a design storm (not EPW)', test: 'tests/free-simulations.cjs' },
   structure: { category: 'building', covers: [], extension: 'Structural screening', method: 'PlotCloud frame solver on confirmed members, supports and loads', test: 'tests/structural-workflow.cjs' },
   skyview: { category: 'building', covers: ['B04'], method: 'Sky exposure / projected sky view factor (browser)', test: 'tests/environment-analysis.cjs' },

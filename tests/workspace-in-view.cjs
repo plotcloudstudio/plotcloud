@@ -28,7 +28,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert(await p.locator('.sp-legend').isVisible(), 'legend shown'); assert(painted && painted.ana && painted.cv, 'the result is painted into the topographic block');
     console.log(`PASS Sun hours runs in the view: ${st.res.cells} ground cells, mean ${st.res.avg.toFixed(1)} h, painted into the site; legend shown`);
 
-    for (const [id, unit] of [['radiation', 'kWh/m²'], ['skyview', '%'], ['wind', 'Lawson class'], ['stormwater', 'm³ passing (log)']]) {   // Solar radiation (project weather), Sky exposure and Wind flow (2D flow, Lawson) run on the ground too
+    for (const [id, unit] of [['radiation', 'kWh/m²'], ['skyview', '%'], ['wind', 'Lawson class'], ['stormwater', 'drainage'], ['snow', 'cm of snow']]) {   // Solar radiation (project weather), Sky exposure and Wind flow (2D flow, Lawson) run on the ground too
       await p.click('#addSimBtn'); await p.click(`.w2-simmenu [data-addsim=${id}]`); await p.click('[data-st=run]');
       await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
       const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, unit: s.res?.unit, avg: s.res?.avg, cells: s.res?.cells, ramp: s.res?.ramp }; });

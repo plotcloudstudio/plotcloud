@@ -80,6 +80,7 @@ export function studyInputs(study) {
   if (study === 'vent') return [...SUNPOS, 'site.terrain', 'site.shelter', 'weather.epw'];
   if (study === 'daylight') return [...SUNPOS, 'study.plane', 'study.occStart', 'study.occEnd', 'weather.epw'];
   if (study === 'stormwater') return [...SITE, 'study.rain', 'study.duration'];
+  if (study === 'snow') return [...SUNPOS, 'site.terrain', 'weather.epw'];
   if (['acoustics', 'roomacoustics', 'noise'].includes(study)) return ['study.band'];
   if (['isovist', 'views', 'privacy'].includes(study)) return ['study.eye'];
   if (study === 'structure') return ['study.code'];
