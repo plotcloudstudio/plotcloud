@@ -27,8 +27,14 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.equal(r.err, ''); assert.deepEqual(r.rows[1], ['Pairs walked', '10 of 10']); assert.match(r.rows[0][1], /^\d+(\.\d)? m$/); assert.equal(r.view, 'walks');
     await p.waitForTimeout(9000); const fr = p.frames().find((f) => f.url().includes('ws=persp')), sheet = await fr.evaluate(() => S3._sheet());
     assert(sheet && sheet.vis, 'the walks are drawn on the floor in 3D'); assert(await fr.evaluate(() => (window.__ws._walkPNG() || '').length > 10000), 'the walks ink has content');
-    console.log(`PASS Circulation on Level 1: ${r.rows[1][1]} pairs, average walk ${r.rows[0][1]}, walks on the floor in 3D`);
+    // on the floor, not in the air, and people walking the routes (2026-11-01)
+    const pp = await fr.evaluate(() => ({ ...S3._people(), sheet: S3._sheet().y }));
+    const lv1 = await fr.evaluate(() => S3._floorTop());   // the top of Level 1's floor slab in the 3D view
+    assert(Number.isFinite(lv1) && Math.abs(pp.sheet - lv1) < 0.12, `the walks sheet on the floor of Level 1 (${pp.sheet} vs slab top ${lv1})`); assert(pp.n >= 1 && Math.abs(pp.y - pp.sheet) < 0.01, `people walking on the sheet ${JSON.stringify(pp)}`);
+    if (process.env.SHOTS) await p.screenshot({ path: process.env.SHOTS + '/circ-3d.png' });
+    console.log(`PASS Circulation on Level 1: ${r.rows[1][1]} pairs, average walk ${r.rows[0][1]}, walks on the floor in 3D (sheet ${pp.sheet.toFixed(2)} m, floor ${lv1.toFixed(2)} m), ${pp.n} people walking`);
     await p.click('[data-sp=dim]'); await p.waitForTimeout(2500); await p.click('[data-st-view=density]'); await p.waitForTimeout(500);
+    if (process.env.SHOTS) { await p.click('[data-st-view=walks]'); await p.waitForTimeout(1500); await p.screenshot({ path: process.env.SHOTS + '/circ-2d.png' }); await p.click('[data-st-view=density]'); await p.waitForTimeout(500); }
     const pf = p.frames().find((f) => f.url().includes('ws=plan')); assert(await pf.evaluate(() => (window.__ws._walkPNG() || '').length > 5000), 'density drawn over the plan');
     console.log('PASS the same study over the 2D plan; Density view');
     await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=privacy]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });

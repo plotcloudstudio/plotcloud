@@ -5366,8 +5366,24 @@ function drawGuide() { if (!GUIDE || CAM === '3d') return; const p = W2S(GUIDE.p
 // ---- an interior study on one level (2026-10-31): Circulation's walks as ink that builds up as the ants walk, or its density
 const WK = { o: null, cv: null, g: null, k: 1, done: null, t: 0, raf: 0, last: 0 };
 function walkStop() { cancelAnimationFrame(WK.raf); WK.raf = 0; }
+// people on the walks (2026-11-01): up to 40 at once, each takes a computed walk, fades in over its first metre, walks it at about
+// three times walking pace and fades out over its last metre, then starts another; 3D figures, 2D dots
+const PPLS = { raf: 0, out: null, last: 0, t2: 0 };
+function peopleStop() { cancelAnimationFrame(PPLS.raf); PPLS.raf = 0; PPLS.out = null; if (window.S3 && S3.people) S3.people(null); }
+function peopleStart(walks, z) { peopleStop(); const W = (walks || []).filter((w) => w.len > 2 && w.pts && w.pts.length > 1); if (!W.length) return;
+  const n = Math.min(40, Math.max(6, Math.round(W.length / 3))), ppl = Array.from({ length: n }, (_, i) => ({ w: null, d: 0, wait: i * 0.45 })), SPEED = 4, FADE = 1.2;
+  PPLS.last = performance.now();
+  const tick = (t) => { const dt = Math.min(0.1, (t - PPLS.last) / 1000); PPLS.last = t; const out = [];
+    for (const P of ppl) { if (P.wait > 0) { P.wait -= dt; out.push(null); continue; } if (!P.w) { P.w = W[Math.floor(Math.random() * W.length)]; P.d = 0; }
+      P.d += dt * SPEED; const w = P.w; if (P.d >= w.len) { P.w = null; P.wait = Math.random() * 0.8; out.push(null); continue; }
+      let acc = 0, x = w.pts[0][0], y = w.pts[0][1]; for (let q = 1; q < w.pts.length; q++) { const A = w.pts[q - 1], C = w.pts[q], L = Math.hypot(C[0] - A[0], C[1] - A[1]); if (acc + L >= P.d) { const u = L ? (P.d - acc) / L : 0; x = A[0] + (C[0] - A[0]) * u; y = A[1] + (C[1] - A[1]) * u; break; } acc += L; x = C[0]; y = C[1]; }
+      out.push({ x, y, z, op: Math.max(0, Math.min(1, P.d / FADE, (w.len - P.d) / FADE)) }); }
+    PPLS.out = out; if (CAM === '3d') { if (window.S3 && S3.on && S3.people) S3.people(out); } else if (t - PPLS.t2 > 33) { PPLS.t2 = t; draw(); }
+    PPLS.raf = requestAnimationFrame(tick); };
+  PPLS.raf = requestAnimationFrame(tick); }
 function walkShow(o) {
-  walkStop(); WK.o = o; if (!o) { if (window.S3 && S3.floorSheet) S3.floorSheet(null); if (CAM !== '3d') draw(); return; }
+  walkStop(); WK.o = o; if (!o) { peopleStop(); if (window.S3 && S3.floorSheet) S3.floorSheet(null); if (CAM !== '3d') draw(); return; }
+  if (o.view === 'walks' && o.people !== false && o.walks && o.walks.length) peopleStart(o.walks, o.z || 0); else peopleStop();
   const b = o.box, w = b.x1 - b.x0, h = b.y1 - b.y0, k = Math.min(60, 2600 / Math.max(w, h)); if (!WK.cv || WK.cv.width !== Math.round(w * k) || WK.cv.height !== Math.round(h * k)) { WK.cv = document.createElement('canvas'); WK.cv.width = Math.round(w * k); WK.cv.height = Math.round(h * k); WK.g = WK.cv.getContext('2d'); }
   WK.k = k; WK.done = new Float32Array(o.walks.length); WK.t = o.play ? 0 : o.T; WK.g.clearRect(0, 0, WK.cv.width, WK.cv.height);
   if (o.view !== 'walks') { const D = o.density, R = o.rampStops || RAMPS_TOP[o.ramp || 'violet'], lo = D.lo || 0, sp = Math.max(1e-9, D.hi - lo); for (let j = 0; j < D.ny; j++) for (let i = 0; i < D.nx; i++) { const v = D.vals[j * D.nx + i]; if (!Number.isFinite(v)) continue; const t = Math.max(0, Math.min(1, (v - lo) / sp)); WK.g.fillStyle = rampAtTop(R, t); WK.g.globalAlpha = o.solid ? 0.9 : Math.min(0.92, 0.25 + 0.75 * t); const x = (D.X0 + i * D.cell - b.x0) * k, y = (b.y1 - (D.Y0 + (j + 1) * D.cell)) * k; WK.g.fillRect(x, y, D.cell * k + 0.6, D.cell * k + 0.6); } WK.g.globalAlpha = 1; walkMarks(); walkFrame(); return; }
@@ -5392,6 +5408,7 @@ function walkInk() {   // each walk stroked only up to where its ant has got; tr
 function walkFrame() { const o = WK.o; if (!o) return;
   if (o.ground == null) { o.ground = -Infinity; const site = M.site; if (site && site.terrain) for (let i = 0; i <= 16; i++) for (let j = 0; j <= 16; j++) { const q = siteOfM(M, [o.box.x0 + (o.box.x1 - o.box.x0) * i / 16, o.box.y0 + (o.box.y1 - o.box.y0) * j / 16]); o.ground = Math.max(o.ground, SITEC.groundAt(site.terrain, q[0], q[1])); } } if (o.fit && window.S3 && S3.on && S3.fitBox) { o.fit = false; S3.fitBox(o.box, o.z || 0); } if (window.S3 && S3.on && S3.floorSheet) S3.floorSheet({ canvas: WK.cv, x0: o.box.x0, y0: o.box.y0, w: o.box.x1 - o.box.x0, h: o.box.y1 - o.box.y0, z: o.z || 0, lv: o.lv, ground: o.ground }); if (CAM !== '3d') draw(); }
 function drawWalk2() { const o = WK.o; if (!o || CAM === '3d' || !WK.cv || (o.lv && o.lv !== LV)) return; if (o.fit2) { o.fit2 = false; FIT_BOX = { ...o.box }; fitView(); FIT_BOX = null; _drawAgain(); return; } const a = W2S([o.box.x0, o.box.y1]), bb = W2S([o.box.x1, o.box.y0]); g.save(); g.globalAlpha = 0.95; g.drawImage(WK.cv, a[0], a[1], bb[0] - a[0], bb[1] - a[1]); g.restore();
+  if (PPLS.out) { g.save(); for (const P of PPLS.out) { if (!P || P.op < 0.02) continue; const q = W2S([P.x, P.y]), r = Math.max(3 * (VP.d || 1), 0.25 * V.s); g.globalAlpha = P.op; g.fillStyle = '#3d4250'; g.beginPath(); g.arc(q[0], q[1], r, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = Math.max(1, r * 0.25); g.stroke(); } g.restore(); }
   for (const p of o.places || []) { const q = W2S(p.p), d = VP.d || 1; g.beginPath(); g.arc(q[0], q[1], 7 * d, 0, 7); g.fillStyle = '#46148c'; g.fill(); g.lineWidth = 2 * d; g.strokeStyle = '#fff'; g.stroke(); g.fillStyle = '#fff'; g.font = `700 ${9 * d}px Inter,system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(p.letter || '', q[0], q[1] + 0.5); } }
 // ---- reading a study result under the pointer (2026-10-31): the Workspace gets the plan point and the pointer position
 let PROBE = null;
@@ -5745,7 +5762,7 @@ window.S3 = (() => {
     const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); WM.ground = [ground, grid]; ctl.maxDistance = 2.6e7; addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
-  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ R.render(scene, WALK.on ? WALK.cam : cam); } }
+  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ R.render(scene, WALK.on ? WALK.cam : cam); if (typeof PPL !== 'undefined' && PPL.scene && PPL.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(PPL.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } } }
   // ---- the world around the site: OpenStreetMap tiles in three rings (about 24 km, 780 km and the world) under the site.
   // Hidden close up (only the site shows); fades in as the camera pulls back. Tiles: Esri Light Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors).
   const WM = { key: '', rings: [], siteR: 300, ground: [] };
@@ -6016,19 +6033,36 @@ window.S3 = (() => {
   { const _upd = api.update; api.update = (...a) => { _upd(...a); if (SUN.on) sunApply(); }; }
   { const _u2 = api.update; api.update = (...a) => { _u2(...a); if (LOOK.spec) { lookApply(); render(); } }; }   // layer materials after every rebuild
   // ---- an interior study on the floor of one level (2026-10-31): a sheet just above the floor with the study's canvas
-  const FLR = { m: null };
+  const FLR = { m: null, y: 0 };
+  // people walking the routes (2026-11-01): simple scale figures (1.7 m) that fade in, walk and fade out
+  const PPL = { scene: null, list: [], geo: null };
+  function personMesh() { if (!PPL.geo) PPL.geo = { body: new T.CapsuleGeometry(0.17, 0.95, 4, 12), head: new T.SphereGeometry(0.115, 16, 12) };
+    const mat = new T.MeshLambertMaterial({ color: '#3d4250', transparent: true, opacity: 0 }), g0 = new T.Group(), b = new T.Mesh(PPL.geo.body, mat), h = new T.Mesh(PPL.geo.head, mat);
+    b.position.y = 0.72; h.position.y = 1.56; g0.add(b, h); g0.userData.mat = mat; return g0; }
+  api.people = (arr) => { if (!scene) return;
+    if (!arr) { if (PPL.scene) { for (const m of PPL.list) m.userData.mat.dispose(); PPL.list = []; PPL.scene = null; render(); } return; }
+    if (!PPL.scene) { PPL.scene = new T.Scene(); PPL.scene.add(new T.HemisphereLight(0xffffff, 0x8a8f99, 2.4)); const d = new T.DirectionalLight(0xffffff, 1.1); d.position.set(-3, 6, 4); PPL.scene.add(d); }
+    while (PPL.list.length < arr.length) { const m = personMesh(); PPL.scene.add(m); PPL.list.push(m); }
+    PPL.list.forEach((m, i) => { const q = arr[i]; m.visible = !!q && q.op > 0.01; if (!m.visible) return; m.position.set(q.x, FLR.y || q.z || 0, -q.y); m.userData.mat.opacity = q.op; });
+    render(); };
   // frame a plan box (an interior study's level) from above at an angle
   api.fitBox = (b, y = 0) => { if (!cam || !ctl) return; const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, r = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.85 + 4; ctl.target.set(cx, y, -cy); cam.position.set(cx + r * 0.55, y + r * 1.05, -cy + r * 0.85); cam.lookAt(ctl.target); ctl.update(); render(); };
   api._scene = () => scene;   // read-only, for the browser checks
-  api._sheet = () => (FLR.m ? { y: FLR.m.position.y, x: FLR.m.position.x, z: FLR.m.position.z, vis: FLR.m.visible } : null);   // read-only, for the browser checks
+  api._sheet = () => (FLR.m ? { y: FLR.m.position.y, x: FLR.m.position.x, z: FLR.m.position.z, vis: FLR.m.visible } : null);
+  api._floorTop = () => { let t = -Infinity; if (grp) grp.traverse((m) => { if (!m.isMesh) return; const u = tagOf(m); if (u && u.k === 'floor') { const b = new T.Box3().setFromObject(m); if (b.max.y < 2) t = Math.max(t, b.max.y); } }); return t; };   // read-only, for the browser checks
+  api._people = () => ({ n: PPL.list.filter((m) => m.visible).length, y: PPL.list.find((m) => m.visible)?.position.y ?? null, floor: (() => { try { return api.storeys().map((x) => [x.id, x.y]); } catch (e) { return null; } })() });   // read-only, for the browser checks   // read-only, for the browser checks
   api.floorSheet = (o) => { if (!scene) return; if (!o) { if (FLR.cut && R) { R.clippingPlanes = FLR.cut0 || []; FLR.cut = false; render(); } if (FLR.m) { scene.remove(FLR.m); FLR.m.geometry.dispose(); FLR.m.material.map?.dispose(); FLR.m.material.dispose(); FLR.m = null; render(); } return; }
     if (!FLR.m || FLR.m.userData.cv !== o.canvas) { api.floorSheet(null); const tex = new T.CanvasTexture(o.canvas); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
       const m = new T.Mesh(new T.PlaneGeometry(o.w, o.h), new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; m.name = 'floorsheet'; m.userData.cv = o.canvas; scene.add(m); FLR.m = m; }
-    let y = o.z; try { const st = api.storeys().find((x) => x.id === o.lv && !x.roof); if (st) y = st.y; } catch (e) { }
-    // just above the floor's top: the highest floor surface under the sheet's middle
-    try { const rc = new T.Raycaster(new T.Vector3(o.x0 + o.w / 2, y + 2.5, -(o.y0 + o.h / 2)), new T.Vector3(0, -1, 0)); const hs = rc.intersectObjects(grp ? grp.children : [], true).filter((h) => h.object.isMesh && h.point.y < y + 1.2); if (hs.length) y = Math.max(y, hs[0].point.y); } catch (e) { }
-    if (Number.isFinite(o.ground) && o.ground > y && o.z <= 0.5) y = o.ground + 0.25;   // a ground floor the terrain rises over: the sheet on the ground
-    FLR.m.position.set(o.x0 + o.w / 2, y + 0.12, -(o.y0 + o.h / 2)); FLR.m.material.map.needsUpdate = true;
+    let y = o.z, onStorey = false; try { const st = api.storeys().find((x) => x.id === o.lv && !x.roof); if (st) { y = st.y; onStorey = true; } } catch (e) { }
+    // on the floor's top (2026-11-01): the highest floor slab within 0.6 m of the level, under the sheet's middle; furniture,
+    // stairs and the terrain round the building no longer lift it into the air
+    // the window allows for a ground floor set on rising terrain; several points across the sheet, the highest slab top wins
+    let slab = -Infinity; const top = y + Math.max(0.6, (Number.isFinite(o.ground) ? o.ground - y : 0) + 0.6);
+    try { for (const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) { const rc = new T.Raycaster(new T.Vector3(o.x0 + o.w * fx, top, -(o.y0 + o.h * fy)), new T.Vector3(0, -1, 0));
+        for (const h of rc.intersectObjects(grp ? grp.children : [], true)) { if (!h.object.isMesh || h.point.y < y - 0.6 || h.point.y > top) continue; const u = tagOf(h.object); if (u && (u.k === 'floor' || u.k === 'room')) { slab = Math.max(slab, h.point.y); break; } } } } catch (e) { }
+    if (slab > -Infinity) y = slab; else if (!onStorey && Number.isFinite(o.ground) && o.ground > y && o.z <= 0.5) y = o.ground + 0.25;   // no slab under it: a ground floor the terrain rises over
+    FLR.m.position.set(o.x0 + o.w / 2, y + 0.05, -(o.y0 + o.h / 2)); FLR.y = y + 0.05; FLR.m.material.map.needsUpdate = true;
     // a cutaway, as a floor plan in 3D: everything above 1.2 m over this floor is cut away, so the floor and its result show
     if (R && !EL.on) { if (!FLR.cut) { FLR.cut0 = R.clippingPlanes; FLR.cut = true; } R.clippingPlanes = [new T.Plane(new T.Vector3(0, -1, 0), y + 1.2)]; }
     render(); };
