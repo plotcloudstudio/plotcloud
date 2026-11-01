@@ -537,7 +537,7 @@
     ]
   },
   "isovist": {
-    "source": "emb/isovist.html",
+    "source": "mvp/js/workspace-chrome.js (Isovist safety)",
     "definition": "washImage seen/blind",
     "discrete": true,
     "stops": [

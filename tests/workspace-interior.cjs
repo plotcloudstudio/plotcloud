@@ -55,6 +55,16 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
       const fr2 = p.frames().find((f) => f.url().includes('ws=persp')); assert((await fr2.evaluate(() => S3._sheet()))?.vis, id + ': drawn on the floor in 3D');
       if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/${id}.png` });
       console.log(`PASS ${id} in the Workspace: ${ss.n} nodes, views ${ss.views.join(', ')}; ${ss.rows.slice(0, 2).map((x) => x.join(' ')).join(' · ')}`); }
+    // Isovist safety (2026-11-01): the study page's analysis in the Workspace; the viewpoint starts in the largest room and moves with a click
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=isovist]'); await p.locator('.sp-studycard [data-iso=pick]').waitFor({ timeout: 30000 });
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 120000 });
+    const iv = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, rows: s.res?.rows, at: s.isoView, views: Object.keys(s.res?.views || {}) }; });
+    assert(!iv.err && iv.view === 'seen' && /%/.test(iv.rows[0][1]) && iv.at && iv.views.includes('eyes'), 'isovist ' + JSON.stringify(iv));
+    await p.click('[data-iso=pick]'); const fb = await p.locator('#fPlan:visible, #fPersp:visible').first().boundingBox(); await p.mouse.click(fb.x + fb.width * 0.62, fb.y + fb.height * 0.55);
+    await p.waitForFunction((a0) => { const s = window.__wsStudy.state(); return !s.busy && s.res && s.isoView && (s.isoView[0] !== a0[0] || s.isoView[1] !== a0[1]); }, iv.at, { timeout: 60000 });
+    const iv2 = await p.evaluate(() => { const s = window.__wsStudy.state(); return { at: s.isoView, rows: s.res.rows }; });
+    if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/isovist.png` });
+    console.log(`PASS isovist in the Workspace: ${iv.rows[0].join(' ')} from the largest room; a click moved the viewpoint to ${iv2.at.map((v) => v.toFixed(1)).join(', ')} → ${iv2.rows[0].join(' ')}`);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });
