@@ -6,7 +6,8 @@ export const FREE_STUDIES = Object.freeze(["sunhours", "radiation", "utci", "day
 const KEY = 'pc-beta-access-code-v1';
 let serverChecked=0,serverUser='',serverInflight=null,leaseDeadline=0;
 let verified = { active: false, reason: 'code-required' }, lastCode = '', checked = 0, inflight = null, generation = 0;
-export const isFreeStudy = id => FREE_STUDIES.includes(id);
+// every Resources tool is free (2026-11-01): resource:<tool> needs no beta access
+export const isFreeStudy = id => FREE_STUDIES.includes(id) || String(id).startsWith('resource:');
 const readCode = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
 export const normalizeCode = value => String(value || '').replace(/\s+/g, '').toUpperCase();
 export function status() { return { ...verified, active: verified.active && (verified.source==='account' ? performance.now()<leaseDeadline : Date.parse(verified.expiresAt)>Date.now()) }; }
