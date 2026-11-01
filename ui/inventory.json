@@ -82,11 +82,6 @@
       "url": "/emb/vent.html"
     },
     {
-      "file": "emb/views.html",
-      "surface": "tool",
-      "url": "/emb/views.html"
-    },
-    {
       "file": "emb/wind.html",
       "surface": "tool",
       "url": "/emb/wind.html"

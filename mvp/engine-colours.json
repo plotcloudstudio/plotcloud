@@ -400,7 +400,7 @@
     ]
   },
   "views": {
-    "source": "emb/views.html",
+    "source": "mvp/js/interior/views.js",
     "definition": "VFC",
     "stops": [
       [

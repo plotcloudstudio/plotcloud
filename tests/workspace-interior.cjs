@@ -65,6 +65,14 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const iv2 = await p.evaluate(() => { const s = window.__wsStudy.state(); return { at: s.isoView, rows: s.res.rows }; });
     if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/isovist.png` });
     console.log(`PASS isovist in the Workspace: ${iv.rows[0].join(' ')} from the largest room; a click moved the viewpoint to ${iv2.at.map((v) => v.toFixed(1)).join(', ')} → ${iv2.rows[0].join(' ')}`);
+    // View analysis (2026-11-01): the study page's LEED Quality Views screening in the Workspace
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=views]'); await p.locator('.sp-studycard [data-st-set="vwLevel:draft"]').waitFor({ timeout: 30000 });
+    assert.match(await p.locator('.sp-studycard').innerText(), /Draft[\s\S]*Estimated time[\s\S]*Window head height/);
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
+    const vw = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, n: s.res?.cells, rows: s.res?.rows, views: Object.keys(s.res?.views || {}) }; });
+    assert(!vw.err && vw.view === 'quality' && vw.n > 50 && /%/.test(vw.rows[0][1]) && /LEED/.test(vw.rows[2][0]), 'views ' + JSON.stringify(vw));
+    if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/views.png` });
+    console.log(`PASS views in the Workspace: ${vw.n} spots; ${vw.rows.slice(0, 3).map((x) => x.join(' ')).join(' · ')}`);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });
