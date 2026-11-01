@@ -285,3 +285,6 @@ export async function run(sc, o, onProg) { STOP = false; YEAR = null; const p = 
 const SRAMP = [[0, [44, 54, 92]], [0.25, [70, 104, 168]], [0.5, [246, 214, 104]], [0.75, [248, 176, 64]], [1, [255, 244, 214]]];
 const ARAMP = [[0, [236, 233, 226]], [0.2, [250, 214, 150]], [0.6, [236, 120, 60]], [1, [178, 36, 30]]];
 export const RAMPS = { SRAMP, ARAMP };
+// the run's effective conditions, as the study page reported them to the project (__pcAnalysisState): its settings key without
+// the geometry, so parameters[8] is the work plane height
+export function conditions() { let parameters = null; try { parameters = RES ? JSON.parse(RES.key).slice(1) : null; } catch (e) { } return { schema: 1, tool: 'daylight', parameters, spacing: RES?.spacing, bearings: RES?.nb, excluded: [] }; }

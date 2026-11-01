@@ -1,6 +1,6 @@
 // Executable recommendations and "adopt and run Plan B" (replan item 09, plan §7, AC18–AC19).
 // One rule is connected: a daylight result below the project's own daylight target proposes resizing one identified window,
-// within its host wall. The daylight engine (emb/daylight.html, via studio-convert.js) reads window width and head height,
+// within its host wall. The daylight engine (mvp/js/interior/daylight.js, the former emb/daylight.html) reads window width and head height,
 // so the patch changes a real solver input. No improvement is promised before the rerun; only the expected direction is shown.
 // The transaction: check the basis is current → derive plan B from the fixed A revision → apply the patch to a copy of A's model
 // → save B's version and revision → create a run group for the affected studies already in A's study package. A is untouched.

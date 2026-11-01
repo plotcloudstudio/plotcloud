@@ -1,4 +1,4 @@
-"""Daylight factor of the Daylight engine (emb/daylight.html) against Radiance (rtrace, CIE standard overcast sky from gensky)
+"""Daylight factor of the Daylight engine (mvp/js/interior/daylight.js, formerly emb/daylight.html) against Radiance (rtrace, CIE standard overcast sky from gensky)
 and an independent numerical integral of the CIE overcast sky seen through the window.
 
 Test room: 5 m wide, 6 m deep, 2.7 m high, one 3 m wide window, sill 0.9 m, head 2.1 m; work plane 0.8 m; points on the

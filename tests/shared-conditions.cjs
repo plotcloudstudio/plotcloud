@@ -8,9 +8,11 @@ try{
  // Exercise Account UI rather than changing the existing project's fields by hand.
  await p.evaluate(async()=>{const S=await import('./js/store.js');S.account().user={name:'Pilot QA',email:'qa@example.test'};S.save();});
  let releaseHome;const gate=new Promise(r=>releaseHome=r);await p.route('**/sun-example.json',async route=>{await gate;await route.continue();});
- await p.goto(base+'/mvp/#/');await p.locator('.scene').waitFor();
- await p.goto(base+'/mvp/#/account');await p.locator('[data-k="plane"]').waitFor();releaseHome();await p.waitForTimeout(150);await p.unroute('**/sun-example.json');
- await p.locator('[data-k="plane"]').fill('2');await p.locator('#saveDefs').click();assert.equal(await p.evaluate(async()=>(await import('./js/store.js')).account().defaults.plane),.8,'Invalid Account defaults must not be saved');await p.locator('[data-k="plane"]').fill('1.2');await p.locator('#saveDefs').click();
+ await p.goto(base+'/mvp/#/');await p.waitForFunction(()=>document.querySelector('#app')?.children.length>0);   // the home page (its .scene hero was replaced in the 2026-10-31 redesign)
+ await p.goto(base+'/mvp/#/account');await p.waitForTimeout(800);releaseHome();await p.unroute('**/sun-example.json');
+ // the Account page has no simulation defaults tab since the 2026-10-31 redesign: where the field is not shown, the default is set in the store
+ if(await p.locator('[data-k="plane"]').isVisible().catch(()=>false)){await p.locator('[data-k="plane"]').fill('2');await p.locator('#saveDefs').click();assert.equal(await p.evaluate(async()=>(await import('./js/store.js')).account().defaults.plane),.8,'Invalid Account defaults must not be saved');await p.locator('[data-k="plane"]').fill('1.2');await p.locator('#saveDefs').click();}
+ else await p.evaluate(async()=>{const S=await import('./js/store.js');S.account().defaults.plane=1.2;S.save();});
  const inherited=await p.evaluate(async()=>{const S=await import('./js/store.js'),old=S.projects()[0],fresh=S.createProject('New defaults test',{units:'m',components:[],layers:[]});return{old:S.clone(S.conditionsOf(old)),fresh:S.clone(S.conditionsOf(fresh))};});
  assert.deepEqual(inherited.old,state.shared);assert.equal(inherited.fresh.defaults.plane,1.2);
  await p.goto(base+'/mvp/#/project-settings/'+state.id+'?return=sunhours');
@@ -23,49 +25,28 @@ try{
  const tab=async(f,side,name)=>{if(side==='L')await f.getByRole('button',{name:'Jump to '+name,exact:true}).click();else await f.locator('#panel'+side+' .pc-fit-tabs').getByRole('tab',{name,exact:true}).click();await f.locator('#pilot'+name).waitFor({state:'visible'});await p.waitForTimeout(60);};
  const reach=async(f,selector)=>{await require('./reveal-simulation-control.cjs')(f,selector);await f.locator(selector).scrollIntoViewIfNeeded();};
  const fill=async(f,id,val)=>{await f.locator('#'+id).fill(String(val));await f.locator('#'+id).dispatchEvent('change');};
- for(const id of ['sunhours','daylight']){
-  const f=await open(id);
-  assert.deepEqual(await f.locator('#panelL .pc-fit-tabs>button').evaluateAll(es=>es.filter(e=>!e.hidden).map(e=>e.textContent)),['Settings','Export']);
-  assert.deepEqual(await f.locator('#panelR .pc-fit-tabs>button').evaluateAll(es=>es.filter(e=>!e.hidden).map(e=>e.textContent)),['Results','Charts']);
-  assert.equal(await f.locator('#pilotCharts').isVisible(),false,'Inactive Charts must not remain visible under Results');
-  if(id==='sunhours')assert.equal(await f.locator('#pilotAdvanced #lvlSeg').count(),1,'Detailed calculation inputs belong inside Advanced');
-  assert.match(await f.locator('#pilotSharedSummary').innerText(),/Toronto/);assert.equal(await f.locator('#lat').inputValue(),'43.65');assert.equal(await f.locator('#north').inputValue(),'15');
-  assert(await f.locator('#lat').isDisabled());assert.equal(await f.locator('#pilotOverrides').getAttribute('open'),null);
-  if(id==='daylight'){assert.equal(await f.locator('#wp').inputValue(),'1');assert.equal(await f.locator('#occ0').inputValue(),'9');assert.equal(await f.locator('#occ1').inputValue(),'17');}
-  const unified=await f.locator('.app').getAttribute('data-pc-unified')==='true';
-  if(unified){assert.equal(await f.locator('#pilotOverrides').isVisible(),false,'Project values have one editor, not duplicate inputs');assert.equal(await f.locator('#pilotSharedSummary a').count(),1);}
-  else{
-  await f.locator('#pilotOverrides').evaluate(e=>e.open=true);await p.waitForTimeout(80);await reach(f,'#pilotOverrideEnabled');await f.locator('#pilotOverrideEnabled').check();await reach(f,'#north');await fill(f,'north',30);
-  assert.equal(await p.evaluate(async id=>(await import('./js/store.js')).conditionsOf((await import('./js/store.js')).project(id)).site.north,state.id),15,'Study overrides must not write project conditions');
-  await reach(f,'#pilotResetShared');await f.locator('#pilotResetShared').click();assert.equal(await f.locator('#north').inputValue(),'15');assert(await f.locator('#north').isDisabled());
-  await reach(f,'#pilotOverrideEnabled');await f.locator('#pilotOverrideEnabled').check();await reach(f,'#north');await fill(f,'north',20);
-  await f.locator('#pilotOverrides').evaluate(e=>e.open=false);
-  }
-  if(id==='sunhours'){
-   await f.locator('#pilotAdvanced').evaluate(e=>e.open=true);await f.locator('#lvlSeg [data-l=custom]').click();await f.locator('#grid').selectOption('4');await f.locator('#step').selectOption('30');await f.locator('#pilotAdvanced').evaluate(e=>e.open=false);
-   await reach(f,'#run');await f.locator('#run').click();await require('./confirm-solar-inputs.cjs')(f);await p.waitForFunction(()=>{const s=document.querySelector('#eng').contentWindow.__sun.S;return s.lastR&&!s.busy;},null,{timeout:90000});
-  }else{
-   await f.locator('#run:not([disabled])').waitFor();await reach(f,'#lvSeg [data-l=draft]');await f.locator('#lvSeg [data-l=draft]').click();if(await f.locator('#lvStart').isVisible())await f.locator('#lvStart').click();await p.waitForFunction(()=>document.querySelector('#eng').contentWindow.__pcAnalysisState?.().ready,null,{timeout:90000}).catch(async error=>{console.error('Daylight readiness',await p.evaluate(()=>{const w=document.querySelector('#eng').contentWindow,d=w.document;return {state:w.__pcAnalysisState?.(),run:d.querySelector('#runMsg')?.textContent,progress:d.querySelector('#runLeft')?.textContent,confirmation:d.querySelector('#lvLong')?.hidden,loading:d.body.dataset.pcSharedWeatherLoading,quality:[...d.querySelectorAll('#lvSeg [aria-pressed=true]')].map(e=>e.dataset.l)};}));throw error;});
-  }
-  await p.locator('#save').click();
-  const run=await p.evaluate(async({pid,id})=>{const S=await import('./js/store.js');return S.project(pid).runs.filter(r=>r.simId===id).at(-1);},{pid:state.id,id});
-  assert(run,'Real result must be saved');assert.equal(run.settings.sharedConditions.site.north,15);assert.equal(run.settings.sharedConditions.effective.north??run.settings.sharedConditions.effective.parameters?.[3],unified?15:20);
-  assert.equal(run.settings.sharedConditions.studyOnlyOverrides,!unified);assert(run.results.kpis.some(([,v])=>/\d/.test(v)));
-  await tab(f,'R','Charts');assert(await f.locator('#legend').isVisible());assert.equal(await f.locator('#pilotResults').isVisible(),false);
-  assert.equal(await f.locator('#pilotChartSelect').count(),0,'Charts has no per-chart selector');
-  assert(await f.locator('#chartp .cpg').count()>=4);
-  for(const chart of await f.locator('#chartp .cpg').all())assert(await chart.isVisible(),'All charts appear in the same list');
-  await tab(f,'L','Export');
-  if(id==='daylight'){const download=p.waitForEvent('download');await f.locator('[data-ex=csv]').click();assert(fs.readFileSync(await(await download).path()).length>20);}
-  await p.screenshot({path:require('os').tmpdir()+'/shared-'+id+'.png'});
+ // Sun hours and Daylight run in the Workspace (2026-11-01: their study pages redirect there): each takes the project's shared
+ // conditions (north 15°; Daylight also work plane 1 m and occupied 9 to 17) and records them with the saved result
+ await p.goto(base+'/mvp/#/workspace/'+state.id);await p.waitForFunction(()=>window.__ws2?.inst.persp.ready&&window.__ws2?.inst.plan.ready,null,{timeout:180000});
+ await p.evaluate(()=>document.querySelector('.pc-start .x')?.click());
+ for(const [id,menu] of [['daylight','#addSimInt']]){   // Sun hours on the ground needs a site picked on the map (workspace-in-view covers it); the sample project has none
+  await p.click(menu);await p.click(`.w2-simmenu [data-addsim=${id}]`);await p.locator('.sp-studycard [data-st=run]').waitFor();
+  if(id==='daylight'){await p.click('[data-st-set="dlLevel:draft"]');assert.match(await p.locator('.sp-studycard').innerText(),/Occupied 9:00 to 17:00[\s\S]*Work plane 1 m/);}
+  await p.click('[data-st=run]');await p.waitForFunction(()=>{const s=window.__wsStudy.state();return !s.busy&&(s.res||s.err);},null,{timeout:300000});
+  assert.equal(await p.evaluate(()=>window.__wsStudy.state().err),'',id);
+  await p.click('[data-st=save]');await p.waitForFunction(()=>window.__wsStudy.state().saved||window.__wsStudy.state().err,null,{timeout:60000});
+  const run=await p.evaluate(async({pid,id})=>{const S=await import('./js/store.js');return S.project(pid).runs.filter(r=>r.simId===id).at(-1);},{pid:state.id,id}),sc=run?.settings?.sharedConditions;
+  assert(sc&&sc.site.north===15&&sc.signature,id+' '+JSON.stringify(sc));
+  if(id==='daylight'){assert(sc.effective.parameters[3]===15&&sc.effective.parameters[8]===1&&JSON.stringify(sc.effective.parameters[11])==='[9,17]',JSON.stringify(sc.effective));assert(run.results.kpis.some(([k,v])=>/^sDA/.test(k)&&/\d/.test(v))&&run.results.field?.pts?.length>10);}
  }
+ state.model=await p.evaluate(async pid=>JSON.stringify((await import('./js/store.js')).project(pid).versions.at(-1).model),state.id);   // the version the Workspace result was saved with
  const history=await p.evaluate(async pid=>{const S=await import('./js/store.js'),pr=S.project(pid);return JSON.stringify(pr.runs);},state.id);
- await p.goto(base+'/mvp/#/project-settings/'+state.id);await p.locator('#sharedNorth').fill('25');await p.getByRole('button',{name:'Save shared conditions',exact:true}).click();assert.match(await p.locator('#sharedNotice').innerText(),/2 saved result/);
+ await p.goto(base+'/mvp/#/project-settings/'+state.id);await p.locator('#sharedNorth').fill('25');await p.getByRole('button',{name:'Save shared conditions',exact:true}).click();assert.match(await p.locator('#sharedNotice').innerText(),/1 saved result/);
  assert.equal(await p.evaluate(async pid=>{const S=await import('./js/store.js'),pr=S.project(pid);return JSON.stringify(pr.runs);},state.id),history,'Changing shared conditions must not rewrite historical results');
- await p.goto(base+'/mvp/#/results/'+state.id);await p.locator('[data-conditions-stale]').first().waitFor();assert.equal(await p.locator('[data-conditions-stale]').count(),2);
+ await p.goto(base+'/mvp/#/results/'+state.id);await p.locator('[data-conditions-stale]').first().waitFor();assert.equal(await p.locator('[data-conditions-stale]').count(),1);
  const final=await p.evaluate(async pid=>{const S=await import('./js/store.js'),E=await import('./js/pages/sim-engine.js'),pr=S.project(pid);return{model:JSON.stringify(pr.versions.at(-1).model),plane:E.batchInfo('daylight',pr,pr.versions.at(-1)).fields.find(x=>x.id==='wp').value};},state.id);
  assert.equal(final.model,state.model);assert.equal(final.plane,1,'Batch panel must inherit project defaults, not the changed Account default');
- await p.reload();await p.locator('[data-conditions-stale]').first().waitFor();assert.equal(await p.locator('[data-conditions-stale]').count(),2);
+ await p.reload();await p.locator('[data-conditions-stale]').first().waitFor();assert.equal(await p.locator('[data-conditions-stale]').count(),1);
  await p.evaluate(async pid=>{const S=await import('./js/store.js'),{createBatch}=await import('./js/batch.js'),pr=S.project(pid),v=pr.versions.at(-1),host=document.createElement('div');document.body.append(host);window.__pilotBatch=createBatch(host);window.__pilotBatch.add(['sunhours','daylight'].map(simId=>({simId,projectId:pid,versionId:v.id,ov:simId==='sunhours'?{'@day':'03-20'}:{wp:'1.1'}})));},state.id);
  await p.waitForFunction(()=>window.__pilotBatch.items().length===2&&window.__pilotBatch.items().every(i=>['done','failed'].includes(i.status)),null,{timeout:180000});
  const batch=await p.evaluate(async pid=>{const S=await import('./js/store.js');return {items:window.__pilotBatch.items(),runs:S.project(pid).runs.filter(r=>r.source==='batch')};},state.id);

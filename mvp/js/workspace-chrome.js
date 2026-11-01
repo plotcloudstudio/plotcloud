@@ -22,7 +22,8 @@ import * as SSX from './interior/spacesyntax.js?v=ss-20261101-1';
 import * as ISO from './interior/isovist.js?v=iso-20261101-1';
 import * as VWS from './interior/views.js?v=vw-20261101-1';
 import * as CAMS from './interior/cameras.js?v=cam-20261101-1';
-import * as DAY from './interior/daylight.js?v=day-20261101-1';
+import * as DAY from './interior/daylight.js?v=day-20261101-2';
+import { daylightInputs, daylightRecord } from './daylight-run.js?v=day-20261101-2';
 import { keep as PKEEP } from '../../emb/lib/plansim.js?v=1';
 import { mountProps } from './project-props.js?v=grids-20261101-1';
 
@@ -539,10 +540,11 @@ export function mountChrome(app, api) {
         results: { decisions: RES.decisions.length, signs: F.signs, depth: +F.md.toFixed(2), seen: F.seen }, settings: { start: RES.start.name, eye: +ST.wayEye, furniture: ST.wayFurn, label: `Wayfinding from ${esc(RES.start.name)} (Workspace)` } }; }
     if (id === 'daylight') {
       const sc = w.planScene('daylight'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
-      let wx = null; try { wx = await weather(); } catch (e) { wx = null; }
-      const D0 = S.conditionsOf(p).defaults || {}, occ = [Number.isFinite(+D0.occStart) ? +D0.occStart : 8, Number.isFinite(+D0.occEnd) ? +D0.occEnd : 18], site = S.conditionsOf(p).site || {};
-      const out = await DAY.run(sc, { level: ST.dlLevel, tau: ST.dlTau, rf: ST.dlRf, rw: ST.dlRw, rc: ST.dlRc, head: ST.dlHead, occ, north: +(studio()?.north || 0), loc: wx ? { lat: wx.lat, lon: wx.lon, tz: wx.tz, name: wx.station } : { lat: site.lat, lon: site.lon, tz: Number.isFinite(+site.tz) ? +site.tz : Math.round((site.lon || 0) / 15), name: site.label || 'site' }, epw: wx ? wx.text : null, epwName: wx?.station },
+      try { await weather(); } catch (e) { }   // fetch the project weather if it is not stored yet
+      const { shared, inputs } = await daylightInputs(p), occ = inputs.occ, wx = inputs.epw ? { station: inputs.epwName } : null;
+      const out = await DAY.run(sc, { level: ST.dlLevel, tau: ST.dlTau, rf: ST.dlRf, rw: ST.dlRw, rc: ST.dlRc, head: ST.dlHead, ...inputs },
         (f) => { ST.progress = `a year of daylight ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; });
+      const rec = daylightRecord(p, null, shared, out, { origin: sc.origin, settings: { level: ST.dlLevel, tau: ST.dlTau, rf: ST.dlRf, rw: ST.dlRw, rc: ST.dlRc, head: ST.dlHead } });
       const { RES, sm } = out, o = sc.origin || [0, 0], RM = DAY.RAMPS, grid = (f) => { const g = new Float32Array(RES.PW * RES.PH).fill(NaN); RES.pts.forEach((q, k) => { g[q.j * RES.PW + q.i] = f(RES.ev[k]); }); return g; }, pc = (v) => fmt(v * 100, 0) + '%';
       const sSt = stopsOf(RM.SRAMP), aSt = stopsOf(RM.ARAMP), oSt = [[0, '#4668a8'], [0.5, '#38a060'], [1, '#ec783c']];
       const views = { sda: { vals: grid((e) => e.da * 100), unit: '% of occupied hours ≥ 300 lux', ramp: 'heat', lo: 0, hi: 100, dec: 0, avg: sm.sda * 100, title: 'Daylight autonomy (300 lux)', legendCols: sSt.map((x) => x[1]), legendLabels: ['100% of hours', '50% (sDA threshold)', '0%'], stops: sSt },
@@ -554,8 +556,8 @@ export function mountChrome(app, api) {
       return { X0: o[0], Y0: o[1], cell: RES.spacing, nx: RES.PW, ny: RES.PH, cells: RES.pts.length, avg: sm.sda * 100, views, paint: (r, fit) => show(r, fit), chartNote: 'Share of the floor in each band; hover a bar for its value.',
         rows: [['sDA300/50%', pc(sm.sda)], ['ASE1000/250 h', pc(sm.ase)], ['Mean daylight factor', fmt(sm.df, 2) + '%'], ['LEED v4.1 option 1 (sDA)', `${sm.pts1} point${sm.pts1 === 1 ? '' : 's'}${sm.ase > 0.1 ? ' · ASE over 10%: glare control needed' : ''}`], ['LEED v4.1 option 2 (300–3,000 lux)', `${pc(sm.o2)} · ${sm.pts2} point${sm.pts2 === 1 ? '' : 's'}`], ['Regularly occupied floor', fmt(sm.area) + ' m²'], ['Weather', out.epw ? esc(wx.station || 'project weather') : 'a generic year (no project weather)']],
         foot: `${fmt(RES.pts.length)} spots every ${Math.round(RES.spacing * 100)} cm, ${RES.nb} sky directions each`,
-        method: `Illuminance on the work plane (0.8 m) for every daylit hour of ${out.epw ? `the project weather (${esc(wx.station || 'EPW')})` : 'a generic year at the site'}: the sky in 145 patches seen through the windows (glass light ${fmt(ST.dlTau, 2)}), the sun where it reaches the spot, reflections outside and inside (floor ${ST.dlRf}, walls ${ST.dlRw}, ceiling ${ST.dlRc}), window head ${fmt(ST.dlHead, 2)} m; occupied ${occ[0]}:00–${occ[1]}:00. sDA300/50% and ASE1000/250 h as in IES LM-83 and LEED v4.1; option 2 at 9:00 and 15:00 on 21 March and 21 September (clear sky). The method of the Daylight study; a screening, not a certified simulation.`,
-        results: { sda: +(sm.sda * 100).toFixed(1), ase: +(sm.ase * 100).toFixed(1), df: +sm.df.toFixed(2) }, settings: { level: ST.dlLevel, tau: ST.dlTau, rf: ST.dlRf, rw: ST.dlRw, rc: ST.dlRc, head: ST.dlHead, label: `${DAY.LEVELS[ST.dlLevel].name}, glass ${ST.dlTau} (Workspace)` } }; }
+        method: `Illuminance on the work plane (${fmt(inputs.wp, 2)} m) for every daylit hour of ${out.epw ? `the project weather (${esc(wx.station || 'EPW')})` : 'a generic year at the site'}: the sky in 145 patches seen through the windows (glass light ${fmt(ST.dlTau, 2)}), the sun where it reaches the spot, reflections outside and inside (floor ${ST.dlRf}, walls ${ST.dlRw}, ceiling ${ST.dlRc}), window head ${fmt(ST.dlHead, 2)} m; occupied ${occ[0]}:00–${occ[1]}:00. sDA300/50% and ASE1000/250 h as in IES LM-83 and LEED v4.1; option 2 at 9:00 and 15:00 on 21 March and 21 September (clear sky). The method of the Daylight study; a screening, not a certified simulation.`,
+        results: rec.results, settings: { ...rec.settings, label: `${DAY.LEVELS[ST.dlLevel].name}, glass ${ST.dlTau} (Workspace)` } }; }
     if (id === 'cameras') {
       const sc = w.planScene('cameras'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
       const out = await CAMS.run(sc, { camh: ST.camH, tgt: +ST.camTgt, level: ST.camLevel, mode: ST.camMode, n: ST.camN, want: +ST.camWant, types: ST.camTypes }, (f) => { ST.progress = `searching camera positions ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; });
@@ -799,7 +801,9 @@ export function mountChrome(app, api) {
     if (!ST.res || ST.busy) return; ST.busy = true; drawStudy();
     try { if (dirty()) { const before = baseline()?.id; $('#saveV')?.click(); for (let i = 0; i < 100 && baseline()?.id === before; i++) await new Promise((r) => setTimeout(r, 100)); if (baseline()?.id === before) throw Error('The version could not be saved.'); }
       const v = baseline(), r = ST.res; if (!v) throw Error('Save a version first.');
-      S.addRun(p, v.id, ST.id, { ...r.settings, method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString() }, 'workspace');
+      // the project's shared conditions this result used (2026-11-01), so Results can say when they change afterwards
+      const shc = S.clone(S.conditionsOf(p)), sharedConditions = r.settings?.sharedConditions || { revision: shc.revision, signature: S.conditionsSignature(p, ST.id), site: S.clone(shc.site || {}), defaults: S.clone(shc.defaults || {}), studyOnlyOverrides: false, effective: { lat: shc.site?.lat, lon: shc.site?.lon, north: shc.site?.north ?? 0, tz: shc.site?.tz } };
+      S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, inheritedFrom: 'Project shared conditions', method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString() }, 'workspace');
       ST.saved = 'v' + v.n; ST.key = INST.persp.ws.model(); logRun(ST.id, r, 'v' + v.n); }
     catch (e) { ST.err = e.message; }
     ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();
@@ -834,7 +838,7 @@ export function mountChrome(app, api) {
         return `<p class="sp-flabel">Detail (${esc(lab)}, change the level in the Level menu)</p><div class="sp-tabs sp-tabs-sub" role="tablist">${Object.entries(DAY.LEVELS).map(([k, L]) => `<button type="button" role="tab" data-st-set="dlLevel:${k}" aria-selected="${ST.dlLevel === k}">${L.name}${pl[k] ? `<small>${Math.round(pl[k].sp * 100)} cm · ${tf(pl[k].est)}</small>` : ''}</button>`).join('')}</div>
           ${q ? `<p class="sp-note sp-est"><b>Estimated time: ${tf(q.est)}</b> · a spot every ${Math.round(q.sp * 100)} cm, about ${fmt(q.n)} spots, ${q.nb} sky directions each, a year of hours. The estimate learns this computer's speed.</p>` : ''}
           <div class="sp-two">${num('dlTau', 'Glass light transmission', '', 0.1, 0.95, 0.05)}${num('dlHead', 'Window head', 'm', 1.5, 6, 0.05)}${num('dlRf', 'Floor reflects', '', 0.05, 0.9, 0.05)}${num('dlRw', 'Walls reflect', '', 0.05, 0.95, 0.05)}${num('dlRc', 'Ceiling reflects', '', 0.05, 0.95, 0.05)}</div>
-          <p class="sp-note">Weather: the project weather (Project props). Occupied ${Number.isFinite(+D0.occStart) ? D0.occStart : 8}:00 to ${Number.isFinite(+D0.occEnd) ? D0.occEnd : 18}:00 (Project props). Work plane 0.8 m. sDA300/50%: daylit when 300 lux or more for half the occupied hours; ASE1000/250 h: direct sun of 1,000 lux for more than 250 hours. A screening as LEED v4.1 Daylight describes, not a certified simulation.</p>`; },
+          <p class="sp-note">Weather: the project weather (Project props). Occupied ${Number.isFinite(+D0.occStart) ? D0.occStart : 8}:00 to ${Number.isFinite(+D0.occEnd) ? D0.occEnd : 18}:00 (Project props). Work plane ${Number.isFinite(+D0.plane) ? D0.plane : 0.8} m (Project props). sDA300/50%: daylit when 300 lux or more for half the occupied hours; ASE1000/250 h: direct sun of 1,000 lux for more than 250 hours. A screening as LEED v4.1 Daylight describes, not a certified simulation.</p>`; },
       cam: () => { const L = CAMS.LEVELS, num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-cam="${k}" min="${min}" max="${max}" step="${st}" value="${ST[k]}"><i>${u}</i></span></label>`;
         return `${ST.camMode === 'budget' ? `<div class="sp-two">${num('camN', 'Number of cameras', '', 1, 30, 1)}<span></span></div>` : `<label class="sp-field">Cover at least<select class="sp-sel" data-cam="camWant">${[['1', '100% of the floor'], ['0.99', '99%'], ['0.95', '95%'], ['0.9', '90%']].map(([v, n]) => `<option value="${v}" ${ST.camWant === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`}
           <label class="sp-field">Detail needed (DORI, IEC 62676-4)<select class="sp-sel" data-cam="camLevel">${Object.entries(L).map(([k, l]) => `<option value="${k}" ${ST.camLevel === k ? 'selected' : ''}>${l.name} · ${l.ppm} px/m · ${esc(l.note)}</option>`).join('')}</select></label>

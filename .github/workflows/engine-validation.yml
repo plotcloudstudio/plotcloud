@@ -2,7 +2,7 @@ name: PlotCloud engine validation
 on:
   push:
     branches: [main]
-    paths: ['emb/sunhours.html', 'emb/lib/climate.js', 'emb/daylight.html', 'emb/noise.html', 'emb/roomacoustics.html', 'emb/lib/plansim.js', 'tests/validation/**', '.github/workflows/engine-validation.yml']
+    paths: ['emb/sunhours.html', 'emb/lib/climate.js', 'mvp/js/interior/daylight.js', 'emb/noise.html', 'emb/roomacoustics.html', 'emb/lib/plansim.js', 'tests/validation/**', '.github/workflows/engine-validation.yml']
   workflow_dispatch:
 jobs:
   validate:

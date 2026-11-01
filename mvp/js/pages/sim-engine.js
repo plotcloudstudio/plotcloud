@@ -123,15 +123,15 @@ function sunField(w, sc, label, unit) {
     const out = []; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = j * nx + i; if (cnt[q]) out.push(r2(x0 + (i + 0.5) * cs), r2(y0 + (j + 0.5) * cs), r2(sum[q] / cnt[q])); }
     return { label, unit, step: r2(cs), pts: out };
 }
-export const IN_WORKSPACE = ['evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views', 'cameras'];
+export const IN_WORKSPACE = ['evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views', 'cameras', 'daylight'];
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
-  if(sim.family==='environment')return(await import('./environment-study.js?v=run-20261031-2')).render(app,sim,params,context);
+  if(sim.family==='environment')return(await import('./environment-study.js?v=run-20261101-1')).render(app,sim,params,context);
   if(sim.id==='structure')return(await import('./structure-study.js?v=run-20261031-1')).render(app,sim,params,context);
   // studies that run in the Workspace now (2026-11-01; their study pages are retired): an old link opens the project's Workspace
   // with the study's card; a batch run says where it runs
-  if (IN_WORKSPACE.includes(sim.id)) {
+  if (IN_WORKSPACE.includes(sim.id) && !(sim.id === 'daylight' && params.get('batch'))) {   // a Daylight batch runs here, without a page (below)
     if (params.get('batch')) { window.parent.postMessage({ pcBatch: params.get('batch'), ok: false, why: `${sim.name} runs in the Workspace: open the project and choose it from Add simulation.` }, location.origin); return; }
     const p0 = currentProject(); if (p0) { try { sessionStorage.setItem('pc-ws-open-study', sim.id); } catch (e) { } location.hash = '#/workspace/' + p0.id; return; }
     app.innerHTML = `<div class="wrap"><span class="eyebrow">Simulation</span><h1 class="display md">${esc(sim.name)} runs in the Workspace</h1><p class="lede">Open a project, then choose ${esc(sim.name)} under Add simulation › Interior. It runs on the level you are on, with the rooms, walls, doors and furniture of your model.</p><p><a class="btn accent" href="#/new-project">Start a project</a> <a class="btn" href="#/home">Dashboard</a></p></div>`; return; }
@@ -168,6 +168,16 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   const levels = v ? levelsOf(v.model) : [], lvKey = `pc-sim-level:${p.id}`, lvPick = batch ? params.get('level') : (() => { try { return sessionStorage.getItem(lvKey); } catch (e) { return null; } })();
   const lvIx = Math.max(0, Math.min(levels.length - 1, levels.findIndex((L) => 'L' + L.n === lvPick))), level = levels[lvIx] ? { id: 'L' + levels[lvIx].n, z: levels[lvIx].z } : null;
   const perLevel = cfg.input === 'studio' || cfg.input === 'dxf';
+  // Daylight in a batch (2026-11-01): its engine runs here as a module (the study page is retired), on the version's level, with
+  // the shared conditions and the batch panel's changes, and is recorded as the page recorded it
+  if (sim.id === 'daylight' && batch) {
+    app.innerHTML = `<div class="wrap"><p role="status">Daylight · running…</p></div>`; tell({ stage: 'running' });
+    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=day-20261101-2'), DAYM = await import('../interior/daylight.js?v=day-20261101-2');
+      const r = await studioScene(v, site, p.name, 'daylight', level?.id); if (!r.ok) throw Error(r.why || 'The model could not be read.'); const sc = JSON.parse(r.scene);
+      const { shared: sh, inputs } = await DR.daylightInputs(p, OVd), out = await DAYM.run(sc, { level: 'draft', ...inputs });
+      const rec = DR.daylightRecord(p, v, sh, out, { level: level?.id, origin: sc.origin, settings: { batchOverrides: OVd } }); tell({ ok: true, settings: rec.settings, results: rec.results });
+    } catch (e) { tell({ ok: false, why: 'Daylight: ' + (e.message || e) }); }
+    return; }
   // an engine with input 'room' studies one closed room, which goes in as its own wall loop (none does at the moment: Indoor acoustics takes the whole level)
   const rooms = v && cfg.input === 'room' ? v.model.components.filter((c) => c.type === 'room') : [], rmKey = `pc-sim-room:${p.id}`, rmPick = (() => { try { return sessionStorage.getItem(rmKey); } catch (e) { return null; } })();
   const room = rooms.find((c) => c.id === (batch ? params.get('room') : rmPick)) || rooms[0] || null;
