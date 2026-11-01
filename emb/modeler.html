@@ -6031,9 +6031,17 @@ window.S3 = (() => {
   api.sun = (o) => { if (!o) { SUN.on = null; sunApply(); return null; } SUN.north = o.north || 0; SUN.on = sunDir(o.lat, o.doy, o.hour); sunApply(); return { ...SUN.on }; };
   api.sunDir = sunDir;
   { const _upd = api.update; api.update = (...a) => { _upd(...a); if (SUN.on) sunApply(); }; }
-  { const _u2 = api.update; api.update = (...a) => { _u2(...a); if (LOOK.spec) { lookApply(); render(); } }; }   // layer materials after every rebuild
+  { const _u2 = api.update; api.update = (...a) => { _u2(...a); if (LOOK.spec) { lookApply(); render(); } if (FLR.cut) { cutApply(); render(); } }; }   // layer materials after every rebuild
   // ---- an interior study on the floor of one level (2026-10-31): a sheet just above the floor with the study's canvas
-  const FLR = { m: null, y: 0 };
+  const FLR = { m: null, y: 0, plane: null };
+  // the cutaway of an interior study (2026-11-01): only the design is cut 1.2 m above the floor; the site, the terrain and the
+  // surrounding buildings stay whole (a cut over the whole scene took the neighbours away). Re-applied after each rebuild.
+  function cutApply() { if (!R) return; R.localClippingEnabled = true;
+    // restore what was cut, then cut the design again with its own copies of the materials (shared ones are left alone)
+    if (grp) grp.traverse((o) => { if (o.userData.__precut) { const c = o.material; o.material = o.userData.__precut; delete o.userData.__precut; for (const m of Array.isArray(c) ? c : [c]) m.dispose?.(); } });
+    if (!FLR.cut || !FLR.plane || !grp) return;
+    grp.traverse((o) => { if (!(o.isMesh || o.isLine || o.isLineSegments) || !o.material || o.userData.__precut) return; const u = tagOf(o); if (u && ['site', 'ctx', 'world'].includes(u.k)) return;   /* untagged parts of the model (slabs, ceilings) are cut too */
+      const cut = (m) => { const c = m.clone(); c.clippingPlanes = [FLR.plane]; return c; }; o.userData.__precut = o.material; o.material = Array.isArray(o.material) ? o.material.map(cut) : cut(o.material); }); }
   // people walking the routes (2026-11-01): simple scale figures (1.7 m) that fade in, walk and fade out
   const PPL = { scene: null, list: [], geo: null };
   function personMesh() { if (!PPL.geo) PPL.geo = { body: new T.CapsuleGeometry(0.17, 0.95, 4, 12), head: new T.SphereGeometry(0.115, 16, 12) };
@@ -6049,9 +6057,10 @@ window.S3 = (() => {
   api.fitBox = (b, y = 0) => { if (!cam || !ctl) return; const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, r = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.85 + 4; ctl.target.set(cx, y, -cy); cam.position.set(cx + r * 0.55, y + r * 1.05, -cy + r * 0.85); cam.lookAt(ctl.target); ctl.update(); render(); };
   api._scene = () => scene;   // read-only, for the browser checks
   api._sheet = () => (FLR.m ? { y: FLR.m.position.y, x: FLR.m.position.x, z: FLR.m.position.z, vis: FLR.m.visible } : null);
+  api._cut = () => { let design = 0, site = 0; if (grp) grp.traverse((o) => { if (!o.material) return; const cp = (Array.isArray(o.material) ? o.material : [o.material]).some((m) => m.clippingPlanes && m.clippingPlanes.length); if (!cp) return; const u = tagOf(o); if (u && ['site', 'ctx', 'world'].includes(u.k)) site++; else design++; }); return { global: R ? R.clippingPlanes.length : -1, design, site }; };   // read-only, for the browser checks
   api._floorTop = () => { let t = -Infinity; if (grp) grp.traverse((m) => { if (!m.isMesh) return; const u = tagOf(m); if (u && u.k === 'floor') { const b = new T.Box3().setFromObject(m); if (b.max.y < 2) t = Math.max(t, b.max.y); } }); return t; };   // read-only, for the browser checks
   api._people = () => ({ n: PPL.list.filter((m) => m.visible).length, y: PPL.list.find((m) => m.visible)?.position.y ?? null, floor: (() => { try { return api.storeys().map((x) => [x.id, x.y]); } catch (e) { return null; } })() });   // read-only, for the browser checks   // read-only, for the browser checks
-  api.floorSheet = (o) => { if (!scene) return; if (!o) { if (FLR.cut && R) { R.clippingPlanes = FLR.cut0 || []; FLR.cut = false; render(); } if (FLR.m) { scene.remove(FLR.m); FLR.m.geometry.dispose(); FLR.m.material.map?.dispose(); FLR.m.material.dispose(); FLR.m = null; render(); } return; }
+  api.floorSheet = (o) => { if (!scene) return; if (!o) { if (FLR.cut && R) { FLR.cut = false; FLR.plane = null; cutApply(); render(); } if (FLR.m) { scene.remove(FLR.m); FLR.m.geometry.dispose(); FLR.m.material.map?.dispose(); FLR.m.material.dispose(); FLR.m = null; render(); } return; }
     if (!FLR.m || FLR.m.userData.cv !== o.canvas) { api.floorSheet(null); const tex = new T.CanvasTexture(o.canvas); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
       const m = new T.Mesh(new T.PlaneGeometry(o.w, o.h), new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; m.name = 'floorsheet'; m.userData.cv = o.canvas; scene.add(m); FLR.m = m; }
     let y = o.z, onStorey = false; try { const st = api.storeys().find((x) => x.id === o.lv && !x.roof); if (st) { y = st.y; onStorey = true; } } catch (e) { }
@@ -6064,7 +6073,7 @@ window.S3 = (() => {
     if (slab > -Infinity) y = slab; else if (!onStorey && Number.isFinite(o.ground) && o.ground > y && o.z <= 0.5) y = o.ground + 0.25;   // no slab under it: a ground floor the terrain rises over
     FLR.m.position.set(o.x0 + o.w / 2, y + 0.05, -(o.y0 + o.h / 2)); FLR.y = y + 0.05; FLR.m.material.map.needsUpdate = true;
     // a cutaway, as a floor plan in 3D: everything above 1.2 m over this floor is cut away, so the floor and its result show
-    if (R && !EL.on) { if (!FLR.cut) { FLR.cut0 = R.clippingPlanes; FLR.cut = true; } R.clippingPlanes = [new T.Plane(new T.Vector3(0, -1, 0), y + 1.2)]; }
+    if (R && !EL.on && (!FLR.cut || !FLR.plane || Math.abs(FLR.plane.constant - (y + 1.2)) > 1e-6)) { FLR.cut = true; FLR.plane = new T.Plane(new T.Vector3(0, -1, 0), y + 1.2); cutApply(); }
     render(); };
   // ---- the sun path (2026-10-31, after Ladybug's sun path): lines in world coordinates [{ pts: [[x, y, z]…], color, w }], suns [[x, y, z]]
   const SPATH = { g: null };

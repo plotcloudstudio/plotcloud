@@ -31,6 +31,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const pp = await fr.evaluate(() => ({ ...S3._people(), sheet: S3._sheet().y }));
     const lv1 = await fr.evaluate(() => S3._floorTop());   // the top of Level 1's floor slab in the 3D view
     assert(Number.isFinite(lv1) && Math.abs(pp.sheet - lv1) < 0.12, `the walks sheet on the floor of Level 1 (${pp.sheet} vs slab top ${lv1})`); assert(pp.n >= 1 && Math.abs(pp.y - pp.sheet) < 0.01, `people walking on the sheet ${JSON.stringify(pp)}`);
+    // the cutaway takes only the design above 1.2 m: no cut over the whole scene, the surrounding buildings stay whole
+    const cut = await fr.evaluate(() => S3._cut()); assert(cut.global === 0 && cut.design > 0 && cut.site === 0, `cutaway on the design only ${JSON.stringify(cut)}`);
     if (process.env.SHOTS) await p.screenshot({ path: process.env.SHOTS + '/circ-3d.png' });
     console.log(`PASS Circulation on Level 1: ${r.rows[1][1]} pairs, average walk ${r.rows[0][1]}, walks on the floor in 3D (sheet ${pp.sheet.toFixed(2)} m, floor ${lv1.toFixed(2)} m), ${pp.n} people walking`);
     await p.click('[data-sp=dim]'); await p.waitForTimeout(2500); await p.click('[data-st-view=density]'); await p.waitForTimeout(500);
