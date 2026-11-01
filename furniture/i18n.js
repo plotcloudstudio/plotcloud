@@ -1,7 +1,9 @@
-// UI language. The standalone page is Chinese; the copy embedded in the PlotCloud site sets window.PC_EMBED = { lang: 'en' }.
-export const LANG = (typeof window !== 'undefined' && window.PC_EMBED && window.PC_EMBED.lang) || 'zh';
+// Public resource tools use English, including standalone and embedded entries.
+export const LANG = 'en';
 
 const EN = {
+  '外门': 'Exterior door', '室内门': 'Interior door', '安全出口门': 'Exit door', '无障碍门': 'Accessible door', '窗': 'Window',
+  '楼梯生成器': 'Stair generator', '门窗生成器': 'Door & window generator',
   // categories
   '卧室': 'Bedroom', '客厅': 'Living room', '餐厅与书房': 'Dining & study', '厨房与家电': 'Kitchen & appliances', '卫浴': 'Bathroom',
   // models
