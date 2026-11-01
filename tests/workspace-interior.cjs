@@ -80,6 +80,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert(!cm.err && cm.view === 'count' && /%/.test(cm.rows[0][1]) && /^4 /.test(cm.rows[1][1]), 'cameras ' + JSON.stringify(cm));
     if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/cameras.png` });
     console.log(`PASS cameras in the Workspace: ${cm.rows.slice(0, 3).map((x) => x.join(' ')).join(' · ')}`);
+    // Daylight (2026-11-01): the study page's climate-based daylight in the Workspace, with the project weather
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=daylight]'); await p.locator('.sp-studycard [data-st-set="dlLevel:draft"]').waitFor({ timeout: 30000 });
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
+    const dl = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, rows: s.res?.rows, views: Object.keys(s.res?.views || {}) }; });
+    assert(!dl.err && dl.view === 'sda' && /%/.test(dl.rows[0][1]) && dl.views.includes('opt2'), 'daylight ' + JSON.stringify(dl));
+    if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/daylight.png` });
+    console.log(`PASS daylight in the Workspace: ${dl.rows.slice(0, 3).map((x) => x.join(' ')).join(' · ')} · ${dl.rows.at(-1).join(' ')}`);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });
