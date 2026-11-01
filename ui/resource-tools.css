@@ -1,0 +1,69 @@
+/* Resources tools share the public site's typography and controls.
+   Scoped to these six pages; modelling geometry and analysis palettes stay tool-owned. */
+html[data-resource-tool][data-pc-ui] {
+  --pc-ui-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --pc-ui-mono: var(--pc-ui-font);
+  --f-body: var(--pc-ui-font); --f-display: var(--pc-ui-font); --f-mono: var(--pc-ui-font);
+  --pc-ui-text:#142335; --pc-ui-secondary:#526276; --pc-ui-muted:#6b7b8e;
+  --pc-ui-primary:#19354e; --pc-ui-primary-hover:#294d70; --pc-ui-primary-soft:#eaf0f6;
+  --pc-ui-selection:#294f78; --pc-ui-selection-soft:#eaf0f6; --pc-ui-focus:#2f5bd3;
+  --pc-ui-border:#e0e6ed; --pc-ui-border-strong:#c7d2df;
+  --pc-ui-page:#f4f5f7; --pc-ui-surface:#fff; --pc-ui-view:#e9ecef;
+  --bg:#f4f5f7; --surface:#fff; --paper:#fff; --well:#f4f6f9;
+  --ink:#142335; --muted:#627286; --line:#e0e6ed; --line-strong:#c7d2df;
+  --accent:#294f78; --accent-soft:#eaf0f6; --pc-red:#19354e; --pc-ink:#142335;
+}
+html[data-resource-tool] body {font:13px/1.5 var(--pc-ui-font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+html[data-resource-tool] :is(button,input,select,textarea,summary,.brand,.pcdesk,.pcdesk b,.pcdesk span,.deskonly,.deskonly b,.dims .val,.dimlabel,.kv dd,.num,.status,.rbtn,.meta) {font-family:var(--pc-ui-font)!important;letter-spacing:normal}
+html[data-resource-tool] :is(button,input,select,textarea) {box-sizing:border-box}
+html[data-resource-tool] :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible {outline:2px solid #5f88be!important;outline-offset:3px}
+html[data-resource-tool] :is(.sec h2,.rail h3,.col .sec h2) {font-size:10px;font-weight:650;letter-spacing:.09em;text-transform:uppercase;line-height:1.5;color:#627286}
+html[data-resource-tool] .title h1 {font-size:23px;line-height:1.15;font-weight:650;letter-spacing:-.025em;margin:4px 0 0}
+html[data-resource-tool] .title .cat {font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#627286}
+html[data-resource-tool] .top {display:none}
+html[data-resource-tool] .app:not(.fitapp) {grid-template-rows:minmax(0,1fr)}
+html[data-resource-tool] .main {grid-template-columns:196px minmax(0,1fr) 310px}
+html[data-resource-tool] .rail {padding:12px 8px 24px;border-color:#e0e6ed;scrollbar-width:thin;scrollbar-color:#c7d2df transparent}
+html[data-resource-tool] .rail h3 {margin:20px 10px 7px}
+html[data-resource-tool] .rail h3:first-child {margin-top:4px}
+html[data-resource-tool] .rail button {border:0;border-radius:6px;min-height:32px;padding:7px 10px;font-size:12px;line-height:1.45;gap:0}
+html[data-resource-tool] .rail button[aria-current=true] {background:#eaf0f6;color:#23496e;font-weight:600;box-shadow:inset 2px 0 #294f78}
+html[data-resource-tool] .rail button:hover {background:#f0f4f8}
+html[data-resource-tool] .panel {scrollbar-width:thin;scrollbar-color:#c7d2df transparent}
+html[data-resource-tool] .sec {padding:18px;gap:14px;border-color:#e0e6ed}
+html[data-resource-tool] .sec h2 {margin:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+html[data-resource-tool] .sec h2 button {text-transform:none;letter-spacing:0;font-size:11px}
+html[data-resource-tool] :is(.head label,.head>span,.head>label,.lab,.row label) {font-size:12px;line-height:1.5;color:#40556c}
+html[data-resource-tool] :is(.presets,.seg,.views,.tools) {gap:5px;flex-wrap:wrap}
+html[data-resource-tool] :is(.presets button,.seg button,.chipbtn,.views button) {font-size:11px;line-height:1.4;padding:6px 9px;min-height:29px;border-radius:5px}
+html[data-resource-tool] :is(.presets button,.seg button,.chipbtn) {border:1px solid #d7e0e9;background:#fff}
+html[data-resource-tool] :is(.views,.stage .tools) {max-width:calc(100% - 24px)}
+html[data-resource-tool] .views {gap:0;box-shadow:0 3px 12px #14233508}
+html[data-resource-tool] .views button {border-radius:0}
+html[data-resource-tool] .views button[aria-pressed=true] {background:#19354e;color:#fff}
+html[data-resource-tool] :is(input[type=range],input[type=checkbox]) {accent-color:#294f78}
+html[data-resource-tool] .row .num {border-color:#d7e0e9;border-radius:5px;background:#f7f9fb}
+html[data-resource-tool] .row .num input {min-height:28px;font-size:12px;background:transparent}
+html[data-resource-tool] .export {min-height:38px;border-radius:6px;background:#19354e;color:#fff;font-size:12px;font-weight:600}
+html[data-resource-tool] :is(.status,.note,.hint) {font-size:11px;line-height:1.6}
+html[data-resource-tool] .fmt {padding-block:9px}
+html[data-resource-tool] .fmt b {font-size:12px;font-weight:550}
+html[data-resource-tool] .fmt small {font-size:10px;line-height:1.5}
+/* Parameter text stays at its real size: scroll instead of scaling a whole column. */
+html[data-resource-tool] .app.fitapp .col {overflow:auto!important;scrollbar-width:thin;scrollbar-color:#c7d2df transparent}
+html[data-resource-tool] .app.fitapp .colIn {transform:none!important;width:auto!important;min-height:0!important}
+html[data-resource-tool] .app.fitapp .col .sec {padding:16px;gap:12px}
+html[data-resource-tool] .app.fitapp .sec h2 {justify-content:flex-start}
+html[data-resource-tool] .app.fitapp .col :is(select,input,.btn,.num) {font-size:12px}
+html[data-resource-tool] .app.fitapp .col .note {white-space:normal;font-size:11px;line-height:1.5}
+@media (max-width:1100px) and (min-width:901px) {html[data-resource-tool] .main {grid-template-columns:166px minmax(0,1fr) 282px}html[data-resource-tool] .sec{padding:14px}}
+@media (min-width:901px) {
+  html[data-resource-tool],html[data-resource-tool] body {height:100%;overflow:hidden}
+  html[data-resource-tool] .app:not(.fitapp) {display:grid;height:100%;overflow:hidden}
+  html[data-resource-tool] .main {display:grid;grid-template-rows:minmax(0,1fr);height:100%;min-height:0;overflow:hidden}
+  html[data-resource-tool] .main>.rail {grid-column:1;grid-row:1;display:block;overflow-x:hidden;overflow-y:auto;padding:12px 8px 24px;border-right:1px solid #e0e6ed;border-bottom:0}
+  html[data-resource-tool] .main>.rail h3 {display:block}
+  html[data-resource-tool] .main>.rail button {display:flex;width:100%;white-space:normal}
+  html[data-resource-tool] .main>.stage {grid-column:2;grid-row:1;min-height:0;height:100%}
+  html[data-resource-tool] .main>.panel {grid-column:3;grid-row:1;border-top:0;border-left:1px solid #e0e6ed;max-height:none;min-height:0}
+}
