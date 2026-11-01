@@ -7,6 +7,7 @@ import {SIMS} from '../data.js';
 import {simulationPresentation} from '../simulation-presentation.js';
 import {mountDriftWall} from '../drift-wall.js';
 import {publicNav,bindPublicNav} from '../public-chrome.js';
+import {currentProject} from '../app.js';
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const RAMP = ['#26306b', '#2f6db3', '#3fa6a0', '#9ccf6b', '#f2d44a', '#f08a2c'];
@@ -28,7 +29,7 @@ export async function render(app, rest, params, context = {}) {
 
   <header class="lp-hero lp-hero-drift">
     <div class="lp-copy"><div class="lp-eyebrow">Building performance, made visible</div><h1>Understand your building.<br><span>Test every design decision.</span></h1>
-      <p>Type an address and start on the terrain and the buildings around it. Mass, plan and test sun, daylight, wind and snow in one model, then compare sketches side by side.</p>
+      <p>Test sun, daylight, wind and snow in one model. Compare Plan A with Plan B, then turn saved simulation results into a report for your next design review.</p>
       <div class="lp-actions"><a class="lp-btn lp-big" href="${start}">Start a project</a><a class="lp-ghost" href="#lp-studies">See what it does</a></div></div>
     <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
     <div class="lp-drift-controls"><div class="lp-drift-caption" id="lpDriftCaption"><b>Explore all ${SIMS.length} simulations.</b><span>Hover to lift a card. Click to open its study.</span></div><button type="button" id="lpDriftPause" aria-pressed="false">Pause wall</button></div>
@@ -45,7 +46,7 @@ export async function render(app, rest, params, context = {}) {
     <article class="lp-card lp-c3" data-card="site"><div class="lp-vis" id="lpSite"><div class="lp-type"><span id="lpAddr"></span><i></i></div><svg viewBox="0 0 400 260"></svg></div><h3>The site from an address</h3><p>Terrain, surrounding buildings, roads and weather are fetched for the address you type, ready before the first study.</p></article>
     <article class="lp-card lp-c4" data-card="compare"><div class="lp-vis" id="lpCompare"></div><h3>Compare design decisions</h3><p>Every saved version is a sketch. See floor area and study results side by side and export them to Excel.</p></article>
     <article class="lp-card lp-c5" data-card="studies"><div class="lp-vis" id="lpStudies"></div><h3>Every study in one place</h3><p>Building and interior studies open inside the Workspace and run on the version you are drawing.</p></article>
-    <article class="lp-card lp-c6" data-card="drawings"><div class="lp-vis" id="lpDraw"><svg viewBox="0 0 400 240"></svg></div><h3>Plans out to DXF</h3><p>Levels go out as DXF with dimensions, room names and areas, for the CAD drawings you already make.</p></article>
+    <article class="lp-card lp-c6 lp-report" data-card="report" aria-labelledby="lpReportTitle"><div id="lpReportDemo"></div><div class="lp-report-copy"><div class="lp-eyebrow">The simulation report</div><h3 id="lpReportTitle">Two plans.<br>One clear comparison.</h3><p>Compare Plan A and Plan B, then generate a simulation report from your saved results. Bring the evidence to your next design review.</p><ul><li>Recorded metrics and available analysis maps</li><li>Model versions, inputs and calculation methods</li><li>PDF report, with CSV and JSON evidence exports</li></ul><a class="lp-btn lp-big" href="${currentProject() ? '#/comparison-report/'+encodeURIComponent(currentProject().id) : start}">Create a simulation report ↗</a><small>Save two design versions and their study results to compare them.</small></div></article>
   </section>
 
   <section class="lp-band"><h2>Screening for early design.</h2><p>Studies are estimates for comparing options, with their method and inputs kept with every result. They are not code compliance.</p><a class="lp-btn lp-big" href="${start}">Start a project</a></section>
@@ -53,7 +54,7 @@ export async function render(app, rest, params, context = {}) {
 </div>`;
   const stops = [mountDriftWall(app.querySelector('#lpDriftWall'),SIMS.map(simulationPresentation),{pauseButton:app.querySelector('#lpDriftPause'),onActive:item=>{const caption=app.querySelector('#lpDriftCaption');caption.querySelector('b').textContent=item?item.title:`Explore all ${SIMS.length} simulations.`;caption.querySelector('span').textContent=item?item.question:'Hover to lift a card. Click to open its study.';}}), figures(app), massing(app), site(app), compare(app), studies(app), drawings(app), simulationPreview(app)];
   // optional pictures (generated from docs/home-image-prompts.md): shown only when the file exists
-  for (const [k, file] of [['massing', 'massing'], ['site', 'site'], ['drawings', 'drawings']]) { const im = new Image(); im.onload = () => { if (!alive()) return; const v = app.querySelector(`[data-card="${k}"] .lp-vis`); if (v) { im.className = 'lp-photo'; im.alt = ''; v.prepend(im); v.classList.add('has-photo'); } }; im.src = `img/home/${file}.webp`; }
+  for (const [k, file] of [['massing', 'massing'], ['site', 'site']]) { const im = new Image(); im.onload = () => { if (!alive()) return; const v = app.querySelector(`[data-card="${k}"] .lp-vis`); if (v) { im.className = 'lp-photo'; im.alt = ''; v.prepend(im); v.classList.add('has-photo'); } }; im.src = `img/home/${file}.webp`; }
   app.querySelectorAll('a[href="#lp-studies"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();app.querySelector('#lp-studies').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}));
   const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('lp-visible');observer.unobserve(e.target);}}),{threshold:.08});
   const nav=bindPublicNav(app),onScroll=()=>nav.classList.toggle('is-scrolled',scrollY>40);onScroll();addEventListener('scroll',onScroll,{passive:true});
@@ -130,9 +131,18 @@ function studies(app) {
   const all = [...host.querySelectorAll('span')]; let k = 0; const t = setInterval(() => { all.forEach((s, i) => s.classList.toggle('on', i === k)); k = (k + 1) % all.length; }, 700);
   return () => clearInterval(t);
 }
-// plans out to DXF: a plan draws its walls, then its dimensions
+// A schematic comparison, deliberately separate from saved engine evidence.
 function drawings(app) {
-  const svg = app.querySelector('#lpDraw svg');
-  svg.innerHTML = `<g class="lp-plan"><path d="M60,40 H300 V190 H60 Z M180,40 V120 M180,150 V190 M60,120 H140 M220,120 H300"/><path class="lp-dim" d="M60,210 H300 M60,204 V216 M300,204 V216"/><text x="180" y="226">15 750</text><text x="110" y="85">Living 42.0 m²</text><text x="230" y="85">Bed 18.4 m²</text><text x="110" y="165">Kitchen</text><text x="236" y="165">Bath</text></g>`;
-  return () => { };
+  const host=app.querySelector('#lpReportDemo');
+  const plan=(variant)=>`<svg viewBox="0 0 520 330" aria-hidden="true"><defs><linearGradient id="lpReportLight${variant}"><stop stop-color="#f8eead"/><stop offset="${variant==='A'?'.42':'.72'}" stop-color="#81d4dc"/><stop offset="1" stop-color="#245bb1"/></linearGradient><pattern id="lpReportGrid${variant}" width="17" height="17" patternUnits="userSpaceOnUse"><path d="M17 0H0V17" fill="none" stroke="#ffffff" stroke-opacity=".24" stroke-width=".7"/></pattern></defs><rect x="60" y="55" width="400" height="225" rx="2" fill="url(#lpReportLight${variant})"/><rect x="60" y="55" width="400" height="225" fill="url(#lpReportGrid${variant})"/><g fill="white" stroke="#b7c3cf" stroke-width="1.2"><rect x="89" y="99" width="75" height="29" rx="3"/><rect x="89" y="128" width="26" height="62" rx="3"/><rect x="134" y="151" width="42" height="30" rx="3"/><rect x="305" y="76" width="69" height="85" rx="3"/><rect x="311" y="81" width="26" height="17" rx="2"/><rect x="341" y="81" width="26" height="17" rx="2"/><rect x="279" y="223" width="96" height="31" rx="2"/><rect x="399" y="223" width="37" height="31" rx="2"/></g><path d="M60 55H460V280H60Z M252 55V175 M252 215V280 M252 195H460" fill="none" stroke="white" stroke-width="12"/><path d="M60 55H460V280H60Z M252 55V175 M252 215V280 M252 195H460" fill="none" stroke="#9aa9b8" stroke-width="1.1"/><path d="M60 83V${variant==='A'?'144':'235'}" stroke="#2e74c8" stroke-width="6"/><path d="M60 83V${variant==='A'?'144':'235'}" stroke="#d8f4ff" stroke-width="2"/><g fill="#17344d" font-family="Inter,system-ui,sans-serif" font-size="10"><text x="92" y="252">LIVING</text><text x="392" y="177">BEDROOM</text></g></svg>`;
+  host.innerHTML=`<div class="lp-report-toolbar"><span>DAYLIGHT · DESIGN OPTIONS</span><div role="group" aria-label="Choose comparison view"><button type="button" data-report-view="0" aria-pressed="false">Plan A</button><button type="button" data-report-view="50" aria-pressed="true">Compare</button><button type="button" data-report-view="100" aria-pressed="false">Plan B</button></div></div><div class="lp-report-wipe" style="--reveal:50%"><div class="lp-report-layer">${plan('A')}</div><div class="lp-report-layer lp-report-layer-b">${plan('B')}</div><span class="lp-report-label label-a">A · Original opening</span><span class="lp-report-label label-b">B · Extended opening</span><div class="lp-report-divider"><span>↔</span></div></div><label class="lp-report-range">Drag to compare<input type="range" min="0" max="100" value="50" aria-label="Reveal Plan B" aria-valuetext="Plan A and Plan B side by side"></label><div class="lp-report-evidence"><span>01 / COMPARE</span><b id="lpReportState" role="status">Plan A + Plan B · Side by side</b><span>02 / REPORT ↗</span></div><p class="lp-report-disclaimer">Schematic interaction demo · Colours are illustrative, not calculated results. Reports use your saved engine runs.</p>`;
+  const input=host.querySelector('input'),wipe=host.querySelector('.lp-report-wipe'),buttons=[...host.querySelectorAll('button')];
+  const update=()=>{const value=Number(input.value),description=value===0?'Plan A · Original opening':value===100?'Plan B · Extended opening':'Plan A + Plan B · Side by side';wipe.style.setProperty('--reveal',value+'%');host.querySelector('.label-a').hidden=value===100;host.querySelector('.label-b').hidden=value===0;buttons.forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.reportView)===value)));input.setAttribute('aria-valuetext',description);host.querySelector('#lpReportState').textContent=description;};
+  input.addEventListener('input',update);
+  const drag=e=>{if(e.type==='pointermove'&&!wipe.hasPointerCapture(e.pointerId))return;const rect=wipe.getBoundingClientRect();input.value=Math.round(100-Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width))*100);update();};
+  const grab=e=>{wipe.setPointerCapture(e.pointerId);drag(e);};
+  wipe.addEventListener('pointerdown',grab);wipe.addEventListener('pointermove',drag);
+  const select=e=>{input.value=e.currentTarget.dataset.reportView;update();};
+  buttons.forEach(b=>b.addEventListener('click',select));
+  return ()=>{wipe.removeEventListener('pointerdown',grab);wipe.removeEventListener('pointermove',drag);input.removeEventListener('input',update);buttons.forEach(b=>b.removeEventListener('click',select));};
 }
