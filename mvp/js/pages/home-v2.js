@@ -24,7 +24,7 @@ function box(x, y, w, d, h, s, ox, oy, cls = '') {   // an extruded block: top, 
 export async function render(app, rest, params, context = {}) {
   const user = S.account().user, alive = () => (context.isCurrent ? context.isCurrent() : true);
   document.body.classList.add('lp-full');
-  const start = user ? '#/new-project' : '#/login?next=new-project';
+  const start = '#/new-project';
   app.innerHTML = `<div class="lp">
   ${publicNav()}
 

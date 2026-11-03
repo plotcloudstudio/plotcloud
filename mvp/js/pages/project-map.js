@@ -33,8 +33,7 @@ export function utm(lat, lon) {
 }
 
 export async function render(app) {
-  const A = S.account();
-  if (!A.user) { location.hash = '#/login?next=new-project'; return; }
+
   app.innerHTML = `<div class="np">
     <div class="np-map" id="npMap" aria-label="Map: click to place the project"></div>
     <div class="np-search"><input id="npQ" class="np-input" placeholder="Search" aria-label="Search an address or place" autocomplete="off"><div id="npHits" class="np-hits" role="listbox" hidden></div></div>
