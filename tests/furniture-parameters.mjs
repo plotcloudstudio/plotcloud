@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import {MODELS,defaults,buildModel,bounds,normaliseValues,paramVisible,CATS} from '../furniture/models.js';
 const lookup=id=>MODELS.find(m=>m.id===id),build=(id,p={})=>buildModel(lookup(id),p),fingerprint=r=>JSON.stringify(r.parts);
+for(const id of ['person_adult','person_elderly','person_child','person_wheelchair','tree']){
+ const m=lookup(id),height=m.params.find(p=>p.k==='H');
+ for(const H of [height.min,height.def,height.max]){
+  const r=buildModel(m,{...defaults(m),H});assert(Math.abs(r.dims.H-H)<=1,id+' preserves requested height');
+  if(id==='tree')assert(Math.abs(r.dims.W-defaults(m).crown)<=1&&Math.abs(r.dims.D-defaults(m).crown)<=1,'Tree preserves crown dimensions');
+ }
+}
 let cases=0;const inactive=[];
 for(const m of MODELS){
  const def=defaults(m),samples=[def,...['min','max'].map(end=>Object.fromEntries(m.params.map(q=>[q.k,q.type==='bool'?end==='max':q.type==='select'?q.options[end==='max'?q.options.length-1:0][0]:q[end]])))];

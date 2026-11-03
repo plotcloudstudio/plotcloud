@@ -1,8 +1,9 @@
+import {standingFigure,wheelchairFigure,landscapeTree} from './site-assets.js?v=entourage-20261102-1';
 // PlotCloud furniture configurator — parametric base models.
 // Units: millimetres. Axes: Z up, X = width, Y = depth, front faces -Y.
 // After building, every model is moved so the origin sits at the bottom centre of its footprint.
-import { refineFurniture, DETAIL_FAMILIES, STORAGE_FAMILIES } from './furniture-details.js?v=furniture-detail-20261027-1';
-import { studioModels } from './studio-models.js?v=furniture-detail-20261027-1';
+import { refineFurniture, DETAIL_FAMILIES, STORAGE_FAMILIES } from './furniture-details.js?v=entourage-20261102-1';
+import { studioModels } from './studio-models.js?v=entourage-20261102-1';
 
 export const COLORS = {
   fabric: [
@@ -57,6 +58,7 @@ export function makeBuilder() {
 }
 
 function partBounds(p) {
+  if(p.kind==='loft'){const xs=p.rings.map(q=>[q[0]-q[3],q[0]+q[3]]).flat(),ys=p.rings.map(q=>[q[1]-q[4],q[1]+q[4]]).flat(),zs=p.rings.map(q=>q[2]);return[p.cx+Math.min(...xs),p.cy+Math.min(...ys),p.cz+Math.min(...zs),p.cx+Math.max(...xs),p.cy+Math.max(...ys),p.cz+Math.max(...zs)];}
   if(p.kind==='lathe'){const r=Math.max(...p.profile.map(q=>q[0])),zs=p.profile.map(q=>q[1]);return[p.cx-r,p.cy-r*p.depthScale,p.cz+Math.min(...zs),p.cx+r,p.cy+r*p.depthScale,p.cz+Math.max(...zs)];}
   if (p.kind === 'prism') {
     const us = p.pts.map((q) => q[0]), vs = p.pts.map((q) => q[1]);
@@ -871,21 +873,11 @@ export const MODELS = [
 ];
 
 // ===== Accessories (2026-10-19): simple scale-reference pieces — fence, people, pets, vehicles, wall decor, plants, entry. Blocks only, not realistic models. =====
-// People are one fixed light grey-blue, plants one fixed green, so they read at a glance as "not building".
-Object.assign(FIXED_MATS, { person: '#9fb4c6', personDk: '#7f96ab', fur: '#c9b79c', furDk: '#8a7660', car: '#aeb6bd', tyre: '#2b2c2e', leaf: '#5d9448', leafDk: '#47763a', trunk: '#7b5b3c', pot: '#bdb6a8', art: '#cfd8df', gold: '#b8a679' });
+// Neutral architectural people and naturally coloured foliage share the model/export pipeline.
+Object.assign(FIXED_MATS, { person: '#d4d7dc', personDk: '#a6abb3', personSkin:'#deded9', personHair:'#767b82', personSilver:'#c8ccd0', personTrim:'#676d76', personShoe:'#858a92', leafLight:'#87ac57', leafMid:'#6d984d', fur: '#c9b79c', furDk: '#8a7660', car: '#aeb6bd', tyre: '#2b2c2e', leaf: '#5d9448', leafDk: '#47763a', trunk: '#7b5b3c', pot: '#bdb6a8', art: '#cfd8df', gold: '#b8a679' });
 const circ = (r, n = 20) => Array.from({ length: n }, (_, i) => [r * Math.cos(i / n * 2 * Math.PI), r * Math.sin(i / n * 2 * Math.PI)]);
 // a standing figure of overall height H: legs, torso (elliptical from above, like the usual plan symbol), arms, neck, head
-function standingPerson(H, o = {}) {
-  const B = makeBuilder(), hr = (o.headR || 0.062) * H, stoop = (o.stoop || 0) * H;
-  const legH = 0.5 * H, torsoTop = 0.82 * H;
-  for (const sx of [-1, 1]) B.cyl('Leg', 'Body', 'personDk', sx * 0.05 * H, 0, 0, 0.042 * H, legH);
-  B.cyl('Torso', 'Body', 'person', 0, 0, legH, 0.13 * H, torsoTop - legH, { ry: 0.075 * H, taper: 0.86 });
-  for (const sx of [-1, 1]) B.cyl('Arm', 'Body', 'personDk', sx * 0.165 * H, 0, 0.52 * H, 0.027 * H, 0.29 * H);
-  const headH = 2 * hr, neckH = Math.max(0.02 * H, H - headH - torsoTop);
-  B.cyl('Neck', 'Body', 'personDk', 0, -stoop / 2, torsoTop, 0.028 * H, neckH);
-  B.cyl('Head', 'Body', 'person', 0, -stoop, H - headH, hr, headH, { seg: 24 });
-  return B.parts;
-}
+function standingPerson(H,o={}) { return standingFigure(makeBuilder(),H,o); }
 const personModel = (id, name, kw, def, min, max, o = {}) => ({
   id, cat: 'People', group: 'People', kw, name, en: name, colors: [],
   params: [{ k: 'H', label: 'Height', min, max, step: 10, def }],
@@ -939,14 +931,12 @@ function buildRailing(p) {
 }
 function buildPlant(p, tree) {
   const B = makeBuilder(), C = p.crown, H = p.H;
+  if(tree)return landscapeTree(B,H,C,bounds);
   if (!tree) {
     const potR = Math.min(Math.max(C * 0.3, 90), 220), potH = Math.min(H * 0.3, 320);
     B.cyl('Pot', 'Pot', 'pot', 0, 0, 0, potR, potH, { taper: 0.72 });
     B.cyl('Stem', 'Plant', 'trunk', 0, 0, potH, 14, H * 0.4);
     const fy = potH + H * 0.2, fh = H - fy; B.cyl('Foliage low', 'Plant', 'leafDk', 0, 0, fy, C / 2, fh * 0.55, { seg: 20, taper: 0.7 }); B.cyl('Foliage top', 'Plant', 'leaf', 0, 0, fy + fh * 0.45, C * 0.36, fh * 0.55, { seg: 20, taper: 0.55 });
-  } else {
-    const tr = Math.max(80, C * 0.03), th = H * 0.4; B.cyl('Trunk', 'Tree', 'trunk', 0, 0, 0, tr, th, { taper: 1.25 });
-    const ch = H - th * 0.8; B.cyl('Crown low', 'Tree', 'leafDk', 0, 0, th * 0.8, C / 2, ch * 0.6, { seg: 28, taper: 0.75 }); B.cyl('Crown top', 'Tree', 'leaf', 0, 0, th * 0.8 + ch * 0.4, C * 0.34, ch * 0.6, { seg: 28, taper: 0.5 });
   }
   return B.parts;
 }
@@ -981,23 +971,7 @@ function buildDog(p) {
   else { B.box('Haunch', 'Body', 'fur', 0, 120 * s, 0, 260 * s, 300 * s, 260 * s, { r: 70 * s }); B.box('Chest', 'Body', 'fur', 0, -60 * s, 0, 200 * s, 220 * s, 420 * s, { r: 60 * s }); B.box('Head', 'Body', 'fur', 0, -90 * s, 400 * s, 150 * s, 200 * s, 170 * s, { r: 40 * s }); B.box('Tail', 'Body', 'furDk', 0, 300 * s, 0, 40 * s, 120 * s, 40 * s, { r: 15 * s }); }
   return B.parts;
 }
-function buildWheelchair(p) {   // 800 × 1200 mm on the floor; the rider is seated, front towards -y
-  const B = makeBuilder(), W = 800, D = 1200, H = p.H, wr = 300, hr = 105, neckTop = H - 2 * hr, torsoTop = neckTop - 60;
-  B.box('Seat', 'Chair', 'steel', 0, 0, 480, 460, 440, 40, { r: 8 }); B.box('Backrest', 'Chair', 'steel', 0, 230, 500, 460, 30, 420, { r: 8 });
-  for (const sx of [-1, 1]) {
-    B.prism('Wheel', 'Wheels', 'tyre', 'yz', circ(wr, 24).map(([a, b]) => [100 + a, wr + b]), sx > 0 ? W / 2 - 50 : -W / 2, 50);
-    B.cyl('Caster', 'Wheels', 'tyre', sx * 200, -D / 2 + 110, 0, 70, 130);
-    B.tube('Push bar', 'Chair', 'steel', [[sx * 230, 230, 880], [sx * 230, D / 2 - 12, 880]], 12);
-  }
-  B.box('Footrest', 'Chair', 'steel', 0, -D / 2 + 80, 150, 300, 160, 30);
-  B.box('Thighs', 'Body', 'personDk', 0, -120, 520, 300, 520, 130, { r: 40 });
-  for (const sx of [-1, 1]) B.box('Shin', 'Body', 'personDk', sx * 90, -D / 2 + 150, 190, 110, 110, 470);
-  B.cyl('Torso', 'Body', 'person', 0, 170, 650, 221, Math.max(150, torsoTop - 650), { ry: 127, taper: 0.9 });
-  B.cyl('Neck', 'Body', 'personDk', 0, 150, torsoTop, 45, neckTop - torsoTop);
-  B.cyl('Head', 'Body', 'person', 0, 150, neckTop, hr, 2 * hr, { seg: 24 });
-  for (const sx of [-1, 1]) B.box('Arm', 'Body', 'personDk', sx * 235, 100, 600, 60, 340, 80);
-  return B.parts;
-}
+function buildWheelchair(p) { return wheelchairFigure(makeBuilder(),p.H); }
 
 const ACC = [
   { id: 'balcony_rail', cat: 'Outdoor & Fence', group: 'Outdoor & Fence', kw: 'fence railing balcony guard outdoor', name: 'Balcony railing', en: 'Balcony railing', colors: [],
