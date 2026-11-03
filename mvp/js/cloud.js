@@ -34,10 +34,10 @@ async function fresh() {
     catch (e) { if (e.status === 400 || e.status === 401) { lost('Your session ended: please log in again.'); } throw e; } finally { refreshing = null; } })();
   return refreshing;
 }
-async function call(path, { method = 'GET', body, auth = true, headers = {} } = {}) {
+async function call(path, { method = 'GET', body, auth = true, headers = {},signal } = {}) {
   const c = cfg(); if (!c) throw new Error('Cloud accounts are not set up on this site.');
   if (auth) await fresh();
-  const r = await fetch(c.url + path, { method, headers: { apikey: c.key, 'Content-Type': 'application/json', ...(auth && session ? { Authorization: 'Bearer ' + session.access_token } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await fetch(c.url + path, { method, headers: { apikey: c.key, 'Content-Type': 'application/json', ...(auth && session ? { Authorization: 'Bearer ' + session.access_token } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body),signal });
   const txt = await r.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch (e) { data = txt; }
   if (!r.ok) { const e = new Error((data && (data.msg || data.error_description || data.message || data.error)) || r.statusText || 'Request failed'); e.status = r.status; throw e; }
   return data;
@@ -155,8 +155,14 @@ export async function wipe() { if (!session) return; await call('/rest/v1/cloud_
 // Authenticated membership/admin RPCs. PostgreSQL checks the actor; no browser role flag grants access.
 export async function rpc(name, body = {}) {
   if (!user()) throw new Error('Log in to your registered account first.');
-  if (!['pc_is_admin','pc_access_status','pc_admin_search','pc_admin_access','pc_admin_history'].includes(name)) throw new Error('Unknown account operation.');
+  if (!['pc_is_admin','pc_access_status','pc_admin_search','pc_admin_access','pc_admin_history','pc_site_edit'].includes(name)) throw new Error('Unknown account operation.');
   return call('/rest/v1/rpc/' + name, { method:'POST', body });
+}
+export async function publicRpc(name){
+  if(name!=='pc_public_site_content')throw new Error('Unknown public operation.');
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
+  try{return await call('/rest/v1/rpc/'+name,{method:'POST',body:{},auth:false,signal:controller.signal});}
+  finally{clearTimeout(timeout);}
 }
 export async function updateProfile(name) {
  const result=await call('/auth/v1/user',{method:'PUT',body:{data:{name}}});

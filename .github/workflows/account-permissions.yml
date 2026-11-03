@@ -1,0 +1,19 @@
+name: Account and publishing permissions
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/**', 'tests/*permissions.cjs', 'tests/membership-durations.cjs', '.github/workflows/account-permissions.yml']
+  pull_request:
+    paths: ['supabase/**', 'tests/*permissions.cjs', 'tests/membership-durations.cjs', '.github/workflows/account-permissions.yml']
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save @electric-sql/pglite@0.5.14
+      - run: node tests/membership-permissions.cjs
+      - run: node tests/membership-durations.cjs
+      - run: node tests/site-content-permissions.cjs

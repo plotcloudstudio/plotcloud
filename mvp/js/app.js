@@ -51,7 +51,7 @@ function who() {
   $('#who').innerHTML = u ? `<span class="who-w"><button type="button" class="btn sm who-b" id="whoBtn" aria-haspopup="true" aria-expanded="false" style="padding-left:4px"><span class="avatar">${esc(u.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span>${esc(u.name.split(/\s+/)[0].replace(/^./, (c) => c.toUpperCase()))} ▾</button>
       <span class="who-m" id="whoMenu" role="menu" hidden><span class="who-id"><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></span><a role="menuitem" href="#/home">Dashboard</a><a role="menuitem" href="#/account?tab=profile">Account settings</a><a role="menuitem" href="#/account?tab=data">Backup &amp; data</a>${u.cloud?'<span id="adminMenuLink"></span>':''}${u.cloud ? `<span class="who-sync" id="whoSync" aria-live="polite">${esc(syncText())}</span><button role="menuitem" type="button" id="whoSyncNow">Sync now</button>` : ''}<button role="menuitem" type="button" id="whoOut">Log out</button></span></span>`
     : '<a class="btn sm" href="#/login">Log in</a> <a class="btn sm accent" href="#/login?signup=1">Start free</a>';
-  if(u?.cloud){const uid=C.user()?.id;C.rpc('pc_is_admin').then(admin=>{if(admin&&uid===C.user()?.id){const el=$('#adminMenuLink');if(el)el.innerHTML='<a role="menuitem" href="#/admin">Manage account access</a>';}}).catch(()=>{});}
+  if(u?.cloud){const uid=C.user()?.id;C.rpc('pc_is_admin').then(admin=>{if(admin&&uid===C.user()?.id){const el=$('#adminMenuLink');if(el)el.innerHTML='<a role="menuitem" href="#/founder">Manage site content</a><a role="menuitem" href="#/admin">Manage account access</a>';}}).catch(()=>{});}
   if (!u) return;
   const b = $('#whoBtn'), m = $('#whoMenu'), shut = () => { m.hidden = true; b.setAttribute('aria-expanded', 'false'); };
   b.onclick = (e) => { e.stopPropagation(); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); };
@@ -61,6 +61,7 @@ function who() {
 document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e.target.closest('.who-w')) { m.hidden = true; $('#whoBtn')?.setAttribute('aria-expanded', 'false'); } });
 
 const PAGES = {
+  founder:()=>import('./pages/founder.js'),
   'local-compute':()=>import('./pages/local-compute.js?v=study-unified-20261028-2'),
   'comparison-report':()=>import('./pages/comparison-report.js'),
   'start-study':()=>import('./pages/start-study.js'),
@@ -71,7 +72,7 @@ const PAGES = {
   about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { 'comparison-report':'Simulation comparison report', about:'About', blog:'Blog', project:'Project', tables:'Tables', rendering:'Rendering', boards:'Boards', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
+const TITLES = { founder:'Founder workspace', 'comparison-report':'Simulation comparison report', about:'About', blog:'Blog', project:'Project', tables:'Tables', rendering:'Rendering', boards:'Boards', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab
@@ -90,7 +91,7 @@ export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
-  const publicRoute=['pricing','about','blog','login','resources','legal'].includes(key);
+  const publicRoute=['pricing','about','blog','login','resources','legal','founder','admin'].includes(key);
   // the Workspace, its simulations and a project's results are one place, reached from the Dashboard (2026-10-30)
   const navKey = ['workspace', 'simulations', 'results', 'project', 'activity'].includes(key) ? 'home' : key;
   $$('[data-nav]').forEach((a) => { if (a.dataset.nav === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });

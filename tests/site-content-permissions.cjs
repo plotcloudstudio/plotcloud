@@ -1,0 +1,38 @@
+const {PGlite}=require('@electric-sql/pglite');
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+(async()=>{const db=new PGlite();try{
+ await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;`);
+ const migration=fs.readFileSync('supabase/migrations/20261102000000_site_content.sql','utf8');await db.exec(migration);await db.exec(migration);
+ const owner='11111111-1111-4111-8111-111111111111',user='22222222-2222-4222-8222-222222222222',pending='33333333-3333-4333-8333-333333333333';
+ for(const [id,email,confirmed] of [[owner,'owner@test.invalid',true],[user,'user@test.invalid',true],[pending,'pending@test.invalid',false]])await db.query('insert into auth.users values($1,$2,$3)',[id,email,confirmed?new Date():null]);
+ await db.query('insert into private.pc_admins values($1),($2)',[owner,pending]);
+ async function as(id,sql,args=[]){await db.exec(id?'set role authenticated':'set role anon');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);try{return (await db.query(sql,args)).rows[0]?.v;}finally{await db.exec('reset role');}}
+ const read=()=>as(null,'select public.pc_public_site_content() as v');
+ const edit=(id,action,key=null,kind=null,payload=null,rev=null)=>as(id,'select public.pc_site_edit($1,$2,$3,$4,$5) as v',[action,key,kind,payload,rev]);
+ assert.equal((await read()).length,3);
+ await assert.rejects(()=>edit(null,'list'),/permission denied/);
+ for(const id of [user,pending])await assert.rejects(()=>edit(id,'list'),/Founder access required/);
+ await assert.rejects(()=>as(user,'select * from private.pc_site_content'),/permission denied/);
+ let post=await edit(owner,'save','campus-test','blog',{title:'Local test',category:'campus',body:'Test only'},0);
+ assert.equal((await read()).length,3);assert.equal(post.revision,1);
+ await assert.rejects(()=>edit(owner,'publish',post.id,null,null,1),/university and visit date/);
+ post=await edit(owner,'save',post.id,'blog',{...post.draft,university:'Test university',eventDate:'2026-11-02'},1);
+ post=await edit(owner,'publish',post.id,null,null,2);assert.equal(post.revision,3);
+ let published=(await read()).find(p=>p.id===post.id);assert.equal(published.content.title,'Local test');assert(!('draft' in published));assert(!('updated_by' in published));
+ await assert.rejects(()=>edit(owner,'save',post.id,'blog',{title:'Stale'},2),/another session/);
+ post=await edit(owner,'save',post.id,'blog',{...post.draft,title:'Private draft'},3);
+ assert.equal((await read()).find(p=>p.id===post.id).content.title,'Local test');
+ await assert.rejects(()=>edit(owner,'save','bad-image','blog',{image:'javascript:alert(1)'},0),/HTTPS image/);
+ await assert.rejects(()=>edit(owner,'save','bad-size','blog',{body:'x'.repeat(50001)},0),/limit/);
+ post=await edit(owner,'unpublish',post.id,null,null,4);assert.equal(post.draft.title,'Private draft');assert(!(await read()).some(p=>p.id===post.id));
+ assert.equal((await edit(owner,'history',post.id)).length,5);
+ await assert.rejects(()=>edit(user,'history',post.id),/Founder access required/);
+ const about=(await edit(owner,'list')).find(p=>p.id==='about');
+ await assert.rejects(()=>edit(owner,'unpublish','about',null,null,about.revision),/updated About/);
+ let team=await edit(owner,'save','about','about',{...about.draft,team:[{name:'Local Test Person',role:'Test',bio:'Test only'}]},about.revision);
+ assert.equal((await read()).find(p=>p.id==='about').content.team.length,0);
+ team=await edit(owner,'publish','about',null,null,team.revision);assert.equal((await read()).find(p=>p.id==='about').content.team.length,1);
+ await db.query('delete from private.pc_admins where user_id=$1',[owner]);await assert.rejects(()=>edit(owner,'list'),/Founder access required/);
+ console.log('PASS content migration repeatability, founder-only editing, confirmed email, private drafts, publishing, optimistic concurrency, validation, unpublish, team profiles, history and immediate revocation');
+ }finally{await db.close();}})().catch(e=>{console.error(e);process.exit(1)});

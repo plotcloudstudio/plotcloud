@@ -14,6 +14,6 @@ export function bindPublicNav(root){
 }
 export function publicPage(app,key,params=new URLSearchParams()){
   document.body.classList.add('pc-public');
-  app.innerHTML=`<div class="lp lp-public lp-public-${key}">${publicNav(key==='login'&&params.has('signup')?'signup':key,{light:true})}<div class="lp-public-content"></div><footer class="lp-public-footer"><a class="lp-logo" href="#/">plot<b>cloud</b></a><p>Building performance, made visible.</p><div>${links.map(([id,name])=>`<a href="#/${id}">${name}</a>`).join('')}<a href="#/legal">Legal</a></div></footer></div>`;
+  app.innerHTML=`<div class="lp lp-public lp-public-${key}">${publicNav(key==='login'&&params.has('signup')?'signup':key,{light:true})}<div class="lp-public-content"></div><footer class="lp-public-footer"><a class="lp-logo" href="#/">plot<b>cloud</b></a><p>Building performance, made visible.</p><div>${links.map(([id,name])=>`<a href="#/${id}">${name}</a>`).join('')}<a href="#/legal">Legal</a><a href="#/founder">Founder sign-in</a></div></footer></div>`;
   bindPublicNav(app);return app.querySelector('.lp-public-content');
 }

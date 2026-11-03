@@ -57,7 +57,7 @@ export function clearCode() { generation++; localStorage.removeItem(KEY); verifi
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const accessDate = value => new Date(value).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' });
 export function requestURL(subject = 'PlotCloud monthly access') {
-  const body = `Hello PlotCloud,\n\nI would like one month of access at CAD 16.99, plus applicable taxes. Before I send an e-transfer, please confirm the total, required seller details, included access, exact access dates, activation timing and refund terms.\n\nMy registration / access email is: ${Cloud.user()?.email || ''}\n`;
+  const body = `Hello PlotCloud,\n\nMy registered PlotCloud email: [enter the email used to log in].\n\nI would like one month of access at CAD 16.99, plus applicable taxes. Before I send an e-transfer, please confirm the total, required seller details, included access, exact access dates, activation timing and refund terms.\n\nMy registration / access email is: ${Cloud.user()?.email || ''}\n`;
   return 'mailto:' + BETA.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 export function mountActivation(host, { onSuccess = () => location.reload() } = {}) {
