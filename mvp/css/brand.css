@@ -1,0 +1,17 @@
+/* Shared Home palette for application chrome. Analysis layers keep their own scales. */
+:root{--brand-ink:#142335;--brand-primary:#19354e;--brand-hover:#294d70;--brand-muted:#66758a;--brand-border:#e0e6ed;--brand-page:#f4f5f7}
+body{background:var(--brand-page);color:var(--brand-ink)}
+:root[data-pc-ui][data-pc-surface="site"] body>header.top{background:#263b50;color:#fff;border-bottom:1px solid #526b82;font-family:Inter,system-ui,sans-serif}
+:root[data-pc-ui][data-pc-surface="site"] body>header.top :is(a,.logo,.wordmark){color:inherit}
+:root[data-pc-ui][data-pc-surface="site"] body>header.top .btn{background:#fff;color:var(--brand-ink);border-color:#fff}
+:root[data-pc-ui][data-pc-surface="site"] body>header.top :is(.muted,.note){color:#c6d4df}
+.lp,.lp-public{--ink:#142335;--ink2:#526276;--sub:#66758a;--mut:#66758a;--muted:#66758a;--line:#e0e6ed;--line2:#c7d2df;--accent:#19354e;--btn:#19354e;--blue:#294f78}
+.lp-public .btn.accent{background:var(--brand-primary);border-color:var(--brand-primary);color:#fff}
+.lp-public .btn.accent:hover{background:var(--brand-hover)}
+.np :is(.np-card,.np-search input,.np-hits,.np-base){color:var(--brand-ink);border-color:var(--brand-border);font-family:Inter,system-ui,sans-serif}
+.np :is(.np-sub,.np-note){color:var(--brand-muted)}
+.np .btn.accent{background:var(--brand-primary);border-color:var(--brand-primary);color:#fff}
+.ph .ph-card.ph-hl{box-shadow:0 0 0 2px var(--brand-primary)}
+.ph :is(.ph-chip,.ph-hits button:hover){background:#eaf0f6;color:var(--brand-ink)}
+:is(.btn,input,select,textarea,button):focus-visible{outline:2px solid #294f78;outline-offset:3px}
+.brand .logo g[stroke]{stroke:currentColor}

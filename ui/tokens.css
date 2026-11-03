@@ -2,11 +2,11 @@
 :root[data-pc-ui] {
   --pc-ui-font: Inter, 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --pc-ui-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-  --pc-ui-page:#eef0f3; --pc-ui-surface:#ffffff; --pc-ui-subtle:#f5f6f8; --pc-ui-view:#e9ecef;
-  --pc-ui-text:#20242b; --pc-ui-secondary:#505a66; --pc-ui-muted:#626c78;
-  --pc-ui-border:#dce0e5; --pc-ui-border-strong:#b4bcc6;
-  --pc-ui-primary:#c7362c; --pc-ui-primary-hover:#aa2a22; --pc-ui-on-primary:#ffffff; --pc-ui-primary-soft:#faeae7;
-  --pc-ui-selection:#28659f; --pc-ui-selection-soft:#e8f0f9; --pc-ui-focus:#28659f;
+  --pc-ui-page:#f4f5f7; --pc-ui-surface:#ffffff; --pc-ui-subtle:#f5f6f8; --pc-ui-view:#e9ecef;
+  --pc-ui-text:#142335; --pc-ui-secondary:#526276; --pc-ui-muted:#66758a;
+  --pc-ui-border:#e0e6ed; --pc-ui-border-strong:#c7d2df;
+  --pc-ui-primary:#19354e; --pc-ui-primary-hover:#294d70; --pc-ui-on-primary:#ffffff; --pc-ui-primary-soft:#eaf0f6;
+  --pc-ui-selection:#294f78; --pc-ui-selection-soft:#eaf0f6; --pc-ui-focus:#294f78;
   --pc-ui-success:#227443; --pc-ui-warning:#8a580b; --pc-ui-danger:#b12e32;
   --pc-ui-warning-soft:#fff3db; --pc-ui-danger-soft:#fcebed;
   --pc-ui-radius:7px; --pc-ui-panel-radius:10px; --pc-ui-field-height:36px;
