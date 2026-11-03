@@ -50,12 +50,18 @@ export async function render(app) {
     <div class="np-layers" role="group" aria-label="Base map"><button type="button" data-base="map" aria-pressed="true"><span class="np-th np-th-map"></span>Map</button><button type="button" data-base="sat" aria-pressed="false"><span class="np-th np-th-sat"></span>Satellite</button></div>
     <a class="np-back" href="#/home" aria-label="Back to projects">←</a></div>`;
   let L; try { L = await leaflet(); } catch (e) { $('#npMap', app).innerHTML = `<p style="padding:24px">${esc(e.message)}</p>`; return; }
-  const map = L.map($('#npMap', app), { zoomControl: false, worldCopyJump: true, attributionControl: true }).setView([30, 0], 3);
+  const mapElement=$('#npMap',app),world=[[-85.05112878,-180],[85.05112878,180]];
+  // At the widest view, one Mercator world must still cover the whole viewport.
+  const minimumZoom=()=>Math.max(0,Math.ceil(Math.log2(Math.max(mapElement.clientWidth,mapElement.clientHeight,256)/256)));
+  const map = L.map(mapElement, { zoomControl: false, worldCopyJump: false, attributionControl: true,
+    minZoom:minimumZoom(),maxZoom:19,maxBounds:world,maxBoundsViscosity:1,bounceAtZoomLimits:false
+  }).setView([30, 0], Math.max(3,minimumZoom()));
+  map.on('resize',()=>{map.setMinZoom(minimumZoom());map.panInsideBounds(world,{animate:false});});
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   const bases = {
-    map: L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19, attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors' }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19 })]),
-    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }),
+    map: L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { noWrap:true,bounds:world,maxNativeZoom: 16, maxZoom: 19, attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors' }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { noWrap:true,bounds:world,maxNativeZoom: 16, maxZoom: 19 })]),
+    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { noWrap:true,bounds:world,maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }),
   };
   bases.map.addTo(map);
   for (const b of $$('[data-base]', app)) b.onclick = () => { for (const k in bases) map.removeLayer(bases[k]); bases[b.dataset.base].addTo(map); for (const x of $$('[data-base]', app)) x.setAttribute('aria-pressed', String(x === b)); };
