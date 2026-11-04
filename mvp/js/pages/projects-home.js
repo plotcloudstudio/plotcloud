@@ -1,4 +1,4 @@
-import {caseCard,openCase} from '../fallingwater-dashboard.js';
+import {openCase} from '../fallingwater-dashboard.js';
 // Projects home after sign-in (#/home): a workspace rail, a sidebar (My Projects, Favorites, Deleted, Account settings,
 // Categories & Tags, Tutorials, What's new, latest change, signed-in user), and the project browser with a count, sort,
 // grid / list / map views, search and a large "Add new project" card that opens the map (#/new-project).
@@ -71,11 +71,10 @@ export function render(app, [section], params) {
       <label>Sort by: <select class="ph-sort" id="phSort"><option value="created">Created</option><option value="edited">Last edited</option><option value="name">Name</option><option value="results">Most results</option></select></label>
       <div class="ph-views" role="group" aria-label="View">${['grid', 'list', 'map'].map((v) => `<button type="button" data-view="${v}" aria-pressed="${v === view}" aria-label="${v[0].toUpperCase() + v.slice(1)} view">${svg(v)}</button>`).join('')}</div>
       <div class="ph-search">${svg('search')}<input id="phQ" type="search" placeholder="Search projects" aria-label="Search projects"></div></div>
-      ${where==='mine'&&!tag?caseCard():''}<div class="ph-body" id="phBody"></div></section></div>
+      <div class="ph-body" id="phBody"></div></section></div>
     <dialog class="ph-dialog" id="phDlg"><h2>What’s new</h2><ul>${CHANGES.map(([d, t, s]) => `<li><b>${esc(t)}</b> <small>${esc(d)}</small><br><span>${esc(s)}</span></li>`).join('')}</ul><form method="dialog"><button class="btn">Close</button></form></dialog>`;
   $('#phSort', app).value = sort;
   const news = () => $('#phDlg', app).showModal(); $('#phNews', app).onclick = news; $('#phLatest', app).onclick = (e) => { e.preventDefault(); news(); };
-  for(const example of app.querySelectorAll('[data-fallingwater]'))example.onclick=()=>{const p=openCase();setCurrent(p);location.hash='#/'+(example.dataset.fallingwater==='results'?'results':'workspace')+'/'+p.id;};
   if(A.user)$('#phOut', app).onclick = async () => { if (A.user.cloud) await C.signOut(); else { A.user = null; S.save(); } refreshWho(); location.hash = '#/'; toast('Logged out'); };
   $('#phSort', app).onchange = (e) => { sort = e.target.value; setPref({ sort }); draw(); };
   $('#phQ', app).oninput = (e) => { q = e.target.value.toLowerCase(); draw(); };
@@ -128,10 +127,11 @@ export function render(app, [section], params) {
           for (const b of $$('[data-hit]', hits)) b.onclick = async () => { hits.hidden = true; try { const r = await resolve(rows[+b.dataset.hit]); inp.value = r.title; mapObj.setView([r.lat, r.lon], 13); } catch (e) { toast(e.message); } }; }, 250); };
         inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); hits.querySelector('[data-hit]')?.click(); } if (e.key === 'Escape') hits.hidden = true; };
       }); }
-    else body.innerHTML = `<div class="ph-grid">${where === 'mine' && !tag ? `<a class="ph-new" href="#/new-project"><b>+</b>Add new project</a>` : ''}${L.map(card).join('')}</div>${L.length || where === 'mine' ? '' : `<p class="ph-empty">${where === 'deleted' ? 'Nothing deleted. Deleted projects stay here until you remove them permanently.' : 'No favorites yet: use the star on a project.'}</p>`}`;
+    else body.innerHTML = `<div class="ph-grid">${where === 'mine' && !tag ? `<a class="ph-new" href="#/new-project"><b>+</b>Add new project</a>${!q||"fallingwater example".includes(q)?`<article class="ph-card ph-example"><button type="button" class="ph-thumb" data-fallingwater aria-label="Open Fallingwater example"><img src="img/fallingwater-cover.jpg" alt=""><span>Example</span></button><div class="ph-meta"><b>Fallingwater</b></div><div class="ph-dates">Site, architecture and interiors</div><button type="button" class="ph-example-results" data-fallingwater="results">View saved results</button></article>`:""}` : ''}${L.map(card).join('')}</div>${L.length || where === 'mine' ? '' : `<p class="ph-empty">${where === 'deleted' ? 'Nothing deleted. Deleted projects stay here until you remove them permanently.' : 'No favorites yet: use the star on a project.'}</p>`}`;
     bind();
   }
   function bind() {
+    for(const example of app.querySelectorAll('[data-fallingwater]'))example.onclick=()=>{const p=openCase();setCurrent(p);location.hash='#/'+(example.dataset.fallingwater==='results'?'results':'workspace')+'/'+p.id;};
     const P = (id) => S.project(id);
     for (const a of $$('[data-open]', app)) a.addEventListener('click', () => { const p = P(a.dataset.open); if (p && !p.deletedAt) setCurrent(p); });
     for (const b of $$('[data-fav]', app)) b.onclick = () => { const p = P(b.dataset.fav); p.favorite = !p.favorite; S.save(); draw(); };

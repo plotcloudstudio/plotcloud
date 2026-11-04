@@ -2350,7 +2350,7 @@ const fwdD = (q) => { const k = rotK(); if (!k) return q; const d = VP.d, cw = V
 const W2S_ = null; void W2S_;
 const S2W = (x, y) => (CAM === '3d' && P3.p) ? P3.p : [(x - V.ox) / V.s, (V.oy - y) / V.s];
 const P3_HIT = new Set(['win', 'door', 'hole']);
-function P3upd(e) { if (!window.S3 || !S3.on) return false; const lv = lvObj(); P3.hit = S3.hit(e.clientX, e.clientY); P3.p = (!drag && P3_HIT.has(TOOL) && P3.hit) ? P3.hit.p : S3.plane(e.clientX, e.clientY, lv.z); return !!P3.p; }
+function P3upd(e) { if (!window.S3 || !S3.on) return false; const lv = lvObj(); if (TOOL === 'lswater') { P3.p = S3.hits(e.clientX, e.clientY).find(h => h.ud.k === 'site' && h.ud.id === 'terrain')?.p ?? S3.plane(e.clientX, e.clientY, 0); return !!P3.p; } P3.hit = S3.hit(e.clientX, e.clientY); P3.p = (!drag && P3_HIT.has(TOOL) && P3.hit) ? P3.hit.p : S3.plane(e.clientX, e.clientY, lv.z); return !!P3.p; }
 function pick3D(opt) { const h = P3.hit && P3.hit.ud; if (!h) return null; if (opt && opt.only && h.k === 'room') return null; const L = h.k === 'room' ? null : LAYER_OF[h.k]; if (L && !VIS[L]) return null; return { k: h.k, id: h.id }; }
 function drawOverlay3D() {
   if(drawing?.kind==='floor'&&window.S3?.on)upd3D();
@@ -5180,7 +5180,7 @@ function massKpiUI() {
 { const _sc = setCam; setCam = async function (c) { const r = await _sc(c); massKpiUI(); return r; }; }
 // tools: two ways to draw a mass, and a missing neighbour
 RECT.add('massrect');
-Object.assign(HINT, { lsplant: 'Click the corners of the planted area. Click the first corner again, press Enter or double-click to close it.', lswater: 'Click the corners of the water. Click the first corner again, press Enter or double-click to close it.', lspave: 'Click the corners of the paved area. Click the first corner again, press Enter or double-click to close it.', mass: 'Click the corners of the mass. Click the first corner again, press Enter or double-click to close it. Esc cancels.', massrect: 'Drag a rectangle for a mass.', ctxadd: 'Click the corners of a neighbouring building that is missing from the map. Enter or double-click closes it; set its height afterwards.' });
+Object.assign(HINT, { lsplant: 'Click the corners of the planted area. Click the first corner again, press Enter or double-click to close it.', lswater: 'Trace the shoreline. Click the first point or press Enter to close. Backspace removes a point; Esc cancels.', lspave: 'Click the corners of the paved area. Click the first corner again, press Enter or double-click to close it.', mass: 'Click the corners of the mass. Click the first corner again, press Enter or double-click to close it. Esc cancels.', massrect: 'Drag a rectangle for a mass.', ctxadd: 'Click the corners of a neighbouring building that is missing from the map. Enter or double-click closes it; set its height afterwards.' });
 { const pane = $('[data-lp="draw"] .kl-scroll'), ic = (d) => `<svg viewBox="0 0 48 48" aria-hidden="true">${d}</svg>`;
   const T = (t, n, svg, title) => `<button type="button" class="tl" data-tool="${t}" aria-pressed="false" title="${title}">${svg}<span>${n}</span></button>`;
   if (pane) { pane.insertAdjacentHTML('afterbegin', `<section class="ks" id="ksMass"><button type="button" class="ks-h" aria-expanded="true"><b>Massing</b><i class="chev"></i></button><div class="ks-b"><div class="tls">`
@@ -5215,10 +5215,12 @@ addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('i
 { const _fr = finishRect; finishRect = function () { if (!drawing || drawing.kind !== 'massrect') return _fr(); const D = drawing; drawing = null; if (!D.b) return draw(); const x0 = Math.min(D.a[0], D.b[0]), y0 = Math.min(D.a[1], D.b[1]), x1 = Math.max(D.a[0], D.b[0]), y1 = Math.max(D.a[1], D.b[1]);
   if (x1 - x0 < 2 || y1 - y0 < 2) { draw(); flash('Drag a larger rectangle (at least 2 m each way).'); return; } addMass([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]); }; }
 { const _dp = drawPreview; drawPreview = function () { _dp(); const d = VP.d;
-  if (drawing && POLYT.has(drawing.kind)) { const P = drawing.pts.concat(drawing.cur ? [drawing.cur] : []); g.save(); g.beginPath(); P.forEach((q, i) => { const s = W2S(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); });
-    if (P.length > 2) { g.closePath(); g.fillStyle = drawing.kind === 'mass' ? 'rgba(233,195,158,.35)' : 'rgba(150,145,135,.25)'; g.fill(); } g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke();
-    for (const q of drawing.pts) { const s = W2S(q); g.fillStyle = '#fff'; g.fillRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); g.strokeRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); }
-    if (P.length > 2) { const c = W2S(SITEC.centroid(P)); tag(c[0], c[1], `${fmtA(areaOf(P))} m²`, { force: true, col: C.accent }); } g.restore(); }
+  if (drawing && POLYT.has(drawing.kind)) { const P = drawing.pts.concat(drawing.cur ? [drawing.cur] : []), water = drawing.kind === 'lswater';
+    const screen = water && CAM === '3d' && M.site ? q => { const [x,y] = siteOfM(M,q); return S3.toScreen(q[0],q[1],SITEC.groundAt(M.site.terrain,x,y)); } : W2S;
+    g.save(); g.beginPath(); P.forEach((q, i) => { const s = screen(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); });
+    if (P.length > 2) { g.closePath(); g.fillStyle = drawing.kind === 'mass' ? 'rgba(233,195,158,.35)' : water ? 'rgba(84,124,143,.28)' : 'rgba(150,145,135,.25)'; g.fill(); } g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke();
+    for (const q of drawing.pts) { const s = screen(q); g.fillStyle = '#fff'; g.fillRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); g.strokeRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); }
+    if (P.length > 2) { const c = screen(SITEC.centroid(P)); tag(c[0], c[1], `${fmtA(areaOf(P))} m²`, { force: true, col: C.accent }); } g.restore(); }
   if (drawing && drawing.kind === 'massrect' && drawing.b) { const w = Math.abs(drawing.b[0] - drawing.a[0]), h = Math.abs(drawing.b[1] - drawing.a[1]), s = W2S([(drawing.a[0] + drawing.b[0]) / 2, Math.max(drawing.a[1], drawing.b[1])]); tag(s[0], s[1] - 12 * d, `${w.toFixed(1)} × ${h.toFixed(1)} m · ${fmtA(w * h)} m²`, { force: true, col: C.accent }); }
   if (MSNAP && (POLYT.has(TOOL) || TOOL === 'massrect' || (drag && drag.k === 'massv'))) { const s = W2S(MSNAP); g.save(); g.strokeStyle = C.accent; g.lineWidth = 1.6 * d; g.beginPath(); g.arc(s[0], s[1], 6 * d, 0, 7); g.stroke(); g.restore(); } }; }
 // picking, selection, deleting
@@ -5923,14 +5925,38 @@ window.S3 = (() => {
       for(const f of M.site.features3d.slice(0,32)){if(!Array.isArray(f?.vertices)||f.vertices.length%9||f.vertices.length>150000||!f.vertices.every(Number.isFinite))continue;
         const p=[];for(let i=0;i<f.vertices.length;i+=3){const q=SITEC.siteToPlan(M.site,[f.vertices[i],f.vertices[i+1]],M.north);p.push(q[0],f.vertices[i+2],-q[1]);}
         const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(p,3));geo.computeVertexNormals();
-        FG.add(new T.Mesh(geo,mat(f.color||'#789197',{side:T.DoubleSide})));
+        const water = /^pool-|^cascade$/.test(f.id);
+        if (water) {
+          const uv=[]; for(let i=0;i<p.length;i+=3) uv.push(p[i]/4,(p[i+2]+p[i+1])/4);
+          geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+        }
+        FG.add(new T.Mesh(geo,water ? creekMaterial() : mat(f.color||'#789197',{side:T.DoubleSide})));
       }G.add(FG);
     }
-    WM.topo = !!(o.terrain && o.terrain.pts); for (const g of WM.ground) g.visible = !WM.topo;   // the block stands on its own (the world map still fades in far out)
     return G;
   }
   // ---- the topographic block: surface (with its drawing), four sides and a base
   // the block's surface is drawn in layers, so a result can be painted into it: ground (green, roads), the result, water, contours
+  // Tileable ripples shared by drawn shoreline polygons and the example's modeled creek.
+  let rippleTile, rippleMap;
+  function waterTile() {
+    if (rippleTile) return rippleTile;
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const ctx = c.getContext('2d'), data = ctx.createImageData(c.width,c.height);
+    for (let y=0; y<c.height; y++) for (let x=0; x<c.width; x++) {
+      const a=x*Math.PI/64,b=y*Math.PI/64;
+      const wave=9*Math.sin(3*a+17*b+2*Math.sin(5*a-2*b))+5*Math.sin(11*a-23*b)+4*Math.sin(17*a+31*b);
+      data.data.set([87+wave,104+wave,113+wave,255],4*(y*c.width+x));
+    }
+    ctx.putImageData(data,0,0); return rippleTile=c;
+  }
+  function creekMaterial() {
+    if (!rippleMap) {
+      const map=new T.CanvasTexture(waterTile()); map.wrapS=map.wrapT=T.RepeatWrapping; map.colorSpace=T.SRGBColorSpace;
+      rippleMap=new T.MeshLambertMaterial({map,side:T.DoubleSide});
+    }
+    return rippleMap;
+  }
   const TOPO = { key: '', tex: null, cv: null, L: null, G0: null, k: 1, ana: null };
   function topoTexture(site, G0) {
     const key = [site.origin?.lat, site.origin?.lon, G0.nx, G0.ny, G0.step, (site.roads || []).length, (site.areas || []).length, site.version].join(':'); if (TOPO.key === key && TOPO.tex) return TOPO.tex;
@@ -5944,7 +5970,10 @@ window.S3 = (() => {
     { const m = L.marks.getContext('2d'); m.lineCap = m.lineJoin = 'round'; for (const r of site.roads || []) { if (r.pts.length < 2) continue; path(m, r.pts); m.strokeStyle = '#000'; m.lineWidth = Math.max(1.5, (r.width || (r.cls === 'path' ? 2 : 7)) * k); m.stroke(); }
       m.globalCompositeOperation = 'destination-out'; for (const r of site.roads || []) { if (r.pts.length < 2 || r.cls === 'path') continue; path(m, r.pts); m.lineWidth = Math.max(0.5, (r.width || 7) * k - 2.4); m.stroke(); }   // the outlines of the streets
       m.globalCompositeOperation = 'source-over'; for (const a of site.areas || []) { if (a.pts.length < 3 || a.kind === 'water') continue; path(m, a.pts); m.closePath(); m.lineWidth = 1.2; m.setLineDash([6, 5]); m.stroke(); } m.setLineDash([]); }
-    g = L.water.getContext('2d'); for (const a of site.areas || []) { if (a.kind !== 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = '#4c5461'; g.fill(); }
+    g = L.water.getContext('2d');
+    const ripples=g.createPattern(waterTile(),'repeat');
+    if(ripples?.setTransform && typeof DOMMatrix !== 'undefined'){ const size=Math.max(36,4*k)/128; ripples.setTransform(new DOMMatrix().scale(size)); }
+    for (const a of site.areas || []) { if (a.kind !== 'water' || a.pts.length < 3) continue; path(g, a.pts); g.closePath(); g.fillStyle = ripples || '#576871'; g.fill(); }
     // contours: marching squares on the grid; every fifth line heavier
     g = L.lines.getContext('2d'); const z = G0.z, lo = Math.min(...z), hi = Math.max(...z), rel = hi - lo, step = rel < 8 ? 1 : rel < 40 ? 2 : rel < 100 ? 5 : 10;
     const at = (i, j) => z[j * G0.nx + i], P = (i, j) => [G0.x0 + i * G0.step, G0.y0 + j * G0.step];
@@ -6013,7 +6042,9 @@ window.S3 = (() => {
   api.update = (M, S, o) => {
     if (!R) return; if (grp) { scene.remove(grp); grp.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); }
     if (M && M.site) worldBuild(M.site);
-    grp = o.explode ? explodeGroup(M, S, o) : buildGroup(M, S, o); const selected=window.__wsSelections||[o.sel].filter(Boolean);for(const s of selected)highlight(grp,s); scene.add(grp);
+    grp = o.explode ? explodeGroup(M, S, o) : buildGroup(M, S, o);
+    WM.topo = grp.children.some(g => g.userData.k === 'site' && g.userData.id === 'terrain');
+    const selected=window.__wsSelections||[o.sel].filter(Boolean);for(const s of selected)highlight(grp,s); scene.add(grp);
     if (o.fit || !fitted) { fitted = true; const b = siteFree(grp), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6) * (document.documentElement.classList.contains('ws') ? 1.3 : 1) /* the Workspace's floating controls stay clear of the model */; ctl.target.copy(c); if (ISO.dir) { const rb = canvas.getBoundingClientRect(); isoPlace(ISO.dir, c, 2 * r * 1.51 * Math.tan(PERSP_FOV * Math.PI / 360) * rb.width / Math.max(1, rb.height)); } else { cam.position.set(c.x + r * 0.75, c.y + r * 0.85, c.z + r * 1.0); cam.near = 0.1; cam.far = r * 40; } cam.updateProjectionMatrix(); ctl.update(); d0 = cam.position.distanceTo(ctl.target); }
     render();
   };

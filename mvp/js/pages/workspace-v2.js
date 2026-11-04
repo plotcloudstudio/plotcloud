@@ -164,7 +164,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=terrain-20261103-2`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=water-planning-20261103-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -595,6 +595,8 @@ export function render(app, [pid]) {
   function toolUI() {   // which tile is on: the active Plan Studio view's tool
     $('#addLevel', app).disabled = !activePane().ready;
     const pane = activePane(), w = pane.ready ? pane.ws : null; if (!w) return; const st = w.state();
+    const waterHint = $('#siteWaterHint', app);
+    if (waterHint) waterHint.hidden = st.tool !== 'lswater';
     $$('#panelBody [data-tool]', app).forEach((b) => { const n = b.dataset.tool, s = b.dataset.furn ? { furn: b.dataset.furn } : TMAP[n]; let on = false;
       if (b.dataset.myfurn) on = st.impPend === b.dataset.myfurn; else if (b.dataset.furn) on = (st.tool === 'place' || st.tool === 'fence') && st.pick === b.dataset.furn; else if (s?.stair) on = st.tool === 'place' && st.pick === s.stair; else if (s?.tool) on = st.tool === s.tool && (!s.opm || st.opm == null || st.opm === s.opm); else if (UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); on = !!k && st.light === k[0]; }
       b.setAttribute('aria-pressed', String(on)); });
@@ -839,8 +841,8 @@ export function render(app, [pid]) {
   // editing the site model (2026-10-31): a green frame round the screen and a banner; only the site tools (Context, Landscape) work
   const SITE_TOOLS = new Set(['mass', 'landscape']);
   function siteMode() { return M().layers.find((l) => l.name === 'Site')?.locked === false; }
-  function siteBanner(on) { let b = $('#siteEditBanner', app); if (!b) { b = document.createElement('div'); b.id = 'siteEditBanner'; b.className = 'wb-site-banner'; b.setAttribute('role', 'status'); b.innerHTML = '<span></span><button type="button">Done</button>'; app.querySelector('.wb-shell').append(b); b.querySelector('button').onclick = () => editSiteGeometry(); }
-    const n = Math.max(1, p.versions.length); b.querySelector('span').innerHTML = `<b>Editing site model</b> · Changes will affect ${n} ${n === 1 ? 'sketch' : 'sketches'}`; b.hidden = !on; app.querySelector('.wb-shell').classList.toggle('wb-site-editing', on);
+  function siteBanner(on) { let b = $('#siteEditBanner', app); if (!b) { b = document.createElement('div'); b.id = 'siteEditBanner'; b.className = 'wb-site-banner'; b.setAttribute('role', 'status'); b.innerHTML = '<span></span><span id="siteWaterHint" hidden>Water · Trace shoreline · Enter to finish · Esc to cancel</span><button type="button">Done</button>'; app.querySelector('.wb-shell').append(b); b.querySelector('button').onclick = () => editSiteGeometry(); }
+    b.querySelector('span').innerHTML = '<b>Editing site model</b>'; b.hidden = !on; app.querySelector('.wb-shell').classList.toggle('wb-site-editing', on);
     $$('[data-panel]', app).forEach((x) => { if (x.closest('#panel')) return; const off = x.dataset.panel === 'landscape' || x.dataset.panel === 'mass' ? !on : on && x.dataset.panel !== 'project' && !SITE_TOOLS.has(x.dataset.panel); x.setAttribute('aria-disabled', String(off)); x.classList.toggle('sp-off', off); if (x.dataset.panel === 'mass') x.title = on ? 'Context' : 'Context (in Edit site model)'; if (x.dataset.panel === 'landscape') x.title = on ? TOOLS.landscape.label : 'Landscape: planting, water and paving (in Edit site model)'; });
     if (!on && SITE_TOOLS.has(UI.panel)) UI.panel = 'draw';
     if (on && !SITE_TOOLS.has(UI.panel) && UI.panel !== 'project') { UI.panel = 'mass'; }

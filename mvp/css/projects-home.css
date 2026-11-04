@@ -92,3 +92,8 @@
 .np-note{font-size:11px;color:#6b7280;margin:4px 0 0;line-height:1.35}.np-note:empty{display:none}
 .np-size{background:none;border:0}.np-size span{display:inline-block;transform:translate(-50%,-50%);background:#fff;border:1px solid #111827;border-radius:4px;padding:1px 6px;font:600 11px Inter,system-ui,sans-serif;white-space:nowrap}
 .np-size-left span{transform:translate(-50%,-50%) rotate(-90deg)}.np-size-bottom em{display:inline-block;transform:translate(-50%,6px);font:500 11.5px Inter,system-ui,sans-serif;font-style:normal;color:#111827;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff}
+
+.ph-example .ph-thumb{width:100%;border:0;padding:0;cursor:pointer}
+.ph-example .ph-thumb span{position:absolute;top:10px;left:10px;background:#183247;color:#fff;padding:4px 9px;border-radius:5px;font-size:12px;font-weight:650}
+.ph-example .ph-thumb:hover img{filter:brightness(1.05)}
+.ph-example-results{border:0;background:none;padding:4px 0;color:var(--ink,#183247);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
