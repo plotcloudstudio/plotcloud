@@ -1,6 +1,7 @@
 // Display geometry for Bear Run. Plan layout follows HABS PA-5346 sheet 2;
 // vertical profile is schematic, based on sections, not survey elevations or hydraulics.
 import dem from './fallingwater-dem.js';
+import siteDem from './fallingwater-site-dem.js';
 const r=Math.SQRT1_2;
 const world=([x,y,z])=>[(x+y)*r,(y-x)*r,z];
 const profile=[[-23,-8.3,4.5,-3.75],[-16,-7.9,4.0,-3.65],[-10,-6.8,3.5,-3.55],[-5,-6.0,3.4,-3.5],[-3.4,-5.6,3.6,-3.48],[-2.9,-5.5,3.6,-2.32],[-.2,-5.1,3.1,-2.26],[.25,-5.05,3.1,-1.37],[3,-5.1,3.4,-1.33],[9,-5.3,4.0,-1.30],[16,-4.8,4.2,-1.22],[24,-3.9,4.0,-1.16],[31,-4,4.2,-1.1]];
@@ -12,11 +13,17 @@ function localGround(x,y){const [,mid,w,water]=station(x),d=y-mid,bank=Math.max(
  return channel+Math.min(5,bank*.37)+rock;
 }
 export function ground(x,y){
- const [e,n]=world([x,y,0]),u=Math.max(0,Math.min(dem.n-1,e+dem.radius)),v=Math.max(0,Math.min(dem.n-1,n+dem.radius));
+ const [e,n]=world([x,y,0]);
+ const grid=siteDem.grid,fu=Math.max(0,Math.min(grid.nx-1,(e-grid.x0)/grid.step)),fv=Math.max(0,Math.min(grid.ny-1,(n-grid.y0)/grid.step));
+ const fi=Math.min(grid.nx-2,Math.floor(fu)),fj=Math.min(grid.ny-2,Math.floor(fv)),fa=fu-fi,fb=fv-fj,fk=fj*grid.nx+fi;
+ const outer=(1-fb)*((1-fa)*grid.z[fk]+fa*grid.z[fk+1])+fb*((1-fa)*grid.z[fk+grid.nx]+fa*grid.z[fk+grid.nx+1]);
+ const extent=Math.max(Math.abs(e),Math.abs(n)),fade=Math.max(0,Math.min(1,(extent-25)/9)),mix=fade*fade*(3-2*fade);
+ if(mix===1)return outer;
+ const u=Math.max(0,Math.min(dem.n-1,e+dem.radius)),v=Math.max(0,Math.min(dem.n-1,n+dem.radius));
  const i=Math.min(dem.n-2,Math.floor(u)),j=Math.min(dem.n-2,Math.floor(v)),a=u-i,b=v-j,k=j*dem.n+i;
  const surveyed=(1-b)*((1-a)*dem.z[k]+a*dem.z[k+1])+b*((1-a)*dem.z[k+dem.n]+a*dem.z[k+dem.n+1]);
  const dist=Math.min(Math.abs(y-station(x)[1]),Math.hypot(x-2,y-1)),t=Math.max(0,Math.min(1,(dist-8)/15)),blend=t*t*(3-2*t);
- return localGround(x,y)*(1-blend)+surveyed*blend;
+ return (localGround(x,y)*(1-blend)+surveyed*blend)*(1-mix)+outer*mix;
 }
 export function landscape(){
  const groups={};const tri=(key,color,a,b,c)=>{const g=groups[key]??={id:key,color,vertices:[]};g.vertices.push(...[a,b,c].flatMap(p=>world(p).map(v=>+v.toFixed(3))));};

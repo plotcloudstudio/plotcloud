@@ -2350,7 +2350,7 @@ const fwdD = (q) => { const k = rotK(); if (!k) return q; const d = VP.d, cw = V
 const W2S_ = null; void W2S_;
 const S2W = (x, y) => (CAM === '3d' && P3.p) ? P3.p : [(x - V.ox) / V.s, (V.oy - y) / V.s];
 const P3_HIT = new Set(['win', 'door', 'hole']);
-function P3upd(e) { if (!window.S3 || !S3.on) return false; const lv = lvObj(); if (TOOL === 'lswater') { P3.p = S3.hits(e.clientX, e.clientY).find(h => h.ud.k === 'site' && h.ud.id === 'terrain')?.p ?? S3.plane(e.clientX, e.clientY, 0); return !!P3.p; } P3.hit = S3.hit(e.clientX, e.clientY); P3.p = (!drag && P3_HIT.has(TOOL) && P3.hit) ? P3.hit.p : S3.plane(e.clientX, e.clientY, lv.z); return !!P3.p; }
+function P3upd(e) { if (!window.S3 || !S3.on) return false; const lv = lvObj(); if (['lsplant','lswater','lspave'].includes(TOOL)) { P3.p = S3.hits(e.clientX, e.clientY).find(h => h.ud.k === 'site' && h.ud.id === 'terrain')?.p ?? S3.plane(e.clientX, e.clientY, 0); return !!P3.p; } P3.hit = S3.hit(e.clientX, e.clientY); P3.p = (!drag && P3_HIT.has(TOOL) && P3.hit) ? P3.hit.p : S3.plane(e.clientX, e.clientY, lv.z); return !!P3.p; }
 function pick3D(opt) { const h = P3.hit && P3.hit.ud; if (!h) return null; if (opt && opt.only && h.k === 'room') return null; const L = h.k === 'room' ? null : LAYER_OF[h.k]; if (L && !VIS[L]) return null; return { k: h.k, id: h.id }; }
 function drawOverlay3D() {
   if(drawing?.kind==='floor'&&window.S3?.on)upd3D();
@@ -5216,7 +5216,7 @@ addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('i
   if (x1 - x0 < 2 || y1 - y0 < 2) { draw(); flash('Drag a larger rectangle (at least 2 m each way).'); return; } addMass([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]); }; }
 { const _dp = drawPreview; drawPreview = function () { _dp(); const d = VP.d;
   if (drawing && POLYT.has(drawing.kind)) { const P = drawing.pts.concat(drawing.cur ? [drawing.cur] : []), water = drawing.kind === 'lswater';
-    const screen = water && CAM === '3d' && M.site ? q => { const [x,y] = siteOfM(M,q); return S3.toScreen(q[0],q[1],SITEC.groundAt(M.site.terrain,x,y)); } : W2S;
+    const screen = LS_KIND[drawing.kind] && CAM === '3d' && M.site ? q => { const [x,y] = siteOfM(M,q); return S3.toScreen(q[0],q[1],SITEC.groundAt(M.site.terrain,x,y)); } : W2S;
     g.save(); g.beginPath(); P.forEach((q, i) => { const s = screen(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); });
     if (P.length > 2) { g.closePath(); g.fillStyle = drawing.kind === 'mass' ? 'rgba(233,195,158,.35)' : water ? 'rgba(84,124,143,.28)' : 'rgba(150,145,135,.25)'; g.fill(); } g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke();
     for (const q of drawing.pts) { const s = screen(q); g.fillStyle = '#fff'; g.fillRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); g.strokeRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); }
@@ -5530,7 +5530,8 @@ sunRefresh(true);
 registerLayer('imports', 'Imported meshes'); VIEW_MASKS.plan.push('imports'); VIEW_MASKS['3d'].push('imports');
 let IMP_OFF = new Set(); const IMP_MESH = new Map(); const meshOf = (o) => o.mesh || IMP_MESH.get(o.ref || o.id) || null;   // Workspace layers switched off (imports keep the Workspace layer they were sorted to)
 const impOn = (o, view) => layerOn('imports', view) && !isHidden(o.id) && !IMP_OFF.has(o.layer);
-const impLv = (o) => !o.lv || o.lv === LV || !M.levels.some((l) => l.id === o.lv);   // a piece placed on a level shows in the plan of that level only
+const importLevel = (o, model) => model.levels.find(l => l.id === o.lv) || (o.layer === 'Roof' ? model.levels.filter(l => l.z <= o.g.z + .01).sort((a,b) => b.z-a.z)[0] : null);
+const impLv = (o) => !importLevel(o,M) || importLevel(o,M).id === LV;   // a piece placed on a level shows in the plan of that level only
 // a point of the mesh (its own footprint coordinates) in the plan, after the piece's quarter turns
 // imported meshes turn freely (2026-11-01): o.ang (radians) about the footprint's centre; files from before, with quarter turns in
 // o.rot (0–3), read the same. o.w0, o.d0: the unturned footprint; o.g: the turned footprint's bounding box
@@ -5909,7 +5910,7 @@ window.S3 = (() => {
     // imported meshes (kept beside the model, see the block "Imported meshes in Plan Studio's own model")
     const IL = o.imports !== undefined ? o.imports : (o.all ? (M.imports || []).filter((q) => !IMP_OFF.has(q.layer)) : null);
     if (IL && IL.length) { const IG = new T.Group(); IG.name = 'imports';
-      for (const im of IL) { if (o.hidden && o.hidden.has(im.id)) continue; const m = meshOf(im); if (!m || m.length < 9) continue; const pos = new Float32Array(m.length);
+      for (const im of IL) { const level = importLevel(im,M); if (level && !show.some(l => l.id === level.id)) continue; if (o.hidden && o.hidden.has(im.id)) continue; const m = meshOf(im); if (!m || m.length < 9) continue; const pos = new Float32Array(m.length);
         for (let i = 0; i + 2 < m.length; i += 3) { const q = impXY(im, m[i], m[i + 1]); pos[i] = q[0]; pos[i + 1] = im.g.z + m[i + 2]; pos[i + 2] = -q[1]; }
         const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.computeVertexNormals();
         const me = new T.Mesh(geo, mat(im.ref ? '#ddd6ca' : '#cdcac3', { side: T.DoubleSide })); me.name = 'import'; me.userData = { k: 'imp', id: im.id }; IG.add(me); }
@@ -5985,7 +5986,7 @@ window.S3 = (() => {
         for (let e = 0; e < 4; e++) { const a = v[e], b = v[(e + 1) % 4]; if ((a < lv) !== (b < lv)) { const t = (lv - a) / (b - a), A = P(...c[e]), B = P(...c[(e + 1) % 4]); hits.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]); } }
         for (let h = 0; h + 1 < hits.length; h += 2) { g.moveTo(X(hits[h]), Y(hits[h])); g.lineTo(X(hits[h + 1]), Y(hits[h + 1])); }
       }
-      const major = Math.round(lv / step) % 5 === 0; g.strokeStyle = major ? 'rgba(60,62,66,.6)' : 'rgba(60,62,66,.38)'; g.lineWidth = major ? 2.4 : 1.4; g.stroke();
+      const major = Math.round(lv / step) % 5 === 0; g.strokeStyle = major ? 'rgba(60,62,66,.6)' : 'rgba(60,62,66,.38)'; g.lineWidth = (major ? 2.4 : 1.4) * Math.min(1, k / 25); g.stroke();
     }
     if (TOPO.tex) TOPO.tex.dispose(); TOPO.cv = layer(); TOPO.L = L; TOPO.G0 = G0; TOPO.k = k; TOPO.key = key;
     const tex = new T.CanvasTexture(TOPO.cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 8; TOPO.tex = tex; topoCompose(); return tex;

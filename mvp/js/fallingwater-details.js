@@ -31,7 +31,7 @@ export function details(xy){
   const id='habs-detail-'+imports.length,min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
   for(let i=0;i<p.length;i++){const k=i%3;min[k]=Math.min(min[k],p[i]);max[k]=Math.max(max[k],p[i]);}
   meshes[id]=p.map((v,i)=>+(v-min[i%3]).toFixed(4));
-  imports.push({id,name,layer,type:'imported',mat:layer==='Stonework'?'Stone':'Concrete',tris:p.length/9,g:{x:min[0],y:min[1],z:min[2],w:max[0]-min[0],d:max[1]-min[1],h:max[2]-min[2]}});
+  imports.push({id,name,layer,...(layer==='Roof'?{lv:'L3'}:{}),type:'imported',mat:layer==='Stonework'?'Stone':'Concrete',tris:p.length/9,g:{x:min[0],y:min[1],z:min[2],w:max[0]-min[0],d:max[1]-min[1],h:max[2]-min[2]}});
  }
  return {imports,meshes};
 }
