@@ -4,6 +4,7 @@
 // The earlier homepage stays at #/home-classic. Public navigation is shared with the information and authentication pages.
 import * as S from '../store.js';
 import {SIMS} from '../data.js';
+import {PLANNED_SIMS} from '../planned-simulations.js';
 import {simulationPresentation} from '../simulation-presentation.js';
 import {mountDriftWall} from '../drift-wall.js';
 import {publicNav,bindPublicNav} from '../public-chrome.js';
@@ -33,7 +34,7 @@ export async function render(app, rest, params, context = {}) {
       <p>Test sun, daylight, wind and snow in one model. Compare Plan A with Plan B, then turn saved simulation results into a report for your next design review.</p>
       <div class="lp-actions"><a class="lp-btn lp-big" href="${start}">Start a project</a><a class="lp-ghost" href="#lp-studies">See what it does</a></div></div>
     <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
-    <div class="lp-drift-controls"><div class="lp-drift-caption" id="lpDriftCaption"><b>Explore all ${SIMS.length} simulations.</b><span>Hover to lift a card. Click to open its study.</span></div><button type="button" id="lpDriftPause" aria-pressed="false">Pause wall</button></div>
+    <div class="lp-drift-controls"><div class="lp-drift-caption" id="lpDriftCaption"><b>Explore ${SIMS.length} studies + ${PLANNED_SIMS.length} coming soon.</b><span>Hover to lift a card. Click to open its study.</span></div><button type="button" id="lpDriftPause" aria-pressed="false">Pause wall</button></div>
     <p class="lp-drift-note">Illustrative previews · Shared with the Workspace study cards</p>
   </header>
 
@@ -53,7 +54,7 @@ export async function render(app, rest, params, context = {}) {
   <section class="lp-band"><h2>Screening for early design.</h2><p>Studies are estimates for comparing options, with their method and inputs kept with every result. They are not code compliance.</p><a class="lp-btn lp-big" href="${start}">Start a project</a></section>
   <footer class="lp-foot"><span>plot<b>cloud</b></span><a href="#/pricing">Pricing</a><a href="#/resources">Resources</a><a href="#/legal">Legal</a></footer>
 </div>`;
-  const stops = [mountDriftWall(app.querySelector('#lpDriftWall'),SIMS.map(simulationPresentation),{pauseButton:app.querySelector('#lpDriftPause'),onActive:item=>{const caption=app.querySelector('#lpDriftCaption');caption.querySelector('b').textContent=item?item.title:`Explore all ${SIMS.length} simulations.`;caption.querySelector('span').textContent=item?item.question:'Hover to lift a card. Click to open its study.';}}), figures(app), massing(app), site(app), compare(app), studies(app), drawings(app), simulationPreview(app)];
+  const stops = [mountDriftWall(app.querySelector('#lpDriftWall'),[...SIMS,...PLANNED_SIMS].map(simulationPresentation),{pauseButton:app.querySelector('#lpDriftPause'),onActive:item=>{const caption=app.querySelector('#lpDriftCaption');caption.querySelector('b').textContent=item?item.title+(item.status==='planned'?' · Coming soon':''):`Explore ${SIMS.length} studies + ${PLANNED_SIMS.length} coming soon.`;caption.querySelector('span').textContent=item?item.question:'Hover to lift a card. Click to open its study.';}}), figures(app), massing(app), site(app), compare(app), studies(app), drawings(app), simulationPreview(app)];
   // optional pictures (generated from docs/home-image-prompts.md): shown only when the file exists
   for (const [k, file] of [['massing', 'massing'], ['site', 'site']]) { const im = new Image(); im.onload = () => { if (!alive()) return; const v = app.querySelector(`[data-card="${k}"] .lp-vis`); if (v) { im.className = 'lp-photo'; im.alt = ''; v.prepend(im); v.classList.add('has-photo'); } }; im.src = `img/home/${file}.webp`; }
   app.querySelectorAll('a[href="#lp-studies"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();app.querySelector('#lp-studies').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}));

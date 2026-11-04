@@ -1,3 +1,4 @@
+import {PLANNED_SIMS,plannedStudy} from '../planned-simulations.js';
 import {mountSimulationPreview} from '../simulation-picker-preview.js';
 import { mountPicker } from '../color-picker.js?v=ill-20261031-1';
 import {inspectStudy} from '../study-readiness.js';
@@ -20,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=case-terrain-20261103-2';
+import { mountChrome } from '../workspace-chrome.js?v=planned-20261104-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -808,15 +809,15 @@ export function render(app, [pid]) {
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
   // "Add simulation" on the left rail: pick a study, then the same pre-flight and handoff as Send to Simulation
   const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
-  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>categoryOf(x.id)===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}">${esc(x.name)}</button>`).join('')+'</div>').join('');
+  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+[...SIMS,...PLANNED_SIMS].filter(x=>(x.category||categoryOf(x.id))===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}" ${x.status==='planned'?'data-planned="true"':''}>${esc(x.name)}${x.status==='planned'?'<span class="study-soon">Coming soon</span>':''}</button>`).join('')+'</div>').join('');
   const addInt=$('#addSimInt',app);let menuBtn=addSim;   // two entries (2026-11-01): Building simulations and Interior simulations, each with its own list
   document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
-  const disposeSimPreview=mountSimulationPreview(simMenu,addSim,SIMS);
+  const disposeSimPreview=mountSimulationPreview(simMenu,addSim,[...SIMS,...PLANNED_SIMS]);
   const placeMenu=()=>{const r=menuBtn.getBoundingClientRect(),h=Math.min(simMenu.scrollHeight,innerHeight*0.7);simMenu.style.left=(r.right+8)+'px';simMenu.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top-h/2))+'px';};
   const closeMenu=()=>{simMenu.hidden=true;addSim.setAttribute('aria-expanded','false');addInt.setAttribute('aria-expanded','false');};
   const openFor=(btn,cat)=>e=>{e.stopPropagation();const same=!simMenu.hidden&&menuBtn===btn;closeMenu();if(same)return;menuBtn=btn;simMenu.querySelectorAll('[data-cat]').forEach(x=>x.hidden=x.dataset.cat!==cat);simMenu.hidden=false;placeMenu();btn.setAttribute('aria-expanded','true');simMenu.querySelector(`[data-cat="${cat}"] button`)?.focus();};
   addSim.onclick=openFor(addSim,'building');addInt.onclick=openFor(addInt,'interior');
-  simMenu.onclick=e=>{const b=e.target.closest('[data-addsim]');if(!b)return;closeMenu();studyChoice.value=b.dataset.addsim;studyChoice.onchange();$('#sendSim',app).click();};
+  simMenu.onclick=e=>{const b=e.target.closest('[data-addsim]');if(!b)return;closeMenu();if(plannedStudy(b.dataset.addsim)){if(window.__wsHost)window.__wsHost.open(b.dataset.addsim);else location.hash='#/simulations/'+b.dataset.addsim;return;}studyChoice.value=b.dataset.addsim;studyChoice.onchange();$('#sendSim',app).click();};
   simMenu.onkeydown=e=>{if(e.key==='Escape'){closeMenu();addSim.focus();}};
   const simOutside=e=>{if(!simMenu.hidden&&!simMenu.contains(e.target)&&!addSim.contains(e.target)&&!addInt.contains(e.target))closeMenu();};document.addEventListener('click',simOutside);
   $('#sendSim', app).onclick = async () => {
@@ -880,7 +881,7 @@ export function render(app, [pid]) {
   // the floating layout (workspace-chrome.js): the model fills the window, the controls above move onto cards and rails
   document.body.classList.add('sp-full');
   { const site = S.conditionsOf(p).site; if (weatherDownloadAvailable() && !site.climate && Number.isFinite(site.lat)) ensureProjectClimate(p).catch(() => { }); }   // weather from the address, ready before a study needs it
-  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers, sims: SIMS });
+  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers, sims: [...SIMS,...PLANNED_SIMS] });
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel(); tabsUI();

@@ -8,6 +8,7 @@
 // Nothing here is a new tool: each control is the Workspace's or Plan Studio's own, moved, so its behaviour, keyboard and tests stay.
 // The sun is the one addition: Plan Studio's 3D key light set from the site, the date and solar time, with shadows (display only).
 import * as S from './store.js';
+import {plannedStudy} from './planned-simulations.js';
 import { climateFile, ensureProjectClimate } from './project-climate.js';
 import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected-20261027-3';
 import { sunPosition } from './environment/analysis.js?v=run-20261031-2';
@@ -415,13 +416,13 @@ export function mountChrome(app, api) {
     closeHost(); closeStudy(); openCard(false); closePops(); palOpen(false); openSheet(false);
     const token = ++HOST.token, el = el2('section', 'sp-host'); el.setAttribute('aria-label', simName(id)); HOST.el = el; HOST.id = id; root.append(el); root.classList.add('sp-hosting');
     el.addEventListener('click', (e) => { const a = e.target.closest('a[href]'); if (!a) return; const h = a.getAttribute('href') || ''; if (/^#\/workspace(\/|$)/.test(h) || (a.closest('.shbar') && /Back/.test(a.textContent))) { e.preventDefault(); closeHost(); } }, true);
-    try { const mod = await import('./pages/simulations.js?v=inview-20261031-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
+    try { const mod = await import('./pages/simulations.js?v=planned-20261104-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
     catch (e) { el.innerHTML = `<div class="sp-hosterr"><p>${esc(simName(id))} could not open here: ${esc(e.message || e)}.</p><a class="btn sm" href="#/simulations/${esc(id)}">Open it on its own page</a></div>`; }
   }
   function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }
   const el2 = (tag, cls) => { const e = document.createElement(tag); e.className = cls; return e; };
   window.__wsHost = { open: openHost, close: closeHost, id: () => HOST.id };
-  function openStudy(id) { if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res) clearAll(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', sig: '', at: null, err: '', saved: '', exp: false, areaOpen: false, stopped: false }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; hookProbe(); showArea(); loadRose(); drawStudy(); }
+  function openStudy(id) { if(plannedStudy(id)){openHost(id);return;} if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res) clearAll(); if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', sig: '', at: null, err: '', saved: '', exp: false, areaOpen: false, stopped: false }); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; hookProbe(); showArea(); loadRose(); drawStudy(); }
   function closeStudy() { studyCard.hidden = true; resCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; stopPlay(); probeEl.hidden = true; clearAll(); }
   function openPage(id) { const sel = $('#workspaceStudy'); if (sel) { sel.value = id; sel.onchange?.(); } $('#sendSim')?.click(); }
   // the sky seen from a ground cell: 6 rings × 24 patches, weighted for a horizontal surface (sum 1): the sky view factor

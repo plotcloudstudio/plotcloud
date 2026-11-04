@@ -1,3 +1,5 @@
+import {plannedStudy} from '../planned-simulations.js';
+import {render as renderPlannedStudy} from './planned-study.js';
 import {simulationPresentation} from '../simulation-presentation.js';
 import {inspectStudy} from '../study-readiness.js';
 import {checkAccess, isFreeStudy,canUse} from '../beta-access.js';
@@ -8,6 +10,7 @@ import { CATEGORIES, TARGETS, targetStatus, STATUS_LABEL, categoryOf } from '../
 import { $, $$, esc, currentProject, currentVersion, LIVE } from '../app.js';
 
 export async function render(app, [simId], params, context={}) {
+  const planned=plannedStudy(simId);if(planned)return renderPlannedStudy(app,planned);
   if(params.get('test-code')){const code=params.get('test-code');params.delete('test-code');history.replaceState(null,'','#/simulations'+(simId?'/'+encodeURIComponent(simId):'')+(params.toString()?'?'+params.toString():''));try{await activateTestingCode(code);}catch(error){app.innerHTML='<div class="wrap"><h1>Testing access could not be activated.</h1><p role="alert"></p><a href="#/simulations">Browse studies</a></div>';app.querySelector('[role=alert]').textContent=error.message;return;}}
   if(simId==='noise'){app.innerHTML='<div class="wrap"><h1>Study removed</h1><p>Outdoor Noise is no longer available.</p><a class="btn" href="#/simulations">All studies</a></div>';return;}
   if(simId==='snow'&&params.get('mode')!=='drift')return(await import('./snow-study.js?v=vertical-snow-20261031-3')).render(app,SIMS.find(s=>s.id==='snow'),params,context);
