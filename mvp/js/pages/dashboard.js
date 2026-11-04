@@ -1,3 +1,4 @@
+import {caseCard,openCase} from '../fallingwater-dashboard.js';
 // Dashboard (#/home): the page after logging in. Pick up where you left off, what needs attention, your projects
 // (new, open, rename, duplicate, archive, delete), recent activity, the simulations you use most, plan and storage.
 // Everything comes from this browser's store (store.js); nothing here is estimated.
@@ -24,6 +25,7 @@ export function render(app) {
       <div><span class="eyebrow">Dashboard</span><h1 class="display sm" style="margin-top:10px">${hello}, ${esc(first)}.</h1><p class="lede" id="where" style="margin-top:10px"></p></div>
       <div class="db-go" id="go"></div>
     </header>
+    ${caseCard()}
     <section class="db-attn" id="attn" aria-label="Needs attention"></section>
     <div class="db-main">
       <section aria-labelledby="h-proj">
@@ -79,6 +81,7 @@ export function render(app) {
     $('#attn', app).innerHTML = out.length ? `<h2 class="db-h">Needs attention <span class="db-n">${out.length}</span></h2><div class="db-alist">${out.map(([k, t, s, b, href, pid]) => `<div class="db-aitem" data-kind="${k}"><i aria-hidden="true"></i><div><b>${esc(t)}</b><small>${esc(s)}</small></div><a class="btn sm" href="${href}" data-pid="${pid || ''}">${esc(b)}</a></div>`).join('')}</div>` : '';
     $$('#attn [data-pid]', app).forEach((a) => a.addEventListener('click', () => { const p = S.project(a.dataset.pid); if (p) setCurrent(p); }));
   }
+  for(const example of app.querySelectorAll('[data-fallingwater]'))example.onclick=()=>{const p=openCase();setCurrent(p);location.hash='#/'+(example.dataset.fallingwater==='results'?'results':'workspace')+'/'+p.id;};
   const thumbOf = (p) => { const last = p.versions.at(-1)?.id, r = p.runs.filter((x) => x.results?.thumb).sort((a, b) => (b.versionId === last) - (a.versionId === last) || b.created.localeCompare(a.created))[0]; return r ? `<img src="${r.results.thumb}" alt="">` : `<img data-holo="${p.sample ? 'hero' : 'heroA'}" src="${img(p.sample ? 'hero' : 'heroA')}" alt="">`; };
   function projects() {
     const all = S.projects(), arch = all.filter((p) => p.archived), ql = q.toLowerCase();

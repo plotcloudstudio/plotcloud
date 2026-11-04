@@ -1,3 +1,4 @@
+import {caseCard,openCase} from '../fallingwater-dashboard.js';
 // Projects home after sign-in (#/home): a workspace rail, a sidebar (My Projects, Favorites, Deleted, Account settings,
 // Categories & Tags, Tutorials, What's new, latest change, signed-in user), and the project browser with a count, sort,
 // grid / list / map views, search and a large "Add new project" card that opens the map (#/new-project).
@@ -43,10 +44,9 @@ const thumbOf = (p) => [...(p.runs || [])].reverse().find((r) => /^data:image\/(
 
 export function render(app, [section], params) {
   const A = S.account();
-  if (!A.user) { location.hash = '#/login?next=home'; return; }
   const P = pref(); let view = ['grid', 'list', 'map'].includes(P.view) ? P.view : 'grid', sort = P.sort || 'created', q = '', tag = params.get('tag') || '';
   const where = ['favorites', 'deleted', 'tags'].includes(section) ? section : 'mine';
-  const first = (A.user.name || A.user.email || 'You').trim(), initial = first[0]?.toUpperCase() || 'P';
+  const first = (A.user?.name || A.user?.email || 'Guest').trim(), initial = first[0]?.toUpperCase() || 'P';
   const all = () => S.projects(), live = () => all().filter((p) => !p.deletedAt);
   app.innerHTML = `<div class="ph">
     <nav class="ph-rail" aria-label="Workspaces"><a class="ph-ws" href="#/home" title="${esc(first)}’s workspace" aria-label="${esc(first)}’s workspace">${esc(initial)}</a><a class="ph-add" href="#/new-project" title="New project" aria-label="New project">+</a></nav>
@@ -64,18 +64,19 @@ export function render(app, [section], params) {
         <a href="#/activity">${svg('chart')}Activity &amp; storage</a>
       </div>
       <div class="ph-bottom"><a class="ph-news" href="#" id="phLatest"><small>New in the changelog</small><b>${esc(CHANGES[0][1])}</b></a>
-        <div class="ph-who"><span class="ph-avatar">${esc(initial)}</span><div><small>Logged in as ${esc(first)}</small><button type="button" id="phOut">Log out</button></div></div></div>
+        <div class="ph-who"><span class="ph-avatar">${esc(initial)}</span><div>${A.user?`<small>Logged in as ${esc(first)}</small><button type="button" id="phOut">Log out</button>`:'<small>Projects saved in this browser</small><a href="#/login?next=home">Log in</a>'}</div></div></div>
     </aside>
     <section class="ph-main" aria-label="Projects"><div class="ph-bar">
       <div class="ph-count">${where === 'deleted' ? 'Deleted' : where === 'favorites' ? 'Favorites' : where === 'tags' ? 'Categories & Tags' : tag ? `Tag: ${esc(tag)}` : 'Project'}<span id="phCount"></span></div>
       <label>Sort by: <select class="ph-sort" id="phSort"><option value="created">Created</option><option value="edited">Last edited</option><option value="name">Name</option><option value="results">Most results</option></select></label>
       <div class="ph-views" role="group" aria-label="View">${['grid', 'list', 'map'].map((v) => `<button type="button" data-view="${v}" aria-pressed="${v === view}" aria-label="${v[0].toUpperCase() + v.slice(1)} view">${svg(v)}</button>`).join('')}</div>
       <div class="ph-search">${svg('search')}<input id="phQ" type="search" placeholder="Search projects" aria-label="Search projects"></div></div>
-      <div class="ph-body" id="phBody"></div></section></div>
+      ${where==='mine'&&!tag?caseCard():''}<div class="ph-body" id="phBody"></div></section></div>
     <dialog class="ph-dialog" id="phDlg"><h2>What’s new</h2><ul>${CHANGES.map(([d, t, s]) => `<li><b>${esc(t)}</b> <small>${esc(d)}</small><br><span>${esc(s)}</span></li>`).join('')}</ul><form method="dialog"><button class="btn">Close</button></form></dialog>`;
   $('#phSort', app).value = sort;
   const news = () => $('#phDlg', app).showModal(); $('#phNews', app).onclick = news; $('#phLatest', app).onclick = (e) => { e.preventDefault(); news(); };
-  $('#phOut', app).onclick = async () => { if (A.user.cloud) await C.signOut(); else { A.user = null; S.save(); } refreshWho(); location.hash = '#/'; toast('Logged out'); };
+  for(const example of app.querySelectorAll('[data-fallingwater]'))example.onclick=()=>{const p=openCase();setCurrent(p);location.hash='#/'+(example.dataset.fallingwater==='results'?'results':'workspace')+'/'+p.id;};
+  if(A.user)$('#phOut', app).onclick = async () => { if (A.user.cloud) await C.signOut(); else { A.user = null; S.save(); } refreshWho(); location.hash = '#/'; toast('Logged out'); };
   $('#phSort', app).onchange = (e) => { sort = e.target.value; setPref({ sort }); draw(); };
   $('#phQ', app).oninput = (e) => { q = e.target.value.toLowerCase(); draw(); };
   for (const b of $$('[data-view]', app)) b.onclick = () => { view = b.dataset.view; setPref({ view }); for (const x of $$('[data-view]', app)) x.setAttribute('aria-pressed', String(x === b)); draw(); };

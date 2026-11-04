@@ -141,14 +141,15 @@ export async function render(app, [pid], params) {
     const v = cardV; if (!v) { $('#cards', app).innerHTML = '<p class="note">No saved version yet.</p>'; return; }
     const runs = SIMS.map((s) => [s, S.lastRun(p, v.id, s.id)]).filter(([, r]) => r);
     $('#cards', app).innerHTML = runs.map(([s, r]) => `<article class="rcard" data-card="${s.id}">${r.results.thumb ? `<img src="${r.results.thumb}" alt="${esc(s.name)} on v${v.n}">` : '<div class="ph">No picture kept</div>'}
-      <div class="rc-b"><h3>${esc(s.name)}</h3>${assumptionsHTML(p,r)}${S.runConditionsStatus(p,r)?`<p class="notice warn" data-conditions-stale>${esc(S.runConditionsStatus(p,r))}</p>`:''}<p class="note">${when(r.created)} · ${r.source === 'batch' ? 'batch run' : 'saved from its page'}</p>
+      <div class="rc-b"><h3>${esc(s.name)}</h3>${assumptionsHTML(p,r)}${S.runConditionsStatus(p,r)?`<p class="notice warn" data-conditions-stale>${esc(S.runConditionsStatus(p,r))}</p>`:''}<p class="note">${when(r.created)} · ${r.source === 'batch' ? 'batch run' : r.source==='plan-studio-case'?'precomputed in Plan Studio':'saved from its page'}</p>
       <dl>${(r.results.kpis || []).slice(0, 3).map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
       <a class="btn sm primary" href="#/simulations/${s.id}?project=${p.id}&version=${v.id}">Enter</a></div></article>`).join('') || `<p class="note">Nothing run on v${v.n} yet. Tick studies above and Run selected.</p>`;
   }
+  const displayedMetric=s=>s.metrics.find(([key])=>p.runs.some(r=>r.simId===s.id&&Number.isFinite(r.results?.[key])))||s.metrics[0];
   function matrix() {
     const used = SIMS.filter((s) => p.runs.some((r) => r.simId === s.id));
-    $('#matrix', app).innerHTML = used.length ? `<table class="t matrix"><thead><tr><th>Version</th>${used.map((s) => `<th>${esc(s.name)}<br><span style="text-transform:none">${esc(s.metrics[0][1])}${s.metrics[0][2] ? ' · ' + s.metrics[0][2] : ''}</span></th>`).join('')}<th></th></tr></thead>
-      <tbody>${p.versions.slice().reverse().map((v) => `<tr><td><b class="mono">v${v.n}</b> ${esc(v.note)}<br><span class="note">${when(v.created)}</span></td>${used.map((s) => { const r = S.lastRun(p, v.id, s.id); return `<td class="n">${r ? fmt(r.results[s.metrics[0][0]], s.metrics[0][3]) : `<a class="note" href="#/simulations/${s.id}?project=${p.id}&version=${v.id}">run</a>`}</td>`; }).join('')}<td><a class="btn sm" href="#/simulations?project=${p.id}&version=${v.id}">Simulate</a></td></tr>`).join('')}</tbody></table>` : '<p class="note">No saved results yet. Run simulations above.</p>';
+    $('#matrix', app).innerHTML = used.length ? `<table class="t matrix"><thead><tr><th>Version</th>${used.map((s) => `<th>${esc(s.name)}<br><span style="text-transform:none">${esc(displayedMetric(s)[1])}${displayedMetric(s)[2] ? ' · ' + displayedMetric(s)[2] : ''}</span></th>`).join('')}<th></th></tr></thead>
+      <tbody>${p.versions.slice().reverse().map((v) => `<tr><td><b class="mono">v${v.n}</b> ${esc(v.note)}<br><span class="note">${when(v.created)}</span></td>${used.map((s) => { const r = S.lastRun(p, v.id, s.id); return `<td class="n">${r ? fmt(r.results[displayedMetric(s)[0]], displayedMetric(s)[3]) : `<a class="note" href="#/simulations/${s.id}?project=${p.id}&version=${v.id}">run</a>`}</td>`; }).join('')}<td><a class="btn sm" href="#/simulations?project=${p.id}&version=${v.id}">Simulate</a></td></tr>`).join('')}</tbody></table>` : '<p class="note">No saved results yet. Run simulations above.</p>';
   }
   function log() {
     $('#nRuns', app).textContent = p.runs.length;
@@ -310,7 +311,7 @@ export async function render(app, [pid], params) {
   }
   function trend() {
     const el = $('#trend', app); if (!el) return; const sim = C.scope === 'sim' ? SIMS.find((s) => s.id === C.sim) : SIMS.find((s) => p.runs.some((r) => r.simId === s.id)); el.hidden = !sim; if (!sim) { el.innerHTML = ''; return; }
-    const [k, label, u, dd] = sim.metrics[0], rows = p.versions.map((v) => [v, S.lastRun(p, v.id, sim.id)?.results[k]]), max = Math.max(1e-9, ...rows.map(([, x]) => (Number.isFinite(x) ? Math.abs(x) : 0)));
+    const [k, label, u, dd] = displayedMetric(sim), rows = p.versions.map((v) => [v, S.lastRun(p, v.id, sim.id)?.results[k]]), max = Math.max(1e-9, ...rows.map(([, x]) => (Number.isFinite(x) ? Math.abs(x) : 0)));
     el.innerHTML = `<h3 style="font-size:15px;margin-bottom:10px">${esc(sim.name)} · ${esc(label)} across versions</h3><div class="bars">${rows.map(([v, x]) => `<div class="b ${v === B ? 'v2' : ''}"><span>v${v.n}</span>${Number.isFinite(x) ? `<i style="width:${Math.abs(x) / max * 100}%"></i>` : '<span class="note">not run</span>'}<span style="text-align:right">${Number.isFinite(x) ? fmt(x, dd) + (u ? ' ' + u : '') : ''}</span></div>`).join('')}</div>`;
   }
   if (cmpEl) {

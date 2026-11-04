@@ -15,3 +15,5 @@ body{background:var(--brand-page);color:var(--brand-ink)}
 .ph :is(.ph-chip,.ph-hits button:hover){background:#eaf0f6;color:var(--brand-ink)}
 :is(.btn,input,select,textarea,button):focus-visible{outline:2px solid #294f78;outline-offset:3px}
 .brand .logo g[stroke]{stroke:currentColor}
+.pc-case{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin:18px;padding:24px;border-radius:12px;background:#fff;border:1px solid var(--brand-border);color:var(--brand-ink)}
+.pc-case h2{font-size:30px;margin:6px 0}.pc-case p{line-height:1.55}.pc-case-copy>a{display:inline-block;margin:10px;font-size:13px}.pc-case-data{padding:16px;background:#eef3f8;border-radius:8px}.pc-case-metrics{display:flex;flex-wrap:wrap;gap:12px 26px;margin:12px 0}.pc-case-metrics b,.pc-case-metrics small{display:block}.pc-case-metrics b{font-size:24px}.pc-case details summary{cursor:pointer;font-weight:600;font-size:13px}.pc-case-table{overflow:auto}.pc-case-table th,.pc-case-table td{white-space:nowrap}.db>.pc-case{margin-inline:0}@media(max-width:820px){.pc-case{grid-template-columns:1fr;margin:12px;padding:16px}}

@@ -247,6 +247,7 @@ export function render(app, [pid]) {
     ready(role, win) {
       if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true;
       const back = I2.ws.load(SNAP); if (role === 'plan' && back !== SNAP) hub.change('plan', back, false);   // Plan Studio tidies a model it opens: that is the one model from now on
+      if(p.caseStudy?.id==='fallingwater-habs-20261103'&&I2.ws.levels().list.some(l=>l.id==='L3'))I2.ws.level('L3');
       tell(I2); if (role === 'plan' || !OBJ.length) derive(false);
       paneUI(); if (role === 'plan') { levelUI(); if (converted) toast('This project now uses Plan Studio’s model in every view. Imported meshes and the site are kept as they were.'); }
     },
