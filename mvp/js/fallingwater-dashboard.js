@@ -8,9 +8,9 @@ export const caseCard=()=>`<section class="pc-case" aria-labelledby="fallingwate
 
 export function openCase(){
  try{const key='pc-mvp-ws2',ui=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...ui,view:'persp'}));}catch{} 
- let p=S.projects().find(p=>p.caseStudy?.id==='fallingwater-habs-detailed-v2'&&!p.deletedAt);
+ let p=S.projects().find(p=>p.caseStudy?.id==='fallingwater-habs-roof-v3'&&!p.deletedAt);
  if(p)return p;
- p=S.createProject(title + " (detailed)",caseModel());
+ p=S.createProject(title + " (roofed example)",caseModel());
  p.site=S.clone(site);p.siteLinked=false;p.caseStudy={id:'fallingwater-habs-detailed-v2',source,generated:evidence.generated,engine:evidence.engine,engineHash:evidence.engineHash,modelHash:evidence.modelHash};
  S.updateConditions(p,site,p.sharedConditions.defaults,{keepRevision:true});
  for(const r of evidence.runs){

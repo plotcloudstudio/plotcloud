@@ -22,6 +22,10 @@ export function details(xy){
  steps('Stair to bedroom level',485,311,0,2.55,3.1,15,.95);
  steps('Stair to study level',402,291,2.55,2.17,2.55,13,.92);
  steps('Stair down to Bear Run',495,539,-2.62,2.62,2.7,15,1.12);
+ // Stepped flat roof over the study and gallery, with a thin projecting concrete fascia.
+ const roof=(x,y,x2,y2,z,h)=>{const [a,b]=xy(x,y),[c,d]=xy(x2,y2);box('Study and gallery roof','Roof',(a+c)/2,(b+d)/2,z,c-a,b-d,h);};
+ roof(234,215,336,345,6.70,.19);
+ roof(336,241,500,320,6.70,.19);
  const imports=[],meshes={};
  for(const [name,{layer,p}] of Object.entries(groups)){
   const id='habs-detail-'+imports.length,min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
