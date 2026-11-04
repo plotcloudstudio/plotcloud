@@ -5918,6 +5918,14 @@ window.S3 = (() => {
     else if (M.site && M.site.origin && !M.site.terrain && o.site !== undefined) { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), n = 11, st = 2 * r / (n - 1), G0 = { x0: -r, y0: -r, step: st, nx: n, ny: n, z: new Array(n * n).fill(0) }, pts = [];
       for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const q = SITEC.siteToPlan(M.site, [G0.x0 + i * st, G0.y0 + j * st], M.north || 0); pts.push([q[0], q[1], 0]); }
       G.add(topoBlock(M, { nx: n, ny: n, pts }, G0)); o = Object.assign({}, o, { terrain: { pts } }); }   // no terrain data: a flat block of the site square
+    // Survey-case landscape features are display geometry, not wind or hydraulic simulation inputs.
+    if(o.terrain && M.site?.features3d?.length){const FG=new T.Group();FG.name='site-detail';
+      for(const f of M.site.features3d.slice(0,32)){if(!Array.isArray(f?.vertices)||f.vertices.length%9||f.vertices.length>150000||!f.vertices.every(Number.isFinite))continue;
+        const p=[];for(let i=0;i<f.vertices.length;i+=3){const q=SITEC.siteToPlan(M.site,[f.vertices[i],f.vertices[i+1]],M.north);p.push(q[0],f.vertices[i+2],-q[1]);}
+        const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(p,3));geo.computeVertexNormals();
+        FG.add(new T.Mesh(geo,mat(f.color||'#789197',{side:T.DoubleSide})));
+      }G.add(FG);
+    }
     WM.topo = !!(o.terrain && o.terrain.pts); for (const g of WM.ground) g.visible = !WM.topo;   // the block stands on its own (the world map still fades in far out)
     return G;
   }

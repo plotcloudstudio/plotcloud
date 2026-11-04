@@ -75,7 +75,7 @@ export function mountChrome(app, api) {
   // ---- top left: project name (switch projects) and the level pill
   const tl = el('div', 'sp-tl');
   tl.innerHTML = `<div class="sp-card sp-proj sp-menuwrap"><button type="button" class="sp-pname" aria-haspopup="menu" aria-expanded="false"><span class="sp-pn">${esc(p.name)}</span><small id="spSub"></small>${I(P.chevron, 14)}</button>
-    <div class="w2-menu sp-pmenu" role="menu" hidden>${S.projects().filter((x) => !x.archived).slice(0, 12).map((x) => `<a role="menuitem" href="#/workspace/${x.id}" ${x.id === p.id ? 'aria-current="page"' : ''}>${esc(x.name)}</a>`).join('')}<hr><a role="menuitem" href="#/home">All projects</a><a role="menuitem" href="#/new-project">New project</a></div></div>`;
+    <div class="w2-menu sp-pmenu" role="menu" hidden>${S.projects().filter((x) => !x.archived).slice(0, 12).map((x) => `<a role="menuitem" href="#/workspace/${x.id}" ${x.id === p.id ? 'aria-current="page"' : ''}>${esc(x.name)}</a>`).join('')}<hr><button type="button" role="menuitem" data-sp="terrain">Site &amp; terrain</button><a role="menuitem" href="#/home">All projects</a><a role="menuitem" href="#/new-project">New project</a></div></div>`;
   const cap = $('#cap'); cap.classList.add('sp-card', 'sp-level'); tl.append(cap);
   root.append(tl);
   const pbtn = $('.sp-pname', tl), pmenu = $('.sp-pmenu', tl);
@@ -179,6 +179,7 @@ export function mountChrome(app, api) {
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
+    else if (k === 'terrain') { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); openProject('site'); }
     else if (k === 'dim') goView(UI.view === 'plan' ? 'persp' : 'plan');
     else if (k === 'props') openProps(propsCard.hidden);
     else if (k === 'assets') openAssets(assetsCard.hidden);

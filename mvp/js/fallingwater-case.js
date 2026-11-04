@@ -1,8 +1,10 @@
+import {landscape,ground} from './fallingwater-landscape.js';
+import {details} from './fallingwater-details.js';
 // Diagram-level reconstruction traced from HABS PA-5346 sheets 2, 4–6, 9–10.
 // Source rasters are not shipped. Approximate geometry and study inputs are not as-built data.
 export const title='Fallingwater · main house';
 export const source='https://www.loc.gov/resource/hhh.pa1690.sheet?st=gallery';
-export const site={label:'Fallingwater, Mill Run, Pennsylvania',lat:39.9062,lon:-79.468,north:45,tz:'America/New_York',wind:2.5,windDir:'SW'};
+export const site={label:'Fallingwater, Mill Run, Pennsylvania',lat:39.90631,lon:-79.46804,north:45,tz:'America/New_York',wind:2.5,windDir:'SW'};
 const m=.0465,xy=(x,y)=>[+(m*(x-320)).toFixed(3),+(m*(410-y)).toFixed(3)];
 const round=n=>+n.toFixed(3);
 export function caseModel(open=.05){
@@ -35,12 +37,13 @@ export function caseModel(open=.05){
  // Site diagram: Bear Run and the sloping bank are approximated from the survey.
  // Rotate plan-space coordinates back into the site's east/north frame.
  const r=Math.SQRT1_2, world=([x,y])=>[(x+y)*r,(y-x)*r];
- const river=[[-23,-9],[-10,-8],[-4,-7],[5,-6],[15,-7],[34,-5],[34,-2],[15,-3],[5,-3],[-4,-4],[-10,-5],[-23,-5]].map(world);
- const z=[];for(let j=0;j<35;j++)for(let i=0;i<35;i++){const e=-34+2*i,n=-34+2*j,y=(e+n)*r;z.push(round(y< -3?-2.65+Math.max(0,-y-10)*.18:Math.min(8,Math.max(0,y-8)*.36)-.25));}
+ const {water,features}=landscape(),detail=details(xy),n=91,step=.75,z=[];
+ for(let j=0;j<n;j++)for(let i=0;i<n;i++){const e=-33.75+step*i,k=-33.75+step*j;z.push(round(ground((e-k)*r,(e+k)*r)));}
+ const paths=[{id:'approach',name:'Approach to main house',cls:'path',width:2.1,pts:[[30,10],[25,8],[22,5],[23,2],[24,0]].map(p=>world(p))},{id:'woodland-path',name:'Woodland path',cls:'path',width:1.6,pts:[[-22,10],[-16,9],[-10,8],[-5,9],[-2,11],[4,13],[8,13]].map(p=>world(p))}];
  const origin={lat:site.lat,lon:site.lon,label:site.label};
- const context={v:1,id:'habs-pa5346-site',version:1,crs:'local-tm',origin,north:0,boundary:{kind:'radius',r:48},tz:-5,dst:1,buildings:[],roads:[],trees:[],areas:[{id:'bear-run',kind:'water',name:'Bear Run',pts:river}],sources:[{provider:'HABS PA-5346',attribution:'Library of Congress · HABS PA-5346; diagrammatic trace',url:source}],terrain:{provider:'Section-based approximation',res:2,relief:11,grid:{x0:-34,y0:-34,step:2,nx:35,ny:35,z}}};
- const studio={v:2,id:'fallingwater',name:title,units:'m',north:site.north,version:1,levels,walls,ops,floors,names,furn,voids:[],fences:[],ceil:[],notes:[],hiddenIds:[],lights:[],climate:{from:225,U10:2.5,terrain:'suburban',Tout:18,Tin:24},targets:{ach:5,df:2},site:context};
- return {units:'m',north:site.north,layers:['Site','Context','Structure','Walls','Glazing','Roof','Rooms','Furniture'].map(name=>({name,visible:true,locked:name==='Site'})),components:[],studio};
+ const context={v:1,id:'habs-pa5346-site',version:2,crs:'local-tm',origin,north:0,boundary:{kind:'radius',r:48},tz:-5,dst:1,buildings:[],roads:paths,trees:[],features3d:features,areas:[{id:'bear-run',kind:'water',name:'Bear Run',pts:water}],sources:[{provider:'HABS PA-5346',attribution:'Library of Congress · HABS PA-5346; diagrammatic trace',url:source},{provider:'USGS 3DEP',attribution:'USGS National Map · outer terrain',url:'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer'}],terrain:{provider:'USGS 3DEP outer terrain + HABS section-based creek reconstruction',res:step,relief:round(Math.max(...z)-Math.min(...z)),grid:{x0:-33.75,y0:-33.75,step,nx:n,ny:n,z}}};
+ const studio={v:2,id:'fallingwater',name:title,units:'m',north:site.north,version:2,imports:detail.imports,masses:[],levels,walls,ops,floors,names,furn,voids:[],fences:[],ceil:[],notes:[],hiddenIds:[],lights:[],climate:{from:225,U10:2.5,terrain:'suburban',Tout:18,Tin:24},targets:{ach:5,df:2},site:context};
+ return {units:'m',north:site.north,layers:['Site','Masses','Context','Structure','Walls','Glazing','Roof','Rooms','Furniture','Stonework','Terrace rails','Stairs'].map(name=>({name,color:({Stonework:'#a2957b','Terrace rails':'#d8d3c7',Stairs:'#bdb6a7'})[name],visible:true,locked:name==='Site'})),components:[],meshes:detail.meshes,studio};
 }
 
 

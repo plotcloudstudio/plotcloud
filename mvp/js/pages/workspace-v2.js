@@ -20,7 +20,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=dayrec-20261101-2';
+import { mountChrome } from '../workspace-chrome.js?v=case-terrain-20261103-2';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -132,7 +132,12 @@ export function render(app, [pid]) {
     if (p.draft.meshes && p.draft.studio) { const keep = new Set((p.draft.studio.imports || []).map((o) => o.ref || o.id)); for (const k of Object.keys(p.draft.meshes)) if (!keep.has(k)) delete p.draft.meshes[k]; } }
   const M = () => p.draft, comp = (id) => M().components.find((c) => c.id === id);
   const layerOf = (c) => M().layers.find((l) => l.name === c?.layer);
-  const last = () => p.versions.at(-1),baseline=()=>currentVersion(p)||last(), dirty = () => !baseline() || JSON.stringify(baseline().model) !== JSON.stringify(p.draft);
+  // A Studio projection is a disposable view cache, not a model edit.
+  const signature=m=>{const str=JSON.stringify({...m,components:(m.components||[]).filter(c=>!PS.test(c.id))});let a=2166136261,b=5381;for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b,33)^c;}return `${str.length}:${a}:${b}`;};
+  const last = () => p.versions.at(-1),baseline=()=>currentVersion(p)||last();
+  const dirty=()=>{const v=baseline();if(!v)return true;const raw=signature(v.model),current=signature(p.draft),clean=p.workspaceHydration;return current!==raw&&!(clean?.id===v.id&&clean.raw===raw&&clean.normalized===current);};
+  function rememberHydration(back){const v=baseline();if(!v||dirty())return;p.workspaceHydration={id:v.id,raw:signature(v.model),normalized:signature({...p.draft,studio:JSON.parse(back)})};}
+
   const UI = readUI(); const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(UI)); } catch (e) { } };
   const open = new Set((UI.open || []).slice(-1));   // one layer open at a time, so the list fits without scrolling
   const openOnly = (n) => { open.clear(); if (n) open.add(n); UI.open = [...open]; };
@@ -159,7 +164,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=iso-20261101-2`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=terrain-20261103-2`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -246,8 +251,8 @@ export function render(app, [pid]) {
   const hub = {
     ready(role, win) {
       if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true;
-      const back = I2.ws.load(SNAP); if (role === 'plan' && back !== SNAP) hub.change('plan', back, false);   // Plan Studio tidies a model it opens: that is the one model from now on
-      if(p.caseStudy?.id==='fallingwater-habs-20261103'&&I2.ws.levels().list.some(l=>l.id==='L3'))I2.ws.level('L3');
+      const back = I2.ws.load(SNAP); if (role === 'plan' && back !== SNAP) { rememberHydration(back);hub.change('plan', back, false); }   // Plan Studio tidies a model it opens: that is the one model from now on
+      if(p.caseStudy?.id?.startsWith('fallingwater-habs-')&&I2.ws.levels().list.some(l=>l.id==='L3'))I2.ws.level('L3');
       tell(I2); if (role === 'plan' || !OBJ.length) derive(false);
       paneUI(); if (role === 'plan') { levelUI(); if (converted) toast('This project now uses Plan Studio’s model in every view. Imported meshes and the site are kept as they were.'); }
     },
@@ -613,12 +618,26 @@ export function render(app, [pid]) {
     <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Site</span></button></h2><div class="w3-accb">
       <p class="note">${M().studio?.site ? `${esc((M().studio.site.origin.label || "").split(",")[0] || "Site")}: ${M().studio.site.buildings.filter((b) => !b.excluded).length} buildings, ${(M().studio.site.roads || []).length} roads${M().studio.site.terrain ? `, ground ${M().studio.site.terrain.relief} m` : ""} · ${esc(M().studio.site.sources?.[0]?.attribution || "")}` : "No site yet."}</p><a class="btn sm" id="siteBtn" href="#/new-site?project=${p.id}">${M().studio?.site ? "Choose another site on the map" : "Choose the site on the map"}</a>
       <p class="note">The surroundings are on the Site layer, locked; the eye in Layers shows or hides them. Unlock it to change a building’s height, leave one out or draw a missing neighbour (Massing › Neighbour building). Masses go on the Masses layer.</p>
-      <p class="note" id="siteMsg" role="status" aria-live="polite"></p></div></div>
+      <p class="note">Terrain source: ${esc(M().studio?.site?.terrain?.provider || "No elevation grid")}</p><button type="button" class="btn sm" id="usgsTerrain">Load USGS 3DEP elevation</button><p class="note">Uses this project’s location. Buildings and roads stay in place.</p><p class="note" id="siteMsg" role="status" aria-live="polite"></p></div></div>
     <div class="pane w3-accp${UI.pacc === 'export' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="export" aria-expanded="${UI.pacc === 'export'}"><span>${UI.pacc === 'export' ? '▾' : '▸'} Export</span></button></h2><div class="w3-accb">
       <div class="w2-exp">${FORMATS.map(([k, n, d]) => `<button type="button" class="btn sm" data-exp="${k}" title="${esc(d)}">${esc(n)}</button>`).join('')}</div>
       <p class="note">Exports what is visible, in metres; hidden layers are left out. SketchUp's own .skp can only be written by SketchUp, so use the .dae, which SketchUp opens directly.</p>
       <p class="note" id="expMsg" role="status" aria-live="polite"></p></div></div>`;
     $$('[data-pacc]', host).forEach((b) => b.onclick = () => { UI.pacc = b.dataset.pacc; saveUI(); panel(); });
+    $('#usgsTerrain',host).onclick=async()=>{
+      const button=$('#usgsTerrain',host),message=$('#siteMsg',host),draft=M(),before=JSON.stringify(draft.studio.site||null),location=S.siteOf(p);
+      if(!Number.isFinite(location?.lat)||!Number.isFinite(location?.lon)||location.sample){message.textContent='Choose a real project location before loading elevation.';return;}
+      button.disabled=true;message.textContent='Reading USGS elevation…';
+      try{const [{sitec},{fetchUSGSTerrain,USGS_3DEP}]=await Promise.all([import('../studio-bridge.js'),import('../usgs-terrain.js')]),SC=await sitec();
+        const old=draft.studio.site,origin=old?.origin||{lat:location.lat,lon:location.lon,label:location.label};
+        const site=S.clone(old||SC.newSite(origin,{kind:'radius',r:150}));
+        const terrain=await fetchUSGSTerrain(SC.frame(origin),site.boundary?.r||150);
+        if(dead||M()!==draft||JSON.stringify(draft.studio.site||null)!==before)return;
+        if(site.features3d?.length&&!confirm('Replace this reconstructed terrain with USGS elevation? The case’s decorative waterfall and woodland geometry will be removed from this draft. Saved sketches stay unchanged.'))return;
+        site.terrain=terrain;delete site.features3d;SC.addSource(site,{provider:terrain.provider,attribution:'USGS National Map 3DEP',url:USGS_3DEP,at:new Date().toISOString()});
+        draft.studio.site=site;loadAll();persist();panel();toast('USGS elevation loaded. Save a new version to keep this terrain with the model.');
+      }catch(error){message.textContent=error.message||'USGS elevation is unavailable. Existing terrain was kept.';}finally{button.disabled=false;}
+    };
     $('#proj', host).onchange = (e) => { location.hash = '#/workspace/' + e.target.value; };
     $$('[data-exp]', host).forEach((b) => b.onclick = async () => {
       const k = b.dataset.exp, f = FORMATS.find((x) => x[0] === k), msg = $('#expMsg', host), base = p.name.replace(/\W+/g, '-').replace(/^-|-$/g, '');
@@ -774,7 +793,7 @@ export function render(app, [pid]) {
     $$('[data-simv]', app).forEach((a) => a.onclick = () => setCurrentVersion(p, a.dataset.simv));
     $('#toSim', app).href = '#/simulations'; $('#toSim', app).onclick = () => { if (baseline()) setCurrentVersion(p, baseline().id); };
   }
-  function loadAll() { SNAP = JSON.stringify(p.draft.studio); for (const I2 of ready()) { const back = I2.ws.load(SNAP); if (I2 === INST.plan && back !== SNAP) { SNAP = back; p.draft.studio = JSON.parse(back); } tell(I2); } vpFitted = false; derive(false); levelUI(); refresh(true); }
+  function loadAll() { SNAP = JSON.stringify(p.draft.studio); for (const I2 of ready()) { const back = I2.ws.load(SNAP); if (I2 === INST.plan && back !== SNAP) { rememberHydration(back);SNAP = back; p.draft.studio = JSON.parse(back); } tell(I2); } vpFitted = false; derive(false); levelUI(); refresh(true); }
   async function flushCurrentModel(pane=activePane()){
     if(!pane.ready)throw Error('The model is still loading. Try again when the view is ready.');
     const snapshot=pane.ws.model();p.draft.studio=JSON.parse(snapshot);SNAP=snapshot;for(const i of ready())if(i!==pane)i.ws.apply(snapshot,false);
