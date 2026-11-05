@@ -1,5 +1,5 @@
 // Conservative input checks. Engine geometry validation remains authoritative.
-const PLAN=new Set(['daylight','vent','acoustics','spacesyntax','movementdepth','views','cameras','privacy','wayfinding','isovist','evac']);
+const PLAN=new Set(['fire-evacuation','daylight','vent','acoustics','spacesyntax','movementdepth','views','cameras','privacy','wayfinding','isovist','evac']);
 const LOCATION=new Set(['sunhours','daylight','radiation','utci','shadebenefit','solarenvelope']);
 const EPW=new Set(['radiation','utci','climate','passive','shadebenefit']);
 const finite=n=>typeof n==='number'&&Number.isFinite(n);

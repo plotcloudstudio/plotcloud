@@ -1,4 +1,6 @@
 import * as Cloud from './cloud.js';
+import {hospitalResearchPost} from '../research/hospital-evacuation-article.js';
+export const researchPosts=[hospitalResearchPost];
 
 export const categories={campus:'Campus visits',release:'Product updates',studio:'Studio notes'};
 export const aboutDefault={headline:'Understand the building.\nImprove the next decision.',intro:'PlotCloud is a browser workspace for architects and architecture students exploring building performance in early design.',storyTitle:'Keep your existing workflow',story:'Use supported imports and exports alongside your CAD and modelling tools. PlotCloud supports design exploration; study methods and limitations remain part of the result.',teamIntro:'',team:[]};
@@ -12,10 +14,11 @@ export function safeImage(value){
   try{const u=new URL(String(value),location.href);return !u.username&&!u.password&&(u.protocol==='https:'||u.origin===location.origin&&u.protocol==='http:')?u.href:'';}catch{return '';}
 }
 export function bodyHTML(text){
+  const inline=value=>{let out='',at=0;for(const m of String(value).matchAll(/\[([^\]\n]+)\]\(([^\s)]+)\)/g)){out+=escapeText(String(value).slice(at,m.index));let url='';try{const u=new URL(m[2],location.href);if(!u.username&&!u.password&&(u.protocol==='https:'||u.origin===location.origin&&u.protocol==='http:'))url=u.href;}catch{}out+=url?`<a href="${escapeText(url)}">${escapeText(m[1])}</a>`:escapeText(m[0]);at=m.index+m[0].length;}return out+escapeText(String(value).slice(at));};
   return String(text||'').split(/\n\s*\n/).filter(Boolean).map(block=>{
-    if(block.startsWith('## ')){const [head,...rest]=block.split('\n');return `<h2>${escapeText(head.slice(3))}</h2>${rest.length?'<p>'+escapeText(rest.join('\n')).replace(/\n/g,'<br>')+'</p>':''}`;}
-    const lines=block.split('\n');if(lines.every(l=>l.startsWith('- ')))return '<ul>'+lines.map(l=>'<li>'+escapeText(l.slice(2))+'</li>').join('')+'</ul>';
-    return '<p>'+escapeText(block).replace(/\n/g,'<br>')+'</p>';
+    if(block.startsWith('## ')){const [head,...rest]=block.split('\n');return `<h2>${inline(head.slice(3))}</h2>${rest.length?'<p>'+inline(rest.join('\n')).replace(/\n/g,'<br>')+'</p>':''}`;}
+    const lines=block.split('\n');if(lines.every(l=>l.startsWith('- ')))return '<ul>'+lines.map(l=>'<li>'+inline(l.slice(2))+'</li>').join('')+'</ul>';
+    return '<p>'+inline(block).replace(/\n/g,'<br>')+'</p>';
   }).join('');
 }
 export function postHTML(post,{detail=false}={}){

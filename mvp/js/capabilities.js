@@ -14,6 +14,7 @@ export const CATEGORIES = [
 ];
 // Existing studies (plan §4.5): primary category, target IDs they cover, and their method identity.
 export const STUDIES = {
+  'fire-evacuation':{category:'interior',covers:[],extension:'Hospital evacuation research screening',method:'Multi-level navigation and discrete-event queues with pooled escort resources; uncalibrated assumptions, no smoke/tenability model',test:'tests/fire-evacuation.test.mjs'},
   snow: {category:'building',covers:[],extension:'Snow deposition and optional drift screening',method:'Uniform-event vertical first-hit deposition; optional existing project-weather wind drift screening. No structural capacity prediction',test:'tests/snow-analysis.test.mjs'},
   sunhours: { category: 'building', covers: ['B02'], also: ['I06'], method: 'PlotCloud ray-cast direct sun hours (browser)', test: 'tests/sun-period.cjs' },
   radiation: { category: 'building', covers: ['B03'], method: 'PlotCloud sky-patch incident radiation from EPW (browser, no reflections) — not HB-Radiance', test: 'tests/climate-studies.cjs' },

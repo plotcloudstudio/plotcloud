@@ -1,10 +1,5 @@
 // Presentation-only studies. Keep these out of the runnable SIMS registry.
 export const PLANNED_SIMS = [
-  {id:'fire-evacuation',name:'Fire Evacuation',scope:'Interior',category:'interior',
-    question:'How could people reach an exit during a fire?',
-    blurb:'Explore escape routes, exit locations and potential bottlenecks for a fire scenario.',
-    inputs:['Occupants & mobility','Exits & escape routes'],
-    intent:'Help architects compare escape-route arrangements and understand where occupants could converge. The planned study will consider occupancy, mobility, route lengths and exit capacity.'},
   {id:'clinical-visibility',name:'Clinical Visibility',scope:'Interior',category:'interior',
     question:'Where should staff stand to see the spaces that matter?',
     blurb:'Explore observation points, sightline gaps and door or window positions in healthcare interiors.',

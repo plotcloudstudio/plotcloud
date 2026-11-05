@@ -2,6 +2,7 @@
 import { SIMS } from '../data.js';
 export async function render(app, rest, params) {
   const sim = SIMS.find((s) => s.id === params.get('sim'));
+  if(sim?.id==='fire-evacuation'){window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Fire Evacuation needs reviewed occupants, exits, transfers and staff in its study.'},location.origin);return;}
   if (!sim) { try { window.parent.postMessage({ pcBatch: params.get('batch'), ok: false, why: 'Unknown simulation.' }, location.origin); } catch (e) { } return; }
   return (await import('./sim-engine.js')).render(app, sim, params);
 }

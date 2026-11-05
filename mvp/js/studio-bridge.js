@@ -67,3 +67,6 @@ export async function studioOBJ(version,site,name){const {meshes}=await studioMe
  const lines=['# PlotCloud Workspace surface meshes, metres, Y up'];let base=1;
  for(const m of meshes){const im=imports.get(String(m.id));if(im&&off.has(im.layer))continue;lines.push('o '+String(m.id).replace(/[^a-z0-9_-]/gi,'_'));for(let i=0;i<m.pos.length;i+=3)lines.push(`v ${m.pos[i]} ${m.pos[i+2]} ${-m.pos[i+1]}`);for(let i=0;i<m.pos.length/3;i+=3)lines.push(`f ${base+i} ${base+i+1} ${base+i+2}`);base+=m.pos.length/3;}
  return{text:lines.join('\n'),geometryAudit:{objects:lines.filter(l=>l.startsWith('o ')).length,triangles:(base-1)/3,units:'m',axis:'y-up',representation:'Workspace surface meshes'}};}
+
+// Full-building egress geometry from the same room builder used by Workspace.
+export function studioEgressScene(version,site,name){return withModel(version,site,name,()=>{const w=frame.contentWindow;return {studio:JSON.parse(JSON.stringify(w.__st.M)),scenes:w.__st.M.levels.map(l=>w.__wb.planScene(l.id,'wayfinding'))};});}
