@@ -1,6 +1,6 @@
 import {landscape,ground} from './fallingwater-landscape.js';
 import {details} from './fallingwater-details.js';
-import * as H from './fallingwater-habs.js?v=guest-20261107-1';
+import * as H from './fallingwater-habs.js?v=arc-20261107-1';
 // The main house traced from the HABS PA-5346 measured drawings (fallingwater-habs.js: plans, sections, south elevation), at their
 // true scale and levels; the site and terrain round it approximate. Not as-built survey data; source rasters are not shipped.
 export const title='Fallingwater · main house';
@@ -27,9 +27,9 @@ export function caseModel(open=.05){
   const along=(q)=>Math.abs(x1-x0)>=Math.abs(y1-y0)?Math.abs(q-x0)*H.PX:Math.abs(q-y0)*H.PX;
   if(kind==='glass'){const D=(extra||[]).map(([f,g])=>[along(f),along(g)]).sort((p,q)=>p[0]-q[0]);let s0=.05;for(const [f,g] of D){op(id,s0,f-.02,'win');op(id,f,g,'door');s0=g+.02;}op(id,s0,L-.05,'win');}
   else if(kind==='door')op(id,.05,L-.05,'door');}
- // arc walls, as Plan Studio draws them: short straight runs along the curve (their joins are mitred)
- for(const [lv,list] of Object.entries(H.ARCS))for(const A of list){const n=Math.max(4,Math.round(Math.abs(A.a1-A.a0)/12)),grp=`arc${walls.length}`;
-  for(let k=0;k<n;k++){const p=(t)=>{const a=(A.a0+(A.a1-A.a0)*t)*Math.PI/180;return xy(A.c[0]+A.r*Math.cos(a),A.c[1]+A.r*Math.sin(a));};const id=wall(lv,p(k/n),p((k+1)/n),A.t*H.PX,A.kind==='glass'?'Walls':'Stonework');walls.find(w=>w.id===id).grp=grp;}}
+ // arc walls: one wall each, bent by its bulge (tan of a quarter of the angle it turns through; above 0 it bends to the right of a → b)
+ for(const [lv,list] of Object.entries(H.ARCS))for(const A of list){const P=(deg)=>{const a=deg*Math.PI/180;return xy(A.c[0]+A.r*Math.cos(a),A.c[1]+A.r*Math.sin(a));},a=P(A.a0),b=P(A.a1),m=P((A.a0+A.a1)/2),right=((b[0]-a[0])*(m[1]-a[1])-(b[1]-a[1])*(m[0]-a[0]))<0;
+  const id=wall(lv,a,b,A.t*H.PX,A.kind==='glass'?'Walls':'Stonework');walls.find(w=>w.id===id).bulge=round((right?1:-1)*Math.tan(Math.abs(A.a1-A.a0)*Math.PI/180/4)*1e3)/1e3;}
  for(const [lv,list] of Object.entries(H.ROOMS))for(const [name,x,y] of list){const [a,b]=xy(x,y);names.push({lv,name,x:a,y:b});}
  const rect=(lv,x0,y0,x1,y1,layer,th,holes)=>{const [a,b]=xy(x0,y1),[c,d]=xy(x1,y0);floors.push({id:`f${floors.length+1}`,lv,x:a,y:b,w:round(c-a),d:round(d-b),thickness:th,object_type:'floor',layer,...(holes?{holes:holes.map(([p,q,r,s])=>[xy(p,q),xy(r,q),xy(r,s),xy(p,s)])}:{})});};
  for(const [lv,list] of Object.entries(H.FLOORS))for(const [x0,y0,x1,y1,holes] of list)rect(lv,x0,y0,x1,y1,'Flagstone floors',.3,holes);

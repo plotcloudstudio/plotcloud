@@ -1,7 +1,7 @@
 // Editable layer groups for details traced approximately from HABS plans and sections (2026-11-06: rounded ochre parapets, the
 // rear trellis, the hearth boulder and kettle, built-ins, the guest house, its pool and the covered walkway up the hill).
 // Positions and sizes are approximate: a diagrammatic reconstruction for study, not as-built survey data.
-import * as H from './fallingwater-habs.js?v=guest-20261107-1';
+import * as H from './fallingwater-habs.js?v=arc-20261107-1';
 export function details(xy, ground = () => 0, opt = {}){
  const groups={};
  const tri=(name,layer,a,b,c)=>{const g=groups[name]??={layer,p:[]};g.p.push(...a,...b,...c);};

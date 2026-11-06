@@ -1222,9 +1222,32 @@ const STC = (() => {
   let UID = 1; const uid = (p) => p + (UID++).toString(36) + Math.random().toString(36).slice(2, 5);
 
   // ---------- model helpers ----------
-  const wallLen = (w) => Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
-  const wallDir = (w) => { const L = wallLen(w) || 1; return [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L]; };
-  const opPoint = (w, o) => { const d = wallDir(w); return [w.a[0] + d[0] * o.pos, w.a[1] + d[1] * o.pos]; };
+  // arc walls (2026-11-07): a wall can bend, as one wall, by its bulge (as DXF: the tangent of a quarter of the angle it turns
+  // through; above 0 it turns anticlockwise from a to b). Its length, its openings' positions and its thickness follow the arc.
+  function arcOf(w) { const b = +w.bulge || 0; if (Math.abs(b) < 1e-4) return null; const dx = w.b[0] - w.a[0], dy = w.b[1] - w.a[1], ch = Math.hypot(dx, dy); if (ch < 1e-6) return null;
+    const off = ch / 2 * (1 - b * b) / (2 * b), c = [(w.a[0] + w.b[0]) / 2 - dy / ch * off, (w.a[1] + w.b[1]) / 2 + dx / ch * off], r = ch / 2 * (1 + b * b) / (2 * Math.abs(b)), sweep = 4 * Math.atan(b);
+    return { c, r, a0: Math.atan2(w.a[1] - c[1], w.a[0] - c[0]), sweep, len: r * Math.abs(sweep) }; }
+  // the point s metres along an arc wall, k to its left (as for a straight wall: left of a → b)
+  function arcAt(w, s, k = 0) { const A = arcOf(w), ang = A.a0 + A.sweep * Math.max(0, Math.min(1, s / A.len)), rr = A.r + (A.sweep > 0 ? -k : k); return [A.c[0] + rr * Math.cos(ang), A.c[1] + rr * Math.sin(ang)]; }
+  const arcTan = (w, s) => { const A = arcOf(w), ang = A.a0 + A.sweep * Math.max(0, Math.min(1, s / A.len)), sg = A.sweep > 0 ? 1 : -1; return [-Math.sin(ang) * sg, Math.cos(ang) * sg]; };
+  const wallLen = (w) => { const A = w.bulge ? arcOf(w) : null; return A ? A.len : Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); };
+  const wallDir = (w) => { const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; return [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L]; };   // the chord, for an arc wall
+  const opPoint = (w, o) => { if (w.bulge && arcOf(w)) return arcAt(w, o.pos); const d = wallDir(w); return [w.a[0] + d[0] * o.pos, w.a[1] + d[1] * o.pos]; };
+  // for the studies: each arc wall as short straight walls (about 0.5 m, never cutting a window or door, which keep their place
+  // on a straight piece across them); the model itself keeps one wall. Ids: the wall's id, ~ and the piece's number.
+  const ARCX = new WeakMap();
+  function expandArcs(M) { if (!M || !M.walls || !M.walls.some((w) => w.bulge && Math.abs(w.bulge) > 1e-4)) return M;
+    const sig = JSON.stringify(M.walls.filter((w) => w.bulge).map((w) => [w.id, w.a, w.b, w.bulge, w.t, w.lv])) + '|' + M.ops.length + '|' + JSON.stringify(M.ops.filter((o) => M.walls.some((w) => w.bulge && w.id === o.wall)).map((o) => [o.wall, o.pos, o.w]));
+    const c0 = ARCX.get(M); if (c0 && c0.sig === sig) return c0.N;
+    const walls = [], ops = M.ops.slice(), N = Object.assign({}, M, { walls, ops });
+    for (const w of M.walls) { const A = w.bulge ? arcOf(w) : null; if (!A) { walls.push(w); continue; }
+      const mine = ops.filter((o) => o.wall === w.id).map((o) => [Math.max(0, o.pos - o.w / 2), Math.min(A.len, o.pos + o.w / 2), o]).sort((a, b) => a[0] - b[0]), cuts = [0];
+      let s0 = 0; const fill = (a, b) => { const n = Math.max(1, Math.ceil((b - a) / 0.5)); for (let k = 1; k <= n; k++) cuts.push(a + (b - a) * k / n); };
+      for (const [a, b] of mine) { if (a > s0 + 1e-3) fill(s0, a); if (b > a) cuts.push(b); s0 = Math.max(s0, b); } if (A.len > s0 + 1e-3) fill(s0, A.len);
+      for (let k = 1; k < cuts.length; k++) { const id = w.id + '~' + k, a = arcAt(w, cuts[k - 1]), b = arcAt(w, cuts[k]); const seg = Object.assign({}, w, { id, a, b, parent: w.id }); delete seg.bulge; walls.push(seg);
+        for (let i = 0; i < ops.length; i++) { const o = ops[i]; if (o.wall !== w.id || o.pos < cuts[k - 1] - 1e-6 || o.pos > cuts[k] + 1e-6) continue; const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          ops[i] = Object.assign({}, o, { wall: id, pos: Math.min(L, Math.max(0, (o.pos - cuts[k - 1]) * L / Math.max(1e-6, cuts[k] - cuts[k - 1]))), w: Math.min(o.w, L) }); } } }
+    ARCX.set(M, { sig, N }); return N; }
   const levelOf = (M, id) => M.levels.find((l) => l.id === id);
   function bounds(M) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -1423,7 +1446,7 @@ const STC = (() => {
   function mergeWalls(M, lv) {
     let again = true;
     while (again) { again = false;
-      const ws = M.walls.filter((w) => w.lv === lv);
+      const ws = M.walls.filter((w) => w.lv === lv && !w.bulge);   // arc walls are never merged
       outer: for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) {
         const p = ws[i], q = ws[j], d = wallDir(p), dq = wallDir(q); if (Math.abs(d[0] * dq[1] - d[1] * dq[0]) > 1e-3) continue;
         const off = (q.a[0] - p.a[0]) * -d[1] + (q.a[1] - p.a[1]) * d[0]; if (Math.abs(off) > 0.02) continue;
@@ -1438,7 +1461,7 @@ const STC = (() => {
       }
     }
   }
-  function wallAt(M, lv, p) { let best = null, bd = 0.3; for (const w of M.walls) { if (w.lv !== lv) continue; const d = wallDir(w), L = wallLen(w), t = clamp((p[0] - w.a[0]) * d[0] + (p[1] - w.a[1]) * d[1], 0, L), x = w.a[0] + d[0] * t, y = w.a[1] + d[1] * t, dd = Math.hypot(p[0] - x, p[1] - y); if (dd < bd) { bd = dd; best = { w, pos: t }; } } return best; }
+  function wallAt(M, lv, p) { let best = null, bd = 0.3; for (const w of M.walls) { if (w.lv !== lv) continue; const A = w.bulge ? arcOf(w) : null; if (A) { let ang = Math.atan2(p[1] - A.c[1], p[0] - A.c[0]) - A.a0; const sg = Math.sign(A.sweep); ang = ((ang * sg) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI); const s0 = Math.min(A.len, ang * A.r), q = arcAt(w, s0), dd = Math.hypot(p[0] - q[0], p[1] - q[1]); if (ang <= Math.abs(A.sweep) + 0.05 && dd < bd) { bd = dd; best = { w, pos: s0 }; } continue; } const d = wallDir(w), L = wallLen(w), t = clamp((p[0] - w.a[0]) * d[0] + (p[1] - w.a[1]) * d[1], 0, L), x = w.a[0] + d[0] * t, y = w.a[1] + d[1] * t, dd = Math.hypot(p[0] - x, p[1] - y); if (dd < bd) { bd = dd; best = { w, pos: t }; } } return best; }
   function addOp(M, lv, p, kind, w, extra = {}) { const h = wallAt(M, lv, p); if (!h) return null; const o = Object.assign({ id: uid('o'), wall: h.w.id, pos: h.pos, w, kind, sill: kind === 'door' ? 0 : 0.9, head: kind === 'door' ? 2.1 : 2.2, open: kind === 'door' ? 1 : 0.5, flip: 1 }, extra); o.object_type = kind === 'door' ? 'door' : 'window'; o.layer = 'Wall'; M.ops.push(o); fixOp(M, o); return o; }
   // split long walls where another wall meets them, so each room edge is its own wall
   function blank(name) { return { v: 2, units: 'm', version: 0, name, north: 0, climate: { from: 225, U10: 3.5, terrain: 'suburban', Tout: 18, Tin: 24 }, targets: { ach: 5, df: 2, view: 0.75 }, levels: [{ id: 'L1', name: 'Ground', z: 0, h: 2.7 }], walls: [], fences:[], ops: [], floors: [], voids: [], furn: [], names: [] }; }
@@ -1689,7 +1712,8 @@ const STC = (() => {
     }
     return { ok: !why.length, why, multi: M.levels.length > 1 };
   }
-  return { LAYERS, TYPE_LAYER, CAT, CATS, PARAMS, tag, tagAll, migrate, validate, TOOLS, planScene, compat, roomRects, build, airflow, daylight, views, wallLen, wallDir, opPoint, bounds, roomAtR, rectRoom, mergeWalls, addOp, wallAt, fixOp, furnCorners, furnEdges, LIB, TEMPLATES, fu, uid, cpWall, bearing, blank, CELL, segX, clamp };
+  const X = (f) => (M, ...r) => f(expandArcs(M), ...r);   // what reads the model for a study or a check sees arc walls as short straight ones
+  return { arcOf, arcAt, arcTan, expandArcs, LAYERS, TYPE_LAYER, CAT, CATS, PARAMS, tag, tagAll, migrate, validate: X(validate), TOOLS, planScene: X(planScene), compat, roomRects, build: X(build), airflow: X(airflow), daylight: X(daylight), views: X(views), wallLen, wallDir, opPoint, bounds: X(bounds), roomAtR, rectRoom, mergeWalls, addOp, wallAt, fixOp, furnCorners, furnEdges, LIB, TEMPLATES, fu, uid, cpWall, bearing, blank, CELL, segX, clamp };
 })();
 if (typeof module !== 'undefined') module.exports = STC;
 
@@ -2222,11 +2246,13 @@ function arcPts(A, B, C) {   // points along the arc that starts at A, ends at B
   let sw = md(tb - ta), s = 1; if (md(tc - ta) > sw) { s = -1; sw = TAU - sw; }
   const n = Math.max(4, Math.min(80, Math.ceil(sw * r / 0.25))), out = [A];
   for (let i = 1; i < n; i++) { const t = ta + s * sw * i / n; out.push([+(ux + r * Math.cos(t)).toFixed(3), +(uy + r * Math.sin(t)).toFixed(3)]); }
-  out.push(B); out.r = r; out.sweep = sw; return out;
+  out.push(B); out.r = r; out.sweep = sw; out.dir = s; return out;
 }
 function finishArc(C) {
-  const D = drawing; drawing = null; if (!D || !D.b) { draw(); return; } const pts = arcPts(D.a, D.b, C), grp = STC.uid('arc'), b = snapM();
-  for (let i = 0; i + 1 < pts.length; i++) if (!near(pts[i], pts[i + 1], 0.04)) M.walls.push({ id: STC.uid('w'), lv: LV, a: pts[i].slice(), b: pts[i + 1].slice(), t: 0.2, grp: pts.length > 2 ? grp : undefined, object_type: 'wall', layer: 'Wall' });
+  const D = drawing; drawing = null; if (!D || !D.b) { draw(); return; } const pts = arcPts(D.a, D.b, C), b = snapM();
+  // one arc wall (2026-11-07): its bulge from the sweep (anticlockwise from the start above 0); nearly straight makes a straight wall
+  const bulge = pts.length > 2 && pts.sweep ? Math.tan(pts.sweep * pts.dir / 4) : 0;
+  M.walls.push({ id: STC.uid('w'), lv: LV, a: D.a.slice(), b: D.b.slice(), t: 0.2, ...(Math.abs(bulge) > 0.01 ? { bulge: +bulge.toFixed(6) } : {}), object_type: 'wall', layer: 'Wall' });
   tidy(); commit(b);
 }
 function syncStairHoles() {   // a stair on a level opens the floor of the level above it
@@ -2510,7 +2536,22 @@ function draw() {
   drawPreview();
   hud(); zoomUI(); miniSoon(); selBar();
 }
+// an arc wall in plan (2026-11-07): its body as a curved band, openings cut out, windows as arcs, doors swung from a jamb
+function drawArcWall(w) {
+  const d = VP.d, A = STC.arcOf(w), t = w.t || 0.2, sel = wbSelected('wall', w.id), hov = HOV && HOV.k === 'wall' && HOV.id === w.id, at = (s, k) => W2S(STC.arcAt(w, s, k));
+  const os = M.ops.filter((o) => o.wall === w.id).map((o) => [o.pos - o.w / 2, o.pos + o.w / 2, o]).sort((a, b) => a[0] - b[0]), solid = []; let s = 0; for (const [a, b] of os) { if (a > s + 1e-3) solid.push([s, a]); s = Math.max(s, b); } if (A.len > s + 1e-3) solid.push([s, A.len]);
+  const path = (s0, s1, k) => { const n = Math.max(2, Math.ceil((s1 - s0) / Math.max(0.05, A.len / 64))), out = []; for (let i = 0; i <= n; i++) out.push(at(s0 + (s1 - s0) * i / n, k)); return out; };
+  g.fillStyle = hov && !sel ? '#4a4d52' : '#6a6e75';
+  for (const [s0, s1] of solid) { const P = [...path(s0, s1, -t / 2), ...path(s0, s1, t / 2).reverse()]; g.beginPath(); P.forEach((q, i) => (i ? g.lineTo(...q) : g.moveTo(...q))); g.closePath(); g.fill(); if (sel) { g.save(); g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke(); g.restore(); } }
+  for (const [s0, s1, o] of (layerOn('parts.openings') ? os : [])) { const so = SEL && SEL.k === 'op' && SEL.id === o.id;
+    g.strokeStyle = C.ink; g.lineWidth = 1 * d; g.beginPath(); for (const ss of [s0, s1]) { const a = at(ss, -t / 2), b = at(ss, t / 2); g.moveTo(...a); g.lineTo(...b); } g.stroke();
+    if (o.kind === 'win') { g.strokeStyle = so ? C.accent : C.glass; g.lineWidth = (so ? 2.2 : 1.3) * d; for (const k of [-t / 2, 0, t / 2]) { const P = path(s0, s1, k); g.beginPath(); P.forEach((q, i) => (i ? g.lineTo(...q) : g.moveTo(...q))); g.stroke(); } }
+    else { const side = (o.flip === -1 || o.flip === 4) ? -1 : 1, hinge = STC.arcAt(w, s0, side * t / 2), tip = STC.arcAt(w, s1, side * t / 2), len = Math.hypot(tip[0] - hinge[0], tip[1] - hinge[1]), along = [(tip[0] - hinge[0]) / (len || 1), (tip[1] - hinge[1]) / (len || 1)], nn = [-along[1] * side, along[0] * side], ang = (o.open == null ? 1 : o.open) * Math.PI / 2;
+      g.strokeStyle = so ? C.accent : C.door; g.lineWidth = (so ? 2.2 : 1.4) * d; g.beginPath(); g.moveTo(...W2S(hinge)); g.lineTo(...W2S([hinge[0] + (along[0] * Math.cos(ang) + nn[0] * Math.sin(ang)) * len, hinge[1] + (along[1] * Math.cos(ang) + nn[1] * Math.sin(ang)) * len])); g.stroke(); } }
+  if (sel) { g.fillStyle = '#fff'; g.strokeStyle = C.accent; g.lineWidth = 2 * d; for (const p of [w.a, w.b, STC.arcAt(w, A.len / 2)]) { const q = W2S(p); g.beginPath(); g.arc(q[0], q[1], 5 * d, 0, 7); g.fill(); g.stroke(); } }
+}
 function drawWall(w) {
+  if (w.bulge && STC.arcOf(w)) return drawArcWall(w);
   if(w.exclude){g.save();g.strokeStyle='#aaa';g.lineWidth=1.5*VP.d;g.setLineDash([5*VP.d,4*VP.d]);const a=W2S(w.a),b=W2S(w.b);g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke();g.restore();return;}
   const d = VP.d, { L, os, solid } = wallPieces(w), dir = STC.wallDir(w), n = [-dir[1], dir[0]], t = w.t || 0.2, sel = wbSelected('wall',w.id), hov = HOV && HOV.k === 'wall' && HOV.id === w.id;
   const P = (s, k) => W2S([w.a[0] + dir[0] * s + n[0] * k, w.a[1] + dir[1] * s + n[1] * k]);
@@ -2573,7 +2614,7 @@ function drawFurn(f, sel) {
 }
 function dims() {
   const d = VP.d, R = S.L[LV]; if (V.s / d < 12) return;
-  for (const w of lvWalls()) {
+  for (const w of lvWalls()) { if (w.bulge) continue;
     const L = STC.wallLen(w), sel = wbSelected('wall',w.id); if (L < 1.2 && !sel) continue;
     const dir = STC.wallDir(w), n = [-dir[1], dir[0]], m = [(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2], t = (w.t || 0.2) / 2 + 0.25;
     let side = 0; if (STC.roomAtR(R, m[0] + n[0] * t, m[1] + n[1] * t) < 0) side = 1; else if (STC.roomAtR(R, m[0] - n[0] * t, m[1] - n[1] * t) < 0) side = -1;
@@ -2738,7 +2779,8 @@ function hitTest(p, opt = {}) {
   const wallLayer = () => {
     for (const o of M.ops) { const w = wallById(o.wall); if (!w || w.lv !== LV) continue; const dir = STC.wallDir(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1], dn = Math.abs((p[0] - w.a[0]) * -dir[1] + (p[1] - w.a[1]) * dir[0]); if (dn <= (w.t || 0.2) / 2 + tol && Math.abs(t - o.pos) <= o.w / 2) return { k: 'op', id: o.id }; }
     if (!opt.noEnds && SEL && SEL.k === 'wall') { const w = wallById(SEL.id); if (w && w.lv === LV) for (const e of ['a', 'b']) if (Math.hypot(p[0] - w[e][0], p[1] - w[e][1]) < 7 * VP.d / V.s) return { k: 'end', id: w.id, e }; }
-    for (const w of lvWalls()) { const dir = STC.wallDir(w), L = STC.wallLen(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1], dn = Math.abs((p[0] - w.a[0]) * -dir[1] + (p[1] - w.a[1]) * dir[0]); if (t >= -0.1 && t <= L + 0.1 && dn <= (w.t || 0.2) / 2 + tol) return { k: 'wall', id: w.id }; }
+    for (const w of lvWalls()) { const A = w.bulge ? STC.arcOf(w) : null; if (A) { let ang = (Math.atan2(p[1] - A.c[1], p[0] - A.c[0]) - A.a0) * Math.sign(A.sweep); ang = ((ang % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); if (ang <= Math.abs(A.sweep) + 0.02 && Math.abs(Math.hypot(p[0] - A.c[0], p[1] - A.c[1]) - A.r) <= (w.t || 0.2) / 2 + tol) return { k: 'wall', id: w.id }; continue; }   /* an arc wall: within its sweep and its thickness */
+      const dir = STC.wallDir(w), L = STC.wallLen(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1], dn = Math.abs((p[0] - w.a[0]) * -dir[1] + (p[1] - w.a[1]) * dir[0]); if (t >= -0.1 && t <= L + 0.1 && dn <= (w.t || 0.2) / 2 + tol) return { k: 'wall', id: w.id }; }
     return null; };
   const furnLayer = () => { for (const f of M.furn.slice().reverse()) { if (f.lv !== LV || !furnOk(f, 'plan')) continue; const c = Math.cos(f.rot || 0), s2 = Math.sin(f.rot || 0), dx = p[0] - f.x, dy = p[1] - f.y, u = dx * c + dy * s2, v = -dx * s2 + dy * c; if (Math.abs(u) <= f.w / 2 && Math.abs(v) <= f.d / 2) return { k: 'furn', id: f.id }; } return null; };
   const floorLayer = () => { for (const v of M.voids) if (!v.fromStair && v.lv === LV && p[0] >= v.x && p[0] <= v.x + v.w && p[1] >= v.y && p[1] <= v.y + v.d) return { k: 'void', id: v.id };
@@ -2797,6 +2839,7 @@ function stickK(D, k) {
   return +best.toFixed(4);
 }
 function selDim(w) {   // length and thickness of the selected wall, drawn beside it
+  if (w.bulge && STC.arcOf(w)) { const A = STC.arcOf(w), d = VP.d, q = W2S(STC.arcAt(w, A.len / 2, (w.t || 0.2) / 2 + 30 * d / V.s)), text = `R ${A.r.toFixed(2)} m · ${A.len.toFixed(2)} m along · ${Math.round((w.t || 0.2) * 1000)} mm`; g.save(); g.font = `600 ${11 * d}px ${FM}`; const tw = g.measureText(text).width + 10 * d, th = 17 * d; g.fillStyle = '#fff'; g.strokeStyle = '#6c6ce0'; g.lineWidth = d; rr(q[0] - tw / 2, q[1] - th / 2, tw, th, 3 * d); g.fill(); g.stroke(); g.fillStyle = '#6c6ce0'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, q[0], q[1]); g.restore(); return; }
   const d = VP.d, dir = STC.wallDir(w), n = [-dir[1], dir[0]], L = STC.wallLen(w), t = w.t || 0.2, off = t / 2 + 26 * d / V.s;
   const P = (s, k) => W2S([w.a[0] + dir[0] * s + n[0] * k, w.a[1] + dir[1] * s + n[1] * k]), col = '#6c6ce0';
   const lab = (q, text) => { g.font = `600 ${11 * d}px ${FM}`; const tw = g.measureText(text).width + 10 * d, th = 17 * d; g.fillStyle = '#fff'; g.strokeStyle = col; g.lineWidth = d; rr(q[0] - tw / 2, q[1] - th / 2, tw, th, 3 * d); g.fill(); g.stroke(); g.fillStyle = '#1d2129'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, q[0], q[1] + 0.5 * d); };
@@ -5581,7 +5624,7 @@ const impOn = (o, view) => layerOn('imports', view) && !isHidden(o.id) && !IMP_O
 // line, on top of it) is drawn once. Returns, per wall: how far each end runs past (+) or stops short of (−) its end point, and the
 // stretches already covered by an earlier wall. No two walls fill the same space, so no faces flicker.
 function wallJoins(M, lvId) {
-  const W = M.walls.filter((w) => w.lv === lvId && Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) >= 0.05), out = new Map(), idx = new Map(M.walls.map((w, i) => [w.id, i]));
+  const W = M.walls.filter((w) => w.lv === lvId && !w.bulge && Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) >= 0.05), out = new Map(),   /* arc walls end where they end */ idx = new Map(M.walls.map((w, i) => [w.id, i]));
   const geo = (w) => { const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); return { L, d: [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L], t: w.t || 0.2 }; };
   const G = new Map(W.map((w) => [w.id, geo(w)])), near = (p, q, e = 0.06) => Math.hypot(p[0] - q[0], p[1] - q[1]) < e, par = (a, b) => Math.abs(a.d[0] * b.d[1] - a.d[1] * b.d[0]) < 0.06;
   for (const w of W) { const g = G.get(w.id), e = [0, 0], cover = [];
@@ -5922,7 +5965,20 @@ window.S3 = (() => {
       const isCut = !o.all && lv.id === cur.id, top = lvs.indexOf(lv) === lvs.length - 1, below = lvs[lvs.indexOf(lv) - 1];
       // walls, split around windows and doors
       const JN = wallJoins(M, lv.id);
-      for (const w of (o.walls === false ? [] : M.walls)) { if (w.lv !== lv.id || (o.hidden && o.hidden.has(w.id))) continue; const jn = JN.get(w.id) || { e0: 0, e1: 0, cover: [] }; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue; const dir = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L], t = w.t || 0.2, ry = Math.atan2(dir[1], dir[0]);
+      for (const w of (o.walls === false ? [] : M.walls)) { if (w.lv !== lv.id || (o.hidden && o.hidden.has(w.id))) continue; const jn = JN.get(w.id) || { e0: 0, e1: 0, cover: [] };
+        if (w.bulge && STC.arcOf(w)) {   // an arc wall (2026-11-07): curved solid pieces between its openings, curved glass in its windows
+          const A = STC.arcOf(w), t = w.t || 0.2, Hh = w.h || WBP.slabAnchor(M.levels, lv.id).wallH, sg = A.sweep > 0 ? 1 : -1, ud = { k: 'wall', id: w.id };
+          const band = (s0, s1, z0, z1, k0, k1, m, ud2) => { if (s1 - s0 < 0.005 || z1 - z0 < 0.005) return; const n = Math.max(2, Math.ceil(Math.abs(A.sweep) * (s1 - s0) / A.len / 0.05)), sh = new T.Shape(), at = (ss, k) => STC.arcAt(w, ss, k);
+            for (let i = 0; i <= n; i++) { const q = at(s0 + (s1 - s0) * i / n, k0); i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1]); } for (let i = n; i >= 0; i--) { const q = at(s0 + (s1 - s0) * i / n, k1); sh.lineTo(q[0], q[1]); }
+            const geo = new T.ExtrudeGeometry(sh, { depth: z1 - z0, bevelEnabled: false, curveSegments: 1 }); geo.rotateX(-Math.PI / 2); const me = new T.Mesh(geo, m); me.position.y = lv.z + z0; me.name = m === glassM ? 'glass' : 'wall'; me.userData = ud2 || ud; G.add(me); };
+          const os = M.ops.filter((q) => q.wall === w.id && !(o.hidden && o.hidden.has(q.id))).map((q) => [q.pos - q.w / 2, q.pos + q.w / 2, q]).sort((a, b) => a[0] - b[0]);
+          let s = 0; for (const [a, b, q] of os) { if (a > s) band(s, a, 0, Hh, -t / 2, t / 2, wallM); band(a, b, 0, Math.min(q.sill, Hh), -t / 2, t / 2, wallM); if (q.head < Hh) band(a, b, q.head, Hh, -t / 2, t / 2, wallM);
+            if (q.kind === 'win' && o.openings !== false) { band(a, b, q.sill, Math.min(q.head, Hh), -0.01, 0.01, glassM, { k: 'op', id: q.id }); if (q.frame) { const fm = mat(q.frame), z0 = q.sill, z1 = Math.min(q.head, Hh), ud3 = { k: 'op', id: q.id }; band(a, a + 0.05, z0, z1, -0.04, 0.04, fm, ud3); band(b - 0.05, b, z0, z1, -0.04, 0.04, fm, ud3); band(a, b, z0, z0 + 0.05, -0.04, 0.04, fm, ud3); band(a, b, z1 - 0.05, z1, -0.04, 0.04, fm, ud3); } }
+            else if (q.kind !== 'win' && (q.open ?? 1) < 0.05 && o.openings !== false) band(a, b, 0, Math.min(q.head, Hh), -0.025, 0.025, mat('#c9b79a'), { k: 'op', id: q.id });
+            s = Math.max(s, b); }
+          if (A.len > s) band(s, A.len, 0, Hh, -t / 2, t / 2, wallM);
+          if (isCut) band(0, A.len, Hh, Hh + 0.012, -t / 2, t / 2, cutM, { k: 'wallcut' });
+          void sg; continue; } const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue; const dir = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L], t = w.t || 0.2, ry = Math.atan2(dir[1], dir[0]);
         const os = M.ops.filter((q) => q.wall === w.id && !(o.hidden && o.hidden.has(q.id))).map((q) => [q.pos - q.w / 2, q.pos + q.w / 2, q]).sort((a, b) => a[0] - b[0]);
         const piece = (s0, s1, z0, z1, m, nm, ud) => { if (s1 - s0 < 0.005 || z1 - z0 < 0.005) return; if (nm === 'wall' && jn.cover.length) { for (const [c0, c1] of jn.cover) { if (c1 <= s0 || c0 >= s1) continue; if (c0 > s0) piece(s0, c0, z0, z1, m, nm, ud); if (c1 < s1) piece(c1, s1, z0, z1, m, nm, ud); return; } }   /* drawn once where an earlier wall already stands */ const c = (s0 + s1) / 2, x = w.a[0] + dir[0] * c, y = w.a[1] + dir[1] * c; box(G, s1 - s0, z1 - z0, m === glassM ? 0.02 : nm === 'door' ? 0.05 : nm === 'frame' ? 0.08 : t, x, lv.z + (z0 + z1) / 2, -y, m, ry, nm, ud || { k: 'wall', id: w.id }); };
         const H = w.h || WBP.slabAnchor(M.levels, lv.id).wallH;   // v131: up to the slab top above (storey height = slab top to slab top)
@@ -7185,6 +7241,7 @@ if (window.__WSROLE) {
       if (o.name != null) b.name = String(o.name); if (o.h != null && isFinite(o.h) && o.h > 0) { b.h = +(+o.h).toFixed(2); b.hSource = 'user'; b.hNote = 'set by you'; b.levels = o.levels != null ? o.levels : b.levels; }
       if (o.excluded != null) { b.excluded = !!o.excluded; b.why = o.excluded ? 'left out by you' : ''; b.auto = false; }
       b.edited = true; M.site.version++; commit(s0); return true; },
+    screenOf(p) { const s = W2S(p), r = cv.getBoundingClientRect(), k = cv.width / Math.max(1, r.width); return [r.left + s[0] / k, r.top + s[1] / k]; },   // a plan point on the screen, for the browser checks
     screenOfSite(q) { const p = SITEC.siteToPlan(M.site, q, M.north || 0), s = W2S(p), r = cv.getBoundingClientRect(), k = cv.width / Math.max(1, r.width); return [r.left + s[0] / k, r.top + s[1] / k]; },   // for the browser checks
     flowAnim(o) { if (o) flowStart(o); else flowStop(); },
     structGrid(o = {}) {
