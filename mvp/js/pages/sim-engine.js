@@ -123,7 +123,7 @@ function sunField(w, sc, label, unit) {
     const out = []; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = j * nx + i; if (cnt[q]) out.push(r2(x0 + (i + 0.5) * cs), r2(y0 + (j + 0.5) * cs), r2(sum[q] / cnt[q])); }
     return { label, unit, step: r2(cs), pts: out };
 }
-export const IN_WORKSPACE = ['evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views', 'cameras', 'daylight'];
+export const IN_WORKSPACE = ['fire-evacuation', 'evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views', 'cameras', 'daylight'];
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
@@ -134,7 +134,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   if (IN_WORKSPACE.includes(sim.id) && !(sim.id === 'daylight' && params.get('batch'))) {   // a Daylight batch runs here, without a page (below)
     if (params.get('batch')) { window.parent.postMessage({ pcBatch: params.get('batch'), ok: false, why: `${sim.name} runs in the Workspace: open the project and choose it from Add simulation.` }, location.origin); return; }
     const p0 = currentProject(); if (p0) { try { sessionStorage.setItem('pc-ws-open-study', sim.id); } catch (e) { } location.hash = '#/workspace/' + p0.id; return; }
-    app.innerHTML = `<div class="wrap"><span class="eyebrow">Simulation</span><h1 class="display md">${esc(sim.name)} runs in the Workspace</h1><p class="lede">Open a project, then choose ${esc(sim.name)} under Add simulation › Interior. It runs on the level you are on, with the rooms, walls, doors and furniture of your model.</p><p><a class="btn accent" href="#/new-project">Start a project</a> <a class="btn" href="#/home">Dashboard</a></p></div>`; return; }
+    app.innerHTML = `<div class="wrap"><span class="eyebrow">Simulation</span><h1 class="display md">${esc(sim.name)} runs in the Workspace</h1><p class="lede">Open a project, then choose ${esc(sim.name)} under Add simulation › Interior. ${sim.id === 'fire-evacuation' ? 'It runs on the whole building: every level, its rooms, doors and stairs.' : 'It runs on the level you are on, with the rooms, walls, doors and furniture of your model.'}</p><p><a class="btn accent" href="#/new-project">Start a project</a> <a class="btn" href="#/home">Dashboard</a></p></div>`; return; }
   if (!canUse(sim.id)) {
     renderGate(app, sim.name);
     if (params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Active membership required.'},location.origin);

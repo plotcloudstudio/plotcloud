@@ -3,12 +3,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'mvp/js/egress/**'
-      - 'mvp/js/pages/fire-evacuation.js'
-      - 'mvp/research/**'
-      - 'tests/*egress*'
-      - 'tests/*evacuation*'
-      - 'tests/hospital-research-experiment.mjs'
+      - 'mvp/js/interior/egress.js'
+      - 'tests/egress-engine.test.mjs'
       - '.github/workflows/hospital-evacuation.yml'
   workflow_dispatch:
 jobs:
@@ -19,5 +15,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test tests/fire-evacuation.test.mjs
-      - run: node tests/hospital-research-experiment.mjs --check
+      - run: node --test tests/egress-engine.test.mjs

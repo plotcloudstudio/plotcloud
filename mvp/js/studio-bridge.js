@@ -69,4 +69,3 @@ export async function studioOBJ(version,site,name){const {meshes}=await studioMe
  return{text:lines.join('\n'),geometryAudit:{objects:lines.filter(l=>l.startsWith('o ')).length,triangles:(base-1)/3,units:'m',axis:'y-up',representation:'Workspace surface meshes'}};}
 
 // Full-building egress geometry from the same room builder used by Workspace.
-export function studioEgressScene(version,site,name){return withModel(version,site,name,()=>{const w=frame.contentWindow;return {studio:JSON.parse(JSON.stringify(w.__st.M)),scenes:w.__st.M.levels.map(l=>w.__wb.planScene(l.id,'wayfinding'))};});}

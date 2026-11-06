@@ -5412,6 +5412,35 @@ function walkFrame() { const o = WK.o; if (!o) return;
 function drawWalk2() { const o = WK.o; if (!o || CAM === '3d' || !WK.cv || (o.lv && o.lv !== LV)) return; if (o.fit2) { o.fit2 = false; FIT_BOX = { ...o.box }; fitView(); FIT_BOX = null; _drawAgain(); return; } const a = W2S([o.box.x0, o.box.y1]), bb = W2S([o.box.x1, o.box.y0]); g.save(); g.globalAlpha = 0.95; g.drawImage(WK.cv, a[0], a[1], bb[0] - a[0], bb[1] - a[1]); g.restore();
   if (PPLS.out) { g.save(); for (const P of PPLS.out) { if (!P || P.op < 0.02) continue; const q = W2S([P.x, P.y]), r = Math.max(3 * (VP.d || 1), 0.25 * V.s); g.globalAlpha = P.op; g.fillStyle = '#3d4250'; g.beginPath(); g.arc(q[0], q[1], r, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = Math.max(1, r * 0.25); g.stroke(); } g.restore(); }
   for (const p of o.places || []) { const q = W2S(p.p), d = VP.d || 1; g.beginPath(); g.arc(q[0], q[1], 7 * d, 0, 7); g.fillStyle = '#46148c'; g.fill(); g.lineWidth = 2 * d; g.strokeStyle = '#fff'; g.stroke(); g.fillStyle = '#fff'; g.font = `700 ${9 * d}px Inter,system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(p.letter || '', q[0], q[1] + 0.5); } }
+// ---- whole-building evacuation (2026-11-06): one result sheet per level, the building ghosted in 3D, everyone played back with
+// their own level and height (stairs included). o: { levels: [{ lv, z, box, density: { X0, Y0, cell, nx, ny, vals, lo, hi } }],
+// rampStops, frames: [Float32Array (x, y, z, level index, visible) per unit, one per second], kinds, cols { kind: colour }, speed,
+// play, t (s), onTime(t), fit }. Plan coordinates.
+const EGO = { o: null, raf: 0, last: 0, t: 0, cur: null };
+const EG_COLS = { amb: '#3d4250', asst: '#d9921a', bed: '#c8352b', staff: '#2f6fd6' };
+function egressShow(o) {
+  cancelAnimationFrame(EGO.raf); EGO.raf = 0; EGO.o = o; EGO.cur = null;
+  if (!o) { if (window.S3 && S3.egress) S3.egress(null); if (CAM !== '3d') draw(); return; }
+  walkShow(null); const R = o.rampStops || RAMPS_TOP.violet;
+  for (const L of o.levels) { const b = L.box, w = b.x1 - b.x0, h = b.y1 - b.y0, k = Math.min(40, 2000 / Math.max(w, h, 1)), c = document.createElement('canvas'); c.width = Math.max(2, Math.round(w * k)); c.height = Math.max(2, Math.round(h * k)); const x = c.getContext('2d'), D = L.density;
+    if (D) { const lo = D.lo || 0, sp = Math.max(1e-9, D.hi - lo); for (let j = 0; j < D.ny; j++) for (let i = 0; i < D.nx; i++) { const v = D.vals[j * D.nx + i]; if (!Number.isFinite(v)) continue; x.fillStyle = rampAtTop(R, (v - lo) / sp); x.globalAlpha = 0.88; const X = (D.X0 + i * D.cell - b.x0) * k, Y = (b.y1 - (D.Y0 + (j + 1) * D.cell)) * k; x.fillRect(X, Y, D.cell * k + 0.6, D.cell * k + 0.6); } }
+    L.cv = c; L.k = k; }
+  EGO.t = Math.max(0, Math.min(o.frames.length - 1, o.t || 0));
+  if (window.S3 && S3.on && S3.egress) { S3.egress({ sheets: o.levels.map((L) => ({ canvas: L.cv, x0: L.box.x0, y0: L.box.y0, w: L.box.x1 - L.box.x0, h: L.box.y1 - L.box.y0, z: L.z, lv: L.lv })) }); if (o.fit && S3.fitBox) { const bx = o.levels.reduce((a, L) => ({ x0: Math.min(a.x0, L.box.x0), y0: Math.min(a.y0, L.box.y0), x1: Math.max(a.x1, L.box.x1), y1: Math.max(a.y1, L.box.y1) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }), zs = o.levels.map((L) => L.z); S3.fitBox(bx, (Math.min(...zs) + Math.max(...zs)) / 2, 1.15, zs.length > 1); } }
+  o.fit = false; egressFrame();
+  if (o.play !== false) { EGO.last = performance.now(); const tick = (t) => { const dt = Math.max(0, Math.min(0.1, (t - EGO.last) / 1000)); EGO.last = t; if (!EGO.o) return; const end = EGO.o.frames.length - 1; EGO.t = EGO.t >= end ? 0 : Math.min(end, EGO.t + dt * (EGO.o.speed || 30)); egressFrame(); EGO.raf = requestAnimationFrame(tick); }; EGO.raf = requestAnimationFrame(tick); }
+}
+function egressFrame() { const o = EGO.o; if (!o || !o.frames.length) return; if (!Number.isFinite(EGO.t)) EGO.t = 0; const n = o.frames.length, f0 = Math.max(0, Math.min(n - 1, Math.floor(EGO.t))), f1 = Math.min(n - 1, f0 + 1), u = Math.max(0, Math.min(1, EGO.t - f0)), A = o.frames[f0], B2 = o.frames[f1], m = A.length / 5, out = new Array(m);
+  for (let i = 0; i < m; i++) { const b = i * 5, v = A[b + 4] > 0.5 || B2[b + 4] > 0.5, jump = Math.hypot(B2[b] - A[b], B2[b + 1] - A[b + 1]) > 6, w = jump ? 0 : u;
+    out[i] = v ? { x: A[b] + (B2[b] - A[b]) * w, y: A[b + 1] + (B2[b + 1] - A[b + 1]) * w, z: A[b + 2] + (B2[b + 2] - A[b + 2]) * w, li: u < 0.5 ? A[b + 3] : B2[b + 3], kind: o.kinds[i], op: A[b + 4] > 0.5 && B2[b + 4] > 0.5 ? 1 : A[b + 4] > 0.5 ? 1 - u : u } : null; }
+  EGO.cur = out; if (o.onTime) try { o.onTime(EGO.t, n - 1); } catch (e) { }
+  if (CAM === '3d') { if (window.S3 && S3.on && S3.egressPeople) { if (!S3._egress().on) S3.egress({ sheets: o.levels.map((L) => ({ canvas: L.cv, x0: L.box.x0, y0: L.box.y0, w: L.box.x1 - L.box.x0, h: L.box.y1 - L.box.y0, z: L.z, lv: L.lv })) }); S3.egressPeople(out, { ...EG_COLS, ...(o.cols || {}) }); } } else draw(); }
+function drawEgress2() { const o = EGO.o; if (!o || CAM === '3d') return; const li = o.levels.findIndex((L) => L.lv === LV), L = o.levels[li]; if (!L || !L.cv) return; const a = W2S([L.box.x0, L.box.y1]), bb = W2S([L.box.x1, L.box.y0]); g.save(); g.globalAlpha = 0.92; g.drawImage(L.cv, a[0], a[1], bb[0] - a[0], bb[1] - a[1]); g.globalAlpha = 1;
+  const cols = { ...EG_COLS, ...(o.cols || {}) }, r = Math.max(3 * (VP.d || 1), 0.24 * V.s); for (const P of EGO.cur || []) { if (!P || P.li !== li || P.op < 0.05) continue; const q = W2S([P.x, P.y]); g.globalAlpha = P.op; g.fillStyle = cols[P.kind] || '#333';
+    if (P.kind === 'bed') { const hw = Math.max(r * 1.1, 0.45 * V.s), hh = Math.max(r * 2, 1 * V.s); g.fillRect(q[0] - hw, q[1] - hh, 2 * hw, 2 * hh); g.strokeStyle = '#fff'; g.lineWidth = Math.max(1, r * 0.2); g.strokeRect(q[0] - hw, q[1] - hh, 2 * hw, 2 * hh); }
+    else { g.beginPath(); g.arc(q[0], q[1], r, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = Math.max(1, r * 0.25); g.stroke(); } }
+  g.restore(); }
+{ const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawEgress2(); } catch (e) { } return r; }; }
 // ---- reading a study result under the pointer (2026-10-31): the Workspace gets the plan point and the pointer position
 let PROBE = null;
 stage.addEventListener('pointermove', (e) => { if (!PROBE) return; let p = null; if (CAM === '3d' && window.S3 && S3.on) p = S3.probe(e.clientX, e.clientY); else { const a = evP(e); p = S2W(a[0], a[1]); } PROBE(p ? { x: p[0], y: p[1], cx: e.clientX, cy: e.clientY, surf: p.surf ?? null, roof: p.surf != null && SURF.list && SURF.list[p.surf] ? SURF.list[p.surf].roof : null } : null); });
@@ -5769,7 +5798,7 @@ window.S3 = (() => {
     const grid = new T.GridHelper(300, 150, 0xdadde3, 0xe4e7ec); grid.position.y = -0.155; scene.add(grid); WM.ground = [ground, grid]; ctl.maxDistance = 2.6e7; addEventListener('load',()=>{ground.material.color.set(window.PlotCloudUI.viewportColor());render();});
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
-  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ R.render(scene, WALK.on ? WALK.cam : cam); if (typeof PPL !== 'undefined' && PPL.scene && PPL.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(PPL.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } } }
+  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ R.render(scene, WALK.on ? WALK.cam : cam); if (typeof PPL !== 'undefined' && PPL.scene && PPL.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(PPL.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } if (typeof EGR !== 'undefined' && EGR.scene && EGR.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(EGR.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } } }
   // ---- the world around the site: OpenStreetMap tiles in three rings (about 24 km, 780 km and the world) under the site.
   // Hidden close up (only the site shows); fades in as the camera pulls back. Tiles: Esri Light Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors).
   const WM = { key: '', rings: [], siteR: 300, ground: [] };
@@ -6097,8 +6126,38 @@ window.S3 = (() => {
     while (PPL.list.length < arr.length) { const m = personMesh(); PPL.scene.add(m); PPL.list.push(m); }
     PPL.list.forEach((m, i) => { const q = arr[i]; m.visible = !!q && q.op > 0.01; if (!m.visible) return; m.position.set(q.x, FLR.y || q.z || 0, -q.y); m.userData.mat.opacity = q.op; });
     render(); };
+  // ---- whole-building evacuation (2026-11-06): the design ghosted so every floor shows, a result sheet on each storey, people with
+  // their own height (figures; a bed is a red box) in their own colours
+  const EGR = { on: false, sheets: [], scene: null, list: [], yOff: {} };
+  function ghostApply() { if (!grp) return;
+    grp.traverse((o) => { if (o.userData.__preghost) { const c = o.material; o.material = o.userData.__preghost; delete o.userData.__preghost; for (const m of Array.isArray(c) ? c : [c]) m.dispose?.(); } });
+    if (!EGR.on) return;
+    grp.traverse((o) => { if (!(o.isMesh || o.isLine || o.isLineSegments) || !o.material || o.userData.__preghost) return; const u = tagOf(o); if (u && ['site', 'ctx', 'world'].includes(u.k)) return;
+      const fl = u && (u.k === 'floor' || u.k === 'room'), gh = (m) => { const c = m.clone(); c.transparent = true; c.opacity = Math.min(m.opacity ?? 1, o.isMesh ? (fl ? 0.12 : 0.16) : 0.35); c.depthWrite = false; return c; };
+      o.userData.__preghost = o.material; o.material = Array.isArray(o.material) ? o.material.map(gh) : gh(o.material); }); }
+  { const _u4 = api.update; api.update = (...a) => { _u4(...a); if (EGR.on) { ghostApply(); render(); } }; }
+  api.egress = (o) => { if (!scene) return;
+    for (const m of EGR.sheets) { scene.remove(m); m.geometry.dispose(); m.material.map?.dispose(); m.material.dispose(); } EGR.sheets = [];
+    if (!o) { if (EGR.on) { EGR.on = false; ghostApply(); } if (EGR.scene) { for (const m of EGR.list) if (m) m.userData.mat.dispose(); EGR.list = []; EGR.scene = null; } render(); return; }
+    if (FLR.m || FLR.cut) api.floorSheet(null); if (!EGR.on) { EGR.on = true; ghostApply(); }
+    let st = []; try { st = api.storeys(); } catch (e) { }
+    for (const s of o.sheets) { const tex = new T.CanvasTexture(s.canvas); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+      const m = new T.Mesh(new T.PlaneGeometry(s.w, s.h), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.92, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; m.name = 'egresssheet';
+      const y = (st.find((x) => x.id === s.lv && !x.roof) || { y: s.z }).y; m.position.set(s.x0 + s.w / 2, y + 0.06, -(s.y0 + s.h / 2)); EGR.yOff[Math.round(s.z * 100)] = y - s.z; scene.add(m); EGR.sheets.push(m); }
+    render(); };
+  function egressMesh(kind, col) { if (!PPL.geo) PPL.geo = { body: new T.CapsuleGeometry(0.17, 0.95, 4, 12), head: new T.SphereGeometry(0.115, 16, 12) }; if (!EGR.bedGeo) EGR.bedGeo = new T.BoxGeometry(0.95, 0.6, 2.1);
+    const mat = new T.MeshLambertMaterial({ color: col, transparent: true, opacity: 1 }), g0 = new T.Group();
+    if (kind === 'bed') { const b = new T.Mesh(EGR.bedGeo, mat); b.position.y = 0.3; g0.add(b); } else { const b = new T.Mesh(PPL.geo.body, mat), h = new T.Mesh(PPL.geo.head, mat); b.position.y = 0.72; h.position.y = 1.56; g0.add(b, h); }
+    g0.userData.mat = mat; g0.userData.kind = kind; return g0; }
+  api.egressPeople = (arr, cols) => { if (!scene || !EGR.on) return;
+    if (!EGR.scene) { EGR.scene = new T.Scene(); EGR.scene.add(new T.HemisphereLight(0xffffff, 0x8a8f99, 2.4)); const d = new T.DirectionalLight(0xffffff, 1.1); d.position.set(-3, 6, 4); EGR.scene.add(d); }
+    const zs = Object.keys(EGR.yOff).map(Number).sort((a, b) => a - b), off = (z) => { if (!zs.length) return 0; const k = Math.round(z * 100); let best = zs[0]; for (const q of zs) if (q <= k + 1) best = q; return EGR.yOff[best]; };
+    arr.forEach((q, i) => { let m = EGR.list[i]; if (q && (!m || m.userData.kind !== q.kind)) { if (m) { EGR.scene.remove(m); m.userData.mat.dispose(); } m = egressMesh(q.kind, new T.Color(cols[q.kind] || '#333')); EGR.scene.add(m); EGR.list[i] = m; }
+      if (!m) return; m.visible = !!q && q.op > 0.02; if (!m.visible) return; m.position.set(q.x, q.z + off(q.z) + 0.06, -q.y); m.userData.mat.opacity = q.op; });
+    render(); };
+  api._egress = () => ({ on: EGR.on, sheets: EGR.sheets.map((m) => +m.position.y.toFixed(2)), people: EGR.list.filter((m) => m && m.visible).length, ys: [...new Set(EGR.list.filter((m) => m && m.visible).map((m) => Math.round(m.position.y)))].sort((a, b) => a - b), ghost: (() => { let n = 0; if (grp) grp.traverse((o) => { if (o.userData.__preghost) n++; }); return n; })() });   // read-only, for the browser checks
   // frame a plan box (an interior study's level) from above at an angle
-  api.fitBox = (b, y = 0) => { if (!cam || !ctl) return; const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, r = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.85 + 4; ctl.target.set(cx, y, -cy); cam.position.set(cx + r * 0.55, y + r * 1.05, -cy + r * 0.85); cam.lookAt(ctl.target); ctl.update(); render(); };
+  api.fitBox = (b, y = 0, zoom = 1, low = false) => { if (!cam || !ctl) return; const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, r = (Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.85 + 4) * zoom; ctl.target.set(cx, y, -cy); cam.position.set(cx + r * (low ? 0.7 : 0.55), y + r * (low ? 0.5 : 1.05), -cy + r * (low ? 1.0 : 0.85));   /* low: a whole building seen more from the side, so its floors separate */ cam.lookAt(ctl.target); ctl.update(); render(); };
   api._scene = () => scene;   // read-only, for the browser checks
   api._sheet = () => (FLR.m ? { y: FLR.m.position.y, x: FLR.m.position.x, z: FLR.m.position.z, vis: FLR.m.visible } : null);
   api._cut = () => { let design = 0, site = 0; if (grp) grp.traverse((o) => { if (!o.material) return; const cp = (Array.isArray(o.material) ? o.material : [o.material]).some((m) => m.clippingPlanes && m.clippingPlanes.length); if (!cp) return; const u = tagOf(o); if (u && ['site', 'ctx', 'world'].includes(u.k)) site++; else design++; }); return { global: R ? R.clippingPlanes.length : -1, design, site }; };   // read-only, for the browser checks
@@ -6994,11 +7053,16 @@ if (window.__WSROLE) {
       if (!xs.length) return { lv, level: L.name, z: L.z || 0, segs, rooms, box: null };
       return { lv, level: L.name, z: L.z || 0, segs, rooms, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } }; },
     walkShow(o) { walkShow(o); },
+    egressShow(o) { egressShow(o); }, egressSeek(t) { if (!EGO.o) return; EGO.t = Math.max(0, Math.min(EGO.o.frames.length - 1, t)); egressFrame(); }, egressPlay(on) { if (!EGO.o) return; if (!on) { cancelAnimationFrame(EGO.raf); EGO.raf = 0; return; } if (!EGO.raf) egressShow({ ...EGO.o, t: EGO.t, play: true }); }, egressState() { return EGO.o ? { t: EGO.t, n: EGO.o.frames.length, playing: !!EGO.raf, shown: (EGO.cur || []).filter(Boolean).length } : null; },
+    // the whole building for the evacuation study (2026-11-06): every level's plan scene (one origin) and the stairs between levels
+    buildingScene() { const SB = S || STC.build(M), lv = lvSorted(); return { levels: lv.map((l) => ({ id: l.id, name: l.name, z: l.z || 0, h: l.h || 3, sc: STC.planScene(M, SB, l.id, 'wayfinding') })),
+      stairs: (M.furn || []).filter(isStairF).map((f) => ({ id: f.id, lv: f.lv, top: (lvAbove(f.lv) || {}).id || null, corners: STC.furnCorners(f), w: f.w, d: f.d, name: f.name || (REG[f.gen.id] && REG[f.gen.id].name) || 'Stair' })) }; },
     iso(dir) { return window.S3 && S3.iso ? S3.iso(dir) : null; }, isoDir() { return window.S3 && S3.isoDir ? S3.isoDir() : null; },
     camGet() { if (CAM === '3d') return window.S3 && S3.camGet ? S3.camGet() : null; const c = S2W(VP.w / 2, VP.h / 2); return { cx: c[0], cy: c[1], span: VP.w / V.s, z: (lvObj() || { z: 0 }).z }; },
     camSet(o) { if (!o || !isFinite(o.cx) || !isFinite(o.span) || o.span <= 0) return; if (CAM === '3d') { if (window.S3 && S3.camSet) S3.camSet(o); return; } V.s = VP.w / o.span; V.ox = VP.w / 2 - o.cx * V.s; V.oy = VP.h / 2 + o.cy * V.s; V.user = true; draw(); },
     planScene(tool) { return STC.planScene(M, S || STC.build(M), LV, tool); },   // the plan engines' scene of the current level (local metres, .origin)
     _walkPNG() { return WK.cv ? WK.cv.toDataURL() : null; },   // for the browser checks
+    _genFurn(lv, id, x, y, rot) { return JSON.parse(JSON.stringify(genFurn(lv, id, x, y, rot || 0))); },   // a generated piece (a stair) for the browser checks; not added to the model
     /* level(): see level(id) above; with no id it returns the current level (a second definition here used to replace the setter, 2026-11-01) */
     // a neighbouring building (site context) for the Workspace's Properties, and its edits (2026-10-31: Edit site model)
     ctx(id) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return null; return { id: b.id, name: b.name || '', h: b.h, levels: b.levels, area: b.area, excluded: !!b.excluded, src: (b.src && b.src.provider) || '', hSource: b.hSource || '', added: !!b.added }; },
@@ -7099,7 +7163,7 @@ if (window.__WSROLE) {
     surfacePaint(o) { const R = RAMPS_TOP[o && o.ramp] || RAMPS_TOP.ladybug; if (!o || !SURF.list || !SURF.list.length) { if (window.S3 && S3.surface) S3.surface(null); return; }
       const col = (v) => { if (!Number.isFinite(v)) return null; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rampAtTop(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo))); return [m[1] / 255, m[2] / 255, m[3] / 255]; };
       if (window.S3 && S3.on && S3.surface) S3.surface({ list: SURF.list, cols: Array.from(o.vals, col) }); },   /* Array.from: a Float32Array's map would keep only numbers */
-    clearStudy() { flowStop(); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    clearStudy() { flowStop(); egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }

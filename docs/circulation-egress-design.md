@@ -1,5 +1,8 @@
 # Circulation 与 Fire Evacuation：实现设计
 
+> 2026-11-06 更新：Fire Evacuation 已改为在 Workspace 中对整栋楼运行（`mvp/js/interior/egress.js`，测试 `tests/egress-engine.test.mjs`、`tests/workspace-fire-evacuation.cjs`）：先水平转移到相邻防烟分区，可选再经楼梯向下疏散，多次随机运行。旧的 `mvp/js/egress/*` 和独立页面已移除。下文是早期设计记录。
+
+
 日期：2026-11-04。状态：代码审查与开发设计，尚未实现疏散求解器。
 
 ## 1. 从建筑师的交付成果反推
