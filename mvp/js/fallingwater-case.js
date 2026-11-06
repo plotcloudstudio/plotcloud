@@ -1,48 +1,44 @@
 import {landscape,ground} from './fallingwater-landscape.js';
 import {details} from './fallingwater-details.js';
-// Diagram-level reconstruction traced from HABS PA-5346 sheets 2, 4–6, 9–10.
-// Source rasters are not shipped. Approximate geometry and study inputs are not as-built data.
+import * as H from './fallingwater-habs.js?v=habs-20261107-1';
+// The main house traced from the HABS PA-5346 measured drawings (fallingwater-habs.js: plans, sections, south elevation), at their
+// true scale and levels; the site and terrain round it approximate. Not as-built survey data; source rasters are not shipped.
 export const title='Fallingwater · main house';
 export const source='https://www.loc.gov/resource/hhh.pa1690.sheet?st=gallery';
 export const site={label:'Fallingwater, Mill Run, Pennsylvania',lat:39.90631,lon:-79.46804,north:45,tz:'America/New_York',wind:2.5,windDir:'SW'};
-const m=.0465,xy=(x,y)=>[+(m*(x-320)).toFixed(3),+(m*(410-y)).toFixed(3)];
 const round=n=>+n.toFixed(3);
+// a drawing pixel (25 px to the foot) to plan metres; the sheets' y runs down, the plan's up
+const xy=(x,y)=>[round((x-H.ORIGIN[0])*H.PX),round((H.ORIGIN[1]-y)*H.PX)];
 // layer materials: Wright's light ochre concrete, the coursed Pottsville sandstone, waxed flagstone floors, walnut built-ins,
 // Cherokee-red steel and the red kettle; colours approximate, for the 3D view and rendering
 const LOOKS={Structure:['concrete','#e0c994'],'Terrace rails':['concrete','#e2cc98'],Roof:['concrete','#e0c994'],Walls:['plaster','#e6d4a6'],Stonework:['stone','#8f8371'],'Flagstone floors':['stone','#77705f'],Stairs:['concrete','#d9c59a'],'Built-in joinery':['timber-cladding','#6e4b30'],Glazing:['glass-double','#a9c6d6'],'Guest glazing':['glass-double','#a9c6d6'],'Walkway steel':['steel','#9b3a26'],Kettle:['steel','#b8321f']};
 export function caseModel(open=.05){
- const levels=[{id:'L1',name:'Living level',z:0,h:2.55},{id:'L2',name:'Bedroom level',z:2.55,h:2.17},{id:'L3',name:'Study level',z:4.72,h:1.98}];
- const walls=[],ops=[],floors=[],names=[],furn=[];
- const wall=(lv,a,b,t=.25)=>{const id=`w${walls.length+1}`;walls.push({id,lv,a:xy(...a),b:xy(...b),t,object_type:'wall',layer:'Wall'});return id;};
- const loop=(lv,pts)=>pts.map((a,i)=>wall(lv,a,pts[(i+1)%pts.length]));
- const opening=(id,f,w,kind='win')=>{const a=walls.find(x=>x.id===id);ops.push({id:`o${ops.length+1}`,wall:id,pos:round(Math.hypot(a.a[0]-a.b[0],a.a[1]-a.b[1])*f),w,kind,sill:kind==='door'?0:.55,head:kind==='door'?1.95:1.85,open:kind==='door'? .6:open,flip:1});};
- const floor=(lv,x,y,x2,y2)=>{const [a,b]=xy(x,y2);floors.push({id:`f${floors.length+1}`,lv,x:a,y:b,w:round((x2-x)*m),d:round((y2-y)*m),thickness:.24,object_type:'floor',layer:'Floor'});};
- const name=(lv,label,x,y)=>{const[a,b]=xy(x,y);names.push({lv,name:label,x:a,y:b});};
- const item=(lv,label,x,y,w,d,h,id)=>{const[a,b]=xy(x,y);furn.push({id:`u${furn.length+1}`,lv,type:id||'box',name:label,label,x:a,y:b,w,d,h,rot:0,object_type:'furniture',layer:'Furniture',...(id?{gen:{id,vals:{}}}:{})});};
- // Exterior centre lines and room divisions simplified from the HABS floor sheets.
- const a=loop('L1',[[181,228],[325,228],[325,271],[523,271],[523,407],[455,407],[455,535],[311,535],[311,321],[250,321],[250,274],[181,274]]);
- opening(a[2],.53,1.6);opening(a[3],.45,2.1);opening(a[6],.48,4.3);opening(a[7],.58,2.7);opening(a[0],.25,1.6);opening(a[8],.44,1.5);opening(a[4],.43,.9,'door');ops.at(-1).open=0;
- opening(wall('L1',[325,271],[311,321],.16),.52,.9,'door');opening(wall('L1',[250,228],[250,274],.16),.55,.8,'door');
- name('L1','Living room',410,380);name('L1','Kitchen',285,273);name('L1','Service sitting room',210,252);
- floor('L1',181,228,325,274);floor('L1',250,274,325,321);floor('L1',311,271,523,407);floor('L1',235,452,598,543);floor('L1',311,407,598,452);floor('L1',806,411,894,611);
- item('L1','Built-in seating',344,497,2.8,.8,.76,'sofa');item('L1','Living room table',395,443,1.1,.65,.45,'coffee');item('L1','Dining table',454,315,1.7,.85,.75,'dining');item('L1','Kitchen counter',277,300,1.8,.62,.9);
- const b=loop('L2',[[247,229],[392,229],[392,251],[433,251],[433,122],[474,122],[474,251],[538,251],[538,301],[550,301],[550,409],[320,409],[320,320],[247,320]]);
- opening(b[0],.34,2.2);opening(b[4],.5,1.0,'door');ops.at(-1).open=0;opening(b[9],.61,1.8);opening(b[10],.18,2.2);opening(b[10],.77,2.8);opening(b[12],.45,1.7);
- opening(wall('L2',[320,320],[320,229],.16),.52,.85,'door');opening(wall('L2',[320,303],[550,303],.16),.16,.9,'door');opening(wall('L2',[466,303],[466,409],.16),.18,.83,'door');opening(wall('L2',[416,303],[416,409],.16),.55,.75,'door');
- name('L2','Dressing room',280,275);name('L2','Hall and stair landing',403,281);name('L2','Main bedroom',371,361);name('L2','Bath',438,362);name('L2','Guest bedroom',505,367);
- floor('L2',74,201,247,301);floor('L2',247,229,550,409);floor('L2',433,122,474,229);floor('L2',317,409,463,580);floor('L2',550,346,700,415);
- item('L2','Main bed',365,366,1.55,2.05,.55,'bed');item('L2','Guest bed',510,371,1.3,2,.55,'bed');item('L2','Bath fittings',440,375,.8,1.35,.55,'bathtub');
- const c=loop('L3',[[246,228],[325,228],[325,253],[475,253],[475,283],[486,283],[486,307],[325,307],[325,332],[246,332]]);
- opening(c[0],.5,1.8);opening(c[2],.72,1.9);opening(c[6],.45,2.2);opening(c[9],.5,2.0);opening(wall('L3',[325,253],[325,307],.16),.5,.85,'door');
- name('L3','Study',286,275);name('L3','Gallery and sleeping alcove',399,283);
- floor('L3',246,228,325,332);floor('L3',325,253,486,307);floor('L3',325,307,530,384);
- item('L3','Study desk',278,261,1.25,.6,.73,'desk');item('L3','Gallery bench',389,292,1.5,.53,.45,'banquette');
- // Materials (2026-11-06): exterior walls with little glass are the coursed sandstone masses, the rest ochre-painted concrete and
- // plaster; every window has a steel sash in Cherokee red; floors inside are waxed flagstone, the terraces ochre concrete trays.
- for(const w of walls){const L=Math.hypot(w.b[0]-w.a[0],w.b[1]-w.a[1]),glass=ops.filter(o=>o.wall===w.id&&o.kind==='win').reduce((t,o)=>t+o.w,0);w.layer=w.t>=.2&&glass/L<.3?'Stonework':'Walls';}
- for(const o of ops)if(o.kind==='win')o.frame='#9b3a26';
- const loops={L1:a,L2:b,L3:c},inLoop=(lv,x,y)=>{const P=loops[lv].map(id=>walls.find(w=>w.id===id).a);let k=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const p=P[i],q=P[j];if((p[1]>y)!==(q[1]>y)&&x<(q[0]-p[0])*(y-p[1])/(q[1]-p[1])+p[0])k=!k;}return k;};
- for(const f of floors)f.layer=inLoop(f.lv,f.x+f.w/2,f.y+f.d/2)?'Flagstone floors':'Structure';
+ const levels=H.LEVELS.map(l=>({...l})),walls=[],ops=[],floors=[],names=[],furn=[],LV=Object.fromEntries(levels.map(l=>[l.id,l]));
+ const wall=(lv,a,b,t,layer)=>{const id=`w${walls.length+1}`;walls.push({id,lv,a,b,t:round(Math.max(.06,t)),h:LV[lv].h,object_type:'wall',layer});return id;};
+ const op=(id,from,to,kind)=>{const w=walls.find(x=>x.id===id),L=Math.hypot(w.b[0]-w.a[0],w.b[1]-w.a[1]),a=Math.max(0,Math.min(from,to)),b=Math.min(L,Math.max(from,to));if(b-a<.3)return;const door=kind==='door',H0=LV[w.lv].h;
+  ops.push({id:`o${ops.length+1}`,wall:id,pos:round((a+b)/2),w:round(b-a),kind:door?'door':'win',object_type:door?'door':'window',sill:door?0:.05,head:round(door?Math.min(2.1,H0-.1):H0-.12),open:door?.6:open,flip:1,...(door?{}:{frame:'#9b3a26'})});};
+ // the hatched masonry of the plans: each run a stone wall along its longer side, as thick as the drawing shows it
+ for(const [lv,R] of Object.entries(H.STONE))for(const [x0,y0,x1,y1] of R){const w=x1-x0,h=y1-y0;
+  if(w>=h)wall(lv,xy(x0,(y0+y1)/2),xy(x1,(y0+y1)/2),h*H.PX,'Stonework');else wall(lv,xy((x0+x1)/2,y0),xy((x0+x1)/2,y1),w*H.PX,'Stonework');}
+ // glass, partitions and doors read from the drawings
+ for(const [lv,list] of Object.entries(H.WALLS))for(const [x0,y0,x1,y1,t,kind,extra] of list){
+  if(kind==='pier'){const w=x1-x0,h=y1-y0;if(w>=h)wall(lv,xy(x0,(y0+y1)/2),xy(x1,(y0+y1)/2),h*H.PX,'Stonework');else wall(lv,xy((x0+x1)/2,y0),xy((x0+x1)/2,y1),w*H.PX,'Stonework');continue;}
+  const a=xy(x0,y0),b=xy(x1,y1),L=Math.hypot(b[0]-a[0],b[1]-a[1]),id=wall(lv,a,b,t*H.PX,kind==='glass'?'Walls':kind==='stone'?'Stonework':'Walls');
+  const along=(q)=>Math.abs(x1-x0)>=Math.abs(y1-y0)?Math.abs(q-x0)*H.PX:Math.abs(q-y0)*H.PX;
+  if(kind==='glass'){const D=(extra||[]).map(([f,g])=>[along(f),along(g)]).sort((p,q)=>p[0]-q[0]);let s0=.05;for(const [f,g] of D){op(id,s0,f-.02,'win');op(id,f,g,'door');s0=g+.02;}op(id,s0,L-.05,'win');}
+  else if(kind==='door')op(id,.05,L-.05,'door');}
+ for(const [lv,list] of Object.entries(H.ROOMS))for(const [name,x,y] of list){const [a,b]=xy(x,y);names.push({lv,name,x:a,y:b});}
+ const rect=(lv,x0,y0,x1,y1,layer,th,holes)=>{const [a,b]=xy(x0,y1),[c,d]=xy(x1,y0);floors.push({id:`f${floors.length+1}`,lv,x:a,y:b,w:round(c-a),d:round(d-b),thickness:th,object_type:'floor',layer,...(holes?{holes:holes.map(([p,q,r,s])=>[xy(p,q),xy(r,q),xy(r,s),xy(p,s)])}:{})});};
+ for(const [lv,list] of Object.entries(H.FLOORS))for(const [x0,y0,x1,y1,holes] of list)rect(lv,x0,y0,x1,y1,'Flagstone floors',.3,holes);
+ for(const [lv,list] of Object.entries(H.TERRACES))for(const t of list)for(const [x0,y0,x1,y1] of t.slabs)rect(lv,x0,y0,x1,y1,t.roof?'Roof':'Structure',t.roof?.35:.45);
+ // the stairs between levels, as Plan Studio's own straight stairs (the openings above follow)
+ for(const [lv,x0,y0,x1,y1,dir] of H.STAIRS){const [cx,cy]=xy((x0+x1)/2,(y0+y1)/2),ew=dir==='E'||dir==='W',run=(ew?x1-x0:y1-y0)*H.PX,wid=(ew?y1-y0:x1-x0)*H.PX,rot={N:0,S:Math.PI,E:-Math.PI/2,W:Math.PI/2}[dir];
+  furn.push({id:`st${furn.length+1}`,lv,type:'straight',gen:{id:'straight',vals:{use:'private',kind:'stringer',H:Math.round(LV[lv].h*1000),W:Math.round(wid*1000),T:Math.round(run/Math.max(1,Math.round(LV[lv].h/.18)-1)*1000),topLanding:false,rails:'both',glass:false,color_wood:'#d9c4a0',n:Math.round(LV[lv].h/.18)},auto:true},name:'Stair',x:cx,y:cy,w:round(wid),d:round(run),h:LV[lv].h,rot,object_type:'furniture',layer:'Stairs'});}
+ // furniture where the drawings show it (sizes from the plans)
+ const item=(lv,label,x0,y0,x1,y1,h,type)=>{const [a,b]=xy((x0+x1)/2,(y0+y1)/2);furn.push({id:`u${furn.length+1}`,lv,type:type||'box',name:label,label,x:a,y:b,w:round((x1-x0)*H.PX),d:round((y1-y0)*H.PX),h,rot:0,object_type:'furniture',layer:'Furniture'});};
+ item('L1','Dining table',1667,1220,1750,1385,.74,'dining');item('L1','Living room table',1840,1780,1935,1930,.45,'coffee');item('L1','Kitchen counter',1100,1010,1150,1340,.9);item('L1','Kitchen range',1325,1310,1390,1385,.9);
+ item('L2','Master bed',1638,1409,1809,1567,.55,'bed');item('L2','Guest bed',2144,1508,2304,1580,.55,'bed1');item('L2','Dressing room table',1180,1110,1300,1200,.74,'desk');
+ item('L3','Study desk',1110,1040,1300,1090,.74,'desk');item('L3','Alcove bed',1880,1130,2030,1200,.5,'bed1');
  // Site diagram: Bear Run and the sloping bank are approximated from the survey.
  // Rotate plan-space coordinates back into the site's east/north frame.
  const r=Math.SQRT1_2, world=([x,y])=>[(x+y)*r,(y-x)*r];

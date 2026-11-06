@@ -2,16 +2,18 @@
 // vertical profile is schematic, based on sections, not survey elevations or hydraulics.
 import dem from './fallingwater-dem.js';
 import siteDem from './fallingwater-site-dem.js';
+import {STREAM,ORIGIN,PX} from './fallingwater-habs.js?v=habs-20261107-1';
 const r=Math.SQRT1_2;
 const world=([x,y,z])=>[(x+y)*r,(y-x)*r,z];
-// [x along the stream, its middle, width, water surface] in plan metres, the living level at 0. Surface levels (2026-11-06): the
-// upper stream just under the foot of the hatch stair (-2.62), its two falls under the terraces, the lower pool below; schematic.
-const profile=[[-23,-8.3,4.5,-5.05],[-16,-7.9,4.0,-4.95],[-10,-6.8,3.5,-4.85],[-5,-6.0,3.4,-4.78],[-3.4,-5.6,3.6,-4.75],[-2.9,-5.5,3.6,-3.6],[-.2,-5.1,3.1,-3.55],[.25,-5.05,3.1,-2.78],[3,-5.1,3.4,-2.76],[9,-5.3,4.0,-2.72],[16,-4.8,4.2,-2.66],[24,-3.9,4.0,-2.6],[31,-4,4.2,-2.55]];
+// [x along the stream, its middle, width, water surface] in plan metres, the living level at 0: Bear Run as the HABS first-floor plan
+// draws its banks and the south elevation its levels (upper stream about 3.1 m below the living room, the main falls about 5.1 m)
+const profile=STREAM.map(([x,y,z,w])=>[+((x-ORIGIN[0])*PX).toFixed(3),+((ORIGIN[1]-y)*PX).toFixed(3),+(w*PX).toFixed(2),z]).sort((a,b)=>a[0]-b[0]);
 function station(x){let i=profile.findIndex(p=>p[0]>=x);if(i<0)return profile.at(-1);if(i===0)return profile[0];const a=profile[i-1],b=profile[i],t=(x-a[0])/(b[0]-a[0]);return a.map((v,k)=>v+(b[k]-v)*t);}
 function localGround(x,y){const [,mid,w,water]=station(x),d=y-mid,bank=Math.max(0,Math.abs(d)-w/2),channel=water-.55;
  const rock=.24*Math.sin(x*.53+y*.66)+.13*Math.sin(x*1.1-y*.39);
  if(bank<1.6)return channel+bank*1.12+rock*.12;
- if(d>0)return Math.max(-.2,channel+1.7)+Math.max(0,y-7)*.34+rock*Math.min(1,bank/5);
+ // the north bank climbs steeply from the water to the house's back, about at the living level, then up the hill
+ if(d>0)return Math.min(channel+1.8+bank*1.1,-.35)+Math.max(0,y-11)*.34+rock*Math.min(1,bank/5);
  return channel+Math.min(5,bank*.37)+rock;
 }
 export function ground(x,y){

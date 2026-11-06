@@ -1,6 +1,7 @@
 // Editable layer groups for details traced approximately from HABS plans and sections (2026-11-06: rounded ochre parapets, the
 // rear trellis, the hearth boulder and kettle, built-ins, the guest house, its pool and the covered walkway up the hill).
 // Positions and sizes are approximate: a diagrammatic reconstruction for study, not as-built survey data.
+import * as H from './fallingwater-habs.js?v=habs-20261107-1';
 export function details(xy, ground = () => 0){
  const groups={};
  const tri=(name,layer,a,b,c)=>{const g=groups[name]??={layer,p:[]};g.p.push(...a,...b,...c);};
@@ -26,52 +27,26 @@ export function details(xy, ground = () => 0){
  const at=(name,layer,x,y,z,w,d,h)=>box(name,layer,...xy(x,y),z,w,d,h);
  const runH=(name,layer,x,y,x2,y2,z,w,h,round)=>run(name,layer,xy(x,y),xy(x2,y2),z,w,h,round);
 
- // ---- main house: stone masses
- at('Main stone chimney','Stonework',320,318,-.4,1.12,1.48,9.55);
- at('Upper masonry pier','Stonework',474,275,2.28,.75,1.02,4.8);
- at('West terrace support','Stonework',310,511,-4.7,.72,1.45,4.6);
- at('Living room boulder base','Stonework',300,330,-4.2,2.4,1.6,4.0);
- at('Bridge north abutment','Stonework',850,426,-2.6,4.1,.76,2.4);
- at('Bridge south abutment','Stonework',850,593,-3.35,4.1,.85,3.15);
- at('Bridge approach landing','Structure',850,622,-.22,4.2,1.7,.22);
- at('Entrance approach','Structure',752,400,-.24,6.9,1.22,.24);
- // ---- the ochre concrete "trays": deep slab edges under the cantilevered terraces, and parapets with a half-round top
- runH('Living terrace edge beam','Terrace rails',235,543,598,543,-.42,.32,.42);runH('Living terrace edge beam','Terrace rails',598,447,598,543,-.42,.32,.42);runH('Living terrace edge beam','Terrace rails',235,452,235,543,-.42,.32,.42);
- runH('Living terrace parapet','Terrace rails',235,452,235,543,0,.3,.95,true);runH('Living terrace parapet','Terrace rails',235,543,598,543,0,.3,.95,true);runH('Living terrace parapet','Terrace rails',598,447,598,543,0,.3,.95,true);
- runH('Bedroom terrace edge beam','Terrace rails',317,580,463,580,2.13,.32,.42);
- runH('Bedroom terrace parapet','Terrace rails',317,580,463,580,2.55,.3,.95,true);runH('Bedroom terrace parapet','Terrace rails',317,413,317,580,2.55,.3,.95,true);runH('Bedroom terrace parapet','Terrace rails',463,413,463,580,2.55,.3,.95,true);
- runH('Bedroom terrace parapet','Terrace rails',551,415,697,415,2.55,.3,.95,true);runH('Bedroom terrace parapet','Terrace rails',697,346,697,415,2.55,.3,.95,true);
- runH('Study terrace parapet','Terrace rails',326,384,530,384,4.72,.3,.95,true);runH('Study terrace parapet','Terrace rails',530,309,530,384,4.72,.3,.95,true);
- runH('West terrace parapet','Terrace rails',74,201,74,301,2.55,.3,.95,true);runH('West terrace parapet','Terrace rails',74,301,247,301,2.55,.3,.95,true);runH('West terrace parapet','Terrace rails',74,201,247,201,2.55,.3,.95,true);
- runH('Bridge edges','Terrace rails',808,422,808,605,0,.28,.8,true);runH('Bridge edges','Terrace rails',892,422,892,605,0,.28,.8,true);
- // ---- the concrete trellis over the drive behind the house (one of its beams bends round a tree in the real house; straight here)
- for(let i=0;i<9;i++){const x=332+i*21;runH('Rear trellis','Terrace rails',x,229,x,128,2.3,.2,.32);}
- runH('Rear trellis','Terrace rails',322,128,512,128,2.3,.3,.32);
- const steps=(name,x,y,z,rise,run0,n,w)=>{const [cx,cy]=xy(x,y);for(let i=0;i<n;i++){const h=(i+1)*rise/n;box(name,'Stairs',cx,cy+i*run0/n,z,w,run0/n+.012,h);}};
- steps('Stair to bedroom level',485,311,0,2.55,3.1,15,.95);
- steps('Stair to study level',402,291,2.55,2.17,2.55,13,.92);
- // the hatch stair from the living room, hung from the floor, down to just above Bear Run
- steps('Stair down to Bear Run',495,539,-2.62,2.62,2.7,15,1.12);
- { const [cx,cy]=xy(495,539);box('Stair down to Bear Run','Stairs',cx,cy+1.6,-2.72,1.6,.9,.12); }
- // ---- stepped flat roofs over the study and gallery, with a thin projecting fascia
- const roof=(x,y,x2,y2,z,h)=>{const [a,b]=xy(x,y),[c,d]=xy(x2,y2);box('Study and gallery roof','Roof',(a+c)/2,(b+d)/2,z,c-a,b-d,h);};
- roof(234,215,336,345,6.70,.19);
- roof(336,241,500,320,6.70,.19);
- // ---- inside the main house
- { const [x,y]=xy(314,336);rock('Hearth boulder','Stonework',x,y,-.25,1.25,.85,.42,2); }   // the rock of the site, left rising through the living-room floor in front of the fire
- { const [x,y]=xy(320,333);ball('Kettle in the hearth','Kettle',x+.35,y-.25,.05,.28); }       // Wright's red kettle, swung into the fireplace
- at('Living room bookshelves','Built-in joinery',262,232,0,3.0,.38,2.05);
- at('Living room built-in seat (east)','Built-in joinery',512,340,0,.75,4.2,.42);
- at('Living room built-in seat (east)','Built-in joinery',530,340,.42,.18,4.2,.45);
- at('Living room desk niche','Built-in joinery',425,282,0,1.8,.55,.74);
- at('Dining built-in seat','Built-in joinery',470,282,0,2.2,.5,.42);
- at('Main bedroom fireplace','Stonework',332,330,2.55,1.1,.55,2.0);
- at('Main bedroom wardrobe','Built-in joinery',280,236,2.55,2.4,.6,2.0);
- at('Guest bedroom fireplace','Stonework',534,330,2.55,.55,1.1,2.0);
- at('Guest bedroom desk','Built-in joinery',520,400,2.55,1.5,.55,.74);
- at('Study bookshelves','Built-in joinery',252,280,4.72,.36,2.6,1.9);
- at('Study fireplace','Stonework',300,236,4.72,1.0,.5,1.8);
-
+ // ---- the main house's trays, from the traced terraces (fallingwater-habs.js): a deep upturned edge under each slab and a parapet with
+ // a half-round top round its open sides; from the south elevation, the parapets stand about 0.96 m above the floor and the tray's
+ // edge runs about 0.57 m below it
+ const P=(q)=>xy(q[0],q[1]);
+ for(const [lv,list] of Object.entries(H.TERRACES)){const z=H.LEVELS.find(l=>l.id===lv).z;
+  for(const t of list){for(let k=1;k<t.parapet.length;k++){const a=P(t.parapet[k-1]),b=P(t.parapet[k]);run(t.roof?'Roof edge':'Terrace parapets','Terrace rails',a,b,z-.57,.3,t.roof?.75:1.53,!t.roof);}}}
+ // the chimney tower above the roof, to 32'-9 1/2" (sheet 10)
+ { const [a,b]=xy(1328,1668),[c,d]=xy(1436,1392);box('Chimney tower','Stonework',(a+c)/2,(b+d)/2,7.5,c-a,d-b,9.99-7.5); }
+ // the hatch stair: from the living room down through the floor to the platform just above Bear Run (top of platform -9'-3 1/8")
+ { const Hh=H.HATCH,[a,b]=xy(Hh.x0,Hh.y1),[c,d]=xy(Hh.x1,Hh.y0),n=15,w=d-b;for(let k=0;k<n;k++){const z1=-(k+1)*(-Hh.bottom)/n;box('Hatch stair','Stairs',a+(c-a)*(k+.5)/n,(b+d)/2,z1,(c-a)/n+.01,w*.8,.06);}
+   const [p,q]=xy(Hh.platform[0],Hh.platform[3]),[r,t]=xy(Hh.platform[2],Hh.platform[1]);box('Hatch stair platform','Stairs',(p+r)/2,(q+t)/2,Hh.bottom-.2,r-p,t-q,.2); }
+ // the boulder of the site, left rising through the living-room floor in front of the hearth, and Wright's red kettle in the fireplace
+ { const [x,y]=xy(1510,1510);rock('Hearth boulder','Stonework',x,y,-.2,1.1,.8,.42,2); }
+ { const [x,y]=xy(1405,1520);ball('Kettle in the hearth','Kettle',x,y,.05,.28); }
+ // built-in seats along the glazing (walnut), as the plans show them
+ { const [a,b]=xy(1415,2290),[c,d]=xy(1930,2245);box('Living room window seat','Built-in joinery',(a+c)/2,(b+d)/2,0,c-a,d-b,.42); }
+ { const [a,b]=xy(1305,1940),[c,d]=xy(1410,1640);box('Living room window seat','Built-in joinery',(a+c)/2,(b+d)/2,0,c-a,d-b,.42); }
+ // the concrete trellis over the drive behind the house (one beam bends round a tree in the real house; straight here)
+ for(let i=0;i<9;i++){const x=2060+i*70;run('Rear trellis','Terrace rails',xy(x,1060),xy(x,800),4.95,.2,.32);}
+ run('Rear trellis','Terrace rails',xy(2040,800),xy(2640,800),4.95,.3,.32);
  // ---- the guest house (1939), up the hill to the north-west, its plunge pool, and the covered walkway that climbs to it.
  // Plan metres; the floor is set just above the highest ground under it, on a stone plinth.
  const G0=[-31,26],G1=[-17,33.5],T0=[-31,19.5],T1=[-20,26],PO=[[-25.6,20.4],[-20.8,20.4],[-20.8,23.8],[-25.6,23.8]];
@@ -96,7 +71,7 @@ export function details(xy, ground = () => 0){
  box('Guest house pool basin','Terrace rails',(PO[0][0]+PO[1][0])/2,(PO[0][1]+PO[2][1])/2,pool.bottom-.25,PO[1][0]-PO[0][0]+.22,PO[2][1]-PO[0][1]+.22,.25);
  // the covered walkway: from the bedroom-level bridge behind the main house up to the guest house, its canopy stepping down the
  // slope in short flat runs on thin steel posts
- const W=[[6.1,13.4],[5.4,18.5],[2,23.2],[-4,25.6],[-10.5,26.2],[-16,25.4]],z0=2.55;let L=0;const seg=[];for(let i=1;i<W.length;i++){const l=Math.hypot(W[i][0]-W[i-1][0],W[i][1]-W[i-1][1]);seg.push([L,l]);L+=l;}
+ const W=[xy(1950,560),[6.4,18.5],[2.5,23.2],[-4,25.6],[-10.5,26.2],[-16,25.4]],z0=H.LEVELS[1].z;let L=0;const seg=[];for(let i=1;i<W.length;i++){const l=Math.hypot(W[i][0]-W[i-1][0],W[i][1]-W[i-1][1]);seg.push([L,l]);L+=l;}
  const at2=(s)=>{let i=0;while(i<seg.length-1&&seg[i][0]+seg[i][1]<s)i++;const u=(s-seg[i][0])/seg[i][1],a=W[i],b=W[i+1];return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];};
  const zAt=(s)=>{const t=s/L,f=t*t*(3-2*t);return z0+(gf-z0)*f;};
  const N=Math.ceil(L/2.4);for(let k=0;k<N;k++){const s0=k*L/N,s1=(k+1)*L/N,a=at2(s0),b=at2(s1),zs=zAt(s0),ze=zAt(s1),zm=Math.max(zs,ze);
