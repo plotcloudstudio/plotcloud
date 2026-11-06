@@ -2778,7 +2778,7 @@ function hitTest(p, opt = {}) {
   const order = [LAYER, ...STC.LAYERS.filter((L) => L !== LAYER)].filter((L) => VIS[L] && (!opt.only || L === LAYER));
   const wallLayer = () => {
     for (const o of M.ops) { const w = wallById(o.wall); if (!w || w.lv !== LV) continue; const dir = STC.wallDir(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1], dn = Math.abs((p[0] - w.a[0]) * -dir[1] + (p[1] - w.a[1]) * dir[0]); if (dn <= (w.t || 0.2) / 2 + tol && Math.abs(t - o.pos) <= o.w / 2) return { k: 'op', id: o.id }; }
-    if (!opt.noEnds && SEL && SEL.k === 'wall') { const w = wallById(SEL.id); if (w && w.lv === LV) for (const e of ['a', 'b']) if (Math.hypot(p[0] - w[e][0], p[1] - w[e][1]) < 7 * VP.d / V.s) return { k: 'end', id: w.id, e }; }
+    if (!opt.noEnds && SEL && SEL.k === 'wall') { const w = wallById(SEL.id); if (w && w.lv === LV) { for (const e of ['a', 'b']) if (Math.hypot(p[0] - w[e][0], p[1] - w[e][1]) < 7 * VP.d / V.s) return { k: 'end', id: w.id, e }; const A = w.bulge ? STC.arcOf(w) : null; if (A) { const m = STC.arcAt(w, A.len / 2); if (Math.hypot(p[0] - m[0], p[1] - m[1]) < 7 * VP.d / V.s) return { k: 'end', id: w.id, e: 'mid' }; } } }   /* an arc wall's middle handle sets its curve */
     for (const w of lvWalls()) { const A = w.bulge ? STC.arcOf(w) : null; if (A) { let ang = (Math.atan2(p[1] - A.c[1], p[0] - A.c[0]) - A.a0) * Math.sign(A.sweep); ang = ((ang % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); if (ang <= Math.abs(A.sweep) + 0.02 && Math.abs(Math.hypot(p[0] - A.c[0], p[1] - A.c[1]) - A.r) <= (w.t || 0.2) / 2 + tol) return { k: 'wall', id: w.id }; continue; }   /* an arc wall: within its sweep and its thickness */
       const dir = STC.wallDir(w), L = STC.wallLen(w), t = (p[0] - w.a[0]) * dir[0] + (p[1] - w.a[1]) * dir[1], dn = Math.abs((p[0] - w.a[0]) * -dir[1] + (p[1] - w.a[1]) * dir[0]); if (t >= -0.1 && t <= L + 0.1 && dn <= (w.t || 0.2) / 2 + tol) return { k: 'wall', id: w.id }; }
     return null; };
@@ -2891,6 +2891,7 @@ cv.addEventListener('pointerdown', (e) => {
   if (h.k === 'wall') { const w = wallById(h.id), dir = STC.wallDir(w), n = [-dir[1], dir[0]], L = STC.wallLen(w), fol = [];
     for (const q of lvWalls()) { if (q === w) continue; for (const e2 of ['a', 'b']) { const pt = q[e2], t = (pt[0] - w.a[0]) * dir[0] + (pt[1] - w.a[1]) * dir[1], dn = Math.abs((pt[0] - w.a[0]) * n[0] + (pt[1] - w.a[1]) * n[1]); if (dn < 0.03 && t > -0.03 && t < L + 0.03) fol.push([q, e2, pt.slice()]); } }
     drag = { k: 'wall', w, n, p0: p, a0: w.a.slice(), b0: w.b.slice(), fol, b }; }
+  else if (h.k === 'end' && h.e === 'mid') { drag = { k: 'bend', w: wallById(h.id), b }; }
   else if (h.k === 'end') { const w = wallById(h.id), pt = w[h.e].slice(), fol = []; for (const q of lvWalls()) for (const e2 of ['a', 'b']) if ((q !== w || e2 !== h.e) && near(q[e2], pt)) fol.push([q, e2]); drag = { k: 'end', w, e: h.e, fol, b }; }
   else if(h.k==='fence'){const f=selObj();drag={k:'fence',f,p0:p,points:f.points.map(q=>q.slice()),b};}
   else if (h.k === 'mass') { const m = selObj(); SEL = { k: 'mass', id: m.id }; drag = h.v != null ? { k: 'massv', m, v: h.v, b } : { k: 'mass', m, p0: p, points: m.points.map((q) => q.slice()), b }; }
@@ -2906,6 +2907,7 @@ cv.addEventListener('pointermove', (e) => {
     if (drag.k === 'pan') { if (Math.hypot(sx - drag.sx, sy - drag.sy) > 4 * VP.d) drag.click = false; V.ox = drag.ox + sx - drag.sx; V.oy = drag.oy + sy - drag.sy; V.user = true; draw(); return; }
     drag.moved = true;
     if (drag.k === 'wall') { const k = stickK(drag, sg((p[0] - drag.p0[0]) * drag.n[0] + (p[1] - drag.p0[1]) * drag.n[1])), w = drag.w; w.a = [drag.a0[0] + drag.n[0] * k, drag.a0[1] + drag.n[1] * k]; w.b = [drag.b0[0] + drag.n[0] * k, drag.b0[1] + drag.n[1] * k]; for (const [q, e2, pt] of drag.fol) q[e2] = [pt[0] + drag.n[0] * k, pt[1] + drag.n[1] * k]; tipAt(e, `Moved ${k >= 0 ? '+' : ''}${Math.round(k * 1000)} mm`); }
+    else if (drag.k === 'bend') { const w = drag.w, P = arcPts(w.a, w.b, p), nb = P.length > 2 && P.sweep ? Math.tan(P.sweep * P.dir / 4) : 0; if (Math.abs(nb) > 0.01) w.bulge = +nb.toFixed(6); else delete w.bulge; const A = STC.arcOf(w); tipAt(e, A ? `R ${A.r.toFixed(2)} m · ${A.len.toFixed(2)} m along` : 'straight'); }   /* drag the middle of an arc wall: the curve through the pointer */
     else if (drag.k === 'end') { const other = drag.w[drag.e === 'a' ? 'b' : 'a'], q = snapPt(p, other, e.shiftKey); drag.w[drag.e] = q; for (const [w2, e2] of drag.fol) w2[e2] = q.slice(); tipAt(e, `${Math.round(STC.wallLen(drag.w) * 1000)} mm`); }
     else if (drag.k === 'ctx') { const q = siteOfM(M, p), dx = q[0] - drag.p0[0], dy = q[1] - drag.p0[1]; drag.o.xy = drag.xy.map((r) => [+(r[0] + dx).toFixed(2), +(r[1] + dy).toFixed(2)]); drag.o.edited = true; drag.o.ll = []; M.site.version++; tipAt(e, `Moved ${Math.hypot(dx, dy).toFixed(2)} m`); }
     else if (drag.k === 'ctxv') { const q = siteOfM(M, p); drag.o.xy[drag.v] = [+q[0].toFixed(2), +q[1].toFixed(2)]; drag.o.area = +areaOf(drag.o.xy).toFixed(1); drag.o.edited = true; drag.o.ll = []; M.site.version++; tipAt(e, `${fmtA(drag.o.area)} m² footprint`); }
@@ -7016,6 +7018,7 @@ if (window.__WSROLE) {
   document.addEventListener('pointerdown',e=>{if(e.target!==cv)return;if(e.button===2){tipOff();cycleClear();}const ck=e.ctrlKey||e.metaKey;pickMods={add:ck&&!e.shiftKey,toggle:e.shiftKey&&!ck,remove:ck&&e.shiftKey};   /* SketchUp: Ctrl adds, Shift toggles, Ctrl+Shift removes */if(e.button!==0||SPACE||TOOL!=='select'||WALKING||XPL.on||VIEW2D!=='plan')return;
     if(CAM==='3d')P3upd(e);if(!e.altKey&&CAM==='3d'&&WS.gb&&S3.gizmo.hit(e.clientX,e.clientY))return;
     const raw=e.altKey?null:(cycleCurrent()||hitTest(S2W(...evP(e)))),hit=raw?{k:raw.k==='end'?'wall':raw.k,id:raw.id}:null,p=point(e);
+    if(raw&&raw.k==='end'&&raw.e==='mid'&&CAM!=='3d')return;   /* an arc wall's middle handle: Plan Studio's own drag bends it (2026-11-07) */
     if(hit&&(pickMods.add||pickMods.remove||pickMods.toggle)){hub()?.select(WS.role,hit,pickMods);e.stopImmediatePropagation();e.preventDefault();return;}
     if(hit){if(!multi.some(s=>KEY(s)===KEY(hit))){SEL=hit;WS.sel=KEY(SEL);hub()?.select(WS.role,hit);changedSel();}
       const records=multi.map(s=>({s,o:selObj(s)})).filter(r=>r.o&&!r.o.locked&&!r.o.auto&&['wall','furn','imp','floor','void','fence','mass','op','ceil','light','note','ctx'].includes(r.s.k));
