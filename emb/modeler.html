@@ -1547,7 +1547,11 @@ const STC = (() => {
     let S = null; if (!E.length) { S = build(M);
       if (!S.rooms.length) { if ((M.masses || []).length || M.site) warn('rooms', 'No closed rooms yet: only Sun hours (masses and site) can run.'); else err('rooms', 'No closed rooms: walls must enclose at least one room.'); }
       for (const r of S.rooms) { const covered = (M.floors || []).some((f) => f.lv === r.lv && r.lx >= f.x && r.lx <= f.x + f.w && r.ly >= f.y && r.ly <= f.y + f.d); if (!covered) warn('floor', `${r.name} has no floor (Floor layer).`, { k: 'room', id: r.key }); }
-      for (const f of M.furn) { const k = roomAtR(S.L[f.lv], f.x, f.y); if (k < 0) warn('furn-out', `A ${f.type} stands outside every room.`, { k: 'furn', id: f.id }); } }
+      for (const f of M.furn) { const k = roomAtR(S.L[f.lv], f.x, f.y); if (k < 0) warn('furn-out', `A ${f.type} stands outside every room.`, { k: 'furn', id: f.id }); }
+      // a stair must stay inside the building: each corner of its footprint in a room of its level (2026-11-07)
+      for (const f of M.furn) { if (!f.gen || !['straight', 'lshape', 'ushape', 'spiral', 'ramp'].includes(f.gen.id) || !S.L[f.lv]) continue; const out = furnCorners(f).filter((p) => roomAtR(S.L[f.lv], p[0], p[1]) < 0).length; if (out) warn('stair-out', `A stair runs outside the building (${out} of its 4 corners are outside every room): move it into a stair hall or extend the room.`, { k: 'furn', id: f.id }); } }
+    // slabs of one level that overlap: a modelling error in a BIM model (one floor where two meet), though drawn without flicker
+    for (const lv of M.levels) { const F = (M.floors || []).filter((f) => f.lv === lv.id && f.w > 0 && f.d > 0 && !f.points); for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) { const a = F[i], b = F[j], ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.d, b.y + b.d) - Math.max(a.y, b.y); if (ox > 0.05 && oy > 0.05 && ox * oy > 0.25) warn('floor-overlap', `Two floor slabs on ${lv.name} overlap by ${(ox * oy).toFixed(1)} m²: join them or trim one.`, { k: 'floor', id: b.id }); } }
     return { errors: E, warnings: W, S };
   }
 
@@ -5572,8 +5576,33 @@ sunRefresh(true);
 registerLayer('imports', 'Imported meshes'); VIEW_MASKS.plan.push('imports'); VIEW_MASKS['3d'].push('imports');
 let IMP_OFF = new Set(); const IMP_MESH = new Map(); const meshOf = (o) => o.mesh || IMP_MESH.get(o.ref || o.id) || null;   // Workspace layers switched off (imports keep the Workspace layer they were sorted to)
 const impOn = (o, view) => layerOn('imports', view) && !isHidden(o.id) && !IMP_OFF.has(o.layer);
-const importLevel = (o, model) => model.levels.find(l => l.id === o.lv) || (o.layer === 'Roof' ? model.levels.filter(l => l.z <= o.g.z + .01).sort((a,b) => b.z-a.z)[0] : null);
-const impLv = (o) => !importLevel(o,M) || importLevel(o,M).id === LV;   // a piece placed on a level shows in the plan of that level only
+// wall joins (2026-11-07, as in Revit): where walls meet end to end, the first one drawn runs through the corner and the others stop at
+// its face; a wall ending on another's side stops at that face; a free end stops at its end point; a wall drawn over another (in
+// line, on top of it) is drawn once. Returns, per wall: how far each end runs past (+) or stops short of (−) its end point, and the
+// stretches already covered by an earlier wall. No two walls fill the same space, so no faces flicker.
+function wallJoins(M, lvId) {
+  const W = M.walls.filter((w) => w.lv === lvId && Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) >= 0.05), out = new Map(), idx = new Map(M.walls.map((w, i) => [w.id, i]));
+  const geo = (w) => { const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); return { L, d: [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L], t: w.t || 0.2 }; };
+  const G = new Map(W.map((w) => [w.id, geo(w)])), near = (p, q, e = 0.06) => Math.hypot(p[0] - q[0], p[1] - q[1]) < e, par = (a, b) => Math.abs(a.d[0] * b.d[1] - a.d[1] * b.d[0]) < 0.06;
+  for (const w of W) { const g = G.get(w.id), e = [0, 0], cover = [];
+    [w.a, w.b].forEach((P, k) => {
+      const meet = W.filter((v) => v !== w && (near(v.a, P) || near(v.b, P)));
+      if (meet.length) { const cross = meet.filter((v) => !par(G.get(v.id), g)); if (!cross.length) return;   // in line with the next wall: they simply abut
+        const grp = [w, ...cross].sort((x, y) => idx.get(x.id) - idx.get(y.id)), win = grp[0];
+        if (win === w) e[k] = Math.max(...cross.map((v) => G.get(v.id).t)) / 2; else e[k] = -G.get(win.id).t / 2; return; }
+      for (const h of W) { if (h === w) continue; const gh = G.get(h.id); if (par(gh, g)) continue; const u = (P[0] - h.a[0]) * gh.d[0] + (P[1] - h.a[1]) * gh.d[1]; if (u < 0.02 || u > gh.L - 0.02) continue;
+        const dist = Math.abs((P[0] - h.a[0]) * gh.d[1] - (P[1] - h.a[1]) * gh.d[0]); if (dist > gh.t / 2 + 0.03) continue; const sin = Math.abs(g.d[0] * gh.d[1] - g.d[1] * gh.d[0]) || 1;
+        e[k] = -Math.max(0, gh.t / 2 - dist) / sin; return; } });
+    // the stretches of an earlier wall in line with this one, on top of it
+    for (const v of W) { if (v === w || idx.get(v.id) > idx.get(w.id)) continue; const gv = G.get(v.id); if (!par(gv, g)) continue; const off = Math.abs((v.a[0] - w.a[0]) * g.d[1] - (v.a[1] - w.a[1]) * g.d[0]); if (off > 0.03) continue;
+      const u0 = (v.a[0] - w.a[0]) * g.d[0] + (v.a[1] - w.a[1]) * g.d[1], u1 = (v.b[0] - w.a[0]) * g.d[0] + (v.b[1] - w.a[1]) * g.d[1], lo = Math.max(-1, Math.min(u0, u1)), hi = Math.min(g.L + 1, Math.max(u0, u1)); if (hi - lo > 0.05) cover.push([lo, hi]); }
+    out.set(w.id, { e0: e[0], e1: e[1], cover }); }
+  return out; }
+// every imported piece belongs to a level (2026-11-07, as in Revit): its own, or the level its base stands on (the lowest level for
+// pieces below it: foundations, piers); a piece taller than its level shows in the levels it passes through, cut at the view's cut
+const importLevel = (o, model) => { const own = model.levels.find(l => l.id === o.lv); if (own) return own; if (!o.g || !Number.isFinite(o.g.z) || !model.levels.length) return null; const L = model.levels.slice().sort((a, b) => a.z - b.z); return L.filter(l => l.z <= o.g.z + 0.3).pop() || L[0]; };
+const importSpan = (o, model) => { const L = model.levels.slice().sort((a, b) => a.z - b.z), a = importLevel(o, model); if (!a || !o.g) return a ? [a] : []; const top = o.g.z + (o.g.h || 0); return L.filter((l) => l === a || (l.z > a.z && l.z < top - 0.3)); };
+const impLv = (o) => { const sp = importSpan(o, M); return !sp.length || sp.some((l) => l.id === LV); };   // a piece shows in the plan of each level it stands on or passes through
 // a point of the mesh (its own footprint coordinates) in the plan, after the piece's quarter turns
 // imported meshes turn freely (2026-11-01): o.ang (radians) about the footprint's centre; files from before, with quarter turns in
 // o.rot (0–3), read the same. o.w0, o.d0: the unturned footprint; o.g: the turned footprint's bounding box
@@ -5802,7 +5831,7 @@ window.S3 = (() => {
   }
   api.init = async (cv, ev) => {
     await lib(); if (R) return; canvas = cv;
-    R = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true }); R.setPixelRatio(Math.min(2, devicePixelRatio || 1)); R.outputColorSpace = T.SRGBColorSpace;
+    R = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true }); R.localClippingEnabled = true; R.setPixelRatio(Math.min(2, devicePixelRatio || 1)); R.outputColorSpace = T.SRGBColorSpace;
     scene = new T.Scene(); scene.background = new T.Color(window.PlotCloudUI?.viewportColor() || '#f2f3f5'); window.PlotCloudUI?.trackViewport(scene,R,()=>render());
     scene.add(new T.HemisphereLight(0xffffff, 0xcfc9bd, 1.9)); const sun = new T.DirectionalLight(0xfff6ea, 1.6); sun.position.set(-14, 26, 10); scene.add(sun); scene.add(sun.target); SUN.light = sun; const fill = new T.DirectionalLight(0xffffff, 0.35); fill.position.set(12, 8, -14); scene.add(fill);
     cam = new T.PerspectiveCamera(38, 1, 0.1, 2000); cam.position.set(18, 16, 22);
@@ -5889,27 +5918,32 @@ window.S3 = (() => {
     for (const lv of show) {
       const isCut = !o.all && lv.id === cur.id, top = lvs.indexOf(lv) === lvs.length - 1, below = lvs[lvs.indexOf(lv) - 1];
       // walls, split around windows and doors
-      for (const w of (o.walls === false ? [] : M.walls)) { if (w.lv !== lv.id || (o.hidden && o.hidden.has(w.id))) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue; const dir = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L], t = w.t || 0.2, ry = Math.atan2(dir[1], dir[0]);
+      const JN = wallJoins(M, lv.id);
+      for (const w of (o.walls === false ? [] : M.walls)) { if (w.lv !== lv.id || (o.hidden && o.hidden.has(w.id))) continue; const jn = JN.get(w.id) || { e0: 0, e1: 0, cover: [] }; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue; const dir = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L], t = w.t || 0.2, ry = Math.atan2(dir[1], dir[0]);
         const os = M.ops.filter((q) => q.wall === w.id && !(o.hidden && o.hidden.has(q.id))).map((q) => [q.pos - q.w / 2, q.pos + q.w / 2, q]).sort((a, b) => a[0] - b[0]);
-        const piece = (s0, s1, z0, z1, m, nm, ud) => { if (s1 - s0 < 0.005 || z1 - z0 < 0.005) return; const c = (s0 + s1) / 2, x = w.a[0] + dir[0] * c, y = w.a[1] + dir[1] * c; box(G, s1 - s0, z1 - z0, m === glassM ? 0.02 : nm === 'door' ? 0.05 : nm === 'frame' ? 0.08 : t, x, lv.z + (z0 + z1) / 2, -y, m, ry, nm, ud || { k: 'wall', id: w.id }); };
+        const piece = (s0, s1, z0, z1, m, nm, ud) => { if (s1 - s0 < 0.005 || z1 - z0 < 0.005) return; if (nm === 'wall' && jn.cover.length) { for (const [c0, c1] of jn.cover) { if (c1 <= s0 || c0 >= s1) continue; if (c0 > s0) piece(s0, c0, z0, z1, m, nm, ud); if (c1 < s1) piece(c1, s1, z0, z1, m, nm, ud); return; } }   /* drawn once where an earlier wall already stands */ const c = (s0 + s1) / 2, x = w.a[0] + dir[0] * c, y = w.a[1] + dir[1] * c; box(G, s1 - s0, z1 - z0, m === glassM ? 0.02 : nm === 'door' ? 0.05 : nm === 'frame' ? 0.08 : t, x, lv.z + (z0 + z1) / 2, -y, m, ry, nm, ud || { k: 'wall', id: w.id }); };
         const H = w.h || WBP.slabAnchor(M.levels, lv.id).wallH;   // v131: up to the slab top above (storey height = slab top to slab top)
-        let s = -t / 2; for (const [a, b, q] of os) { if (a > s) piece(s, a, 0, H, wallM, 'wall'); piece(a, b, 0, Math.min(q.sill, H), wallM, 'wall'); if (q.head < H) piece(a, b, q.head, H, wallM, 'wall'); if (q.gen || o.openings === false) { } else if (q.kind === 'win') { piece(a, b, q.sill, Math.min(q.head, H), glassM, 'glass', { k: 'op', id: q.id }); if (q.frame) { const fm = mat(q.frame), fw = 0.05, z0 = q.sill, z1 = Math.min(q.head, H), ud = { k: 'op', id: q.id }, nm2 = Math.max(0, Math.round((b - a) / 1.1) - 1);   /* steel sash in its own colour (2026-11-06) */ piece(a, a + fw, z0, z1, fm, 'frame', ud); piece(b - fw, b, z0, z1, fm, 'frame', ud); piece(a, b, z0, z0 + fw, fm, 'frame', ud); piece(a, b, z1 - fw, z1, fm, 'frame', ud); for (let k = 1; k <= nm2; k++) { const c = a + (b - a) * k / (nm2 + 1); piece(c - 0.025, c + 0.025, z0, z1, fm, 'frame', ud); } } } else if ((q.open ?? 1) < 0.05) piece(a, b, 0, Math.min(q.head, H), mat('#c9b79a'), 'door', { k: 'op', id: q.id }); s = Math.max(s, b); }
-        if (L + t / 2 > s) piece(s, L + t / 2, 0, H, wallM, 'wall');
+        let s = -jn.e0; for (const [a, b, q] of os) { if (a > s) piece(s, a, 0, H, wallM, 'wall'); piece(a, b, 0, Math.min(q.sill, H), wallM, 'wall'); if (q.head < H) piece(a, b, q.head, H, wallM, 'wall'); if (q.gen || o.openings === false) { } else if (q.kind === 'win') { piece(a, b, q.sill, Math.min(q.head, H), glassM, 'glass', { k: 'op', id: q.id }); if (q.frame) { const fm = mat(q.frame), fw = 0.05, z0 = q.sill, z1 = Math.min(q.head, H), ud = { k: 'op', id: q.id }, nm2 = Math.max(0, Math.round((b - a) / 1.1) - 1);   /* steel sash in its own colour (2026-11-06) */ piece(a, a + fw, z0, z1, fm, 'frame', ud); piece(b - fw, b, z0, z1, fm, 'frame', ud); piece(a, b, z0, z0 + fw, fm, 'frame', ud); piece(a, b, z1 - fw, z1, fm, 'frame', ud); for (let k = 1; k <= nm2; k++) { const c = a + (b - a) * k / (nm2 + 1); piece(c - 0.025, c + 0.025, z0, z1, fm, 'frame', ud); } } } else if ((q.open ?? 1) < 0.05) piece(a, b, 0, Math.min(q.head, H), mat('#c9b79a'), 'door', { k: 'op', id: q.id }); s = Math.max(s, b); }
+        if (L + jn.e1 > s) piece(s, L + jn.e1, 0, H, wallM, 'wall');
         for (const [, , q] of os) if (q.gen && o.openings !== false) { const gg = genGroup(T, q.gen, 'thumb', (col, glass) => mat(col, glass ? { transparent: true, opacity: 0.5, depthWrite: false } : {})); gg.position.set(w.a[0] + dir[0] * q.pos, lv.z, -(w.a[1] + dir[1] * q.pos)); gg.rotation.y = ry + (q.flip === -1 ? Math.PI : 0); gg.name = 'op'; gg.userData = { k: 'op', id: q.id }; G.add(gg); }
         if (isCut) { // the cut face, darker, so the plan reads from above
-          const cut = new T.Mesh(new T.BoxGeometry(L + t, 0.012, t), cutM); const c = L / 2; cut.position.set(w.a[0] + dir[0] * c, lv.z + H + 0.006, -(w.a[1] + dir[1] * c)); cut.rotation.y = ry; cut.name = 'wallcut'; G.add(cut); }
+          const cut = new T.Mesh(new T.BoxGeometry(Math.max(0.01, L + jn.e0 + jn.e1), 0.012, t), cutM); const c = (L + jn.e1 - jn.e0) / 2; cut.position.set(w.a[0] + dir[0] * c, lv.z + H + 0.006, -(w.a[1] + dir[1] * c)); cut.rotation.y = ry; cut.name = 'wallcut'; G.add(cut); }
       }
       // Model floors are exact extruded outlines, including slabs outside enclosed rooms.
       const R0=S.L[lv.id],holes=below?M.voids.filter(v=>v.lv===below.id&&!(o.hidden&&o.hidden.has(v.id))):[];
-      for(const f of o.floors===false?[]:(M.floors||[])){if(f.lv!==lv.id||(o.hidden&&o.hidden.has(f.id)))continue;const points=floorPoints(f),thickness=f.thickness||lv.slab||.22,sh=new T.Shape(points.map(p=>new T.Vector2(p[0],p[1]))),rings=(f.holes||[]).slice();
+      let fk=0;   /* slabs on one level that overlap: each drawn in its own order, so their coplanar tops never flicker (2026-11-07) */
+      for(const f of o.floors===false?[]:(M.floors||[])){if(f.lv!==lv.id||(o.hidden&&o.hidden.has(f.id)))continue;fk++;const points=floorPoints(f),thickness=f.thickness||lv.slab||.22,sh=new T.Shape(points.map(p=>new T.Vector2(p[0],p[1]))),rings=(f.holes||[]).slice();
         for(const v of holes){const ring=[[v.x,v.y],[v.x+v.w,v.y],[v.x+v.w,v.y+v.d],[v.x,v.y+v.d]];if(ring.every(p=>floorContains(f,p)))rings.push(ring);}
-        for(const ring of rings)sh.holes.push(new T.Path(ring.map(p=>new T.Vector2(p[0],p[1]))));const geo=new T.ExtrudeGeometry(sh,{depth:thickness,bevelEnabled:false});geo.rotateX(-Math.PI/2);const me=new T.Mesh(geo,f.preview?mat('#d8402a',{transparent:true,opacity:.45,depthWrite:false}):slabM);me.position.y=lv.z-thickness;me.name=f.preview?'slab-preview':'slab';me.userData={k:'floor',id:f.id,level:lv.id,thickness};G.add(me);
+        for(const ring of rings)sh.holes.push(new T.Path(ring.map(p=>new T.Vector2(p[0],p[1]))));const geo=new T.ExtrudeGeometry(sh,{depth:thickness,bevelEnabled:false});geo.rotateX(-Math.PI/2);const me=new T.Mesh(geo,f.preview?mat('#d8402a',{transparent:true,opacity:.45,depthWrite:false}):mat('#d9d4ca',{...opq(o.opF),polygonOffset:true,polygonOffsetFactor:-fk*0.5,polygonOffsetUnits:-fk*2}));me.position.y=lv.z-thickness;me.name=f.preview?'slab-preview':'slab';me.userData={k:'floor',id:f.id,level:lv.id,thickness};G.add(me);
       }
       if(o.walls!==false)for(const f of M.fences||[]){if(f.lv!==lv.id||(o.hidden&&o.hidden.has(f.id)))continue;const h=f.h||1.1,post=f.post||.06,rail=f.rail||.05,m=mat('#737b83'),ud={k:'fence',id:f.id,level:lv.id};const seen=new Set();for(const p of fencePostPoints(f)){const key=p.map(x=>x.toFixed(5)).join(',');if(seen.has(key))continue;seen.add(key);box(G,post,h,post,p[0],lv.z+h/2,-p[1],m,0,'fence-post',ud);}for(let i=1;i<f.points.length;i++){const a=f.points[i-1],b=f.points[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<.02)continue;const angle=Math.atan2(b[1]-a[1],b[0]-a[0]);for(const z of [.35*h,.95*h])box(G,L,rail,rail,(a[0]+b[0])/2,lv.z+z,-(a[1]+b[1])/2,m,angle,'fence-rail',ud);}}
       if(!R0)continue;
       // roof over the top level (not when cut)
-      if (top && !o.noRoof && (o.all || !isCut)) { const roofs = M.voids.filter((v) => v.lv === lv.id); const sk = roofs.length ? (i, j) => { const x = R0.x0 + (i + 0.5) * 0.1, y = R0.y0 + (j + 0.5) * 0.1; return roofs.some((v) => x > v.x && x < v.x + v.w && y > v.y && y < v.y + v.d); } : null;
-        for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of rects(R0, r.id, sk)) box(G, w + 0.2, 0.25, d + 0.2, x + w / 2, lv.z + lv.h + 0.125, -(y + d / 2), slabM, 0, 'roof');
+      // (2026-11-07) and over the parts of any lower level that the level above does not cover: a roof wherever nothing stands above
+      const upL = lvs[lvs.indexOf(lv) + 1], upR = upL && S.L[upL.id], upF = upL ? (M.floors || []).filter((f) => f.lv === upL.id) : [];
+      const covered = (x, y) => !!upL && ((upR && STC.roomAtR(upR, x, y) >= 0) || upF.some((f) => { const P = floorPoints(f); let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a2 = P[i], b2 = P[j]; if ((a2[1] > y) !== (b2[1] > y) && x < (b2[0] - a2[0]) * (y - a2[1]) / (b2[1] - a2[1]) + a2[0]) c = !c; } return c; }));
+      if (!o.noRoof && (o.all || !isCut) && (top || upL)) { const roofs = M.voids.filter((v) => v.lv === lv.id); const sk = (i, j) => { const x = R0.x0 + (i + 0.5) * 0.1, y = R0.y0 + (j + 0.5) * 0.1; return roofs.some((v) => x > v.x && x < v.x + v.w && y > v.y && y < v.y + v.d) || covered(x, y); };
+        for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of rects(R0, r.id, sk)) box(G, w + (top ? 0.2 : 0), 0.25, d + (top ? 0.2 : 0), x + w / 2, lv.z + lv.h + 0.125, -(y + d / 2), slabM, 0, 'roof');
         for (const v of roofs) if (v.glazed) box(G, v.w, 0.03, v.d, v.x + v.w / 2, lv.z + lv.h + 0.2, -(v.y + v.d / 2), glassM, 0, 'rooflight'); }
       // stairs: a simple flight in the stair opening of the level below this one's ceiling
       for (const v of M.voids) if (v.lv === lv.id && v.kind === 'stair') { const up = lvs[lvs.indexOf(lv) + 1]; if (!up) continue; const rise = up.z - lv.z, n = Math.max(6, Math.round(rise / 0.18)), along = v.d >= v.w; for (let k = 0; k < n; k++) { const f = (k + 0.5) / n, h = rise * (k + 1) / n; if (along) box(G, v.w * 0.9, h, v.d / n, v.x + v.w / 2, lv.z + h / 2, -(v.y + v.d * f), mat('#cfc8bb'), 0, 'stair'); else box(G, v.w / n, h, v.d * 0.9, v.x + v.w * f, lv.z + h / 2, -(v.y + v.d / 2), mat('#cfc8bb'), 0, 'stair'); } }
@@ -5952,10 +5986,11 @@ window.S3 = (() => {
     // imported meshes (kept beside the model, see the block "Imported meshes in Plan Studio's own model")
     const IL = o.imports !== undefined ? o.imports : (o.all ? (M.imports || []).filter((q) => !IMP_OFF.has(q.layer)) : null);
     if (IL && IL.length) { const IG = new T.Group(); IG.name = 'imports';
-      for (const im of IL) { const level = importLevel(im,M); if (level && !show.some(l => l.id === level.id)) continue; if (o.hidden && o.hidden.has(im.id)) continue; const m = meshOf(im); if (!m || m.length < 9) continue; const pos = new Float32Array(m.length);
+      const cutTop = o.all ? Infinity : cur.z + (cur.h || 3) + 0.001;
+      for (const im of IL) { const span = importSpan(im, M); if (span.length && !span.some((l) => show.some((q) => q.id === l.id))) continue; if (o.hidden && o.hidden.has(im.id)) continue; const m = meshOf(im); if (!m || m.length < 9) continue; const pos = new Float32Array(m.length);
         for (let i = 0; i + 2 < m.length; i += 3) { const q = impXY(im, m[i], m[i + 1]); pos[i] = q[0]; pos[i + 1] = im.g.z + m[i + 2]; pos[i + 2] = -q[1]; }
         const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.computeVertexNormals();
-        const me = new T.Mesh(geo, mat(im.ref ? '#ddd6ca' : '#cdcac3', { side: T.DoubleSide })); me.name = 'import'; me.userData = { k: 'imp', id: im.id }; IG.add(me); }
+        const clip = im.g.z + (im.g.h || 0) > cutTop ? cutTop : null, me = new T.Mesh(geo, mat(im.ref ? '#ddd6ca' : '#cdcac3', clip != null ? { side: T.DoubleSide, clippingPlanes: [new T.Plane(new T.Vector3(0, -1, 0), clip)] } : { side: T.DoubleSide })); me.name = 'import'; me.userData = { k: 'imp', id: im.id, clipZ: clip }; IG.add(me); }   /* cut at the top of the level shown */
       G.add(IG); }
     // the ground of the site as a topographic block (2026-10-30): the terrain surface with contours, water, green and roads
     // drawn on it (a texture over the terrain grid, so they follow the ground exactly), solid sides and a base
@@ -6110,7 +6145,7 @@ window.S3 = (() => {
     grp.traverse((m) => { if (!m.isMesh) return; const ud = tagOf(m); if (!ud || ud.k === 'site') return;
       const layer = ud.k === 'imp' ? sp.imports[ud.id] : (sp.ids && sp.ids[ud.id]) || sp.klayer[ud.k], lk = layer && sp.looks[layer]; if (!lk) return;   /* an object on a layer of its own (a stone wall, a terrace) takes that layer's look */
       if (!m.userData.__look0) m.userData.__look0 = m.material; const o0 = m.userData.__look0, glassy = !Array.isArray(o0) && (o0.transparent || o0.opacity < 1); if (ud.k === 'op' && !glassy) return;   // doors and frames keep theirs; the glazing layer is the panes
-      const key = lk.color + '|' + lk.opacity; let mt = LOOK.mats.get(key); if (!mt) { mt = new T.MeshLambertMaterial({ color: new T.Color(lk.color), transparent: lk.opacity < 1, opacity: lk.opacity, depthWrite: lk.opacity >= 1, side: T.DoubleSide }); LOOK.mats.set(key, mt); }
+      const cz = m.userData.clipZ ?? (tagOf(m) || {}).clipZ, po = !Array.isArray(o0) && o0.polygonOffset ? [o0.polygonOffsetFactor, o0.polygonOffsetUnits] : null, key = lk.color + '|' + lk.opacity + '|' + (cz ?? '') + '|' + (po ? po.join(',') : ''); let mt = LOOK.mats.get(key); if (!mt) { mt = new T.MeshLambertMaterial({ color: new T.Color(lk.color), transparent: lk.opacity < 1, opacity: lk.opacity, depthWrite: lk.opacity >= 1, side: T.DoubleSide, ...(cz != null ? { clippingPlanes: [new T.Plane(new T.Vector3(0, -1, 0), cz)] } : {}), ...(po ? { polygonOffset: true, polygonOffsetFactor: po[0], polygonOffsetUnits: po[1] } : {}) }); LOOK.mats.set(key, mt); }   /* keeps a piece's cut and its draw order */
       m.material = mt; });
   }
   api.layerLooks = (spec) => { LOOK.spec = spec; lookApply(); render(); };
