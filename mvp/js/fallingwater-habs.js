@@ -65,3 +65,26 @@ export const HATCH = { x0: 2016, y0: 1995, x1: 2205, y1: 2140, bottom: -2.823, p
 // Bear Run, from the first-floor plan (banks) and the south elevation (levels): centreline px, water level m, width px; the falls
 // drop about 5.1 m from the lip under the living-room terrace into the pool below
 export const STREAM = [[4420, 2130, -3.12, 640], [3500, 2125, -3.15, 640], [2700, 2140, -3.18, 620], [2200, 2230, -3.22, 600], [1900, 2350, -3.25, 560], [1720, 2440, -3.27, 520], [1650, 2500, -8.35, 520], [1350, 2660, -8.4, 560], [950, 2560, -8.45, 420], [500, 2360, -8.5, 360], [0, 2250, -8.55, 340]];
+// The site plan (sheet 2, 1" = 10': 10 px to the foot here), registered on the plans by the long roof slab over the bedrooms and the
+// master terrace (both drawn on each sheet): plan px = (site px − SITE0) × 2.5 + PLAN0
+export const SITE0 = [2087, 1856], PLAN0 = [1152, 1836];
+export const sitePx = (x, y) => [(x - SITE0[0]) * 2.5 + PLAN0[0], (y - SITE0[1]) * 2.5 + PLAN0[1]];
+// The guest house (1939) up the hill to the north, from the site plan: its walls (inside its roof), the servants' wing and carport
+// to the west, the stone terrace and the plunge pool to the east, the stepped canopy along its south side, and the covered walkway
+// curving up from the bridge behind the main house. Footprints from the site plan; heights, rooms and openings are assumptions.
+export const GUEST = {
+  roof: [2297, 666, 2797, 824], walls: [2317, 686, 2777, 804], partition: 2545,
+  south: { doors: [[2390, 2425], [2700, 2735]] }, east: { doors: [[725, 765]] },
+  rooms: [['Guest living room', 2430, 745], ['Guest bedroom', 2660, 745]],
+  carport: { roof: [2032, 399, 2297, 832], back: [[2042, 820], [2042, 410], [2290, 410]], piers: 4 },
+  terrace: [2797, 676, 3255, 803], pool: [2935, 812, 3233, 940],
+  canopy: [2560, 834, 2890, 887],
+  walkway: [[2470, 1300], [2400, 1260], [2230, 1250], [2100, 1175], [2055, 1065], [2080, 960], [2210, 850]], walkwayWidth: 79,
+};
+// curved pieces, as arcs: centre px, radius px, from and to angle (degrees, drawing axes: 0 east, 90 down the sheet), thickness px
+export const ARCS = {
+  L2: [{ c: [2048, 1292], r: 100, a0: 180, a1: 270, t: 12, kind: 'stone', name: 'Curved wall round the stair down' }],
+};
+// the hatch landing's semicircular parapet round the planter (first-floor plan), and the round stair tower at the foot of the walkway
+export const HATCH_PARAPET = { c: [2262, 2070], r: 78, a0: -90, a1: 90 };
+export const TOWER = { site: [2470, 1300], r: 48, a0: 200, a1: 520 };

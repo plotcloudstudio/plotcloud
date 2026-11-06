@@ -1,11 +1,11 @@
 import {landscape,ground} from './fallingwater-landscape.js';
 import {details} from './fallingwater-details.js';
-import * as H from './fallingwater-habs.js?v=habs-20261107-1';
+import * as H from './fallingwater-habs.js?v=guest-20261107-1';
 // The main house traced from the HABS PA-5346 measured drawings (fallingwater-habs.js: plans, sections, south elevation), at their
 // true scale and levels; the site and terrain round it approximate. Not as-built survey data; source rasters are not shipped.
 export const title='Fallingwater · main house';
 export const source='https://www.loc.gov/resource/hhh.pa1690.sheet?st=gallery';
-export const site={label:'Fallingwater, Mill Run, Pennsylvania',lat:39.90631,lon:-79.46804,north:45,tz:'America/New_York',wind:2.5,windDir:'SW'};
+export const site={label:'Fallingwater, Mill Run, Pennsylvania',lat:39.90631,lon:-79.46804,north:315,tz:'America/New_York',wind:2.5,windDir:'SW'};
 const round=n=>+n.toFixed(3);
 // a drawing pixel (25 px to the foot) to plan metres; the sheets' y runs down, the plan's up
 const xy=(x,y)=>[round((x-H.ORIGIN[0])*H.PX),round((H.ORIGIN[1]-y)*H.PX)];
@@ -27,6 +27,9 @@ export function caseModel(open=.05){
   const along=(q)=>Math.abs(x1-x0)>=Math.abs(y1-y0)?Math.abs(q-x0)*H.PX:Math.abs(q-y0)*H.PX;
   if(kind==='glass'){const D=(extra||[]).map(([f,g])=>[along(f),along(g)]).sort((p,q)=>p[0]-q[0]);let s0=.05;for(const [f,g] of D){op(id,s0,f-.02,'win');op(id,f,g,'door');s0=g+.02;}op(id,s0,L-.05,'win');}
   else if(kind==='door')op(id,.05,L-.05,'door');}
+ // arc walls, as Plan Studio draws them: short straight runs along the curve (their joins are mitred)
+ for(const [lv,list] of Object.entries(H.ARCS))for(const A of list){const n=Math.max(4,Math.round(Math.abs(A.a1-A.a0)/12)),grp=`arc${walls.length}`;
+  for(let k=0;k<n;k++){const p=(t)=>{const a=(A.a0+(A.a1-A.a0)*t)*Math.PI/180;return xy(A.c[0]+A.r*Math.cos(a),A.c[1]+A.r*Math.sin(a));};const id=wall(lv,p(k/n),p((k+1)/n),A.t*H.PX,A.kind==='glass'?'Walls':'Stonework');walls.find(w=>w.id===id).grp=grp;}}
  for(const [lv,list] of Object.entries(H.ROOMS))for(const [name,x,y] of list){const [a,b]=xy(x,y);names.push({lv,name,x:a,y:b});}
  const rect=(lv,x0,y0,x1,y1,layer,th,holes)=>{const [a,b]=xy(x0,y1),[c,d]=xy(x1,y0);floors.push({id:`f${floors.length+1}`,lv,x:a,y:b,w:round(c-a),d:round(d-b),thickness:th,object_type:'floor',layer,...(holes?{holes:holes.map(([p,q,r,s])=>[xy(p,q),xy(r,q),xy(r,s),xy(p,s)])}:{})});};
  for(const [lv,list] of Object.entries(H.FLOORS))for(const [x0,y0,x1,y1,holes] of list)rect(lv,x0,y0,x1,y1,'Flagstone floors',.3,holes);
@@ -38,12 +41,27 @@ export function caseModel(open=.05){
  const item=(lv,label,x0,y0,x1,y1,h,type)=>{const [a,b]=xy((x0+x1)/2,(y0+y1)/2);furn.push({id:`u${furn.length+1}`,lv,type:type||'box',name:label,label,x:a,y:b,w:round((x1-x0)*H.PX),d:round((y1-y0)*H.PX),h,rot:0,object_type:'furniture',layer:'Furniture'});};
  item('L1','Dining table',1667,1220,1750,1385,.74,'dining');item('L1','Living room table',1840,1780,1935,1930,.45,'coffee');item('L1','Kitchen counter',1100,1010,1150,1340,.9);item('L1','Kitchen range',1325,1310,1390,1385,.9);
  item('L2','Master bed',1638,1409,1809,1567,.55,'bed');item('L2','Guest bed',2144,1508,2304,1580,.55,'bed1');item('L2','Dressing room table',1180,1110,1300,1200,.74,'desk');
+ // ---- the guest house, a level of its own up the hill (site plan, sheet 2): stone walls on three sides, glass to the south with the
+ // same red sash, a living room and a bedroom; its floor just above the ground at its middle
+ const G=H.GUEST,gp=(x,y)=>xy(...H.sitePx(x,y)),[gx0,gy0,gx1,gy1]=G.walls,gc=gp((gx0+gx1)/2,(gy0+gy1)/2),gz=round(ground(...gc)+.6);
+ levels.push({id:'G1',name:'Guest house',z:gz,h:2.75});LV.G1=levels.at(-1);
+ const gw=(a,b,t,kind,doors)=>{const id=wall('G1',a,b,t,kind==='glass'?'Walls':'Stonework');const L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(kind==='glass'){let s0=.05;for(const [f,g] of doors||[]){op(id,s0,f-.02,'win');op(id,f,g,'door');s0=g+.02;}op(id,s0,L-.05,'win');}else for(const [f,g] of doors||[])op(id,f,g,'door');return id;};
+ const toAlong=(a0,v)=>(v-a0)*2.5*H.PX;
+ gw(gp(gx0,gy0),gp(gx1,gy0),.45,'stone');gw(gp(gx0,gy0),gp(gx0,gy1),.45,'stone');gw(gp(gx1,gy0),gp(gx1,gy1),.45,'stone',G.east.doors.map(([f,g])=>[toAlong(gy0,f),toAlong(gy0,g)]));
+ gw(gp(gx0,gy1),gp(gx1,gy1),.12,'glass',G.south.doors.map(([f,g])=>[toAlong(gx0,f),toAlong(gx0,g)]));
+ gw(gp(G.partition,gy0),gp(G.partition,gy1),.15,'part',[[toAlong(gy0,gy1)-1.6,toAlong(gy0,gy1)-.7]]);
+ for(const [name,x,y] of G.rooms){const [a,b]=gp(x,y);names.push({lv:'G1',name,x:a,y:b});}
+ { const [a,b]=gp(gx0,gy1),[c,d]=gp(gx1,gy0);floors.push({id:`f${floors.length+1}`,lv:'G1',x:a,y:b,w:round(c-a),d:round(d-b),thickness:.3,object_type:'floor',layer:'Flagstone floors'}); }
+ { const [x0,y0,x1,y1]=G.terrace,[a,b]=gp(x0,y1),[c,d]=gp(x1,y0);floors.push({id:`f${floors.length+1}`,lv:'G1',x:a,y:b,w:round(c-a),d:round(d-b),thickness:.45,object_type:'floor',layer:'Structure'}); }
+ const gitem=(label,x0,y0,x1,y1,h,type)=>{const [a,b]=gp((x0+x1)/2,(y0+y1)/2);furn.push({id:`u${furn.length+1}`,lv:'G1',type,name:label,label,x:a,y:b,w:round((x1-x0)*2.5*H.PX),d:round((y1-y0)*2.5*H.PX),h,rot:0,object_type:'furniture',layer:'Furniture'});};
+ gitem('Guest bed',2600,700,2665,722,.5,'bed');gitem('Guest sofa',2350,692,2440,712,.8,'sofa');
  item('L3','Study desk',1110,1040,1300,1090,.74,'desk');item('L3','Alcove bed',1880,1130,2030,1200,.5,'bed1');
  // Site diagram: Bear Run and the sloping bank are approximated from the survey.
  // Rotate plan-space coordinates back into the site's east/north frame.
- const r=Math.SQRT1_2, world=([x,y])=>[(x+y)*r,(y-x)*r];
- const {water,features,centre}=landscape(),detail=details(xy,ground),n=201,step=2.5,z=[];
- for(let j=0;j<n;j++)for(let i=0;i<n;i++){const e=-250+step*i,k=-250+step*j;z.push(round(ground((e-k)*r,(e+k)*r)));}
+ // true north is 45° clockwise from the drawings' up (the HABS north arrow), so the plan's up is north-west
+ const r=Math.SQRT1_2, world=([x,y])=>[(x-y)*r,(x+y)*r];
+ const {water,features,centre}=landscape(),detail=details(xy,ground,{gz}),n=201,step=2.5,z=[];
+ for(let j=0;j<n;j++)for(let i=0;i<n;i++){const e=-250+step*i,k=-250+step*j;z.push(round(ground((e+k)*r,(k-e)*r)));}
  const paths=[{id:'approach',name:'Approach to main house',cls:'path',width:2.1,pts:[[30,10],[25,8],[22,5],[23,2],[24,0]].map(p=>world(p))},{id:'woodland-path',name:'Woodland path',cls:'path',width:1.6,pts:[[-22,10],[-16,9],[-10,8],[-5,9],[-2,11],[4,13],[8,13]].map(p=>world(p))}];
  const origin={lat:site.lat,lon:site.lon,label:site.label};
  const context={v:1,id:'habs-pa5346-site',version:3,crs:'local-tm',origin,north:0,boundary:{kind:'radius',r:250},tz:-5,dst:1,buildings:[],roads:paths,trees:[],features3d:features,areas:[{id:'bear-run',kind:'water',name:'Bear Run',pts:water,water:{type:'stream',centre,depth:.6,speed:.8,discharge:.5}},{id:'guest-pool',kind:'water',name:'Guest house plunge pool',pts:detail.pool.pts.map(p=>world(p).map(v=>+v.toFixed(2))),water:{type:'pond',level:detail.pool.level,depth:+(detail.pool.level-detail.pool.bottom).toFixed(2)}}],sources:[{provider:'HABS PA-5346',attribution:'Library of Congress · HABS PA-5346 measured drawings; plans traced at true scale, levels from the sections',url:source},{provider:'USGS 3DEP',attribution:'USGS National Map · outer terrain',url:'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer'}],terrain:{provider:'USGS 3DEP outer terrain + HABS section-based creek reconstruction',res:step,relief:round(Math.max(...z)-Math.min(...z)),grid:{x0:-250,y0:-250,step,nx:n,ny:n,z}}};

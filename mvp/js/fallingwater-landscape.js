@@ -2,9 +2,9 @@
 // vertical profile is schematic, based on sections, not survey elevations or hydraulics.
 import dem from './fallingwater-dem.js';
 import siteDem from './fallingwater-site-dem.js';
-import {STREAM,ORIGIN,PX} from './fallingwater-habs.js?v=habs-20261107-1';
+import {STREAM,ORIGIN,PX} from './fallingwater-habs.js?v=guest-20261107-1';
 const r=Math.SQRT1_2;
-const world=([x,y,z])=>[(x+y)*r,(y-x)*r,z];
+const world=([x,y,z])=>[(x-y)*r,(x+y)*r,z];   // plan to site: true north is 45° clockwise from the drawings' up
 // [x along the stream, its middle, width, water surface] in plan metres, the living level at 0: Bear Run as the HABS first-floor plan
 // draws its banks and the south elevation its levels (upper stream about 3.1 m below the living room, the main falls about 5.1 m)
 const profile=STREAM.map(([x,y,z,w])=>[+((x-ORIGIN[0])*PX).toFixed(3),+((ORIGIN[1]-y)*PX).toFixed(3),+(w*PX).toFixed(2),z]).sort((a,b)=>a[0]-b[0]);

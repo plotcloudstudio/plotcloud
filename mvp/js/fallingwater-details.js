@@ -1,8 +1,8 @@
 // Editable layer groups for details traced approximately from HABS plans and sections (2026-11-06: rounded ochre parapets, the
 // rear trellis, the hearth boulder and kettle, built-ins, the guest house, its pool and the covered walkway up the hill).
 // Positions and sizes are approximate: a diagrammatic reconstruction for study, not as-built survey data.
-import * as H from './fallingwater-habs.js?v=habs-20261107-1';
-export function details(xy, ground = () => 0){
+import * as H from './fallingwater-habs.js?v=guest-20261107-1';
+export function details(xy, ground = () => 0, opt = {}){
  const groups={};
  const tri=(name,layer,a,b,c)=>{const g=groups[name]??={layer,p:[]};g.p.push(...a,...b,...c);};
  const quad=(name,layer,a,b,c,d)=>{tri(name,layer,a,b,c);tri(name,layer,a,c,d);};
@@ -38,6 +38,9 @@ export function details(xy, ground = () => 0){
  // the hatch stair: from the living room down through the floor to the platform just above Bear Run (top of platform -9'-3 1/8")
  { const Hh=H.HATCH,[a,b]=xy(Hh.x0,Hh.y1),[c,d]=xy(Hh.x1,Hh.y0),n=15,w=d-b;for(let k=0;k<n;k++){const z1=-(k+1)*(-Hh.bottom)/n;box('Hatch stair','Stairs',a+(c-a)*(k+.5)/n,(b+d)/2,z1,(c-a)/n+.01,w*.8,.06);}
    const [p,q]=xy(Hh.platform[0],Hh.platform[3]),[r,t]=xy(Hh.platform[2],Hh.platform[1]);box('Hatch stair platform','Stairs',(p+r)/2,(q+t)/2,Hh.bottom-.2,r-p,t-q,.2); }
+ // the hatch landing's semicircular parapet round the planter, and the round stair tower at the foot of the covered walkway
+ const arcRun=(name,layer,c,r,a0,a1,z,w,h,round,P2=xy)=>{const n=Math.max(6,Math.round(Math.abs(a1-a0)/10));for(let k=0;k<n;k++){const p=(t)=>{const a=(a0+(a1-a0)*t)*Math.PI/180;return P2(c[0]+r*Math.cos(a),c[1]+r*Math.sin(a));};run(name,layer,p(k/n),p((k+1)/n),z,w,h,round);}};
+ { const A=H.HATCH_PARAPET;arcRun('Hatch landing parapet','Terrace rails',A.c,A.r,A.a0,A.a1,-.57,.25,1.53,true); }
  // the boulder of the site, left rising through the living-room floor in front of the hearth, and Wright's red kettle in the fireplace
  { const [x,y]=xy(1510,1510);rock('Hearth boulder','Stonework',x,y,-.2,1.1,.8,.42,2); }
  { const [x,y]=xy(1405,1520);ball('Kettle in the hearth','Kettle',x,y,.05,.28); }
@@ -47,39 +50,33 @@ export function details(xy, ground = () => 0){
  // the concrete trellis over the drive behind the house (one beam bends round a tree in the real house; straight here)
  for(let i=0;i<9;i++){const x=2060+i*70;run('Rear trellis','Terrace rails',xy(x,1060),xy(x,800),4.95,.2,.32);}
  run('Rear trellis','Terrace rails',xy(2040,800),xy(2640,800),4.95,.3,.32);
- // ---- the guest house (1939), up the hill to the north-west, its plunge pool, and the covered walkway that climbs to it.
- // Plan metres; the floor is set just above the highest ground under it, on a stone plinth.
- const G0=[-31,26],G1=[-17,33.5],T0=[-31,19.5],T1=[-20,26],PO=[[-25.6,20.4],[-20.8,20.4],[-20.8,23.8],[-25.6,23.8]];
- // the floor at the ground of the house's middle and a little over: the uphill side is cut into the hill, the downhill side stands on its plinth
- const gf=+(ground(-24,29.75)+.6).toFixed(2);
- let gmin=Infinity;for(const x of [-31,-24,-17])for(const y of [19.5,26,33.5])gmin=Math.min(gmin,ground(x,y));
- box('Guest house plinth','Stonework',(G0[0]+G1[0])/2,(G0[1]+G1[1])/2,gmin-.3,G1[0]-G0[0],G1[1]-G0[1],gf-gmin+.3-.27);
- for(const x of [-30.4,-26])box('Guest house terrace piers','Stonework',x,21,gmin-.3,.6,.6,gf-gmin-.15);
- box('Guest house floor','Structure',(G0[0]+G1[0])/2,(G0[1]+G1[1])/2,gf-.25,G1[0]-G0[0],G1[1]-G0[1],.25);
- // stone walls on the hill side and the ends; the south side opens to the terrace in glass (as Glazing, without the sash)
- run('Guest house stone walls','Stonework',[G0[0],G1[1]],[G1[0],G1[1]],gf,.45,2.7);run('Guest house stone walls','Stonework',[G0[0],G0[1]],[G0[0],G1[1]],gf,.45,2.7);run('Guest house stone walls','Stonework',[G1[0],G0[1]],[G1[0],G1[1]],gf,.45,2.7);
- run('Guest house stone walls','Stonework',[-24,G0[1]],[-24,G1[1]],gf,.3,2.7);box('Guest house chimney','Stonework',-24,31.8,gf,1.1,1.1,4.1);
- run('Guest house glazing','Guest glazing',[G0[0],G0[1]],[G1[0],G0[1]],gf+.05,.06,2.45);
- box('Guest house roof','Terrace rails',(G0[0]+G1[0])/2,(G0[1]+G1[1])/2-.6,gf+2.7,G1[0]-G0[0]+2.4,G1[1]-G0[1]+2.6,.32);
- // the terrace slab, open where the pool is
- const slab=(x0,y0,x1,y1)=>{if(x1-x0>.05&&y1-y0>.05)box('Guest house terrace','Structure',(x0+x1)/2,(y0+y1)/2,gf-.42,x1-x0,y1-y0,.42);};
- slab(T0[0],T0[1],PO[0][0],T1[1]);slab(PO[1][0],T0[1],T1[0],T1[1]);slab(PO[0][0],T0[1],PO[1][0],PO[0][1]);slab(PO[0][0],PO[2][1],PO[1][0],T1[1]);
- run('Guest house terrace parapet','Terrace rails',[T0[0],T0[1]],[T1[0],T0[1]],gf,.3,.95,true);run('Guest house terrace parapet','Terrace rails',[T1[0],T0[1]],[T1[0],T1[1]],gf,.3,.95,true);run('Guest house terrace parapet','Terrace rails',[T0[0],T0[1]],[T0[0],T1[1]],gf,.3,.95,true);
- // the plunge pool, sunk into the terrace: its basin here, its water a site water body (see the case's areas)
- const pool={pts:PO,level:+(gf-.25).toFixed(2),bottom:+(gf-1.6).toFixed(2)};
- for(let i=0;i<4;i++)run('Guest house pool basin','Terrace rails',PO[i],PO[(i+1)%4],pool.bottom,.22,gf-pool.bottom+.02);
- box('Guest house pool basin','Terrace rails',(PO[0][0]+PO[1][0])/2,(PO[0][1]+PO[2][1])/2,pool.bottom-.25,PO[1][0]-PO[0][0]+.22,PO[2][1]-PO[0][1]+.22,.25);
- // the covered walkway: from the bedroom-level bridge behind the main house up to the guest house, its canopy stepping down the
- // slope in short flat runs on thin steel posts
- const W=[xy(1950,560),[6.4,18.5],[2.5,23.2],[-4,25.6],[-10.5,26.2],[-16,25.4]],z0=H.LEVELS[1].z;let L=0;const seg=[];for(let i=1;i<W.length;i++){const l=Math.hypot(W[i][0]-W[i-1][0],W[i][1]-W[i-1][1]);seg.push([L,l]);L+=l;}
- const at2=(s)=>{let i=0;while(i<seg.length-1&&seg[i][0]+seg[i][1]<s)i++;const u=(s-seg[i][0])/seg[i][1],a=W[i],b=W[i+1];return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];};
- const zAt=(s)=>{const t=s/L,f=t*t*(3-2*t);return z0+(gf-z0)*f;};
- const N=Math.ceil(L/2.4);for(let k=0;k<N;k++){const s0=k*L/N,s1=(k+1)*L/N,a=at2(s0),b=at2(s1),zs=zAt(s0),ze=zAt(s1),zm=Math.max(zs,ze);
-  run('Covered walkway path','Structure',a,b,Math.min(zs,ze)-.2,1.6,.2+Math.abs(ze-zs)*.5);
-  run('Covered walkway canopy','Terrace rails',a,b,zm+2.35,2.3,.16,false);
-  const gm=ground((a[0]+b[0])/2,(a[1]+b[1])/2);if(Math.min(zs,ze)-.25>gm+.3)box('Covered walkway piers','Stonework',(a[0]+b[0])/2,(a[1]+b[1])/2,gm-.2,.5,.5,Math.min(zs,ze)-.2-gm);
-  const u=[b[0]-a[0],b[1]-a[1]],ul=Math.hypot(...u)||1,n=[-u[1]/ul*1.05,u[0]/ul*1.05];box('Covered walkway posts','Walkway steel',a[0]+n[0],a[1]+n[1],Math.min(zs,ze)-.05,.08,.08,zm-Math.min(zs,ze)+2.4);}
-
+ // ---- the guest house up the hill (site plan, sheet 2): its roof overhang, the servants' wing and carport, the stone terrace and
+ // the plunge pool, the stepped canopy and the covered walkway; the guest house's walls and rooms are native (see the case)
+ const gp=(x,y)=>xy(...H.sitePx(x,y)),G=H.GUEST,gf=opt.gz??6;
+ const slabS=(name,layer,[x0,y0,x1,y1],z,h)=>{const [a,b]=gp(x0,y1),[c,d]=gp(x1,y0);box(name,layer,(a+c)/2,(b+d)/2,z,c-a,d-b,h);};
+ slabS('Guest house roof','Roof',G.roof,gf+2.75,.3);
+ // the servants' wing and the carport: a flat roof on stone walls at the back and piers to the drive
+ slabS('Carport roof','Roof',G.carport.roof,gf+2.6,.3);
+ for(let k=1;k<G.carport.back.length;k++){const a=gp(...G.carport.back[k-1]),b=gp(...G.carport.back[k]);run('Servants\' wing stone walls','Stonework',a,b,ground(...a)-.3,.45,gf+2.6-ground(...a)+.3);}
+ { const [x0,y0,x1,y1]=G.carport.roof;for(let k=0;k<G.carport.piers;k++){const y=y0+30+(y1-y0-60)*k/(G.carport.piers-1),p=gp(x1-12,y);box('Carport piers','Stonework',p[0],p[1],ground(...p)-.3,.6,.6,gf+2.6-ground(...p)+.3);} }
+ // the terrace's parapets (north and east) and the plunge pool sunk below it, spring-fed; its water is a site water body
+ { const [x0,y0,x1,y1]=G.terrace;run('Guest terrace parapet','Terrace rails',gp(x0,y0),gp(x1,y0),gf,.3,.95,true);run('Guest terrace parapet','Terrace rails',gp(x1,y0),gp(x1,y1),gf,.3,.95,true); }
+ const [px0,py0,px1,py1]=G.pool,PO=[gp(px0,py0),gp(px1,py0),gp(px1,py1),gp(px0,py1)],pool={pts:PO,level:+(gf-.55).toFixed(2),bottom:+(gf-2.0).toFixed(2)};
+ for(let i=0;i<4;i++)run('Guest house pool basin','Terrace rails',PO[i],PO[(i+1)%4],Math.min(pool.bottom,ground(...PO[i])-.2),.25,gf-.3-Math.min(pool.bottom,ground(...PO[i])-.2));
+ { const [a,b]=gp(px0,py1),[c,d]=gp(px1,py0);box('Guest house pool basin','Terrace rails',(a+c)/2,(b+d)/2,pool.bottom-.25,c-a,d-b,.25); }
+ // the stepped canopy along the guest house's south side: concrete squares stepping down to the terrace
+ { const [x0,y0,x1,y1]=G.canopy,n=8;for(let k=0;k<n;k++){const xa=x0+(x1-x0)*k/n,xb=x0+(x1-x0)*(k+1)/n;slabS('Stepped canopy','Terrace rails',[xa+2,y0,xb-2,y1],gf+2.45-k*.06,.16);} }
+ { const T=H.TOWER,c=gp(...T.site),g0=ground(...c);arcRun('Walkway stair tower','Stonework',T.site,T.r,T.a0,T.a1,g0-.3,.35,H.LEVELS[1].z+2.6-g0+.3,false,gp); }
+ // the covered walkway, as the site plan draws it: from the stair tower at the bridge behind the main house, round the hill and up
+ // to the guest house; its canopy steps up in short flat runs on thin steel posts
+ const W=[xy(1950,560),...G.walkway.map(([x,y])=>gp(x,y))],z0=H.LEVELS[1].z,wid=G.walkwayWidth*2.5*H.PX;let L=0;const seg=[];for(let i=1;i<W.length;i++){const l=Math.hypot(W[i][0]-W[i-1][0],W[i][1]-W[i-1][1]);seg.push([L,l]);L+=l;}
+ const at2=(s0)=>{let i=0;while(i<seg.length-1&&seg[i][0]+seg[i][1]<s0)i++;const u=(s0-seg[i][0])/seg[i][1],a=W[i],b=W[i+1];return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];};
+ const zAt=(s0)=>{const t=s0/L,f=t*t*(3-2*t);return z0+(gf-z0)*f;};
+ const N=Math.ceil(L/1.6);for(let k=0;k<N;k++){const s0=k*L/N,s1=(k+1)*L/N,a=at2(s0),b=at2(s1),zs=zAt(s0),ze=zAt(s1),zm=Math.max(zs,ze),gm=ground((a[0]+b[0])/2,(a[1]+b[1])/2);
+  run('Covered walkway path','Structure',a,b,Math.min(zs,ze)-.2,wid*.7,.2+Math.abs(ze-zs)*.5);
+  run('Covered walkway canopy','Terrace rails',a,b,zm+2.35,wid,.16,false);
+  if(Math.min(zs,ze)-.25>gm+.3)box('Covered walkway piers','Stonework',(a[0]+b[0])/2,(a[1]+b[1])/2,gm-.2,.45,.45,Math.min(zs,ze)-.2-gm);
+  if(k%2===0){const u=[b[0]-a[0],b[1]-a[1]],ul=Math.hypot(...u)||1,n=[-u[1]/ul*wid*.45,u[0]/ul*wid*.45];box('Covered walkway posts','Walkway steel',a[0]+n[0],a[1]+n[1],Math.min(zs,ze)-.05,.08,.08,zm-Math.min(zs,ze)+2.4);}}
  const imports=[],meshes={};
  for(const [name,{layer,p}] of Object.entries(groups)){
   const id='habs-detail-'+imports.length,min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];

@@ -5588,6 +5588,9 @@ function wallJoins(M, lvId) {
     [w.a, w.b].forEach((P, k) => {
       const meet = W.filter((v) => v !== w && (near(v.a, P) || near(v.b, P)));
       if (meet.length) { const cross = meet.filter((v) => !par(G.get(v.id), g)); if (!cross.length) return;   // in line with the next wall: they simply abut
+        // a shallow bend (the segments of an arc wall, 2026-11-07): both run on by half the thickness × tan(half the bend), a mitre
+        const sinA = Math.max(...cross.map((v) => { const gv = G.get(v.id); return Math.abs(gv.d[0] * g.d[1] - gv.d[1] * g.d[0]); }));
+        if (sinA < 0.58) { const th = Math.asin(Math.min(1, sinA)); e[k] = Math.max(g.t, ...cross.map((v) => G.get(v.id).t)) / 2 * Math.tan(th / 2); return; }
         const grp = [w, ...cross].sort((x, y) => idx.get(x.id) - idx.get(y.id)), win = grp[0];
         if (win === w) e[k] = Math.max(...cross.map((v) => G.get(v.id).t)) / 2; else e[k] = -G.get(win.id).t / 2; return; }
       for (const h of W) { if (h === w) continue; const gh = G.get(h.id); if (par(gh, g)) continue; const u = (P[0] - h.a[0]) * gh.d[0] + (P[1] - h.a[1]) * gh.d[1]; if (u < 0.02 || u > gh.L - 0.02) continue;

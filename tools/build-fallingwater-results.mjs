@@ -13,7 +13,7 @@ const number=n=>{assert(Number.isFinite(n));return +n.toFixed(3);};
 const runs=[.05,.15].map(open=>{
  const original=caseModel(open),model=STC.migrate(structuredClone(original.studio));
  const validation=STC.validate(model);assert.deepEqual(validation.errors,[]);const scene=validation.S;
- assert.equal(new Set(scene.rooms.map(r=>r.lv)).size,3);
+ assert(new Set(scene.rooms.map(r=>r.lv)).size>=3);   // the main house's three levels, and the guest house
  assert(scene.ops.filter(o=>o.ext&&o.o.kind==='win').length>=8);
  const a=STC.airflow(model,scene);assert(a.total>0);
  const d=STC.daylight(model,scene,{step:.5,wp:.8,tau:.7});assert(d.pts.length>0);
