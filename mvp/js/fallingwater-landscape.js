@@ -4,7 +4,9 @@ import dem from './fallingwater-dem.js';
 import siteDem from './fallingwater-site-dem.js';
 const r=Math.SQRT1_2;
 const world=([x,y,z])=>[(x+y)*r,(y-x)*r,z];
-const profile=[[-23,-8.3,4.5,-3.75],[-16,-7.9,4.0,-3.65],[-10,-6.8,3.5,-3.55],[-5,-6.0,3.4,-3.5],[-3.4,-5.6,3.6,-3.48],[-2.9,-5.5,3.6,-2.32],[-.2,-5.1,3.1,-2.26],[.25,-5.05,3.1,-1.37],[3,-5.1,3.4,-1.33],[9,-5.3,4.0,-1.30],[16,-4.8,4.2,-1.22],[24,-3.9,4.0,-1.16],[31,-4,4.2,-1.1]];
+// [x along the stream, its middle, width, water surface] in plan metres, the living level at 0. Surface levels (2026-11-06): the
+// upper stream just under the foot of the hatch stair (-2.62), its two falls under the terraces, the lower pool below; schematic.
+const profile=[[-23,-8.3,4.5,-5.05],[-16,-7.9,4.0,-4.95],[-10,-6.8,3.5,-4.85],[-5,-6.0,3.4,-4.78],[-3.4,-5.6,3.6,-4.75],[-2.9,-5.5,3.6,-3.6],[-.2,-5.1,3.1,-3.55],[.25,-5.05,3.1,-2.78],[3,-5.1,3.4,-2.76],[9,-5.3,4.0,-2.72],[16,-4.8,4.2,-2.66],[24,-3.9,4.0,-2.6],[31,-4,4.2,-2.55]];
 function station(x){let i=profile.findIndex(p=>p[0]>=x);if(i<0)return profile.at(-1);if(i===0)return profile[0];const a=profile[i-1],b=profile[i],t=(x-a[0])/(b[0]-a[0]);return a.map((v,k)=>v+(b[k]-v)*t);}
 function localGround(x,y){const [,mid,w,water]=station(x),d=y-mid,bank=Math.max(0,Math.abs(d)-w/2),channel=water-.55;
  const rock=.24*Math.sin(x*.53+y*.66)+.13*Math.sin(x*1.1-y*.39);
@@ -29,19 +31,9 @@ export function landscape(){
  const groups={};const tri=(key,color,a,b,c)=>{const g=groups[key]??={id:key,color,vertices:[]};g.vertices.push(...[a,b,c].flatMap(p=>world(p).map(v=>+v.toFixed(3))));};
  const quad=(key,color,a,b,c,d)=>{tri(key,color,a,b,c);tri(key,color,a,c,d);};
  const edge=(p,t,z=0)=>[p[0],p[1]+p[2]*t,p[3]+z];
- for(let i=1;i<profile.length;i++){
-  const a=profile[i-1],b=profile[i],drop=b[3]-a[3]>.5;
-  for(let j=0;j<6;j++){const l=-.5+j/6,h=l+1/6,key=drop?'cascade':`pool-${j%3}`,color=drop?'#82c5d0':['#3e8794','#4b9ca7','#367682'][j%3];quad(key,color,edge(a,l),edge(b,l),edge(b,h),edge(a,h));}
-  if(drop)for(let j=0;j<9;j++){
-   const f=-.42+j*.1,l=f-.013,h=f+.013;
-   quad('whitewater','#e7f6f3',edge(a,l,.025),edge(b,l,.025),edge(b,h,.025),edge(a,h,.025));
-   const z=a[3]+.033,y=a[1]+a[2]*f,x=a[0]-.12;
-   quad('whitewater','#e7f6f3',[x-.7,y,z],[x,y-.08,z],[x+.08,y+.08,z],[x-.35,y+.13,z]);
-  }
- }
  // The segmented stream edges and exposed ledges read as rock rather than a rectangular trench.
  for(let i=1;i<profile.length;i++)for(const s of [-1,1]){
-  const a=profile[i-1],b=profile[i],pa=edge(a,s*.52,-.15),pb=edge(b,s*.52,-.15),qa=edge(a,s*.68,.36),qb=edge(b,s*.68,.36);
+  const a=profile[i-1],b=profile[i];if(Math.abs(b[3]-a[3])>.5)continue;const pa=edge(a,s*.52,-.15),pb=edge(b,s*.52,-.15),qa=edge(a,s*.68,.36),qb=edge(b,s*.68,.36);
   quad(i%2?'ledge-light':'ledge-dark',i%2?'#a6a398':'#7e8178',pa,pb,qb,qa);
  }
  // Woodland context sampled from the clusters shown on the site sheet, with assumed heights.
@@ -56,5 +48,7 @@ export function landscape(){
    }
   }
  }
- return {features:Object.values(groups),water:profile.map(p=>edge(p,-.5)).concat([...profile].reverse().map(p=>edge(p,.5))).map(p=>world(p).slice(0,2))};
+ // Bear Run as a site water body: its outline, and its centreline (upstream first) with the surface level and width
+ const centre=[...profile].reverse().map(p=>{const [e,n]=world([p[0],p[1],0]);return [+e.toFixed(2),+n.toFixed(2),p[3],p[2]];});
+ return {features:Object.values(groups),water:profile.map(p=>edge(p,-.5)).concat([...profile].reverse().map(p=>edge(p,.5))).map(p=>world(p).slice(0,2).map(v=>+v.toFixed(2))),centre};
 }

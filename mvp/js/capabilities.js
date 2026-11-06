@@ -22,6 +22,7 @@ export const STUDIES = {
   wind: { category: 'building', covers: ['B07', 'B08'], method: 'PlotCloud GPU lattice flow screening (browser) — not OpenFOAM CFD', test: 'tests/climate-studies.cjs' },
   stormwater: { category: 'building', covers: [], extension: 'Site drainage screening', method: 'PlotCloud runoff screening with a design storm (not EPW)', test: 'tests/free-simulations.cjs' },
   structure: { category: 'building', covers: [], extension: 'Structural screening', method: 'PlotCloud frame solver on confirmed members, supports and loads', test: 'tests/structural-workflow.cjs' },
+  watersound: { category: 'building', covers: [], extension: 'Sound of the site’s falls and streams', method: 'Point sources at each fall (sound power from the falling water’s power and an assumed acoustic efficiency) and riffles along streams; spherical spreading over the ground, screening by buildings and terrain; window and indoor estimates', test: 'tests/workspace-water.cjs' },
   skyview: { category: 'building', covers: ['B04'], method: 'Sky exposure / projected sky view factor (browser)', test: 'tests/environment-analysis.cjs' },
   shadebenefit: { category: 'building', covers: ['B05'], method: 'Temperature-weighted shade benefit (browser); not a load-based result', test: 'tests/environment-analysis.cjs' },
   solarenvelope: { category: 'building', covers: ['B06'], method: 'Solar envelope from protected periods (browser); not a planning approval', test: 'tests/environment-analysis.cjs' },

@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=fire-20261106-1';
+import { mountChrome } from '../workspace-chrome.js?v=water-20261106-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -165,7 +165,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=fire-20261106-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=water-20261106-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -245,7 +245,7 @@ export function render(app, [pid]) {
   const lockList = () => siteMode() ? [...new Set([...M().layers.map((l) => l.name), ...Object.values(KLAYER)])].filter((n) => n !== 'Site') : M().layers.filter((l) => l.locked).map((l) => l.name);
   const offLayers = () => M().layers.filter((l) => l.visible === false).map((l) => l.name);
   // layer materials in the 3D view: each layer's look, which Plan Studio objects belong to which layer, and the imports' layers
-  const lookSpec = () => ({ looks: LM.looks(M().layers), klayer: KLAYER, imports: Object.fromEntries((M().studio?.imports || []).map((o) => [o.id, o.layer || 'Imported'])) });
+  const lookSpec = () => { const names = new Set((M().layers || []).map((l) => l.name)), st = M().studio || {}, ids = {}; for (const k of ['walls', 'floors', 'furn', 'fences']) for (const o of st[k] || []) { const L = names.has(o.sourceLayer) ? o.sourceLayer : names.has(o.layer) ? o.layer : null; if (L) ids[o.id] = L; }   /* Plan Studio keeps a layer of another name as sourceLayer */ return { looks: LM.looks(M().layers), klayer: KLAYER, ids, imports: Object.fromEntries((st.imports || []).map((o) => [o.id, o.layer || 'Imported'])) }; };   // objects on a layer of their own (2026-11-06)
   const tellLooks = () => { for (const I2 of ready()) I2.ws.layerLooks?.(lookSpec()); };
   function tell(I2) { const w = I2.ws;w.projectLabel?.(p.name);w.layerLooks?.(lookSpec()); if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.illustration?.(illOf()); w.display(UI.disp);
     const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s);w.selectMany?.(UI.sels.map(psSel).filter(Boolean)); }

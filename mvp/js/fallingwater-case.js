@@ -7,6 +7,9 @@ export const source='https://www.loc.gov/resource/hhh.pa1690.sheet?st=gallery';
 export const site={label:'Fallingwater, Mill Run, Pennsylvania',lat:39.90631,lon:-79.46804,north:45,tz:'America/New_York',wind:2.5,windDir:'SW'};
 const m=.0465,xy=(x,y)=>[+(m*(x-320)).toFixed(3),+(m*(410-y)).toFixed(3)];
 const round=n=>+n.toFixed(3);
+// layer materials: Wright's light ochre concrete, the coursed Pottsville sandstone, waxed flagstone floors, walnut built-ins,
+// Cherokee-red steel and the red kettle; colours approximate, for the 3D view and rendering
+const LOOKS={Structure:['concrete','#e0c994'],'Terrace rails':['concrete','#e2cc98'],Roof:['concrete','#e0c994'],Walls:['plaster','#e6d4a6'],Stonework:['stone','#8f8371'],'Flagstone floors':['stone','#77705f'],Stairs:['concrete','#d9c59a'],'Built-in joinery':['timber-cladding','#6e4b30'],Glazing:['glass-double','#a9c6d6'],'Guest glazing':['glass-double','#a9c6d6'],'Walkway steel':['steel','#9b3a26'],Kettle:['steel','#b8321f']};
 export function caseModel(open=.05){
  const levels=[{id:'L1',name:'Living level',z:0,h:2.55},{id:'L2',name:'Bedroom level',z:2.55,h:2.17},{id:'L3',name:'Study level',z:4.72,h:1.98}];
  const walls=[],ops=[],floors=[],names=[],furn=[];
@@ -34,16 +37,22 @@ export function caseModel(open=.05){
  name('L3','Study',286,275);name('L3','Gallery and sleeping alcove',399,283);
  floor('L3',246,228,325,332);floor('L3',325,253,486,307);floor('L3',325,307,530,384);
  item('L3','Study desk',278,261,1.25,.6,.73,'desk');item('L3','Gallery bench',389,292,1.5,.53,.45,'banquette');
+ // Materials (2026-11-06): exterior walls with little glass are the coursed sandstone masses, the rest ochre-painted concrete and
+ // plaster; every window has a steel sash in Cherokee red; floors inside are waxed flagstone, the terraces ochre concrete trays.
+ for(const w of walls){const L=Math.hypot(w.b[0]-w.a[0],w.b[1]-w.a[1]),glass=ops.filter(o=>o.wall===w.id&&o.kind==='win').reduce((t,o)=>t+o.w,0);w.layer=w.t>=.2&&glass/L<.3?'Stonework':'Walls';}
+ for(const o of ops)if(o.kind==='win')o.frame='#9b3a26';
+ const loops={L1:a,L2:b,L3:c},inLoop=(lv,x,y)=>{const P=loops[lv].map(id=>walls.find(w=>w.id===id).a);let k=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const p=P[i],q=P[j];if((p[1]>y)!==(q[1]>y)&&x<(q[0]-p[0])*(y-p[1])/(q[1]-p[1])+p[0])k=!k;}return k;};
+ for(const f of floors)f.layer=inLoop(f.lv,f.x+f.w/2,f.y+f.d/2)?'Flagstone floors':'Structure';
  // Site diagram: Bear Run and the sloping bank are approximated from the survey.
  // Rotate plan-space coordinates back into the site's east/north frame.
  const r=Math.SQRT1_2, world=([x,y])=>[(x+y)*r,(y-x)*r];
- const {water,features}=landscape(),detail=details(xy),n=201,step=2.5,z=[];
+ const {water,features,centre}=landscape(),detail=details(xy,ground),n=201,step=2.5,z=[];
  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const e=-250+step*i,k=-250+step*j;z.push(round(ground((e-k)*r,(e+k)*r)));}
  const paths=[{id:'approach',name:'Approach to main house',cls:'path',width:2.1,pts:[[30,10],[25,8],[22,5],[23,2],[24,0]].map(p=>world(p))},{id:'woodland-path',name:'Woodland path',cls:'path',width:1.6,pts:[[-22,10],[-16,9],[-10,8],[-5,9],[-2,11],[4,13],[8,13]].map(p=>world(p))}];
  const origin={lat:site.lat,lon:site.lon,label:site.label};
- const context={v:1,id:'habs-pa5346-site',version:3,crs:'local-tm',origin,north:0,boundary:{kind:'radius',r:250},tz:-5,dst:1,buildings:[],roads:paths,trees:[],features3d:features,areas:[{id:'bear-run',kind:'water',name:'Bear Run',pts:water}],sources:[{provider:'HABS PA-5346',attribution:'Library of Congress · HABS PA-5346; diagrammatic trace',url:source},{provider:'USGS 3DEP',attribution:'USGS National Map · outer terrain',url:'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer'}],terrain:{provider:'USGS 3DEP outer terrain + HABS section-based creek reconstruction',res:step,relief:round(Math.max(...z)-Math.min(...z)),grid:{x0:-250,y0:-250,step,nx:n,ny:n,z}}};
+ const context={v:1,id:'habs-pa5346-site',version:3,crs:'local-tm',origin,north:0,boundary:{kind:'radius',r:250},tz:-5,dst:1,buildings:[],roads:paths,trees:[],features3d:features,areas:[{id:'bear-run',kind:'water',name:'Bear Run',pts:water,water:{type:'stream',centre,depth:.6,speed:.8,discharge:.5}},{id:'guest-pool',kind:'water',name:'Guest house plunge pool',pts:detail.pool.pts.map(p=>world(p).map(v=>+v.toFixed(2))),water:{type:'pond',level:detail.pool.level,depth:+(detail.pool.level-detail.pool.bottom).toFixed(2)}}],sources:[{provider:'HABS PA-5346',attribution:'Library of Congress · HABS PA-5346; diagrammatic trace',url:source},{provider:'USGS 3DEP',attribution:'USGS National Map · outer terrain',url:'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer'}],terrain:{provider:'USGS 3DEP outer terrain + HABS section-based creek reconstruction',res:step,relief:round(Math.max(...z)-Math.min(...z)),grid:{x0:-250,y0:-250,step,nx:n,ny:n,z}}};
  const studio={v:2,id:'fallingwater',name:title,units:'m',north:site.north,version:2,imports:detail.imports,masses:[],levels,walls,ops,floors,names,furn,voids:[],fences:[],ceil:[],notes:[],hiddenIds:[],lights:[],climate:{from:225,U10:2.5,terrain:'suburban',Tout:18,Tin:24},targets:{ach:5,df:2},site:context};
- return {units:'m',north:site.north,layers:['Site','Masses','Context','Structure','Walls','Glazing','Roof','Rooms','Furniture','Stonework','Terrace rails','Stairs'].map(name=>({name,color:({Stonework:'#a2957b','Terrace rails':'#d8d3c7',Stairs:'#bdb6a7'})[name],visible:true,locked:name==='Site'})),components:[],meshes:detail.meshes,studio};
+ return {units:'m',north:site.north,layers:['Site','Masses','Context','Structure','Flagstone floors','Walls','Glazing','Guest glazing','Roof','Rooms','Furniture','Built-in joinery','Stonework','Terrace rails','Stairs','Walkway steel','Kettle'].map(name=>({name,color:({Stonework:'#8f8371','Terrace rails':'#e2cc98',Stairs:'#bdb6a7'})[name],visible:true,locked:name==='Site',...(LOOKS[name]?{material:LOOKS[name][0],props:{color:LOOKS[name][1]}}:{})})),components:[],meshes:detail.meshes,studio};
 }
 
 
