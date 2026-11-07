@@ -5486,6 +5486,10 @@ function egressShow(o) {
   walkShow(null); const R = o.rampStops || RAMPS_TOP.violet;
   for (const L of o.levels) { const b = L.box, w = b.x1 - b.x0, h = b.y1 - b.y0, k = Math.min(40, 2000 / Math.max(w, h, 1)), c = document.createElement('canvas'); c.width = Math.max(2, Math.round(w * k)); c.height = Math.max(2, Math.round(h * k)); const x = c.getContext('2d'), D = L.density;
     if (D) { const lo = D.lo || 0, sp = Math.max(1e-9, D.hi - lo); for (let j = 0; j < D.ny; j++) for (let i = 0; i < D.nx; i++) { const v = D.vals[j * D.nx + i]; if (!Number.isFinite(v)) continue; x.fillStyle = rampAtTop(R, (v - lo) / sp); x.globalAlpha = 0.88; const X = (D.X0 + i * D.cell - b.x0) * k, Y = (b.y1 - (D.Y0 + (j + 1) * D.cell)) * k; x.fillRect(X, Y, D.cell * k + 0.6, D.cell * k + 0.6); } }
+    // arrows on the sheet (ventilation, 2026-11-06): [{ a, b (plan m), col, w (m) }], the head at b
+    x.globalAlpha = 1; for (const A of L.arrows || []) { const P = (q) => [(q[0] - b.x0) * k, (b.y1 - q[1]) * k], a = P(A.a), e = P(A.b), dx = e[0] - a[0], dy = e[1] - a[1], ln = Math.hypot(dx, dy) || 1, ux = dx / ln, uy = dy / ln, lw = Math.max(1.5, (A.w || 0.12) * k), hd = Math.min(ln * 0.6, lw * 2.6 + 4);
+      x.strokeStyle = x.fillStyle = A.col || '#1d4ed8'; x.lineWidth = lw; x.lineCap = 'round'; x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(e[0] - ux * hd * 0.8, e[1] - uy * hd * 0.8); x.stroke();
+      x.beginPath(); x.moveTo(e[0], e[1]); x.lineTo(e[0] - ux * hd - uy * hd * 0.6, e[1] - uy * hd + ux * hd * 0.6); x.lineTo(e[0] - ux * hd + uy * hd * 0.6, e[1] - uy * hd - ux * hd * 0.6); x.closePath(); x.fill(); }
     L.cv = c; L.k = k; }
   EGO.t = Math.max(0, Math.min(o.frames.length - 1, o.t || 0));
   if (window.S3 && S3.on && S3.egress) { S3.egress({ sheets: o.levels.map((L) => ({ canvas: L.cv, x0: L.box.x0, y0: L.box.y0, w: L.box.x1 - L.box.x0, h: L.box.y1 - L.box.y0, z: L.z, lv: L.lv })) }); if (o.fit && S3.fitBox) { const bx = o.levels.reduce((a, L) => ({ x0: Math.min(a.x0, L.box.x0), y0: Math.min(a.y0, L.box.y0), x1: Math.max(a.x1, L.box.x1), y1: Math.max(a.y1, L.box.y1) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }), zs = o.levels.map((L) => L.z); S3.fitBox(bx, (Math.min(...zs) + Math.max(...zs)) / 2, 1.15, zs.length > 1); } }
@@ -7224,6 +7228,31 @@ if (window.__WSROLE) {
     // the whole building for the evacuation study (2026-11-06): every level's plan scene (one origin) and the stairs between levels
     buildingScene() { const SB = S || STC.build(M), lv = lvSorted(); return { levels: lv.map((l) => ({ id: l.id, name: l.name, z: l.z || 0, h: l.h || 3, sc: STC.planScene(M, SB, l.id, 'wayfinding') })),
       stairs: (M.furn || []).filter(isStairF).map((f) => ({ id: f.id, lv: f.lv, top: (lvAbove(f.lv) || {}).id || null, corners: STC.furnCorners(f), w: f.w, d: f.d, name: f.name || (REG[f.gen.id] && REG[f.gen.id].name) || 'Stair' })) }; },
+    // natural ventilation of the whole building (2026-11-06): the pressure network of every level (wind on the facades, the
+    // stack between floors through stairs and voids) for one wind and temperature. o: { U10, from (compass °), Tout, Tin, terrain,
+    // win (multiplier on each window's opening share, capped at the whole window), doors: 'open' | 'inside' (outside doors shut) |
+    // 'shut' (all shut: a 1 cm gap under each), grid (true: each level's rooms as a grid, for painting) }. Rooms whose openings to
+    // outside are all on one facade also get the single-sided flow of de Gids and Phaff (1982) where that is larger.
+    ventNet(o = {}) { const SB = S || STC.build(M); if (!SB.rooms.length) return null; const k = Number.isFinite(o.win) ? o.win : 1, dm = o.doors || 'inside';
+      const ops = SB.ops.map((op) => { const door = op.o.kind === 'door' || op.o.object_type === 'door', full = op.o.w * Math.max(0, op.o.head - op.o.sill);
+        let A = door ? ((dm === 'shut' || (dm === 'inside' && op.ext)) ? op.o.w * 0.01 : full) : Math.min(full, op.A * k); if (op.o.hole) A = full; return { ...op, A }; });
+      const SV = { ...SB, ops }, MC = { ...M, climate: { ...(M.climate || {}), U10: o.U10 ?? 3.5, from: o.from ?? 225, Tout: o.Tout ?? 20, Tin: o.Tin ?? 24, terrain: o.terrain || 'suburban' } };
+      const af = STC.airflow(MC, SV); if (!af) return null;
+      const dT = Math.abs((o.Tin ?? 24) - (o.Tout ?? 20)), U = o.U10 ?? 3.5;
+      const rooms = SB.rooms.map((r, i) => { const ext = ops.filter((q) => q.ext && q.inR === r.gi && q.A > 0.005), faces = new Set(ext.map((q) => Math.round(Math.atan2(q.outN[1], q.outN[0]) / (Math.PI / 4)) & 7)), a = af.closed ? { inflow: 0, direct: 0, via: 0, ach: 0 } : af.rooms[i];
+        let inflow = a.inflow, direct = a.direct, single = false;
+        if (faces.size === 1) { const Ae = ext.reduce((s2, q) => s2 + q.A, 0), H = Math.max(...ext.map((q) => q.zh - q.zs)), q1 = 0.5 * Ae * Math.sqrt(0.001 * U * U + 0.0035 * H * dT + 0.01) * 1000; if (q1 > inflow) { direct += q1 - inflow; inflow = q1; single = true; } }
+        return { gi: r.gi, lv: r.lv, name: r.name.replace(/^.*· /, ''), area: +r.area.toFixed(2), vol: +r.vol.toFixed(2), z: r.z0, p: [r.lx, r.ly], inflow, direct, fresh: inflow > 1e-6 ? Math.min(1, direct / inflow) : 0, ach: inflow * 3.6 / r.vol, single, ext: ext.length, faces: faces.size }; });
+      // each opening's net flow, its point and the way it goes (into the room for an outside opening; from a to b inside)
+      const flows = []; for (const e of af.per || []) { const l = e.link; if (!l.op) continue; const op = l.op, w = op.w, d = STC.wallDir(w), n = [-d[1], d[0]];
+        let dir, q; if (op.ext) { dir = [-op.outN[0], -op.outN[1]]; q = e.ba - e.ab; } else { dir = [-n[0], -n[1]]; q = e.ab - e.ba; }   // ra lies on the +n side, so a → b runs along −n
+        flows.push({ id: op.o.id, lv: op.lv.id, p: op.p, dir, q, ext: op.ext, A: +op.A.toFixed(3), kind: op.o.kind === 'door' ? 'door' : op.o.hole ? 'opening' : 'window', name: op.o.name || null }); }
+      const total = rooms.reduce((s2, r) => s2 + r.direct, 0), vol = rooms.reduce((s2, r) => s2 + r.vol, 0);
+      const out = { rooms, flows, total, vol, ach: total * 3.6 / Math.max(1e-9, vol), zn: af.zn ?? null, closed: !!af.closed, Uref: af.Uref };
+      if (o.grid) { const lvs = lvSorted(), f = 2; out.levels = lvs.map((l) => { const R = SB.L[l.id]; if (!R) return null; const nx = Math.ceil(R.W / f), ny = Math.ceil(R.H / f), room = new Int32Array(nx * ny).fill(-1);
+          for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const id = R.lab[Math.min(R.H - 1, j * f + 1) * R.W + Math.min(R.W - 1, i * f + 1)]; if (id < 0) continue; const r = SB.rooms.find((q) => q.lv === l.id && q.id === id); if (r) room[j * nx + i] = r.gi; }
+          return { id: l.id, name: l.name, z: l.z || 0, h: l.h || 3, X0: R.x0, Y0: R.y0, cell: STC.CELL * f, nx, ny, room }; }).filter(Boolean); }
+      return out; },
     iso(dir) { return window.S3 && S3.iso ? S3.iso(dir) : null; }, isoDir() { return window.S3 && S3.isoDir ? S3.isoDir() : null; },
     camGet() { if (CAM === '3d') return window.S3 && S3.camGet ? S3.camGet() : null; const c = S2W(VP.w / 2, VP.h / 2); return { cx: c[0], cy: c[1], span: VP.w / V.s, z: (lvObj() || { z: 0 }).z }; },
     camSet(o) { if (!o || !isFinite(o.cx) || !isFinite(o.span) || o.span <= 0) return; if (CAM === '3d') { if (window.S3 && S3.camSet) S3.camSet(o); return; } V.s = VP.w / o.span; V.ox = VP.w / 2 - o.cx * V.s; V.oy = VP.h / 2 + o.cy * V.s; V.user = true; draw(); },

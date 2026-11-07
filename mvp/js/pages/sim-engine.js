@@ -123,7 +123,7 @@ function sunField(w, sc, label, unit) {
     const out = []; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const q = j * nx + i; if (cnt[q]) out.push(r2(x0 + (i + 0.5) * cs), r2(y0 + (j + 0.5) * cs), r2(sum[q] / cnt[q])); }
     return { label, unit, step: r2(cs), pts: out };
 }
-export const IN_WORKSPACE = ['watersound', 'fire-evacuation', 'evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views', 'cameras', 'daylight'];
+export const IN_WORKSPACE = ['watersound', 'fire-evacuation', 'evac', 'privacy', 'wayfinding', 'spacesyntax', 'movementdepth', 'isovist', 'views', 'cameras', 'daylight', 'vent', 'acoustics'];
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
@@ -131,10 +131,10 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   if(sim.id==='structure')return(await import('./structure-study.js?v=run-20261031-1')).render(app,sim,params,context);
   // studies that run in the Workspace now (2026-11-01; their study pages are retired): an old link opens the project's Workspace
   // with the study's card; a batch run says where it runs
-  if (IN_WORKSPACE.includes(sim.id) && !(sim.id === 'daylight' && params.get('batch'))) {   // a Daylight batch runs here, without a page (below)
+  if (IN_WORKSPACE.includes(sim.id) && !(['daylight', 'vent', 'acoustics'].includes(sim.id) && params.get('batch')) && !(sim.id === 'vent' && params.get('detail'))) {   // a Daylight batch runs here, without a page (below); Ventilation and Acoustics batches and the detailed ventilation page (air speed inside one level) still use their pages
     if (params.get('batch')) { window.parent.postMessage({ pcBatch: params.get('batch'), ok: false, why: `${sim.name} runs in the Workspace: open the project and choose it from Add simulation.` }, location.origin); return; }
     const p0 = currentProject(); if (p0) { try { sessionStorage.setItem('pc-ws-open-study', sim.id); } catch (e) { } location.hash = '#/workspace/' + p0.id; return; }
-    app.innerHTML = `<div class="wrap"><span class="eyebrow">Simulation</span><h1 class="display md">${esc(sim.name)} runs in the Workspace</h1><p class="lede">Open a project, then choose ${esc(sim.name)} under Add simulation › ${sim.id === 'watersound' ? 'Exterior' : 'Interior'}. ${sim.id === 'watersound' ? 'It runs on the site’s water and your building. ' : ''}${sim.id === 'watersound' ? '' : sim.id === 'fire-evacuation' ? 'It runs on the whole building: every level, its rooms, doors and stairs.' : 'It runs on the level you are on, with the rooms, walls, doors and furniture of your model.'}</p><p><a class="btn accent" href="#/new-project">Start a project</a> <a class="btn" href="#/home">Dashboard</a></p></div>`; return; }
+    app.innerHTML = `<div class="wrap"><span class="eyebrow">Simulation</span><h1 class="display md">${esc(sim.name)} runs in the Workspace</h1><p class="lede">Open a project, then choose ${esc(sim.name)} under Add simulation › ${sim.id === 'watersound' ? 'Exterior' : 'Interior'}. ${sim.id === 'watersound' ? 'It runs on the site’s water and your building. ' : ''}${sim.id === 'watersound' ? '' : sim.id === 'fire-evacuation' ? 'It runs on the whole building: every level, its rooms, doors and stairs.' : sim.id === 'vent' ? 'It runs on the whole building: every level, its rooms, windows, doors and stairs.' : 'It runs on the level you are on, with the rooms, walls, doors and furniture of your model.'}</p><p><a class="btn accent" href="#/new-project">Start a project</a> <a class="btn" href="#/home">Dashboard</a></p></div>`; return; }
   if (!canUse(sim.id)) {
     renderGate(app, sim.name);
     if (params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Active membership required.'},location.origin);
