@@ -41,6 +41,7 @@ const P = {
   upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19.5h14"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   zoomSel: '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><rect x="9" y="9" width="6" height="6"/>',
+  section: '<path d="M6.4 13h2.2M11 13h2M15.4 13h2.2"/><circle cx="4" cy="13" r="2.3"/><circle cx="20" cy="13" r="2.3"/><path d="M4 10.7V5.5M20 10.7V5.5"/><path d="M2.3 7.6L4 5.2l1.7 2.4zM18.3 7.6L20 5.2l1.7 2.4z" fill="currentColor"/>',
   sun: '<circle cx="12" cy="12" r="3.6"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   snap: '<path d="M7 4v7a5 5 0 0 0 10 0V4"/><path d="M7 8h3M14 8h3"/>',
   eye: '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6S18 18 12 18 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>',
@@ -68,7 +69,7 @@ const fmt = (n, d = 0) => Number(n || 0).toLocaleString('en', { maximumFractionD
 const DOY0 = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334], MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function mountChrome(app, api) {
-  const { p, UI, saveUI, goView, activePane, dirty, baseline, select, studio, INST } = api;
+  const { p, UI, saveUI, goView, activePane, dirty, baseline, select, studio, INST, sectionView } = api;
   const $ = (s, r = app) => r.querySelector(s), root = $('.w2');
   root.classList.add('sp');
   let KEEP = null; const keepEl = () => { if (!KEEP) { KEEP = document.createElement('div'); KEEP.className = 'sp-keep'; KEEP.hidden = true; root.append(KEEP); } return KEEP; };   // controls kept for their behaviour, not shown
@@ -132,7 +133,7 @@ export function mountChrome(app, api) {
   keepEl().append($('#fit'));   // Fit and Zoom selected live in the View panel (2026-11-01); the button stays for its behaviour
   const wrap = (node) => { const w = node.closest('div') || node; w.classList.add('sp-menuwrap'); right.append(w); };
   const gear = $('.w3-gearw'); wrap($('#vBtn')); gear.classList.add('sp-menuwrap'); right.append(gear);
-  right.insertAdjacentHTML('beforeend', `<span class="sp-hr"></span>${btn('sun', 'Sun position', 'sun', 'aria-pressed="false"')}${btn('snap', 'Snapping', 'snap', 'aria-pressed="false"')}${btn('vis', 'Visibility', 'eye', 'aria-pressed="false"')}`);
+  right.insertAdjacentHTML('beforeend', `<span class="sp-hr"></span>${btn('sec', 'Section', 'section', 'aria-pressed="false"')}${btn('sun', 'Sun position', 'sun', 'aria-pressed="false"')}${btn('snap', 'Snapping', 'snap', 'aria-pressed="false"')}${btn('vis', 'Visibility', 'eye', 'aria-pressed="false"')}`);
   wrap($('#dBtn'));
   root.append(right);
   $('#vBtn').title = 'View: plan, perspective, isometric, zoom and fit'; $('#dBtn').title = 'Display mode'; $('#fit').title = 'Fit the model'; $('#tabGear').title = 'Walkthrough, explode, interior elevation';
@@ -141,7 +142,8 @@ export function mountChrome(app, api) {
   const card = $('.w2-right'); card.classList.add('sp-card', 'sp-panelcard'); card.insertAdjacentHTML('afterbegin', '<button type="button" class="sp-x" aria-label="Close panel" title="Close">×</button>');
   card.querySelector('.sp-x').onclick = () => openCard(false);
   const pops = {};
-  for (const k of ['stats', 'spaces', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
+  for (const k of ['stats', 'spaces', 'sec', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
+  pops.sec.style.right = '60px';
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
   // the panels card and a study panel share the left side: the card covers the study panel while it is open
@@ -159,7 +161,7 @@ export function mountChrome(app, api) {
   function closePops(except) { for (const [k, c] of Object.entries(pops)) if (k !== except) { c.hidden = true; app.querySelector(`[data-sp="${k}"]`)?.setAttribute('aria-pressed', 'false'); } }
   function togglePop(k, anchor) {
     const c = pops[k], on = c.hidden; closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
-    if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis();
+    if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis(); if (k === 'sec') drawSec();
     if (['stats', 'spaces'].includes(k)) { openCard(false); if (!dat.hidden) openData(false); if (!cmp.hidden) openSheet(false); }
     const r = anchor.getBoundingClientRect(); c.style.top = '64px'; requestAnimationFrame(() => { const h = c.offsetHeight; c.style.top = Math.max(64, Math.min(innerHeight - h - 12, r.top - 8)) + 'px'; });
   }
@@ -233,6 +235,42 @@ export function mountChrome(app, api) {
     pops.sun.querySelector('#spSunOn').onchange = (e) => { save({ on: e.target.checked }); if (e.target.checked && UI.view === 'plan') goView('persp'); };
     pops.sun.querySelector('#spSunDay').oninput = (e) => { const n = +e.target.value + 1; let m = 11; while (DOY0[m] >= n) m--; save({ m, d: n - DOY0[m] }); };
     pops.sun.querySelector('#spSunHour').oninput = (e) => save({ h: +e.target.value });
+  }
+  // ---- section (2026-11-07, after Revit's Section): the line is part of the model, drawn and edited on the plan (drag the line or a
+  // head, click an arrow to flip, drag the dashed far edge); here: draw it, the Section view (square to the cut, parallel, with the
+  // levels), the 3D cutaway, the far clip, and a study's result on the cut where the study has one through the height of a room
+  const SECK = 'pc-ws-section';
+  // the model as a study sees it: a section line is a way of looking at the model, never an input, so moving it keeps results current
+  const studyModel = (w) => String(w.model()).replace(/,"section":\{[^{}]*\}|"section":\{[^{}]*\},?/, '');
+  const secStyle = () => { try { return { opacity: 0.6, bands: true, ...(JSON.parse(localStorage.getItem(SECK)) || {}) }; } catch { return { opacity: 0.6, bands: true }; } };
+  const secPane = () => (INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : null);
+  const secViewOn = () => !!(UI.view === 'persp' && INST.persp.ready && INST.persp.ws.sectionState?.()?.view);
+  function drawSec() {
+    const w = secPane(), s = w?.section?.() || null, on = secViewOn(), drawing = !!(INST.plan.ready && INST.plan.ws.sectionState?.()?.drawing), st = secStyle();
+    if (INST.persp.ready) INST.persp.ws.sectionStyle?.(st);
+    const simName = ST.id ? ((api.sims || []).find((x) => x.id === ST.id)?.name || 'This study') : '', vent = ST.id === 'vent' && ST.res;
+    const row = 'style="display:flex;gap:6px;margin:8px 0 2px"';
+    pops.sec.innerHTML = '<h3>Section</h3>' + (!s
+      ? `<p class="sp-note" style="margin-top:0">${drawing ? 'On the plan: click where the cut starts, then where it ends. Esc to stop.' : 'A vertical cut through the building, as in a drawn section. Draw its line on the plan, then look at it square on (Section view) or cut the 3D view.'}</p><div ${row}><button type="button" class="btn sm" data-sec="draw" ${drawing ? 'disabled' : ''}>Draw section line</button></div>`
+      : `<div class="sp-kv"><span>Section ${esc(s.name || 'A')}</span><b>${fmt(s.len, 2)} m</b></div>
+        <div ${row}><button type="button" class="btn sm${on ? ' accent' : ''}" data-sec="view" aria-pressed="${on}">${on ? 'Back to 3D' : 'Section view'}</button><button type="button" class="btn sm" data-sec="flip" title="Look the other way">Flip</button></div>
+        <label class="sp-sw"><input type="checkbox" data-sec="on" ${s.on !== false ? 'checked' : ''}> Cut the 3D view</label>
+        <label class="sp-sw"><input type="checkbox" data-sec="farOn" ${s.far ? 'checked' : ''}> Far clip</label>
+        ${s.far ? `<label class="sp-sl"><span>Depth behind the cut <output>${fmt(s.far, 1)} m</output></span><input type="range" data-sec="far" min="0.5" max="60" step="0.5" value="${s.far}"></label>` : ''}
+        ${vent ? `<h4>Simulation on the cut</h4><label class="sp-sw"><input type="checkbox" data-sec="bands" ${st.bands ? 'checked' : ''}> ${esc(simName)} on the cut</label><label class="sp-sl"><span>Opacity <output>${Math.round(st.opacity * 100)}%</output></span><input type="range" data-sec="op" min="0.1" max="1" step="0.05" value="${st.opacity}"></label><p class="sp-note">One value per room, with the colours of the legend: the airflow network treats each room as fully mixed. The cut shows the rooms the section passes through, not air speed or temperature inside them.</p>`
+          : ST.id && ST.res ? `<p class="sp-note">${esc(simName)} is a result on floors, ground or facades: the cut clips it with the model. It has no result through the height of a room, so nothing is drawn on the cut.</p>` : ''}
+        <p class="sp-note">On the plan: drag the line or a head to move it, click an arrow to flip, drag the dashed far edge to set the depth.</p>
+        <div ${row}><button type="button" class="btn sm" data-sec="draw">Redraw</button><button type="button" class="btn sm" data-sec="del">Delete section</button></div>`);
+    const q = (k) => pops.sec.querySelector(`[data-sec="${k}"]`), set = (o) => { secPane()?.sectionSet?.(o); setTimeout(drawSec, 80); }, keep = (o) => { try { localStorage.setItem(SECK, JSON.stringify({ ...secStyle(), ...o })); } catch { } if (INST.persp.ready) INST.persp.ws.sectionStyle?.(secStyle()); };
+    if (q('draw')) q('draw').onclick = async () => { if (UI.view !== 'plan') await goView('plan'); for (let i = 0; i < 60 && !INST.plan.ready; i++) await new Promise((r) => setTimeout(r, 100)); INST.plan.ws.sectionDraw?.(() => drawSec()); setTimeout(drawSec, 0); };   // redrawn after this click (the click outside the popover closes it)
+    if (q('view')) q('view').onclick = async () => { await sectionView(!on); setTimeout(drawSec, 0); };
+    if (q('flip')) q('flip').onclick = () => set({ flip: !s.flip });
+    if (q('on')) q('on').onchange = (e) => set({ on: e.target.checked });
+    if (q('farOn')) q('farOn').onchange = (e) => set({ far: e.target.checked ? Math.max(2, Math.min(30, Math.round(s.len / 2))) : null });
+    if (q('far')) { q('far').oninput = (e) => { e.target.closest('label').querySelector('output').textContent = fmt(+e.target.value, 1) + ' m'; }; q('far').onchange = (e) => set({ far: +e.target.value }); }
+    if (q('del')) q('del').onclick = async () => { if (secViewOn()) await sectionView(false); set(null); };
+    if (q('bands')) q('bands').onchange = (e) => keep({ bands: e.target.checked });
+    if (q('op')) q('op').oninput = (e) => { e.target.closest('label').querySelector('output').textContent = Math.round(+e.target.value * 100) + '%'; keep({ opacity: +e.target.value }); };
   }
   // ---- visibility: the Workspace's layers (the same eye as the Layers panel) and the site context's transparency
   function drawVis() {
@@ -629,7 +667,7 @@ export function mountChrome(app, api) {
       const qmax = Math.max(1, ...net.flows.map((f) => Math.abs(f.q)));
       const arrowsOf = (lvId) => net.flows.filter((f) => f.lv === lvId && Math.abs(f.q) >= 0.5).map((f) => { const s0 = Math.sign(f.q), d = [f.dir[0] * s0, f.dir[1] * s0], L = 0.5 + 1.6 * Math.sqrt(Math.abs(f.q) / qmax);
         return { a: [f.p[0] - d[0] * L / 2, f.p[1] - d[1] * L / 2], b: [f.p[0] + d[0] * L / 2, f.p[1] + d[1] * L / 2], col: f.ext ? (f.q > 0 ? '#1d4ed8' : '#b91c1c') : '#475569', w: 0.07 + 0.2 * Math.sqrt(Math.abs(f.q) / qmax) }; });
-      const show = (r, fit) => { const V = r.views[r.view] || Object.values(r.views)[0]; views2().forEach((w2) => { w2.clearStudy?.(); w2.egressShow?.({ levels: net.levels.map((L, li) => ({ lv: L.id, z: L.z, box, density: { X0: L.X0, Y0: L.Y0, cell: L.cell, nx: L.nx, ny: L.ny, vals: V.lv[li], lo: V.lo, hi: V.hi }, arrows: arrowsOf(L.id) })), rampStops: V.stops, frames: [], kinds: [], play: false, fit: !!fit }); }); };
+      const show = (r, fit) => { const V = r.views[r.view] || Object.values(r.views)[0]; views2().forEach((w2) => { w2.clearStudy?.(); w2.egressShow?.({ levels: net.levels.map((L, li) => ({ lv: L.id, z: L.z, box, density: { X0: L.X0, Y0: L.Y0, cell: L.cell, nx: L.nx, ny: L.ny, vals: V.lv[li], lo: V.lo, hi: V.hi }, arrows: arrowsOf(L.id) })), rampStops: V.stops, frames: [], kinds: [], play: false, fit: !!fit, section: 'room' }); }); };
       const roomAt = (x, y) => { const li = curLi(), L = net.levels[li]; if (!L) return null; const i = Math.floor((x - L.X0) / L.cell), j = Math.floor((y - L.Y0) / L.cell); if (i < 0 || j < 0 || i >= L.nx || j >= L.ny) return null; const g = L.room[j * L.nx + i]; return g >= 0 ? g : null; };
       const ok1 = net.rooms.filter((r) => r.ach >= tgt).length, sorted = net.rooms.map((r, i) => ({ r, i })).sort((a, b) => (yr ? val.hours[a.i] - val.hours[b.i] : a.r.ach - b.r.ach)), singles = net.rooms.filter((r) => r.single), cols = (v) => (v >= tgt ? '#8fcaa9' : v >= tgt / 2 ? '#f3e3a0' : '#f08a3c');
       const DOORS = { open: 'all doors open', inside: 'inside doors open, outside doors shut', shut: 'all doors shut' }[ST.vnDoors], WIN = { 2: 'windows wide open', 1: 'windows open as drawn', 0.5: 'windows ajar' }[ST.vnWin] || 'windows open as drawn';
@@ -982,7 +1020,7 @@ export function mountChrome(app, api) {
       ST.estAtRun = estimate(ST.id); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf()); drawStudy(); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
       if (ST.cancel) throw Error('Stopped.');
       addViews(id, r); applyView(r, ST.view[id]); hookProbe(); paintRes(r, true);
-      r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = w.model(); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); logRun(id, r); learn(id, r.ms); }
+      r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = studyModel(w); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); logRun(id, r); learn(id, r.ms); }
     catch (e) { ST.res = null; ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); ST.stopped = e.message === 'Stopped.'; }
     clearInterval(tick); ST.busy = false; ST.progress = ''; if (!ST.res) { clearAll(); showArea(); } drawStudy();
   }
@@ -994,7 +1032,7 @@ export function mountChrome(app, api) {
       // the project's shared conditions this result used (2026-11-01), so Results can say when they change afterwards
       const shc = S.clone(S.conditionsOf(p)), sharedConditions = r.settings?.sharedConditions || { revision: shc.revision, signature: S.conditionsSignature(p, ST.id), site: S.clone(shc.site || {}), defaults: S.clone(shc.defaults || {}), studyOnlyOverrides: false, effective: { lat: shc.site?.lat, lon: shc.site?.lon, north: shc.site?.north ?? 0, tz: shc.site?.tz } };
       S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, inheritedFrom: 'Project shared conditions', method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString() }, 'workspace');
-      ST.saved = 'v' + v.n; ST.key = INST.persp.ws.model(); logRun(ST.id, r, 'v' + v.n); }
+      ST.saved = 'v' + v.n; ST.key = studyModel(INST.persp.ws); logRun(ST.id, r, 'v' + v.n); }
     catch (e) { ST.err = e.message; }
     ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();
   }
@@ -1007,7 +1045,7 @@ export function mountChrome(app, api) {
     const mx = Math.max(1, ...cnt), cols = (r.legendCols || INST.persp.ws?.rampColors?.(r.ramp)) || ['#999'], col = (i) => cols[Math.min(cols.length - 1, Math.round(i / (n - 1) * (cols.length - 1)))];
     return `<svg viewBox="0 0 260 150" class="sp-hist" role="img" aria-label="Share of the ground in each band">${cnt.map((c, i) => `<rect x="${8 + i * 20.5}" y="${120 - c / mx * 105}" width="18" height="${c / mx * 105}" fill="${col(i)}"><title>${fmt(r.lo + span * i / n, r.dec)}–${fmt(r.lo + span * (i + 1) / n, r.dec)} ${r.unit}: ${fmt(c / Math.max(1, tot) * 100, 1)}%</title></rect>`).join('')}<line x1="6" y1="120.5" x2="256" y2="120.5" stroke="#d1d5db"/><text x="8" y="136">${fmt(r.lo, r.dec)}</text><text x="252" y="136" text-anchor="end">${fmt(r.hi, r.dec)} ${esc(r.unit)}</text></svg><p class="sp-note">${r.chartNote || 'Share of the ground in each band; hover a bar for its value.'}</p>`; }
   function drawStudy() {
-    if (!ST.id) return; const id = ST.id, name = simName(id), r = ST.res, sp = SPEC[id] || {}, stale = r && INST.persp.ready && INST.persp.ws.model() !== ST.key, changed = r && ST.sig !== sigOf(id);
+    if (!ST.id) return; const id = ST.id, name = simName(id), r = ST.res, sp = SPEC[id] || {}, stale = r && INST.persp.ready && studyModel(INST.persp.ws) !== ST.key, changed = r && ST.sig !== sigOf(id);
     const status = ST.busy ? ['run', 'Solving'] : ST.err ? ['err', 'Could not run'] : ST.stopped && !r ? ['idle', 'Stopped'] : !r ? ['idle', 'Not run yet'] : stale ? ['stale', 'Model changed'] : changed ? ['stale', 'Settings changed'] : ['ok', `Up to date ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`];
     const seg = (attr, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" ${attr}="${k}" aria-selected="${cur === k}">${esc(n)}</button>`).join('')}</div>`;
     const about = typeof sp.about === 'function' ? sp.about() : sp.about || '', views = viewsOf(id), cur = r ? r.view : ST.view[id] || views[0]?.[0], area = AREAS.find((a) => a[0] === ST.area) || AREAS[0];
@@ -1277,7 +1315,7 @@ export function mountChrome(app, api) {
   // run on (a fingerprint), so Project data and Compare sketches can say whether it still matches the model
   const LOGK = 'pc-ws-simlog:' + p.id;
   const hashOf = (s) => { s = String(s ?? ''); let h = 5381; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36) + '.' + s.length.toString(36); };
-  const modelHash = () => { try { return INST.persp.ready ? hashOf(INST.persp.ws.model()) : null; } catch { return null; } };
+  const modelHash = () => { try { return INST.persp.ready ? hashOf(studyModel(INST.persp.ws)) : null; } catch { return null; } };
   const simLog = () => { try { return JSON.parse(localStorage.getItem(LOGK)) || {}; } catch { return {}; } };
   const plain = (h) => { const d = document.createElement('div'); d.innerHTML = String(h ?? ''); return d.textContent.trim(); };
   function logRun(id, r, saved) {
@@ -1440,7 +1478,7 @@ export function mountChrome(app, api) {
     const saved = $('.sp-saved', tr); saved.dataset.state = d ? 'dirty' : 'saved'; saved.title = d ? 'Unsaved changes: save a version' : `Saved${v ? ' · v' + v.n : ''}`;
     $('#spSub', tl).textContent = `${v ? 'v' + v.n : 'No version yet'}${d ? ' · unsaved changes' : ''}`;
     if (!sunOnce && INST.persp.ready && sunState().on) { sunOnce = true; applySun(); }
-    if (ST.res && INST.persp.ready) { const st = INST.persp.ws.model() !== ST.key; if (st !== staleShown) { staleShown = st; drawStudy(); } }
+    if (ST.res && INST.persp.ready) { const st = studyModel(INST.persp.ws) !== ST.key; if (st !== staleShown) { staleShown = st; drawStudy(); } }
   };
   const timer = setInterval(tick, 400); tick();
   // a study asked for from another page (an old study link): its card opens once the 3D view is ready
