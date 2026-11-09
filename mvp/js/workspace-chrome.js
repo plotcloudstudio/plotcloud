@@ -42,6 +42,7 @@ const P = {
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   zoomSel: '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><rect x="9" y="9" width="6" height="6"/>',
   section: '<path d="M6.4 13h2.2M11 13h2M15.4 13h2.2"/><circle cx="4" cy="13" r="2.3"/><circle cx="20" cy="13" r="2.3"/><path d="M4 10.7V5.5M20 10.7V5.5"/><path d="M2.3 7.6L4 5.2l1.7 2.4zM18.3 7.6L20 5.2l1.7 2.4z" fill="currentColor"/>',
+  xlist: '<path d="M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5v14l-3-2-3 2-3-2-3 2V6A1.5 1.5 0 0 1 7 4.5z"/><path d="M9.5 9h5M9.5 12h5M9.5 15h3"/>',
   sun: '<circle cx="12" cy="12" r="3.6"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   snap: '<path d="M7 4v7a5 5 0 0 0 10 0V4"/><path d="M7 8h3M14 8h3"/>',
   eye: '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6S18 18 12 18 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>',
@@ -106,6 +107,7 @@ export function mountChrome(app, api) {
   left.insertAdjacentHTML('beforeend', btn('assets', 'Assets: imported models and your furniture', 'assets', 'aria-pressed="false"'));
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'), $('#addSimInt'));
+  add.insertAdjacentHTML('beforeend', `<span class="sp-hr"></span><button type="button" class="sp-b sp-xlb" data-sp="xl" title="Export list: the views, series and sections for the report" aria-label="Export list" aria-pressed="false">${I(P.xlist)}<i class="sp-badge" hidden></i></button>`);
   root.append(left, add);
 
   // ---- bottom: Edit site | the model tools | select, text, delete, more
@@ -142,8 +144,8 @@ export function mountChrome(app, api) {
   const card = $('.w2-right'); card.classList.add('sp-card', 'sp-panelcard'); card.insertAdjacentHTML('afterbegin', '<button type="button" class="sp-x" aria-label="Close panel" title="Close">×</button>');
   card.querySelector('.sp-x').onclick = () => openCard(false);
   const pops = {};
-  for (const k of ['stats', 'spaces', 'q', 'sec', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
-  pops.sec.style.right = '60px'; pops.q.style.left = '60px'; pops.q.style.width = '280px';
+  for (const k of ['stats', 'spaces', 'q', 'xl', 'sec', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
+  pops.sec.style.right = '60px'; pops.q.style.left = '60px'; pops.q.style.width = '280px'; pops.xl.style.left = '60px'; pops.xl.style.width = '340px';
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
   // the panels card and a study panel share the left side: the card covers the study panel while it is open
@@ -161,8 +163,8 @@ export function mountChrome(app, api) {
   function closePops(except) { for (const [k, c] of Object.entries(pops)) if (k !== except) { c.hidden = true; app.querySelector(`[data-sp="${k}"]`)?.setAttribute('aria-pressed', 'false'); } }
   function togglePop(k, anchor) {
     const c = pops[k], on = c.hidden; closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
-    if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis(); if (k === 'sec') drawSec(); if (k === 'q') drawQ();
-    if (k === 'q') { const sc = app.querySelector('.sp-studycard'); c.style.left = sc && !sc.hidden ? `${Math.round(sc.getBoundingClientRect().right - root.getBoundingClientRect().left + 8)}px` : '60px'; }   // beside an open study, not over it
+    if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis(); if (k === 'sec') drawSec(); if (k === 'q') drawQ(); if (k === 'xl') drawXL();
+    if (k === 'q' || k === 'xl') { const sc = app.querySelector('.sp-studycard'); c.style.left = sc && !sc.hidden ? `${Math.round(sc.getBoundingClientRect().right - root.getBoundingClientRect().left + 8)}px` : '60px'; }   // beside an open study, not over it
     if (['stats', 'spaces'].includes(k)) { openCard(false); if (!dat.hidden) openData(false); if (!cmp.hidden) openSheet(false); }
     const r = anchor.getBoundingClientRect(); c.style.top = '64px'; requestAnimationFrame(() => { const h = c.offsetHeight; c.style.top = Math.max(64, Math.min(innerHeight - h - 12, r.top - 8)) + 'px'; });
   }
@@ -193,7 +195,7 @@ export function mountChrome(app, api) {
     else if (k === 'zoomSel') doc()?.getElementById('fitSelectedBtn')?.click();
     else if (pops[k]) { e.stopPropagation(); togglePop(k, b); }
   });
-  const away = (e) => { if (!e.target.closest('.sp-pop,[data-sp]')) closePops(); if (!e.target.closest('.sp-proj')) { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); } };
+  const away = (e) => { const inPop = e.composedPath().some((n) => n.nodeType === 1 && (n.matches?.('.sp-pop,[data-sp]')));   /* the path as the click went: a popover that redrew under it still holds it */ if (!inPop && !e.target.closest('.sp-pop,[data-sp]')) closePops(); if (!e.target.closest('.sp-proj')) { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); } };
   document.addEventListener('click', away);
 
   // ---- statistics: counted from the model as it is now (Plan Studio's objects and masses), nothing estimated
@@ -297,6 +299,27 @@ export function mountChrome(app, api) {
       if (document.hidden) { document.addEventListener('visibilitychange', onFocus); RUN.cleanup = () => document.removeEventListener('visibilitychange', onFocus); } else onFocus();
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
+  // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261109-1'));
+  const XL = { list: { title: '', items: [] }, busy: '' };
+  xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
+  function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
+  async function xlSave() { const m = await xlMod(); await m.saveList(p.id, XL.list); xlBadge(); if (!pops.xl.hidden) drawXL(); }
+  async function drawXL() { const m = await xlMod(); m.renderList(pops.xl, XL.list, { project: p.name, modelKey: modelHash(), busy: XL.busy, onChange: (redraw = true) => { xlSave(); if (redraw) drawXL(); }, onExport: xlExport }); }
+  const xlCtx = () => { const st = S.siteOf(p) || {}, last = (p.versions || []).at(-1); return { project: p.name, site: st.label && st.label !== p.name ? st.label : '', coords: Number.isFinite(st.lat) ? `${Math.abs(st.lat).toFixed(4)}° ${st.lat >= 0 ? 'N' : 'S'}, ${Math.abs(st.lon).toFixed(4)}° ${st.lon >= 0 ? 'E' : 'W'}` : '', version: last ? `v${last.n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: S.conditionsOf(p).revision, author: S.account()?.user?.name || '', weather: ROSE.v?.station || '' }; };
+  async function xlExport(kind) { if (XL.busy) return; XL.busy = kind === 'pdf' ? 'Laying out the report…' : kind === 'pptx' ? 'Building the slides…' : 'Packing the pictures…'; drawXL();
+    try { const m = await xlMod(), { name, blob } = await m.exportList(kind, XL.list, xlCtx()), a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = name; a.addEventListener('click', (ev) => ev.stopPropagation()); document.body.append(a); a.click(); a.remove();   /* a download is not a click outside the list */ setTimeout(() => URL.revokeObjectURL(u), 4000); XL.busy = ''; }
+    catch (e) { XL.busy = 'The export could not finish: ' + (e.message || e); } drawXL(); setTimeout(() => { if (XL.busy.startsWith('The export')) { XL.busy = ''; } }, 6000); }
+  // what every item records: how it was computed
+  const basisLine = (q = qualOf(), cell = 0) => { const c = xlCtx(); return `Quality ${q.name}${cell ? ` · ground grid ${fmt(cell, 2)} m` : ''} · model ${c.version} · conditions revision ${c.revision ?? '–'}${c.site ? ' · ' + c.site : ''}`; };
+  const legendOf = (V, r) => { const cols = V.legendCols || INST.persp.ws.rampColors?.(r.ramp) || ['#ddd', '#333']; return { lo: V.lo, hi: V.hi, unit: V.unit || r.unit || '', dec: V.dec ?? r.dec ?? 1, stops: V.legendLabels ? cols.slice().reverse() : cols }; };
+  async function xlAdd(item) { const m = await xlMod(); XL.list.items.push({ id: 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: new Date().toISOString(), modelKey: modelHash(), ...item }); await xlSave(); toastXL(`Added to the export list (${XL.list.items.length}).`); void m; }
+  const toastXL = (t) => { const b = app.querySelector('.sp-xlb'); if (!b) return; b.classList.remove('sp-pulse'); void b.offsetWidth; b.classList.add('sp-pulse'); b.title = t; };
+  // the study's view as it is now, at print size (about 1800 px wide), with its legend, key results and method
+  async function xlAddView() { const r = ST.res, id = ST.id; if (!r || !INST.persp.ready) return; if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 400)); }
+    const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1800 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (!c) return;
+    const m = await xlMod(), V = (r.views && r.views[r.view]) || r, blob = await m.canvasBlob(c);
+    await xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name}`, pictures: [{ label: m.plain(V.title || r.title || ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell) }); }
   // ---- section (2026-11-07, after Revit's Section): the line is part of the model, drawn and edited on the plan (drag the line or a
   // head, click an arrow to flip, drag the dashed far edge); here: draw it, the Section view (square to the cut, parallel, with the
   // levels), the 3D cutaway, the far clip, and a study's result on the cut where the study has one through the height of a room
@@ -314,7 +337,7 @@ export function mountChrome(app, api) {
     pops.sec.innerHTML = '<h3>Section</h3>' + (!s
       ? `<p class="sp-note" style="margin-top:0">${drawing ? 'On the plan: click where the cut starts, then where it ends. Esc to stop.' : 'A vertical cut through the building, as in a drawn section. Draw its line on the plan, then look at it square on (Section view) or cut the 3D view.'}</p><div ${row}><button type="button" class="btn sm" data-sec="draw" ${drawing ? 'disabled' : ''}>Draw section line</button></div>`
       : `<div class="sp-kv"><span>Section ${esc(s.name || 'A')}</span><b>${fmt(s.len, 2)} m</b></div>
-        <div ${row}><button type="button" class="btn sm${on ? ' accent' : ''}" data-sec="view" aria-pressed="${on}">${on ? 'Back to 3D' : 'Section view'}</button><button type="button" class="btn sm" data-sec="flip" title="Look the other way">Flip</button>${on ? '<button type="button" class="btn sm" data-sec="png" title="The Section view with its levels, notes and a title block">Export PNG</button>' : ''}</div>
+        <div ${row}><button type="button" class="btn sm${on ? ' accent' : ''}" data-sec="view" aria-pressed="${on}">${on ? 'Back to 3D' : 'Section view'}</button><button type="button" class="btn sm" data-sec="flip" title="Look the other way">Flip</button>${on ? '<button type="button" class="btn sm" data-sec="png" title="The Section view with its levels, notes and a title block">Export PNG</button><button type="button" class="btn sm" data-sec="xl" title="Keep this section for the report">Add to export list</button>' : ''}</div>
         <label class="sp-sw"><input type="checkbox" data-sec="on" ${s.on !== false ? 'checked' : ''}> Cut the 3D view</label>
         <label class="sp-sw"><input type="checkbox" data-sec="farOn" ${s.far ? 'checked' : ''}> Far clip</label>
         ${s.far ? `<label class="sp-sl"><span>Depth behind the cut <output>${fmt(s.far, 1)} m</output></span><input type="range" data-sec="far" min="0.5" max="60" step="0.5" value="${s.far}"></label>` : ''}
@@ -326,6 +349,10 @@ export function mountChrome(app, api) {
     if (q('draw')) q('draw').onclick = async () => { if (UI.view !== 'plan') await goView('plan'); for (let i = 0; i < 60 && !INST.plan.ready; i++) await new Promise((r) => setTimeout(r, 100)); INST.plan.ws.sectionDraw?.(() => drawSec()); setTimeout(drawSec, 0); };   // redrawn after this click (the click outside the popover closes it)
     if (q('view')) q('view').onclick = async () => { await sectionView(!on); setTimeout(drawSec, 0); };
     if (q('flip')) q('flip').onclick = () => set({ flip: !s.flip });
+    if (q('xl')) q('xl').onclick = async () => { const V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null]); if (!u) return;
+      const blob = await (await fetch(u)).blob(), X = await xlMod();
+      await xlAdd({ kind: 'section', study: vent ? 'vent' : 'section', title: `Section ${s.name || 'A'}${V ? ' · ' + X.plain(V.title) : ''}`, sub: `${s.far ? `far clip ${fmt(s.far, 1)} m` : 'no far clip'} · parallel view`, pictures: [{ label: `Section ${s.name || 'A'}`, blob }], cols: 1, legend: V ? legendOf(V, ST.res) : null,
+        rows: V ? (ST.res.rows || []).slice(0, 10).map(([k, v]) => [X.plain(k), X.plain(v)]) : [], method: V ? X.plain(ST.res.method || '') : 'A vertical cut through the model at the section line, seen square on with a 1° lens from far away (all but parallel); cut faces filled where closed solids are cut.', basis: basisLine(), notes: V ? ['On the cut: one value per room (the airflow network treats each room as fully mixed), not air speed or temperature.'] : [] }); };
     if (q('png')) q('png').onclick = async () => { const V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, at = (ST.at || new Date()).toISOString().slice(0, 16).replace('T', ' ');
       const u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null, V ? `Result of ${at}${ST.saved ? ' · ' + ST.saved : ''}` : null, `Exported ${new Date().toISOString().slice(0, 16).replace('T', ' ')} · PlotCloud`]);
       if (u) { const a = document.createElement('a'); a.href = u; a.download = `${p.name.replace(/[^\w-]+/g, '-')}-section-${s.name || 'A'}.png`; a.click(); } };
@@ -1144,6 +1171,10 @@ export function mountChrome(app, api) {
     const M = await seriesUI();
     M.openSeriesPreview(app, { frames: frames.map((f) => ({ label: f.label })), cols: frames.length === 12 ? 4 : frames.length === 4 ? 2 : Math.ceil(Math.sqrt(frames.length)), meta,
       paint, snap: (wd, ht, sc) => INST.persp.ws.snapAt?.(wd, ht, sc), move: (o) => INST.persp.ws.camMove?.(o),
+      addToList: async (canvases, labels) => { const X = await xlMod(), pics = []; for (const [i, c] of canvases.entries()) pics.push({ label: labels[i], blob: await X.canvasBlob(c) });
+        await xlAdd({ kind: 'series', study: id, title: `${simName(id)} · ${kind === 'months' ? '12 months' : '4 seasons'}`, sub: `${def[kind + 'Note']} · ${q.name}`, pictures: pics, cols: frames.length === 12 ? 4 : 2,
+          legend: { lo, hi, unit: meta.unit, dec: meta.dec, stops: meta.labels ? cols.slice().reverse() : cols }, rows: frames.map((f) => [f.label, Number.isFinite(V(f.r).avg ?? f.r.avg) ? `${fmt(V(f.r).avg ?? f.r.avg, meta.dec)} ${meta.unit} on average` : '–']),
+          method: meta.method, basis: basisLine(q, r0.cell), notes: [`One colour scale for every picture: ${fmt(lo, meta.dec)} to ${fmt(hi, meta.dec)} ${meta.unit}.`] }); },
       onClose: () => { ST[def.key] = keepKey; if (ST.res) paintRes(ST.res); else clearAll(); } }); }
   async function runStudy() {
     if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
@@ -1271,7 +1302,7 @@ export function mountChrome(app, api) {
       rose: () => { if (ST.roseErr) return `<p class="sp-note sp-errtext">${esc(ST.roseErr)}</p>`; if (!ST.rose) return '<p class="sp-note">Reading the wind of the project weather…</p>'; const R = ST.rose, single = ST.windMode === 'single', dir = ST.windDir ?? R.prevailing, i = Math.round(dir / 22.5) % 16, spd = ST.windSpeed ?? R.sec[i].mean;
         return `<p class="sp-flabel">${single ? 'Click the rose to choose the wind direction' : 'The year’s wind by direction, from the project weather'}</p>${roseSVG(R, single)}${single ? `<label class="sp-spdrow"><span>From ${DIR16[i]} · <span class="sp-spd">${fmt(spd, 1)}</span> m/s at 10 m</span><input type="range" min="0.5" max="20" step="0.5" value="${(+spd).toFixed(1)}" data-st="windSpeed"></label>` : `<p class="sp-note">Prevailing from ${DIR16[Math.round(R.prevailing / 22.5) % 16]}; calm ${fmt(R.calm * 100)}% of hours. ${esc(R.station)}</p>`}`; } };
     studyCard.innerHTML = `<header><b>${esc(name)}</b><span class="sp-pill" data-state="${status[0]}">${esc(status[1])}</span><span class="sp-hbtns"><button type="button" class="sp-ib" data-st="exp" aria-expanded="${ST.exp}" title="Export">⤓</button><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></span></header>
-      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}${SERIES[id] ? `<p class="sp-flabel">Series: one picture each, on one colour scale</p><button type="button" class="btn sm" data-st="ser-months" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].monthsNote)}">12 months</button><button type="button" class="btn sm" data-st="ser-seasons" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].seasonsNote)}">4 seasons</button><p class="sp-note">${esc(SERIES[id].monthsNote)}, or ${esc(SERIES[id].seasonsNote.toLowerCase())}; at ${esc(qualOf().name)} quality, about ${dur((estimate(id)?.ms || 0) * 12)} for 12. Then choose the view and export the sheet.</p>` : ''}</div>` : ''}
+      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button><button type="button" class="btn sm" data-st="xl-view" ${r && !ST.busy ? '' : 'disabled'} title="Keep this view, with its legend, key results and method, for the report">Add view to export list</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}${SERIES[id] ? `<p class="sp-flabel">Series: one picture each, on one colour scale</p><button type="button" class="btn sm" data-st="ser-months" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].monthsNote)}">12 months</button><button type="button" class="btn sm" data-st="ser-seasons" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].seasonsNote)}">4 seasons</button><p class="sp-note">${esc(SERIES[id].monthsNote)}, or ${esc(SERIES[id].seasonsNote.toLowerCase())}; at ${esc(qualOf().name)} quality, about ${dur((estimate(id)?.ms || 0) * 12)} for 12. Then choose the view and export the sheet.</p>` : ''}</div>` : ''}
       ${sp.mode ? seg('data-st-mode', ST[sp.mode[0]], sp.mode[1]) : ''}${stage}
       ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}
       ${r && id === 'fire-evacuation' ? `<div class="sp-acts sp-acts1 sp-egplay"><button type="button" class="btn sm" data-eg="play">${ST.egPlay ? '❚❚ Pause' : '▶ Play'}</button><input type="range" data-eg="seek" min="0" max="${r.nFrames || 1}" step="1" value="${Math.round(ST.egT || 0)}" aria-label="Time in the run shown"><span class="sp-egt sp-note"></span></div><div class="sp-chips" role="group" aria-label="Playback speed">${[[10, '×10'], [30, '×30'], [60, '×60']].map(([v, n]) => `<button type="button" data-eg="speed" data-v="${v}" aria-pressed="${ST.egSpeed === v}">${n}</button>`).join('')}</div>` : ''}
@@ -1326,7 +1357,7 @@ export function mountChrome(app, api) {
   studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'windSpeed') { ST.windSpeed = +e.target.value; drawStudy(); } });
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
-    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
+    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'xl-view') { xlAddView(); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false;
 
