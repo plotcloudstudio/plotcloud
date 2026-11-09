@@ -42,6 +42,7 @@ const P = {
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   zoomSel: '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><rect x="9" y="9" width="6" height="6"/>',
   section: '<path d="M6.4 13h2.2M11 13h2M15.4 13h2.2"/><circle cx="4" cy="13" r="2.3"/><circle cx="20" cy="13" r="2.3"/><path d="M4 10.7V5.5M20 10.7V5.5"/><path d="M2.3 7.6L4 5.2l1.7 2.4zM18.3 7.6L20 5.2l1.7 2.4z" fill="currentColor"/>',
+  xlist: '<path d="M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5v14l-3-2-3 2-3-2-3 2V6A1.5 1.5 0 0 1 7 4.5z"/><path d="M9.5 9h5M9.5 12h5M9.5 15h3"/>',
   sun: '<circle cx="12" cy="12" r="3.6"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   snap: '<path d="M7 4v7a5 5 0 0 0 10 0V4"/><path d="M7 8h3M14 8h3"/>',
   eye: '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6S18 18 12 18 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>',
@@ -106,6 +107,7 @@ export function mountChrome(app, api) {
   left.insertAdjacentHTML('beforeend', btn('assets', 'Assets: imported models and your furniture', 'assets', 'aria-pressed="false"'));
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'), $('#addSimInt'));
+  add.insertAdjacentHTML('beforeend', `<span class="sp-hr"></span><button type="button" class="sp-b sp-xlb" data-sp="xl" title="Export list: the views, series and sections for the report" aria-label="Export list" aria-pressed="false">${I(P.xlist)}<i class="sp-badge" hidden></i></button>`);
   root.append(left, add);
 
   // ---- bottom: Edit site | the model tools | select, text, delete, more
@@ -142,8 +144,8 @@ export function mountChrome(app, api) {
   const card = $('.w2-right'); card.classList.add('sp-card', 'sp-panelcard'); card.insertAdjacentHTML('afterbegin', '<button type="button" class="sp-x" aria-label="Close panel" title="Close">×</button>');
   card.querySelector('.sp-x').onclick = () => openCard(false);
   const pops = {};
-  for (const k of ['stats', 'spaces', 'sec', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
-  pops.sec.style.right = '60px';
+  for (const k of ['stats', 'spaces', 'q', 'xl', 'sec', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
+  pops.sec.style.right = '60px'; pops.q.style.left = '60px'; pops.q.style.width = '280px'; pops.xl.style.left = '60px'; pops.xl.style.width = '340px';
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
   // the panels card and a study panel share the left side: the card covers the study panel while it is open
@@ -161,7 +163,8 @@ export function mountChrome(app, api) {
   function closePops(except) { for (const [k, c] of Object.entries(pops)) if (k !== except) { c.hidden = true; app.querySelector(`[data-sp="${k}"]`)?.setAttribute('aria-pressed', 'false'); } }
   function togglePop(k, anchor) {
     const c = pops[k], on = c.hidden; closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
-    if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis(); if (k === 'sec') drawSec();
+    if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis(); if (k === 'sec') drawSec(); if (k === 'q') drawQ(); if (k === 'xl') drawXL();
+    if (k === 'q' || k === 'xl') { const sc = app.querySelector('.sp-studycard'); c.style.left = sc && !sc.hidden ? `${Math.round(sc.getBoundingClientRect().right - root.getBoundingClientRect().left + 8)}px` : '60px'; }   // beside an open study, not over it
     if (['stats', 'spaces'].includes(k)) { openCard(false); if (!dat.hidden) openData(false); if (!cmp.hidden) openSheet(false); }
     const r = anchor.getBoundingClientRect(); c.style.top = '64px'; requestAnimationFrame(() => { const h = c.offsetHeight; c.style.top = Math.max(64, Math.min(innerHeight - h - 12, r.top - 8)) + 'px'; });
   }
@@ -192,7 +195,7 @@ export function mountChrome(app, api) {
     else if (k === 'zoomSel') doc()?.getElementById('fitSelectedBtn')?.click();
     else if (pops[k]) { e.stopPropagation(); togglePop(k, b); }
   });
-  const away = (e) => { if (!e.target.closest('.sp-pop,[data-sp]')) closePops(); if (!e.target.closest('.sp-proj')) { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); } };
+  const away = (e) => { const inPop = e.composedPath().some((n) => n.nodeType === 1 && (n.matches?.('.sp-pop,[data-sp]')));   /* the path as the click went: a popover that redrew under it still holds it */ if (!inPop && !e.target.closest('.sp-pop,[data-sp]')) closePops(); if (!e.target.closest('.sp-proj')) { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); } };
   document.addEventListener('click', away);
 
   // ---- statistics: counted from the model as it is now (Plan Studio's objects and masses), nothing estimated
@@ -236,6 +239,87 @@ export function mountChrome(app, api) {
     pops.sun.querySelector('#spSunDay').oninput = (e) => { const n = +e.target.value + 1; let m = 11; while (DOY0[m] >= n) m--; save({ m, d: n - DOY0[m] }); };
     pops.sun.querySelector('#spSunHour').oninput = (e) => save({ h: +e.target.value });
   }
+  // ---- simulation quality (2026-11-09): a small slider above Add simulation. Drag it (or use the arrow keys) from Draft, quick
+  // results while designing, to Refined, finer grids for results to present; a click opens its card: what each step changes,
+  // the open study's time at each step, and the grids of Project props to set by hand.
+  const qEl = el('div', 'sp-q'); qEl.dataset.sp = 'q'; qEl.tabIndex = 0; qEl.setAttribute('role', 'slider'); qEl.setAttribute('aria-label', 'Simulation quality'); qEl.setAttribute('aria-valuemin', '0'); qEl.setAttribute('aria-valuemax', '2');
+  qEl.innerHTML = '<span class="sp-q-tr"><i></i><i></i><i></i><b></b></span>'; root.append(qEl);
+  function qUI() { const q = qualOf(), i = QUAL.indexOf(q); qEl.dataset.q = q.k; qEl.setAttribute('aria-valuenow', String(i)); qEl.setAttribute('aria-valuetext', q.name); qEl.querySelector('b').style.left = `${i * 50}%`;
+    qEl.title = `Simulation quality: ${q.name}. Slide right for finer, slower results; left for quick drafts. Click for grids and times.`; }
+  function setQual(k) { const q = QUAL.find((x) => x.k === k); if (!q || q === qualOf()) return; const c = S.conditionsOf(p); S.updateConditions(p, c.site, { ...c.defaults, quality: k }, { acquisition: 'manual-entry', valueOrigin: 'user-override' }); syncLevels(); qUI(); if (!pops.q.hidden) drawQ(); if (ST.id) drawStudy(); }
+  const setDefault = (key, v) => { const c = S.conditionsOf(p); S.updateConditions(p, c.site, { ...c.defaults, [key]: v }, { acquisition: 'manual-entry', valueOrigin: 'user-override' }); drawQ(); if (ST.id) drawStudy(); };
+  { let drag = null; const at = (x) => { const r = qEl.querySelector('.sp-q-tr').getBoundingClientRect(); return Math.max(0, Math.min(2, Math.round((x - r.left) / Math.max(1, r.width) * 2))); };
+    qEl.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; drag = { x: e.clientX, moved: false }; qEl.setPointerCapture(e.pointerId); });
+    qEl.addEventListener('pointermove', (e) => { if (!drag) return; if (Math.abs(e.clientX - drag.x) > 5) drag.moved = true; if (drag.moved) qEl.querySelector('b').style.left = `${at(e.clientX) * 50}%`; });
+    qEl.addEventListener('pointerup', (e) => { if (!drag) return; const d = drag; drag = null; if (d.moved) { qEl.dataset.dragged = '1'; setQual(QUAL[at(e.clientX)].k); qUI(); } });
+    qEl.addEventListener('click', (e) => { if (qEl.dataset.dragged) { delete qEl.dataset.dragged; e.stopImmediatePropagation(); } }, true);   // a slide is not a click
+    qEl.addEventListener('keydown', (e) => { const i = QUAL.indexOf(qualOf()); if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setQual(QUAL[Math.min(2, i + 1)].k); } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setQual(QUAL[Math.max(0, i - 1)].k); } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePop('q', qEl); } }); }
+  queueMicrotask(qUI);   // once the quality table below is defined
+  function drawQ() { const q = qualOf(), i = QUAL.indexOf(q), id = ST.id, nm = id ? simName(id) : '', est = id ? QUAL.map((x) => estimate(id, x)) : null, d0 = S.conditionsOf(p).defaults || {}, a = autoCells();
+    const sel = (key, opts, label) => `<label class="sp-field">${label}<select class="sp-sel" data-qset="${key}">${opts.map((o) => `<option value="${o}" ${String(d0[key] ?? opts[0]) === o ? 'selected' : ''}>${o === 'Auto' ? `Auto (set by quality${key === 'grid' && a ? `: ${fmt(gridSet() ? a.cell : (gridOf() || a.cell), 2)} m` : key === 'surfGrid' && a && a.surf ? `: ${fmt(surfSet() ? a.surf : (surfOf() || a.surf), 2)} m` : ''})` : o + (key === 'flowDetail' ? '' : ' m')}</option>`).join('')}</select></label>`;
+    const times = est && est.some(Boolean) ? `<h4>${esc(nm)} at each quality</h4>${QUAL.map((x, j) => `<div class="sp-kv"><span>${x.name}</span><b>${est[j] ? dur(est[j].ms) : '—'}</b></div>`).join('')}` : `<p class="sp-note">${id ? `${esc(nm)} has no time estimate before it runs; its progress shows at the top while it runs.` : 'Open a simulation to see its time at each quality.'}</p>`;
+    pops.q.innerHTML = `<h3>Simulation quality</h3>
+      <label class="sp-sl"><span><b>${q.name}</b><output>${['Quickest', 'Balanced', 'Finest, slower'][i]}</output></span><input type="range" min="0" max="2" step="1" value="${i}" data-qset="quality" aria-label="Simulation quality"></label>
+      <div class="sp-qticks"><span>Draft</span><span>Standard</span><span>Refined</span></div>
+      <p class="sp-note">${esc(q.note)} Interior studies: ${esc(q.lv === 'fine' ? 'Fine' : q.lv === 'standard' ? 'Standard' : 'Draft')} detail.</p>
+      ${i > 0 ? `<p class="sp-note sp-warn">Takes longer than Draft${est && est[0] && est[i] ? `: ${esc(nm)} ${dur(est[i].ms)} instead of ${dur(est[0].ms)}` : `: about ${i === 1 ? '2' : '4'} times the grid points`}. Once it starts, the time left and when it will finish show at the top, so you can leave it running.</p>` : ''}
+      ${times}
+      <h4>Grids (Project props › Default)</h4>
+      ${sel('grid', ['Auto', '0.25', '0.5', '1', '2', '4'], 'Ground grid')}${sel('surfGrid', ['Auto', '0.25', '0.5', '1', '2'], 'Building surface grid')}${sel('flowDetail', ['Standard', 'Fine', 'Very fine'], 'Wind, snow and water detail')}
+      <p class="sp-note">A grid set here is used at every quality; Auto lets the quality set it.${gridSet() || surfSet() ? ' <b>Custom grids are set.</b>' : ''}</p>`;
+    pops.q.querySelectorAll('[data-qset]').forEach((x) => x.onchange = () => { if (x.dataset.qset === 'quality') setQual(QUAL[+x.value].k); else setDefault(x.dataset.qset, x.value); });
+    pops.q.querySelector('[data-qset=quality]').oninput = (e) => { const j = +e.target.value; e.target.closest('label').querySelector('b').textContent = QUAL[j].name; }; }
+
+  // ---- the run at the top (2026-11-09): while a study runs, its time left and the clock time it should finish, from the estimate
+  // and, once it reports progress, from its progress; the tab title shows it too, and a notice can come when it ends (opt in)
+  const runEl = el('div', 'sp-card sp-runbar'); runEl.hidden = true; runEl.setAttribute('role', 'status'); runEl.setAttribute('aria-live', 'polite'); root.append(runEl);
+  const RUN = { title: null, cleanup: null }, NOTK = 'pc-ws-notify', clock = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const durS = (ms) => (ms < 60000 ? `${Math.max(1, Math.round(ms / 1000))} s` : ms < 3600000 ? `${Math.floor(ms / 60000)} min ${String(Math.round(ms % 60000 / 1000)).padStart(2, '0')} s` : `${Math.floor(ms / 3600000)} h ${Math.round(ms % 3600000 / 60000)} min`);
+  const wantNotice = () => { try { return localStorage.getItem(NOTK) === '1'; } catch { return false; } };
+  function runBar(state) {
+    if (RUN.title == null) RUN.title = document.title; const nm = simName(ST.id), q = ST.runQ || qualOf(), el0 = Date.now() - (ST.t0 || Date.now()), e = ST.estAtRun;
+    if (RUN.cleanup) { RUN.cleanup(); RUN.cleanup = null; }
+    if (state === 'start' || state === 'tick') {
+      const m = /(\d+(?:\.\d+)?)\s*%/.exec(ST.progress || ''), f = m ? Math.min(0.99, +m[1] / 100) : 0;
+      let left = e ? Math.max(0, e.ms - el0) : null; if (f >= 0.1 && el0 > 2000) left = el0 * (1 - f) / f;   // the study's own progress, once it has some, beats the estimate
+      const over = left != null && left < 1000 && f < 0.95 && el0 > 3000, txt = left != null && !over ? `about ${durS(left)} left · done around ${clock(Date.now() + left)}` : over ? 'taking longer than estimated' : 'time not known before it runs';
+      if (state === 'start' || !runEl.querySelector('.sp-run-left')) { runEl.innerHTML = `<span class="sp-run-dot" aria-hidden="true"></span><b class="sp-run-nm"></b><span class="sp-run-q"></span><span class="sp-run-left"></span><span class="sp-run-el"></span><label class="sp-run-n" title="A notice from the browser when it finishes, while you are in another tab or window"><input type="checkbox" ${wantNotice() ? 'checked' : ''}> Notify me</label><button type="button" class="btn sm" data-run="stop">Stop</button>`;
+        runEl.querySelector('[data-run=stop]').onclick = () => { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); };
+        runEl.querySelector('.sp-run-n input').onchange = async (ev) => { const on = ev.target.checked; try { localStorage.setItem(NOTK, on ? '1' : '0'); } catch { } if (on && 'Notification' in window && Notification.permission === 'default') { try { await Notification.requestPermission(); } catch { } } }; }
+      runEl.dataset.state = 'run'; runEl.hidden = false; runEl.querySelector('.sp-run-nm').textContent = nm; runEl.querySelector('.sp-run-q').textContent = q.name; runEl.querySelector('.sp-run-left').textContent = txt;
+      runEl.querySelector('.sp-run-el').textContent = `${durS(el0)} elapsed${e ? ` · estimated ${dur(e.ms)}` : ''}${f ? ` · ${Math.round(f * 100)}%` : ''}`;
+      document.title = `${left != null && !over ? durS(left) + ' left' : 'Running'} · ${nm} — PlotCloud`; return; }
+    if (state === 'done' || state === 'error') { const ok = state === 'done', end = Date.now();
+      runEl.dataset.state = ok ? 'done' : 'error'; runEl.hidden = false;
+      runEl.innerHTML = `<span class="sp-run-dot" aria-hidden="true"></span><b>${esc(nm)}</b><span>${ok ? `finished at ${clock(end)} · took ${durS(el0)} · ${esc(q.name)}` : 'could not run: see its panel'}</span><button type="button" class="sp-x" aria-label="Close" title="Close">×</button>`;
+      document.title = `${ok ? '✓' : '✗'} ${nm} ${ok ? 'done' : 'failed'} — PlotCloud`;
+      const restore = () => { document.title = RUN.title; runEl.hidden = true; RUN.title = null; }, onFocus = () => { if (!document.hidden) setTimeout(restore, ok ? 8000 : 15000); };
+      runEl.querySelector('.sp-x').onclick = () => { restore(); RUN.cleanup?.(); RUN.cleanup = null; };
+      if (wantNotice() && document.hidden && 'Notification' in window && Notification.permission === 'granted') { try { new Notification(`PlotCloud · ${nm} ${ok ? 'finished' : 'could not run'}`, { body: ok ? `${q.name} · took ${durS(el0)}` : 'Open the Workspace to see why.' }); } catch { } }
+      if (document.hidden) { document.addEventListener('visibilitychange', onFocus); RUN.cleanup = () => document.removeEventListener('visibilitychange', onFocus); } else onFocus();
+      return; }
+    runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
+  // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261109-1'));
+  const XL = { list: { title: '', items: [] }, busy: '' };
+  xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
+  function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
+  async function xlSave() { const m = await xlMod(); await m.saveList(p.id, XL.list); xlBadge(); if (!pops.xl.hidden) drawXL(); }
+  async function drawXL() { const m = await xlMod(); m.renderList(pops.xl, XL.list, { project: p.name, modelKey: modelHash(), busy: XL.busy, onChange: (redraw = true) => { xlSave(); if (redraw) drawXL(); }, onExport: xlExport }); }
+  const xlCtx = () => { const st = S.siteOf(p) || {}, last = (p.versions || []).at(-1); return { project: p.name, site: st.label && st.label !== p.name ? st.label : '', coords: Number.isFinite(st.lat) ? `${Math.abs(st.lat).toFixed(4)}° ${st.lat >= 0 ? 'N' : 'S'}, ${Math.abs(st.lon).toFixed(4)}° ${st.lon >= 0 ? 'E' : 'W'}` : '', version: last ? `v${last.n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: S.conditionsOf(p).revision, author: S.account()?.user?.name || '', weather: ROSE.v?.station || '' }; };
+  async function xlExport(kind) { if (XL.busy) return; XL.busy = kind === 'pdf' ? 'Laying out the report…' : kind === 'pptx' ? 'Building the slides…' : 'Packing the pictures…'; drawXL();
+    try { const m = await xlMod(), { name, blob } = await m.exportList(kind, XL.list, xlCtx()), a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = name; a.addEventListener('click', (ev) => ev.stopPropagation()); document.body.append(a); a.click(); a.remove();   /* a download is not a click outside the list */ setTimeout(() => URL.revokeObjectURL(u), 4000); XL.busy = ''; }
+    catch (e) { XL.busy = 'The export could not finish: ' + (e.message || e); } drawXL(); setTimeout(() => { if (XL.busy.startsWith('The export')) { XL.busy = ''; } }, 6000); }
+  // what every item records: how it was computed
+  const basisLine = (q = qualOf(), cell = 0) => { const c = xlCtx(); return `Quality ${q.name}${cell ? ` · ground grid ${fmt(cell, 2)} m` : ''} · model ${c.version} · conditions revision ${c.revision ?? '–'}${c.site ? ' · ' + c.site : ''}`; };
+  const legendOf = (V, r) => { const cols = V.legendCols || INST.persp.ws.rampColors?.(r.ramp) || ['#ddd', '#333']; return { lo: V.lo, hi: V.hi, unit: V.unit || r.unit || '', dec: V.dec ?? r.dec ?? 1, stops: V.legendLabels ? cols.slice().reverse() : cols }; };
+  async function xlAdd(item) { const m = await xlMod(); XL.list.items.push({ id: 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: new Date().toISOString(), modelKey: modelHash(), ...item }); await xlSave(); toastXL(`Added to the export list (${XL.list.items.length}).`); void m; }
+  const toastXL = (t) => { const b = app.querySelector('.sp-xlb'); if (!b) return; b.classList.remove('sp-pulse'); void b.offsetWidth; b.classList.add('sp-pulse'); b.title = t; };
+  // the study's view as it is now, at print size (about 1800 px wide), with its legend, key results and method
+  async function xlAddView() { const r = ST.res, id = ST.id; if (!r || !INST.persp.ready) return; if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 400)); }
+    const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1800 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (!c) return;
+    const m = await xlMod(), V = (r.views && r.views[r.view]) || r, blob = await m.canvasBlob(c);
+    await xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name}`, pictures: [{ label: m.plain(V.title || r.title || ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell) }); }
   // ---- section (2026-11-07, after Revit's Section): the line is part of the model, drawn and edited on the plan (drag the line or a
   // head, click an arrow to flip, drag the dashed far edge); here: draw it, the Section view (square to the cut, parallel, with the
   // levels), the 3D cutaway, the far clip, and a study's result on the cut where the study has one through the height of a room
@@ -253,7 +337,7 @@ export function mountChrome(app, api) {
     pops.sec.innerHTML = '<h3>Section</h3>' + (!s
       ? `<p class="sp-note" style="margin-top:0">${drawing ? 'On the plan: click where the cut starts, then where it ends. Esc to stop.' : 'A vertical cut through the building, as in a drawn section. Draw its line on the plan, then look at it square on (Section view) or cut the 3D view.'}</p><div ${row}><button type="button" class="btn sm" data-sec="draw" ${drawing ? 'disabled' : ''}>Draw section line</button></div>`
       : `<div class="sp-kv"><span>Section ${esc(s.name || 'A')}</span><b>${fmt(s.len, 2)} m</b></div>
-        <div ${row}><button type="button" class="btn sm${on ? ' accent' : ''}" data-sec="view" aria-pressed="${on}">${on ? 'Back to 3D' : 'Section view'}</button><button type="button" class="btn sm" data-sec="flip" title="Look the other way">Flip</button>${on ? '<button type="button" class="btn sm" data-sec="png" title="The Section view with its levels, notes and a title block">Export PNG</button>' : ''}</div>
+        <div ${row}><button type="button" class="btn sm${on ? ' accent' : ''}" data-sec="view" aria-pressed="${on}">${on ? 'Back to 3D' : 'Section view'}</button><button type="button" class="btn sm" data-sec="flip" title="Look the other way">Flip</button>${on ? '<button type="button" class="btn sm" data-sec="png" title="The Section view with its levels, notes and a title block">Export PNG</button><button type="button" class="btn sm" data-sec="xl" title="Keep this section for the report">Add to export list</button>' : ''}</div>
         <label class="sp-sw"><input type="checkbox" data-sec="on" ${s.on !== false ? 'checked' : ''}> Cut the 3D view</label>
         <label class="sp-sw"><input type="checkbox" data-sec="farOn" ${s.far ? 'checked' : ''}> Far clip</label>
         ${s.far ? `<label class="sp-sl"><span>Depth behind the cut <output>${fmt(s.far, 1)} m</output></span><input type="range" data-sec="far" min="0.5" max="60" step="0.5" value="${s.far}"></label>` : ''}
@@ -265,6 +349,10 @@ export function mountChrome(app, api) {
     if (q('draw')) q('draw').onclick = async () => { if (UI.view !== 'plan') await goView('plan'); for (let i = 0; i < 60 && !INST.plan.ready; i++) await new Promise((r) => setTimeout(r, 100)); INST.plan.ws.sectionDraw?.(() => drawSec()); setTimeout(drawSec, 0); };   // redrawn after this click (the click outside the popover closes it)
     if (q('view')) q('view').onclick = async () => { await sectionView(!on); setTimeout(drawSec, 0); };
     if (q('flip')) q('flip').onclick = () => set({ flip: !s.flip });
+    if (q('xl')) q('xl').onclick = async () => { const V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null]); if (!u) return;
+      const blob = await (await fetch(u)).blob(), X = await xlMod();
+      await xlAdd({ kind: 'section', study: vent ? 'vent' : 'section', title: `Section ${s.name || 'A'}${V ? ' · ' + X.plain(V.title) : ''}`, sub: `${s.far ? `far clip ${fmt(s.far, 1)} m` : 'no far clip'} · parallel view`, pictures: [{ label: `Section ${s.name || 'A'}`, blob }], cols: 1, legend: V ? legendOf(V, ST.res) : null,
+        rows: V ? (ST.res.rows || []).slice(0, 10).map(([k, v]) => [X.plain(k), X.plain(v)]) : [], method: V ? X.plain(ST.res.method || '') : 'A vertical cut through the model at the section line, seen square on with a 1° lens from far away (all but parallel); cut faces filled where closed solids are cut.', basis: basisLine(), notes: V ? ['On the cut: one value per room (the airflow network treats each room as fully mixed), not air speed or temperature.'] : [] }); };
     if (q('png')) q('png').onclick = async () => { const V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, at = (ST.at || new Date()).toISOString().slice(0, 16).replace('T', ' ');
       const u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null, V ? `Result of ${at}${ST.saved ? ' · ' + ST.saved : ''}` : null, `Exported ${new Date().toISOString().slice(0, 16).replace('T', ' ')} · PlotCloud`]);
       if (u) { const a = document.createElement('a'); a.href = u; a.download = `${p.name.replace(/[^\w-]+/g, '-')}-section-${s.name || 'A'}.png`; a.click(); } };
@@ -294,27 +382,51 @@ export function mountChrome(app, api) {
   const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1, stormwater: 1, snow: 1, structure: 1, evac: 1, privacy: 1, wayfinding: 1, spacesyntax: 1, movementdepth: 1, isovist: 1, views: 1, cameras: 1, daylight: 1, 'fire-evacuation': 1, watersound: 1, vent: 1, acoustics: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
   const ENVELOPES = [['equinox', 'Equinoxes, 9:00 to 15:00', [[3, 20], [9, 22]], 9, 15], ['winter', 'Winter solstice, 10:00 to 14:00', [[12, 21]], 10, 14], ['summer', 'Summer solstice, 8:00 to 17:00', [[6, 21]], 8, 17]];
   const PERIODS = [['year', 'Whole year', 1, 12], ['summer', 'Summer · June to August', 6, 8], ['winter', 'Winter · December to February', 12, 2]];
+  // the periods of a series (2026-11-09): each month, and the four three-month seasons (named by their months: the site may be south)
+  const MONTHN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const SER_PERIODS = Object.fromEntries([...MONTHN.map((n, i) => [`m${i + 1}`, n, i + 1, i + 1]), ['q-djf', 'December to February', 12, 2], ['q-mam', 'March to May', 3, 5], ['q-jja', 'June to August', 6, 8], ['q-son', 'September to November', 9, 11]].map((x) => [x[0], x]));
+  const periodDef = (k) => PERIODS.find((x) => x[0] === k) || SER_PERIODS[k] || PERIODS[0];
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
   const ST = { dlLevel: 'draft', dlTau: 0.6, dlRf: 0.2, dlRw: 0.5, dlRc: 0.8, dlHead: 2.4, camMode: 'budget', camN: 4, camWant: '0.95', camLevel: 'recognise', camH: 2.7, camTgt: '1', camTypes: { dome: true, bullet: true, fish: true }, vwLevel: 'draft', vwEye: '1.07', vwHead: 2.4, vwFar: 7.5, vwNature: false, vwMotion: true, isoEye: '1.0', isoTgt: '0.6', isoView: null, isoPick: false, ssLevel: 'standard', ssVh: '1.6', ssGlass: true, id: null, day: '03-21', sunH0: 0, sunH1: 24, sunStep: 15, period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', snowCm: '30', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, priv: { sides: ['top', 'bottom'], dS: 4, eye: 1.6, dO: 15, hO: 9, doors: false }, wayEye: '1.6', wayStart: '', wayFurn: true, wsLoud: 'typical', egStrat: 'horizontal', egRatio: '4', egMix: 'typical', egRuns: 20, egSeed: 1, egFire: null, egPick: false, egSpeed: 30, egPlay: true, egT: 0, area: 3, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
   // the project's analysis grid (Project props › Default): 0 = automatic
-  const gridOf = () => { const g = S.conditionsOf(p).defaults?.grid; return g && g !== 'Auto' ? +g || 0 : 0; };
+  // simulation quality (2026-11-09): one setting above Add simulation for every study, from Draft (quick results while designing:
+  // the automatic grids, as before) to Refined (finer grids, slower: results to present). A grid set in Project props › Default
+  // is kept as set (Custom). Kept with the project's conditions, so each result records the quality it ran at.
+  const QUAL = [
+    { k: 'draft', name: 'Draft', f: 1, flow: 160, lv: 'draft', note: 'Quick results while you design: the automatic grids.' },
+    { k: 'standard', name: 'Standard', f: 1.5, flow: 260, lv: 'standard', note: 'Grids 1.5 times finer than Draft.' },
+    { k: 'refined', name: 'Refined', f: 2, flow: 400, lv: 'fine', note: 'Grids twice as fine as Draft: results to present. Slower.' }];
+  const qualOf = () => QUAL.find((q) => q.k === S.conditionsOf(p).defaults?.quality) || QUAL[0];
+  const syncLevels = () => { const lv = qualOf().lv; ST.dlLevel = ST.vwLevel = ST.ssLevel = lv; };
+  // the automatic grids for the study area as it is (cached per area and model), the base that Standard and Refined make finer
+  const AUTO = { key: '', v: null };
+  function autoCells() { const w = INST.persp.ready ? INST.persp.ws : null; if (!w?.studySize) return null; let mk = ''; try { mk = String(w.model()).length; } catch { }
+    const key = JSON.stringify([ST.area, mk]); if (AUTO.key === key) return AUTO.v; let z = null; try { w.studyArea?.(ST.area); w.studyCell?.(0); w.surfaceCell?.(0); z = w.studySize({ maxCells: 160 }); } catch { }
+    AUTO.key = key; AUTO.v = z && z.cell ? { cell: z.cell, surf: z.surfCell || 0 } : null; return AUTO.v; }
+  const gridSet = () => { const g = S.conditionsOf(p).defaults?.grid; return g && g !== 'Auto' ? +g || 0 : 0; };
+  const gridOf = (q = qualOf()) => { const g = gridSet(); if (g || q.f === 1) return g; const a = autoCells(); return a ? Math.max(0.25, +(a.cell / q.f).toFixed(2)) : 0; };
   // the building surface grid and the detail of the flow studies (Project props › Default, 2026-11-01)
-  const surfOf = () => { const g = S.conditionsOf(p).defaults?.surfGrid; return g && g !== 'Auto' ? +g || 0 : 0; };
-  const flowOf = () => ({ Fine: 260, 'Very fine': 400 })[S.conditionsOf(p).defaults?.flowDetail] || 160;
+  const surfSet = () => { const g = S.conditionsOf(p).defaults?.surfGrid; return g && g !== 'Auto' ? +g || 0 : 0; };
+  const surfOf = (q = qualOf()) => { const g = surfSet(); if (g || q.f === 1) return g; const a = autoCells(); return a && a.surf ? Math.max(0.2, +(a.surf / q.f).toFixed(2)) : 0; };
+  const flowSet = () => ({ Fine: 260, 'Very fine': 400 })[S.conditionsOf(p).defaults?.flowDetail] || 160;
+  const flowOf = (q = qualOf()) => Math.max(flowSet(), q.flow);
   // a time estimate before a run (2026-11-01): milliseconds per ground cell (a) and per building square (b) for each study,
   // measured in a desktop browser; flow studies (lattice-Boltzmann) grow faster than the cell count. Each run corrects its
   // study's factor on this computer, so the estimate learns the machine.
   const COST = { sunhours: [0.03, 0.1], radiation: [0.2, 0.55], skyview: [0.15, 0.4], shadebenefit: [0.2, 0.45], solarenvelope: [0.03, 0.02], utci: [0.3, 0.02], stormwater: [0.025, 0.02], wind: [0.55, 0.02, 1], snow: [0.12, 0.02, 1] };
   const SPEEDK = 'pc-study-speed', speed = () => { try { return JSON.parse(localStorage.getItem(SPEEDK)) || {}; } catch { return {}; } };
-  function estimate(id) { const c = COST[id]; if (!c || !INST.persp.ready || !INST.persp.ws.studySize) return null; let z = null; try { INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf()); z = INST.persp.ws.studySize({ maxCells: flowOf() }); } catch { } if (!z) return null;
+  function estimate(id, q = qualOf()) { const c = COST[id]; if (!c) return estInterior(id, q); if (!INST.persp.ready || !INST.persp.ws.studySize) return null; let z = null; try { const g = gridOf(q), sf = surfOf(q); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(g); INST.persp.ws.surfaceCell?.(sf); z = INST.persp.ws.studySize({ maxCells: flowOf(q) }); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf()); } catch { } if (!z) return null;
     const flow = !!c[2], n = flow ? z.flowCells : z.cells, side = flow ? z.flowSide : 0, mode = id === 'wind' && ST.windMode !== 'yearly' ? 0.15 : 1, sunK = id === 'sunhours' ? Math.max(0.2, (ST.sunH1 - ST.sunH0) / 24 * 15 / Math.max(1, ST.sunStep)) : 1;
     const ms = (c[0] * n * (flow ? Math.max(1, side / 160) : 1) * mode + c[1] * z.samples) * sunK * (speed()[id] || 1);
     return { ms, ...z, flow }; }
+  // the interior studies plan their grid for the time of their level; that plan is their estimate
+  const IPLAN = { daylight: [() => DAY, 'daylight'], views: [() => VWS, 'views'], spacesyntax: [() => SSX, 'spacesyntax'] };
+  function estInterior(id, q = qualOf()) { const P0 = IPLAN[id]; if (!P0 || !INST.persp.ready) return null; try { const sc = INST.persp.ws.planScene?.(P0[1]); if (!sc || !sc.walls?.length) return null; const pl = P0[0]().plan(sc, { level: q.lv }); return pl && pl.est ? { ms: pl.est * 1000, interior: true, sp: pl.sp, n: pl.n } : null; } catch { return null; } }
   const dur = (ms) => (ms < 1500 ? 'about a second' : ms < 60000 ? `about ${Math.round(ms / 1000)} s` : ms < 3600000 ? `about ${Math.round(ms / 60000)} min` : 'over an hour');
-  function learn(id, actual) { const e = ST.estAtRun; if (!e || !e.ms || !actual) return; const S0 = speed(), k = (S0[id] || 1) * actual / e.ms; S0[id] = +Math.max(0.05, Math.min(20, 0.6 * (S0[id] || 1) + 0.4 * k)).toFixed(3); try { localStorage.setItem(SPEEDK, JSON.stringify(S0)); } catch { } }
-  const estLine = (e) => e ? `<p class="sp-note sp-est"><b>Estimated time: ${dur(e.ms)}</b> · ${e.flow ? `flow grid ${fmt(e.flowCells)} cells at ${fmt(e.flowCell, 1)} m` : `ground ${fmt(e.cells)} cells at ${fmt(e.cell, 2)} m`}${e.samples ? ` · building ${fmt(e.samples)} squares at ${fmt(e.surfCell, 2)} m` : ''}. Grids: Project props › Default.${e.ms > 120000 ? ' <span class="sp-warn">Long: a coarser grid or a smaller area is quicker.</span>' : ''}</p>` : '';
+  function learn(id, actual) { const e = ST.estAtRun; if (!e || !e.ms || !actual || !COST[id]) return; const S0 = speed(), k = (S0[id] || 1) * actual / e.ms; S0[id] = +Math.max(0.05, Math.min(20, 0.6 * (S0[id] || 1) + 0.4 * k)).toFixed(3); try { localStorage.setItem(SPEEDK, JSON.stringify(S0)); } catch { } }
+  const estLine = (e) => e && !e.interior ? `<p class="sp-note sp-est"><b>${esc(qualOf().name)} · estimated time: ${dur(e.ms)}</b> · ${e.flow ? `flow grid ${fmt(e.flowCells)} cells at ${fmt(e.flowCell, 1)} m` : `ground ${fmt(e.cells)} cells at ${fmt(e.cell, 2)} m`}${e.samples ? ` · building ${fmt(e.samples)} squares at ${fmt(e.surfCell, 2)} m` : ''}. Quality: set above Add simulation${gridSet() || surfSet() ? ' (a grid set in Project props › Default is kept)' : ''}.${e.ms > 120000 ? ' <span class="sp-warn">Long: Draft or a smaller area is quicker.</span>' : ''}</p>` : '';
   const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const AREAS = [[1, '1× · the building and 40 m round it'], [2, '2×'], [3, '3× · the default'], [4, '4×']];
   // every building study has the same card (2026-10-31): a mode where the study has one, the study area on the site before Start,
@@ -399,7 +511,7 @@ export function mountChrome(app, api) {
   const SNOWS = [['10', '10 cm'], ['30', '30 cm'], ['60', '60 cm']];
   const STORMS = [['25', '25 mm'], ['50', '50 mm'], ['100', '100 mm']], COVERS = [['lawn', 'Mostly planted', 0.25], ['mixed', 'Mixed', 0.5], ['paved', 'Mostly paved', 0.85]];
   const viewsOf = (id) => { const v = SPEC[id]?.views; return typeof v === 'function' ? v() : v || []; };
-  const sigOf = (id) => JSON.stringify([id, ST.area, gridOf(), surfOf(), flowOf(), ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], isovist: [ST.isoEye, ST.isoTgt, ST.isoView], daylight: [ST.dlLevel, ST.dlTau, ST.dlRf, ST.dlRw, ST.dlRc, ST.dlHead], cameras: [ST.camMode, ST.camN, ST.camWant, ST.camLevel, ST.camH, ST.camTgt, JSON.stringify(ST.camTypes)], views: [ST.vwLevel, ST.vwEye, ST.vwHead, ST.vwFar, ST.vwNature, ST.vwMotion], spacesyntax: [ST.ssLevel, ST.ssVh, ST.ssGlass], movementdepth: [ST.ssLevel, ST.ssVh, ST.ssGlass], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : ''], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], watersound: [ST.wsLoud, INST.persp.ready ? JSON.stringify(INST.persp.ws.waters?.() || []) : ''], 'fire-evacuation': [ST.egStrat, ST.egRatio, ST.egMix, ST.egRuns, ST.egSeed, JSON.stringify(ST.egFire)], structure: [ST.system, ST.span, ST.bearing], vent: [ST.vnMode, ST.vnTout, ST.vnTin, ST.vnWin, ST.vnDoors, ST.vnTarget, ST.vnLo, ST.vnHi, ST.vnMode === 'one' ? ST.windDir : '', ST.vnMode === 'one' ? ST.windSpeed : ''], acoustics: [ST.acFormula, ST.acTarget, ST.acPeople, ST.acTemp, ST.acRh, INST.persp.ready ? INST.persp.ws.level?.() : ''], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
+  const sigOf = (id) => JSON.stringify([id, qualOf().k, ST.area, gridOf(), surfOf(), flowOf(), ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], isovist: [ST.isoEye, ST.isoTgt, ST.isoView], daylight: [ST.dlLevel, ST.dlTau, ST.dlRf, ST.dlRw, ST.dlRc, ST.dlHead], cameras: [ST.camMode, ST.camN, ST.camWant, ST.camLevel, ST.camH, ST.camTgt, JSON.stringify(ST.camTypes)], views: [ST.vwLevel, ST.vwEye, ST.vwHead, ST.vwFar, ST.vwNature, ST.vwMotion], spacesyntax: [ST.ssLevel, ST.ssVh, ST.ssGlass], movementdepth: [ST.ssLevel, ST.ssVh, ST.ssGlass], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : ''], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], watersound: [ST.wsLoud, INST.persp.ready ? JSON.stringify(INST.persp.ws.waters?.() || []) : ''], 'fire-evacuation': [ST.egStrat, ST.egRatio, ST.egMix, ST.egRuns, ST.egSeed, JSON.stringify(ST.egFire)], structure: [ST.system, ST.span, ST.bearing], vent: [ST.vnMode, ST.vnTout, ST.vnTin, ST.vnWin, ST.vnDoors, ST.vnTarget, ST.vnLo, ST.vnHi, ST.vnMode === 'one' ? ST.windDir : '', ST.vnMode === 'one' ? ST.windSpeed : ''], acoustics: [ST.acFormula, ST.acTarget, ST.acPeople, ST.acTemp, ST.acRh, INST.persp.ready ? INST.persp.ws.level?.() : ''], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
   // the map views of a result: the study's own, or made here from its values
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, svals: r.svals, slo: r.slo, shi: r.shi, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
@@ -522,7 +634,7 @@ export function mountChrome(app, api) {
       rows: [['Average on the ground', fmt(r.avg, 1) + ' h'], ['Range', fmt(r.min, 1) + '–' + fmt(r.max, 1) + ' h'], ['Ground with ≥ 2 h of sun', fmt(r.two * 100) + '%'], ...(r.plot ? [['Plot with ≥ 2 h of sun', fmt(r.plot.two * 100) + '%']] : []), ...surfRows, ['Day length', fmt(r.dayLength, 1) + ' h']],
       method: `Sun directions through ${r.dayName} at the site; each ${fmt(r.cell, 1)} m ground cell counts the time it sees the sun${sv.length ? `, and so does each square on the design's facades and roofs (${fmt(sv.length)} of them), counting only the sun in front of a facade` : ''}.`, results: { ground: +r.avg.toFixed(2), ground2h: +(r.two * 100).toFixed(1), min: r.min, max: r.max }, settings: { day: ST.day, dayName: r.dayName, label: `Ground, ${r.dayName} (Workspace)` } }; }
     if (id === 'radiation') {
-      const wx = await weather(), [, pname, m0, m1] = PERIODS.find((x) => x[0] === ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
+      const wx = await weather(), [, pname, m0, m1] = periodDef(ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
       const bins = new Map(), binsN = new Map(); let dhi = 0, hours = 0;
       for (const r of wx.rows) { if (!inP(r.m)) continue; const sp = sunPosition(2026, r.m, r.d, r.h - 0.5, wx.lat, wx.lon, wx.tz); if (sp.alt <= 0) continue; hours++; dhi += r.dhi / 1000;
         if (r.dni > 0) { const key = Math.floor(sp.az / 15) + '|' + Math.min(8, Math.floor(sp.alt / 10)); bins.set(key, (bins.get(key) || 0) + r.dni * Math.sin(sp.alt * Math.PI / 180) / 1000); binsN.set(key, (binsN.get(key) || 0) + r.dni / 1000); } }
@@ -566,7 +678,7 @@ export function mountChrome(app, api) {
         method: `The tallest a building could be at each ${fmt(g.cell, 1)} m cell without its shadow reaching a surrounding building, for ${dirs.length} sun positions (${pname}, solar time). Heights above the ground, capped at 100 m${sv && sv.length ? `. The building's facades and roofs (imported models included) show the envelope height where they stand; squares higher than it shade a neighbour at the protected hours` : ''}.`,
         results: { value: +st.avg.toFixed(2), min: st.lo, max: st.hi }, settings: { envelope: ST.envelope, label: `Envelope, ${pname} (Workspace)` } }; }
     if (id === 'utci') {
-      const wx = await weather(), E = CL.parseEPW(wx.text), [, pname, m0, m1] = PERIODS.find((x) => x[0] === ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
+      const wx = await weather(), E = CL.parseEPW(wx.text), [, pname, m0, m1] = periodDef(ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
       const alpha = ({ open: 0.14, suburban: 0.22, city: 0.33 })[S.conditionsOf(p).site.terrain] || 0.22, hrs = [], binIx = new Map(), binDirs = [];
       for (let k = 0; k < 8760; k++) { const [m, d] = CL.monthDay(Math.floor(k / 24)); if (!inP(m)) continue; const sp = sunPosition(2026, m, d, (k % 24) + 0.5, E.lat, E.lon, E.tz); if (ST.utciHours === 'sun' && sp.alt <= 0) continue;
         let b = -1; if (sp.alt > 1 && E.DNR[k] > 0) { const key = Math.floor(sp.az / 15) + '|' + Math.min(8, Math.floor(sp.alt / 10)); if (!binIx.has(key)) { binIx.set(key, binDirs.length); const [a, l] = key.split('|').map(Number); binDirs.push({ az: a * 15 + 7.5, alt: Math.min(85, l * 10 + 5), w: 1 }); } b = binIx.get(key); }
@@ -1016,16 +1128,64 @@ export function mountChrome(app, api) {
         results: { peak: +peak.toFixed(2), windy: Math.round(windy * a2), sitting: +(sit / Math.max(1, n) * 100).toFixed(1), uncomf: +(unc / Math.max(1, n) * 100).toFixed(1), unsafe: Math.round(unsafe * a2) }, settings: { mode: 'yearly', label: 'Pedestrian wind, the year (Workspace)' } }; }
     throw Error('This study does not run here yet.');
   }
+  // ---- series (2026-11-09): one study through the year, a picture each month (the 21st, for a day's study; the month, for a
+  // period's) or each season (the solstices and equinoxes; three-month seasons), on one colour scale, then the linked preview
+  // where the view is chosen and the sheet exported. The presets are the study's own: only studies with a time of year have them.
+  const SEASON_DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['09-23', '23 September'], ['12-21', '21 December']];
+  const SERIES = {
+    sunhours: { key: 'day', what: 'direct sun through the day',
+      method: (r) => `Sun directions through each day shown, at the site’s latitude, time zone and true north (Project props), every ${ST.sunStep} minutes from ${ST.sunH0}:00 to ${ST.sunH1}:00 solar time; each ${fmt(r.cell, 1)} m ground cell counts the hours it sees the sun, shaded by the masses, the building, the surrounding buildings and the terrain${r.svals && r.svals.length ? ', and so does each square of the design’s facades and roofs' : ''}. Direct sun only: a screening, not a daylight or rights-to-light assessment.`,
+      months: MONTHN.map((n, i) => ({ v: `${String(i + 1).padStart(2, '0')}-21`, label: `21 ${n}` })), seasons: SEASON_DAYS.map(([v, label]) => ({ v, label })),
+      monthsNote: 'The 21st of each month', seasonsNote: 'The equinoxes and solstices' },
+    radiation: { key: 'period', what: 'sunlight energy over the period, from the project weather',
+      method: (r) => `The hourly direct sun and diffuse sky of the project weather over each period, with the same shading; each ${fmt(r.cell, 1)} m ground cell sums the sunlight that reaches it in kWh/m² (direct sun by its height, sky by the share each cell sees; no light reflected from the ground).`,
+      months: MONTHN.map((n, i) => ({ v: `m${i + 1}`, label: n })), seasons: [['q-mam', 'March–May'], ['q-jja', 'June–August'], ['q-son', 'September–November'], ['q-djf', 'December–February']].map(([v, label]) => ({ v, label })),
+      monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
+  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-1'));
+  async function runSeries(kind) {
+    const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; }
+    if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }
+    const list = def[kind], keep = ST[def.key], keepRes = ST.res, q = qualOf(), frames = []; syncLevels();
+    // the estimate: one run per frame, at this quality
+    let estMs = 0; for (const f of list) { ST[def.key] = f.v; const e = estimate(id); estMs += e ? e.ms : 0; } ST[def.key] = keep;
+    ST.busy = true; ST.cancel = false; ST.err = ''; ST.t0 = Date.now(); ST.runQ = q; ST.estAtRun = estMs ? { ms: estMs } : null; ST.progress = `${list.length} pictures`; drawStudy(); runBar('start');
+    const tick = setInterval(() => runBar('tick'), 1000);
+    try { INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf());
+      for (let k = 0; k < list.length; k++) { if (ST.cancel) throw Error('Stopped.'); ST[def.key] = list[k].v; ST.progress = `${list[k].label}: picture ${k + 1} of ${list.length} · ${Math.round(k / list.length * 100)}%`; drawStudy(); runBar('tick'); await new Promise((r) => setTimeout(r, 20));
+        const r = await compute(id); addViews(id, r); applyView(r, ST.view[id]); frames.push({ label: list[k].label, v: list[k].v, r }); }
+    } catch (e) { ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); }
+    clearInterval(tick); ST[def.key] = keep; ST.busy = false; ST.progress = ''; const ok = frames.length === list.length; runBar(ok ? 'done' : ST.err ? 'error' : 'stopped');
+    if (keepRes) paintRes(keepRes); else { clearAll(); showArea(); } drawStudy(); if (!ok) return;
+    openSeries(id, kind, frames, q); }
+  async function openSeries(id, kind, frames, q) {
+    const def = SERIES[id], w = INST.persp.ws, view = frames[0].r.view, V = (r) => (r.views && r.views[view]) || r;
+    // one colour scale for every picture: the lowest and the highest of the series (each month alone would not compare)
+    const lo = Math.min(...frames.map((f) => V(f.r).lo)), hi = Math.max(...frames.map((f) => V(f.r).hi)), shi = Math.max(...frames.map((f) => V(f.r).shi ?? V(f.r).hi));
+    const keepKey = ST[def.key], paint = (i) => { const f = frames[i]; ST[def.key] = f.v; try { paintRes({ ...f.r, lo, hi, slo: lo, shi: Math.max(hi, shi) }); } finally { ST[def.key] = keepKey; } };   // that day's sun path too
+    const site = S.siteOf(p) || {}, c0 = S.conditionsOf(p), r0 = frames[0].r, cols = (V(r0).legendCols) || w.rampColors?.(r0.ramp) || ['#ddd', '#333'];
+    const meta = { project: p.name, site: site.label || '', lat: site.lat, lon: site.lon, study: simName(id), what: def.what, basis: def[kind + 'Note'], quality: q.name, grid: `ground ${fmt(r0.cell || 0, 2)} m${r0.surfCell ? ` · building ${fmt(r0.surfCell, 2)} m` : ''}`,
+      title: V(r0).title?.replace(/ · .*$/, '') || simName(id), unit: V(r0).unit || r0.unit, lo, hi, dec: V(r0).dec ?? r0.dec ?? 1, cols, labels: V(r0).legendLabels || null, view: view,
+      method: def.method ? def.method(r0) : r0.method, version: (p.versions || []).at(-1)?.n ? `v${p.versions.at(-1).n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: c0.revision, at: new Date(), station: id === 'radiation' ? ((await weather().catch(() => null))?.station || '') : '' };
+    paintRes({ ...frames[0].r, lo, hi, slo: lo, shi: Math.max(hi, shi) });   // the view framed on the result, before the tiles copy it
+    if (Number.isFinite(r0.X0) && r0.nx) w.fitBox?.({ x0: r0.X0, y0: r0.Y0, x1: r0.X0 + r0.nx * r0.cell, y1: r0.Y0 + r0.ny * r0.cell }, 0, 1.25, false);
+    const M = await seriesUI();
+    M.openSeriesPreview(app, { frames: frames.map((f) => ({ label: f.label })), cols: frames.length === 12 ? 4 : frames.length === 4 ? 2 : Math.ceil(Math.sqrt(frames.length)), meta,
+      paint, snap: (wd, ht, sc) => INST.persp.ws.snapAt?.(wd, ht, sc), move: (o) => INST.persp.ws.camMove?.(o),
+      addToList: async (canvases, labels) => { const X = await xlMod(), pics = []; for (const [i, c] of canvases.entries()) pics.push({ label: labels[i], blob: await X.canvasBlob(c) });
+        await xlAdd({ kind: 'series', study: id, title: `${simName(id)} · ${kind === 'months' ? '12 months' : '4 seasons'}`, sub: `${def[kind + 'Note']} · ${q.name}`, pictures: pics, cols: frames.length === 12 ? 4 : 2,
+          legend: { lo, hi, unit: meta.unit, dec: meta.dec, stops: meta.labels ? cols.slice().reverse() : cols }, rows: frames.map((f) => [f.label, Number.isFinite(V(f.r).avg ?? f.r.avg) ? `${fmt(V(f.r).avg ?? f.r.avg, meta.dec)} ${meta.unit} on average` : '–']),
+          method: meta.method, basis: basisLine(q, r0.cell), notes: [`One colour scale for every picture: ${fmt(lo, meta.dec)} to ${fmt(hi, meta.dec)} ${meta.unit}.`] }); },
+      onClose: () => { ST[def.key] = keepKey; if (ST.res) paintRes(ST.res); else clearAll(); } }); }
   async function runStudy() {
-    if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; drawStudy();
-    const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; }, 1000);
+    if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
+    const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; runBar('tick'); }, 1000);
     try { for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
       ST.estAtRun = estimate(ST.id); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf()); drawStudy(); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
       if (ST.cancel) throw Error('Stopped.');
       addViews(id, r); applyView(r, ST.view[id]); hookProbe(); paintRes(r, true);
       r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = studyModel(w); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); logRun(id, r); learn(id, r.ms); }
     catch (e) { ST.res = null; ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); ST.stopped = e.message === 'Stopped.'; }
-    clearInterval(tick); ST.busy = false; ST.progress = ''; if (!ST.res) { clearAll(); showArea(); } drawStudy();
+    clearInterval(tick); ST.busy = false; ST.progress = ''; runBar(ST.res ? 'done' : ST.err ? 'error' : 'stopped'); if (!ST.res) { clearAll(); showArea(); } drawStudy();
   }
   // a result is kept with the saved version it was computed on: unsaved edits are saved as a version first
   async function saveStudy() {
@@ -1047,7 +1207,7 @@ export function mountChrome(app, api) {
   function chart(r) { const n = 12, cnt = Array(n).fill(0), span = Math.max(1e-9, r.hi - r.lo); let tot = 0; for (const v of r.vals) if (Number.isFinite(v)) { cnt[Math.min(n - 1, Math.floor((v - r.lo) / span * n))]++; tot++; }
     const mx = Math.max(1, ...cnt), cols = (r.legendCols || INST.persp.ws?.rampColors?.(r.ramp)) || ['#999'], col = (i) => cols[Math.min(cols.length - 1, Math.round(i / (n - 1) * (cols.length - 1)))];
     return `<svg viewBox="0 0 260 150" class="sp-hist" role="img" aria-label="Share of the ground in each band">${cnt.map((c, i) => `<rect x="${8 + i * 20.5}" y="${120 - c / mx * 105}" width="18" height="${c / mx * 105}" fill="${col(i)}"><title>${fmt(r.lo + span * i / n, r.dec)}–${fmt(r.lo + span * (i + 1) / n, r.dec)} ${r.unit}: ${fmt(c / Math.max(1, tot) * 100, 1)}%</title></rect>`).join('')}<line x1="6" y1="120.5" x2="256" y2="120.5" stroke="#d1d5db"/><text x="8" y="136">${fmt(r.lo, r.dec)}</text><text x="252" y="136" text-anchor="end">${fmt(r.hi, r.dec)} ${esc(r.unit)}</text></svg><p class="sp-note">${r.chartNote || 'Share of the ground in each band; hover a bar for its value.'}</p>`; }
-  function drawStudy() {
+  function drawStudy() { syncLevels();
     if (!ST.id) return; const id = ST.id, name = simName(id), r = ST.res, sp = SPEC[id] || {}, stale = r && INST.persp.ready && studyModel(INST.persp.ws) !== ST.key, changed = r && ST.sig !== sigOf(id);
     const status = ST.busy ? ['run', 'Solving'] : ST.err ? ['err', 'Could not run'] : ST.stopped && !r ? ['idle', 'Stopped'] : !r ? ['idle', 'Not run yet'] : stale ? ['stale', 'Model changed'] : changed ? ['stale', 'Settings changed'] : ['ok', `Up to date ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`];
     const seg = (attr, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" ${attr}="${k}" aria-selected="${cur === k}">${esc(n)}</button>`).join('')}</div>`;
@@ -1064,10 +1224,10 @@ export function mountChrome(app, api) {
         <p class="sp-note">${ST.sunH0 <= 0 && ST.sunH1 >= 24 ? 'The whole day, sunrise to sunset.' : `Sun counted from ${hh(ST.sunH0)} to ${hh(ST.sunH1)} (local standard time).`} Grid: ${gridOf() ? gridOf() + ' m' : 'automatic'} (Project props › Default).</p>`,
       structure: () => `<p class="sp-flabel">Structure</p>${seg('data-st-set', 'system:' + systemOf(), SYSTEMS.map(([k, n]) => ['system:' + k, n]))}<p class="sp-flabel">Column grid, about</p>${seg('data-st-set', 'span:' + ST.span, [['6', '6 m'], ['7.5', '7.5 m'], ['9', '9 m']].map(([k, n]) => ['span:' + k, n]))}<p class="sp-flabel">Soil bearing (assumed until a geotechnical report)</p>${seg('data-st-set', 'bearing:' + ST.bearing, [['100', '100 kPa'], ['150', '150 kPa'], ['300', '300 kPa']].map(([k, n]) => ['bearing:' + k, n]))}<p class="sp-note"><a href="#" data-st="page">Detailed frame check, member by member</a></p>`,
       dl: () => { let sc = null, pl = {}; try { sc = INST.persp.ws.planScene?.('daylight'); } catch { } const lab = sc?.name?.split(' · ').pop() || 'this level', tf = (s0) => (s0 < 90 ? `~${Math.max(1, Math.round(s0))} s` : `~${Math.round(s0 / 60)} min`), D0 = S.conditionsOf(p).defaults || {};
-        if (sc && sc.walls?.length) for (const k of Object.keys(DAY.LEVELS)) { try { pl[k] = DAY.plan(sc, { level: k }); } catch { } }
+        if (sc && sc.walls?.length) for (const k of [ST.dlLevel]) { try { pl[k] = DAY.plan(sc, { level: k }); } catch { } }
         const q = pl[ST.dlLevel], num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-dl="${k}" min="${min}" max="${max}" step="${st}" value="${ST[k]}"><i>${u}</i></span></label>`;
-        return `<p class="sp-flabel">Detail (${esc(lab)}, change the level in the Level menu)</p><div class="sp-tabs sp-tabs-sub" role="tablist">${Object.entries(DAY.LEVELS).map(([k, L]) => `<button type="button" role="tab" data-st-set="dlLevel:${k}" aria-selected="${ST.dlLevel === k}">${L.name}${pl[k] ? `<small>${Math.round(pl[k].sp * 100)} cm · ${tf(pl[k].est)}</small>` : ''}</button>`).join('')}</div>
-          ${q ? `<p class="sp-note sp-est"><b>Estimated time: ${tf(q.est)}</b> · a spot every ${Math.round(q.sp * 100)} cm, about ${fmt(q.n)} spots, ${q.nb} sky directions each, a year of hours. The estimate learns this computer's speed.</p>` : ''}
+        return `
+          ${q ? `<p class="sp-note sp-est"><b>${esc(qualOf().name)} · estimated time: ${tf(q.est)}</b> · a spot every ${Math.round(q.sp * 100)} cm, about ${fmt(q.n)} spots, ${q.nb} sky directions each, a year of hours. On ${esc(lab)}. The estimate learns this computer's speed; the quality is set above Add simulation.</p>` : ''}
           <div class="sp-two">${num('dlTau', 'Glass light transmission', '', 0.1, 0.95, 0.05)}${num('dlHead', 'Window head', 'm', 1.5, 6, 0.05)}${num('dlRf', 'Floor reflects', '', 0.05, 0.9, 0.05)}${num('dlRw', 'Walls reflect', '', 0.05, 0.95, 0.05)}${num('dlRc', 'Ceiling reflects', '', 0.05, 0.95, 0.05)}</div>
           <p class="sp-note">Weather: the project weather (Project props). Occupied ${Number.isFinite(+D0.occStart) ? D0.occStart : 8}:00 to ${Number.isFinite(+D0.occEnd) ? D0.occEnd : 18}:00 (Project props). Work plane ${Number.isFinite(+D0.plane) ? D0.plane : 0.8} m (Project props). sDA300/50%: daylit when 300 lux or more for half the occupied hours; ASE1000/250 h: direct sun of 1,000 lux for more than 250 hours. A screening as LEED v4.1 Daylight describes, not a certified simulation.</p>`; },
       cam: () => { const L = CAMS.LEVELS, num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-cam="${k}" min="${min}" max="${max}" step="${st}" value="${ST[k]}"><i>${u}</i></span></label>`;
@@ -1078,10 +1238,10 @@ export function mountChrome(app, api) {
           <p class="sp-flabel">Camera types to use</p>${CAMS.TYPES.map((T) => `<label class="sp-check"><input type="checkbox" data-camtype="${T.k}" ${ST.camTypes[T.k] ? 'checked' : ''}> ${esc(T.name)} · ${T.fov}° · ${fmt(T.px)} px · $${fmt(T.price, 2)}</label>`).join('')}
           <p class="sp-note">Candidate positions 0.15–0.35 m inside the walls every 0.8 m (dome and bullet, 16 directions) and on a 1.25 m ceiling grid (fisheye). Each camera reaches as far as it still gives the pixels per metre of the chosen detail at the watched height; walls and anything taller than the sight line block it. Prices are examples.</p>`; },
       vw: () => { let sc = null, pl = {}; try { sc = INST.persp.ws.planScene?.('views'); } catch { } const lab = sc?.name?.split(' · ').pop() || 'this level', tf = (s0) => (s0 < 90 ? `~${Math.max(1, Math.round(s0))} s` : `~${Math.round(s0 / 60)} min`);
-        if (sc && sc.walls?.length) for (const k of Object.keys(VWS.LEVELS)) { try { pl[k] = VWS.plan(sc, { level: k, eye: +ST.vwEye, head: ST.vwHead, far: ST.vwFar, nature: ST.vwNature, motion: ST.vwMotion }); } catch { } }
+        if (sc && sc.walls?.length) for (const k of [ST.vwLevel]) { try { pl[k] = VWS.plan(sc, { level: k, eye: +ST.vwEye, head: ST.vwHead, far: ST.vwFar, nature: ST.vwNature, motion: ST.vwMotion }); } catch { } }
         const q = pl[ST.vwLevel], num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-vw="${k}" min="${min}" max="${max}" step="${st}" value="${ST[k]}"><i>${u}</i></span></label>`;
-        return `<p class="sp-flabel">Detail (${esc(lab)}, change the level in the Level menu)</p><div class="sp-tabs sp-tabs-sub" role="tablist">${Object.entries(VWS.LEVELS).map(([k, L]) => `<button type="button" role="tab" data-st-set="vwLevel:${k}" aria-selected="${ST.vwLevel === k}">${L.name}${pl[k] ? `<small>${Math.round(pl[k].sp * 100)} cm · ${tf(pl[k].est)}</small>` : ''}</button>`).join('')}</div>
-          ${q ? `<p class="sp-note sp-est"><b>Estimated time: ${tf(q.est)}</b> · a spot every ${Math.round(q.sp * 100)} cm, about ${fmt(q.n)} spots, ${q.nr} sight lines each. The estimate learns this computer's speed.</p>` : ''}
+        return `
+          ${q ? `<p class="sp-note sp-est"><b>${esc(qualOf().name)} · estimated time: ${tf(q.est)}</b> · a spot every ${Math.round(q.sp * 100)} cm, about ${fmt(q.n)} spots, ${q.nr} sight lines each. On ${esc(lab)}. The estimate learns this computer's speed; the quality is set above Add simulation.</p>` : ''}
           <div class="sp-two">${num('vwHead', 'Window head height', 'm', 1.5, 6, 0.05)}${num('vwFar', '"Far" objects from', 'm', 2, 50, 0.5)}</div>
           <label class="sp-check"><input type="checkbox" data-vw="vwNature" ${ST.vwNature ? 'checked' : ''}> Planting, water or animals in view outside (counts as nature)</label>
           <label class="sp-check"><input type="checkbox" data-vw="vwMotion" ${ST.vwMotion ? 'checked' : ''}> A street or path with people outside (counts as movement)</label>
@@ -1093,9 +1253,9 @@ export function mountChrome(app, api) {
           <p class="sp-note">720 sight lines from the eye: anything taller than the eye stops them; lower furniture hides the floor behind it down to where the line over its top comes back to the height looked for. The room is the floor closed by walls 2 m or taller and glazing.</p>`; },
       ss: () => { let sc = null, pl = {}; try { sc = INST.persp.ws.planScene?.('spacesyntax'); } catch { } const lab = sc?.name?.split(' · ').pop() || 'this level';
         const tf = (s0) => (s0 < 90 ? `~${Math.max(1, Math.round(s0))} s` : `~${Math.round(s0 / 60)} min`);
-        if (sc && sc.walls?.length) for (const k of Object.keys(SSX.LEVELS)) { try { pl[k] = SSX.plan(sc, { level: k, vh: +ST.ssVh, glass: ST.ssGlass }); } catch { } }
-        return `<p class="sp-flabel">Detail (${esc(lab)}, change the level in the Level menu)</p><div class="sp-tabs sp-tabs-sub" role="tablist">${Object.entries(SSX.LEVELS).map(([k, L]) => `<button type="button" role="tab" data-st-set="ssLevel:${k}" aria-selected="${ST.ssLevel === k}">${L.name}${pl[k] ? `<small>${Math.round(pl[k].sp * 100)} cm · ${tf(pl[k].est)}</small>` : ''}</button>`).join('')}</div>
-          ${pl[ST.ssLevel] ? `<p class="sp-note sp-est"><b>Estimated time: ${tf(pl[ST.ssLevel].est)}</b> · a node every ${Math.round(pl[ST.ssLevel].sp * 100)} cm, about ${fmt(pl[ST.ssLevel].n)} nodes, ${pl[ST.ssLevel].nr} sight lines from each. The estimate learns this computer's speed.</p>` : ''}
+        if (sc && sc.walls?.length) for (const k of [ST.ssLevel]) { try { pl[k] = SSX.plan(sc, { level: k, vh: +ST.ssVh, glass: ST.ssGlass }); } catch { } }
+        return `
+          ${pl[ST.ssLevel] ? `<p class="sp-note sp-est"><b>${esc(qualOf().name)} · estimated time: ${tf(pl[ST.ssLevel].est)}</b> · a node every ${Math.round(pl[ST.ssLevel].sp * 100)} cm, about ${fmt(pl[ST.ssLevel].n)} nodes, ${pl[ST.ssLevel].nr} sight lines from each. On ${esc(lab)}. The estimate learns this computer's speed; the quality is set above Add simulation.</p>` : ''}
           <label class="sp-check"><input type="checkbox" data-ss="glass" ${ST.ssGlass ? 'checked' : ''}> Windows and glass partitions are seen through</label>
           <p class="sp-note">Nodes on a grid over the floor are joined where they see each other at the analysis height (eye 1.6 m: furniture below it is seen over; knee 0.5 m: furniture blocks, as for walking). Integration [HH] from mean visual depth; 200 agents walk 1,500 steps towards spots in their 170° view (gate counts). As DepthmapX; a design check, not a measure of use.</p>`; },
       watersound: () => { const WB = (INST.persp.ready ? INST.persp.ws.waters?.() : null) || []; return `<p class="sp-flabel">The site’s water</p>${WB.length ? `<div class="sp-places">${WB.map((b) => `<button type="button" class="sp-place" data-wsopen="${esc(b.id)}"><i style="background:#2c6fa3">≈</i><span>${esc(b.name)}</span><small>${b.type === 'stream' ? `${fmt(b.discharge, 2)} m³/s${b.falls.length ? `, falls ${b.falls.map((f) => fmt(f.drop, 1) + ' m').join(', ')}` : ''}` : 'still'}</small></button>`).join('')}</div>` : '<p class="sp-note">No water on the site yet: draw a water area (Site › Water) or map one.</p>'}<p class="sp-note">Click a body of water to set its flow, speed and level (Project data › Site). The loudness of falls varies a lot with their shape: choose Gentle, Typical or Loud above.</p>`; },
@@ -1142,7 +1302,7 @@ export function mountChrome(app, api) {
       rose: () => { if (ST.roseErr) return `<p class="sp-note sp-errtext">${esc(ST.roseErr)}</p>`; if (!ST.rose) return '<p class="sp-note">Reading the wind of the project weather…</p>'; const R = ST.rose, single = ST.windMode === 'single', dir = ST.windDir ?? R.prevailing, i = Math.round(dir / 22.5) % 16, spd = ST.windSpeed ?? R.sec[i].mean;
         return `<p class="sp-flabel">${single ? 'Click the rose to choose the wind direction' : 'The year’s wind by direction, from the project weather'}</p>${roseSVG(R, single)}${single ? `<label class="sp-spdrow"><span>From ${DIR16[i]} · <span class="sp-spd">${fmt(spd, 1)}</span> m/s at 10 m</span><input type="range" min="0.5" max="20" step="0.5" value="${(+spd).toFixed(1)}" data-st="windSpeed"></label>` : `<p class="sp-note">Prevailing from ${DIR16[Math.round(R.prevailing / 22.5) % 16]}; calm ${fmt(R.calm * 100)}% of hours. ${esc(R.station)}</p>`}`; } };
     studyCard.innerHTML = `<header><b>${esc(name)}</b><span class="sp-pill" data-state="${status[0]}">${esc(status[1])}</span><span class="sp-hbtns"><button type="button" class="sp-ib" data-st="exp" aria-expanded="${ST.exp}" title="Export">⤓</button><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></span></header>
-      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}</div>` : ''}
+      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button><button type="button" class="btn sm" data-st="xl-view" ${r && !ST.busy ? '' : 'disabled'} title="Keep this view, with its legend, key results and method, for the report">Add view to export list</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}${SERIES[id] ? `<p class="sp-flabel">Series: one picture each, on one colour scale</p><button type="button" class="btn sm" data-st="ser-months" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].monthsNote)}">12 months</button><button type="button" class="btn sm" data-st="ser-seasons" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].seasonsNote)}">4 seasons</button><p class="sp-note">${esc(SERIES[id].monthsNote)}, or ${esc(SERIES[id].seasonsNote.toLowerCase())}; at ${esc(qualOf().name)} quality, about ${dur((estimate(id)?.ms || 0) * 12)} for 12. Then choose the view and export the sheet.</p>` : ''}</div>` : ''}
       ${sp.mode ? seg('data-st-mode', ST[sp.mode[0]], sp.mode[1]) : ''}${stage}
       ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}
       ${r && id === 'fire-evacuation' ? `<div class="sp-acts sp-acts1 sp-egplay"><button type="button" class="btn sm" data-eg="play">${ST.egPlay ? '❚❚ Pause' : '▶ Play'}</button><input type="range" data-eg="seek" min="0" max="${r.nFrames || 1}" step="1" value="${Math.round(ST.egT || 0)}" aria-label="Time in the run shown"><span class="sp-egt sp-note"></span></div><div class="sp-chips" role="group" aria-label="Playback speed">${[[10, '×10'], [30, '×30'], [60, '×60']].map(([v, n]) => `<button type="button" data-eg="speed" data-v="${v}" aria-pressed="${ST.egSpeed === v}">${n}</button>`).join('')}</div>` : ''}
@@ -1197,7 +1357,7 @@ export function mountChrome(app, api) {
   studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'windSpeed') { ST.windSpeed = +e.target.value; drawStudy(); } });
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
-    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
+    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'xl-view') { xlAddView(); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false;
 
