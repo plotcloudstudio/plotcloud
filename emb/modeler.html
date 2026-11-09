@@ -6852,6 +6852,19 @@ window.S3 = (() => {
     x.fillStyle = 'rgba(255,255,255,.94)'; x.fillRect(pad, H - bh - pad, bw, bh); x.strokeStyle = '#1f2a3a'; x.lineWidth = k; x.strokeRect(pad, H - bh - pad, bw, bh);
     L.forEach((t, i) => { x.font = `${i ? 400 : 700} ${fs}px ${FB}`; x.fillStyle = i ? '#374151' : '#1f2a3a'; x.fillText(t, pad * 2, H - bh - pad + pad * 0.7 + fs * (i + 1) * 1.45 - fs * 0.35); });
     return c.toDataURL('image/png'); };
+  // ---- a picture of the view at a given size (2026-11-09: the tiles of a series preview, the sheet's frames): the same camera,
+  // the same scene, w × h CSS pixels at the device pixel ratio (scale: more pixels for print); the view itself is put back
+  api.snapAt = (w, h, scale = 1) => { if (!R || !cam) return null; const s0 = R.getSize(new T.Vector2()), pr = R.getPixelRatio(), a = cam.aspect, on = api.on;
+    try { R.setPixelRatio(pr * scale); R.setSize(Math.max(16, Math.round(w)), Math.max(16, Math.round(h)), false); cam.aspect = w / h; cam.updateProjectionMatrix(); api.on = true; render();
+      const c = document.createElement('canvas'); c.width = R.domElement.width; c.height = R.domElement.height; c.getContext('2d').drawImage(R.domElement, 0, 0); return c; }
+    finally { R.setPixelRatio(pr); R.setSize(s0.x, s0.y, false); cam.aspect = a; cam.updateProjectionMatrix(); api.on = on; render(); } };
+  // move the camera from outside the view (the linked tiles of a series preview): orbit [dθ, dφ] (radians), zoom (× distance),
+  // pan [fx, fy] (fractions of the view's height); the orbit controller follows
+  api.camMove = (o = {}) => { if (!cam || !ctl) return null; const off = cam.position.clone().sub(ctl.target), sp = new T.Spherical().setFromVector3(off);
+    if (o.orbit) { sp.theta -= o.orbit[0]; sp.phi = Math.max(0.03, Math.min(ctl.maxPolarAngle, sp.phi - o.orbit[1])); }
+    if (o.zoom) sp.radius = Math.max(1, Math.min(2e5, sp.radius * o.zoom)); off.setFromSpherical(sp);
+    if (o.pan) { cam.updateMatrix(); const D = 2 * sp.radius * Math.tan(cam.fov * Math.PI / 360), right = new T.Vector3().setFromMatrixColumn(cam.matrix, 0), up = new T.Vector3().setFromMatrixColumn(cam.matrix, 1); ctl.target.addScaledVector(right, -o.pan[0] * D * cam.aspect).addScaledVector(up, o.pan[1] * D); }
+    cam.position.copy(ctl.target).add(off); cam.lookAt(ctl.target); ctl.update(); render(); return { theta: sp.theta, phi: sp.phi, r: sp.radius }; };
   // a point on screen (CSS px inside the canvas) for overlay labels; null when behind the camera
   api.toCss = (x, y, z) => { const v = new T.Vector3(x, z, -y).project(cam), r = canvas.getBoundingClientRect(); if (v.z > 1) return null; return [(v.x + 1) / 2 * r.width, (1 - v.y) / 2 * r.height]; };
   // the fixtures' sketch cones in the current scene (for checking what the elevation shows)
@@ -7524,6 +7537,7 @@ if (window.__WSROLE) {
     sectionView(on) { if (!window.S3 || !S3.secView) return false; if (on && CAM !== '3d') return false; return S3.secView(!!on); },
     sectionStyle(o) { return window.S3 && S3.secStyle ? S3.secStyle(o) : null; },
     sectionPNG(lines) { return window.S3 && S3.secPNG ? S3.secPNG(lines) : null; },
+    snapAt(w, h, scale) { return window.S3 && S3.on && S3.snapAt ? S3.snapAt(w, h, scale) : null; }, fitBox(b, y, zoom, low) { if (window.S3 && S3.fitBox) S3.fitBox(b, y || 0, zoom || 1, !!low); }, camMove(o) { return window.S3 && S3.camMove ? S3.camMove(o) : null; },
     sectionState() { const st = window.S3 && S3.secState ? S3.secState() : null; return { section: !!secOf(), drawing: !!SEC2.draw, ...(st || {}) }; },
     surfaceCell(c) { SURF_CELL = c > 0 ? Math.max(0.2, +c) : 0; return SURF_CELL; },
     // the size of a run before it starts (2026-11-01), for the time estimate: ground cells and their size, the flow grid for a

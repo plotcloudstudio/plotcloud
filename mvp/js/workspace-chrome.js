@@ -355,6 +355,10 @@ export function mountChrome(app, api) {
   const IN_VIEW = { sunhours: 1, radiation: 1, skyview: 1, shadebenefit: 1, solarenvelope: 1, utci: 1, wind: 1, stormwater: 1, snow: 1, structure: 1, evac: 1, privacy: 1, wayfinding: 1, spacesyntax: 1, movementdepth: 1, isovist: 1, views: 1, cameras: 1, daylight: 1, 'fire-evacuation': 1, watersound: 1, vent: 1, acoustics: 1 }, DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['12-21', '21 December']];
   const ENVELOPES = [['equinox', 'Equinoxes, 9:00 to 15:00', [[3, 20], [9, 22]], 9, 15], ['winter', 'Winter solstice, 10:00 to 14:00', [[12, 21]], 10, 14], ['summer', 'Summer solstice, 8:00 to 17:00', [[6, 21]], 8, 17]];
   const PERIODS = [['year', 'Whole year', 1, 12], ['summer', 'Summer · June to August', 6, 8], ['winter', 'Winter · December to February', 12, 2]];
+  // the periods of a series (2026-11-09): each month, and the four three-month seasons (named by their months: the site may be south)
+  const MONTHN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const SER_PERIODS = Object.fromEntries([...MONTHN.map((n, i) => [`m${i + 1}`, n, i + 1, i + 1]), ['q-djf', 'December to February', 12, 2], ['q-mam', 'March to May', 3, 5], ['q-jja', 'June to August', 6, 8], ['q-son', 'September to November', 9, 11]].map((x) => [x[0], x]));
+  const periodDef = (k) => PERIODS.find((x) => x[0] === k) || SER_PERIODS[k] || PERIODS[0];
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
@@ -603,7 +607,7 @@ export function mountChrome(app, api) {
       rows: [['Average on the ground', fmt(r.avg, 1) + ' h'], ['Range', fmt(r.min, 1) + '–' + fmt(r.max, 1) + ' h'], ['Ground with ≥ 2 h of sun', fmt(r.two * 100) + '%'], ...(r.plot ? [['Plot with ≥ 2 h of sun', fmt(r.plot.two * 100) + '%']] : []), ...surfRows, ['Day length', fmt(r.dayLength, 1) + ' h']],
       method: `Sun directions through ${r.dayName} at the site; each ${fmt(r.cell, 1)} m ground cell counts the time it sees the sun${sv.length ? `, and so does each square on the design's facades and roofs (${fmt(sv.length)} of them), counting only the sun in front of a facade` : ''}.`, results: { ground: +r.avg.toFixed(2), ground2h: +(r.two * 100).toFixed(1), min: r.min, max: r.max }, settings: { day: ST.day, dayName: r.dayName, label: `Ground, ${r.dayName} (Workspace)` } }; }
     if (id === 'radiation') {
-      const wx = await weather(), [, pname, m0, m1] = PERIODS.find((x) => x[0] === ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
+      const wx = await weather(), [, pname, m0, m1] = periodDef(ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
       const bins = new Map(), binsN = new Map(); let dhi = 0, hours = 0;
       for (const r of wx.rows) { if (!inP(r.m)) continue; const sp = sunPosition(2026, r.m, r.d, r.h - 0.5, wx.lat, wx.lon, wx.tz); if (sp.alt <= 0) continue; hours++; dhi += r.dhi / 1000;
         if (r.dni > 0) { const key = Math.floor(sp.az / 15) + '|' + Math.min(8, Math.floor(sp.alt / 10)); bins.set(key, (bins.get(key) || 0) + r.dni * Math.sin(sp.alt * Math.PI / 180) / 1000); binsN.set(key, (binsN.get(key) || 0) + r.dni / 1000); } }
@@ -647,7 +651,7 @@ export function mountChrome(app, api) {
         method: `The tallest a building could be at each ${fmt(g.cell, 1)} m cell without its shadow reaching a surrounding building, for ${dirs.length} sun positions (${pname}, solar time). Heights above the ground, capped at 100 m${sv && sv.length ? `. The building's facades and roofs (imported models included) show the envelope height where they stand; squares higher than it shade a neighbour at the protected hours` : ''}.`,
         results: { value: +st.avg.toFixed(2), min: st.lo, max: st.hi }, settings: { envelope: ST.envelope, label: `Envelope, ${pname} (Workspace)` } }; }
     if (id === 'utci') {
-      const wx = await weather(), E = CL.parseEPW(wx.text), [, pname, m0, m1] = PERIODS.find((x) => x[0] === ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
+      const wx = await weather(), E = CL.parseEPW(wx.text), [, pname, m0, m1] = periodDef(ST.period), inP = (m) => (m0 <= m1 ? m >= m0 && m <= m1 : m >= m0 || m <= m1);
       const alpha = ({ open: 0.14, suburban: 0.22, city: 0.33 })[S.conditionsOf(p).site.terrain] || 0.22, hrs = [], binIx = new Map(), binDirs = [];
       for (let k = 0; k < 8760; k++) { const [m, d] = CL.monthDay(Math.floor(k / 24)); if (!inP(m)) continue; const sp = sunPosition(2026, m, d, (k % 24) + 0.5, E.lat, E.lon, E.tz); if (ST.utciHours === 'sun' && sp.alt <= 0) continue;
         let b = -1; if (sp.alt > 1 && E.DNR[k] > 0) { const key = Math.floor(sp.az / 15) + '|' + Math.min(8, Math.floor(sp.alt / 10)); if (!binIx.has(key)) { binIx.set(key, binDirs.length); const [a, l] = key.split('|').map(Number); binDirs.push({ az: a * 15 + 7.5, alt: Math.min(85, l * 10 + 5), w: 1 }); } b = binIx.get(key); }
@@ -1097,6 +1101,50 @@ export function mountChrome(app, api) {
         results: { peak: +peak.toFixed(2), windy: Math.round(windy * a2), sitting: +(sit / Math.max(1, n) * 100).toFixed(1), uncomf: +(unc / Math.max(1, n) * 100).toFixed(1), unsafe: Math.round(unsafe * a2) }, settings: { mode: 'yearly', label: 'Pedestrian wind, the year (Workspace)' } }; }
     throw Error('This study does not run here yet.');
   }
+  // ---- series (2026-11-09): one study through the year, a picture each month (the 21st, for a day's study; the month, for a
+  // period's) or each season (the solstices and equinoxes; three-month seasons), on one colour scale, then the linked preview
+  // where the view is chosen and the sheet exported. The presets are the study's own: only studies with a time of year have them.
+  const SEASON_DAYS = [['03-21', '21 March'], ['06-21', '21 June'], ['09-23', '23 September'], ['12-21', '21 December']];
+  const SERIES = {
+    sunhours: { key: 'day', what: 'direct sun through the day',
+      method: (r) => `Sun directions through each day shown, at the site’s latitude, time zone and true north (Project props), every ${ST.sunStep} minutes from ${ST.sunH0}:00 to ${ST.sunH1}:00 solar time; each ${fmt(r.cell, 1)} m ground cell counts the hours it sees the sun, shaded by the masses, the building, the surrounding buildings and the terrain${r.svals && r.svals.length ? ', and so does each square of the design’s facades and roofs' : ''}. Direct sun only: a screening, not a daylight or rights-to-light assessment.`,
+      months: MONTHN.map((n, i) => ({ v: `${String(i + 1).padStart(2, '0')}-21`, label: `21 ${n}` })), seasons: SEASON_DAYS.map(([v, label]) => ({ v, label })),
+      monthsNote: 'The 21st of each month', seasonsNote: 'The equinoxes and solstices' },
+    radiation: { key: 'period', what: 'sunlight energy over the period, from the project weather',
+      method: (r) => `The hourly direct sun and diffuse sky of the project weather over each period, with the same shading; each ${fmt(r.cell, 1)} m ground cell sums the sunlight that reaches it in kWh/m² (direct sun by its height, sky by the share each cell sees; no light reflected from the ground).`,
+      months: MONTHN.map((n, i) => ({ v: `m${i + 1}`, label: n })), seasons: [['q-mam', 'March–May'], ['q-jja', 'June–August'], ['q-son', 'September–November'], ['q-djf', 'December–February']].map(([v, label]) => ({ v, label })),
+      monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
+  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-1'));
+  async function runSeries(kind) {
+    const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; }
+    if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }
+    const list = def[kind], keep = ST[def.key], keepRes = ST.res, q = qualOf(), frames = []; syncLevels();
+    // the estimate: one run per frame, at this quality
+    let estMs = 0; for (const f of list) { ST[def.key] = f.v; const e = estimate(id); estMs += e ? e.ms : 0; } ST[def.key] = keep;
+    ST.busy = true; ST.cancel = false; ST.err = ''; ST.t0 = Date.now(); ST.runQ = q; ST.estAtRun = estMs ? { ms: estMs } : null; ST.progress = `${list.length} pictures`; drawStudy(); runBar('start');
+    const tick = setInterval(() => runBar('tick'), 1000);
+    try { INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridOf()); INST.persp.ws.surfaceCell?.(surfOf());
+      for (let k = 0; k < list.length; k++) { if (ST.cancel) throw Error('Stopped.'); ST[def.key] = list[k].v; ST.progress = `${list[k].label}: picture ${k + 1} of ${list.length} · ${Math.round(k / list.length * 100)}%`; drawStudy(); runBar('tick'); await new Promise((r) => setTimeout(r, 20));
+        const r = await compute(id); addViews(id, r); applyView(r, ST.view[id]); frames.push({ label: list[k].label, v: list[k].v, r }); }
+    } catch (e) { ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); }
+    clearInterval(tick); ST[def.key] = keep; ST.busy = false; ST.progress = ''; const ok = frames.length === list.length; runBar(ok ? 'done' : ST.err ? 'error' : 'stopped');
+    if (keepRes) paintRes(keepRes); else { clearAll(); showArea(); } drawStudy(); if (!ok) return;
+    openSeries(id, kind, frames, q); }
+  async function openSeries(id, kind, frames, q) {
+    const def = SERIES[id], w = INST.persp.ws, view = frames[0].r.view, V = (r) => (r.views && r.views[view]) || r;
+    // one colour scale for every picture: the lowest and the highest of the series (each month alone would not compare)
+    const lo = Math.min(...frames.map((f) => V(f.r).lo)), hi = Math.max(...frames.map((f) => V(f.r).hi)), shi = Math.max(...frames.map((f) => V(f.r).shi ?? V(f.r).hi));
+    const keepKey = ST[def.key], paint = (i) => { const f = frames[i]; ST[def.key] = f.v; try { paintRes({ ...f.r, lo, hi, slo: lo, shi: Math.max(hi, shi) }); } finally { ST[def.key] = keepKey; } };   // that day's sun path too
+    const site = S.siteOf(p) || {}, c0 = S.conditionsOf(p), r0 = frames[0].r, cols = (V(r0).legendCols) || w.rampColors?.(r0.ramp) || ['#ddd', '#333'];
+    const meta = { project: p.name, site: site.label || '', lat: site.lat, lon: site.lon, study: simName(id), what: def.what, basis: def[kind + 'Note'], quality: q.name, grid: `ground ${fmt(r0.cell || 0, 2)} m${r0.surfCell ? ` · building ${fmt(r0.surfCell, 2)} m` : ''}`,
+      title: V(r0).title?.replace(/ · .*$/, '') || simName(id), unit: V(r0).unit || r0.unit, lo, hi, dec: V(r0).dec ?? r0.dec ?? 1, cols, labels: V(r0).legendLabels || null, view: view,
+      method: def.method ? def.method(r0) : r0.method, version: (p.versions || []).at(-1)?.n ? `v${p.versions.at(-1).n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: c0.revision, at: new Date(), station: id === 'radiation' ? ((await weather().catch(() => null))?.station || '') : '' };
+    paintRes({ ...frames[0].r, lo, hi, slo: lo, shi: Math.max(hi, shi) });   // the view framed on the result, before the tiles copy it
+    if (Number.isFinite(r0.X0) && r0.nx) w.fitBox?.({ x0: r0.X0, y0: r0.Y0, x1: r0.X0 + r0.nx * r0.cell, y1: r0.Y0 + r0.ny * r0.cell }, 0, 1.25, false);
+    const M = await seriesUI();
+    M.openSeriesPreview(app, { frames: frames.map((f) => ({ label: f.label })), cols: frames.length === 12 ? 4 : frames.length === 4 ? 2 : Math.ceil(Math.sqrt(frames.length)), meta,
+      paint, snap: (wd, ht, sc) => INST.persp.ws.snapAt?.(wd, ht, sc), move: (o) => INST.persp.ws.camMove?.(o),
+      onClose: () => { ST[def.key] = keepKey; if (ST.res) paintRes(ST.res); else clearAll(); } }); }
   async function runStudy() {
     if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
     const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; runBar('tick'); }, 1000);
@@ -1223,7 +1271,7 @@ export function mountChrome(app, api) {
       rose: () => { if (ST.roseErr) return `<p class="sp-note sp-errtext">${esc(ST.roseErr)}</p>`; if (!ST.rose) return '<p class="sp-note">Reading the wind of the project weather…</p>'; const R = ST.rose, single = ST.windMode === 'single', dir = ST.windDir ?? R.prevailing, i = Math.round(dir / 22.5) % 16, spd = ST.windSpeed ?? R.sec[i].mean;
         return `<p class="sp-flabel">${single ? 'Click the rose to choose the wind direction' : 'The year’s wind by direction, from the project weather'}</p>${roseSVG(R, single)}${single ? `<label class="sp-spdrow"><span>From ${DIR16[i]} · <span class="sp-spd">${fmt(spd, 1)}</span> m/s at 10 m</span><input type="range" min="0.5" max="20" step="0.5" value="${(+spd).toFixed(1)}" data-st="windSpeed"></label>` : `<p class="sp-note">Prevailing from ${DIR16[Math.round(R.prevailing / 22.5) % 16]}; calm ${fmt(R.calm * 100)}% of hours. ${esc(R.station)}</p>`}`; } };
     studyCard.innerHTML = `<header><b>${esc(name)}</b><span class="sp-pill" data-state="${status[0]}">${esc(status[1])}</span><span class="sp-hbtns"><button type="button" class="sp-ib" data-st="exp" aria-expanded="${ST.exp}" title="Export">⤓</button><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></span></header>
-      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}</div>` : ''}
+      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}${SERIES[id] ? `<p class="sp-flabel">Series: one picture each, on one colour scale</p><button type="button" class="btn sm" data-st="ser-months" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].monthsNote)}">12 months</button><button type="button" class="btn sm" data-st="ser-seasons" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].seasonsNote)}">4 seasons</button><p class="sp-note">${esc(SERIES[id].monthsNote)}, or ${esc(SERIES[id].seasonsNote.toLowerCase())}; at ${esc(qualOf().name)} quality, about ${dur((estimate(id)?.ms || 0) * 12)} for 12. Then choose the view and export the sheet.</p>` : ''}</div>` : ''}
       ${sp.mode ? seg('data-st-mode', ST[sp.mode[0]], sp.mode[1]) : ''}${stage}
       ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}
       ${r && id === 'fire-evacuation' ? `<div class="sp-acts sp-acts1 sp-egplay"><button type="button" class="btn sm" data-eg="play">${ST.egPlay ? '❚❚ Pause' : '▶ Play'}</button><input type="range" data-eg="seek" min="0" max="${r.nFrames || 1}" step="1" value="${Math.round(ST.egT || 0)}" aria-label="Time in the run shown"><span class="sp-egt sp-note"></span></div><div class="sp-chips" role="group" aria-label="Playback speed">${[[10, '×10'], [30, '×30'], [60, '×60']].map(([v, n]) => `<button type="button" data-eg="speed" data-v="${v}" aria-pressed="${ST.egSpeed === v}">${n}</button>`).join('')}</div>` : ''}
@@ -1278,7 +1326,7 @@ export function mountChrome(app, api) {
   studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'windSpeed') { ST.windSpeed = +e.target.value; drawStudy(); } });
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
-    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
+    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false;
 
