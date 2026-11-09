@@ -6771,7 +6771,8 @@ window.S3 = (() => {
   const SEC_CUT = new Set(['floorsheet', 'egresssheet', 'surfaceresult', 'sectionresult', 'structure']);
   const secWhole = (o) => o.name === 'site' || o.name === 'site-detail' || o.name === 'water' || ['site', 'ctx', 'world'].includes(o.userData && o.userData.k);
   function secRender(c) {
-    const cut = [], whole = []; for (const ch of scene.children) { if (ch === grp) continue; (SEC_CUT.has(ch.name) ? cut : whole).push(ch); }
+    const lit = (o) => o.isLight || o.isCamera || (o.type === 'Object3D' && !o.children.length);   // the lights (and a light's target) light both passes: hidden, the cut building came out black
+    const cut = [], whole = []; for (const ch of scene.children) { if (ch === grp || lit(ch)) continue; (SEC_CUT.has(ch.name) ? cut : whole).push(ch); }
     if (grp) for (const ch of grp.children) (secWhole(ch) ? whole : cut).push(ch);
     const vis = new Map([...cut, ...whole].map((o) => [o, o.visible])), bg = scene.background, sa = R.shadowMap.autoUpdate, cp = R.clippingPlanes;
     try { for (const o of cut) o.visible = false; R.clippingPlanes = []; R.render(scene, c);   // the site whole first, so the cut building's see-through parts blend over it
