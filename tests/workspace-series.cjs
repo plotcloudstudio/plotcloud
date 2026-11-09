@@ -23,7 +23,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 1 · four seasons: the run at the top, then the preview, 2 × 2, every tile drawn
     const t0 = Date.now(); await p.click('.sp-exp [data-st=ser-seasons]'); await p.waitForTimeout(200);
     const bar = await p.evaluate(() => { const e = document.querySelector('.sp-runbar'); return e && !e.hidden ? e.innerText : ''; }); assert.match(bar, /Sun hours[\s\S]*(left|picture)/i, 'the run at the top: ' + bar);
-    await p.waitForSelector('.sx', { timeout: 240000 }); await p.waitForFunction(() => [...document.querySelectorAll('.sx-tile canvas')].every((c) => c.width > 50), null, { timeout: 120000 }); await p.waitForTimeout(1500);
+    await p.waitForSelector('.sx', { timeout: 240000 }); await p.waitForSelector('.sx[data-ready="1"]', { timeout: 240000 });   // every tile drawn at full resolution (a blank canvas is 300 wide too) await p.waitForTimeout(1500);
     const g4 = await p.evaluate(() => { const t = [...document.querySelectorAll('.sx-tile')], r = t.map((e) => e.getBoundingClientRect()); return { n: t.length, labels: t.map((e) => e.querySelector('figcaption').textContent), cols: new Set(r.map((q) => Math.round(q.x))).size, rows: new Set(r.map((q) => Math.round(q.y))).size, win: document.querySelector('.sx-win').getBoundingClientRect().width / innerWidth, legend: document.querySelector('.sx-lab').textContent }; });
     assert.equal(g4.n, 4); assert.equal(g4.cols, 2); assert.equal(g4.rows, 2); assert.deepEqual(g4.labels, ['21 March', '21 June', '23 September', '21 December']); assert(Math.abs(g4.win - 0.7) < 0.02, 'the size of the import preview: ' + g4.win);
     const sig = () => p.evaluate(() => [...document.querySelectorAll('.sx-tile canvas')].map((c) => { const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0; for (let i = 0; i < x.length; i += 97) h = (h * 31 + x[i]) >>> 0; return h; }));
@@ -33,7 +33,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
 
     // 2 · one camera: dragging the first tile turns the last one too
     const tb = await p.locator('.sx-tile canvas').first().boundingBox(); await p.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2); await p.mouse.down(); await p.mouse.move(tb.x + tb.width / 2 + 120, tb.y + tb.height / 2 + 20, { steps: 8 }); await p.mouse.up();
-    await p.waitForFunction(() => !document.querySelector('.sx-status').textContent, null, { timeout: 60000 }); await p.waitForTimeout(600);
+    await p.waitForSelector('.sx[data-ready="1"]', { timeout: 240000 });
     const s1 = await sig(); assert(s1.every((v, i) => v !== s0[i]), 'every tile follows the drag: ' + JSON.stringify([s0, s1]));
     console.log('PASS one camera for every tile');
 
@@ -48,10 +48,10 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 4 · close: the view comes back; twelve months, 4 × 3
     await p.click('.sx [data-sx=close]'); await p.waitForTimeout(500); assert.equal(await p.locator('.sx').count(), 0);
     if (await p.locator('.sp-exp').count() === 0) await p.click('.sp-studycard [data-st=exp]');
-    await p.click('.sp-exp [data-st=ser-months]'); await p.waitForSelector('.sx', { timeout: 300000 }); await p.waitForFunction(() => [...document.querySelectorAll('.sx-tile canvas')].every((c) => c.width > 50), null, { timeout: 180000 });
+    await p.click('.sp-exp [data-st=ser-months]'); await p.waitForSelector('.sx', { timeout: 300000 }); await p.waitForSelector('.sx[data-ready="1"]', { timeout: 300000 });
     const g12 = await p.evaluate(() => { const t = [...document.querySelectorAll('.sx-tile')], r = t.map((e) => e.getBoundingClientRect()); return { n: t.length, first: t[0].querySelector('figcaption').textContent, last: t[11].querySelector('figcaption').textContent, cols: new Set(r.map((q) => Math.round(q.x))).size, rows: new Set(r.map((q) => Math.round(q.y))).size }; });
     assert.deepEqual(g12, { n: 12, first: '21 January', last: '21 December', cols: 4, rows: 3 });
-    await p.waitForFunction(() => !document.querySelector('.sx-status').textContent, null, { timeout: 300000 }); await p.screenshot({ path: out + '/series-12.png', timeout: 120000 });
+    await p.waitForSelector('.sx[data-ready="1"]', { timeout: 300000 }); await p.screenshot({ path: out + '/series-12.png', timeout: 120000 });
     console.log('PASS 12 months, 4 × 3');
     await p.keyboard.press('Escape'); await p.waitForTimeout(300); assert.equal(await p.locator('.sx').count(), 0, 'Esc closes');
     assert.deepEqual(errs, []);

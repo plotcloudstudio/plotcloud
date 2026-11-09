@@ -32,12 +32,12 @@ export function renderList(host, list, { project, modelKey, onChange, onExport, 
   const items = list.items, stale = (it) => it.modelKey && modelKey && it.modelKey !== modelKey;
   for (const u of host.__urls || []) URL.revokeObjectURL(u); host.__urls = [];
   const thumb = (it) => { const b = it.pictures[0]?.blob; if (!b) return ''; const u = URL.createObjectURL(b); host.__urls.push(u); return `<img src="${u}" alt="">`; };
-  host.innerHTML = `<h3>Export list</h3>${items.length ? `<label class="sp-field">Report title<input class="sp-in" data-xl="title" value="${esc(list.title || `${project} · environmental studies`)}" maxlength="120"></label>
+  host.innerHTML = `<h3>Export list</h3>${items.length ? `<label class="sp-field">Report title<input class="sp-in" data-xl="title" value="${esc(list.title || 'Building Performance Simulation Report')}" maxlength="120"></label>
     <ol class="xl-items">${items.map((it, i) => `<li class="xl-it${stale(it) ? ' stale' : ''}"><span class="xl-th">${thumb(it)}${it.pictures.length > 1 ? `<i>${it.pictures.length}</i>` : ''}</span><span class="xl-tx"><b>${esc(it.title)}</b><small>${esc(KIND[it.kind])} · ${esc(it.sub || '')}</small>${stale(it) ? '<small class="sp-warn">The model has changed since: add it again to update it.</small>' : ''}</span>
       <span class="xl-bt"><button type="button" data-xl="up" data-i="${i}" ${i ? '' : 'disabled'} aria-label="Move up" title="Move up">↑</button><button type="button" data-xl="down" data-i="${i}" ${i < items.length - 1 ? '' : 'disabled'} aria-label="Move down" title="Move down">↓</button><button type="button" data-xl="del" data-i="${i}" aria-label="Remove ${esc(it.title)}" title="Remove">×</button></span></li>`).join('')}</ol>
     <div class="xl-acts"><button type="button" class="btn sm primary" data-xl="pdf" ${busy ? 'disabled' : ''}>Report (PDF)</button><button type="button" class="btn sm" data-xl="pptx" ${busy ? 'disabled' : ''}>Slides (PPTX)</button><button type="button" class="btn sm" data-xl="zip" ${busy ? 'disabled' : ''}>Pictures (ZIP)</button></div>
     <p class="sp-note xl-status" aria-live="polite">${busy ? esc(busy) : `${items.length} item${items.length === 1 ? '' : 's'}, ${items.reduce((a, it) => a + it.pictures.length, 0)} pictures. Each page states what it was computed from.`}</p>`
-    : '<p class="sp-note" style="margin-top:0">Nothing yet. Add a view or a series from a study’s Export area (⤓), or a section from the Section card; then export them together as a report, slides or pictures.</p>'}`;
+    : '<p class="sp-note" style="margin-top:0">Nothing yet. Tick the simulations above and Generate pictures; they come here, ready to export together as a report, slides or pictures.</p>'}`;
   host.onclick = async (e) => { const b = e.target.closest('[data-xl]'); if (!b || b.tagName === 'INPUT') return; const k = b.dataset.xl, i = +b.dataset.i;
     if (k === 'up' && i > 0) { [items[i - 1], items[i]] = [items[i], items[i - 1]]; onChange(); }
     else if (k === 'down' && i < items.length - 1) { [items[i + 1], items[i]] = [items[i], items[i + 1]]; onChange(); }
@@ -47,80 +47,119 @@ export function renderList(host, list, { project, modelKey, onChange, onExport, 
 }
 
 // ---- the report
-const LIMITS = 'Results are computed in PlotCloud from the model, the inputs and the settings stated on each page. They are screenings for design decisions: not a certification, a code-compliance assessment or an engineering sign-off. A result applies to the model version and the conditions it states; when either changes, run it again.';
+// ---- the report, written as a North American building performance simulation report (2026-11-09): English (US spelling),
+// 11 × 17 in (ANSI B / Tabloid) landscape, dates written out; a cover with the project information, a summary of results, one
+// chapter per analysis (objective, method, references, inputs and boundary conditions, results, assumptions and limitations,
+// numbered figures) and a closing page on the limits. References are those the methods use, and are given as informative.
+const LIMITS = 'The analyses in this report were computed in PlotCloud from the model, inputs and settings stated in each chapter. They are design-stage screening analyses intended to inform design decisions. They are not a certification, a code-compliance demonstration, a LEED submission or an engineering sign-off. Each result applies only to the model version and the project conditions it states; when either changes, the analysis should be run again.';
+const DOC = {
+  sunhours: { name: 'Direct Sunlight Hours', refs: ['NOAA Solar Calculator algorithm (solar position)'], limit: 'Direct sun only: no diffuse skylight, reflected light or atmospheric attenuation. A screening of sun access, not a shadow study prepared to a municipal terms of reference.' },
+  radiation: { name: 'Incident Solar Radiation', refs: ['Project weather file (EPW): direct normal and diffuse horizontal irradiance', 'NOAA Solar Calculator algorithm (solar position)'], limit: 'Ground-reflected radiation is not included; surroundings beyond the modeled context are taken as unobstructed.' },
+  skyview: { name: 'Sky View Factor', refs: [], limit: 'Geometric sky exposure only; no weather data.' },
+  utci: { name: 'Outdoor Thermal Comfort (UTCI)', refs: ['Bröde et al. (2012), Deriving the operational procedure for the Universal Thermal Climate Index (UTCI), International Journal of Biometeorology 56'], limit: 'Wind speed and mean radiant temperature are simplified for screening.' },
+  wind: { name: 'Pedestrian-Level Wind', refs: ['Two-dimensional lattice-Boltzmann flow at pedestrian height (speed ratio to the reference wind)'], limit: 'A two-dimensional slice of the flow at pedestrian height: no flow over roofs or down facades. It screens channelling and shelter; it is not a wind tunnel test or a three-dimensional CFD study.' },
+  daylight: { name: 'Daylight Performance (sDA300/50% and ASE1000,250)', refs: ['IES LM-83, Approved Method: IES Spatial Daylight Autonomy (sDA) and Annual Sunlight Exposure (ASE)', 'LEED v4.1 BD+C, EQ Credit: Daylight, Option 1 (informative)'], limit: 'A screening of the metrics LEED v4.1 Daylight uses, not a simulation prepared for a LEED submission.' },
+  vent: { name: 'Natural Ventilation (Air Change Rate)', refs: ['ASHRAE Handbook—Fundamentals, Chapter 24: Airflow Around Buildings (informative)', 'ANSI/ASHRAE Standard 62.1, Natural Ventilation Procedure (informative)', 'AIVC, Guide to Energy Efficient Ventilation (wind pressure coefficients)', 'de Gids and Phaff (1982), single-sided ventilation'], limit: 'Each room is treated as a fully mixed zone; results are air change rates, not air speeds or temperatures. Not CFD and not a code calculation.' },
+  acoustics: { name: 'Room Acoustics (Reverberation Time)', refs: ['DIN 18041:2016, Acoustic quality in rooms (reverberation time targets used)', 'ANSI/ASA S12.60 and LEED v4.1 EQ Credit: Acoustic Performance (informative North American references)'], limit: 'Statistical reverberation (Sabine or Eyring) from room volume and finishes; no ray tracing. STI is estimated from reverberation only.' },
+  spacesyntax: { name: 'Spatial Configuration (Visibility Graph Analysis)', refs: ['Turner, Doxa, O’Sullivan and Penn (2001), From isovists to visibility graphs, Environment and Planning B 28'], limit: 'Configurational analysis of the plan; it does not predict occupant numbers.' },
+  section: { name: 'Building Section', refs: [], limit: '' } };
+const docOf = (it) => DOC[it.study] || { name: it.title, refs: [], limit: '' };
+const usage = (t) => String(t || '').replace(/\bcolour/g, 'color').replace(/\bColour/g, 'Color').replace(/\bcentre/g, 'center').replace(/\bmetres\b/g, 'meters').replace(/\bmetre\b/g, 'meter').replace(/\bmodelled\b/g, 'modeled').replace(/\banalyse/g, 'analyze');
+// a method written for a report: no screen language, US spelling
+const methodText = (t) => usage(plain(t).replace(/Project props(\s*›\s*\w+)?/g, 'the project settings').split(/(?<=\.)\s+/).filter((x) => !/detailed page|Workspace|this page|click|Start again/i.test(x)).join(' '));
+const usDate = (t) => new Date(t).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const usTime = (t) => new Date(t).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+// a chapter's title: the analysis, then what this one shows (a day, a season set, a wind), written once
+const cap1 = (v) => (v && /^[a-z]{2}/.test(v) ? v.charAt(0).toUpperCase() + v.slice(1) : v || '');   // "sDA300" stays as written
+const variantOf = (it) => { if (it.kind === 'series') return /12 months/.test(it.title) ? (it.study === 'sunhours' ? 'Twelve Months (21st of Each Month)' : 'Monthly') : (it.study === 'sunhours' ? 'Equinoxes and Solstices' : 'Seasonal');
+  const parts = String(it.title).split(' · '), last = parts.length > 1 ? parts.at(-1) : ''; return cap1(last.replace(/^[a-z][a-z ]*, (?=[a-z])/, '')); };   // "air changes, wind from E 4.7 m/s" → "Wind from E 4.7 m/s"
+const headOf = (it) => { const v = variantOf(it), sec = it.kind === 'section' ? String(it.title).split(' · ')[0] : ''; if (sec) return it.study === 'section' ? `Building ${sec}` : `${sec} — ${docOf(it).name}${v ? ': ' + v : ''}`; return `${docOf(it).name}${v ? ' — ' + v : ''}`; };
+const inputsOf = (it) => (it.inputs && it.inputs.length ? it.inputs : [['Basis', it.basis || '']]).concat([['Computed', usTime(it.at)]]);
+// the headline: a series by its range across the figures (lowest and highest), any other by its first result
+const headline = (it) => { const R = it.rows || [];
+  if (it.kind === 'series' && R.length > 1) { const v = R.map(([k, x]) => ({ k: plain(k), n: parseFloat(plain(x)), u: (/^[-\d.,]+\s*(\S+)/.exec(plain(x)) || [])[1] || '' })).filter((q) => Number.isFinite(q.n));
+    if (v.length > 1) { const lo = v.reduce((a, q) => (q.n < a.n ? q : a)), hi = v.reduce((a, q) => (q.n > a.n ? q : a)); return `Average ${lo.n}–${hi.n} ${lo.u} across the ${v.length} figures (lowest ${lo.k}, highest ${hi.k})`; } }
+  const r = R[0]; return r ? `${plain(r[0])}: ${plain(r[1])}` : '—'; };
 function legendCanvas(L, w = 900, h = 150) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); const bw = w - 40, gr = g.createLinearGradient(20, 0, 20 + bw, 0); L.stops.forEach((s, i) => gr.addColorStop(L.stops.length === 1 ? 0 : i / (L.stops.length - 1), s)); g.fillStyle = gr; g.fillRect(20, 20, bw, 34); g.strokeStyle = '#6b7280'; g.strokeRect(20, 20, bw, 34);
   g.fillStyle = '#111827'; g.font = '500 26px Inter, Arial, sans-serif'; g.textBaseline = 'top'; [0, 0.5, 1].forEach((t) => { g.textAlign = t === 0 ? 'left' : t === 1 ? 'right' : 'center'; g.fillText(num(L.lo + (L.hi - L.lo) * t, L.dec), 20 + bw * t, 64); }); g.textAlign = 'left'; g.fillStyle = '#374151'; g.fillText(L.unit, 20, 106); return c; }   // the unit on its own line: long units fit
 
 export async function exportList(kind, list, ctx) {
-  const items = list.items, title = list.title || `${ctx.project} · environmental studies`, base = `${slug(ctx.project)}-report-${day(Date.now())}`;
-  if (kind === 'zip') { const files = []; for (const [n, it] of items.entries()) for (const [k, p] of it.pictures.entries()) files.push({ name: `${String(n + 1).padStart(2, '0')}-${slug(it.title)}/${String(k + 1).padStart(2, '0')}-${slug(p.label || it.title)}.jpg`, data: await bytes(p.blob) });
-    files.push({ name: 'report.json', data: JSON.stringify({ title, project: ctx.project, site: ctx.site, generated: new Date().toISOString(), items: items.map((it) => ({ kind: it.kind, study: it.study, title: it.title, sub: it.sub, pictures: it.pictures.map((p) => p.label), legend: it.legend && { from: it.legend.lo, to: it.legend.hi, unit: it.legend.unit }, results: it.rows, method: it.method, basis: it.basis, computed: it.at })), limits: LIMITS }, null, 2) });
+  const items = list.items, title = list.title || 'Building Performance Simulation Report', base = `${slug(ctx.project)}-simulation-report-${day(Date.now())}`;
+  if (kind === 'zip') { const files = []; for (const [n, it] of items.entries()) for (const [k, p] of it.pictures.entries()) files.push({ name: `${String(n + 1).padStart(2, '0')}-${slug(headOf(it))}/figure-${n + 1}-${k + 1}-${slug(p.label || it.title)}.jpg`, data: await bytes(p.blob) });
+    files.push({ name: 'report.json', data: JSON.stringify({ title, project: ctx.project, location: ctx.site, coordinates: ctx.coords, climateData: ctx.weather || null, generated: new Date().toISOString(), items: items.map((it, n) => ({ number: n + 1, analysis: headOf(it), kind: it.kind, study: it.study, figures: it.pictures.map((p, k) => `Figure ${n + 1}.${k + 1} ${p.label || ''}`.trim()), legend: it.legend && { from: it.legend.lo, to: it.legend.hi, unit: it.legend.unit }, results: it.rows, objective: it.objective || null, method: methodText(it.method), references: docOf(it).refs, inputs: inputsOf(it), limitations: [docOf(it).limit, ...(it.notes || []).map(usage)].filter(Boolean), computed: it.at })), disclaimer: LIMITS }, null, 2) });
     return { name: base + '.zip', blob: new Blob([zip(files)], { type: 'application/zip' }) }; }
   if (kind === 'pptx') return { name: base + '.pptx', blob: new Blob([await pptx(items, title, ctx)], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }) };
   return { name: base + '.pdf', blob: await pdf(items, title, ctx) };
 }
 
 async function pdf(items, title, ctx) {
-  const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'landscape', unit: 'mm', format: 'a3', compress: true }); d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
-  d.setProperties({ title, subject: `${ctx.project} · ${ctx.site || ''}`, author: ctx.author || '', creator: 'PlotCloud' });
-  const W = 420, H = 297, mg = 16, ink = [17, 24, 39], sub = [75, 85, 99], line = [209, 213, 219], N = items.length + 2, made = `Generated ${day(Date.now())} with PlotCloud`;
-  const foot = (n) => { d.setDrawColor(...line); d.setLineWidth(0.2); d.line(mg, H - 12, W - mg, H - 12); d.setFontSize(8); d.setTextColor(...sub); d.text(`${ctx.project} · ${title}`, mg, H - 7.5); d.text(`${n} / ${N}`, W - mg, H - 7.5, { align: 'right' }); };
-  const wrap = (t, w, size, x, y, col = sub, lh = 0.42) => { d.setFontSize(size); d.setTextColor(...col); const ls = d.splitTextToSize(t, w); d.text(ls, x, y); return y + ls.length * size * lh; };
-  // cover
-  const CW = 168;   // the cover: title, project and contents on the left, the first picture on the right
-  d.setFillColor(17, 24, 39); d.rect(0, 0, W, 8, 'F'); d.setTextColor(...ink); d.setFontSize(28); const tl = d.splitTextToSize(title, CW); d.text(tl, mg, 46);
-  let y = wrap([ctx.project, ctx.site, ctx.coords].filter(Boolean).join(' · '), CW, 12.5, mg, 46 + tl.length * 11 + 4, sub, 0.45);
-  y = wrap(`${made}${ctx.author ? ' · prepared by ' + ctx.author : ''} · model ${ctx.version}`, CW, 9.5, mg, y + 2, sub);
-  d.setDrawColor(...line); d.line(mg, y + 6, mg + CW, y + 6); d.setTextColor(...ink); d.setFontSize(12); d.text('Contents', mg, y + 16); y += 25;
-  const toc = (n, t, s2, pg) => { d.setFontSize(10.5); d.setTextColor(...ink); const tt = d.splitTextToSize(`${n}.  ${t}`, CW - 14); d.text(tt, mg, y); d.setTextColor(...sub); d.text(String(pg), mg + CW, y, { align: 'right' }); y += tt.length * 4.6; if (s2) { d.setFontSize(8.5); d.text(d.splitTextToSize(s2, CW - 14), mg + 6, y); y += 4.2; } y += 2.6; };
-  items.forEach((it, i) => toc(i + 1, it.title, `${KIND[it.kind]} · ${it.sub || ''}`, i + 2)); toc(items.length + 1, 'Basis and limits', '', N);
-  if (items[0]?.pictures[0]) { const b0 = items[0].pictures[0].blob, im = await imgOf(b0), x0 = mg + CW + 14, ww = W - mg - x0, hh = Math.min(H - 60, ww * im.height / im.width), w2 = hh * im.width / im.height;
-    d.addImage(await dataURL(b0), 'JPEG', x0 + (ww - w2) / 2, 30, w2, hh, undefined, 'FAST'); d.setFontSize(8); d.setTextColor(...sub); d.text(`${items[0].title}${items[0].pictures.length > 1 ? ' · ' + (items[0].pictures[0].label || '') : ''}`, x0 + (ww - w2) / 2, 30 + hh + 5); }
+  const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'landscape', unit: 'mm', format: 'tabloid', compress: true }); d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
+  d.setProperties({ title, subject: `${ctx.project}${ctx.site ? ' · ' + ctx.site : ''}`, author: ctx.author || '', creator: 'PlotCloud', keywords: 'building performance simulation, screening analysis' });
+  const W = d.internal.pageSize.getWidth(), H = d.internal.pageSize.getHeight(), mg = 16, ink = [17, 24, 39], sub = [75, 85, 99], line = [209, 213, 219], N = items.length + 3, issued = usDate(Date.now());
+  const foot = (n) => { d.setDrawColor(...line); d.setLineWidth(0.2); d.line(mg, H - 12, W - mg, H - 12); d.setFontSize(8); d.setTextColor(...sub); d.text(`${ctx.project} · ${title} · Issued ${issued}`, mg, H - 7.5); d.text(`Page ${n} of ${N}`, W - mg, H - 7.5, { align: 'right' }); };
+  const wrap = (t, w, size, x, y, col = sub, lh = 0.42) => { d.setFontSize(size); d.setTextColor(...col); const ls = d.splitTextToSize(String(t), w); d.text(ls, x, y); return y + ls.length * size * lh; };
+  const head = (t, x, y) => { d.setFontSize(9.5); d.setTextColor(...ink); d.text(t, x, y); d.setDrawColor(...line); d.line(x, y + 1.6, x + 12, y + 1.6); return y + 6; };
+  const table = (rows, x, y, w, kw = 0.45, size = 8, maxY = H - 22) => { d.setFontSize(size); for (const [k, v] of rows) { if (y > maxY) break; const kl = d.splitTextToSize(plain(k), w * kw - 2), vl = d.splitTextToSize(plain(v), w * (1 - kw)), h = Math.max(kl.length, vl.length) * size * 0.4 + 1.6; d.setTextColor(...sub); d.text(kl, x, y + size * 0.36); d.setTextColor(...ink); d.text(vl, x + w * kw, y + size * 0.36); d.setDrawColor(238, 240, 243); d.line(x, y + h, x + w, y + h); y += h; } return y; };
+  const band = () => { d.setFillColor(17, 24, 39); d.rect(0, 0, W, 4, 'F'); };
+  // cover: title, the project information, the first figure
+  const CW = 178; d.setFillColor(17, 24, 39); d.rect(0, 0, W, 8, 'F'); d.setFontSize(9); d.setTextColor(...sub); d.text('BUILDING PERFORMANCE SIMULATION · DESIGN-STAGE SCREENING', mg, 30);
+  d.setTextColor(...ink); d.setFontSize(26); const tl = d.splitTextToSize(title, CW); d.text(tl, mg, 42); let y = 42 + tl.length * 10 + 4;
+  y = head('Project information', mg, y + 4);
+  y = table([['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used by the analyses in this report'], ['Model', ctx.version], ['Project conditions', `Revision ${ctx.revision ?? '—'}`], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Software', 'PlotCloud, web-based building performance screening'], ['Report status', 'Design-stage screening analysis; not a compliance submission']], mg, y, CW, 0.32, 9);
+  if (items[0]?.pictures[0]) { const b0 = items[0].pictures[0].blob, im = await imgOf(b0), x0 = mg + CW + 14, ww = W - mg - x0, hh = Math.min(H - 70, ww * im.height / im.width), w2 = hh * im.width / im.height;
+    d.addImage(await dataURL(b0), 'JPEG', x0 + (ww - w2) / 2, 30, w2, hh, undefined, 'FAST'); d.setFontSize(8); d.setTextColor(...sub); d.text(`${headOf(items[0])}${items[0].pictures.length > 1 ? ', ' + (items[0].pictures[0].label || '') : ''}`, x0 + (ww - w2) / 2, 30 + hh + 5); }
   foot(1);
-  // one page per item: pictures left (a grid for a series), the key results, legend, method and basis on the right
-  for (const [i, it] of items.entries()) { d.addPage('a3', 'landscape'); d.setFont('DejaVu');
-    d.setFillColor(17, 24, 39); d.rect(0, 0, W, 4, 'F'); d.setTextColor(...ink); d.setFontSize(18); d.text(`${i + 1}. ${it.title}`, mg, 20); d.setFontSize(10); d.setTextColor(...sub); d.text(`${KIND[it.kind]} · ${it.sub || ''}`, mg, 27);
-    const infoH = 72, gx = mg, gw = W - 2 * mg, gy = 33, gh = H - gy - 20 - infoH - 4, P = it.pictures, cols = it.cols || (P.length === 12 ? 4 : P.length === 4 ? 2 : Math.ceil(Math.sqrt(P.length))), rows = Math.ceil(P.length / cols);
-    const im0 = await imgOf(P[0].blob), ar = im0.height / im0.width, gap = 3.5, cap = P.length > 1 ? 5 : 0, fw = Math.min((gw - (cols - 1) * gap) / cols, ((gh - (rows - 1) * gap) / rows - cap) / ar), fh = fw * ar, x0 = gx + (gw - (cols * fw + (cols - 1) * gap)) / 2;
-    for (const [k, p] of P.entries()) { const x = x0 + (k % cols) * (fw + gap), yy = gy + Math.floor(k / cols) * (fh + cap + gap); if (cap) { d.setFontSize(8.5); d.setTextColor(...ink); d.text(p.label || '', x, yy + 3.6); }
-      d.addImage(await dataURL(p.blob), 'JPEG', x, yy + cap, fw, fh, undefined, 'FAST'); d.setDrawColor(229, 231, 235); d.rect(x, yy + cap, fw, fh); }
-    // under the pictures: legend and key results | method | basis and notes
-    const iy = H - 20 - infoH, c1 = 128, c2 = 150, cx2 = mg + c1 + 10, cx3 = cx2 + c2 + 10, c3 = W - mg - cx3; d.setDrawColor(...line); d.line(mg, iy - 3, W - mg, iy - 3);
-    let sy = iy + 2; const sx = mg, side = c1;
-    if (it.legend) { const L = it.legend, lw = side - 26, lh = 4, st = L.stops, hex = (c) => { const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})/i.exec(c); return m ? m.slice(1).map((v) => parseInt(v, 16)) : (/rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(c) || [0, 128, 128, 128]).slice(1).map(Number); };
+  // summary of results, with the contents
+  d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text('Summary of Results', mg, 20);
+  y = wrap('Each analysis below is described in its own chapter: objective, method, references, inputs and boundary conditions, results, and assumptions and limitations.', W - 2 * mg, 9.5, mg, 30, sub) + 4;
+  const cx = [mg, mg + 12, mg + 150, W - mg - 38, W - mg - 14], hdr = ['No.', 'Analysis', 'Headline result', 'Figures', 'Page']; d.setFontSize(9); d.setTextColor(...sub); hdr.forEach((t, k) => d.text(t, cx[k], y)); d.setDrawColor(...line); d.line(mg, y + 2, W - mg, y + 2); y += 7;
+  items.forEach((it, i) => { d.setFontSize(9.5); const an = d.splitTextToSize(headOf(it), 132), hl = d.splitTextToSize(headline(it), cx[3] - cx[2] - 6), h = Math.max(an.length, hl.length) * 4.2 + 2.4; d.setTextColor(...ink); d.text(String(i + 1), cx[0], y); d.text(an, cx[1], y); d.setTextColor(...sub); d.text(hl, cx[2], y); d.text(String(it.pictures.length), cx[3], y); d.text(String(i + 3), cx[4], y); d.setDrawColor(238, 240, 243); d.line(mg, y + h - 3, W - mg, y + h - 3); y += h; });
+  d.setFontSize(9.5); d.setTextColor(...ink); d.text(String(items.length + 1), cx[0], y); d.text('Assumptions, Limitations and Disclaimer', cx[1], y); d.setTextColor(...sub); d.text(String(N), cx[4], y); foot(2);
+  // one chapter per analysis: the figures across the page; under them objective and method | references, inputs | results, limitations
+  for (const [i, it] of items.entries()) { d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); band(); const D = docOf(it), n = i + 1;
+    d.setTextColor(...ink); d.setFontSize(17); d.text(`${n}. ${headOf(it)}`, mg, 19); d.setFontSize(9); d.setTextColor(...sub); d.text(`${it.kind === 'series' ? 'Series' : it.kind === 'section' ? 'Section' : 'Analysis view'} · ${it.pictures.length} figure${it.pictures.length === 1 ? '' : 's'}`, mg, 25.5);
+    const infoH = 92, gx = mg, gw = W - 2 * mg, gy = 31, gh = H - gy - 20 - infoH - 3, P = it.pictures, cols = it.cols || (P.length === 12 ? 4 : P.length === 4 ? 2 : Math.ceil(Math.sqrt(P.length))), rows = Math.ceil(P.length / cols);
+    const im0 = await imgOf(P[0].blob), ar = im0.height / im0.width, gap = 3.5, cap = 4.6, fw = Math.min((gw - (cols - 1) * gap) / cols, ((gh - (rows - 1) * gap) / rows - cap) / ar), fh = fw * ar, x0 = gx + (gw - (cols * fw + (cols - 1) * gap)) / 2;
+    for (const [k, pic] of P.entries()) { const x = x0 + (k % cols) * (fw + gap), yy = gy + Math.floor(k / cols) * (fh + cap + gap); d.setFontSize(8); d.setTextColor(...ink); d.text(`Figure ${n}.${k + 1}${pic.label ? '  ' + pic.label : ''}`, x, yy + 3.4);
+      d.addImage(await dataURL(pic.blob), 'JPEG', x, yy + cap, fw, fh, undefined, 'FAST'); d.setDrawColor(229, 231, 235); d.rect(x, yy + cap, fw, fh); }
+    const iy = H - 20 - infoH, colW = (W - 2 * mg - 2 * 10) / 3, c1 = mg, c2 = mg + colW + 10, c3 = c2 + colW + 10; d.setDrawColor(...line); d.line(mg, iy - 3, W - mg, iy - 3);
+    // column 1: objective, method
+    let y1 = iy + 3; if (it.objective) { y1 = head('Objective', c1, y1); y1 = wrap(usage(plain(it.objective)), colW, 7.8, c1, y1, sub) + 3; }
+    y1 = head('Method', c1, y1); y1 = wrap(methodText(it.method) || '—', colW, 7.8, c1, y1, sub) + 2;
+    // column 2: references, inputs and boundary conditions
+    let y2 = iy + 3; if (D.refs.length) { y2 = head('References', c2, y2); for (const r of D.refs) y2 = wrap('• ' + r, colW, 7.6, c2, y2, sub) + 0.6; y2 += 2.5; }
+    y2 = head('Inputs and Boundary Conditions', c2, y2); y2 = table(inputsOf(it), c2, y2, colW, 0.4, 7.6);
+    // column 3: legend, results, assumptions and limitations
+    let y3 = iy + 3; if (it.legend) { const L = it.legend, lw = colW - 30, lh = 3.6, st = L.stops, hex = (c) => { const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})/i.exec(c); return m ? m.slice(1).map((v) => parseInt(v, 16)) : (/rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(c) || [0, 128, 128, 128]).slice(1).map(Number); };
       const at = (t) => { const s2 = t * (st.length - 1), k = Math.min(st.length - 2, Math.floor(s2)), u = s2 - k, a = hex(st[Math.max(0, k)]), b = hex(st[Math.min(st.length - 1, k + 1)]); return a.map((v, j) => Math.round(v + (b[j] - v) * u)); };
-      d.setFontSize(9); d.setTextColor(...ink); d.text('Legend', sx, sy + 3); sy += 6; for (let k = 0; k < 90; k++) { d.setFillColor(...(st.length > 1 ? at(k / 89) : hex(st[0]))); d.rect(sx + lw * k / 90, sy, lw / 90 + 0.05, lh, 'F'); }
-      d.setDrawColor(107, 114, 128); d.rect(sx, sy, lw, lh); d.setFontSize(7.5); for (const t of [0, 0.5, 1]) d.text(num(L.lo + (L.hi - L.lo) * t, L.dec), sx + lw * t, sy + lh + 3.6, { align: t === 0 ? 'left' : t === 1 ? 'right' : 'center' }); d.text(d.splitTextToSize(L.unit, 24), sx + lw + 2, sy + lh - 0.5); sy += lh + 9; }
-    if (it.rows && it.rows.length) { d.setFontSize(9); d.setTextColor(...ink); d.text('Key results', sx, sy + 3); sy += 5.5; d.setFontSize(7.6);
-      for (const [k, v] of it.rows.slice(0, 14)) { if (sy > H - 24) break; const kl = d.splitTextToSize(plain(k), side * 0.5), vl = d.splitTextToSize(plain(v), side * 0.48), h = Math.max(kl.length, vl.length) * 3.2 + 1.4; d.setTextColor(...sub); d.text(kl, sx, sy + 2.8); d.setTextColor(...ink); d.text(vl, sx + side, sy + 2.8, { align: 'right' }); d.setDrawColor(238, 240, 243); d.line(sx, sy + h, sx + side, sy + h); sy += h; } }
-    let my = iy + 2; if (it.method) { d.setFontSize(9); d.setTextColor(...ink); d.text('Method', cx2, my + 3); my = wrap(it.method, c2, 7.8, cx2, my + 8, sub) + 3; }
-    let by = iy + 2; d.setFontSize(9); d.setTextColor(...ink); d.text('Basis', cx3, by + 3); by = wrap(`${it.basis || ''} · computed ${local(it.at)}`, c3, 7.8, cx3, by + 8, sub) + 3;
-    for (const n2 of it.notes || []) by = wrap(n2, c3, 7.8, cx3, by + 1, sub) + 1;
-    foot(i + 2); }
-  // basis and limits
-  d.addPage('a3', 'landscape'); d.setFont('DejaVu'); d.setFillColor(17, 24, 39); d.rect(0, 0, W, 4, 'F'); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Basis and limits`, mg, 20);
-  y = wrap(LIMITS, W - 2 * mg, 10.5, mg, 32, ink, 0.45) + 6; d.setFontSize(11); d.setTextColor(...ink); d.text('Each item', mg, y); y += 7;
-  for (const [i, it] of items.entries()) { d.setFontSize(9.5); d.setTextColor(...ink); d.text(`${i + 1}. ${it.title}`, mg, y); y = wrap(`${it.basis || ''} · computed ${local(it.at)}`, W - 2 * mg - 10, 8.5, mg + 6, y + 5, sub) + 3; if (y > H - 30) { foot(N); d.addPage('a3', 'landscape'); d.setFont('DejaVu'); y = 24; } }
-  y = wrap(`Site and weather: ${[ctx.site, ctx.coords, ctx.weather].filter(Boolean).join(' · ')}. Project conditions revision ${ctx.revision ?? '–'}.`, W - 2 * mg, 9, mg, y + 4, sub);
+      y3 = head('Legend', c3, y3); for (let k = 0; k < 90; k++) { d.setFillColor(...(st.length > 1 ? at(k / 89) : hex(st[0]))); d.rect(c3 + lw * k / 90, y3, lw / 90 + 0.05, lh, 'F'); }
+      d.setDrawColor(107, 114, 128); d.rect(c3, y3, lw, lh); d.setFontSize(7.4); d.setTextColor(...ink); for (const t of [0, 0.5, 1]) d.text(num(L.lo + (L.hi - L.lo) * t, L.dec), c3 + lw * t, y3 + lh + 3.4, { align: t === 0 ? 'left' : t === 1 ? 'right' : 'center' }); d.text(d.splitTextToSize(L.unit, 28), c3 + lw + 2, y3 + lh - 0.4); y3 += lh + 8; }
+    if (it.rows && it.rows.length) { y3 = head('Results', c3, y3); y3 = table(it.rows.slice(0, 12), c3, y3, colW, 0.52, 7.6, H - 46) + 3; }
+    const lim = [D.limit, ...(it.notes || []).map(usage)].filter(Boolean); if (lim.length) { y3 = head('Assumptions and Limitations', c3, y3); for (const t of lim) y3 = wrap(t, colW, 7.4, c3, y3, sub) + 1; }
+    foot(i + 3); }
+  // assumptions, limitations and disclaimer
+  d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Assumptions, Limitations and Disclaimer`, mg, 20);
+  y = wrap(LIMITS, W - 2 * mg, 10.5, mg, 31, ink, 0.45) + 5; y = head('By analysis', mg, y + 2);
+  for (const [i, it] of items.entries()) { d.setFontSize(9.5); d.setTextColor(...ink); d.text(`${i + 1}. ${headOf(it)}`, mg, y); y = wrap([docOf(it).limit, `${it.basis || ''} · computed ${usTime(it.at)}`].filter(Boolean).join(' '), W - 2 * mg - 8, 8.4, mg + 6, y + 5, sub) + 3; if (y > H - 30) { foot(N); d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); y = 24; } }
+  y = head('Site and climate data', mg, y + 3); wrap(`${[ctx.site, ctx.coords].filter(Boolean).join(' · ') || '—'}. Climate data: ${ctx.weather || 'not used by the analyses in this report'}. Project conditions revision ${ctx.revision ?? '—'}. Units: SI.`, W - 2 * mg, 9, mg, y, sub);
   foot(N);
   return d.output('blob');
 }
 
 async function pptx(items, title, ctx) {
-  const W = 13.333, H = 7.5, slides = [{ title, blocks: [{ type: 'text', x: 0.5, y: 1.3, w: W - 1, h: 1.6, paragraphs: [{ text: [ctx.project, ctx.site, ctx.coords].filter(Boolean).join(' · '), size: 18 }, { text: `Generated ${day(Date.now())} with PlotCloud · model ${ctx.version}`, size: 12, color: '6B7385' }] },
-    { type: 'text', x: 0.5, y: 3.1, w: 6.2, h: 3.6, paragraphs: items.map((it, i) => ({ text: `${i + 1}. ${it.title} — ${KIND[it.kind]} · ${it.sub || ''}`, size: 12, bullet: false })) }] }];
-  if (items[0]?.pictures[0]) { const im = await imgOf(items[0].pictures[0].blob), w = 5.9, h = Math.min(4.6, w * im.height / im.width); slides[0].blocks.push({ type: 'image', x: W - 0.5 - h * im.width / im.height, y: 2.6, w: h * im.width / im.height, h, jpeg: await bytes(items[0].pictures[0].blob), alt: items[0].title, name: 'Cover picture' }); }
-  for (const [i, it] of items.entries()) { const P = it.pictures, cols = it.cols || (P.length === 12 ? 4 : P.length === 4 ? 2 : Math.ceil(Math.sqrt(P.length))), rows = Math.ceil(P.length / cols), im0 = await imgOf(P[0].blob), ar = im0.height / im0.width;
-    const gx = 0.5, gy = 1.2, gw = 8.6, gh = H - gy - 0.7, gap = 0.08, cap = P.length > 1 ? 0.22 : 0, fw = Math.min((gw - (cols - 1) * gap) / cols, ((gh - (rows - 1) * gap) / rows - cap) / ar), fh = fw * ar, blocks = [];
-    for (const [k, p] of P.entries()) { const x = gx + (k % cols) * (fw + gap), y = gy + Math.floor(k / cols) * (fh + cap + gap); if (cap) blocks.push({ type: 'text', x, y: y - 0.04, w: fw, h: cap, paragraphs: [{ text: p.label || '', size: 9, bold: true }] }); blocks.push({ type: 'image', x, y: y + cap, w: fw, h: fh, jpeg: await bytes(p.blob), alt: `${it.title} · ${p.label || ''}`, name: p.label || it.title }); }
-    let sy = 1.25; const sx = 9.35, sw = W - sx - 0.45;
-    blocks.push({ type: 'text', x: sx, y: 0.95, w: sw, h: 0.35, paragraphs: [{ text: `${KIND[it.kind]} · ${it.sub || ''}`, size: 10, color: '4B5563' }] });
-    if (it.legend) { const c = legendCanvas(it.legend), png = await bytes(await canvasBlob(c, 'image/png')); blocks.push({ type: 'image', x: sx, y: sy + 0.1, w: sw, h: sw * c.height / c.width, png, alt: 'Legend', name: 'Legend' }); sy += sw * c.height / c.width + 0.25; }
-    if (it.rows && it.rows.length) { const r = it.rows.slice(0, 9).map(([k, v]) => [plain(k), plain(v)]); blocks.push({ type: 'table', x: sx, y: sy, w: sw, h: Math.min(3, r.length * 0.32 + 0.32), size: 9, rows: [['Key result', 'Value'], ...r] }); sy += Math.min(3, (r.length + 1) * 0.32) + 0.2; }
-    blocks.push({ type: 'text', x: sx, y: sy, w: sw, h: Math.max(0.6, H - sy - 0.6), paragraphs: [{ text: it.method ? 'Method: ' + it.method : '', size: 8, color: '4B5563' }, { text: `Basis: ${it.basis || ''} · computed ${local(it.at)}`, size: 8, color: '4B5563' }] });
-    slides.push({ title: `${i + 1}. ${it.title}`, blocks }); }
-  slides.push({ title: `${items.length + 1}. Basis and limits`, blocks: [{ type: 'text', x: 0.5, y: 1.3, w: W - 1, h: H - 2, paragraphs: [{ text: LIMITS, size: 13 }, ...items.map((it, i) => ({ text: `${i + 1}. ${it.title}: ${it.basis || ''}`, size: 10, color: '4B5563' })), { text: `Site and weather: ${[ctx.site, ctx.coords, ctx.weather].filter(Boolean).join(' · ')}`, size: 10, color: '4B5563' }] }] });
-  return buildPptx({ title, author: ctx.author || 'PlotCloud', footer: `${ctx.project} · ${title}`, slides });
+  const W = 13.333, H = 7.5, issued = usDate(Date.now()), slides = [{ title, blocks: [{ type: 'table', x: 0.5, y: 1.25, w: 6.3, h: 4.6, size: 11, rows: [['Project information', ''], ['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used'], ['Model', ctx.version], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Report status', 'Design-stage screening analysis']] }] }];
+  if (items[0]?.pictures[0]) { const im = await imgOf(items[0].pictures[0].blob), h = Math.min(4.6, 5.9 * im.height / im.width); slides[0].blocks.push({ type: 'image', x: W - 0.5 - h * im.width / im.height, y: 1.3, w: h * im.width / im.height, h, jpeg: await bytes(items[0].pictures[0].blob), alt: headOf(items[0]), name: 'Cover figure' }); }
+  slides.push({ title: 'Summary of Results', blocks: [{ type: 'table', x: 0.5, y: 1.25, w: W - 1, h: Math.min(5.5, (items.length + 1) * 0.42), size: 11, rows: [['No.', 'Analysis', 'Headline result'], ...items.map((it, i) => [String(i + 1), headOf(it), headline(it)])] }] });
+  for (const [i, it] of items.entries()) { const P = it.pictures, n = i + 1, cols = it.cols || (P.length === 12 ? 4 : P.length === 4 ? 2 : Math.ceil(Math.sqrt(P.length))), rows = Math.ceil(P.length / cols), im0 = await imgOf(P[0].blob), ar = im0.height / im0.width;
+    const gx = 0.5, gy = 1.2, gw = 8.6, gh = H - gy - 0.7, gap = 0.08, cap = 0.22, fw = Math.min((gw - (cols - 1) * gap) / cols, ((gh - (rows - 1) * gap) / rows - cap) / ar), fh = fw * ar, blocks = [];
+    for (const [k, p] of P.entries()) { const x = gx + (k % cols) * (fw + gap), y = gy + Math.floor(k / cols) * (fh + cap + gap); blocks.push({ type: 'text', x, y: y - 0.04, w: fw, h: cap, paragraphs: [{ text: `Figure ${n}.${k + 1}${p.label ? '  ' + p.label : ''}`, size: 9, bold: true }] }); blocks.push({ type: 'image', x, y: y + cap, w: fw, h: fh, jpeg: await bytes(p.blob), alt: `${headOf(it)} · ${p.label || ''}`, name: `Figure ${n}.${k + 1}` }); }
+    let sy = 1.2; const sx = 9.35, sw = W - sx - 0.45;
+    if (it.legend) { const c = legendCanvas(it.legend), png = await bytes(await canvasBlob(c, 'image/png')); blocks.push({ type: 'image', x: sx, y: sy, w: sw, h: sw * c.height / c.width, png, alt: 'Legend', name: 'Legend' }); sy += sw * c.height / c.width + 0.2; }
+    if (it.rows && it.rows.length) { const r = it.rows.slice(0, 8).map(([k, v]) => [plain(k), plain(v)]); blocks.push({ type: 'table', x: sx, y: sy, w: sw, h: Math.min(2.8, r.length * 0.3 + 0.3), size: 9, rows: [['Result', 'Value'], ...r] }); sy += Math.min(2.8, (r.length + 1) * 0.3) + 0.2; }
+    blocks.push({ type: 'text', x: sx, y: sy, w: sw, h: Math.max(0.6, H - sy - 0.6), paragraphs: [{ text: 'Method: ' + (methodText(it.method) || '—'), size: 8, color: '4B5563' }, ...(docOf(it).refs.length ? [{ text: 'References: ' + docOf(it).refs.join('; '), size: 8, color: '4B5563' }] : []), { text: 'Inputs: ' + inputsOf(it).map(([k, v]) => `${k} ${v}`).join(' · '), size: 8, color: '4B5563' }, ...(docOf(it).limit ? [{ text: 'Limitations: ' + docOf(it).limit, size: 8, color: '4B5563' }] : [])] });
+    slides.push({ title: `${n}. ${headOf(it)}`, blocks }); }
+  slides.push({ title: `${items.length + 1}. Assumptions, Limitations and Disclaimer`, blocks: [{ type: 'text', x: 0.5, y: 1.3, w: W - 1, h: H - 2, paragraphs: [{ text: LIMITS, size: 13 }, ...items.map((it, i) => ({ text: `${i + 1}. ${headOf(it)}: ${docOf(it).limit || ''} ${it.basis || ''}`, size: 10, color: '4B5563' })), { text: `Site and climate data: ${[ctx.site, ctx.coords, ctx.weather].filter(Boolean).join(' · ')}. Units: SI.`, size: 10, color: '4B5563' }] }] });
+  return buildPptx({ title, author: ctx.author || 'PlotCloud', footer: `${ctx.project} · ${title} · Issued ${issued}`, slides });
 }
 
 let deps = null;

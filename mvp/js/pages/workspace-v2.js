@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=xlist-20261109-1';
+import { mountChrome } from '../workspace-chrome.js?v=report-20261109-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -165,7 +165,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=xlist-20261109-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=report-20261109-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -636,7 +636,8 @@ export function render(app, [pid]) {
       <p class="note">The surroundings are on the Site layer, locked; the eye in Layers shows or hides them. Unlock it to change a building’s height, leave one out or draw a missing neighbour (Massing › Neighbour building). Masses go on the Masses layer.</p>
       <p class="note">Terrain source: ${esc(M().studio?.site?.terrain?.provider || "No elevation grid")}</p><button type="button" class="btn sm" id="usgsTerrain">Load USGS 3DEP elevation</button><p class="note">Uses this project’s location. Buildings and roads stay in place.</p><p class="note" id="siteMsg" role="status" aria-live="polite"></p></div></div>
     <div class="pane w3-accp${UI.pacc === 'export' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="export" aria-expanded="${UI.pacc === 'export'}"><span>${UI.pacc === 'export' ? '▾' : '▸'} Export</span></button></h2><div class="w3-accb">
-      <div class="w2-exp">${FORMATS.map(([k, n, d]) => `<button type="button" class="btn sm" data-exp="${k}" title="${esc(d)}">${esc(n)}</button>`).join('')}</div>
+      <h3 class="w2-exh">Simulation pictures and report</h3><p class="note">Choose the simulations, see the time each one takes, generate their pictures, then the report (PDF), slides or pictures.</p><button type="button" class="btn sm primary" id="openExportList">Open the export list</button>
+      <h3 class="w2-exh">Model</h3><div class="w2-exp">${FORMATS.map(([k, n, d]) => `<button type="button" class="btn sm" data-exp="${k}" title="${esc(d)}">${esc(n)}</button>`).join('')}</div>
       <p class="note">Exports what is visible, in metres; hidden layers are left out. SketchUp's own .skp can only be written by SketchUp, so use the .dae, which SketchUp opens directly.</p>
       <p class="note" id="expMsg" role="status" aria-live="polite"></p></div></div>`;
     $$('[data-pacc]', host).forEach((b) => b.onclick = () => { UI.pacc = b.dataset.pacc; saveUI(); panel(); });
@@ -655,6 +656,7 @@ export function render(app, [pid]) {
       }catch(error){message.textContent=error.message||'USGS elevation is unavailable. Existing terrain was kept.';}finally{button.disabled=false;}
     };
     $('#proj', host).onchange = (e) => { location.hash = '#/workspace/' + e.target.value; };
+    $('#openExportList', host)?.addEventListener('click', (e) => { e.stopPropagation(); const b = app.querySelector('.sp-xlb'); if (b) setTimeout(() => b.click(), 0); });   // the export list (Generate pictures) lives under Add simulation
     $$('[data-exp]', host).forEach((b) => b.onclick = async () => {
       const k = b.dataset.exp, f = FORMATS.find((x) => x[0] === k), msg = $('#expMsg', host), base = p.name.replace(/\W+/g, '-').replace(/^-|-$/g, '');
       const save = (href, name) => { const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove(); };

@@ -24,28 +24,29 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const badge = () => p.evaluate(() => { const e = document.querySelector('.sp-xlb .sp-badge'); return e && !e.hidden ? +e.textContent : 0; });
     assert.equal(await p.locator('.sp-add .sp-xlb').count(), 1, 'the list sits under Add simulation'); assert.equal(await badge(), 0);
 
-    // 1 · a view: Sun hours, run, then Export › Add view to export list
-    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim="sunhours"]'); await p.waitForTimeout(1500);
-    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
-    await p.click('.sp-studycard [data-st=exp]'); await p.click('.sp-exp [data-st=xl-view]'); await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent === 1, null, { timeout: 30000 });
-    console.log('PASS a view added');
-    // 2 · a series, from its preview
-    await p.click('.sp-exp [data-st=ser-seasons]'); await p.waitForSelector('.sx', { timeout: 240000 }); await p.waitForFunction(() => [...document.querySelectorAll('.sx-tile canvas')].every((c) => c.width > 50), null, { timeout: 120000 });
-    await p.click('.sx [data-sx=list]'); await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent === 2, null, { timeout: 120000 }); await p.click('.sx [data-sx=close]'); await p.waitForTimeout(500);
-    console.log('PASS a series added');
-    // 3 · Natural ventilation on a section, from the Section card
-    await p.click('.sp-studycard [data-st=close]').catch(() => {}); await p.waitForTimeout(400);
-    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim="vent"]'); await p.waitForTimeout(1500);
-    await p.waitForFunction(() => /m\/s at 10 m|Without the project weather/.test(document.querySelector('.sp-studycard')?.innerText || ''), null, { timeout: 120000 });
-    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
-    if (await p.locator('#vMenu').isHidden()) await p.click('#vBtn'); await p.click('#vMenu [data-view=section]'); await p.waitForTimeout(1500);
-    await p.click('[data-sp=sec]'); await p.click('.sp-pop-sec [data-sec=xl]'); await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent === 3, null, { timeout: 60000 });
-    console.log('PASS a section added');
+    // 1 · no "add to the list" buttons elsewhere any more: Generate pictures is the one way in (2026-11-09)
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim="sunhours"]'); await p.waitForTimeout(1500); await p.click('.sp-studycard [data-st=exp]'); await p.waitForTimeout(300);
+    assert.equal(await p.locator('.sp-exp [data-st=xl-view]').count(), 0, 'no Add view to export list in the study'); await p.click('.sp-studycard [data-st=close]').catch(() => {}); await p.waitForTimeout(400);
+    // 2 · Generate pictures: tick Sun hours (4 seasons), Natural ventilation (a view) and the section; each one's time and the total
+    await p.click('.sp-xlb'); await p.waitForTimeout(800); const rows = await p.$$eval('.xl-gr label', (ls) => ls.map((l) => l.textContent.trim()));
+    assert(rows.includes('Sun Hours') || rows.some((r) => /Sun hours/i.test(r)), 'Sun hours listed: ' + rows); assert(rows.some((r) => /Section A/.test(r)), 'the section listed: ' + rows);
+    await p.check('[data-gp=sunhours]'); await p.waitForTimeout(200); await p.selectOption('select[data-gk=sunhours]', 'seasons'); await p.check('[data-gp=vent]'); await p.check('[data-gp=section]'); await p.waitForTimeout(400);
+    const gen = await p.evaluate(() => ({ t: [...document.querySelectorAll('.xl-gr.on')].map((r) => [r.querySelector('label').textContent.trim(), r.querySelector('.xl-t').textContent.trim()]), tot: document.querySelector('.xl-tot').innerText, go: document.querySelector('[data-g=go]').textContent }));
+    const tSun = gen.t.find(([n]) => /Sun hours/i.test(n))[1], tVent = gen.t.find(([n]) => /ventilation/i.test(n))[1]; assert.match(tSun, /^~\d+ (s|min)|^~a second/, 'Sun hours: an estimate ' + tSun); assert.match(tVent, /first run|~/, 'ventilation: ' + tVent);
+    assert.match(gen.tot, /6 pictures · about[\s\S]*done around \d/, gen.tot); assert.match(gen.go, /Generate 6 pictures/);
+    await p.screenshot({ path: out + '/xl-generate.png' });
+    console.log('PASS Generate pictures:', JSON.stringify(gen.t), '|', gen.tot.replace(/\s+/g, ' '));
+    // 3 · generate: one after another, the run at the top says which; all three join the list
+    await p.click('[data-g=go]'); await p.waitForFunction(() => /1 of 3 · Sun hours/i.test(document.querySelector('.sp-runbar')?.innerText || ''), null, { timeout: 30000 });
+    await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent === 3, null, { timeout: 900000 });
+    await p.waitForFunction(() => /3 of 3 made for the export list/.test(document.querySelector('.sp-runbar')?.innerText || ''), null, { timeout: 60000 });
+    assert.equal(await p.locator('.sp-pop-sec [data-sec=xl]').count(), 0, 'no Add to export list on the Section card');
+    console.log('PASS generated: 3 items');
 
-    // 4 · the list: three items in order, move the series to the top, a title
-    await p.click('.sp-xlb'); await p.waitForTimeout(600); let titles = await p.$$eval('.xl-it .xl-tx b', (bs) => bs.map((x) => x.textContent));
-    assert.equal(titles.length, 3); assert.match(titles[0], /Sun hours/i); assert.match(titles[1], /Sun hours · 4 seasons/); assert.match(titles[2], /Section A/);
-    await p.click('.xl-it:nth-child(2) [data-xl=up]'); await p.waitForTimeout(400); titles = await p.$$eval('.xl-it .xl-tx b', (bs) => bs.map((x) => x.textContent)); assert.match(titles[0], /4 seasons/);
+    // 4 · the list: three items in order, move the section up, a title
+    if (await p.locator('.sp-pop-xl').isHidden()) await p.click('.sp-xlb'); await p.waitForTimeout(600); let titles = await p.$$eval('.xl-it .xl-tx b', (bs) => bs.map((x) => x.textContent));
+    assert.equal(titles.length, 3); assert.match(titles[0], /Sun hours · 4 seasons/); assert.match(titles[1], /Natural ventilation/i); assert.match(titles[2], /Section A/);
+    await p.click('.xl-it:nth-child(3) [data-xl=up]'); await p.waitForTimeout(400); titles = await p.$$eval('.xl-it .xl-tx b', (bs) => bs.map((x) => x.textContent)); assert.match(titles[0], /4 seasons/); assert.match(titles[1], /Section A/);
     await p.fill('.sp-pop-xl [data-xl=title]', 'QA report · sun and air'); await p.press('.sp-pop-xl [data-xl=title]', 'Tab'); await p.waitForTimeout(300);
     await p.screenshot({ path: out + '/xl-list.png' });
     console.log('PASS the list:', titles.join(' | '));
@@ -58,13 +59,16 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
 
     // 6 · the exports
     const dl = async (k) => { const [d] = await Promise.all([p.waitForEvent('download', { timeout: 240000 }), p.click(`.sp-pop-xl [data-xl=${k}]`)]); const f = out + '/' + d.suggestedFilename(); await d.saveAs(f); return { f, buf: fs.readFileSync(f), name: d.suggestedFilename() }; };
-    const pdf = await dl('pdf'); assert.match(pdf.name, /qa-report-block-report-\d{4}-\d\d-\d\d\.pdf$/); const info = execFileSync('pdfinfo', [pdf.f]).toString(), pages = +/Pages:\s+(\d+)/.exec(info)[1];
-    assert.equal(pages, 5, 'cover, three items, basis and limits'); assert.match(info, /Page size:\s+1190\.55 x 841\.89/, 'A3 landscape');
+    const pdf = await dl('pdf'); assert.match(pdf.name, /qa-report-block-simulation-report-\d{4}-\d\d-\d\d\.pdf$/); const info = execFileSync('pdfinfo', [pdf.f]).toString(), pages = +/Pages:\s+(\d+)/.exec(info)[1];
+    assert.equal(pages, 6, 'cover, summary, three chapters, limitations'); assert.match(info, /Page size:\s+1224 x 792/, '11 × 17 in landscape (North American)');
     const fonts = execFileSync('pdffonts', [pdf.f]).toString(); assert.match(fonts, /DejaVu\s+CID TrueType\s+Identity-H\s+yes/, 'the font embedded');
-    const text = execFileSync('pdftotext', ['-layout', pdf.f, '-']).toString();
-    for (const re of [/QA report · sun and air/, /Contents/, /4 seasons/, /Key results/, /Legend/, /Method/, /Basis/, /Quality Draft/, /model (v\d+|unsaved draft)/, /one value per room/i, /Basis and limits/, /not a certification/, /prepared by QA Architect/, /1 ?\/ ?5/, /5 ?\/ ?5/]) assert.match(text, re, 'report text: ' + re);
+    const text = execFileSync('pdftotext', ['-layout', pdf.f, '-']).toString().replace(/\s+/g, ' ');   // lines joined: a sentence may wrap
+    for (const re of [/QA report · sun and air/, /Project information/, /Report status\s+Design-stage screening analysis; not a compliance submission/, /Prepared by\s+QA Architect/, /Date of issue\s+[A-Z][a-z]+ \d{1,2}, \d{4}/, /Summary of Results/, /Headline result/,
+      /Direct Sunlight Hours — Equinoxes and Solstices/, /Section A — Natural Ventilation \(Air Change Rate\): Wind from/, /Figure 1\.1\s+21 March/, /Objective/, /Method/, /References/, /Inputs and Boundary Conditions/, /Simulation resolution/, /Results/, /Assumptions and Limitations/,
+      /ANSI\/ASHRAE Standard 62\.1/, /One color scale for every figure/, /one value per room/i, /Assumptions, Limitations and Disclaimer/, /not a certification, a code-compliance demonstration, a LEED submission/, /Page ?1 ?of ?6/, /Page ?6 ?of ?6/]) assert.match(text, re, 'report text: ' + re);
+    for (const bad of [/colour/i, /Project props/, /Workspace/, /detailed page/, /\bpicture/i]) assert.doesNotMatch(text, bad, 'report wording: ' + bad);
     execFileSync('pdftoppm', ['-r', '45', '-png', pdf.f, out + '/report']);
-    const pptx = await dl('pptx'); const pz = pptx.buf.toString('latin1'); assert.equal(pptx.buf.toString('ascii', 0, 2), 'PK'); for (let n = 1; n <= 5; n++) assert(pz.includes(`ppt/slides/slide${n}.xml`), 'slide ' + n); assert(!pz.includes('ppt/slides/slide6.xml')); assert(((pz.match(/ppt\/media\/image\d+\.(jpeg|png)/g) || []).length) >= 6 * 2, 'pictures and legends in the slides');
+    const pptx = await dl('pptx'); const pz = pptx.buf.toString('latin1'); assert.equal(pptx.buf.toString('ascii', 0, 2), 'PK'); for (let n = 1; n <= 6; n++) assert(pz.includes(`ppt/slides/slide${n}.xml`), 'slide ' + n); assert(!pz.includes('ppt/slides/slide7.xml')); assert(((pz.match(/ppt\/media\/image\d+\.(jpeg|png)/g) || []).length) >= 6 * 2, 'pictures and legends in the slides');
     const z = await dl('zip'); const zn = [...z.buf.toString('latin1').matchAll(/PK\x01\x02[\s\S]{42}([\w./-]+\.(?:jpg|json))/g)].map((m) => m[1]); assert(zn.includes('report.json') && zn.filter((x) => x.endsWith('.jpg')).length === 6, 'zip: ' + zn.join(', '));
     console.log('PASS exports:', `PDF ${pages} pages ${Math.round(pdf.buf.length / 1024)} kB`, `PPTX ${Math.round(pptx.buf.length / 1024)} kB`, `ZIP ${zn.length} files`);
 
