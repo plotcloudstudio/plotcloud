@@ -198,6 +198,28 @@ export function mountChrome(app, api) {
   const away = (e) => { const inPop = e.composedPath().some((n) => n.nodeType === 1 && (n.matches?.('.sp-pop,[data-sp]')));   /* the path as the click went: a popover that redrew under it still holds it */ if (!inPop && !e.target.closest('.sp-pop,[data-sp]')) closePops(); if (!e.target.closest('.sp-proj')) { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); } };
   document.addEventListener('click', away);
 
+  // ---- drop a model anywhere (2026-11-09, as a whiteboard takes a file): drag a file over the Workspace, plan or 3D, and a card
+  // says to let go; it goes through the Project panel's own import (the preview first, then Confirm import), wherever it lands
+  const DROPF = [['OBJ', '#2563eb', 'Wavefront OBJ'], ['STL', '#7c3aed', 'STL mesh'], ['GLB', '#059669', 'glTF binary'], ['glTF', '#0d9488', 'glTF'], ['3DM', '#dc2626', 'Rhino 3DM']], DROPX = /\.(obj|stl|glb|gltf|3dm)$/i;
+  const dropEl = el('div', 'sp-drop'); dropEl.hidden = true; dropEl.setAttribute('role', 'dialog'); dropEl.setAttribute('aria-label', 'Drop a model');
+  dropEl.innerHTML = `<div class="sp-drop-card"><p class="sp-drop-t">Release to drop your model into the site</p><p class="sp-drop-s">It opens in a preview first: units, up axis and size to check before it joins ${esc(p.name)}.</p><hr><div class="sp-drop-pill"><span>Supported file types</span>${DROPF.map(([n, c, t]) => `<i style="--c:${c}" title="${t}">${n}</i>`).join('')}</div><p class="sp-drop-n">Up to 25 MiB and 80,000 triangles · read in this browser, not uploaded</p></div>`;
+  document.body.append(dropEl);
+  const DROP = { t: 0, wins: new WeakSet() }, hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+  const dropShow = (on, msg) => { clearTimeout(DROP.t); dropEl.hidden = !on; dropEl.classList.toggle('bad', !!msg); const t = dropEl.querySelector('.sp-drop-t'), s2 = dropEl.querySelector('.sp-drop-s'); t.textContent = msg ? msg[0] : 'Release to drop your model into the site'; s2.textContent = msg ? msg[1] : `It opens in a preview first: units, up axis and size to check before it joins ${p.name}.`; if (msg) DROP.t = setTimeout(() => dropShow(false), 3200); };
+  async function dropFile(files) { const f = [...files].find((x) => DROPX.test(x.name)) || files[0]; if (!f) return dropShow(false);
+    if (!DROPX.test(f.name)) return dropShow(true, [`${f.name} is not a model PlotCloud reads`, 'Drop an OBJ, STL, GLB, glTF or Rhino 3DM file. A plan drawing goes in through Draw › Import plan.']);
+    dropShow(false); openProject('import'); let inp = null; for (let i = 0; i < 40 && !(inp = app.querySelector('#file')); i++) await new Promise((r) => setTimeout(r, 50)); if (!inp) return dropShow(true, ['The import could not open', 'Open Project › Import and choose the file there.']);
+    const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); }
+  const onOver = (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopImmediatePropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; if (dropEl.hidden || dropEl.classList.contains('bad')) dropShow(true); };
+  const onDrop = (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopImmediatePropagation(); dropFile(e.dataTransfer.files); };
+  for (const n of ['dragenter', 'dragover']) window.addEventListener(n, onOver, true); window.addEventListener('drop', onDrop, true);
+  dropEl.addEventListener('dragleave', (e) => { if (!e.relatedTarget || !dropEl.contains(e.relatedTarget)) { if (e.target === dropEl) dropShow(false); } });
+  dropEl.addEventListener('click', () => dropShow(false)); window.addEventListener('dragend', () => dropShow(false));
+  // the plan and 3D panes are pages of their own: a file dragged over them shows the card here, and Plan Studio's own drop (it
+  // opens a saved Plan Studio file in place of the model) never sees it
+  const dropPanes = () => { for (const k of ['plan', 'persp']) { const w = INST[k].ready ? INST[k].win : null; if (!w || DROP.wins.has(w)) continue; DROP.wins.add(w);
+    for (const n of ['dragenter', 'dragover']) w.addEventListener(n, onOver, true); w.addEventListener('drop', onDrop, true); } };
+  dropPanes(); const dropT = setInterval(dropPanes, 1500);
   // ---- statistics: counted from the model as it is now (Plan Studio's objects and masses), nothing estimated
   function drawStats() {
     const w = INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : null, objs = w ? w.objects() : [], st = studio() || {};
@@ -1659,5 +1681,5 @@ export function mountChrome(app, api) {
   root.addEventListener('pointerout', (e) => { const b = e.target.closest(TIPS); if (b && !b.contains(e.relatedTarget)) tip.hidden = true; });
   root.addEventListener('pointerdown', () => { tip.hidden = true; }, true);
   window.__wsStudy = { open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }) };   // for the browser checks
-  return () => { document.removeEventListener('click', startCompare, true); disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
+  return () => { clearInterval(dropT); dropEl.remove(); for (const n of ['dragenter', 'dragover']) window.removeEventListener(n, onOver, true); window.removeEventListener('drop', onDrop, true); document.removeEventListener('click', startCompare, true); disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
 }
