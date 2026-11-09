@@ -5970,7 +5970,7 @@ window.S3 = (() => {
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
   // the section (2026-11-07, after Revit's Section): set from the model's section line (api.section); planes, cut faces, the Section view
   const SEC = { o: null, key: '', planes: [], cut: false, view: false, saved: null, op: 0.6, bands: true, cap: null, band: null, svg: null, caps: 0 };
-  function render() { if (R && api.on) { if (api.preRender) api.preRender(); if (SEC.view) secNear(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ R.render(scene, WALK.on ? WALK.cam : cam); if (SEC.cut && !EL.on) secCaps(WALK.on ? WALK.cam : cam); if (typeof PPL !== 'undefined' && PPL.scene && PPL.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(PPL.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } if (typeof EGR !== 'undefined' && EGR.scene && EGR.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(EGR.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } secOverlay(); } }
+  function render() { if (R && api.on) { if (api.preRender) api.preRender(); if (SEC.view) secNear(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ if (SEC.cut && !SEC.view && !EL.on) secRender(WALK.on ? WALK.cam : cam); else R.render(scene, WALK.on ? WALK.cam : cam); if (SEC.cut && !EL.on) secCaps(WALK.on ? WALK.cam : cam); if (typeof PPL !== 'undefined' && PPL.scene && PPL.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(PPL.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } if (typeof EGR !== 'undefined' && EGR.scene && EGR.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(EGR.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } secOverlay(); } }
   // ---- the world around the site: OpenStreetMap tiles in three rings (about 24 km, 780 km and the world) under the site.
   // Hidden close up (only the site shows); fades in as the camera pulls back. Tiles: Esri Light Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors).
   const WM = { key: '', rings: [], siteR: 300, ground: [] };
@@ -6765,6 +6765,19 @@ window.S3 = (() => {
   function secApply() { if (!R) return; SEC.cut = !!SEC.o && (SEC.o.on || SEC.view); SEC.planes = SEC.cut ? secPlanes(SEC.o) : [];
     if (EL.on) { if (EL.saved) EL.saved.clip = SEC.planes; } else R.clippingPlanes = SEC.planes;   // an interior elevation keeps its own plane and gives the section back on exit
     secBandMesh(); }
+  // the 3D cutaway (2026-11-09): only the building and the results on it are cut; the site, its terrain, water and surrounding
+  // buildings, the ground and its results stay whole (cutting the whole site laid open a slab of ground hundreds of metres wide
+  // over the view; the interior studies' cutaway works the same way). The Section view cuts everything, ground included.
+  const SEC_CUT = new Set(['floorsheet', 'egresssheet', 'surfaceresult', 'sectionresult', 'structure']);
+  const secWhole = (o) => o.name === 'site' || o.name === 'water' || ['site', 'ctx', 'world'].includes(o.userData && o.userData.k);
+  function secRender(c) {
+    const cut = [], whole = []; for (const ch of scene.children) { if (ch === grp) continue; (SEC_CUT.has(ch.name) ? cut : whole).push(ch); }
+    if (grp) for (const ch of grp.children) (secWhole(ch) ? whole : cut).push(ch);
+    const vis = new Map([...cut, ...whole].map((o) => [o, o.visible])), bg = scene.background, sa = R.shadowMap.autoUpdate, cp = R.clippingPlanes;
+    try { for (const o of cut) o.visible = false; R.clippingPlanes = []; R.render(scene, c);   // the site whole first, so the cut building's see-through parts blend over it
+      for (const o of whole) o.visible = false; for (const o of cut) o.visible = vis.get(o); R.clippingPlanes = cp; scene.background = null; R.shadowMap.autoUpdate = false; R.autoClear = false; R.render(scene, c); }
+    finally { for (const [o, v] of vis) o.visible = v; scene.background = bg; R.shadowMap.autoUpdate = sa; R.clippingPlanes = cp; R.autoClear = true; } }
+  const inWhole = (o) => { for (let q = o; q && q !== grp; q = q.parent) if (secWhole(q)) return true; return false; };
   function secCaps(c) {
     if (!grp || !SEC.planes.length) return;
     if (!SEC.cap) { const st = (side, op) => new T.MeshBasicMaterial({ side, colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilFunc: T.AlwaysStencilFunc, stencilFail: op, stencilZFail: op, stencilZPass: op });
@@ -6777,7 +6790,7 @@ window.S3 = (() => {
     for (const ch of scene.children) if (ch !== grp && ch.visible) { ch.visible = false; hid.push(ch); }
     grp.traverse((o) => { if (o !== grp && (o.isMesh || o.isLine || o.isPoints || o.isSprite)) all.push(o); });
     const vis0 = all.map((o) => o.visible), solid = (o) => o.isMesh && !o.isSkinnedMesh && o.geometry && !o.userData.__outline;
-    const sets = [[all.filter((o, i) => vis0[i] && solid(o) && o.userData.capOk), 0xb9b2a4], [all.filter((o, i) => vis0[i] && solid(o) && !o.userData.capOk && closedGeo(o.geometry)), 0x23262b]];
+    const sets = [[SEC.view ? all.filter((o, i) => vis0[i] && solid(o) && o.userData.capOk) : [], 0xb9b2a4], [all.filter((o, i) => vis0[i] && solid(o) && !o.userData.capOk && (SEC.view || !inWhole(o)) && closedGeo(o.geometry)), 0x23262b]];
     const o = SEC.o, n3 = secL3(o), m = SEC.cap; m.position.set((o.a[0] + o.b[0]) / 2, 0, -(o.a[1] + o.b[1]) / 2).addScaledVector(n3, 0.003); m.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), n3); m.scale.set(6000, 6000, 1); m.updateMatrixWorld();
     scene.background = null; R.shadowMap.autoUpdate = false; R.autoClear = false;
     try { for (const [list, col] of sets) { if (!list.length) continue; n += list.length; for (const x of all) x.visible = false; for (const x of list) x.visible = true;
