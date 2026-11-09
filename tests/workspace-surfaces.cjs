@@ -39,7 +39,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const before = await p.evaluate(() => window.__wsStudy.state().res.slist?.length || __ws2.inst.persp.ws.surfaceList().length);
     await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'), pr = A.currentProject(), c = S.conditionsOf(pr); S.updateConditions(pr, { ...c.site }, { ...c.defaults, grid: '2', surfGrid: '0.25', flowDetail: 'Fine' }); S.save(); });
     await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=sunhours]'); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });
-    const est = await p.locator('.sp-studycard .sp-est').innerText(); assert.match(est, /Estimated time: .*ground [\d,]+ cells at 2(\.00)? m.*building [\d,]+ squares at 0\.25 m/, est);
+    const est = await p.locator('.sp-studycard .sp-est').innerText(); assert.match(est, /(Draft|Standard|Refined) · estimated time: .*ground [\d,]+ cells at 2(\.00)? m.*building [\d,]+ squares at 0\.25 m/, est);
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const fine = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, n: s.res.svals.length, cell: s.res.cell, ms: s.res.ms, est: s.estAtRun?.ms }; });
     assert(!fine.err && fine.n > before * 2.5 && Math.abs(fine.cell - 2) < 0.01, JSON.stringify({ before, ...fine }));

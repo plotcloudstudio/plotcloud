@@ -47,9 +47,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log(`PASS Wayfinding on Level 1: every room reached (doorways walkable), ${wf.rows[0][1]} decision points`);
     // Space syntax and Movement depth (2026-11-01): the study page's visibility graph, in the Workspace, on the floor of this level
     for (const [id, view] of [['spacesyntax', 'integ'], ['movementdepth', 'flowdepth']]) {
-      await p.click('#addSimInt'); await p.click(`.w2-simmenu [data-addsim=${id}]`); await p.locator('.sp-studycard [data-st-set="ssLevel:draft"]').waitFor({ timeout: 30000 });
-      assert.match(await p.locator('.sp-studycard').innerText(), /Draft[\s\S]*Standard[\s\S]*Fine[\s\S]*Estimated time/);
-      await p.click('[data-st-set="ssLevel:draft"]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
+      await p.click('#addSimInt'); await p.click(`.w2-simmenu [data-addsim=${id}]`); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });
+      assert.match(await p.locator('.sp-studycard').innerText(), /Draft · estimated time/); assert.equal(await p.locator('.sp-studycard [data-st-set^="ssLevel"]').count(), 0, 'the detail comes from the quality above Add simulation (2026-11-09)');
+      await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
       const ss = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, n: s.res?.cells, rows: s.res?.rows, fin: s.res ? Array.from(s.res.vals).filter(Number.isFinite).length : 0, views: Object.keys(s.res?.views || {}) }; });
       assert(!ss.err && ss.view === view && ss.n > 30 && ss.fin === ss.n, id + ' ' + JSON.stringify(ss));
       const fr2 = p.frames().find((f) => f.url().includes('ws=persp')); assert((await fr2.evaluate(() => S3._sheet()))?.vis, id + ': drawn on the floor in 3D');
@@ -66,8 +66,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/isovist.png` });
     console.log(`PASS isovist in the Workspace: ${iv.rows[0].join(' ')} from the largest room; a click moved the viewpoint to ${iv2.at.map((v) => v.toFixed(1)).join(', ')} → ${iv2.rows[0].join(' ')}`);
     // View analysis (2026-11-01): the study page's LEED Quality Views screening in the Workspace
-    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=views]'); await p.locator('.sp-studycard [data-st-set="vwLevel:draft"]').waitFor({ timeout: 30000 });
-    assert.match(await p.locator('.sp-studycard').innerText(), /Draft[\s\S]*Estimated time[\s\S]*Window head height/);
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=views]'); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });
+    assert.match(await p.locator('.sp-studycard').innerText(), /Draft · estimated time[\s\S]*Window head height/);
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const vw = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, n: s.res?.cells, rows: s.res?.rows, views: Object.keys(s.res?.views || {}) }; });
     assert(!vw.err && vw.view === 'quality' && vw.n > 50 && /%/.test(vw.rows[0][1]) && /LEED/.test(vw.rows[2][0]), 'views ' + JSON.stringify(vw));
@@ -81,7 +81,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/cameras.png` });
     console.log(`PASS cameras in the Workspace: ${cm.rows.slice(0, 3).map((x) => x.join(' ')).join(' · ')}`);
     // Daylight (2026-11-01): the study page's climate-based daylight in the Workspace, with the project weather
-    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=daylight]'); await p.locator('.sp-studycard [data-st-set="dlLevel:draft"]').waitFor({ timeout: 30000 });
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=daylight]'); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const dl = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, rows: s.res?.rows, views: Object.keys(s.res?.views || {}) }; });
     assert(!dl.err && dl.view === 'sda' && /%/.test(dl.rows[0][1]) && dl.views.includes('opt2'), 'daylight ' + JSON.stringify(dl));
