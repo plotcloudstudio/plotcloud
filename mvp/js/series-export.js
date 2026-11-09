@@ -10,7 +10,7 @@ import { zip } from './zip-store.js';
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const num = (v, d = 1) => Number(v || 0).toLocaleString('en', { maximumFractionDigits: d, minimumFractionDigits: d });
-const stamp = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+const stamp = (t) => t.toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const slug = (s) => String(s || 'plotcloud').replace(/[^\w-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
 const raf = () => new Promise((r) => requestAnimationFrame(() => r()));
 
@@ -21,7 +21,7 @@ export function notesOf(m, n) {
     sub: `${m.basis} · ${m.what}`,
     where: [m.project, m.site && m.site !== m.project ? m.site : '', Number.isFinite(m.lat) ? `${num(Math.abs(m.lat), 4)}° ${m.lat >= 0 ? 'N' : 'S'}, ${num(Math.abs(m.lon), 4)}° ${m.lon >= 0 ? 'E' : 'W'}` : ''].filter(Boolean).join(' · '),
     basis: `Quality ${m.quality} · grid ${m.grid} · model ${m.version} · conditions revision ${m.revision ?? '–'}${m.station ? ` · weather ${m.station}` : ''}`,
-    scale: `One colour scale for every picture: ${num(m.lo, m.dec)} to ${num(m.hi, m.dec)} ${m.unit}`,
+    scale: `One color scale for every figure: ${num(m.lo, m.dec)} to ${num(m.hi, m.dec)} ${m.unit}`,
     made: `Generated ${stamp(m.at)} with PlotCloud`,
   };
 }
@@ -42,7 +42,7 @@ export function openSeriesPreview(app, o) {
   const stops = legendStops(m);
   back.innerHTML = `<div class="sx-win">
     <header class="sx-head"><div><b>${esc(N.head)}</b><span>${esc(N.sub)}</span></div>
-      <div class="sx-acts">${o.addToList ? '<button type="button" class="btn sm" data-sx="list" title="Keep this series, from this view, for the report">Add to export list</button>' : ''}<button type="button" class="btn sm" data-sx="png" title="One picture of the whole sheet, with its title, legend and notes">Sheet (PNG)</button><button type="button" class="btn sm" data-sx="zip" title="Every picture at print size, the sheet, and the settings">All pictures (ZIP)</button><button type="button" class="btn sm primary" data-sx="pdf" title="A3 landscape: the pictures at print size, text and legend as text">PDF (A3)</button><button type="button" class="sx-x" data-sx="close" aria-label="Close the preview" title="Close">×</button></div></header>
+      <div class="sx-acts">${o.addToList ? '<button type="button" class="btn sm" data-sx="list" title="Keep this series, from this view, for the report">Add to export list</button>' : ''}<button type="button" class="btn sm" data-sx="png" title="One picture of the whole sheet, with its title, legend and notes">Sheet (PNG)</button><button type="button" class="btn sm" data-sx="zip" title="Every figure at print size, the sheet, and the settings">All figures (ZIP)</button><button type="button" class="btn sm primary" data-sx="pdf" title="11 × 17 in landscape: the figures at print size, text and legend as text">PDF (11×17)</button><button type="button" class="sx-x" data-sx="close" aria-label="Close the preview" title="Close">×</button></div></header>
     <div class="sx-grid" style="grid-template-columns:repeat(${cols},minmax(0,1fr));grid-template-rows:repeat(${rows},minmax(0,1fr))">${o.frames.map((f, i) => `<figure class="sx-tile" data-i="${i}"><canvas aria-label="${esc(f.label)}"></canvas><figcaption>${esc(f.label)}</figcaption></figure>`).join('')}</div>
     <footer class="sx-foot"><div class="sx-leg"><span class="sx-bar" style="background:linear-gradient(90deg,${stops.join(',')})"></span><span class="sx-lab"><i>${esc(num(m.lo, m.dec))}</i><i>${esc(num((m.lo + m.hi) / 2, m.dec))}</i><i>${esc(num(m.hi, m.dec))} ${esc(m.unit)}</i></span></div>
       <p class="sx-note">${esc(N.scale)}. Drag any picture to turn them all; right-drag or Shift-drag to pan; scroll to zoom.</p><p class="sx-status" aria-live="polite"></p></footer></div>`;
@@ -106,9 +106,9 @@ export function openSeriesPreview(app, o) {
 
   // A3 landscape, millimetres: title block, the pictures in the grid with their captions, the legend drawn as bands, the notes
   async function pdf(frames) {
-    const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'landscape', unit: 'mm', format: 'a3', compress: true }); d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
+    const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'landscape', unit: 'mm', format: 'tabloid', compress: true }) /* 11 × 17 in (ANSI B), as North American offices print */; d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
     d.setProperties({ title: `${N.head} · ${m.project}`, subject: N.sub, creator: 'PlotCloud', keywords: `${m.study}, ${m.quality}` });
-    const W = 420, H = 297, mg = 14, gap = 4, bottom = 30, ar = frames[0].height / frames[0].width, cw = (W - 2 * mg - (cols - 1) * gap) / cols, chMax = (H - 34 - bottom - mg - (rows - 1) * gap) / rows - 6, fw = Math.min(cw, chMax / ar), fh = fw * ar, x0 = (W - (cols * fw + (cols - 1) * gap)) / 2, block = rows * (fh + 6) + (rows - 1) * gap + 30, top = Math.max(34, 34 + (H - mg - 34 - block) / 2);   // the pictures, legend and notes centred on the page under the title
+    const W = d.internal.pageSize.getWidth(), H = d.internal.pageSize.getHeight(), mg = 14, gap = 4, bottom = 30, ar = frames[0].height / frames[0].width, cw = (W - 2 * mg - (cols - 1) * gap) / cols, chMax = (H - 34 - bottom - mg - (rows - 1) * gap) / rows - 6, fw = Math.min(cw, chMax / ar), fh = fw * ar, x0 = (W - (cols * fw + (cols - 1) * gap)) / 2, block = rows * (fh + 6) + (rows - 1) * gap + 30, top = Math.max(34, 34 + (H - mg - 34 - block) / 2);   // the pictures, legend and notes centred on the page under the title
     d.setTextColor(17, 24, 39); d.setFontSize(18); d.text(N.head, mg, mg + 6); d.setFontSize(9); d.setTextColor(55, 65, 81); d.text(N.sub, mg, mg + 12.5); d.text(N.where, mg, mg + 17.5); d.text(N.made, W - mg, mg + 6, { align: 'right' });
     d.setDrawColor(209, 213, 219); d.setLineWidth(0.2); d.line(mg, mg + 21, W - mg, mg + 21);
     frames.forEach((f, i) => { const x = x0 + (i % cols) * (fw + gap), y = top + Math.floor(i / cols) * (fh + 6 + gap); d.setFontSize(8.5); d.setTextColor(17, 24, 39); d.text(o.frames[i].label, x, y + 3.6);

@@ -318,14 +318,15 @@ export function mountChrome(app, api) {
       runEl.dataset.state = ok ? 'done' : 'error'; runEl.hidden = false;
       runEl.innerHTML = `<span class="sp-run-dot" aria-hidden="true"></span><b>${esc(nm)}</b><span>${extra.batch ? `${esc(extra.batch)} · finished at ${clock(end)}` : ok ? `finished at ${clock(end)} · took ${durS(el0)} · ${esc(q.name)}` : 'could not run: see its panel'}</span><button type="button" class="sp-x" aria-label="Close" title="Close">×</button>`;
       document.title = `${ok ? '✓' : '✗'} ${nm} ${ok ? 'done' : 'failed'} — PlotCloud`;
-      const restore = () => { document.title = RUN.title; runEl.hidden = true; RUN.title = null; }, onFocus = () => { if (!document.hidden) setTimeout(restore, ok ? 8000 : 15000); };
+      // the bar stays until closed or the next run (whoever stepped away sees it on return); the tab title comes back once someone is here
+      const restore = () => { document.title = RUN.title; runEl.hidden = true; RUN.title = null; }, back = () => { if (RUN.title != null) document.title = RUN.title; RUN.cleanup?.(); RUN.cleanup = null; };
       runEl.querySelector('.sp-x').onclick = () => { restore(); RUN.cleanup?.(); RUN.cleanup = null; };
       if (wantNotice() && document.hidden && 'Notification' in window && Notification.permission === 'granted') { try { new Notification(`PlotCloud · ${nm} ${ok ? 'finished' : 'could not run'}`, { body: ok ? `${q.name} · took ${durS(el0)}` : 'Open the Workspace to see why.' }); } catch { } }
-      if (document.hidden) { document.addEventListener('visibilitychange', onFocus); RUN.cleanup = () => document.removeEventListener('visibilitychange', onFocus); } else onFocus();
+      setTimeout(() => { if (RUN.cleanup) return; const opts = { capture: true, once: true }; for (const n of ['pointerdown', 'keydown']) window.addEventListener(n, back, opts); RUN.cleanup = () => { for (const n of ['pointerdown', 'keydown']) window.removeEventListener(n, back, true); }; }, 400);
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261109-2'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261109-4'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
@@ -378,18 +379,24 @@ export function mountChrome(app, api) {
   const legendOf = (V, r) => { const cols = V.legendCols || INST.persp.ws.rampColors?.(r.ramp) || ['#ddd', '#333']; return { lo: V.lo, hi: V.hi, unit: V.unit || r.unit || '', dec: V.dec ?? r.dec ?? 1, stops: V.legendLabels ? cols.slice().reverse() : cols }; };
   async function xlAdd(item) { const m = await xlMod(); void m; XL.list.items.push({ id: 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: new Date().toISOString(), modelKey: modelHash(), ...item }); await xlSave(); toastXL(`Added to the export list (${XL.list.items.length}).`); return true; }
   const toastXL = (t) => { const b = app.querySelector('.sp-xlb'); if (!b) return; b.classList.remove('sp-pulse'); void b.offsetWidth; b.classList.add('sp-pulse'); b.title = t; };
+  // what a report chapter states (2026-11-09): the analysis objective (the study's own description) and its inputs and boundary conditions
+  const objectiveOf = (id) => { const a = SPEC[id]?.about; try { return typeof a === 'function' ? a() : a || ''; } catch { return ''; } };
+  const WX = new Set(['radiation', 'utci', 'wind', 'vent', 'daylight', 'snow', 'stormwater', 'acoustics']);
+  const inputsFor = (id, r, q = qualOf(), extra = []) => { const c = xlCtx(), st = r?.settings?.label ? String(r.settings.label).replace(/\s*\(Workspace\)\s*$/, '') : '';
+    return [['Simulation resolution', `${q.name}: ${q.note.replace(/\.$/, '').replace(/^Quick results while you design: /, '')}`], ...(r?.cell ? [['Analysis grid', `${fmt(r.cell, 2)} m`]] : []), ...(st ? [['Analysis settings', st]] : []), ...extra,
+      ...(WX.has(id) && c.weather ? [['Climate data', c.weather]] : []), ['Location', [c.site, c.coords].filter(Boolean).join(' · ') || '—'], ['Model', c.version], ['Project conditions', `Revision ${c.revision ?? '—'}`]]; };
   // the section as it is, in the Section view: its levels and notes, and Natural ventilation on the cut when that is the result shown
   async function xlAddSection() { const s = secPane()?.section?.(); if (!s) return false; const was = secViewOn(); if (!was) { await sectionView(true); await new Promise((r) => setTimeout(r, 600)); }
-    try { const vent = ST.id === 'vent' && ST.res, V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null]); if (!u) return false;
+    try { const vent = ST.id === 'vent' && ST.res, V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, u = await INST.persp.ws.sectionPNG?.(false); if (!u) return false;   // no title block: the report captions it
       const blob = await (await fetch(u)).blob(), X = await xlMod();
       await xlAdd({ kind: 'section', study: vent ? 'vent' : 'section', title: `Section ${s.name || 'A'}${V ? ' · ' + X.plain(V.title) : ''}`, sub: `${s.far ? `far clip ${fmt(s.far, 1)} m` : 'no far clip'} · parallel view`, pictures: [{ label: `Section ${s.name || 'A'}`, blob }], cols: 1, legend: V ? legendOf(V, ST.res) : null,
-        rows: V ? (ST.res.rows || []).slice(0, 10).map(([k, v]) => [X.plain(k), X.plain(v)]) : [], method: V ? X.plain(ST.res.method || '') : 'A vertical cut through the model at the section line, seen square on with a 1° lens from far away (all but parallel); cut faces filled where closed solids are cut.', basis: basisLine(), notes: V ? ['On the cut: one value per room (the airflow network treats each room as fully mixed), not air speed or temperature.'] : [] });
+        rows: V ? (ST.res.rows || []).slice(0, 10).map(([k, v]) => [X.plain(k), X.plain(v)]) : [], method: V ? X.plain(ST.res.method || '') : 'A vertical cut through the model at the section line, seen square on with a 1° lens from far away (all but parallel); cut faces filled where closed solids are cut.', basis: basisLine(), objective: V ? objectiveOf('vent') : 'A vertical section through the building at the section line, to read the spaces, levels and cut construction.', inputs: inputsFor(vent ? 'vent' : 'section', V ? ST.res : null, qualOf(), [['Section', `${s.name || 'A'}, ${fmt(s.len, 2)} m long, ${s.far ? `far clip ${fmt(s.far, 1)} m` : 'no far clip'}, parallel view`]]), notes: V ? ['On the cut: one value per room (the airflow network treats each room as fully mixed), not air speed or temperature.'] : [] });
       return true; } finally { if (!was) await sectionView(false); } }
   // the study's view as it is now, at print size (about 1800 px wide), with its legend, key results and method
   async function xlAddView() { const r = ST.res, id = ST.id; if (!r || !INST.persp.ready) return; if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 400)); }
     const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1800 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (!c) return;
     const m = await xlMod(), V = (r.views && r.views[r.view]) || r, blob = await m.canvasBlob(c);
-    return xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name}`, pictures: [{ label: m.plain(V.title || r.title || ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell) }); }
+    return xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name}`, pictures: [{ label: m.plain(V.title || r.title || ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
   // ---- section (2026-11-07, after Revit's Section): the line is part of the model, drawn and edited on the plan (drag the line or a
   // head, click an arrow to flip, drag the dashed far edge); here: draw it, the Section view (square to the cut, parallel, with the
   // levels), the 3D cutaway, the far clip, and a study's result on the cut where the study has one through the height of a room
@@ -1207,7 +1214,7 @@ export function mountChrome(app, api) {
       method: (r) => `The hourly direct sun and diffuse sky of the project weather over each period, with the same shading; each ${fmt(r.cell, 1)} m ground cell sums the sunlight that reaches it in kWh/m² (direct sun by its height, sky by the share each cell sees; no light reflected from the ground).`,
       months: MONTHN.map((n, i) => ({ v: `m${i + 1}`, label: n })), seasons: [['q-mam', 'March–May'], ['q-jja', 'June–August'], ['q-son', 'September–November'], ['q-djf', 'December–February']].map(([v, label]) => ({ v, label })),
       monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
-  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-2'));
+  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-3'));
   async function runSeries(kind, opts = {}) {
     const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; }
     if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }
@@ -1236,7 +1243,7 @@ export function mountChrome(app, api) {
     const frame = () => { paintRes({ ...frames[0].r, lo, hi, slo: lo, shi: Math.max(hi, shi) }); if (Number.isFinite(r0.X0) && r0.nx) w.fitBox?.({ x0: r0.X0, y0: r0.Y0, x1: r0.X0 + r0.nx * r0.cell, y1: r0.Y0 + r0.ny * r0.cell }, 0, 1.25, false); };   // the view framed on the result
     const item = (pics) => ({ kind: 'series', study: id, title: `${simName(id)} · ${kind === 'months' ? '12 months' : '4 seasons'}`, sub: `${def[kind + 'Note']} · ${q.name}`, pictures: pics, cols: frames.length === 12 ? 4 : 2,
       legend: { lo, hi, unit: meta.unit, dec: meta.dec, stops: meta.labels ? cols.slice().reverse() : cols }, rows: frames.map((f) => [f.label, Number.isFinite(V(f.r).avg ?? f.r.avg) ? `${fmt(V(f.r).avg ?? f.r.avg, meta.dec)} ${meta.unit} on average` : '–']),
-      method: meta.method, basis: basisLine(q, r0.cell), notes: [`One colour scale for every picture: ${fmt(lo, meta.dec)} to ${fmt(hi, meta.dec)} ${meta.unit}.`] });
+      method: meta.method, basis: basisLine(q, r0.cell), objective: objectiveOf(id), inputs: inputsFor(id, r0, q, [['Series', `${def[kind + 'Note']} (${frames.length} figures)`]]), notes: [`One color scale for every figure: ${fmt(lo, meta.dec)} to ${fmt(hi, meta.dec)} ${meta.unit}.`] });
     return { def, meta, paint, frame, item, keepKey, restore: () => { ST[def.key] = keepKey; if (ST.res) paintRes(ST.res); else clearAll(); } }; }
   async function openSeries(id, kind, frames, q) {
     const P = await seriesPack(id, kind, frames, q); P.frame();

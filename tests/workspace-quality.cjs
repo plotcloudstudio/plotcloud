@@ -74,6 +74,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const done = await p.evaluate(() => { const e = document.querySelector('.sp-runbar'); return { state: e.dataset.state, text: e.innerText, hidden: e.hidden, title: document.title }; });
     assert(!done.hidden && done.state === 'done' && /finished at \d/.test(done.text) && /took/.test(done.text), 'then done: ' + JSON.stringify(done));
     await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/quality-done.png' : '/dev/null' }).catch(() => {}); 
+    await p.waitForTimeout(9000); assert(!(await p.locator('.sp-runbar').isHidden()), 'the finished run stays at the top until closed (whoever stepped away sees it)');
     assert.match(done.title, /✓ .* done — PlotCloud/); await p.click('.sp-runbar .sp-x'); assert.equal(await p.title(), title0, 'the title comes back');
     console.log('PASS run at the top:', bar.text.replace(/\s+/g, ' ').slice(0, 120), '→', done.text.replace(/\s+/g, ' '));
     assert.deepEqual(errs, []);
