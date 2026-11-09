@@ -109,6 +109,18 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await setRange('.sp-pop-sec [data-sec=op]', 0.3); await p.waitForTimeout(300); assert.equal(await fr3.evaluate(() => S3.secState().opacity), 0.3);
     await p.click('.sp-pop-sec [data-sec=view]'); await p.waitForTimeout(1200); assert(!(await p.locator('.sp-pop-sec').isHidden()), 'the popover stays open'); assert(await fr3.evaluate(() => S3.secState().view && S3.secState().band));
     await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-vent.png' : '/dev/null' }).catch(() => {});
+    // notes on the cut (one wind): each room's value, the flows at the openings seen ahead of the cut
+    let nt = await fr3.evaluate(() => S3.secState().notes); assert(nt && nt.rooms >= 4 && nt.flows > 0, 'room values and opening flows: ' + JSON.stringify(nt));
+    let svgT = await fr3.evaluate(() => document.querySelector('svg.secov').textContent); assert.match(svgT, /\d+\.\d ach[\s\S]*\d+ L\/s/);
+    // a cut north–south through the windows and doors of the west rooms: the flow through them drawn across the cut
+    await frp.evaluate((o) => __ws.sectionSet({ a: [o.X + 2.5, o.Y - 3], b: [o.X + 2.5, o.Y + 15] }), O); await p.waitForTimeout(1500);
+    nt = await fr3.evaluate(() => S3.secState().notes); assert(nt.across >= 4, 'arrows across the cut at the windows and doors it passes: ' + JSON.stringify(nt));
+    await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-vent-ns.png' : '/dev/null' }).catch(() => {});
+    // export: the Section view with its levels, notes and title block
+    const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.sp-pop-sec [data-sec=png]')]); assert.match(dl.suggestedFilename(), /section-A\.png$/);
+    const pngPath = (process.env.SHOT_DIR || require('os').tmpdir()) + '/section-export.png'; await dl.saveAs(pngPath); const buf = require('fs').readFileSync(pngPath);
+    assert.equal(buf.toString('ascii', 1, 4), 'PNG'); assert(buf.readUInt32BE(16) >= 1000 && buf.length > 50000, 'a full-size picture: ' + [buf.readUInt32BE(16), buf.length]);
+    console.log('PASS notes on the cut and export:', JSON.stringify(nt), Math.round(buf.length / 1024) + ' kB');
     await p.click('.sp-pop-sec [data-sec=bands]'); await p.waitForTimeout(300); assert(!(await fr3.evaluate(() => S3.secState().band)), 'the result can be hidden on the cut');
     await p.click('.sp-pop-sec [data-sec=bands]'); await p.click('.sp-pop-sec [data-sec=view]'); await p.waitForTimeout(600);
     console.log('PASS Natural ventilation on the cut');
