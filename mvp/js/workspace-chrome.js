@@ -295,25 +295,28 @@ export function mountChrome(app, api) {
   // ---- the run at the top (2026-11-09): while a study runs, its time left and the clock time it should finish, from the estimate
   // and, once it reports progress, from its progress; the tab title shows it too, and a notice can come when it ends (opt in)
   const runEl = el('div', 'sp-card sp-runbar'); runEl.hidden = true; runEl.setAttribute('role', 'status'); runEl.setAttribute('aria-live', 'polite'); root.append(runEl);
+  let BATCH = null;   // Generate pictures: { n, k, later (ms of the ones after this), final, cancel }
   const RUN = { title: null, cleanup: null }, NOTK = 'pc-ws-notify', clock = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const durS = (ms) => (ms < 60000 ? `${Math.max(1, Math.round(ms / 1000))} s` : ms < 3600000 ? `${Math.floor(ms / 60000)} min ${String(Math.round(ms % 60000 / 1000)).padStart(2, '0')} s` : `${Math.floor(ms / 3600000)} h ${Math.round(ms % 3600000 / 60000)} min`);
   const wantNotice = () => { try { return localStorage.getItem(NOTK) === '1'; } catch { return false; } };
-  function runBar(state) {
-    if (RUN.title == null) RUN.title = document.title; const nm = simName(ST.id), q = ST.runQ || qualOf(), el0 = Date.now() - (ST.t0 || Date.now()), e = ST.estAtRun;
+  function runBar(state, extra = {}) {
+    const B = BATCH; if (B && !['start', 'tick'].includes(state)) return;   // one run of several: the bar carries on to the next
+    if (RUN.title == null) RUN.title = document.title; const nm = extra.batch ? 'Generate pictures' : B ? `${B.k + 1} of ${B.n} · ${simName(ST.id)}` : simName(ST.id), q = ST.runQ || qualOf(), el0 = Date.now() - (ST.t0 || Date.now()), e = ST.estAtRun;
     if (RUN.cleanup) { RUN.cleanup(); RUN.cleanup = null; }
     if (state === 'start' || state === 'tick') {
       const m = /(\d+(?:\.\d+)?)\s*%/.exec(ST.progress || ''), f = m ? Math.min(0.99, +m[1] / 100) : 0;
       let left = e ? Math.max(0, e.ms - el0) : null; if (f >= 0.1 && el0 > 2000) left = el0 * (1 - f) / f;   // the study's own progress, once it has some, beats the estimate
+      if (left != null && B) left += B.later;   // and the ones still to come
       const over = left != null && left < 1000 && f < 0.95 && el0 > 3000, txt = left != null && !over ? `about ${durS(left)} left · done around ${clock(Date.now() + left)}` : over ? 'taking longer than estimated' : 'time not known before it runs';
       if (state === 'start' || !runEl.querySelector('.sp-run-left')) { runEl.innerHTML = `<span class="sp-run-dot" aria-hidden="true"></span><b class="sp-run-nm"></b><span class="sp-run-q"></span><span class="sp-run-left"></span><span class="sp-run-el"></span><label class="sp-run-n" title="A notice from the browser when it finishes, while you are in another tab or window"><input type="checkbox" ${wantNotice() ? 'checked' : ''}> Notify me</label><button type="button" class="btn sm" data-run="stop">Stop</button>`;
-        runEl.querySelector('[data-run=stop]').onclick = () => { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); };
+        runEl.querySelector('[data-run=stop]').onclick = () => { if (BATCH) BATCH.cancel = true; ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); };
         runEl.querySelector('.sp-run-n input').onchange = async (ev) => { const on = ev.target.checked; try { localStorage.setItem(NOTK, on ? '1' : '0'); } catch { } if (on && 'Notification' in window && Notification.permission === 'default') { try { await Notification.requestPermission(); } catch { } } }; }
       runEl.dataset.state = 'run'; runEl.hidden = false; runEl.querySelector('.sp-run-nm').textContent = nm; runEl.querySelector('.sp-run-q').textContent = q.name; runEl.querySelector('.sp-run-left').textContent = txt;
       runEl.querySelector('.sp-run-el').textContent = `${durS(el0)} elapsed${e ? ` · estimated ${dur(e.ms)}` : ''}${f ? ` · ${Math.round(f * 100)}%` : ''}`;
       document.title = `${left != null && !over ? durS(left) + ' left' : 'Running'} · ${nm} — PlotCloud`; return; }
     if (state === 'done' || state === 'error') { const ok = state === 'done', end = Date.now();
       runEl.dataset.state = ok ? 'done' : 'error'; runEl.hidden = false;
-      runEl.innerHTML = `<span class="sp-run-dot" aria-hidden="true"></span><b>${esc(nm)}</b><span>${ok ? `finished at ${clock(end)} · took ${durS(el0)} · ${esc(q.name)}` : 'could not run: see its panel'}</span><button type="button" class="sp-x" aria-label="Close" title="Close">×</button>`;
+      runEl.innerHTML = `<span class="sp-run-dot" aria-hidden="true"></span><b>${esc(nm)}</b><span>${extra.batch ? `${esc(extra.batch)} · finished at ${clock(end)}` : ok ? `finished at ${clock(end)} · took ${durS(el0)} · ${esc(q.name)}` : 'could not run: see its panel'}</span><button type="button" class="sp-x" aria-label="Close" title="Close">×</button>`;
       document.title = `${ok ? '✓' : '✗'} ${nm} ${ok ? 'done' : 'failed'} — PlotCloud`;
       const restore = () => { document.title = RUN.title; runEl.hidden = true; RUN.title = null; }, onFocus = () => { if (!document.hidden) setTimeout(restore, ok ? 8000 : 15000); };
       runEl.querySelector('.sp-x').onclick = () => { restore(); RUN.cleanup?.(); RUN.cleanup = null; };
@@ -322,26 +325,71 @@ export function mountChrome(app, api) {
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261109-1'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261109-2'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
   async function xlSave() { const m = await xlMod(); await m.saveList(p.id, XL.list); xlBadge(); if (!pops.xl.hidden) drawXL(); }
-  async function drawXL() { const m = await xlMod(); m.renderList(pops.xl, XL.list, { project: p.name, modelKey: modelHash(), busy: XL.busy, onChange: (redraw = true) => { xlSave(); if (redraw) drawXL(); }, onExport: xlExport }); }
+  async function drawXL() { const m = await xlMod(); if (!pops.xl.querySelector('.xl-lst')) pops.xl.innerHTML = '<div class="xl-gen"></div><div class="xl-lst"></div>'; drawGen(pops.xl.querySelector('.xl-gen')); m.renderList(pops.xl.querySelector('.xl-lst'), XL.list, { project: p.name, modelKey: modelHash(), busy: XL.busy, onChange: (redraw = true) => { xlSave(); if (redraw) drawXL(); }, onExport: xlExport }); }
   const xlCtx = () => { const st = S.siteOf(p) || {}, last = (p.versions || []).at(-1); return { project: p.name, site: st.label && st.label !== p.name ? st.label : '', coords: Number.isFinite(st.lat) ? `${Math.abs(st.lat).toFixed(4)}° ${st.lat >= 0 ? 'N' : 'S'}, ${Math.abs(st.lon).toFixed(4)}° ${st.lon >= 0 ? 'E' : 'W'}` : '', version: last ? `v${last.n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: S.conditionsOf(p).revision, author: S.account()?.user?.name || '', weather: ROSE.v?.station || '' }; };
   async function xlExport(kind) { if (XL.busy) return; XL.busy = kind === 'pdf' ? 'Laying out the report…' : kind === 'pptx' ? 'Building the slides…' : 'Packing the pictures…'; drawXL();
     try { const m = await xlMod(), { name, blob } = await m.exportList(kind, XL.list, xlCtx()), a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = name; a.addEventListener('click', (ev) => ev.stopPropagation()); document.body.append(a); a.click(); a.remove();   /* a download is not a click outside the list */ setTimeout(() => URL.revokeObjectURL(u), 4000); XL.busy = ''; }
     catch (e) { XL.busy = 'The export could not finish: ' + (e.message || e); } drawXL(); setTimeout(() => { if (XL.busy.startsWith('The export')) { XL.busy = ''; } }, 6000); }
+  // ---- Generate pictures (2026-11-09): tick the simulations, choose a view or a series for each, see each one's time and the
+  // total, then generate: they run one after another at the quality set above Add simulation, and each picture joins the list
+  const GENK = 'pc-ws-gen:' + p.id, GEN_IDS = ['sunhours', 'radiation', 'skyview', 'utci', 'wind', 'daylight', 'vent', 'acoustics', 'spacesyntax'];
+  XL.gen = (() => { try { return { pick: {}, ...(JSON.parse(localStorage.getItem(GENK)) || {}) }; } catch { return { pick: {} }; } })();
+  const genSave = () => { try { localStorage.setItem(GENK, JSON.stringify({ pick: XL.gen.pick })); } catch { } };
+  const genList = () => [...GEN_IDS.filter((id) => (api.sims || []).some((x) => x.id === id)).map((id) => ({ id, name: simName(id), series: !!SERIES[id] })), ...(secPane()?.section?.() ? [{ id: 'section', name: `Section ${secPane().section().name || 'A'}`, series: false }] : [])];
+  const nPics = (kind) => (kind === 'months' ? 12 : kind === 'seasons' ? 4 : 1);
+  // each one's time: the estimate where the study has one, else its last run on this computer, else not known before it runs
+  function timeOf(id, kind) { if (id === 'section') return { ms: 4000, src: 'est' }; const n = nPics(kind); let ms = null, src = 'est';
+    try { const e = estimate(id); if (e && e.ms) ms = e.ms; } catch { } if (ms == null) { const L = simLog()[id]; if (L && L.ms) { ms = L.ms; src = 'last'; } }
+    return ms == null ? null : { ms: ms * n + n * 600, src }; }   // + about 0.6 s a picture to frame and capture it
+  const clockAt = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  function drawGen(host) { const G = genList(), on = G.filter((g) => XL.gen.pick[g.id]), T = on.map((g) => timeOf(g.id, XL.gen.pick[g.id])), known = T.filter(Boolean), tot = known.reduce((a, t) => a + t.ms, 0), pics = on.reduce((a, g) => a + nPics(XL.gen.pick[g.id]), 0), busy = !!XL.gen.running || ST.busy;
+    const opt = (g) => { const k = XL.gen.pick[g.id] || 'view'; return g.series ? `<select class="xl-gk" data-gk="${g.id}" ${busy ? 'disabled' : ''} aria-label="${esc(g.name)}: what to make">${[['view', 'View'], ['months', '12 months'], ['seasons', '4 seasons']].map(([v, n]) => `<option value="${v}" ${k === v ? 'selected' : ''}>${n}</option>`).join('')}</select>` : '<span class="xl-gk">View</span>'; };
+    const tm = (g) => { if (!XL.gen.pick[g.id]) return ''; const t = timeOf(g.id, XL.gen.pick[g.id]); return t ? `${dur(t.ms).replace(/^about /, '~')}${t.src === 'last' ? '<i title="From its last run on this computer">*</i>' : ''}` : '<i title="Not known before its first run">first run</i>'; };
+    host.innerHTML = `<h3>Generate pictures</h3><p class="sp-note" style="margin-top:0">Tick what to make; they run one after another at ${esc(qualOf().name)} quality and each picture joins the export list below.</p>
+      <div class="xl-gl">${G.map((g) => `<div class="xl-gr${XL.gen.pick[g.id] ? ' on' : ''}"><label><input type="checkbox" data-gp="${g.id}" ${XL.gen.pick[g.id] ? 'checked' : ''} ${busy ? 'disabled' : ''}> ${esc(g.name)}</label>${opt(g)}<span class="xl-t">${tm(g)}</span></div>`).join('')}</div>
+      <div class="xl-tot">${on.length ? `<b>${pics} picture${pics === 1 ? '' : 's'} · about ${dur(tot).replace(/^about /, '')}${known.length < on.length ? ` + ${on.length - known.length} not yet timed` : ''}</b><span>done around ${clockAt(Date.now() + tot)}${known.some((t) => t.src === 'last') ? ' · * from the last run' : ''}</span>` : '<span>Nothing ticked.</span>'}</div>
+      <div class="xl-acts"><button type="button" class="btn sm primary" data-g="go" ${on.length && !busy ? '' : 'disabled'}>${XL.gen.running ? `Generating ${XL.gen.running.k + 1} of ${XL.gen.running.n}…` : `Generate ${pics || ''} picture${pics === 1 ? '' : 's'}`}</button></div>
+      ${XL.gen.last ? `<p class="sp-note xl-glast">${XL.gen.last}</p>` : ''}`;
+    host.querySelectorAll('[data-gp]').forEach((x) => x.onchange = () => { if (x.checked) XL.gen.pick[x.dataset.gp] = XL.gen.pick[x.dataset.gp] || 'view'; else delete XL.gen.pick[x.dataset.gp]; genSave(); drawGen(host); });
+    host.querySelectorAll('select[data-gk]').forEach((x) => x.onchange = () => { XL.gen.pick[x.dataset.gk] = x.value; genSave(); drawGen(host); });
+    const go = host.querySelector('[data-g=go]'); if (go) go.onclick = () => genRun(); }
+  async function genRun() { const G = genList().filter((g) => XL.gen.pick[g.id]); if (!G.length || XL.gen.running || ST.busy) return;
+    const times = G.map((g) => timeOf(g.id, XL.gen.pick[g.id])?.ms || 0), done = [], failed = [], keepId = ST.id; XL.gen.running = { k: 0, n: G.length }; XL.gen.last = '';
+    closePops(); BATCH = { n: G.length, k: 0, later: 0, final: false, cancel: false };
+    for (let k = 0; k < G.length; k++) { const g = G[k], kind = XL.gen.pick[g.id]; Object.assign(BATCH, { k, later: times.slice(k + 1).reduce((a, t) => a + t, 0), final: k === G.length - 1 }); XL.gen.running.k = k; let ok = false, why = '';
+      try { if (g.id === 'section') ok = await xlAddSection();
+        else { openStudy(g.id); await new Promise((r) => setTimeout(r, 400));
+          if (kind === 'view') { await runStudy(); ok = !!ST.res && !!(await xlAddView()); if (!ST.res) why = ST.err; }
+          else { const out = await runSeries(kind, { preview: false }); ok = !!out && await xlAddSeries(g.id, kind, out.frames, out.q); if (!out) why = ST.err; } } }
+      catch (e) { why = e.message || String(e); }
+      (ok ? done : failed).push(ok ? g.name : `${g.name}${why ? ': ' + plain(why) : ''}`); if (BATCH.cancel) break; }
+    const stopped = BATCH.cancel; BATCH = null; XL.gen.running = null;
+    XL.gen.last = `${done.length ? `Added: ${esc(done.join(', '))}.` : ''}${failed.length ? ` <span class="sp-warn">Could not make: ${esc(failed.join('; '))}.</span>` : ''}${stopped ? ' Stopped.' : ''}`;
+    runBar(failed.length && !done.length ? 'error' : 'done', { batch: `${done.length} of ${G.length} made for the export list${failed.length ? `, ${failed.length} could not run` : ''}` });
+    if (keepId && keepId !== ST.id && !stopped) { /* the study last open stays as the generation left it */ }
+    if (pops.xl.hidden) togglePop('xl', app.querySelector('.sp-xlb')); else drawXL(); }
   // what every item records: how it was computed
   const basisLine = (q = qualOf(), cell = 0) => { const c = xlCtx(); return `Quality ${q.name}${cell ? ` · ground grid ${fmt(cell, 2)} m` : ''} · model ${c.version} · conditions revision ${c.revision ?? '–'}${c.site ? ' · ' + c.site : ''}`; };
   const legendOf = (V, r) => { const cols = V.legendCols || INST.persp.ws.rampColors?.(r.ramp) || ['#ddd', '#333']; return { lo: V.lo, hi: V.hi, unit: V.unit || r.unit || '', dec: V.dec ?? r.dec ?? 1, stops: V.legendLabels ? cols.slice().reverse() : cols }; };
-  async function xlAdd(item) { const m = await xlMod(); XL.list.items.push({ id: 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: new Date().toISOString(), modelKey: modelHash(), ...item }); await xlSave(); toastXL(`Added to the export list (${XL.list.items.length}).`); void m; }
+  async function xlAdd(item) { const m = await xlMod(); void m; XL.list.items.push({ id: 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: new Date().toISOString(), modelKey: modelHash(), ...item }); await xlSave(); toastXL(`Added to the export list (${XL.list.items.length}).`); return true; }
   const toastXL = (t) => { const b = app.querySelector('.sp-xlb'); if (!b) return; b.classList.remove('sp-pulse'); void b.offsetWidth; b.classList.add('sp-pulse'); b.title = t; };
+  // the section as it is, in the Section view: its levels and notes, and Natural ventilation on the cut when that is the result shown
+  async function xlAddSection() { const s = secPane()?.section?.(); if (!s) return false; const was = secViewOn(); if (!was) { await sectionView(true); await new Promise((r) => setTimeout(r, 600)); }
+    try { const vent = ST.id === 'vent' && ST.res, V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null]); if (!u) return false;
+      const blob = await (await fetch(u)).blob(), X = await xlMod();
+      await xlAdd({ kind: 'section', study: vent ? 'vent' : 'section', title: `Section ${s.name || 'A'}${V ? ' · ' + X.plain(V.title) : ''}`, sub: `${s.far ? `far clip ${fmt(s.far, 1)} m` : 'no far clip'} · parallel view`, pictures: [{ label: `Section ${s.name || 'A'}`, blob }], cols: 1, legend: V ? legendOf(V, ST.res) : null,
+        rows: V ? (ST.res.rows || []).slice(0, 10).map(([k, v]) => [X.plain(k), X.plain(v)]) : [], method: V ? X.plain(ST.res.method || '') : 'A vertical cut through the model at the section line, seen square on with a 1° lens from far away (all but parallel); cut faces filled where closed solids are cut.', basis: basisLine(), notes: V ? ['On the cut: one value per room (the airflow network treats each room as fully mixed), not air speed or temperature.'] : [] });
+      return true; } finally { if (!was) await sectionView(false); } }
   // the study's view as it is now, at print size (about 1800 px wide), with its legend, key results and method
   async function xlAddView() { const r = ST.res, id = ST.id; if (!r || !INST.persp.ready) return; if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 400)); }
     const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1800 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (!c) return;
     const m = await xlMod(), V = (r.views && r.views[r.view]) || r, blob = await m.canvasBlob(c);
-    await xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name}`, pictures: [{ label: m.plain(V.title || r.title || ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell) }); }
+    return xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name}`, pictures: [{ label: m.plain(V.title || r.title || ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell) }); }
   // ---- section (2026-11-07, after Revit's Section): the line is part of the model, drawn and edited on the plan (drag the line or a
   // head, click an arrow to flip, drag the dashed far edge); here: draw it, the Section view (square to the cut, parallel, with the
   // levels), the 3D cutaway, the far clip, and a study's result on the cut where the study has one through the height of a room
@@ -359,7 +407,7 @@ export function mountChrome(app, api) {
     pops.sec.innerHTML = '<h3>Section</h3>' + (!s
       ? `<p class="sp-note" style="margin-top:0">${drawing ? 'On the plan: click where the cut starts, then where it ends. Esc to stop.' : 'A vertical cut through the building, as in a drawn section. Draw its line on the plan, then look at it square on (Section view) or cut the 3D view.'}</p><div ${row}><button type="button" class="btn sm" data-sec="draw" ${drawing ? 'disabled' : ''}>Draw section line</button></div>`
       : `<div class="sp-kv"><span>Section ${esc(s.name || 'A')}</span><b>${fmt(s.len, 2)} m</b></div>
-        <div ${row}><button type="button" class="btn sm${on ? ' accent' : ''}" data-sec="view" aria-pressed="${on}">${on ? 'Back to 3D' : 'Section view'}</button><button type="button" class="btn sm" data-sec="flip" title="Look the other way">Flip</button>${on ? '<button type="button" class="btn sm" data-sec="png" title="The Section view with its levels, notes and a title block">Export PNG</button><button type="button" class="btn sm" data-sec="xl" title="Keep this section for the report">Add to export list</button>' : ''}</div>
+        <div ${row}><button type="button" class="btn sm${on ? ' accent' : ''}" data-sec="view" aria-pressed="${on}">${on ? 'Back to 3D' : 'Section view'}</button><button type="button" class="btn sm" data-sec="flip" title="Look the other way">Flip</button>${on ? '<button type="button" class="btn sm" data-sec="png" title="The Section view with its levels, notes and a title block">Export PNG</button>' : ''}</div>
         <label class="sp-sw"><input type="checkbox" data-sec="on" ${s.on !== false ? 'checked' : ''}> Cut the 3D view</label>
         <label class="sp-sw"><input type="checkbox" data-sec="farOn" ${s.far ? 'checked' : ''}> Far clip</label>
         ${s.far ? `<label class="sp-sl"><span>Depth behind the cut <output>${fmt(s.far, 1)} m</output></span><input type="range" data-sec="far" min="0.5" max="60" step="0.5" value="${s.far}"></label>` : ''}
@@ -371,10 +419,6 @@ export function mountChrome(app, api) {
     if (q('draw')) q('draw').onclick = async () => { if (UI.view !== 'plan') await goView('plan'); for (let i = 0; i < 60 && !INST.plan.ready; i++) await new Promise((r) => setTimeout(r, 100)); INST.plan.ws.sectionDraw?.(() => drawSec()); setTimeout(drawSec, 0); };   // redrawn after this click (the click outside the popover closes it)
     if (q('view')) q('view').onclick = async () => { await sectionView(!on); setTimeout(drawSec, 0); };
     if (q('flip')) q('flip').onclick = () => set({ flip: !s.flip });
-    if (q('xl')) q('xl').onclick = async () => { const V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null]); if (!u) return;
-      const blob = await (await fetch(u)).blob(), X = await xlMod();
-      await xlAdd({ kind: 'section', study: vent ? 'vent' : 'section', title: `Section ${s.name || 'A'}${V ? ' · ' + X.plain(V.title) : ''}`, sub: `${s.far ? `far clip ${fmt(s.far, 1)} m` : 'no far clip'} · parallel view`, pictures: [{ label: `Section ${s.name || 'A'}`, blob }], cols: 1, legend: V ? legendOf(V, ST.res) : null,
-        rows: V ? (ST.res.rows || []).slice(0, 10).map(([k, v]) => [X.plain(k), X.plain(v)]) : [], method: V ? X.plain(ST.res.method || '') : 'A vertical cut through the model at the section line, seen square on with a 1° lens from far away (all but parallel); cut faces filled where closed solids are cut.', basis: basisLine(), notes: V ? ['On the cut: one value per room (the airflow network treats each room as fully mixed), not air speed or temperature.'] : [] }); };
     if (q('png')) q('png').onclick = async () => { const V = vent ? (ST.res.views[ST.res.view] || Object.values(ST.res.views)[0]) : null, at = (ST.at || new Date()).toISOString().slice(0, 16).replace('T', ' ');
       const u = await INST.persp.ws.sectionPNG?.([p.name, V ? `${V.title} · one value per room (fully mixed airflow network)` : null, V ? `Result of ${at}${ST.saved ? ' · ' + ST.saved : ''}` : null, `Exported ${new Date().toISOString().slice(0, 16).replace('T', ' ')} · PlotCloud`]);
       if (u) { const a = document.createElement('a'); a.href = u; a.download = `${p.name.replace(/[^\w-]+/g, '-')}-section-${s.name || 'A'}.png`; a.click(); } };
@@ -1164,7 +1208,7 @@ export function mountChrome(app, api) {
       months: MONTHN.map((n, i) => ({ v: `m${i + 1}`, label: n })), seasons: [['q-mam', 'March–May'], ['q-jja', 'June–August'], ['q-son', 'September–November'], ['q-djf', 'December–February']].map(([v, label]) => ({ v, label })),
       monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
   let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-2'));
-  async function runSeries(kind) {
+  async function runSeries(kind, opts = {}) {
     const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; }
     if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }
     const list = def[kind], keep = ST[def.key], keepRes = ST.res, q = qualOf(), frames = []; syncLevels();
@@ -1178,8 +1222,9 @@ export function mountChrome(app, api) {
     } catch (e) { ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); }
     clearInterval(tick); ST[def.key] = keep; ST.busy = false; ST.progress = ''; const ok = frames.length === list.length; runBar(ok ? 'done' : ST.err ? 'error' : 'stopped');
     if (keepRes) paintRes(keepRes); else { clearAll(); showArea(); } drawStudy(); if (!ok) return;
-    openSeries(id, kind, frames, q); }
-  async function openSeries(id, kind, frames, q) {
+    if (opts.preview === false) return { frames, q }; openSeries(id, kind, frames, q); }
+  // a series' colour scale, painting and the notes its exports carry (the preview and Generate pictures both use it)
+  async function seriesPack(id, kind, frames, q) {
     const def = SERIES[id], w = INST.persp.ws, view = frames[0].r.view, V = (r) => (r.views && r.views[view]) || r;
     // one colour scale for every picture: the lowest and the highest of the series (each month alone would not compare)
     const lo = Math.min(...frames.map((f) => V(f.r).lo)), hi = Math.max(...frames.map((f) => V(f.r).hi)), shi = Math.max(...frames.map((f) => V(f.r).shi ?? V(f.r).hi));
@@ -1188,16 +1233,21 @@ export function mountChrome(app, api) {
     const meta = { project: p.name, site: site.label || '', lat: site.lat, lon: site.lon, study: simName(id), what: def.what, basis: def[kind + 'Note'], quality: q.name, grid: `ground ${fmt(r0.cell || 0, 2)} m${r0.surfCell ? ` · building ${fmt(r0.surfCell, 2)} m` : ''}`,
       title: V(r0).title?.replace(/ · .*$/, '') || simName(id), unit: V(r0).unit || r0.unit, lo, hi, dec: V(r0).dec ?? r0.dec ?? 1, cols, labels: V(r0).legendLabels || null, view: view,
       method: def.method ? def.method(r0) : r0.method, version: (p.versions || []).at(-1)?.n ? `v${p.versions.at(-1).n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: c0.revision, at: new Date(), station: id === 'radiation' ? ((await weather().catch(() => null))?.station || '') : '' };
-    paintRes({ ...frames[0].r, lo, hi, slo: lo, shi: Math.max(hi, shi) });   // the view framed on the result, before the tiles copy it
-    if (Number.isFinite(r0.X0) && r0.nx) w.fitBox?.({ x0: r0.X0, y0: r0.Y0, x1: r0.X0 + r0.nx * r0.cell, y1: r0.Y0 + r0.ny * r0.cell }, 0, 1.25, false);
+    const frame = () => { paintRes({ ...frames[0].r, lo, hi, slo: lo, shi: Math.max(hi, shi) }); if (Number.isFinite(r0.X0) && r0.nx) w.fitBox?.({ x0: r0.X0, y0: r0.Y0, x1: r0.X0 + r0.nx * r0.cell, y1: r0.Y0 + r0.ny * r0.cell }, 0, 1.25, false); };   // the view framed on the result
+    const item = (pics) => ({ kind: 'series', study: id, title: `${simName(id)} · ${kind === 'months' ? '12 months' : '4 seasons'}`, sub: `${def[kind + 'Note']} · ${q.name}`, pictures: pics, cols: frames.length === 12 ? 4 : 2,
+      legend: { lo, hi, unit: meta.unit, dec: meta.dec, stops: meta.labels ? cols.slice().reverse() : cols }, rows: frames.map((f) => [f.label, Number.isFinite(V(f.r).avg ?? f.r.avg) ? `${fmt(V(f.r).avg ?? f.r.avg, meta.dec)} ${meta.unit} on average` : '–']),
+      method: meta.method, basis: basisLine(q, r0.cell), notes: [`One colour scale for every picture: ${fmt(lo, meta.dec)} to ${fmt(hi, meta.dec)} ${meta.unit}.`] });
+    return { def, meta, paint, frame, item, keepKey, restore: () => { ST[def.key] = keepKey; if (ST.res) paintRes(ST.res); else clearAll(); } }; }
+  async function openSeries(id, kind, frames, q) {
+    const P = await seriesPack(id, kind, frames, q); P.frame();
     const M = await seriesUI();
-    M.openSeriesPreview(app, { frames: frames.map((f) => ({ label: f.label })), cols: frames.length === 12 ? 4 : frames.length === 4 ? 2 : Math.ceil(Math.sqrt(frames.length)), meta,
-      paint, snap: (wd, ht, sc) => INST.persp.ws.snapAt?.(wd, ht, sc), move: (o) => INST.persp.ws.camMove?.(o),
-      addToList: async (canvases, labels) => { const X = await xlMod(), pics = []; for (const [i, c] of canvases.entries()) pics.push({ label: labels[i], blob: await X.canvasBlob(c) });
-        await xlAdd({ kind: 'series', study: id, title: `${simName(id)} · ${kind === 'months' ? '12 months' : '4 seasons'}`, sub: `${def[kind + 'Note']} · ${q.name}`, pictures: pics, cols: frames.length === 12 ? 4 : 2,
-          legend: { lo, hi, unit: meta.unit, dec: meta.dec, stops: meta.labels ? cols.slice().reverse() : cols }, rows: frames.map((f) => [f.label, Number.isFinite(V(f.r).avg ?? f.r.avg) ? `${fmt(V(f.r).avg ?? f.r.avg, meta.dec)} ${meta.unit} on average` : '–']),
-          method: meta.method, basis: basisLine(q, r0.cell), notes: [`One colour scale for every picture: ${fmt(lo, meta.dec)} to ${fmt(hi, meta.dec)} ${meta.unit}.`] }); },
-      onClose: () => { ST[def.key] = keepKey; if (ST.res) paintRes(ST.res); else clearAll(); } }); }
+    M.openSeriesPreview(app, { frames: frames.map((f) => ({ label: f.label })), cols: frames.length === 12 ? 4 : frames.length === 4 ? 2 : Math.ceil(Math.sqrt(frames.length)), meta: P.meta,
+      paint: P.paint, snap: (wd, ht, sc) => INST.persp.ws.snapAt?.(wd, ht, sc), move: (o) => INST.persp.ws.camMove?.(o), onClose: P.restore }); }
+  // a series straight into the export list (Generate pictures): framed on the result, each picture at print size from the 3D view
+  async function xlAddSeries(id, kind, frames, q) { const P = await seriesPack(id, kind, frames, q), X = await xlMod(); P.frame(); await new Promise((r) => setTimeout(r, 120));
+    const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1400 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), pics = [];
+    try { for (let i = 0; i < frames.length; i++) { P.paint(i); const c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (c) pics.push({ label: frames[i].label, blob: await X.canvasBlob(c) }); await new Promise((r) => setTimeout(r, 0)); } } finally { P.restore(); }
+    if (pics.length === frames.length) await xlAdd(P.item(pics)); return pics.length === frames.length; }
   async function runStudy() {
     if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
     const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; runBar('tick'); }, 1000);
@@ -1324,7 +1374,7 @@ export function mountChrome(app, api) {
       rose: () => { if (ST.roseErr) return `<p class="sp-note sp-errtext">${esc(ST.roseErr)}</p>`; if (!ST.rose) return '<p class="sp-note">Reading the wind of the project weather…</p>'; const R = ST.rose, single = ST.windMode === 'single', dir = ST.windDir ?? R.prevailing, i = Math.round(dir / 22.5) % 16, spd = ST.windSpeed ?? R.sec[i].mean;
         return `<p class="sp-flabel">${single ? 'Click the rose to choose the wind direction' : 'The year’s wind by direction, from the project weather'}</p>${roseSVG(R, single)}${single ? `<label class="sp-spdrow"><span>From ${DIR16[i]} · <span class="sp-spd">${fmt(spd, 1)}</span> m/s at 10 m</span><input type="range" min="0.5" max="20" step="0.5" value="${(+spd).toFixed(1)}" data-st="windSpeed"></label>` : `<p class="sp-note">Prevailing from ${DIR16[Math.round(R.prevailing / 22.5) % 16]}; calm ${fmt(R.calm * 100)}% of hours. ${esc(R.station)}</p>`}`; } };
     studyCard.innerHTML = `<header><b>${esc(name)}</b><span class="sp-pill" data-state="${status[0]}">${esc(status[1])}</span><span class="sp-hbtns"><button type="button" class="sp-ib" data-st="exp" aria-expanded="${ST.exp}" title="Export">⤓</button><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></span></header>
-      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button><button type="button" class="btn sm" data-st="xl-view" ${r && !ST.busy ? '' : 'disabled'} title="Keep this view, with its legend, key results and method, for the report">Add view to export list</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}${SERIES[id] ? `<p class="sp-flabel">Series: one picture each, on one colour scale</p><button type="button" class="btn sm" data-st="ser-months" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].monthsNote)}">12 months</button><button type="button" class="btn sm" data-st="ser-seasons" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].seasonsNote)}">4 seasons</button><p class="sp-note">${esc(SERIES[id].monthsNote)}, or ${esc(SERIES[id].seasonsNote.toLowerCase())}; at ${esc(qualOf().name)} quality, about ${dur((estimate(id)?.ms || 0) * 12)} for 12. Then choose the view and export the sheet.</p>` : ''}</div>` : ''}
+      ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>${r ? '' : '<p class="sp-note">Run the study first.</p>'}${SERIES[id] ? `<p class="sp-flabel">Series: one picture each, on one colour scale</p><button type="button" class="btn sm" data-st="ser-months" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].monthsNote)}">12 months</button><button type="button" class="btn sm" data-st="ser-seasons" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].seasonsNote)}">4 seasons</button><p class="sp-note">${esc(SERIES[id].monthsNote)}, or ${esc(SERIES[id].seasonsNote.toLowerCase())}; at ${esc(qualOf().name)} quality, about ${dur((estimate(id)?.ms || 0) * 12)} for 12. Then choose the view and export the sheet.</p>` : ''}</div>` : ''}
       ${sp.mode ? seg('data-st-mode', ST[sp.mode[0]], sp.mode[1]) : ''}${stage}
       ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}
       ${r && id === 'fire-evacuation' ? `<div class="sp-acts sp-acts1 sp-egplay"><button type="button" class="btn sm" data-eg="play">${ST.egPlay ? '❚❚ Pause' : '▶ Play'}</button><input type="range" data-eg="seek" min="0" max="${r.nFrames || 1}" step="1" value="${Math.round(ST.egT || 0)}" aria-label="Time in the run shown"><span class="sp-egt sp-note"></span></div><div class="sp-chips" role="group" aria-label="Playback speed">${[[10, '×10'], [30, '×30'], [60, '×60']].map(([v, n]) => `<button type="button" data-eg="speed" data-v="${v}" aria-pressed="${ST.egSpeed === v}">${n}</button>`).join('')}</div>` : ''}
@@ -1379,7 +1429,7 @@ export function mountChrome(app, api) {
   studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'windSpeed') { ST.windSpeed = +e.target.value; drawStudy(); } });
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
-    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'xl-view') { xlAddView(); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
+    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false;
 
