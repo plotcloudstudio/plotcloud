@@ -6769,7 +6769,7 @@ window.S3 = (() => {
   // buildings, the ground and its results stay whole (cutting the whole site laid open a slab of ground hundreds of metres wide
   // over the view; the interior studies' cutaway works the same way). The Section view cuts everything, ground included.
   const SEC_CUT = new Set(['floorsheet', 'egresssheet', 'surfaceresult', 'sectionresult', 'structure']);
-  const secWhole = (o) => o.name === 'site' || o.name === 'water' || ['site', 'ctx', 'world'].includes(o.userData && o.userData.k);
+  const secWhole = (o) => o.name === 'site' || o.name === 'site-detail' || o.name === 'water' || ['site', 'ctx', 'world'].includes(o.userData && o.userData.k);
   function secRender(c) {
     const cut = [], whole = []; for (const ch of scene.children) { if (ch === grp) continue; (SEC_CUT.has(ch.name) ? cut : whole).push(ch); }
     if (grp) for (const ch of grp.children) (secWhole(ch) ? whole : cut).push(ch);

@@ -477,3 +477,26 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-watercard .sp-field input,.w2.sp .sp-watercard .sp-field select{font:12px Inter,system-ui,sans-serif;padding:5px 7px;border:1px solid #d6d9de;border-radius:6px;background:#fff;color:#111;min-width:0}
 .w2.sp .sp-watercard .sp-num{display:flex;align-items:center;gap:4px}.w2.sp .sp-watercard .sp-num input{width:100%}
 .w2.sp .sp-watercard .sp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* simulation quality (2026-11-09): a small dark slider above Add simulation, Draft (left) to Refined (right) */
+.w2.sp .sp-q{position:absolute;z-index:30;left:12px;top:calc(50% + 93px);width:44px;height:22px;display:flex;align-items:center;justify-content:center;background:var(--sp-dark);border-radius:8px;box-shadow:var(--sp-shadow);cursor:pointer;touch-action:none;outline:none}
+.w2.sp .sp-q:focus-visible{box-shadow:0 0 0 2px #93c5fd,var(--sp-shadow)}
+.w2.sp .sp-q[aria-pressed=true]{background:#3b4556}
+.w2.sp .sp-q-tr{position:relative;width:28px;height:2px;background:#4b5563;border-radius:1px;display:flex;justify-content:space-between;align-items:center}
+.w2.sp .sp-q-tr i{width:3px;height:3px;border-radius:50%;background:#9ca3af}
+.w2.sp .sp-q-tr b{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#e5e7eb;transition:left .12s}
+.w2.sp .sp-q[data-q=standard] .sp-q-tr b{background:#fbbf24}
+.w2.sp .sp-q[data-q=refined] .sp-q-tr b{background:#f97316}
+.w2.sp .sp-qticks{display:flex;justify-content:space-between;font-size:10px;color:var(--sp-sub);margin:2px 0 4px}
+/* a run, top centre: time left, the clock time it should end; then done or failed */
+.w2.sp .sp-runbar{position:absolute;z-index:32;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:min(760px,calc(100% - 760px));min-width:320px;padding:8px 12px;font:12px/1.35 Inter,system-ui,sans-serif;color:var(--sp-ink);white-space:nowrap;overflow:hidden}
+.w2.sp .sp-runbar[hidden]{display:none}
+.w2.sp .sp-runbar .sp-run-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#f59e0b;animation:sp-run 1.2s ease-in-out infinite}
+.w2.sp .sp-runbar[data-state=done] .sp-run-dot{background:#16a34a;animation:none}
+.w2.sp .sp-runbar[data-state=error] .sp-run-dot{background:#dc2626;animation:none}
+.w2.sp .sp-runbar .sp-run-q{color:var(--sp-sub)}
+.w2.sp .sp-runbar .sp-run-left{font-weight:600}
+.w2.sp .sp-runbar .sp-run-el{color:var(--sp-sub);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.w2.sp .sp-runbar .sp-run-n{display:flex;align-items:center;gap:4px;color:var(--sp-sub);cursor:pointer}
+.w2.sp .sp-runbar .sp-x{position:static;flex:none}
+@keyframes sp-run{50%{opacity:.35}}
