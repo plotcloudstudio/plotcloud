@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=vent-20261107-1';
+import { mountChrome } from '../workspace-chrome.js?v=section-20261109-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -165,7 +165,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=vent-20261107-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=section-20261109-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -379,18 +379,20 @@ export function render(app, [pid]) {
     plan: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4"><rect x="5" y="6" width="22" height="20" rx="1" fill="#f1efea"/><path d="M5 15h10V6M15 15v11M15 19h12"/></svg>',
     ceiling: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4"><rect x="5" y="6" width="22" height="20" rx="1" fill="#f1efea"/><path d="M5 12h22M5 20h22M12 6v20M20 6v20" stroke-dasharray="1.6 1.6" stroke-width="1"/><circle cx="12" cy="12" r="1.6" fill="#3b3f45"/><circle cx="20" cy="20" r="1.6" fill="#3b3f45"/></svg>',
     persp: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"><path d="M7 11l9-6 9 6v13l-9 4-9-4z" fill="#e9e7e3"/><path d="M7 11l9 4 9-4M16 15v13"/><path d="M16 15l9-4v13l-9 4z" fill="#cfccc6"/></svg>',
-    iso: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#e9e7e3"/><path d="M5 10l11 6 11-6M16 16v12"/><path d="M16 16l11-6v12l-11 6z" fill="#cfccc6"/></svg>' };
+    iso: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"><path d="M16 4l11 6v12l-11 6-11-6V10z" fill="#e9e7e3"/><path d="M5 10l11 6 11-6M16 16v12"/><path d="M16 16l11-6v12l-11 6z" fill="#cfccc6"/></svg>',
+    section: '<svg viewBox="0 0 32 32" fill="none" stroke="#3b3f45" stroke-width="1.4" stroke-linejoin="round"><path d="M6 27V13l10-7 10 7v14z" fill="#f1efea"/><path d="M6 13l10-7 10 7" stroke-width="2.6"/><path d="M6 13v14M26 13v14M4 27h24" stroke-width="2.6"/><path d="M6 19.5h20" stroke-width="2"/><path d="M4 19.5h1.5M26.5 19.5H28" stroke-dasharray="1.5 1.5"/></svg>' };
   const ISOS = [['nw', 'NW'], ['ne', 'NE'], ['sw', 'SW'], ['se', 'SE']];   // laid out as on a compass, north up
   function viewPanel() {
     const host = $('#vMenu', app), a = INST.plan.ready ? INST.plan.ws.state() : null, iso = UI.view === 'persp' && INST.persp.ready ? INST.persp.ws.isoDir?.() : null;
-    const cur = UI.view === 'plan' ? (a?.view2d === 'ceiling' ? 'ceiling' : 'plan') : iso ? 'iso' : 'persp';
+    const cur = UI.view === 'plan' ? (a?.view2d === 'ceiling' ? 'ceiling' : 'plan') : sectionOn() ? 'section' : iso ? 'iso' : 'persp';
     host.classList.add('w3-disp', 'w3-views');
     host.innerHTML = `<header><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><path d="M12 8l4 2v4l-4 2-4-2v-4z"/></svg><b>View</b></header>
-      <div class="w3-dgrid">${[['plan', 'Plan'], ['ceiling', 'Ceiling plan'], ['persp', 'Perspective'], ['iso', 'Isometric']].map(([k, n]) => `<button type="button" role="menuitemradio" data-view="${k}" aria-checked="${cur === k}"><span class="w3-dic">${VICON[k]}</span><span>${n}</span></button>`).join('')}</div>
+      <div class="w3-dgrid">${[['plan', 'Plan'], ['ceiling', 'Ceiling plan'], ['persp', 'Perspective'], ['iso', 'Isometric'], ['section', 'Section']].map(([k, n]) => `<button type="button" role="menuitemradio" data-view="${k}" aria-checked="${cur === k}"><span class="w3-dic">${VICON[k]}</span><span>${n}</span></button>`).join('')}</div>
       ${cur === 'iso' ? `<section class="w3-iso"><p>Look from</p><div class="w3-isogrid" role="group" aria-label="Isometric direction">${ISOS.map(([k, n]) => `<button type="button" data-iso="${k}" aria-pressed="${iso === k}" title="Isometric from the ${n}"><span aria-hidden="true">${({ nw: '↖', ne: '↗', sw: '↙', se: '↘' })[k]}</span> ${n}</button>`).join('')}</div><p class="w3-illnote">A parallel view at the isometric angle. Orbit to leave it; Perspective puts the normal lens back.</p></section>` : ''}
       <div class="w3-vacts"><button type="button" data-vact="sel">${'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><rect x="9" y="9" width="6" height="6"/></svg>'}Zoom selected</button><button type="button" data-vact="fit">${'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>'}Fit the model</button></div>`;
     host.onclick = (e) => e.stopPropagation();
     host.querySelectorAll('[data-view]').forEach((x) => x.onclick = async () => { const k = x.dataset.view;
+      if (k === 'section') { closeMenus(); await sectionView(true); return; }
       if (k === 'iso') { if (UI.view !== 'persp') { goView('persp'); for (let i = 0; i < 40 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); await new Promise((r) => setTimeout(r, 150)); } INST.persp.ws.iso?.(INST.persp.ws.isoDir?.() || UI.iso || 'se'); viewPanel(); menus(); return; }
       if (k === 'persp' && UI.view === 'persp' && INST.persp.ready) INST.persp.ws.iso?.(null);
       closeMenus(); goView(k); });
@@ -399,8 +401,19 @@ export function render(app, [pid]) {
   }
   function viewName() {
     const st = INST.plan.ready ? INST.plan.ws.state() : null;
+    if (sectionOn()) return 'Section ' + (INST.persp.ws.section?.()?.name || 'A');
     return UI.view === 'plan' ? (st?.view2d === 'ceiling' ? 'Ceiling plan' : 'Plan') : 'Perspective';
   }
+  // the Section view (2026-11-07, after Revit's Section): the model's section line, looked at square on in the 3D pane (parallel, pan
+  // and zoom, the levels drawn); without a line yet, the Plan asks for one (two clicks) and the view opens once it is drawn
+  const sectionOn = () => !!(UI.view === 'persp' && INST.persp.ready && INST.persp.ws.sectionState?.()?.view);
+  async function sectionView(on) {
+    if (!on) { if (INST.persp.ready) INST.persp.ws.sectionView?.(false); menus(); return false; }
+    const wait = async (k) => { for (let i = 0; i < 80 && !INST[k].ready; i++) await new Promise((r) => setTimeout(r, 100)); return INST[k].ready; };
+    const has = INST.plan.ready ? INST.plan.ws.section?.() : INST.persp.ready ? INST.persp.ws.section?.() : null;
+    if (!has) { if (UI.view !== 'plan') await goView('plan'); if (!(await wait('plan'))) return false; INST.plan.ws.sectionDraw?.((ok) => { if (ok) setTimeout(() => sectionView(true), 120); }); menus(); return false; }
+    if (UI.view !== 'persp') { await goView('persp'); if (!(await wait('persp'))) return false; await new Promise((r) => setTimeout(r, 250)); }   // after goView's own camera hand-over
+    const r = INST.persp.ws.sectionView?.(true); menus(); return !!r; }
   function menus() {
     const L = (INST.plan.ready ? INST.plan.ws : any())?.levels(), a = INST.plan.ready ? INST.plan.ws.state() : null, b = INST.persp.ready ? INST.persp.ws.state() : null;
     const it = (attrs, on, label, small = '') => `<button role="menuitemradio" ${attrs} aria-checked="${on}">${label}${small ? `<small>${small}</small>` : ''}</button>`;
@@ -881,7 +894,7 @@ export function render(app, [pid]) {
   // the floating layout (workspace-chrome.js): the model fills the window, the controls above move onto cards and rails
   document.body.classList.add('sp-full');
   { const site = S.conditionsOf(p).site; if (weatherDownloadAvailable() && !site.climate && Number.isFinite(site.lat)) ensureProjectClimate(p).catch(() => { }); }   // weather from the address, ready before a study needs it
-  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers, sims: [...SIMS,...PLANNED_SIMS] });
+  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, sectionView, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers, sims: [...SIMS,...PLANNED_SIMS] });
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel(); tabsUI();
