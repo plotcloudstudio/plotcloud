@@ -58,6 +58,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const dark = () => fr3.evaluate(async () => { const im = new Image(); im.src = S3.png(); await im.decode(); const c2 = document.createElement('canvas'); c2.width = im.width; c2.height = im.height; const x = c2.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c2.width, c2.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - 0x23) < 6 && Math.abs(d[i + 1] - 0x26) < 6 && Math.abs(d[i + 2] - 0x2b) < 6) n++; return n; });
     if (process.env.SHOT_DIR) { const u = await fr3.evaluate(() => S3.png()); require('fs').writeFileSync(process.env.SHOT_DIR + '/cut3d.png', Buffer.from(u.split(',')[1], 'base64')); }
     const darkCut = await dark(); assert(darkCut > 200, 'cut faces painted solid: ' + darkCut);
+    // the 3D cutaway cuts the building, not the site: zoomed out over the whole site, no slab of cut ground fills the view
+    const earth = () => fr3.evaluate(async () => { const im = new Image(); im.src = S3.png(); await im.decode(); const c2 = document.createElement('canvas'); c2.width = im.width; c2.height = im.height; const x = c2.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c2.width, c2.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - 0xb9) < 4 && Math.abs(d[i + 1] - 0xb2) < 4 && Math.abs(d[i + 2] - 0xa4) < 4) n++; return n / (d.length / 4); });
+    for (const [r, low] of [[150, false], [400, true]]) { await fr3.evaluate(([o, r2, lo]) => S3.fitBox({ x0: o.X - r2, y0: o.Y - r2, x1: o.X + r2, y1: o.Y + r2 }, 0, 0.6, lo), [O, r, low]); await p.waitForTimeout(600);
+      const e = await earth(); if (process.env.SHOT_DIR) { const u = await fr3.evaluate(() => S3.png()); require('fs').writeFileSync(process.env.SHOT_DIR + `/cutaway-site-${r}.png`, Buffer.from(u.split(',')[1], 'base64')); }
+      assert(e < 0.002, `no cut ground in the 3D cutaway (${r} m round): ${(e * 100).toFixed(2)}% of the view`); }
+    await fr3.evaluate((o) => S3.fitBox({ x0: o.X, y0: o.Y, x1: o.X + 24, y1: o.Y + 12 }, 3, 0.9), O); await p.waitForTimeout(500);
+    assert(await dark() > 200, 'the building still cut and filled');
     console.log('PASS 3D cutaway:', JSON.stringify({ planes: s3.planes, caps: s3.caps, poche: darkCut }));
 
     // 4 · Section view from the View menu: square to the cut, 1° lens, the two levels drawn, the name in the view pill
@@ -66,6 +73,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.equal(s3.levels, 2, 'the two levels drawn as level lines'); assert.match(await p.locator('#vBtn').innerText(), /Section A/);
     const svg = await fr3.evaluate(() => document.querySelector('svg.secov').textContent); assert.match(svg, /Level 1[\s\S]*\+0\.00[\s\S]*Level 2[\s\S]*\+3\.00/);
     const darkSec = await dark(); assert(darkSec > 300, 'walls and slabs cut in the Section view: ' + darkSec);
+    const earthSec = await earth(); assert(earthSec > 0.02, 'the ground cut in the Section view: ' + earthSec);
     await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-view.png' : '/dev/null' }).catch(() => {});
     console.log('PASS Section view:', JSON.stringify({ dir: s3.dir, levels: s3.levels, poche: darkSec }));
 
