@@ -50,12 +50,14 @@ export function openSeriesPreview(app, o) {
   const tiles = [...back.querySelectorAll('.sx-tile')], cvs = tiles.map((t) => t.querySelector('canvas')), status = back.querySelector('.sx-status');
   const box = () => { const r = cvs[0].getBoundingClientRect(); return { w: Math.max(40, r.width), h: Math.max(30, r.height) }; };
   const R = { token: 0, painted: -1, busy: false, sharp: false };   // sharp: every tile drawn at full resolution since the view last moved
+  // a blank frame (the renderer can hand back an empty picture on a busy machine) is never put up: it is drawn again
+  const blank = (c) => { try { const t = document.createElement('canvas'); t.width = t.height = 8; const g = t.getContext('2d'); g.drawImage(c, 0, 0, 8, 8); const d = g.getImageData(0, 0, 8, 8).data; for (let k = 3; k < d.length; k += 4) if (d[k]) return false; return true; } catch { return false; } };
   const put = (i, c) => { if (!c) return; const t = cvs[i]; t.width = c.width; t.height = c.height; t.getContext('2d').drawImage(c, 0, 0); };
   const shot = (i, sc = 1) => { if (R.painted !== i) { o.paint(i); R.painted = i; } const b = box(); return o.snap(b.w, b.h, sc); };
   // every tile, one after another (a newer request stops an older one); low resolution while the view moves
-  async function renderAll(sc = 1, first = -1) { const tk = ++R.token; R.sharp = false; const order = [...Array(n).keys()].sort((a, b) => (a === first ? -1 : b === first ? 1 : a - b));
-    for (let k = 0; k < order.length; k++) { if (tk !== R.token) return false; const i = order[k]; put(i, shot(i, sc)); status.textContent = sc < 1 ? 'Moving the view…' : k + 1 < n ? `Drawing ${k + 1} of ${n}…` : ''; await raf(); }
-    if (tk === R.token && sc < 1) return renderAll(1, first); if (tk === R.token) R.sharp = true; return true; }
+  async function renderAll(sc = 1, first = -1) { const tk = ++R.token; R.sharp = false; back.dataset.ready = '0'; const order = [...Array(n).keys()].sort((a, b) => (a === first ? -1 : b === first ? 1 : a - b));
+    for (let k = 0; k < order.length; k++) { if (tk !== R.token) return false; const i = order[k]; let c = shot(i, sc); for (let t = 0; t < 3 && c && blank(c); t++) { await new Promise((r) => setTimeout(r, 250)); if (tk !== R.token) return false; R.painted = -1; c = shot(i, sc); } put(i, c); status.textContent = sc < 1 ? 'Moving the view…' : k + 1 < n ? `Drawing ${k + 1} of ${n}…` : ''; await raf(); }
+    if (tk === R.token && sc < 1) return renderAll(1, first); if (tk === R.token) { R.sharp = true; back.dataset.ready = '1'; } return true; }   // ready: every tile at full resolution
   // one camera for every tile: a drag in any tile turns them all
   let drag = null, wheelT = 0;
   for (const [i, c] of cvs.entries()) {
