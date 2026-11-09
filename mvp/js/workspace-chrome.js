@@ -1163,7 +1163,7 @@ export function mountChrome(app, api) {
       method: (r) => `The hourly direct sun and diffuse sky of the project weather over each period, with the same shading; each ${fmt(r.cell, 1)} m ground cell sums the sunlight that reaches it in kWh/m² (direct sun by its height, sky by the share each cell sees; no light reflected from the ground).`,
       months: MONTHN.map((n, i) => ({ v: `m${i + 1}`, label: n })), seasons: [['q-mam', 'March–May'], ['q-jja', 'June–August'], ['q-son', 'September–November'], ['q-djf', 'December–February']].map(([v, label]) => ({ v, label })),
       monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
-  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-1'));
+  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-2'));
   async function runSeries(kind) {
     const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; }
     if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }

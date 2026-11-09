@@ -49,13 +49,13 @@ export function openSeriesPreview(app, o) {
   app.append(back);
   const tiles = [...back.querySelectorAll('.sx-tile')], cvs = tiles.map((t) => t.querySelector('canvas')), status = back.querySelector('.sx-status');
   const box = () => { const r = cvs[0].getBoundingClientRect(); return { w: Math.max(40, r.width), h: Math.max(30, r.height) }; };
-  const R = { token: 0, painted: -1, busy: false };
+  const R = { token: 0, painted: -1, busy: false, sharp: false };   // sharp: every tile drawn at full resolution since the view last moved
   const put = (i, c) => { if (!c) return; const t = cvs[i]; t.width = c.width; t.height = c.height; t.getContext('2d').drawImage(c, 0, 0); };
   const shot = (i, sc = 1) => { if (R.painted !== i) { o.paint(i); R.painted = i; } const b = box(); return o.snap(b.w, b.h, sc); };
   // every tile, one after another (a newer request stops an older one); low resolution while the view moves
-  async function renderAll(sc = 1, first = -1) { const tk = ++R.token; const order = [...Array(n).keys()].sort((a, b) => (a === first ? -1 : b === first ? 1 : a - b));
+  async function renderAll(sc = 1, first = -1) { const tk = ++R.token; R.sharp = false; const order = [...Array(n).keys()].sort((a, b) => (a === first ? -1 : b === first ? 1 : a - b));
     for (let k = 0; k < order.length; k++) { if (tk !== R.token) return false; const i = order[k]; put(i, shot(i, sc)); status.textContent = sc < 1 ? 'Moving the view…' : k + 1 < n ? `Drawing ${k + 1} of ${n}…` : ''; await raf(); }
-    if (tk === R.token && sc < 1) return renderAll(1, first); return true; }
+    if (tk === R.token && sc < 1) return renderAll(1, first); if (tk === R.token) R.sharp = true; return true; }
   // one camera for every tile: a drag in any tile turns them all
   let drag = null, wheelT = 0;
   for (const [i, c] of cvs.entries()) {
@@ -92,7 +92,7 @@ export function openSeriesPreview(app, o) {
   const toBlob = (c) => new Promise((r) => c.toBlob(r, 'image/png'));
   const base = () => `${slug(m.project)}-${slug(m.study)}-${n === 12 ? '12-months' : n === 4 ? '4-seasons' : n}`;
   const busy = async (fn) => { if (R.busy) return; R.busy = true; back.querySelectorAll('[data-sx]').forEach((b) => { if (b.dataset.sx !== 'close') b.disabled = true; });
-    try { await fn(); } catch (e) { status.textContent = 'The export could not finish: ' + (e.message || e); } finally { R.busy = false; back.querySelectorAll('[data-sx]').forEach((b) => (b.disabled = false)); renderAll(1); } };
+    try { await fn(); } catch (e) { status.textContent = 'The export could not finish: ' + (e.message || e); } finally { R.busy = false; back.querySelectorAll('[data-sx]').forEach((b) => (b.disabled = false)); if (!R.sharp) renderAll(1); } };   // an export leaves the tiles as they were: redraw only an interrupted drawing (it froze the page for a while on a slow GPU)
   back.addEventListener('click', (e) => { const b = e.target.closest('[data-sx]'); if (!b) { if (e.target === back) close(); return; } const k = b.dataset.sx;
     if (k === 'close') close();
     else if (k === 'png') busy(async () => { const fr = await printFrames(); save(base() + '.png', await toBlob(sheet(fr))); status.textContent = 'Sheet saved.'; });
