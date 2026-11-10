@@ -2,7 +2,8 @@
 // grids of every study (Standard and Refined make the automatic grids 1.5 and 2 times finer; the interior studies take their
 // Standard and Fine detail); a click opens its card with the open study's time at each quality and the grids to set by hand.
 // The interior studies' own Draft / Standard / Fine tabs are gone. While a study runs, the top shows the time left and when it
-// should finish; then that it finished. Needs network access (site data).
+// should finish; then that it finished. Sun hours follows Ladybug's timestep for the quality (Refined: 12, every 5 minutes).
+// Needs network access (site data).
 const { chromium } = require('playwright'), assert = require('node:assert/strict');
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -69,8 +70,10 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const title0 = await p.title(); await p.click('[data-st=run]');
     await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/quality-run.png' : '/dev/null' }).catch(() => {}); 
     const bar = await p.evaluate(() => { const e = document.querySelector('.sp-runbar'); return e && !e.hidden ? { state: e.dataset.state, text: e.innerText, title: document.title } : null; });
-    assert(bar && bar.state === 'run' && /Sun Hours|Sun hours/i.test(bar.text) && /Refined/.test(bar.text) && /left · done around \d/.test(bar.text), 'the run at the top: ' + JSON.stringify(bar));
+    // a quick run can finish before the check looks: then the bar already says it finished
+    assert(bar && /Sun Hours|Sun hours/i.test(bar.text) && /Refined/.test(bar.text) && ((bar.state === 'run' && /left · done around \d/.test(bar.text)) || (bar.state === 'done' && /finished at \d/.test(bar.text))), 'the run at the top: ' + JSON.stringify(bar));
     await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
+    const meth = await p.evaluate(() => window.__wsStudy.state().res?.method || ''); assert.match(meth, /Ladybug’s Direct Sun Hours method[\s\S]*every 5 minutes \(timestep 12\)[\s\S]*0\.1 m above the ground/, 'Refined: Ladybug timestep 12: ' + meth);
     const done = await p.evaluate(() => { const e = document.querySelector('.sp-runbar'); return { state: e.dataset.state, text: e.innerText, hidden: e.hidden, title: document.title }; });
     assert(!done.hidden && done.state === 'done' && /finished at \d/.test(done.text) && /took/.test(done.text), 'then done: ' + JSON.stringify(done));
     await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/quality-done.png' : '/dev/null' }).catch(() => {}); 

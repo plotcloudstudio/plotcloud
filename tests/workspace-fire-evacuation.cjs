@@ -5,8 +5,9 @@
 const { chromium } = require('playwright'), assert = require('node:assert/strict');
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const fr3s = () => pg.frames().find((f) => f.url().includes('ws=persp')); let pg;
   try {
-    const p = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message)); const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
+    const p = pg = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message)); const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
     await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); });
     await p.goto(base + '/mvp/#/new-project'); await p.waitForFunction(() => window.__newProjectMap, null, { timeout: 30000 });
@@ -32,23 +33,35 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS the building scene: two levels with their rooms and doors, one stair between them', JSON.stringify(bs.levels));
     // the study, from Add simulation › Interior
     await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim="fire-evacuation"]'); await p.waitForTimeout(800);
-    let card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Fire Evacuation[\s\S]*Horizontal relocation[\s\S]*Then down the stairs[\s\S]*Staff on duty[\s\S]*CSA Z8000/);
+    let card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Fire Evacuation[\s\S]*Everyone out[\s\S]*Hospital: next zone[\s\S]*Hospital: then out[\s\S]*Building use[\s\S]*Detection and alarm[\s\S]*PD 7974-6/);
     assert.doesNotMatch(card, /Shade from the masses/); assert.equal(await p.locator('.sp-host').count(), 0, 'it runs in the Workspace, not on the old page');
-    await p.click('.sp-studycard [data-st-mode=down]'); await p.selectOption('.sp-studycard [data-eg=runs]', '10');
+    // 1 · everyone out (the default, 2026-11-09): the stages of the evacuation time, the exits and stairs, the purple routes
+    await p.selectOption('.sp-studycard [data-eg=runs]', '10'); await p.selectOption('.sp-studycard [data-eg=detect]', '60');
+    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
+    const ra = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view, results: s.res?.results, csv: s.res?.csv?.().slice(0, 3) }; });
+    assert.equal(ra.err, ''); assert.equal(ra.view, 'trails', 'the routes first'); assert.equal(ra.results.notFinished, 0, JSON.stringify(ra.rows)); assert(ra.results.people > 20, JSON.stringify(ra.results));
+    const keys = ra.rows.map((x) => x[0]).join(' | ');
+    for (const k of [/Everyone out \(RSET\)/, /1 · Detection and alarm/, /2 · Pre-movement/, /First person out/, /3 · Travel incl\. queueing/, /Queueing at doors and stairs/, /Last person out/, /Level 1 clear after/, /Level 2 clear after/, /Exit: Level 1/, /Stair: /]) assert.match(keys, k);
+    assert.match(ra.csv[0], /alarm_s,pre_movement_s,starts_walking_s,out_s,travel_s,queueing_s,distance_m,exit/);
+    const st = await fr3s().evaluate(() => window.__ws.egressState()); assert(st.trails && st.purple[0] > 500 && st.purple[1] > 500, 'purple routes on both floors: ' + JSON.stringify(st.purple)); assert(st.fire, 'the room of fire origin marked');
+    await p.screenshot({ path: (process.env.SHOT_DIR || require('os').tmpdir()) + '/evac-routes.png' });
+    console.log('PASS everyone out:', ra.rows.slice(0, 9).map((x) => x.join(' ')).join(' · '), '· purple px', st.purple.join('/'));
+    // 2 · the hospital: horizontal relocation, then down the stairs
+    await p.click('.sp-studycard [data-st-mode=down]'); card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Staff on duty[\s\S]*CSA Z8000/); await p.selectOption('.sp-studycard [data-eg=runs]', '10');
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view, results: s.res?.results }; });
-    assert.equal(r.err, ''); assert.equal(r.rows[0][0], 'Everyone out, median (P50)'); assert.match(r.rows[0][1], /^\d+(\.\d)? (s|min)$/); assert.equal(r.view, 'density');
+    assert.equal(r.err, ''); assert.equal(r.rows[0][0], 'Everyone out, median (P50)'); assert.match(r.rows[0][1], /^\d+(\.\d)? (s|min)$/); assert.equal(r.view, 'trails');
     assert.equal(r.results.patients, 32); assert.equal(r.results.staff, 8); assert.equal(r.results.notFinished, 0, JSON.stringify(r.rows));
     assert(r.rows.some(([k, v]) => k === 'Smoke compartments' && /Level 1 2 · Level 2 2/.test(v)), 'the smoke door splits each floor in two');
     console.log('PASS the run: horizontal then down,', r.rows.slice(0, 4).map((x) => x.join(' ')).join(' · '));
     // 3D: the building ghosted, a sheet on each floor, people on both floors and on the stair over the playback
-    const fr3 = p.frames().find((f) => f.url().includes('ws=persp')); await p.waitForTimeout(1500);
+    const fr3 = fr3s(); await p.waitForTimeout(1500);
     const g = await fr3.evaluate(() => S3._egress()); assert(g.on && g.ghost > 10, 'the building is ghosted: ' + JSON.stringify(g)); assert.equal(g.sheets.length, 2); assert(g.sheets[1] - g.sheets[0] > 3, 'one sheet on each floor: ' + g.sheets);
     const ys = new Set(); for (let i = 0; i < 30; i++) { const st = await fr3.evaluate(() => { const s = window.__ws.egressState(); window.__ws.egressSeek(s.n * Math.random()); return S3._egress(); }); st.ys.forEach((y) => ys.add(y)); }
     assert(ys.size >= 2, 'people on more than one floor: ' + [...ys]); console.log('PASS 3D: the building ghosted, sheets at', g.sheets.join(' and '), 'm, people at heights', [...ys].sort((a, b) => a - b).join(', '));
     // playback controls: pause, scrub, speed; the views switch without running again
     await p.click('.sp-studycard [data-eg=play]'); assert.equal(await fr3.evaluate(() => window.__ws.egressState().playing), false); await p.click('.sp-studycard [data-eg=play]'); assert.equal(await fr3.evaluate(() => window.__ws.egressState().playing), true);
-    for (const v of ['time', 'wait', 'density']) { await p.click(`.sp-studycard [data-st-view=${v}]`); await p.waitForTimeout(400); assert.equal(await p.evaluate(() => window.__wsStudy.state().res.view), v); }
+    for (const v of ['time', 'wait', 'density', 'trails']) { await p.click(`.sp-studycard [data-st-view=${v}]`); await p.waitForTimeout(400); assert.equal(await p.evaluate(() => window.__wsStudy.state().res.view), v); }
     assert(await p.locator('.sp-studycard svg.sp-hist polyline').count() >= 11, 'the chart has a curve per run and the run shown');
     console.log('PASS playback: pause and play, the three views, the curve of every run');
     // 2D: the current level's sheet and its people

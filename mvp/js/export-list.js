@@ -1,5 +1,5 @@
 // The export list (2026-11-09): what a project's report will hold, collected from the studies (a view, a series of 12 months or
-// 4 seasons, a section), kept per project in this browser (IndexedDB), then exported together: a report (PDF, A3 landscape:
+// 4 seasons, a section), kept per project in this browser (IndexedDB), then exported together: a report (PDF, US Letter portrait:
 // cover with contents, one page per item with its pictures, legend, key results, method and basis, and a closing page on the
 // basis and limits), editable slides (PPTX), or every picture (ZIP). Every item records what it was computed from, and the list
 // marks an item whose model has changed since.
@@ -48,20 +48,21 @@ export function renderList(host, list, { project, modelKey, onChange, onExport, 
 
 // ---- the report
 // ---- the report, written as a North American building performance simulation report (2026-11-09): English (US spelling),
-// 11 × 17 in (ANSI B / Tabloid) landscape, dates written out; a cover with the project information, a summary of results, one
+// US Letter (8.5 × 11 in) portrait, dates written out; a cover with the project information, a summary of results, one
 // chapter per analysis (objective, method, references, inputs and boundary conditions, results, assumptions and limitations,
 // numbered figures) and a closing page on the limits. References are those the methods use, and are given as informative.
 const LIMITS = 'The analyses in this report were computed in PlotCloud from the model, inputs and settings stated in each chapter. They are design-stage screening analyses intended to inform design decisions. They are not a certification, a code-compliance demonstration, a LEED submission or an engineering sign-off. Each result applies only to the model version and the project conditions it states; when either changes, the analysis should be run again.';
 const DOC = {
-  sunhours: { name: 'Direct Sunlight Hours', refs: ['NOAA Solar Calculator algorithm (solar position)'], limit: 'Direct sun only: no diffuse skylight, reflected light or atmospheric attenuation. A screening of sun access, not a shadow study prepared to a municipal terms of reference.' },
+  sunhours: { name: 'Direct Sunlight Hours', refs: ['Ladybug Tools, ladybug-core Sunpath and LB Direct Sun Hours (method followed: sun path, timestep, 0.1 m test-point offset, 90° cut-off)', 'NOAA Solar Calculator algorithm (solar position, as implemented in Ladybug)'], limit: 'Direct sun only: no diffuse skylight, reflected light or atmospheric attenuation. A screening of sun access, not a shadow study prepared to a municipal terms of reference.' },
   radiation: { name: 'Incident Solar Radiation', refs: ['Project weather file (EPW): direct normal and diffuse horizontal irradiance', 'NOAA Solar Calculator algorithm (solar position)'], limit: 'Ground-reflected radiation is not included; surroundings beyond the modeled context are taken as unobstructed.' },
-  skyview: { name: 'Sky View Factor', refs: [], limit: 'Geometric sky exposure only; no weather data.' },
+  skyview: { name: 'Sky View', refs: ['Ladybug Tools, LB View Percent (Sky View) and ladybug-core view_sphere dome patches (method followed: patch resolution, 0.1 m offset, 2·cos weighting)', 'Tregenza, P. R. (1987). Subdivision of the sky hemisphere for luminance measurements. Lighting Research & Technology 19(1)'], limit: 'Geometric sky exposure only; no weather data.' },
   utci: { name: 'Outdoor Thermal Comfort (UTCI)', refs: ['Bröde et al. (2012), Deriving the operational procedure for the Universal Thermal Climate Index (UTCI), International Journal of Biometeorology 56'], limit: 'Wind speed and mean radiant temperature are simplified for screening.' },
   wind: { name: 'Pedestrian-Level Wind', refs: ['Two-dimensional lattice-Boltzmann flow at pedestrian height (speed ratio to the reference wind)'], limit: 'A two-dimensional slice of the flow at pedestrian height: no flow over roofs or down facades. It screens channelling and shelter; it is not a wind tunnel test or a three-dimensional CFD study.' },
   daylight: { name: 'Daylight Performance (sDA300/50% and ASE1000,250)', refs: ['IES LM-83, Approved Method: IES Spatial Daylight Autonomy (sDA) and Annual Sunlight Exposure (ASE)', 'LEED v4.1 BD+C, EQ Credit: Daylight, Option 1 (informative)'], limit: 'A screening of the metrics LEED v4.1 Daylight uses, not a simulation prepared for a LEED submission.' },
   vent: { name: 'Natural Ventilation (Air Change Rate)', refs: ['ASHRAE Handbook—Fundamentals, Chapter 24: Airflow Around Buildings (informative)', 'ANSI/ASHRAE Standard 62.1, Natural Ventilation Procedure (informative)', 'AIVC, Guide to Energy Efficient Ventilation (wind pressure coefficients)', 'de Gids and Phaff (1982), single-sided ventilation'], limit: 'Each room is treated as a fully mixed zone; results are air change rates, not air speeds or temperatures. Not CFD and not a code calculation.' },
   acoustics: { name: 'Room Acoustics (Reverberation Time)', refs: ['DIN 18041:2016, Acoustic quality in rooms (reverberation time targets used)', 'ANSI/ASA S12.60 and LEED v4.1 EQ Credit: Acoustic Performance (informative North American references)'], limit: 'Statistical reverberation (Sabine or Eyring) from room volume and finishes; no ray tracing. STI is estimated from reverberation only.' },
   spacesyntax: { name: 'Spatial Configuration (Visibility Graph Analysis)', refs: ['Turner, Doxa, O’Sullivan and Penn (2001), From isovists to visibility graphs, Environment and Planning B 28'], limit: 'Configurational analysis of the plan; it does not predict occupant numbers.' },
+  'fire-evacuation': { name: 'Fire Evacuation (Required Safe Egress Time)', refs: ['SFPE Handbook of Fire Protection Engineering, 5th ed. (2016), Employing the Hydraulic Model in Assessing Emergency Movement (walking speeds, specific flows of doors and stairs)', 'BSI PD 7974-6:2019, Human factors: life safety strategies, occupant evacuation, behaviour and condition (detection, alarm and pre-movement times)', 'IBC 2021 Table 1004.5, Maximum floor area allowances per occupant (occupant load)'], limit: 'A screening of the evacuation time (RSET): no fire or smoke is computed, so there is no available safe egress time (ASET) to compare with, and it is not a code compliance check. Pre-movement times and occupant loads are assumptions stated in the inputs; routes through the room of fire origin stay open and lifts are not used.' },
   section: { name: 'Building Section', refs: [], limit: '' } };
 const docOf = (it) => DOC[it.study] || { name: it.title, refs: [], limit: '' };
 const usage = (t) => String(t || '').replace(/\bcolour/g, 'color').replace(/\bColour/g, 'Color').replace(/\bcentre/g, 'center').replace(/\bmetres\b/g, 'meters').replace(/\bmetre\b/g, 'meter').replace(/\bmodelled\b/g, 'modeled').replace(/\banalyse/g, 'analyze');
@@ -93,7 +94,7 @@ export async function exportList(kind, list, ctx) {
 }
 
 async function pdf(items, title, ctx) {
-  const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'landscape', unit: 'mm', format: 'tabloid', compress: true }); d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
+  const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true }); d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
   d.setProperties({ title, subject: `${ctx.project}${ctx.site ? ' · ' + ctx.site : ''}`, author: ctx.author || '', creator: 'PlotCloud', keywords: 'building performance simulation, screening analysis' });
   const W = d.internal.pageSize.getWidth(), H = d.internal.pageSize.getHeight(), mg = 16, ink = [17, 24, 39], sub = [75, 85, 99], line = [209, 213, 219], N = items.length + 3, issued = usDate(Date.now());
   const foot = (n) => { d.setDrawColor(...line); d.setLineWidth(0.2); d.line(mg, H - 12, W - mg, H - 12); d.setFontSize(8); d.setTextColor(...sub); d.text(`${ctx.project} · ${title} · Issued ${issued}`, mg, H - 7.5); d.text(`Page ${n} of ${N}`, W - mg, H - 7.5, { align: 'right' }); };
@@ -102,45 +103,44 @@ async function pdf(items, title, ctx) {
   const table = (rows, x, y, w, kw = 0.45, size = 8, maxY = H - 22) => { d.setFontSize(size); for (const [k, v] of rows) { if (y > maxY) break; const kl = d.splitTextToSize(plain(k), w * kw - 2), vl = d.splitTextToSize(plain(v), w * (1 - kw)), h = Math.max(kl.length, vl.length) * size * 0.4 + 1.6; d.setTextColor(...sub); d.text(kl, x, y + size * 0.36); d.setTextColor(...ink); d.text(vl, x + w * kw, y + size * 0.36); d.setDrawColor(238, 240, 243); d.line(x, y + h, x + w, y + h); y += h; } return y; };
   const band = () => { d.setFillColor(17, 24, 39); d.rect(0, 0, W, 4, 'F'); };
   // cover: title, the project information, the first figure
-  const CW = 178; d.setFillColor(17, 24, 39); d.rect(0, 0, W, 8, 'F'); d.setFontSize(9); d.setTextColor(...sub); d.text('BUILDING PERFORMANCE SIMULATION · DESIGN-STAGE SCREENING', mg, 30);
-  d.setTextColor(...ink); d.setFontSize(26); const tl = d.splitTextToSize(title, CW); d.text(tl, mg, 42); let y = 42 + tl.length * 10 + 4;
-  y = head('Project information', mg, y + 4);
-  y = table([['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used by the analyses in this report'], ['Model', ctx.version], ['Project conditions', `Revision ${ctx.revision ?? '—'}`], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Software', 'PlotCloud, web-based building performance screening'], ['Report status', 'Design-stage screening analysis; not a compliance submission']], mg, y, CW, 0.32, 9);
-  if (items[0]?.pictures[0]) { const b0 = items[0].pictures[0].blob, im = await imgOf(b0), x0 = mg + CW + 14, ww = W - mg - x0, hh = Math.min(H - 70, ww * im.height / im.width), w2 = hh * im.width / im.height;
-    d.addImage(await dataURL(b0), 'JPEG', x0 + (ww - w2) / 2, 30, w2, hh, undefined, 'FAST'); d.setFontSize(8); d.setTextColor(...sub); d.text(`${headOf(items[0])}${items[0].pictures.length > 1 ? ', ' + (items[0].pictures[0].label || '') : ''}`, x0 + (ww - w2) / 2, 30 + hh + 5); }
+  const CW = W - 2 * mg; d.setFillColor(17, 24, 39); d.rect(0, 0, W, 8, 'F'); d.setFontSize(9); d.setTextColor(...sub); d.text('BUILDING PERFORMANCE SIMULATION · DESIGN-STAGE SCREENING', mg, 26);
+  d.setTextColor(...ink); d.setFontSize(24); const tl = d.splitTextToSize(title, CW); d.text(tl, mg, 38); let y = 38 + tl.length * 9.5 + 2;
+  if (items[0]?.pictures[0]) { const b0 = items[0].pictures[0].blob, im = await imgOf(b0), hh = Math.min(100, CW * im.height / im.width), w2 = hh * im.width / im.height, x0 = mg + (CW - w2) / 2;
+    d.addImage(await dataURL(b0), 'JPEG', x0, y, w2, hh, undefined, 'FAST'); d.setFontSize(8); d.setTextColor(...sub); d.text(`${headOf(items[0])}${items[0].pictures.length > 1 ? ', ' + (items[0].pictures[0].label || '') : ''}`, x0, y + hh + 4.5); y += hh + 10; }
+  y = head('Project information', mg, y + 2);
+  y = table([['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used by the analyses in this report'], ['Model', ctx.version], ['Project conditions', `Revision ${ctx.revision ?? '—'}`], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Software', 'PlotCloud, web-based building performance screening'], ['Report status', 'Design-stage screening analysis; not a compliance submission']], mg, y, CW, 0.3, 9);
   foot(1);
   // summary of results, with the contents
-  d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text('Summary of Results', mg, 20);
+  d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text('Summary of Results', mg, 20);
   y = wrap('Each analysis below is described in its own chapter: objective, method, references, inputs and boundary conditions, results, and assumptions and limitations.', W - 2 * mg, 9.5, mg, 30, sub) + 4;
-  const cx = [mg, mg + 12, mg + 150, W - mg - 38, W - mg - 14], hdr = ['No.', 'Analysis', 'Headline result', 'Figures', 'Page']; d.setFontSize(9); d.setTextColor(...sub); hdr.forEach((t, k) => d.text(t, cx[k], y)); d.setDrawColor(...line); d.line(mg, y + 2, W - mg, y + 2); y += 7;
-  items.forEach((it, i) => { d.setFontSize(9.5); const an = d.splitTextToSize(headOf(it), 132), hl = d.splitTextToSize(headline(it), cx[3] - cx[2] - 6), h = Math.max(an.length, hl.length) * 4.2 + 2.4; d.setTextColor(...ink); d.text(String(i + 1), cx[0], y); d.text(an, cx[1], y); d.setTextColor(...sub); d.text(hl, cx[2], y); d.text(String(it.pictures.length), cx[3], y); d.text(String(i + 3), cx[4], y); d.setDrawColor(238, 240, 243); d.line(mg, y + h - 3, W - mg, y + h - 3); y += h; });
+  const cx = [mg, mg + 10, mg + 82, W - mg - 26, W - mg - 9], hdr = ['No.', 'Analysis', 'Headline result', 'Figures', 'Page']; d.setFontSize(9); d.setTextColor(...sub); hdr.forEach((t, k) => d.text(t, cx[k], y)); d.setDrawColor(...line); d.line(mg, y + 2, W - mg, y + 2); y += 7;
+  items.forEach((it, i) => { d.setFontSize(9.5); const an = d.splitTextToSize(headOf(it), cx[2] - cx[1] - 4), hl = d.splitTextToSize(headline(it), cx[3] - cx[2] - 6), h = Math.max(an.length, hl.length) * 4.2 + 2.4; d.setTextColor(...ink); d.text(String(i + 1), cx[0], y); d.text(an, cx[1], y); d.setTextColor(...sub); d.text(hl, cx[2], y); d.text(String(it.pictures.length), cx[3], y); d.text(String(i + 3), cx[4], y); d.setDrawColor(238, 240, 243); d.line(mg, y + h - 3, W - mg, y + h - 3); y += h; });
   d.setFontSize(9.5); d.setTextColor(...ink); d.text(String(items.length + 1), cx[0], y); d.text('Assumptions, Limitations and Disclaimer', cx[1], y); d.setTextColor(...sub); d.text(String(N), cx[4], y); foot(2);
   // one chapter per analysis: the figures across the page; under them objective and method | references, inputs | results, limitations
-  for (const [i, it] of items.entries()) { d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); band(); const D = docOf(it), n = i + 1;
-    d.setTextColor(...ink); d.setFontSize(17); d.text(`${n}. ${headOf(it)}`, mg, 19); d.setFontSize(9); d.setTextColor(...sub); d.text(`${it.kind === 'series' ? 'Series' : it.kind === 'section' ? 'Section' : 'Analysis view'} · ${it.pictures.length} figure${it.pictures.length === 1 ? '' : 's'}`, mg, 25.5);
-    const infoH = 92, gx = mg, gw = W - 2 * mg, gy = 31, gh = H - gy - 20 - infoH - 3, P = it.pictures, cols = it.cols || (P.length === 12 ? 4 : P.length === 4 ? 2 : Math.ceil(Math.sqrt(P.length))), rows = Math.ceil(P.length / cols);
+  for (const [i, it] of items.entries()) { d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); const D = docOf(it), n = i + 1;
+    d.setTextColor(...ink); d.setFontSize(17); const tt = d.splitTextToSize(`${n}. ${headOf(it)}`, W - 2 * mg).slice(0, 2), ty = (tt.length - 1) * 7; d.text(tt, mg, 19); d.setFontSize(9); d.setTextColor(...sub); d.text(`${it.kind === 'series' ? 'Series' : it.kind === 'section' ? 'Section' : 'Analysis view'} · ${it.pictures.length} figure${it.pictures.length === 1 ? '' : 's'}`, mg, 25.5 + ty);
+    const infoH = 122, gx = mg, gw = W - 2 * mg, gy = 31 + ty, gh = H - gy - 20 - infoH - 3, P = it.pictures, cols = it.cols || (P.length === 12 ? 4 : P.length === 4 ? 2 : Math.ceil(Math.sqrt(P.length))), rows = Math.ceil(P.length / cols);
     const im0 = await imgOf(P[0].blob), ar = im0.height / im0.width, gap = 3.5, cap = 4.6, fw = Math.min((gw - (cols - 1) * gap) / cols, ((gh - (rows - 1) * gap) / rows - cap) / ar), fh = fw * ar, x0 = gx + (gw - (cols * fw + (cols - 1) * gap)) / 2;
     for (const [k, pic] of P.entries()) { const x = x0 + (k % cols) * (fw + gap), yy = gy + Math.floor(k / cols) * (fh + cap + gap); d.setFontSize(8); d.setTextColor(...ink); d.text(`Figure ${n}.${k + 1}${pic.label ? '  ' + pic.label : ''}`, x, yy + 3.4);
       d.addImage(await dataURL(pic.blob), 'JPEG', x, yy + cap, fw, fh, undefined, 'FAST'); d.setDrawColor(229, 231, 235); d.rect(x, yy + cap, fw, fh); }
-    const iy = H - 20 - infoH, colW = (W - 2 * mg - 2 * 10) / 3, c1 = mg, c2 = mg + colW + 10, c3 = c2 + colW + 10; d.setDrawColor(...line); d.line(mg, iy - 3, W - mg, iy - 3);
+    const iy = H - 20 - infoH, colW = (W - 2 * mg - 10) / 2, c1 = mg, c2 = mg + colW + 10, c3 = c2; d.setDrawColor(...line); d.line(mg, iy - 3, W - mg, iy - 3);
     // column 1: objective, method
     let y1 = iy + 3; if (it.objective) { y1 = head('Objective', c1, y1); y1 = wrap(usage(plain(it.objective)), colW, 7.8, c1, y1, sub) + 3; }
     y1 = head('Method', c1, y1); y1 = wrap(methodText(it.method) || '—', colW, 7.8, c1, y1, sub) + 2;
-    // column 2: references, inputs and boundary conditions
-    let y2 = iy + 3; if (D.refs.length) { y2 = head('References', c2, y2); for (const r of D.refs) y2 = wrap('• ' + r, colW, 7.6, c2, y2, sub) + 0.6; y2 += 2.5; }
-    y2 = head('Inputs and Boundary Conditions', c2, y2); y2 = table(inputsOf(it), c2, y2, colW, 0.4, 7.6);
-    // column 3: legend, results, assumptions and limitations
+    if (D.refs.length) { y1 = head('References', c1, y1 + 1); for (const r of D.refs) y1 = wrap('• ' + r, colW, 7.4, c1, y1, sub) + 0.6; }
+    // column 2: legend, results, inputs and boundary conditions, assumptions and limitations
     let y3 = iy + 3; if (it.legend) { const L = it.legend, lw = colW - 30, lh = 3.6, st = L.stops, hex = (c) => { const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})/i.exec(c); return m ? m.slice(1).map((v) => parseInt(v, 16)) : (/rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(c) || [0, 128, 128, 128]).slice(1).map(Number); };
       const at = (t) => { const s2 = t * (st.length - 1), k = Math.min(st.length - 2, Math.floor(s2)), u = s2 - k, a = hex(st[Math.max(0, k)]), b = hex(st[Math.min(st.length - 1, k + 1)]); return a.map((v, j) => Math.round(v + (b[j] - v) * u)); };
       y3 = head('Legend', c3, y3); for (let k = 0; k < 90; k++) { d.setFillColor(...(st.length > 1 ? at(k / 89) : hex(st[0]))); d.rect(c3 + lw * k / 90, y3, lw / 90 + 0.05, lh, 'F'); }
       d.setDrawColor(107, 114, 128); d.rect(c3, y3, lw, lh); d.setFontSize(7.4); d.setTextColor(...ink); for (const t of [0, 0.5, 1]) d.text(num(L.lo + (L.hi - L.lo) * t, L.dec), c3 + lw * t, y3 + lh + 3.4, { align: t === 0 ? 'left' : t === 1 ? 'right' : 'center' }); d.text(d.splitTextToSize(L.unit, 28), c3 + lw + 2, y3 + lh - 0.4); y3 += lh + 8; }
-    if (it.rows && it.rows.length) { y3 = head('Results', c3, y3); y3 = table(it.rows.slice(0, 12), c3, y3, colW, 0.52, 7.6, H - 46) + 3; }
-    const lim = [D.limit, ...(it.notes || []).map(usage)].filter(Boolean); if (lim.length) { y3 = head('Assumptions and Limitations', c3, y3); for (const t of lim) y3 = wrap(t, colW, 7.4, c3, y3, sub) + 1; }
+    if (it.rows && it.rows.length) { y3 = head('Results', c3, y3); y3 = table(it.rows.slice(0, 12), c3, y3, colW, 0.52, 7.6, H - 60) + 3; }
+    y3 = head('Inputs and Boundary Conditions', c3, y3); y3 = table(inputsOf(it), c3, y3, colW, 0.4, 7.4, H - 50) + 3;
+    const lim = [D.limit, ...(it.notes || []).map(usage)].filter(Boolean); if (lim.length) { y3 = head('Assumptions and Limitations', c3, y3); for (const t of lim) { if (y3 > H - 26) break; y3 = wrap(t, colW, 7.2, c3, y3, sub) + 1; } }
     foot(i + 3); }
   // assumptions, limitations and disclaimer
-  d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Assumptions, Limitations and Disclaimer`, mg, 20);
+  d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Assumptions, Limitations and Disclaimer`, mg, 20);
   y = wrap(LIMITS, W - 2 * mg, 10.5, mg, 31, ink, 0.45) + 5; y = head('By analysis', mg, y + 2);
-  for (const [i, it] of items.entries()) { d.setFontSize(9.5); d.setTextColor(...ink); d.text(`${i + 1}. ${headOf(it)}`, mg, y); y = wrap([docOf(it).limit, `${it.basis || ''} · computed ${usTime(it.at)}`].filter(Boolean).join(' '), W - 2 * mg - 8, 8.4, mg + 6, y + 5, sub) + 3; if (y > H - 30) { foot(N); d.addPage('tabloid', 'landscape'); d.setFont('DejaVu'); y = 24; } }
+  for (const [i, it] of items.entries()) { d.setFontSize(9.5); d.setTextColor(...ink); d.text(`${i + 1}. ${headOf(it)}`, mg, y); y = wrap([docOf(it).limit, `${it.basis || ''} · computed ${usTime(it.at)}`].filter(Boolean).join(' '), W - 2 * mg - 8, 8.4, mg + 6, y + 5, sub) + 3; if (y > H - 30) { foot(N); d.addPage('letter', 'portrait'); d.setFont('DejaVu'); y = 24; } }
   y = head('Site and climate data', mg, y + 3); wrap(`${[ctx.site, ctx.coords].filter(Boolean).join(' · ') || '—'}. Climate data: ${ctx.weather || 'not used by the analyses in this report'}. Project conditions revision ${ctx.revision ?? '—'}. Units: SI.`, W - 2 * mg, 9, mg, y, sub);
   foot(N);
   return d.output('blob');

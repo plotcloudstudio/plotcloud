@@ -36,11 +36,25 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.match(gen.tot, /6 pictures · about[\s\S]*done around \d/, gen.tot); assert.match(gen.go, /Generate 6 pictures/);
     await p.screenshot({ path: out + '/xl-generate.png' });
     console.log('PASS Generate pictures:', JSON.stringify(gen.t), '|', gen.tot.replace(/\s+/g, ' '));
+    // 2b · Preview after the time: runs the study once, the person sets the 3D view, Use this view keeps it; the pictures come from it
+    assert.equal(await p.locator('.xl-gr.on [data-gpv=sunhours]').innerText(), 'Preview'); assert.equal(await p.locator('[data-gpv=section]').count(), 0, 'no preview for the section');
+    const tBox = await p.locator('.xl-gr.on:has([data-gpv=sunhours]) .xl-t').boundingBox(), pvBox = await p.locator('[data-gpv=sunhours]').boundingBox(); assert(pvBox.x >= tBox.x + tBox.width - 1, 'Preview sits after the time');
+    await p.click('[data-gpv=sunhours]'); await p.waitForSelector('.xl-pvbar', { timeout: 240000 }); assert(await p.locator('.sp-pop-xl').isHidden(), 'the list steps aside for the preview'); const pvb = await p.locator('.xl-pvbar').boundingBox(); assert(pvb && pvb.y > 40 && pvb.y < 160 && pvb.width > 300, 'the preview bar is on screen at the top: ' + JSON.stringify(pvb));
+    assert.match(await p.locator('.xl-pvbar').innerText(), /Preview · Sun hours[\s\S]*Orbit, pan and zoom[\s\S]*Use this view/);
+    const cam0 = await p.evaluate(() => __ws2.inst.persp.ws.camView());
+    await p.screenshot({ path: out + '/xl-preview.png' });
+    await p.evaluate(() => __ws2.inst.persp.ws.camMove({ orbit: [0.7, 0.15], zoom: 0.8 })); await p.waitForTimeout(400);   // as an orbit and a zoom in the 3D view
+    const cam1 = await p.evaluate(() => __ws2.inst.persp.ws.camView()); assert.notDeepEqual(cam1.p, cam0.p, 'the view turned');
+    await p.click('.xl-pvbar [data-pv=use]'); await p.waitForTimeout(600); assert.equal(await p.locator('.xl-pvbar').count(), 0); assert(!(await p.locator('.sp-pop-xl').isHidden()), 'back to the list');
+    assert.equal(await p.locator('[data-gpv=sunhours]').innerText(), 'View set ✓');
+    await p.evaluate(() => { const w = __ws2.inst.persp.ws, f = w.snapAt.bind(w); window.__snapCams = []; w.snapAt = (...a) => { window.__snapCams.push(w.camView()); return f(...a); }; });
+    console.log('PASS Preview: the view set and kept');
     // 3 · generate: one after another, the run at the top says which; all three join the list
     await p.click('[data-g=go]'); await p.waitForFunction(() => /1 of 3 · Sun hours/i.test(document.querySelector('.sp-runbar')?.innerText || ''), null, { timeout: 30000 });
     await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent === 3, null, { timeout: 900000 });
     await p.waitForFunction(() => /3 of 3 made for the export list/.test(document.querySelector('.sp-runbar')?.innerText || ''), null, { timeout: 60000 });
     assert.equal(await p.locator('.sp-pop-sec [data-sec=xl]').count(), 0, 'no Add to export list on the Section card');
+    const snapCams = await p.evaluate(() => window.__snapCams.slice(0, 4)); assert.equal(snapCams.length, 4); for (const c of snapCams) assert(c.p.every((v, k) => Math.abs(v - cam1.p[k]) < 1e-6) && c.t.every((v, k) => Math.abs(v - cam1.t[k]) < 1e-6), 'the 4 season pictures from the view set: ' + JSON.stringify([c, cam1]));
     console.log('PASS generated: 3 items');
 
     // 4 · the list: three items in order, move the section up, a title
@@ -60,7 +74,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 6 · the exports
     const dl = async (k) => { const [d] = await Promise.all([p.waitForEvent('download', { timeout: 240000 }), p.click(`.sp-pop-xl [data-xl=${k}]`)]); const f = out + '/' + d.suggestedFilename(); await d.saveAs(f); return { f, buf: fs.readFileSync(f), name: d.suggestedFilename() }; };
     const pdf = await dl('pdf'); assert.match(pdf.name, /qa-report-block-simulation-report-\d{4}-\d\d-\d\d\.pdf$/); const info = execFileSync('pdfinfo', [pdf.f]).toString(), pages = +/Pages:\s+(\d+)/.exec(info)[1];
-    assert.equal(pages, 6, 'cover, summary, three chapters, limitations'); assert.match(info, /Page size:\s+1224 x 792/, '11 × 17 in landscape (North American)');
+    assert.equal(pages, 6, 'cover, summary, three chapters, limitations'); assert.match(info, /Page size:\s+612 x 792/, 'US Letter portrait (North American)');
     const fonts = execFileSync('pdffonts', [pdf.f]).toString(); assert.match(fonts, /DejaVu\s+CID TrueType\s+Identity-H\s+yes/, 'the font embedded');
     const text = execFileSync('pdftotext', ['-layout', pdf.f, '-']).toString().replace(/\s+/g, ' ');   // lines joined: a sentence may wrap
     for (const re of [/QA report · sun and air/, /Project information/, /Report status\s+Design-stage screening analysis; not a compliance submission/, /Prepared by\s+QA Architect/, /Date of issue\s+[A-Z][a-z]+ \d{1,2}, \d{4}/, /Summary of Results/, /Headline result/,

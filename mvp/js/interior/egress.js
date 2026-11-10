@@ -210,8 +210,90 @@ export function simulate(B, pop, seed, o = {}) {
     pats: pats.map((u) => ({ kind: u.kind, li: u.li0, k: u.k0, room: u.roomIx, t1: u.t1, t2: u.t2, t: down ? u.t2 : u.t1, moved: u.stage > 0, wait: u.waitStaff || 0 })), staffWait: staffWait / Math.max(1, pats.filter((u) => u.need && u.stage > 0).length), curve, doorMax: Array.from(doorMax), stairMax, peak, frames, kinds: U.map((u) => u.kind), perLevel, nPat: pats.length, nStaff: staffU.length, mixCount: { amb: pats.filter((u) => u.kind === 'amb').length, asst: pats.filter((u) => u.kind === 'asst').length, bed: pats.filter((u) => u.kind === 'bed').length } };
 }
 
+// ---- everyone out (2026-11-09): a fire in any building, the way an evacuation unfolds -------------------------------------------
+// The fire starts in a room (random each run, or chosen). The people in that room notice it and leave first; everyone else hears
+// the alarm after the detection and alarm time and then takes their pre-movement time (noticing, checking, gathering) before
+// walking: a lognormal through the 1st and 99th percentiles of the building use (after PD 7974-6:2019 and the SFPE Handbook;
+// assumptions to edit). Then each walks to the nearest way out: the outside doors on the exit level, the stairs down from the
+// floors above (up from a basement), slowed in a crowd (SFPE), doors letting through 1.32 people per second per metre and stair
+// flights 1.1 (SFPE specific flows), queues at both. RSET, in the terms of PD 7974-6: detection and alarm + pre-movement + travel
+// (with queueing). No fire or smoke is computed (no ASET), and the room of fire origin stays open to pass through.
+// occupant load factors, m² per person, after IBC 2021 Table 1004.5 (gross or net as there); 0: nobody is counted there
+const LOAD = [[/corridor|hall(way)?\b|lobby|passage|circulation|landing|stair|lift|elevator|toilet|\bwc\b|bath|shower|washroom|restroom|shaft|duct|走廊|过道|楼梯|电梯|卫生间|厕所|浴室/i, 0],
+  [/class|lecture|seminar|tutorial|教室|课室/i, 1.9], [/meeting|conference|assembly|auditorium|theat|cinema|hall|chapel|worship|会议|礼堂|报告厅/i, 1.4], [/dining|restaurant|cafe|café|canteen|bar\b|餐厅|食堂|咖啡/i, 1.4],
+  [/retail|shop|sales|showroom|商店|零售|商铺/i, 5.6], [/gym|fitness|exercise|dance|健身/i, 4.6], [/librar|reading|图书|阅览/i, 4.6], [/lab|workshop|studio|实验|工作室/i, 4.6],
+  [/ward|patient|bed bay|icu|病房/i, 22.3], [/bed|living|dining room|apartment|suite|unit|guest|hotel|dwelling|lounge|family|卧室|客厅|起居|公寓|客房/i, 18.6], [/kitchen|厨房/i, 18.6],
+  [/stor|plant|mechanical|electrical|utility|server|garage|parking|库|机房|设备|车库/i, 27.9], [/office|work|admin|reception|办公|前台/i, 13.9]];
+export const USES = { office: { name: 'Office (awake, familiar)', p1: 30, p99: 120 }, school: { name: 'School (awake, staff-led)', p1: 30, p99: 120 },
+  retail: { name: 'Shop or assembly (awake, unfamiliar)', p1: 30, p99: 180 }, residential: { name: 'Homes (may be asleep)', p1: 60, p99: 600 }, hotel: { name: 'Hotel (asleep, unfamiliar)', p1: 120, p99: 900 } };
+export function loadFactor(name) { for (const [re, f] of LOAD) if (re.test(name || '')) return f; return 9.3; }
+export function occupants(B) {
+  const people = [];
+  for (const L of B.levels) for (const r of L.rooms) { const f = loadFactor(r.name); if (!f) continue; const cells = []; for (let k = 0; k < B.N; k++) if (L.room[k] === r.ri && L.walk[k] && L.door[k] < 0) cells.push(k); if (!cells.length) continue;
+    const n = Math.min(Math.floor(cells.length / 2), Math.max(r.area >= 4 ? 1 : 0, Math.round(r.area / f))); for (let i = 0; i < n; i++) people.push({ li: L.li, room: r.ri, roomName: r.name, k: cells[Math.floor((i + 0.5) * cells.length / n)], f }); }
+  return people;
+}
+export function simulateAll(B, people, seed, o = {}) {
+  const r = rng(seed), dt = 0.5, horizon = o.horizon || DEFAULTS.horizon, { W, N, levels, doors, stairs } = B, use = USES[o.use] || USES.office, detect = Number.isFinite(+o.detect) ? +o.detect : 60, slow = o.slow ?? 0.04;
+  const occ = levels.map(() => new Uint8Array(N)), peak = levels.map(() => new Float32Array(N));
+  const rooms = []; for (const p of people) if (!rooms.some((q) => q.li === p.li && q.room === p.room)) rooms.push({ li: p.li, room: p.room });
+  let fire = rooms[Math.floor(r() * rooms.length)]; if (o.fire && o.fire !== 'random') fire = { li: o.fire.li, room: o.fire.room };
+  const zq = (2.326), med = Math.sqrt(use.p1 * use.p99), sg = Math.log(use.p99 / use.p1) / (2 * zq);
+  const downCells = (li) => stairs.filter((s) => s.hi === li).flatMap((s) => s.acc[li]), upCells = (li) => stairs.filter((s) => s.lo === li).flatMap((s) => s.acc[li]), exitCells = (li) => doors.filter((d) => d.li === li && d.ext).flatMap((d) => d.cells);
+  const fieldOf = (li) => (li === B.exitLv ? B.field('exit', li, exitCells(li), false) : li > B.exitLv ? B.field('down', li, downCells(li), false) : B.field('upx', li, upCells(li), false));
+  const U = people.map((p, id) => { const imp = r() < slow, own = p.li === fire.li && p.room === fire.room;
+    const tAlarm = own ? 0 : detect, pre = own ? 10 + 20 * r() : clamp(logn(r, med, sg), use.p1 * 0.5, use.p99 * 2);
+    return { id, kind: imp ? 'imp' : 'occ', li: p.li, li0: p.li, k0: p.k, k: p.k, room: p.room, roomName: p.roomName, own, tAlarm, pre, tStart: tAlarm + pre, v0: imp ? clamp(0.6 + 0.1 * normal(r), 0.4, 0.8) : clamp(1.19 + 0.2 * normal(r), 0.6, 1.6),
+      vs: imp ? clamp(0.35 + 0.05 * normal(r), 0.25, 0.45) : clamp(0.85 + 0.15 * normal(r), 0.5, 1.1), state: 'idle', d: 0, dist: 0, queue: 0, tOut: NaN, exit: -1 }; });
+  for (const u of U) occ[u.li][u.k]++;
+  const doorMax = new Float32Array(doors.length), stairMax = stairs.map(() => 0), frames = o.record ? [] : null, curve = [], flights = stairs.map((s) => { const q = {}; for (let li = s.lo + 1; li <= s.hi; li++) q[li] = []; return { q, tok: {}, on: [] }; });
+  const exitUse = doors.map(() => ({ n: 0, last: NaN })), stairUse = stairs.map(() => 0);
+  let T = 0;
+  const step = (u, F) => { const L = levels[u.li], o2 = occ[u.li], i = u.k % W, j = (u.k / W) | 0; let cnt = 0; for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= W || jj >= B.H) continue; cnt += o2[jj * W + ii]; }
+    const D = cnt / (25 * B.c * B.c); if (D > peak[u.li][u.k]) peak[u.li][u.k] = D; const v = u.v0 * (D <= 0.54 ? 1 : Math.max(0.15, (1 - 0.266 * D) / (1 - 0.266 * 0.54)));
+    u.d += v * dt; const cap = (u.wait || 0) > 2 ? 2 : 1; let blocked = false;
+    for (let guard = 0; guard < 4; guard++) { const fk = F[u.k]; if (!(fk > 0)) break; let best = -1, bf = fk, bw = 1; const ii0 = u.k % W, jj0 = (u.k / W) | 0;
+      for (const [di, dj, w] of NB8) { const ii = ii0 + di, jj = jj0 + dj; if (ii < 0 || jj < 0 || ii >= W || jj >= B.H) continue; const m = jj * W + ii; if (F[m] < bf - 1e-6 && o2[m] < cap) { if (di && dj && (!isFinite(F[jj0 * W + ii]) || !isFinite(F[jj * W + ii0]))) continue; bf = F[m]; best = m; bw = w; } }
+      const len = bw * B.c; if (best < 0) { u.d = Math.min(u.d, len); u.wait = (u.wait || 0) + dt; blocked = true; break; } if (u.d < len) break;
+      const dr = L.door[best]; if (dr >= 0 && L.door[u.k] !== dr) { const dd = doors[dr]; if (dd.tokens < 1) { u.d = Math.min(u.d, len); u.wait = (u.wait || 0) + dt; dd.waiting = (dd.waiting || 0) + 1; blocked = true; break; } dd.tokens -= 1; }
+      o2[u.k] = Math.max(0, o2[u.k] - 1); o2[best]++; u.k = best; u.d -= len; u.dist += len; u.wait = 0; }
+    if (blocked) u.queue += dt; };
+  const arrive = (u) => { const L = u.li;
+    if (L === B.exitLv) { occ[L][u.k] = Math.max(0, occ[L][u.k] - 1); u.state = 'out'; u.tOut = T; const di = levels[L].door[u.k]; u.exit = di; if (di >= 0) { exitUse[di].n++; exitUse[di].last = T; } return; }
+    if (L > B.exitLv) { const S = stairs.find((s) => s.hi === L && s.acc[L].includes(u.k)); if (!S) return; occ[L][u.k] = Math.max(0, occ[L][u.k] - 1); u.onStair = true; u.qT = T; stairUse[S.si]++; flights[S.si].q[L].push({ u, wgt: u.kind === 'imp' ? 1.5 : 1 }); return; }
+    const S = stairs.find((s) => s.lo === L && s.acc[L].includes(u.k)); if (!S) return; occ[L][u.k] = Math.max(0, occ[L][u.k] - 1); u.onStair = true; u.upS = S; u.upT0 = T; u.upT = T + S.len / (u.vs * 0.8); stairUse[S.si]++; };
+  for (T = 0; T <= horizon; T += dt) {
+    for (const d of doors) { d.tokens = Math.min(d.tokens + 1.32 * d.w * dt, Math.max(2, 1.32 * d.w)); doorMax[d.di] = Math.max(doorMax[d.di], d.waiting || 0); d.waiting = 0; }
+    for (const u of U) { if (u.state === 'out' || u.state === 'stuck') continue;
+      if (u.upS) { if (T >= u.upT) { const S = u.upS, li = S.hi, free = S.acc[li].find((k) => !occ[li][k]) ?? S.acc[li][0]; u.upS = null; u.onStair = false; u.li = li; u.k = free; occ[li][free]++; u.d = 0; u.dist += S.len; } continue; }
+      if (u.onStair) continue;
+      if (u.state === 'idle') { if (T < u.tStart) continue; u.state = 'walk'; }
+      const F = fieldOf(u.li); if (!isFinite(F[u.k])) { u.state = 'stuck'; continue; } if (F[u.k] === 0) arrive(u); else step(u, F); }
+    for (const [si, S] of stairs.entries()) { const fl = flights[si];
+      for (let li = S.hi; li > S.lo; li--) { const q = fl.q[li]; fl.tok[li] = Math.min((fl.tok[li] || 0) + 1.1 * S.width * dt, 2 + 1.1 * S.width); stairMax[si] = Math.max(stairMax[si], q.length);
+        while (q.length && fl.tok[li] >= q[0].wgt) { const e = q.shift(); fl.tok[li] -= e.wgt; e.u.queue += T - (e.u.qT ?? T); e.u.stairFrom = li; e.u.stairT0 = T; e.u.stairT1 = T + S.len / e.u.vs * (0.85 + 0.3 * r()); fl.on.push(e.u); } }
+      for (let n = fl.on.length - 1; n >= 0; n--) { const u = fl.on[n]; if (T < u.stairT1) continue; const li = u.stairFrom - 1; u.dist += S.len;
+        if (li > S.lo && li !== B.exitLv) { fl.on.splice(n, 1); u.qT = T; fl.q[li].push({ u, wgt: u.kind === 'imp' ? 1.5 : 1 }); u.li = li; continue; }
+        const cells = S.acc[li] || [], free = cells.find((k) => !occ[li][k]); if (free == null) continue; fl.on.splice(n, 1); u.onStair = false; u.stairT1 = null; u.li = li; u.k = free; occ[li][free]++; u.d = 0; } }
+    if (frames && Math.abs(T - Math.round(T)) < 1e-6) frames.push(snapshot());
+    if (Math.round(T) % 5 === 0 && Math.abs(T - Math.round(T)) < 1e-6) curve.push([T, U.filter((u) => u.state === 'out').length]);
+    if (U.every((u) => u.state === 'out' || u.state === 'stuck')) { curve.push([T + dt, U.filter((u) => u.state === 'out').length]); if (frames) frames.push(snapshot()); break; }
+  }
+  function snapshot() { const out = new Float32Array(U.length * 5); U.forEach((u, n) => { let x, y, z, li = u.li;
+      if (u.upS) { const S = u.upS, f = clamp((T - u.upT0) / Math.max(1e-6, u.upT - u.upT0), 0, 1); [x, y] = S.centre; z = levels[S.lo].z + (levels[S.hi].z - levels[S.lo].z) * f; li = f < 0.5 ? S.lo : S.hi; }
+      else if (u.onStair && u.stairT1) { const S = stairs.find((s) => s.lo < u.stairFrom && s.hi >= u.stairFrom) || stairs[0], f = clamp((T - u.stairT0) / Math.max(1e-6, u.stairT1 - u.stairT0), 0, 1), z0 = levels[u.stairFrom].z, z1 = levels[u.stairFrom - 1].z; [x, y] = S.centre; z = z0 + (z1 - z0) * f; li = f < 0.5 ? u.stairFrom : u.stairFrom - 1; }
+      else { [x, y] = B.ctr(u.k); z = levels[li].z; }
+      out[n * 5] = x + B.O[0]; out[n * 5 + 1] = y + B.O[1]; out[n * 5 + 2] = z; out[n * 5 + 3] = li; out[n * 5 + 4] = u.state === 'out' ? 0 : 1; }); return out; }
+  const outT = U.map((u) => u.tOut).filter(Number.isFinite), perLevel = levels.map((L) => { const ts = U.filter((u) => u.li0 === L.li).map((u) => u.tOut).filter(Number.isFinite); return ts.length ? Math.max(...ts) : NaN; });
+  return { seed, fire: { li: fire.li, room: fire.room, level: levels[fire.li].name, roomName: levels[fire.li].rooms[fire.room]?.name || 'a room' }, t: outT.length ? Math.max(...outT) : NaN, t2: outT.length ? Math.max(...outT) : NaN,
+    stuck: U.filter((u) => u.state === 'stuck').length, unfinished: U.filter((u) => u.state !== 'out').length, detect, use: o.use || 'office',
+    people: U.map((u) => ({ kind: u.kind, li: u.li0, room: u.room, own: u.own, tAlarm: u.tAlarm, pre: u.pre, tStart: u.tStart, tOut: u.tOut, travel: u.tOut - u.tStart, queue: u.queue, dist: u.dist, exit: u.exit })),
+    curve, doorMax: Array.from(doorMax), stairMax, stairUse, exitUse, peak, frames, kinds: U.map((u) => u.kind), perLevel, n: U.length };
+}
+
 // ---- many runs, summarised; the run nearest the median kept with its frames for playback --------------------------------------
 export async function run(building, o = {}, onProg = () => {}) {
+  if (o.strategy === 'all') return runAll(building, o, onProg);
   const B = prepare(building, o), pop = population(B, o);
   if (o.fire && o.fire.lv != null) { const li = B.levels.findIndex((L) => L.id === o.fire.lv), k = li >= 0 ? B.cellAt(o.fire.x - B.O[0], o.fire.y - B.O[1]) : -1, ri = k >= 0 ? B.levels[li].room[k] : -1;   // a room clicked in the view (plan point)
     if (ri < 0) throw Error('The fire room is not inside a room of the model: click inside a room.'); o = { ...o, fire: { li, room: ri } }; } if (!pop.pats.length) throw Error('No patient rooms found on any level: name rooms ward, patient room, bed bay or ICU on the plan.');
@@ -222,5 +304,18 @@ export async function run(building, o = {}, onProg = () => {}) {
   const key = o.strategy === 'down' ? 't2' : 't1', vals = runs.map((x) => x[key]), med = pct(vals, 0.5), rep = runs.reduce((b, x) => (Math.abs(x[key] - med) < Math.abs(b[key] - med) ? x : b), runs[0]);
   for (const d of B.doors) d.tokens = 0; const shown = simulate(B, pop, rep.seed, { ...o, record: true }); onProg(1);
   return { B, pop, runs, rep: shown, key, med, p90: pct(vals, 0.9), p10: pct(vals, 0.1) };
+}
+async function runAll(building, o, onProg) {
+  const B = prepare(building, o), people = occupants(B);
+  if (o.fire && o.fire.lv != null) { const li = B.levels.findIndex((L) => L.id === o.fire.lv), k = li >= 0 ? B.cellAt(o.fire.x - B.O[0], o.fire.y - B.O[1]) : -1, ri = k >= 0 ? B.levels[li].room[k] : -1;
+    if (ri < 0) throw Error('The fire room is not inside a room of the model: click inside a room.'); o = { ...o, fire: { li, room: ri } }; }
+  if (!people.length) throw Error('Nobody to evacuate: draw rooms with names (office, classroom, bedroom…) on the plan.');
+  if (B.exitLv < 0) throw Error('No outside door found: draw an exterior door on the ground floor.');
+  for (const L of B.levels) { if (L.li === B.exitLv || !people.some((p) => p.li === L.li)) continue; if (L.li > B.exitLv ? !B.stairs.some((s) => s.hi === L.li) : !B.stairs.some((s) => s.lo === L.li)) throw Error(`${L.name} has no stair ${L.li > B.exitLv ? 'down' : 'up'}: place a stair to the next level.`); }
+  const runs = [], n = o.runs || DEFAULTS.runs, seed0 = o.seed ?? DEFAULTS.seed;
+  for (let i = 0; i < n; i++) { for (const d of B.doors) d.tokens = 0; runs.push(simulateAll(B, people, seed0 + i * 7919, { ...o })); onProg((i + 1) / (n + 1)); if (i % 2 === 1) await new Promise((r) => setTimeout(r, 0)); }
+  const vals = runs.map((x) => x.t), med = pct(vals, 0.5), rep = runs.reduce((b, x) => (Math.abs(x.t - med) < Math.abs(b.t - med) ? x : b), runs[0]);
+  for (const d of B.doors) d.tokens = 0; const shown = simulateAll(B, people, rep.seed, { ...o, record: true }); onProg(1);
+  return { B, people, runs, rep: shown, key: 't', med, p90: pct(vals, 0.9), p10: pct(vals, 0.1), all: true };
 }
 export { pct };
