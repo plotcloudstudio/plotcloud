@@ -34,7 +34,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS groups by floor, their lines in the chart, grey then yellow:', JSON.stringify(st0), JSON.stringify(st1));
     let st = await fr('persp').evaluate(() => window.__ws.egressState()); assert(st.timed, 'routes shaded by time'); const mk = st.marks.filter((m) => m && (m.stairs || m.doors.length));
     assert(mk.length >= 3 && mk.every((m) => m.stairs >= 2), 'two stairs drawn on every floor: ' + JSON.stringify(st.marks)); assert(mk.some((m) => m.doors.includes('exit')), 'the outside doors drawn'); assert(mk.some((m) => m.doors.includes('smoke')), 'the smoke doors drawn');
-    const legend = await p.locator('.sp-legend').innerText(); assert.match(legend, /Out last[\s\S]*Out first/);
+    await p.click('.sp-studycard [data-st-view=trails]'); await p.waitForTimeout(600); const legend = await p.locator('.sp-legend').innerText(); assert.match(legend, /Out last[\s\S]*Out first/);
     await p.screenshot({ path: `${out}/fire-details-all.png` });
     console.log('PASS everyone out:', ['Everyone out (RSET), median of runs', 'Incidents in the run shown', 'Runs with an exit found blocked'].map((k) => `${k}: ${row(k)}`).join(' · '), '· marks', JSON.stringify(st.marks));
     // 2 · the fire room, clicked in the plan
