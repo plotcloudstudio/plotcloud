@@ -5,7 +5,7 @@
 //   two corridors of 2.44 m clear (bed and equipment movement)
 // · every floor in two smoke compartments: a smoke barrier across both corridors and the core at mid-length, double smoke doors
 //   held open on magnetic releases (progressive horizontal evacuation, the first stage in care occupancies)
-// · two exit stairs at the ends of the core (1.4 m flights), entered from both corridors, opening to outside at grade; two bed
+// · two exit stairs at the ends of the core (1.65 m flights, OBC Table 3.4.3.2.-B for stairs serving patients' sleeping rooms), entered from both corridors at their ends (no dead-end corridor, OBC 3.3.3.3.(1)), opening to outside at grade; two bed
 //   elevators at mid-plate (not used to evacuate in this model)
 // · 26 single patient rooms per inpatient floor, same-handed: an inboard barrier-free ensuite with a curbless shower, a dedicated
 //   hand-hygiene sink at the entry, the bed on a side headwall with a view to the window, a patient chair and a family sleeper
@@ -18,7 +18,7 @@
 //   diagnostic imaging, specimen collection, staff lockers, shipping and receiving
 export const title = 'Example hospital · inpatient building';
 export const site = { label: 'Example hospital site (generic location)', lat: 49.2448, lon: -123.0071, north: 0, tz: 'America/Vancouver', wind: 3.5, windDir: 'E' };
-export const CASE_ID = 'example-hospital-inpatient-v4';
+export const CASE_ID = 'example-hospital-inpatient-v5';
 const r3 = (n) => +n.toFixed(3);
 export function hospitalModel() {
   const L = 61.2, D = 27.4, HF = 4.5, X0 = -L / 2, Y0 = -D / 2, P = (x, y) => [r3(X0 + x), r3(Y0 + y)];
@@ -70,9 +70,9 @@ export function hospitalModel() {
     name(lv, XM / 2, (yS1 + yS2) / 2, 'Corridor South West'); name(lv, XM * 1.5, (yS1 + yS2) / 2, 'Corridor South East'); name(lv, XM / 2, (yN1 + yN2) / 2, 'Corridor North West'); name(lv, XM * 1.5, (yN1 + yN2) / 2, 'Corridor North East');
     // the exit stairs at both ends of the core, entered from both corridors, out to grade on Level 1
     const corS = wallAt(lv, [0, yS2], [L, yS2]), corN = wallAt(lv, [0, yN1], [L, yN1]); wall(lv, [STW, yS2], [STW, yN1], 0.25); wall(lv, [L - STW, yS2], [L - STW, yN1], 0.25);
-    door(corS, STW - 0.9, 1.2); door(corN, STW - 0.9, 1.2); door(corS, L - STW + 0.9, 1.2); door(corN, L - STW + 0.9, 1.2); name(lv, 1.0, yS2 + 0.7, 'Exit stair West'); name(lv, L - 1.0, yS2 + 0.7, 'Exit stair East');
+    door(corS, 1.15, 1.2); door(corN, 1.15, 1.2); door(corS, L - 1.15, 1.2); door(corN, L - 1.15, 1.2); name(lv, 1.0, yS2 + 0.7, 'Exit stair West'); name(lv, L - 1.0, yS2 + 0.7, 'Exit stair East');   // stair doors at the corridors' ends: no dead end beyond the exit (2026-11-10)
     if (!ward) { door(W, D - yN1 + 0.9, 1.2); door(E, yS2 + 0.9, 1.2); }
-    if (lv !== 'L3') for (const [cx, rot] of [[STW / 2, -Math.PI / 2], [L - STW / 2, Math.PI / 2]]) { const nR = Math.round(HF / 0.18), run = r3((nR - 1) * 0.28), q = P(cx, (yS2 + yN1) / 2 + 1.1); name(lv, cx, (yS2 + yN1) / 2 + 1.1, cx < L / 2 ? 'Exit stair West (flight)' : 'Exit stair East (flight)'); furn.push({ id: `st${furn.length + 1}`, lv, type: 'straight', gen: { id: 'straight', vals: { use: 'public', kind: 'stringer', H: Math.round(HF * 1000), W: 1400, T: 280, topLanding: false, rails: 'both', glass: false, color_wood: '#c9c3b8', n: nR }, auto: true }, name: 'Exit stair (1.4 m)', x: q[0], y: q[1], w: 1.4, d: run, h: HF, rot, object_type: 'furniture', layer: 'Stairs' }); }
+    if (lv !== 'L3') for (const [cx, rot] of [[STW / 2, -Math.PI / 2], [L - STW / 2, Math.PI / 2]]) { const nR = Math.round(HF / 0.18), run = r3((nR - 1) * 0.28), q = P(cx, (yS2 + yN1) / 2 + 1.1); name(lv, cx, (yS2 + yN1) / 2 + 1.1, cx < L / 2 ? 'Exit stair West (flight)' : 'Exit stair East (flight)'); furn.push({ id: `st${furn.length + 1}`, lv, type: 'straight', gen: { id: 'straight', vals: { use: 'public', kind: 'stringer', H: Math.round(HF * 1000), W: 1650, T: 280, topLanding: false, rails: 'both', glass: false, color_wood: '#c9c3b8', n: nR }, auto: true }, name: 'Exit stair (1.65 m)', x: q[0], y: q[1], w: 1.4, d: run, h: HF, rot, object_type: 'furniture', layer: 'Stairs' }); }
     if (ward) {
       band(lv, 'S', UNIT.S(n)); band(lv, 'N', UNIT.N(n));
       core(lv, STW, [[6.0, 'Nurse station West', { n: true, d: 1.8, desk: true }], [3.2, 'Medication'], [3.2, 'Clean supply'], [3.4, 'Soiled utility'], [3.0, 'Equipment storage', { d: 1.5 }], [2.8, 'Staff washroom']]);

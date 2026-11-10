@@ -61,7 +61,7 @@ export function prepare(building, o = {}) {
     // furniture blocks (stairs are handled as stairs)
     for (const f of sc.furn || []) { if (stairIds.has(f.id) || !(f.h > 0.3)) continue; const i0 = Math.max(0, Math.floor(f.x / c)), i1 = Math.min(W - 1, Math.floor((f.x + f.w) / c)), j0 = Math.max(0, Math.floor(f.y / c)), j1 = Math.min(H - 1, Math.floor((f.y + f.d) / c));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const k = j * W + i, [px, py] = ctr(k); if (px > f.x && px < f.x + f.w && py > f.y && py < f.y + f.d && door[k] < 0) walk[k] = 0; } }
-    levels.push({ li, id: Lv.id, name: Lv.name, z: Lv.z, h: Lv.h || 3, rooms, room, walk, door, furn: sc.furn || [] });
+    levels.push({ li, id: Lv.id, name: Lv.name, z: Lv.z, h: Lv.h || 3, rooms, room, walk, door, furn: sc.furn || [], walls: sc.walls || [] });
   }
   // stairs: their footprint is closed on the levels they join; the cells round it (0.9 m) are where people get on and off
   const lvIx = new Map(levels.map((L) => [L.id, L.li])), stairs = [];

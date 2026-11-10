@@ -14,7 +14,7 @@ PlotCloud Studio. PlotCloud, building performance software for architects. Prepa
 
 ## Abstract
 
-Fire Evacuation in PlotCloud estimates how long a building takes to clear, either with everyone leaving at once or by a hospital's progressive horizontal evacuation followed by descent. It is a grid-based stochastic model with hydraulic flow limits after the SFPE Handbook, pre-movement times after PD 7974-6, and five occupant groups (adults, older adults, children, walking-aid users and wheelchair users) whose speeds come from published measurements. This study asks whether the engine implements its equations correctly, how many runs give stable results, how sensitive results are to the grid, to random incidents, to occupant groups and to hospital staffing, and what accuracy can honestly be claimed. Eighteen verification tests after IMO MSC.1/Circ.1533 and the verification categories of NIST TN 1822 and ISO 20414 all pass: speeds, flows and pre-movement distributions agree with analytical values within 0–3 %, and a three-storey building agrees with an SFPE hand calculation within 5.6 %. The study found and fixed five defects. The 0.5 m grid keeps only 1 m of a 1.8 m clear corridor (0.25 m grid: 1.5 m). The mean settles within 1 % after about 20 runs and the 90th percentile needs about 50. Inputs about people dominate the uncertainty: in the example hospital, staffing and patient preparation move the median by 40 % and 22 %, occupant groups move the clinic's everyone-out median by 37 %, and a wheelchair user's wait for assisted descent sets the end of the evacuation when there are wheelchair users above the ground floor. The model suits the comparison of design options under stated assumptions; it is not a prediction of a real evacuation time and not a code-compliance check.
+Fire Evacuation in PlotCloud estimates how long a building takes to clear, either with everyone leaving at once or by a hospital's progressive horizontal evacuation followed by descent. It is a grid-based stochastic model with hydraulic flow limits after the SFPE Handbook, pre-movement times after PD 7974-6, and five occupant groups (adults, older adults, children, walking-aid users and wheelchair users) whose speeds come from published measurements. This study asks whether the engine implements its equations correctly, how many runs give stable results, how sensitive results are to the grid, to random incidents, to occupant groups and to hospital staffing, and what accuracy can honestly be claimed. Eighteen verification tests after IMO MSC.1/Circ.1533 and the verification categories of NIST TN 1822 and ISO 20414 all pass: speeds, flows and pre-movement distributions agree with analytical values within 0–3 %, and a three-storey building agrees with an SFPE hand calculation within 5.6 %. The study found and fixed five defects. The 0.5 m grid keeps only 1 m of a 1.8 m clear corridor (0.25 m grid: 1.5 m). The mean settles within 1 % after about 20 runs and the 90th percentile needs about 50. Inputs about people dominate the uncertainty: in the example hospital, staffing and patient preparation move the median by 43 % and 20 %, occupant groups move the clinic's everyone-out median by 38 %, and a wheelchair user's wait for assisted descent sets the end of the evacuation when there are wheelchair users above the ground floor. The model suits the comparison of design options under stated assumptions; it is not a prediction of a real evacuation time and not a code-compliance check.
 
 Keywords: Evacuation modelling; Verification; Required safe escape time (RSET); Hospital evacuation; People with reduced mobility; Children; Monte Carlo convergence
 
@@ -150,7 +150,7 @@ Table 4. Walkable width kept of a 2 m corridor with 0.2 m walls on its centre li
 | 0.5 m | 1 m | -44.4 % |
 | 0.25 m | 1.5 m | -16.7 % |
 
-Walls must block at least one cell wherever they lie, which costs width on a coarse grid. Door and stair capacities come from tokens, not cells, so flows are unaffected (V3, V3c), but corridors and the crowding in them are modelled narrower than they are. In the example hospital, the 0.25 m grid lowers the hospital-mode median by 5 % (Section 7). The Refined setting now uses the 0.25 m grid.
+Walls must block at least one cell wherever they lie, which costs width on a coarse grid. Door and stair capacities come from tokens, not cells, so flows are unaffected (V3, V3c), but corridors and the crowding in them are modelled narrower than they are. In the example hospital, the 0.25 m grid lowers the hospital-mode median by 3 % (Section 7). The Refined setting now uses the 0.25 m grid.
 
 ### 5.2. Number of runs
 
@@ -213,7 +213,7 @@ Night staffing adds 69 % to the median, and the preparation times, left out of e
 
 ## 7. Case study: the PlotCloud example hospital
 
-The example is a generic three-storey inpatient building of about 61 × 27 m, with an entrance and clinics on the ground floor and two inpatient units above (52 single patient rooms). Each inpatient floor has two smoke compartments separated by cross-corridor doors, and two exit stairs serve every floor. In each run the fire starts in a random compartment with patients (hospital mode) or a random occupied room (everyone out).
+The example is a generic three-storey inpatient building of about 61 × 27 m, with an entrance and clinics on the ground floor and two inpatient units above (52 single patient rooms). Each inpatient floor has two smoke compartments separated by cross-corridor doors, and two exit stairs with 1.65 m flights serve every floor, entered at the ends of both corridors. Its means of egress meets every check of the software's Ontario Building Code screening (Section 10). Before that screening, the stairs had 1.4 m flights and were entered 8 m in from the corridors' ends, leaving dead-end corridors; both were corrected. In each run the fire starts in a random compartment with patients (hospital mode) or a random occupied room (everyone out).
 
 ![Fig. 1. Routes of the run nearest the median in the example hospital, hospital mode: each route shaded by when that person reached safety (lighter sooner, darker later); stairs outlined and labelled, exits in green, smoke doors in orange.](img/research/evacuation-routes.jpg?v=20261110-2)
 
@@ -221,27 +221,27 @@ Table 9. Hospital mode, horizontal then down, 50 runs each.
 
 | Variant | Patients · staff | 10th %, min | Median, min | 90th %, min | Horizontal stage, min |
 |---|---|---|---|---|---|
-| Day staffing 1:4 | 52 · 14 | 12.3 | 15.6 | 21.3 | 4.5 |
-| Night staffing 1:8 | 52 · 8 | 16.9 | 21.8 | 32.8 | 5.4 |
-| Day, no preparation times | 52 · 14 | 10.2 | 12.8 | 16.5 | 4.0 |
-| Day, no incidents | 52 · 14 | 12.4 | 15.6 | 21.3 | 4.5 |
-| Day, 0.25 m grid | 52 · 14 | 12.1 | 14.8 | 20.0 | 4.4 |
+| Day staffing 1:4 | 52 · 14 | 12.7 | 15.7 | 21.4 | 4.5 |
+| Night staffing 1:8 | 52 · 8 | 17.5 | 22.4 | 34.0 | 5.2 |
+| Day, no preparation times | 52 · 14 | 10.5 | 13.1 | 16.4 | 4.0 |
+| Day, no incidents | 52 · 14 | 13.0 | 15.8 | 21.7 | 4.5 |
+| Day, 0.25 m grid | 52 · 14 | 12.6 | 15.3 | 20.6 | 4.4 |
 
 Table 10. Everyone out, clinic use (shop, clinic or assembly), 50 runs each. People by group: 152 adults, 42 older adults, 30 children, 15 walking-aid users, 5 wheelchair users.
 
 | Variant | 10th %, min | Median, min | 90th %, min | Incidents per run |
 |---|---|---|---|---|
-| Clinic use, alarm 60 s | 6.3 | 7.0 | 9.6 | 7.3 |
-| Clinic use, alarm 60 s, no incidents | 6.3 | 7.4 | 8.9 | 0 |
-| Clinic use, alarm 60 s, 0.25 m grid | 6.0 | 6.8 | 9.3 | 7.2 |
-| Clinic use, alarm 3 min | 8.3 | 9.0 | 11.6 | 7.3 |
-| Clinic use, everyone an adult (no groups) | 4.5 | 5.1 | 5.6 | 0 |
+| Clinic use, alarm 60 s | 6.2 | 7.2 | 9.3 | 6.7 |
+| Clinic use, alarm 60 s, no incidents | 6.4 | 7.5 | 10.2 | 0 |
+| Clinic use, alarm 60 s, 0.25 m grid | 6.4 | 7.6 | 8.9 | 6.5 |
+| Clinic use, alarm 3 min | 8.2 | 9.2 | 11.3 | 6.8 |
+| Clinic use, everyone an adult (no groups) | 4.5 | 5.2 | 5.7 | 0 |
 
 What a design team would take from this case:
 
 - Horizontal relocation clears the fire compartment in about 4.5 minutes by day. That is the figure to compare with the time a compartment can be held, and it is far shorter than full evacuation.
-- Full vertical evacuation takes 15.6 minutes by day (90th percentile 21.3) and 21.8 at night (90th percentile 32.8). The night shift, not the stair width, is the constraint. This argues for planning around horizontal relocation and staff deployment rather than more stair capacity.
-- For everyone out, a realistic mix of people raises the median from 5.1 to 7.0 min. The 5 wheelchair users waiting at the stairs for assisted descent are among the last out.
+- Full vertical evacuation takes 15.7 minutes by day (90th percentile 21.4) and 22.4 at night (90th percentile 34.0). The night shift, not the stair width, is the constraint. This argues for planning around horizontal relocation and staff deployment rather than more stair capacity.
+- For everyone out, a realistic mix of people raises the median from 5.2 to 7.2 min. In the run shown, the 5 wheelchair users, waiting at the stairs for assisted descent, are the last out: 7.2 min, against 5.7 min for everyone else.
 - An alarm at 3 minutes instead of 60 s moves the median by 2.0 min. Detection and staff response are worth more here than wider exits.
 
 ## 8. Discussion: how accurate is it?
@@ -249,8 +249,8 @@ What a design team would take from this case:
 The errors are of three kinds, and of different sizes:
 
 - Numerical, meaning whether the code does what its equations say: 0–3 % for speeds, flows and pre-movement, and 5.6 % against a building-scale hand calculation. This is the only kind this study measures directly.
-- Discretisation: up to 5 % in the hospital case on the 0.5 m grid, mainly because corridors are narrowed.
-- Input uncertainty: 22–69 % for staffing and preparation in hospitals, 37 % for the occupant mix, and several minutes for the assumed wait before assisted descent. This is by far the largest.
+- Discretisation: up to 3 % in the hospital case on the 0.5 m grid, mainly because corridors are narrowed.
+- Input uncertainty: 20–69 % for staffing and preparation in hospitals, 38 % for the occupant mix, and several minutes for the assumed wait before assisted descent. This is by far the largest.
 
 How far the predictions lie from real evacuations is unknown until they are compared with measured drills, as TN 1822 and ISO 20414 require for validation [21], [22]. The results should therefore be read comparatively: option A against option B, day against night, one stair against two, under the same stated assumptions. They are not a forecast of the minutes a real evacuation will take, not an RSET for a fire engineering submission without a qualified engineer's review, and not evidence of code compliance.
 
@@ -276,6 +276,10 @@ The following changes were made as a result of this study:
 - A room whose only way out is through the fire room is reported.
 - People are shown grey until alerted and yellow while getting ready, and the results chart has a line for each group.
 - The Refined setting uses a 0.25 m grid, and the default is 50 runs.
+- A code-check mode screens the model's means of egress against the Ontario Building Code 2024, Part 3: number of exits, travel distance, distance between exits, exit width for the occupant load, minimum widths of exit doors and stairs, corridor widths, doorways for beds and dead-end corridors. It is a screening for the design team, not a compliance determination.
+- An available safe escape time (ASET) can be entered, or read from an FDS device file at a tenability threshold, and is compared with the evacuation time.
+- Drill records can be loaded and compared with the runs, which supports the validation this article calls for. A protocol describes what to record.
+- A brief for the fire engineer can be downloaded, with the inputs, sources, results, ASET, drill comparison, code check, limitations and a review block.
 
 ## 11. Conclusions
 
