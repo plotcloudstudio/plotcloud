@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=evac-20261110-2';
+import { mountChrome } from '../workspace-chrome.js?v=evac-20261110-3';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';

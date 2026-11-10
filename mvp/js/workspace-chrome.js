@@ -1703,7 +1703,7 @@ export function mountChrome(app, api) {
   window.__wsWater = { open: openWater, state: () => ({ id: watId, open: !watCard.hidden }) };
   // ---- the site's areas, roads and boundary, picked on the plan in Edit site model (2026-11-10): water opens its water card (with
   // Delete); planting, paving and the like, roads and paths, the boundary open this card
-  const siteCard = el('section', 'sp-card sp-watercard sp-sitecard'); siteCard.hidden = true; siteCard.setAttribute('aria-label', 'Site element'); root.append(siteCard);
+  const siteCard = el('section', 'sp-card sp-sitecard'); siteCard.hidden = true; siteCard.setAttribute('aria-label', 'Site element'); root.append(siteCard);
   let siteSel = null; const sitePane = () => (INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : null);
   const AREA_KINDS = [['green', 'Planting'], ['grass', 'Lawn'], ['park', 'Park'], ['wood', 'Woodland'], ['paving', 'Paving'], ['water', 'Water']], ROAD_KINDS = [['road', 'Road'], ['path', 'Path']];
   function drawSiteEl() { const o = siteSel && sitePane()?.siteEl?.(siteSel); if (!o) { siteCard.hidden = true; return; }

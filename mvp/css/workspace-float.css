@@ -471,12 +471,12 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-tabs-sub button{flex-direction:column;line-height:1.2;padding-top:5px;padding-bottom:5px}
 .w2.sp .sp-tabs-sub button small{display:block;font-size:10px;font-weight:400;color:#6b7280}
 /* a water body of the site (2026-11-06): set from Project data › Site */
-.w2.sp .sp-watercard{position:absolute;z-index:31;right:64px;top:64px;width:300px;max-height:calc(100vh - 140px);overflow:auto;padding:12px 14px;font:11.5px/1.45 Inter,system-ui,sans-serif;color:var(--sp-ink);display:flex;flex-direction:column;gap:8px}
-.w2.sp .sp-watercard header{display:flex;align-items:center;gap:8px}.w2.sp .sp-watercard header b{flex:1;font-size:13px}
-.w2.sp .sp-watercard .sp-field{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sp-mute,#6b7280)}
-.w2.sp .sp-watercard .sp-field input,.w2.sp .sp-watercard .sp-field select{font:12px Inter,system-ui,sans-serif;padding:5px 7px;border:1px solid #d6d9de;border-radius:6px;background:#fff;color:#111;min-width:0}
-.w2.sp .sp-watercard .sp-num{display:flex;align-items:center;gap:4px}.w2.sp .sp-watercard .sp-num input{width:100%}
-.w2.sp .sp-watercard .sp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.w2.sp :is(.sp-watercard,.sp-sitecard){position:absolute;z-index:31;right:64px;top:64px;width:300px;max-height:calc(100vh - 140px);overflow:auto;padding:12px 14px;font:11.5px/1.45 Inter,system-ui,sans-serif;color:var(--sp-ink);display:flex;flex-direction:column;gap:8px}
+.w2.sp :is(.sp-watercard,.sp-sitecard) header{display:flex;align-items:center;gap:8px}.w2.sp :is(.sp-watercard,.sp-sitecard) header b{flex:1;font-size:13px}
+.w2.sp :is(.sp-watercard,.sp-sitecard) .sp-field{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sp-mute,#6b7280)}
+.w2.sp :is(.sp-watercard,.sp-sitecard) .sp-field input,.w2.sp :is(.sp-watercard,.sp-sitecard) .sp-field select{font:12px Inter,system-ui,sans-serif;padding:5px 7px;border:1px solid #d6d9de;border-radius:6px;background:#fff;color:#111;min-width:0}
+.w2.sp :is(.sp-watercard,.sp-sitecard) .sp-num{display:flex;align-items:center;gap:4px}.w2.sp :is(.sp-watercard,.sp-sitecard) .sp-num input{width:100%}
+.w2.sp :is(.sp-watercard,.sp-sitecard) .sp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
 /* simulation quality (2026-11-09): a small dark slider above Add simulation, Draft (left) to Refined (right) */
 .w2.sp .sp-q{position:absolute;z-index:30;left:12px;top:calc(50% + 93px);width:44px;height:22px;display:flex;align-items:center;justify-content:center;background:var(--sp-dark);border-radius:8px;box-shadow:var(--sp-shadow);cursor:pointer;touch-action:none;outline:none}
