@@ -57,7 +57,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS the run: horizontal then down,', r.rows.slice(0, 4).map((x) => x.join(' ')).join(' · '));
     // 3D: the building ghosted, a sheet on each floor, people on both floors and on the stair over the playback
     const fr3 = fr3s(); await p.waitForTimeout(1500);
-    const g = await fr3.evaluate(() => S3._egress()); assert(g.on && g.ghost > 10, 'the building is ghosted: ' + JSON.stringify(g)); assert.equal(g.sheets.length, 2); assert(g.sheets[1] - g.sheets[0] > 3, 'one sheet on each floor: ' + g.sheets);
+    let g = await fr3.evaluate(() => S3._egress()); assert(g.on && g.mode === 'cut' && g.cut.n > 10 && g.cut.caps > 3, 'the building cut away at 1.4 m: ' + JSON.stringify(g));
+    await p.click('.sp-studycard [data-eg=v3d][data-v=ghost]'); await p.waitForTimeout(800); g = await fr3.evaluate(() => S3._egress()); assert(g.ghost > 10, 'see-through on request: ' + JSON.stringify(g)); assert.equal(g.sheets.length, 2); assert(g.sheets[1] - g.sheets[0] > 3, 'one sheet on each floor: ' + g.sheets);
     const ys = new Set(); for (let i = 0; i < 30; i++) { const st = await fr3.evaluate(() => { const s = window.__ws.egressState(); window.__ws.egressSeek(s.n * Math.random()); return S3._egress(); }); st.ys.forEach((y) => ys.add(y)); }
     assert(ys.size >= 2, 'people on more than one floor: ' + [...ys]); console.log('PASS 3D: the building ghosted, sheets at', g.sheets.join(' and '), 'm, people at heights', [...ys].sort((a, b) => a - b).join(', '));
     // playback controls: pause, scrub, speed; the views switch without running again
