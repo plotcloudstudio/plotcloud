@@ -1,7 +1,8 @@
-// Section cut and Section view in the Workspace (2026-11-07, after Revit's Section tool). The two-storey block of the ventilation
-// test: a section line drawn on the plan with two clicks, kept in the model (both views, undo); the 3D view cut by a real plane with
-// filled cut faces; the Section view square to the cut with the levels drawn; flip, far clip, drag on the plan; Natural ventilation's
-// per-room result on the cut; switching views; delete. The model's walls, doors and windows are unchanged throughout.
+// Section in the Workspace (2026-11-10, a key plan): the Section button opens a plan at preview size where the cut is drawn, any
+// angle and with turns; Use this section shrinks it into a key plan in the top right corner. The two-storey block of the
+// ventilation test: the cut kept in the model (both views, undo); the 3D view cut segment by segment with filled cut faces; the
+// Section view unfolded at the turns, with the levels; flip and editing from the key plan; Natural ventilation, Wind flow and
+// Daylight on the section; closing the key plan ends the section. The model's walls, doors and windows are unchanged throughout.
 // Needs network access (site data).
 const { chromium } = require('playwright'), assert = require('node:assert/strict');
 (async () => {
@@ -36,112 +37,102 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const pickView = async (k) => { if (await p.locator('#vMenu').isHidden()) await p.click('#vBtn'); await p.click(`#vMenu [data-view=${k}]`); };
     const planPx = async (q) => { const bb = await box('#fPlan'), s = await frp.evaluate((q2) => __ws.screenOf(q2), q); return [bb.x + s[0], bb.y + s[1]]; };
 
-    // 1 · the Section button on the right rail; no section yet; Draw section line, then two clicks on the plan (y = Y + 3, through the south rooms)
-    await p.click('[data-sp=sec]'); let pop = await p.locator('.sp-pop-sec').innerText(); assert.match(pop, /Section[\s\S]*Draw section line/);
-    await p.click('.sp-pop-sec [data-sec=draw]'); await p.waitForTimeout(500); assert(await frp.evaluate(() => __ws.sectionState().drawing), 'drawing a section');
-    let a = await planPx([O.X - 3, O.Y + 3]), c = await planPx([O.X + 27, O.Y + 3.3]); await p.mouse.click(a[0], a[1]); await p.mouse.move(c[0], c[1], { steps: 4 }); await p.mouse.click(c[0], c[1]); await p.waitForTimeout(800);
-    let sec = await frp.evaluate(() => __ws.section()); assert(sec, 'a section in the model');
-    assert(Math.abs(sec.a[1] - (O.Y + 3)) < 0.15 && Math.abs(sec.b[1] - sec.a[1]) < 1e-6, 'drawn nearly level, it snaps level: ' + JSON.stringify(sec)); assert(Math.abs(sec.len - 30) < 0.4, 'its length');
-    assert.deepEqual(sec.look.map((v) => Math.round(v) + 0), [0, 1], 'drawn left to right, it looks north (up the plan)');
-    await p.waitForTimeout(600); assert(await fr3.evaluate(() => !!__ws.section()), 'the 3D pane has it too');
-    assert.equal(await body(), body0, 'the model itself is untouched');
-    console.log('PASS section line drawn on the plan:', sec.a.map((v) => v.toFixed(2)).join(','), '→', sec.b.map((v) => v.toFixed(2)).join(','));
+    const kpOpen = async () => { await p.waitForSelector('.sp-kp', { timeout: 10000 }); return p.locator('.sp-kp').innerText(); };
+    const edPt = (x, y) => p.evaluate((q) => window.__wsSection.toScreen(q), [O.X + x, O.Y + y]);
+    const run = async () => { await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 }); return p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows || [], on: !!s.res?.onSection }; }); };
 
-    // 2 · undo and redo
-    await frp.evaluate(() => __ws.undo()); await p.waitForTimeout(400); assert.equal(await frp.evaluate(() => __ws.section()), null, 'undo removes it');
-    await frp.evaluate(() => __ws.redo()); await p.waitForTimeout(600); assert(await frp.evaluate(() => !!__ws.section()), 'redo brings it back');
+    // 1 · Section on the right rail opens the plan at preview size; three clicks with a turn, Enter, Use this section
+    await p.click('[data-sp=sec]'); await p.waitForSelector('.sxs', { timeout: 10000 }); const ed = await p.locator('.sxs-win').boundingBox();
+    assert(Math.abs(ed.width / 1600 - 0.7) < 0.03 && Math.abs(ed.height / 900 - 0.7) < 0.03, 'the plan at preview size: ' + JSON.stringify(ed)); assert.match(await p.locator('.sxs').innerText(), /Section A[\s\S]*Click where the cut starts/);
+    for (const [x, y] of [[-3, 3], [9, 3], [14, 9.5], [27, 9.5]]) { const s2 = await edPt(x, y); await p.mouse.click(s2[0], s2[1]); await p.waitForTimeout(120); }
+    await p.keyboard.press('Enter'); await p.waitForTimeout(200); let st = await p.evaluate(() => window.__wsSection.state()); assert(!st.drawing && st.pts.length === 4, 'four points, three segments: ' + JSON.stringify(st));
+    assert.match(await p.locator('.sxs-len').innerText(), /m · 3 segments/); await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-editor.png' : '/dev/null' }).catch(() => {});
+    await p.click('.sxs [data-se=ok]'); await p.waitForTimeout(1500); assert.equal(await p.locator('.sxs').count(), 0, 'the editor closes');
+    let kp = await kpOpen(); assert.match(kp, /Section A[\s\S]*3 segments[\s\S]*3D cut[\s\S]*Section/); const kb = await p.locator('.sp-kp').boundingBox(); assert(kb.x > 1100 && kb.y < 120, 'top right: ' + JSON.stringify(kb));
+    let sec = await frp.evaluate(() => __ws.section()); assert(sec && sec.pts.length === 4 && sec.segs.length === 3, 'in the model: ' + JSON.stringify(sec)); assert(Math.abs(sec.pts[2][0] - (O.X + 14)) < 0.2, 'a turn at any angle kept as drawn');
+    await p.waitForTimeout(600); assert(await fr3.evaluate(() => !!__ws.section()), 'the 3D pane has it too'); assert.equal(await body(), body0, 'the model itself is untouched');
+    console.log('PASS editor → key plan:', sec.pts.map((q) => q.map((v) => v.toFixed(1)).join(',')).join(' → '));
 
-    // 3 · 3D cutaway: the cut plane, filled cut faces
-    await p.click('[data-sp=dim]'); await p.waitForFunction(() => __ws2.inst.persp.ready, null, { timeout: 30000 }); await p.waitForTimeout(1500);
+    // 2 · undo and redo (the key plan follows)
+    await frp.evaluate(() => __ws.undo()); await p.waitForTimeout(1200); assert.equal(await frp.evaluate(() => __ws.section()), null, 'undo removes it'); await p.waitForFunction(() => !document.querySelector('.sp-kp'), null, { timeout: 8000 }).catch(() => {}); assert.equal(await p.locator('.sp-kp').count(), 0, 'and its key plan');
+    await frp.evaluate(() => __ws.redo()); await p.waitForTimeout(1200); assert(await frp.evaluate(() => !!__ws.section()), 'redo brings it back'); await kpOpen();
+
+    // 3 · 3D cutaway: one pass per segment, filled cut faces, lit, the site not cut
+    if (await p.evaluate(() => __ws2.UI.view) !== 'persp') { await p.click('[data-sp=dim]'); await p.waitForTimeout(1500); }
     await fr3.evaluate((o) => S3.fitBox({ x0: o.X, y0: o.Y, x1: o.X + 24, y1: o.Y + 12 }, 3, 0.9), O); await p.waitForTimeout(500);
-    let s3 = await fr3.evaluate(() => { S3.png(); return S3.secState(); }); assert(s3.cut && s3.planes === 1 && !s3.view, 'the 3D view is cut: ' + JSON.stringify(s3)); assert(s3.caps > 10, 'closed meshes take part in the cut faces: ' + s3.caps);
+    let s3 = await fr3.evaluate(() => { S3.png(); return S3.secState(); }); assert(s3.cut && s3.passes === 3 && !s3.view, 'the 3D view cut segment by segment: ' + JSON.stringify(s3)); assert(s3.caps > 10, 'closed meshes take part in the cut faces: ' + s3.caps);
     const dark = () => fr3.evaluate(async () => { const im = new Image(); im.src = S3.png(); await im.decode(); const c2 = document.createElement('canvas'); c2.width = im.width; c2.height = im.height; const x = c2.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c2.width, c2.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - 0x23) < 6 && Math.abs(d[i + 1] - 0x26) < 6 && Math.abs(d[i + 2] - 0x2b) < 6) n++; return n; });
-    if (process.env.SHOT_DIR) { const u = await fr3.evaluate(() => S3.png()); require('fs').writeFileSync(process.env.SHOT_DIR + '/cut3d.png', Buffer.from(u.split(',')[1], 'base64')); }
-    const darkCut = await dark(); assert(darkCut > 200, 'cut faces painted solid: ' + darkCut);
-    // the building is lit in the cutaway: the cut faces are the dark grey fill, never a black building (2026-11-09: the cut pass once ran without the lights)
     const black = () => fr3.evaluate(async () => { const im = new Image(); im.src = S3.png(); await im.decode(); const c2 = document.createElement('canvas'); c2.width = im.width; c2.height = im.height; const x = c2.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c2.width, c2.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 14 && d[i + 1] < 14 && d[i + 2] < 14) n++; return n / (d.length / 4); });
-    const bl = await black(); assert(bl < 0.004, `the cut building is lit, not black: ${(bl * 100).toFixed(2)}% of the view is black`);
-    // the 3D cutaway cuts the building, not the site: zoomed out over the whole site, no slab of cut ground fills the view
     const earth = () => fr3.evaluate(async () => { const im = new Image(); im.src = S3.png(); await im.decode(); const c2 = document.createElement('canvas'); c2.width = im.width; c2.height = im.height; const x = c2.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c2.width, c2.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - 0xb9) < 4 && Math.abs(d[i + 1] - 0xb2) < 4 && Math.abs(d[i + 2] - 0xa4) < 4) n++; return n / (d.length / 4); });
-    for (const [r, low] of [[150, false], [400, true]]) { await fr3.evaluate(([o, r2, lo]) => S3.fitBox({ x0: o.X - r2, y0: o.Y - r2, x1: o.X + r2, y1: o.Y + r2 }, 0, 0.6, lo), [O, r, low]); await p.waitForTimeout(600);
-      const e = await earth(); if (process.env.SHOT_DIR) { const u = await fr3.evaluate(() => S3.png()); require('fs').writeFileSync(process.env.SHOT_DIR + `/cutaway-site-${r}.png`, Buffer.from(u.split(',')[1], 'base64')); }
-      assert(e < 0.002, `no cut ground in the 3D cutaway (${r} m round): ${(e * 100).toFixed(2)}% of the view`); }
-    await fr3.evaluate((o) => S3.fitBox({ x0: o.X, y0: o.Y, x1: o.X + 24, y1: o.Y + 12 }, 3, 0.9), O); await p.waitForTimeout(500);
-    assert(await dark() > 200, 'the building still cut and filled');
-    console.log('PASS 3D cutaway:', JSON.stringify({ planes: s3.planes, caps: s3.caps, poche: darkCut }));
+    if (process.env.SHOT_DIR) { const u = await fr3.evaluate(() => S3.png()); require('fs').writeFileSync(process.env.SHOT_DIR + '/cut3d.png', Buffer.from(u.split(',')[1], 'base64')); }
+    const darkCut = await dark(); assert(darkCut > 200, 'cut faces painted solid: ' + darkCut); const bl = await black(); assert(bl < 0.004, `the cut building is lit, not black: ${(bl * 100).toFixed(2)}%`);
+    for (const [r, low] of [[150, false], [400, true]]) { await fr3.evaluate(([o, r2, lo]) => S3.fitBox({ x0: o.X - r2, y0: o.Y - r2, x1: o.X + r2, y1: o.Y + r2 }, 0, 0.6, lo), [O, r, low]); await p.waitForTimeout(600); const e = await earth(); assert(e < 0.002, `no cut ground in the 3D cutaway (${r} m round): ${(e * 100).toFixed(2)}%`); }
+    console.log('PASS 3D cutaway:', JSON.stringify({ passes: s3.passes, caps: s3.caps, poche: darkCut }));
 
-    // 4 · Section view from the View menu: square to the cut, 1° lens, the two levels drawn, the name in the view pill
-    await pickView('section'); await p.waitForTimeout(1200);
-    s3 = await fr3.evaluate(() => S3.secState()); assert(s3.view && s3.fov === 1, JSON.stringify(s3)); assert(Math.abs(s3.dir[1] - 1) < 1e-3 && Math.abs(s3.dir[2]) < 1e-3, 'looking north, level: ' + s3.dir);
-    assert.equal(s3.levels, 2, 'the two levels drawn as level lines'); assert.match(await p.locator('#vBtn').innerText(), /Section A/);
+    // 4 · the Section view from the key plan: unfolded at the turns (three strips, two fold lines), the levels, the ground cut
+    await p.click('.sp-kp [data-kp=sec]'); await p.waitForTimeout(1500); s3 = await fr3.evaluate(() => S3.secState());
+    assert(s3.view && s3.panels.length === 3 && s3.folds === 2 && s3.levels === 2, 'unfolded: ' + JSON.stringify(s3)); assert(s3.panels[0][1] === s3.panels[1][0] && s3.panels[1][1] === s3.panels[2][0], 'the strips meet: ' + JSON.stringify(s3.panels));
+    assert.match(await p.locator('#vBtn').innerText(), /Section A/); assert.equal(await p.getAttribute('.sp-kp [data-kp=sec]', 'aria-pressed'), 'true');
     const svg = await fr3.evaluate(() => document.querySelector('svg.secov').textContent); assert.match(svg, /Level 1[\s\S]*\+0\.00[\s\S]*Level 2[\s\S]*\+3\.00/);
-    const darkSec = await dark(); assert(darkSec > 300, 'walls and slabs cut in the Section view: ' + darkSec);
-    const earthSec = await earth(); assert(earthSec > 0.02, 'the ground cut in the Section view: ' + earthSec);
-    await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-view.png' : '/dev/null' }).catch(() => {});
-    console.log('PASS Section view:', JSON.stringify({ dir: s3.dir, levels: s3.levels, poche: darkSec }));
+    const darkSec = await dark(); assert(darkSec > 300, 'walls and slabs cut in the Section view: ' + darkSec); assert(await earth() > 0.02, 'the ground cut in the Section view');
+    const k0 = s3.scale; await p.mouse.move(800, 450); await p.mouse.wheel(0, -300); await p.waitForTimeout(300); assert((await fr3.evaluate(() => S3.secState().scale)) > k0, 'the wheel zooms the section');
+    await fr3.evaluate(() => S3.secFit()); await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-view.png' : '/dev/null' }).catch(() => {});
+    console.log('PASS Section view unfolded:', JSON.stringify({ panels: s3.panels, levels: s3.levels, poche: darkSec }));
 
-    // 5 · flip and far clip from the Section popover; the view follows
-    if (await p.locator('.sp-pop-sec').isHidden()) await p.click('[data-sp=sec]');
-    await p.click('.sp-pop-sec [data-sec=flip]'); await p.waitForTimeout(900); s3 = await fr3.evaluate(() => S3.secState()); assert(s3.view && Math.abs(s3.dir[1] + 1) < 1e-3, 'flipped, looking south: ' + s3.dir);
-    await p.click('.sp-pop-sec [data-sec=farOn]'); await p.waitForTimeout(900); s3 = await fr3.evaluate(() => S3.secState()); sec = await frp.evaluate(() => __ws.section()); assert(sec.far > 0 && s3.planes === 2, 'far clip: ' + JSON.stringify([sec.far, s3.planes]));
-    await setRange('.sp-pop-sec [data-sec=far]', 3); await p.waitForTimeout(800); sec = await frp.evaluate(() => __ws.section()); assert.equal(sec.far, 3);
-    console.log('PASS flip and far clip', sec.far, 'm');
+    // 5 · flip from the key plan; the strips run the other way
+    await p.click('.sp-kp [data-kp=flip]'); await p.waitForTimeout(1000); sec = await frp.evaluate(() => __ws.section()); assert.equal(sec.flip, true); s3 = await fr3.evaluate(() => S3.secState()); assert(s3.view && s3.panels.length === 3);
+    console.log('PASS flip from the key plan');
 
-    // 6 · back to 3D: orbit works again, the cut stays put in the world
-    await p.click('.sp-pop-sec [data-sec=view]'); await p.waitForTimeout(800); s3 = await fr3.evaluate(() => S3.secState()); assert(!s3.view && s3.cut && s3.planes === 2, JSON.stringify(s3)); assert(await fr3.evaluate(() => S3.secState().fov) > 30, 'the normal lens is back');
-    // switching views keeps the model and the section: plan, perspective, isometric
+    // 6 · change the cut: a click on the key plan opens the editor with the cut; drag a point; Use this section
+    await p.click('.sp-kp .sp-kp-plan'); await p.waitForSelector('.sxs'); st = await p.evaluate(() => window.__wsSection.state()); assert(!st.drawing && st.pts.length === 4 && st.flip, 'the cut to change: ' + JSON.stringify(st));
+    const v0 = await edPt(14, 9.5), v1 = await edPt(15, 6); await p.mouse.move(v0[0], v0[1]); await p.mouse.down(); await p.mouse.move(v1[0], v1[1], { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(200);
+    st = await p.evaluate(() => window.__wsSection.state()); assert(Math.abs(st.pts[2][0] - (O.X + 15)) < 0.3 && Math.abs(st.pts[2][1] - (O.Y + 6)) < 0.3, 'the point moved: ' + JSON.stringify(st.pts[2]));
+    await p.click('.sxs [data-se=ok]'); await p.waitForTimeout(1500); sec = await frp.evaluate(() => __ws.section()); assert(Math.abs(sec.pts[2][1] - (O.Y + 6)) < 0.3, 'kept in the model'); assert.equal(await body(), body0, 'editing the cut never moves the model');
+    console.log('PASS editing from the key plan');
+
+    // 7 · back to 3D from the key plan; the views keep the section
+    await p.click('.sp-kp [data-kp="3d"]'); await p.waitForTimeout(800); s3 = await fr3.evaluate(() => S3.secState()); assert(!s3.view && s3.cut, JSON.stringify(s3));
     await pickView('iso'); await p.waitForTimeout(800); assert(await fr3.evaluate(() => S3.secState().cut), 'the cut survives the isometric view');
-    await pickView('section'); await p.waitForTimeout(1000); assert(await fr3.evaluate(() => S3.secState().view), 'Section view from isometric');
+    await pickView('section'); await p.waitForTimeout(1000); assert(await fr3.evaluate(() => S3.secState().view), 'Section view from the View menu');
     await pickView('persp'); await p.waitForTimeout(1000); assert(!(await fr3.evaluate(() => S3.secState().view)), 'Perspective leaves the Section view');
     console.log('PASS view switching keeps the section');
 
-    // 7 · on the plan: drag the line 2 m north, click an arrow to flip it back
-    await p.click('[data-sp=dim]'); await p.waitForTimeout(1200); sec = await frp.evaluate(() => __ws.section());
-    const m0 = await planPx([(sec.a[0] + sec.b[0]) / 2 - 4, sec.a[1]]), m1 = await planPx([(sec.a[0] + sec.b[0]) / 2 - 4, sec.a[1] + 1.5]);
-    await p.mouse.move(m0[0], m0[1]); await p.mouse.down(); await p.mouse.move(m1[0], m1[1], { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(700);
-    const moved = await frp.evaluate(() => __ws.section()); assert(Math.abs(moved.a[1] - sec.a[1] - 1.5) < 0.15 && Math.abs(moved.b[1] - sec.b[1] - 1.5) < 0.15, 'dragged 1.5 m: ' + JSON.stringify([sec.a, moved.a]));
-    const tip = await frp.evaluate(() => { const s = __ws.section(); return __ws.screenOf([s.a[0], s.a[1]]); }), look = moved.look, bb = await box('#fPlan');
-    await p.mouse.click(bb.x + tip[0] + look[0] * 16, bb.y + tip[1] - look[1] * 16); await p.waitForTimeout(600);
-    assert.equal((await frp.evaluate(() => __ws.section())).flip, !moved.flip, 'a click on the arrow flips it');
-    assert.equal(await body(), body0, 'dragging the section never moves the model');
-    await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-plan.png' : '/dev/null' }).catch(() => {});
-    console.log('PASS plan editing: drag', (moved.a[1] - sec.a[1]).toFixed(2), 'm, arrow flips');
-
-    // 8 · Natural ventilation: its per-room result on the cut, with the opacity control
+    // 8 · Natural ventilation on the cut: each room's value, the flow at the openings across a straight north–south cut
     await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim="vent"]'); await p.waitForTimeout(1500);
     await p.waitForFunction(() => /m\/s at 10 m|Without the project weather/.test(document.querySelector('.sp-studycard')?.innerText || ''), null, { timeout: 120000 });
-    await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
-    assert.equal(await p.evaluate(() => window.__wsStudy.state().err), '');
-    await frp.evaluate(() => __ws.sectionSet({ far: null })); await p.click('[data-sp=dim]'); await p.waitForTimeout(1500);
-    assert.doesNotMatch(await p.locator('.sp-studycard').innerText(), /Model changed/, 'moving the section is not a change to the model the study ran on');
-    s3 = await fr3.evaluate(() => S3.secState()); assert(s3.band && s3.cut, 'ventilation drawn on the cut: ' + JSON.stringify(s3));
-    if (await p.locator('.sp-pop-sec').isHidden()) await p.click('[data-sp=sec]');
-    pop = await p.locator('.sp-pop-sec').innerText(); assert.match(pop, /Simulation on the cut[\s\S]*one value per room[\s\S]*not air speed or temperature/i);
-    await setRange('.sp-pop-sec [data-sec=op]', 0.3); await p.waitForTimeout(300); assert.equal(await fr3.evaluate(() => S3.secState().opacity), 0.3);
-    await p.click('.sp-pop-sec [data-sec=view]'); await p.waitForTimeout(1200); assert(!(await p.locator('.sp-pop-sec').isHidden()), 'the popover stays open'); assert(await fr3.evaluate(() => S3.secState().view && S3.secState().band));
+    let r = await run(); assert.equal(r.err, '');
+    await frp.evaluate((o) => __ws.sectionSet({ pts: [[o.X + 2.5, o.Y - 3], [o.X + 2.5, o.Y + 15]], flip: false }), O); await p.waitForTimeout(1500);
+    await p.click('.sp-kp [data-kp=sec]'); await p.waitForTimeout(1500); s3 = await fr3.evaluate(() => S3.secState()); assert(s3.band && s3.view, 'ventilation on the cut: ' + JSON.stringify(s3));
+    let nt = s3.notes; assert(nt && nt.rooms >= 4 && nt.across >= 4, 'room values and flows across the cut: ' + JSON.stringify(nt));
+    const u = await fr3.evaluate(() => __ws.sectionPNG(['QA'])); assert(u && u.length > 50000, 'the Section view as a picture');
     await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-vent.png' : '/dev/null' }).catch(() => {});
-    // notes on the cut (one wind): each room's value, the flows at the openings seen ahead of the cut
-    let nt = await fr3.evaluate(() => S3.secState().notes); assert(nt && nt.rooms >= 4 && nt.flows > 0, 'room values and opening flows: ' + JSON.stringify(nt));
-    let svgT = await fr3.evaluate(() => document.querySelector('svg.secov').textContent); assert.match(svgT, /\d+\.\d ach[\s\S]*\d+ L\/s/);
-    // a cut north–south through the windows and doors of the west rooms: the flow through them drawn across the cut
-    await frp.evaluate((o) => __ws.sectionSet({ a: [o.X + 2.5, o.Y - 3], b: [o.X + 2.5, o.Y + 15] }), O); await p.waitForTimeout(1500);
-    nt = await fr3.evaluate(() => S3.secState().notes); assert(nt.across >= 4, 'arrows across the cut at the windows and doors it passes: ' + JSON.stringify(nt));
-    await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-vent-ns.png' : '/dev/null' }).catch(() => {});
-    // export: the Section view with its levels, notes and title block
-    const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.sp-pop-sec [data-sec=png]')]); assert.match(dl.suggestedFilename(), /section-A\.png$/);
-    const pngPath = (process.env.SHOT_DIR || require('os').tmpdir()) + '/section-export.png'; await dl.saveAs(pngPath); const buf = require('fs').readFileSync(pngPath);
-    assert.equal(buf.toString('ascii', 1, 4), 'PNG'); assert(buf.readUInt32BE(16) >= 1000 && buf.length > 50000, 'a full-size picture: ' + [buf.readUInt32BE(16), buf.length]);
-    console.log('PASS notes on the cut and export:', JSON.stringify(nt), Math.round(buf.length / 1024) + ' kB');
-    await p.click('.sp-pop-sec [data-sec=bands]'); await p.waitForTimeout(300); assert(!(await fr3.evaluate(() => S3.secState().band)), 'the result can be hidden on the cut');
-    await p.click('.sp-pop-sec [data-sec=bands]'); await p.click('.sp-pop-sec [data-sec=view]'); await p.waitForTimeout(600);
-    console.log('PASS Natural ventilation on the cut');
+    await p.click('.sp-studycard [data-st=close]').catch(() => {}); await p.waitForTimeout(600);
+    console.log('PASS Natural ventilation on the cut:', JSON.stringify(nt));
 
-    // 9 · Cut the 3D view off, then delete; the model is as it was
-    await p.click('.sp-pop-sec [data-sec=on]'); await p.waitForTimeout(700); s3 = await fr3.evaluate(() => S3.secState()); assert(!s3.cut && s3.planes === 0, 'not cut: ' + JSON.stringify(s3));
-    await p.click('.sp-pop-sec [data-sec=del]'); await p.waitForTimeout(800); assert.equal(await frp.evaluate(() => __ws.section()), null); assert.equal(await fr3.evaluate(() => __ws.section()), null);
-    assert.match(await p.locator('.sp-pop-sec').innerText(), /Draw section line/);
-    assert.equal(await body(), body0, 'walls, openings, floors, furniture and levels unchanged');
-    console.log('PASS cut off, section deleted, model unchanged');
+    // 9 · Wind flow on the section: a cut west–east, the wind from the east, a vertical flow along the cut drawn on it
+    await frp.evaluate((o) => __ws.sectionSet({ pts: [[o.X - 3, o.Y + 3], [o.X + 10, o.Y + 3], [o.X + 14, o.Y + 9], [o.X + 27, o.Y + 9]] }), O); await p.waitForTimeout(1200);
+    await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim="wind"]'); await p.waitForTimeout(1500); await p.click('.sp-studycard [data-st-mode=section]'); await p.waitForTimeout(2500);
+    await p.click('.sp-studycard [data-wdir="4"]'); await p.waitForTimeout(300); r = await run(); assert.equal(r.err, ''); assert(r.on, 'a result on the section');
+    const rk = r.rows.map((x) => x[0]).join(' | '); assert.match(rk, /Along the cut[\s\S]*Speed-up, windiest 1 % of the section[\s\S]*At 1\.5 m along the cut/);
+    await p.waitForTimeout(1500); s3 = await fr3.evaluate(() => S3.secState()); assert(s3.view && s3.field !== false && s3.bands === 3, 'the flow on every segment of the cut, in the Section view: ' + JSON.stringify(s3));
+    assert.match(await p.locator('.sp-kp').innerText(), /on the cut/);
+    await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-wind.png' : '/dev/null' }).catch(() => {});
+    await p.click('.sp-studycard [data-st-view=ratio]'); await p.waitForTimeout(600); assert(await fr3.evaluate(() => S3.secState().bands === 3));
+    await p.click('.sp-studycard [data-st=close]').catch(() => {}); await p.waitForTimeout(600);
+    console.log('PASS Wind flow on the section:', r.rows.slice(1, 5).map((x) => x.join(' ')).join(' · '));
+
+    // 10 · Daylight on the section: the floor study's sky at points of the cut, every level
+    await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim="daylight"]'); await p.waitForTimeout(1500); await p.click('.sp-studycard [data-st-mode=section]'); await p.waitForTimeout(400);
+    r = await run(); assert.equal(r.err, ''); assert(r.on); assert.match(r.rows.map((x) => x.join(' ')).join(' | '), /Daylight factor on the cut, mean \d[\s\S]*Level 1 mean[\s\S]*Level 2 mean/);
+    await p.waitForTimeout(1200); s3 = await fr3.evaluate(() => S3.secState()); assert(s3.bands >= 1, 'daylight on the cut: ' + JSON.stringify(s3));
+    await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/section-daylight.png' : '/dev/null' }).catch(() => {});
+    console.log('PASS Daylight on the section:', r.rows.slice(0, 2).map((x) => x.join(' ')).join(' · '));
+
+    // 11 · closing the key plan ends the section; the model is as it was; Section offers the last cut again
+    await p.click('.sp-kp [data-kp=x]'); await p.waitForTimeout(1200); assert.equal(await frp.evaluate(() => __ws.section()), null); assert.equal(await fr3.evaluate(() => __ws.section()), null); assert.equal(await p.locator('.sp-kp').count(), 0);
+    assert(!(await fr3.evaluate(() => S3.secState().cut)), 'nothing cut'); assert.equal(await body(), body0, 'walls, openings, floors, furniture and levels unchanged');
+    await p.click('[data-sp=sec]'); await p.waitForSelector('.sxs'); st = await p.evaluate(() => window.__wsSection.state()); assert.equal(st.pts.length, 4, 'the last cut offered again'); await p.keyboard.press('Escape'); await p.waitForTimeout(300); assert.equal(await p.locator('.sxs').count(), 0, 'Esc closes the editor');
+    console.log('PASS key plan closed, section ended, model unchanged');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });

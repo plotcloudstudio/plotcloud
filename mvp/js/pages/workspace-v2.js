@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=ladybug-20261109-1';
+import { mountChrome } from '../workspace-chrome.js?v=section-20261110-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -165,7 +165,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=ladybug-20261109-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=section-20261110-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -404,14 +404,14 @@ export function render(app, [pid]) {
     if (sectionOn()) return 'Section ' + (INST.persp.ws.section?.()?.name || 'A');
     return UI.view === 'plan' ? (st?.view2d === 'ceiling' ? 'Ceiling plan' : 'Plan') : 'Perspective';
   }
-  // the Section view (2026-11-07, after Revit's Section): the model's section line, looked at square on in the 3D pane (parallel, pan
-  // and zoom, the levels drawn); without a line yet, the Plan asks for one (two clicks) and the view opens once it is drawn
+  // the Section view (2026-11-07; unfolded along a free polyline since 2026-11-10): the model's section line, looked at square on in
+  // the 3D pane (parallel, pan and zoom, the levels drawn); without a line yet, the section editor opens
   const sectionOn = () => !!(UI.view === 'persp' && INST.persp.ready && INST.persp.ws.sectionState?.()?.view);
   async function sectionView(on) {
     if (!on) { if (INST.persp.ready) INST.persp.ws.sectionView?.(false); menus(); return false; }
     const wait = async (k) => { for (let i = 0; i < 80 && !INST[k].ready; i++) await new Promise((r) => setTimeout(r, 100)); return INST[k].ready; };
     const has = INST.plan.ready ? INST.plan.ws.section?.() : INST.persp.ready ? INST.persp.ws.section?.() : null;
-    if (!has) { if (UI.view !== 'plan') await goView('plan'); if (!(await wait('plan'))) return false; INST.plan.ws.sectionDraw?.((ok) => { if (ok) setTimeout(() => sectionView(true), 120); }); menus(); return false; }
+    if (!has) { window.__wsSection?.edit(); menus(); return false; }   // no cut yet: the section editor (2026-11-10)
     if (UI.view !== 'persp') { await goView('persp'); if (!(await wait('persp'))) return false; await new Promise((r) => setTimeout(r, 250)); }   // after goView's own camera hand-over
     const r = INST.persp.ws.sectionView?.(true); menus(); return !!r; }
   function menus() {

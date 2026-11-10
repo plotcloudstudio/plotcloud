@@ -277,6 +277,20 @@ function setup(sc, o = {}) { const k = JSON.stringify([sc.bounds, sc.walls?.leng
 export function plan(sc, o) { setup(sc, o); analyse(); const A = GC.R.area || 1, nS = Math.max(8, GC.S.length), L = LEVELS[o.level] || LEVELS.draft, VR = rate(); let best = null;
   for (const [sp, nb] of L.cand) { const n = A / (sp * sp), work = n * (nb * nS * 0.02 + 4400 * 0.12), est = VR * work + 0.3; best = { sp, nb, n, est, work }; if (est <= L.T) return best; } return best; }
 export function stop() { STOP = true; }
+// daylight on a section (2026-11-10): the same sky, sun, glass and reflections as the floor study, at points of a vertical cut
+// through the level: pts [{ x, y (local metres), z (height above the floor) }] → [{ df (%), da (share of occupied hours ≥ 300
+// lux), mean (lux) } or null outside the rooms]. Each point is a horizontal sensor at its height (the work plane moved to z).
+export async function section(sc, o, pts, onProg = () => {}) { STOP = false; setup(sc, o); analyse(); if (!YEAR) buildYear(); const nb = o.nb || 180, irc = roomIRC(), G = GC.G, reg = GC.R.reg, wp0 = WP;
+  const Lh = new Array(8760), hours = []; for (let i = 0; i < 8760; i++) if (YEAR.alt[i] > 0.5 && YEAR.Ed[i] + YEAR.Eb[i] >= 1) { Lh[i] = Lof(i); hours.push(i); }
+  const nOcc = 365 * (OCC[1] - OCC[0]), ov = new Float32Array(NP); skyLum(45, 180, 0, 1, ov); const out = new Array(pts.length).fill(null); let t0 = performance.now();
+  try { for (let k = 0; k < pts.length; k++) { const p = pts[k], cx = Math.floor(p.x / G.c), cy = Math.floor(p.y / G.c); if (cx < 0 || cy < 0 || cx >= G.W || cy >= G.H) continue; const ci = cy * G.W + cx; if (!reg[ci]) continue;
+      WP = p.z; const sk = spotSky([p.x, p.y], nb, GC.S), rk = GC.R.room[ci], ir = rk >= 0 ? irc[rk] : 0; let lit = 0, sum = 0;
+      for (const i of hours) { const h = i % 24; if (!occ(h)) continue; const [e] = hourLux(sk, ir, Lh[i], i); if (e >= 300) lit++; sum += e; }
+      let df = 0; for (let q = 0; q < sk.idx.length; q++) df += sk.val[q] * ov[sk.idx[q]]; df = 100 * (df + sk.erc * 0.15 / Math.PI + ir);
+      out[k] = { df, da: lit / nOcc, mean: sum / nOcc };
+      if (performance.now() - t0 > 60) { onProg((k + 1) / pts.length); await tick(); t0 = performance.now(); if (STOP) throw Error('Stopped.'); } } }
+  finally { WP = wp0; }
+  return out; }
 // o: { level, tau, rf, rw, rc, head, ceil, wp, north, occ: [h0, h1], loc: { lat, lon, tz, name }, epw: text or null, epwName }
 export async function run(sc, o, onProg) { STOP = false; YEAR = null; const p = plan(sc, o), t0 = performance.now(); RES = await compute(p.sp, p.nb, onProg || (() => {})); if (!RES) throw Error('Stopped.');
   const secs = (performance.now() - t0) / 1000; try { localStorage.setItem(RATEK, String(Math.max(1e-13, (secs - 0.3) / Math.max(1, p.work)))); } catch (e) { }

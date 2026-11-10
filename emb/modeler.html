@@ -2534,7 +2534,7 @@ function draw() {
   // air through openings and floor openings
   if (LAY.flows && VIS.Wall && SHOW === 'air' && live() && RES.af && !RES.af.closed) flows('op');
   // the section mark (2026-11-07)
-  if (M.section || SEC2.draw) drawSecMark();
+  if (M.section) drawSecMark();
   // drawing in progress
   drawPreview();
   hud(); zoomUI(); miniSoon(); selBar();
@@ -5569,20 +5569,28 @@ stage.addEventListener('pointerleave', () => { if (PROBE) PROBE(null); });
 let PICK1 = null;
 window.addEventListener('pointerdown', (e) => { if (!PICK1 || e.button !== 0 || !stage.contains(e.target)) return; let p = null;   /* window capture: before the selection and gizmo handlers */ if (CAM === '3d' && window.S3 && S3.on) p = S3.probe(e.clientX, e.clientY); else { const a = evP(e); p = S2W(a[0], a[1]); }
   if (!p) return; e.preventDefault(); e.stopImmediatePropagation(); const f = PICK1; PICK1 = null; stage.style.cursor = ''; f([p[0], p[1]]); }, true);
-// ---- section (2026-11-07, after Revit's Section tool): one section line on the plan, kept in the model (M.section: { a, b, flip,
-// far, on, name }), so it travels with undo, versions and both Workspace views. Drawn on every level as a section mark: a head
-// at each end with the section's letter and a solid arrow the way it looks; a click on an arrow flips it, a head drags its end,
-// the line drags the whole cut, the dashed far edge sets how deep the section looks (Revit's far clip). The 3D view cuts the
-// model there (S3.section) and draws a study's per-room result on the cut where the study has one (egressShow({ section: 'room' })).
+// ---- section (2026-11-07; a free polyline since 2026-11-10): one section line, kept in the model (M.section: { pts: [[x, y], …],
+// flip, far, on, name }; the first version's { a, b } is read as two points), so it travels with undo, versions and both
+// Workspace views. It is drawn and edited in the Workspace (the section editor and its key plan); here it shows on every level as
+// a section mark. The 3D view cuts the model along it, segment by segment (S3.section): the plane is split at each joint along the
+// bisector of the two segments, and each part keeps what lies on the looking side of its own segment.
 const SEC2 = { draw: null, drag: null };
-function secOf(m = M) { const s = m && m.section; if (!s || !Array.isArray(s.a) || !Array.isArray(s.b)) return null; const dx = s.b[0] - s.a[0], dy = s.b[1] - s.a[1], len = Math.hypot(dx, dy); if (!(len > 0.2)) return null;
-  const u = [dx / len, dy / len], look = s.flip ? [u[1], -u[0]] : [-u[1], u[0]]; return { a: s.a, b: s.b, u, look, len, far: Number.isFinite(s.far) && s.far > 0 ? s.far : null, on: s.on !== false, name: s.name || 'A' }; }
+function secPts(m = M) { const s = m && m.section; if (!s) return null; const P = Array.isArray(s.pts) ? s.pts : Array.isArray(s.a) && Array.isArray(s.b) ? [s.a, s.b] : null; if (!P) return null; const out = [];
+  for (const q of P) if (Array.isArray(q) && Number.isFinite(+q[0]) && Number.isFinite(+q[1]) && (!out.length || Math.hypot(q[0] - out.at(-1)[0], q[1] - out.at(-1)[1]) > 0.05)) out.push([+q[0], +q[1]]); return out.length >= 2 ? out : null; }
+function secOf(m = M) { const P = secPts(m); if (!P) return null; const s = m.section, segs = []; let t = 0;
+  for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy), u = [dx / len, dy / len], look = s.flip ? [u[1], -u[0]] : [-u[1], u[0]]; segs.push({ i, a, b, u, look, len, s0: t }); t += len; }
+  if (!(t > 0.2)) return null; const joints = [];
+  for (let i = 1; i < segs.length; i++) { const u1 = segs[i - 1].u, u2 = segs[i].u, mx = u1[0] + u2[0], my = u1[1] + u2[1], L = Math.hypot(mx, my) || 1; joints.push({ p: P[i], m: [mx / L, my / L] }); }
+  return { pts: P, segs, joints, a: P[0], b: P.at(-1), u: segs[0].u, look: segs[0].look, len: t, far: Number.isFinite(s.far) && s.far > 0 ? s.far : null, on: s.on !== false, name: s.name || 'A', flip: !!s.flip }; }
+// a point of the unfolded cut, t metres along it (before 0 and past the end: along the end segments)
+function secAt(s, t) { let g = s.segs[0]; for (const q of s.segs) if (t >= q.s0) g = q; const d = t - g.s0; return { p: [g.a[0] + g.u[0] * d, g.a[1] + g.u[1] * d], g }; }
+// a study's per-room result on the cut (the airflow network, egressShow({ section: 'room' })): one column per 1/24 m along the cut
 function secBands(s) { const o = EGO.o; if (!s || !o || o.section !== 'room' || !o.levels) return null; const R = o.rampStops || RAMPS_TOP.violet, K = 24, W = Math.max(2, Math.round(s.len * K));
   const lvs = o.levels.map((L) => ({ L, lv: M.levels.find((l) => l.id === L.lv) })).filter((x) => x.lv && x.L.density); if (!lvs.length) return null;
   const z0 = Math.min(...lvs.map((x) => x.lv.z || 0)), z1 = Math.max(...lvs.map((x) => (x.lv.z || 0) + (x.lv.h || 3))), H = Math.max(2, Math.round((z1 - z0) * K)), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
   const F = o.secFmt || { unit: '', dec: 1 }, rooms = [];
   for (const { L, lv } of lvs) { const D = L.density, lo = D.lo || 0, sp = Math.max(1e-9, D.hi - lo), top = Math.round((z1 - (lv.z || 0) - (lv.h || 3)) * K), hh = Math.round((lv.h || 3) * K), vs = new Float64Array(W).fill(NaN);
-    for (let i = 0; i < W; i++) { const t = (i + 0.5) / K, gi = Math.floor((s.a[0] + s.u[0] * t - D.X0) / D.cell), gj = Math.floor((s.a[1] + s.u[1] * t - D.Y0) / D.cell); if (gi < 0 || gj < 0 || gi >= D.nx || gj >= D.ny) continue;
+    for (let i = 0; i < W; i++) { const q = secAt(s, (i + 0.5) / K).p, gi = Math.floor((q[0] - D.X0) / D.cell), gj = Math.floor((q[1] - D.Y0) / D.cell); if (gi < 0 || gj < 0 || gi >= D.nx || gj >= D.ny) continue;
       const v = D.vals[gj * D.nx + gi]; if (!Number.isFinite(v)) continue; vs[i] = v; x.fillStyle = rampAtTop(R, (v - lo) / sp); x.fillRect(i, top, 1, hh); }
     // each room the cut crosses (a run of one value), labelled where it is at least 1.4 m wide
     let i0 = 0; for (let i = 1; i <= W; i++) { if (i < W && (vs[i] === vs[i0] || (Number.isNaN(vs[i]) && Number.isNaN(vs[i0])))) continue;
@@ -5591,57 +5599,45 @@ function secBands(s) { const o = EGO.o; if (!s || !o || o.section !== 'room' || 
   // is ahead of the cut and inside the far clip (⊙ towards you, ⊗ away). Blue in, red out, grey between rooms, as on the plan.
   const flows = []; if (o.secFlows && S) { const qmax = Math.max(1, ...o.secFlows.map((f) => Math.abs(f.q))), far = s.far ?? Infinity;
     for (const f of o.secFlows) { if (Math.abs(f.q) < 2) continue; const op = S.ops.find((q) => q.o.id === f.id); if (!op) continue;
-      const rx = f.p[0] - s.a[0], ry = f.p[1] - s.a[1], t = rx * s.u[0] + ry * s.u[1], dn = rx * s.look[0] + ry * s.look[1]; if (t < -0.2 || t > s.len + 0.2) continue;
-      const sg = Math.sign(f.q), d = [f.dir[0] * sg, f.dir[1] * sg], along = d[0] * s.u[0] + d[1] * s.u[1], across = d[0] * s.look[0] + d[1] * s.look[1];
+      let best = null; for (const g of s.segs) { const rx = f.p[0] - g.a[0], ry = f.p[1] - g.a[1], tt = rx * g.u[0] + ry * g.u[1], dn = rx * g.look[0] + ry * g.look[1]; if (tt < -0.2 || tt > g.len + 0.2) continue; if (!best || Math.abs(dn) < Math.abs(best.dn)) best = { g, t: g.s0 + tt, dn }; }
+      if (!best) continue; const { g, t, dn } = best;
+      const sg = Math.sign(f.q), d = [f.dir[0] * sg, f.dir[1] * sg], along = d[0] * g.u[0] + d[1] * g.u[1], across = d[0] * g.look[0] + d[1] * g.look[1];
       const col = f.ext ? (f.q > 0 ? '#1d4ed8' : '#b91c1c') : '#475569', z = (op.zs + op.zh) / 2, q = Math.abs(f.q), w = Math.sqrt(q / qmax);
       if (Math.abs(along) >= 0.7 && Math.abs(dn) <= Math.max(0.3, (op.o.w || 0.9) / 2)) flows.push({ t, z, k: along > 0 ? 1 : -1, q, col, w });
       else if (Math.abs(across) >= 0.7 && dn >= -0.05 && dn <= far) flows.push({ t, z, k: 0, toward: across < 0, q, col, w }); } }
   const zn = Number.isFinite(o.secZn) && o.secZn > z0 - 0.5 && o.secZn < z1 + 0.5 ? o.secZn : null;
-  const l0 = lvs.reduce((a, q) => ((q.lv.z || 0) < (a.z || 0) ? q.lv : a), lvs[0].lv); return { canvas: c, z0, z1, lv0: l0.id, zl: l0.z || 0, notes: { rooms, flows, zn } }; }
-function secSync() { if (!window.S3 || !S3.section) return; const s = secOf(); try { S3.section(s ? { ...s, bands: secBands(s) } : null); } catch (e) { console.warn(e); } }
-// the mark in screen pixels: heads, their arrows, the far edge
-function secGeo() { const s = secOf(); if (!s) return null; const d = VP.d, A = W2S(s.a), B = W2S(s.b), ls = [s.look[0], -s.look[1]], ps = [-ls[1], ls[0]], r = 9 * d;
-  const tri = (c) => [[c[0] + ls[0] * r * 2.4, c[1] + ls[1] * r * 2.4], [c[0] + ps[0] * r, c[1] + ps[1] * r], [c[0] - ps[0] * r, c[1] - ps[1] * r]];
-  const far = s.far ? [W2S([s.a[0] + s.look[0] * s.far, s.a[1] + s.look[1] * s.far]), W2S([s.b[0] + s.look[0] * s.far, s.b[1] + s.look[1] * s.far])] : null;
-  return { s, A, B, r, ls, tri: [tri(A), tri(B)], far }; }
-function drawSecMark() {
-  const d = VP.d, G = secGeo(), dr = SEC2.draw; g.save();
-  if (dr && dr.a) { const A = W2S(dr.a), P = dr.p ? W2S(dr.p) : A; g.strokeStyle = '#2f6fd6'; g.lineWidth = 1.6 * d; g.setLineDash([12 * d, 4 * d, 2 * d, 4 * d]); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(P[0], P[1]); g.stroke(); g.setLineDash([]);
-    if (dr.p) { const L = Math.hypot(dr.p[0] - dr.a[0], dr.p[1] - dr.a[1]); tag((A[0] + P[0]) / 2, (A[1] + P[1]) / 2 - 14 * d, L.toFixed(2) + ' m', { mono: true, fs: 10.5, col: '#2f6fd6', tries: [[0, 0]] }); } }
-  if (G) { const { s, A, B, r } = G, sel = !!SEC2.drag, ink = s.on ? '#1f2a3a' : '#8b93a0';
-    if (G.far) { g.strokeStyle = 'rgba(47,111,214,.55)'; g.lineWidth = 1 * d; g.setLineDash([6 * d, 4 * d]); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(G.far[0][0], G.far[0][1]); g.lineTo(G.far[1][0], G.far[1][1]); g.lineTo(B[0], B[1]); g.stroke(); g.setLineDash([]); }
-    g.strokeStyle = ink; g.lineWidth = (sel ? 2.2 : 1.6) * d; g.setLineDash([16 * d, 4 * d, 3 * d, 4 * d]); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke(); g.setLineDash([]);
-    for (let k = 0; k < 2; k++) { const c = k ? B : A, t = G.tri[k]; g.fillStyle = ink; g.beginPath(); g.moveTo(t[0][0], t[0][1]); g.lineTo(t[1][0], t[1][1]); g.lineTo(t[2][0], t[2][1]); g.closePath(); g.fill();
-      g.fillStyle = '#fff'; g.strokeStyle = ink; g.lineWidth = 1.4 * d; g.beginPath(); g.arc(c[0], c[1], r, 0, 7); g.fill(); g.stroke();
-      g.fillStyle = ink; g.font = `700 ${11 * d}px ${FM}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(s.name, c[0], c[1] + 0.5 * d); } }
+  const l0 = lvs.reduce((a, q) => ((q.lv.z || 0) < (a.z || 0) ? q.lv : a), lvs[0].lv); return { canvas: c, z0, z1, t0: 0, t1: s.len, lv0: l0.id, zl: l0.z || 0, notes: { rooms, flows, zn } }; }
+// a field over the unfolded cut from the Workspace (2026-11-10: wind in section, daylight in section): t along the cut (t0..t1,
+// may run past the ends), z above level 0 (z0..z1), nx × ny values from the bottom row up; arrows optional (vx, vy per cell)
+let SECF = null;
+function secFieldBands(s) { const F = SECF; if (!s || !F) return null; const K = Math.max(4, Math.min(40, 2400 / Math.max(1, F.t1 - F.t0))), W = Math.max(2, Math.round((F.t1 - F.t0) * K)), H = Math.max(2, Math.round((F.z1 - F.z0) * K)), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  const R = F.stops || RAMPS_TOP.ladybug, lo = F.lo ?? 0, sp = Math.max(1e-9, (F.hi ?? 1) - lo), cw = W / F.nx, ch = H / F.ny;
+  for (let j = 0; j < F.ny; j++) for (let i = 0; i < F.nx; i++) { const v = F.vals[j * F.nx + i]; if (!Number.isFinite(v)) continue; x.fillStyle = rampAtTop(R, (v - lo) / sp); x.fillRect(Math.floor(i * cw), Math.floor(H - (j + 1) * ch), Math.ceil(cw) + 1, Math.ceil(ch) + 1); }
+  if (F.vx && F.vy) { const step = Math.max(1, Math.round(1.6 / ((F.t1 - F.t0) / F.nx))), L = step * cw * 0.85; x.strokeStyle = x.fillStyle = 'rgba(17,24,39,.72)'; x.lineWidth = Math.max(1, cw * 0.12); x.lineCap = 'round';
+    for (let j = Math.floor(step / 2); j < F.ny; j += step) for (let i = Math.floor(step / 2); i < F.nx; i += step) { const k = j * F.nx + i, vx = F.vx[k], vy = F.vy[k], m = Math.hypot(vx, vy); if (!(m > 0.05) || !Number.isFinite(m)) continue;
+      const cx = (i + 0.5) * cw, cy = H - (j + 0.5) * ch, sc = Math.min(1.2, m) * L / 2, ux = vx / m, uy = -vy / m, hx = cx + ux * sc, hy = cy + uy * sc, hd = Math.max(2, L * 0.22);
+      x.beginPath(); x.moveTo(cx - ux * sc, cy - uy * sc); x.lineTo(hx, hy); x.stroke(); x.beginPath(); x.moveTo(hx, hy); x.lineTo(hx - ux * hd - uy * hd * 0.55, hy - uy * hd + ux * hd * 0.55); x.lineTo(hx - ux * hd + uy * hd * 0.55, hy - uy * hd - ux * hd * 0.55); x.closePath(); x.fill(); } }
+  const l0 = [...M.levels].sort((a, b) => (a.z || 0) - (b.z || 0))[0] || { id: LV, z: 0 }; return { canvas: c, z0: F.z0, z1: F.z1, t0: F.t0, t1: F.t1, lv0: l0.id, zl: l0.z || 0, notes: { rooms: F.labels || [], flows: [], zn: null } }; }
+function secSync() { if (!window.S3 || !S3.section) return; const s = secOf(); try { S3.section(s ? { ...s, bands: SECF ? secFieldBands(s) : secBands(s) } : null); } catch (e) { console.warn(e); } }
+// the mark on the plan: the polyline dash-dotted, a head at each end with the section's letter and an arrow the way it looks
+function drawSecMark() { const s = secOf(); if (!s) return; const d = VP.d, r = 9 * d, ink = s.on ? '#1f2a3a' : '#8b93a0'; g.save();
+  const Q = s.pts.map((q) => W2S(q)); g.strokeStyle = ink; g.lineWidth = 1.6 * d; g.setLineDash([16 * d, 4 * d, 3 * d, 4 * d]); g.beginPath(); Q.forEach((q, i) => (i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]))); g.stroke(); g.setLineDash([]);
+  for (const [c, sg] of [[Q[0], s.segs[0]], [Q.at(-1), s.segs.at(-1)]]) { const ls = [sg.look[0], -sg.look[1]], ps = [-ls[1], ls[0]], t = [[c[0] + ls[0] * r * 2.4, c[1] + ls[1] * r * 2.4], [c[0] + ps[0] * r, c[1] + ps[1] * r], [c[0] - ps[0] * r, c[1] - ps[1] * r]];
+    g.fillStyle = ink; g.beginPath(); g.moveTo(t[0][0], t[0][1]); g.lineTo(t[1][0], t[1][1]); g.lineTo(t[2][0], t[2][1]); g.closePath(); g.fill();
+    g.fillStyle = '#fff'; g.strokeStyle = ink; g.lineWidth = 1.4 * d; g.beginPath(); g.arc(c[0], c[1], r, 0, 7); g.fill(); g.stroke(); g.fillStyle = ink; g.font = `700 ${11 * d}px ${FM}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(s.name, c[0], c[1] + 0.5 * d); }
   g.restore(); }
-function secHit(a) { const G = secGeo(); if (!G) return null; const d = VP.d, inTri = (p, t) => { const sg = (p1, p2, p3) => (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1]), d1 = sg(p, t[0], t[1]), d2 = sg(p, t[1], t[2]), d3 = sg(p, t[2], t[0]); return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)); };
-  const seg = (p, q, r2) => { const dx = r2[0] - q[0], dy = r2[1] - q[1], L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p[0] - q[0]) * dx + (p[1] - q[1]) * dy) / L2)); return Math.hypot(p[0] - q[0] - t * dx, p[1] - q[1] - t * dy); };
-  if (Math.hypot(a[0] - G.A[0], a[1] - G.A[1]) <= G.r + 3 * d) return 'a'; if (Math.hypot(a[0] - G.B[0], a[1] - G.B[1]) <= G.r + 3 * d) return 'b';
-  if (inTri(a, G.tri[0]) || inTri(a, G.tri[1])) return 'flip';
-  if (seg(a, G.A, G.B) <= 6 * d) return 'move'; if (G.far && seg(a, G.far[0], G.far[1]) <= 6 * d) return 'far'; return null; }
-const secPlanOk = () => CAM !== '3d' && CAM !== 'section' && !window.__elv3;
-const secOrtho = (a, p) => { const dx = p[0] - a[0], dy = p[1] - a[1], L = Math.hypot(dx, dy), an = Math.atan2(dy, dx), q = Math.round(an / (Math.PI / 2)) * (Math.PI / 2); return Math.abs(an - q) < 4 * Math.PI / 180 ? [a[0] + Math.cos(q) * L, a[1] + Math.sin(q) * L] : p; };
-function secDrawEnd(ok) { const dr = SEC2.draw; SEC2.draw = null; stage.style.cursor = ''; draw(); if (dr && dr.cb) dr.cb(!!ok); }
-window.addEventListener('pointerdown', (e) => { if (e.button !== 0 || PICK1 || !stage.contains(e.target) || !secPlanOk()) return; const a = evP(e), p = S2W(a[0], a[1]);
-  if (SEC2.draw) { e.preventDefault(); e.stopImmediatePropagation(); const dr = SEC2.draw;
-    if (!dr.a) { dr.a = [+p[0].toFixed(3), +p[1].toFixed(3)]; dr.p = null; draw(); return; }
-    const q = secOrtho(dr.a, p); if (Math.hypot(q[0] - dr.a[0], q[1] - dr.a[1]) < 0.5) { flash('Make the section line at least 0.5 m long.'); return; }
-    const before = snapM(), was = M.section || {}; M.section = { a: dr.a, b: [+q[0].toFixed(3), +q[1].toFixed(3)], flip: false, far: Number.isFinite(was.far) ? was.far : null, on: true, name: was.name || 'A' }; commit(before); secDrawEnd(true); return; }
-  if (TOOL !== 'select') return;   // with a drawing tool, a click near the line is the tool's
-  const h = secHit(a); if (!h) return; e.preventDefault(); e.stopImmediatePropagation();
-  const before = snapM(); if (h === 'flip') { M.section.flip = !M.section.flip; commit(before); return; }
-  SEC2.drag = { k: h, p0: p, a0: [...M.section.a], b0: [...M.section.b], before, moved: false }; draw(); }, true);
-window.addEventListener('pointermove', (e) => { if (!secPlanOk()) return; if (!SEC2.draw && !SEC2.drag) { if (M.section && TOOL === 'select' && stage.contains(e.target) && !PICK1) { const h = secHit(evP(e)); if (h) stage.style.cursor = h === 'flip' ? 'pointer' : 'move'; else if (stage.style.cursor === 'move' || stage.style.cursor === 'pointer') stage.style.cursor = ''; } return; }
-  const a = evP(e), p = S2W(a[0], a[1]);
-  if (SEC2.draw) { if (SEC2.draw.a) { SEC2.draw.p = secOrtho(SEC2.draw.a, p); draw(); } return; }
-  const D = SEC2.drag, S0 = M.section, dx = p[0] - D.p0[0], dy = p[1] - D.p0[1], r3 = (v) => +v.toFixed(3); D.moved = true; e.preventDefault(); e.stopImmediatePropagation();
-  if (D.k === 'move') { S0.a = [r3(D.a0[0] + dx), r3(D.a0[1] + dy)]; S0.b = [r3(D.b0[0] + dx), r3(D.b0[1] + dy)]; }
-  else if (D.k === 'a' || D.k === 'b') { const other = D.k === 'a' ? D.b0 : D.a0, q = secOrtho(other, p); if (Math.hypot(q[0] - other[0], q[1] - other[1]) >= 0.5) S0[D.k] = [r3(q[0]), r3(q[1])]; }
-  else if (D.k === 'far') { const s = secOf(); if (s) { const f = (p[0] - s.a[0]) * s.look[0] + (p[1] - s.a[1]) * s.look[1]; S0.far = Math.max(0.5, Math.round(f * 10) / 10); } }
-  changed(true); }, true);
-window.addEventListener('pointerup', () => { const D = SEC2.drag; if (!D) return; SEC2.drag = null; if (D.moved) commit(D.before); else draw(); }, true);
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && SEC2.draw) { e.preventDefault(); e.stopImmediatePropagation(); secDrawEnd(false); } }, true);
+// the cut through the model as a vertical profile (2026-11-10, for wind in section): along the unfolded cut every ds metres from
+// t0 to t1, solid where a mass, the building (its storeys: base to top) or a surrounding building stands, or below the terrain
+function secProfile(prisms, o = {}) { const s = secOf(); if (!s) return null; const ds = Math.max(0.2, +o.ds || 0.5), dz = Math.max(0.2, +o.dz || ds), t0 = o.t0 ?? -40, t1 = o.t1 ?? s.len + 40;
+  const pr = prisms.map((P) => Object.assign(prismOf(P.outer, P.h), { b: P.b || 0 })).concat(M.site ? SITEC.contextMasses(M.site, M.north || 0).map((m) => Object.assign(prismOf(m.outer, m.h), { b: 0 })) : []);
+  const gAt = (q) => { if (!M.site || !M.site.terrain) return 0; const t = siteOfM(M, q); return SITEC.groundAt(M.site.terrain, t[0], t[1]); };
+  const nx = Math.max(4, Math.round((t1 - t0) / ds)), cols = []; let top = 0, g0 = Infinity;
+  for (let i = 0; i < nx; i++) { const q = secAt(s, t0 + (i + 0.5) * ds).p, gz = gAt(q), runs = []; g0 = Math.min(g0, gz);
+    for (const P of pr) if (q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer)) { runs.push([P.b, P.h]); top = Math.max(top, P.h); } cols.push({ gz, runs }); }
+  if (!Number.isFinite(g0)) g0 = 0; const z0 = Math.min(0, g0), z1 = Math.max(top * 3, top + 30, 20), ny = Math.max(6, Math.round((z1 - z0) / dz)), solid = new Uint8Array(nx * ny);
+  for (let i = 0; i < nx; i++) { const C = cols[i]; for (let j = 0; j < ny; j++) { const z = z0 + (j + 0.5) * dz; if (j === 0 || z < C.gz || C.runs.some(([b, h]) => z >= b && z <= h)) solid[j * nx + i] = 1; } }
+  const open = new Uint8Array(nx * ny); for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const z = z0 + (j + 0.5) * dz; if (j === 0 || z < cols[i].gz) open[j * nx + i] = 1; }   // the same ground without the buildings
+  return { t0, t1: t0 + nx * ds, z0, z1: z0 + ny * dz, nx, ny, ds, dz, solid, open, top, len: s.len, segs: s.segs.length }; }
 // ---- flow animation (2026-10-31): particles carried by a velocity field on the study grid (m/s in plan axes), drawn as streaks:
 // on the 3D topographic block and on a layer over the 2D plan; respawned where the field is still, off the grid or old
 const FLOW = { o: null, P: null, raf: 0, last: 0, cv: null };
@@ -6020,8 +6016,8 @@ window.S3 = (() => {
   };
   api.resize = () => { if (!R) return; const r = canvas.parentElement.getBoundingClientRect(); const w = Math.max(50, r.width), h = Math.max(50, r.height); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); render(); };
   // the section (2026-11-07, after Revit's Section): set from the model's section line (api.section); planes, cut faces, the Section view
-  const SEC = { o: null, key: '', planes: [], cut: false, view: false, saved: null, op: 0.6, bands: true, cap: null, band: null, svg: null, caps: 0 };
-  function render() { if (R && api.on) { if (api.preRender) api.preRender(); if (SEC.view) secNear(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ if (SEC.cut && !SEC.view && !EL.on) secRender(WALK.on ? WALK.cam : cam); else R.render(scene, WALK.on ? WALK.cam : cam); if (SEC.cut && !EL.on) secCaps(WALK.on ? WALK.cam : cam); if (typeof PPL !== 'undefined' && PPL.scene && PPL.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(PPL.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } if (typeof EGR !== 'undefined' && EGR.scene && EGR.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(EGR.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } secOverlay(); } }
+  const SEC = { o: null, key: '', planes: [], passes: [], cut: false, view: false, saved: null, op: 0.6, bands: true, cap: null, band: null, bandMs: [], svg: null, caps: 0, e0: 4, e1: 4, v: { k: 10, cx: 0, cz: 0 } };
+  function render() { if (R && api.on) { if (api.preRender) api.preRender(); worldFade(); if (typeof REND !== 'undefined' && DISP === 'rendered' && REND.bg && scene.background !== REND.bg) scene.background = REND.bg;   /* Rendered keeps its sky over the viewport colour */ if (SEC.view && SEC.cut && !EL.on) secViewRender(); else if (SEC.cut && !EL.on) secRender(WALK.on ? WALK.cam : cam); else R.render(scene, WALK.on ? WALK.cam : cam); if (SEC.cut && !EL.on && !SEC.view) secCaps(WALK.on ? WALK.cam : cam); if (!SEC.view && typeof PPL !== 'undefined' && PPL.scene && PPL.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(PPL.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } if (!SEC.view && typeof EGR !== 'undefined' && EGR.scene && EGR.list.length) { const cp = R.clippingPlanes; R.clippingPlanes = []; R.autoClear = false; R.render(EGR.scene, WALK.on ? WALK.cam : cam); R.autoClear = true; R.clippingPlanes = cp; } secOverlay(); } }
   // ---- the world around the site: OpenStreetMap tiles in three rings (about 24 km, 780 km and the world) under the site.
   // Hidden close up (only the site shows); fades in as the camera pulls back. Tiles: Esri Light Gray Canvas (Esri, HERE, Garmin, © OpenStreetMap contributors).
   const WM = { key: '', rings: [], siteR: 300, ground: [] };
@@ -6812,11 +6808,22 @@ window.S3 = (() => {
       for (let t = 0; t + 2 < n; t += 3) { const a = id(ix ? ix.getX(t) : t), b = id(ix ? ix.getX(t + 1) : t + 1), c = id(ix ? ix.getX(t + 2) : t + 2); add(a, b); add(b, c); add(c, a); }
       r = E.size > 0; for (const k of E.values()) if (k % 2) { r = false; break; } } }   // closed: every edge is shared by an even number of faces
     CLOSED.set(g, r); return r; }
+  // ---- the cut (2026-11-10, a free polyline): one pass per segment, each clipped to its wedge (between the bisectors at its
+  // joints) and to the looking side of its segment, and the far clip; every point of the model is drawn by exactly one pass
   const secL3 = (o) => new T.Vector3(o.look[0], 0, -o.look[1]);
-  function secPlanes(o) { const n = secL3(o), k = o.look[0] * o.a[0] + o.look[1] * o.a[1], P = [new T.Plane(n.clone(), -k)]; if (o.far) P.push(new T.Plane(n.clone().negate(), k + o.far)); return P; }   // kept: 0 ≤ look·p − k ≤ far
-  function secApply() { if (!R) return; SEC.cut = !!SEC.o && (SEC.o.on || SEC.view); SEC.planes = SEC.cut ? secPlanes(SEC.o) : [];
-    if (EL.on) { if (EL.saved) EL.saved.clip = SEC.planes; } else R.clippingPlanes = SEC.planes;   // an interior elevation keeps its own plane and gives the section back on exit
-    secBandMesh(); }
+  const P3 = (n, k) => new T.Plane(new T.Vector3(n[0], 0, -n[1]), -k);   // keeps n·p ≥ k (plan n and p)
+  function secPasses(o) { if (!o || !o.segs) return []; return o.segs.map((g, i) => { const k = g.look[0] * g.a[0] + g.look[1] * g.a[1], P = [P3(g.look, k)];
+      if (i > 0) { const J = o.joints[i - 1]; P.push(P3(J.m, J.m[0] * J.p[0] + J.m[1] * J.p[1])); }
+      if (i < o.segs.length - 1) { const J = o.joints[i]; P.push(P3([-J.m[0], -J.m[1]], -(J.m[0] * J.p[0] + J.m[1] * J.p[1]))); }
+      if (o.far) P.push(P3([-g.look[0], -g.look[1]], -(k + o.far))); return P; }); }
+  function secPlanes(o) { const ps = secPasses(o); return ps.length === 1 ? ps[0] : []; }
+  function secApply() { if (!R) return; SEC.cut = !!SEC.o && (SEC.o.on || SEC.view); SEC.passes = SEC.cut ? secPasses(SEC.o) : []; SEC.planes = SEC.passes.length === 1 ? SEC.passes[0] : [];
+    if (EL.on) { if (EL.saved) EL.saved.clip = SEC.planes; } else R.clippingPlanes = SEC.view ? [] : SEC.planes;   // one segment: the renderer's own clipping, as before; more: pass by pass
+    if (SEC.cut) secExt(); secBandMesh(); }
+  // how far the building runs past the ends of the cut (the unfolded view shows it): along the end segments, 2 to 80 m
+  function secExt() { const o = SEC.o; let e0 = 4, e1 = 4; const b = grp ? siteFree(grp) : null; if (b && !b.isEmpty()) { const g0 = o.segs[0], g1 = o.segs.at(-1);
+      for (const x of [b.min.x, b.max.x]) for (const zz of [b.min.z, b.max.z]) { const q = [x, -zz]; e0 = Math.max(e0, -((q[0] - g0.a[0]) * g0.u[0] + (q[1] - g0.a[1]) * g0.u[1]) + 2); e1 = Math.max(e1, (q[0] - g1.b[0]) * g1.u[0] + (q[1] - g1.b[1]) * g1.u[1] + 2); } }
+    SEC.e0 = Math.min(80, e0); SEC.e1 = Math.min(80, e1); }
   // the 3D cutaway (2026-11-09): only the building and the results on it are cut; the site, its terrain, water and surrounding
   // buildings, the ground and its results stay whole (cutting the whole site laid open a slab of ground hundreds of metres wide
   // over the view; the interior studies' cutaway works the same way). The Section view cuts everything, ground included.
@@ -6828,72 +6835,96 @@ window.S3 = (() => {
     if (grp) for (const ch of grp.children) (secWhole(ch) ? whole : cut).push(ch);
     const vis = new Map([...cut, ...whole].map((o) => [o, o.visible])), bg = scene.background, sa = R.shadowMap.autoUpdate, cp = R.clippingPlanes;
     try { for (const o of cut) o.visible = false; R.clippingPlanes = []; R.render(scene, c);   // the site whole first, so the cut building's see-through parts blend over it
-      for (const o of whole) o.visible = false; for (const o of cut) o.visible = vis.get(o); R.clippingPlanes = cp; scene.background = null; R.shadowMap.autoUpdate = false; R.autoClear = false; R.render(scene, c); }
+      for (const o of whole) o.visible = false; for (const o of cut) o.visible = vis.get(o); scene.background = null; R.shadowMap.autoUpdate = false; R.autoClear = false;
+      for (const P of SEC.passes) { R.clippingPlanes = P; R.render(scene, c); } }
     finally { for (const [o, v] of vis) o.visible = v; scene.background = bg; R.shadowMap.autoUpdate = sa; R.clippingPlanes = cp; R.autoClear = true; } }
   const inWhole = (o) => { for (let q = o; q && q !== grp; q = q.parent) if (secWhole(q)) return true; return false; };
-  function secCaps(c) {
-    if (!grp || !SEC.planes.length) return;
+  // the cut faces filled, segment by segment: the faces a ray crosses beyond the segment's plane are counted (odd: inside a solid),
+  // then the cut is filled there inside the segment's wedge: the ground block in an earth tone (Section view), every closed mesh dark
+  function secCaps(c, only) {
+    if (!grp || !SEC.passes.length) return;
     if (!SEC.cap) { const st = (side, op) => new T.MeshBasicMaterial({ side, colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilFunc: T.AlwaysStencilFunc, stencilFail: op, stencilZFail: op, stencilZPass: op });
       SEC.back = st(T.BackSide, T.IncrementWrapStencilOp); SEC.front = st(T.FrontSide, T.DecrementWrapStencilOp);
       SEC.cap = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ color: 0x23262b, side: T.DoubleSide, stencilWrite: true, stencilRef: 0, stencilFunc: T.NotEqualStencilFunc, stencilFail: T.ZeroStencilOp, stencilZFail: T.ZeroStencilOp, stencilZPass: T.ZeroStencilOp }));
       SEC.cap.name = 'sectioncap'; SEC.capScene = new T.Scene(); SEC.capScene.add(SEC.cap); }
-    // two passes, each counting the faces a ray crosses beyond the cut (odd: inside a solid) and filling the cut there: the ground
-    // block (its top, sides and base close it together) in an earth tone, then every closed mesh of the building and its context dark
     const all = [], hid = [], bg = scene.background, sa = R.shadowMap.autoUpdate, cp = R.clippingPlanes; let n = 0;
     for (const ch of scene.children) if (ch !== grp && ch.visible) { ch.visible = false; hid.push(ch); }
     grp.traverse((o) => { if (o !== grp && (o.isMesh || o.isLine || o.isPoints || o.isSprite)) all.push(o); });
     const vis0 = all.map((o) => o.visible), solid = (o) => o.isMesh && !o.isSkinnedMesh && o.geometry && !o.userData.__outline;
     const sets = [[SEC.view ? all.filter((o, i) => vis0[i] && solid(o) && o.userData.capOk) : [], 0xb9b2a4], [all.filter((o, i) => vis0[i] && solid(o) && !o.userData.capOk && (SEC.view || !inWhole(o)) && closedGeo(o.geometry)), 0x23262b]];
-    const o = SEC.o, n3 = secL3(o), m = SEC.cap; m.position.set((o.a[0] + o.b[0]) / 2, 0, -(o.a[1] + o.b[1]) / 2).addScaledVector(n3, 0.003); m.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), n3); m.scale.set(6000, 6000, 1); m.updateMatrixWorld();
-    scene.background = null; R.shadowMap.autoUpdate = false; R.autoClear = false;
-    try { for (const [list, col] of sets) { if (!list.length) continue; n += list.length; for (const x of all) x.visible = false; for (const x of list) x.visible = true;
-        R.clippingPlanes = [SEC.planes[0]]; R.clearStencil(); scene.overrideMaterial = SEC.back; R.render(scene, c); scene.overrideMaterial = SEC.front; R.render(scene, c); scene.overrideMaterial = null;
-        R.clippingPlanes = cp; m.material.color.setHex(col); R.render(SEC.capScene, c); } }
+    const o = SEC.o, m = SEC.cap; scene.background = null; R.shadowMap.autoUpdate = false; R.autoClear = false;
+    try { SEC.passes.forEach((P, gi) => { if (only != null && gi !== only) return; const g = o.segs[gi], n3 = new T.Vector3(g.look[0], 0, -g.look[1]);
+        m.position.set((g.a[0] + g.b[0]) / 2, 0, -(g.a[1] + g.b[1]) / 2).addScaledVector(n3, 0.003); m.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), n3); m.scale.set(6000, 6000, 1); m.updateMatrixWorld();
+        for (const [list, col] of sets) { if (!list.length) continue; n += list.length; for (const x of all) x.visible = false; for (const x of list) x.visible = true;
+          R.clippingPlanes = [P[0]]; R.clearStencil(); scene.overrideMaterial = SEC.back; R.render(scene, c); scene.overrideMaterial = SEC.front; R.render(scene, c); scene.overrideMaterial = null;
+          R.clippingPlanes = P; m.material.color.setHex(col); R.render(SEC.capScene, c); } }); }
     finally { scene.overrideMaterial = null; all.forEach((x, i) => { x.visible = vis0[i]; }); for (const x of hid) x.visible = true; scene.background = bg; R.shadowMap.autoUpdate = sa; R.clippingPlanes = cp; R.autoClear = true; }
     SEC.caps = n; }
-  // a study's per-room result on the cut (o.bands: a canvas, one column per 1/24 m along the line, from z0 to z1 above level 0)
-  function secBandMesh() { if (SEC.band) { scene.remove(SEC.band); SEC.band.geometry.dispose(); SEC.band.material.map?.dispose(); SEC.band.material.dispose(); SEC.band = null; }
+  // a result on the cut (o.bands: a canvas over t0..t1 along the unfolded cut and z0..z1 above level 0): one strip per segment
+  function secBandMesh() { for (const m of SEC.bandMs || []) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); } if (SEC.bandTex) { SEC.bandTex.dispose(); SEC.bandTex = null; } SEC.bandMs = []; SEC.band = null;
     const o = SEC.o, B = o && o.bands; if (!scene || !SEC.cut || !B || !SEC.bands) return;
     let off = 0; try { const st = api.storeys().find((x) => x.id === B.lv0 && !x.roof); if (st) off = st.y - B.zl; } catch (e) { } SEC.bandOff = off;
-    const tex = new T.CanvasTexture(B.canvas); tex.colorSpace = T.SRGBColorSpace; tex.magFilter = T.NearestFilter; tex.minFilter = T.LinearFilter; tex.generateMipmaps = false;
-    const m = new T.Mesh(new T.PlaneGeometry(o.len, B.z1 - B.z0), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: SEC.op, depthWrite: false, side: T.DoubleSide }));
-    const u3 = new T.Vector3(o.u[0], 0, -o.u[1]), y3 = new T.Vector3(0, 1, 0); m.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(u3, y3, new T.Vector3().crossVectors(u3, y3)));
-    m.position.set(o.a[0] + o.u[0] * o.len / 2, (B.z0 + B.z1) / 2 + off, -(o.a[1] + o.u[1] * o.len / 2)).addScaledVector(secL3(o), 0.004); m.renderOrder = 6; m.name = 'sectionresult'; scene.add(m); SEC.band = m; }
-  const SEC_FOV = 1;
-  function secNear() { const d = cam.position.distanceTo(ctl.target); cam.near = Math.max(0.05, d * 0.4); cam.far = d * 3 + 4000; cam.updateProjectionMatrix(); }
-  function secPlace() { const o = SEC.o, b0 = grp ? siteFree(grp) : null, b = b0 && !b0.isEmpty() ? b0 : new T.Box3(new T.Vector3(-5, 0, -5), new T.Vector3(5, 6, 5)), y0 = Math.max(b.min.y, -3), y1 = Math.max(y0 + 3, b.max.y), r = canvas.getBoundingClientRect(), asp = r.width / Math.max(1, r.height);
-    const span = Math.max(o.len * 1.5, (y1 - y0) * 1.6 * asp), t = new T.Vector3(o.a[0] + o.u[0] * o.len / 2, (y0 + y1) / 2, -(o.a[1] + o.u[1] * o.len / 2));
-    cam.fov = SEC_FOV; cam.updateProjectionMatrix(); const d = Math.max(2, (span / 2) / halfTan());
-    ctl.target.copy(t); cam.up.set(0, 1, 0); cam.position.copy(t).addScaledVector(secL3(o), -d); cam.lookAt(t); secNear(); ctl.update(); }
-  api.section = (o) => { SEC.o = o || null; const key = o ? [o.a, o.b, o.look, o.far].join('|') : '', moved = key !== SEC.key; SEC.key = key; if (!R) return;
-    if (!o && SEC.view) api.secView(false); secApply(); if (o && SEC.view && moved) secPlace(); render(); };
+    const tex = new T.CanvasTexture(B.canvas); tex.colorSpace = T.SRGBColorSpace; tex.magFilter = T.NearestFilter; tex.minFilter = T.LinearFilter; tex.generateMipmaps = false; SEC.bandTex = tex;
+    const T0 = B.t0 ?? 0, T1 = B.t1 ?? o.len, span = Math.max(1e-6, T1 - T0);
+    o.segs.forEach((g, i) => { const ta = Math.max(T0, i ? g.s0 : -Infinity), tb = Math.min(T1, i < o.segs.length - 1 ? g.s0 + g.len : Infinity); if (!(tb > ta + 1e-4)) return;
+      const geo = new T.PlaneGeometry(tb - ta, B.z1 - B.z0), uv = geo.attributes.uv, u0 = (ta - T0) / span, u1 = (tb - T0) / span; for (let k = 0; k < uv.count; k++) uv.setX(k, uv.getX(k) < 0.5 ? u0 : u1); uv.needsUpdate = true;
+      const m = new T.Mesh(geo, new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: SEC.op, depthWrite: false, side: T.DoubleSide }));
+      const u3 = new T.Vector3(g.u[0], 0, -g.u[1]), y3 = new T.Vector3(0, 1, 0); m.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(u3, y3, new T.Vector3().crossVectors(u3, y3)));
+      const tm = (ta + tb) / 2 - g.s0; m.position.set(g.a[0] + g.u[0] * tm, (B.z0 + B.z1) / 2 + off, -(g.a[1] + g.u[1] * tm)).addScaledVector(new T.Vector3(g.look[0], 0, -g.look[1]), 0.004); m.renderOrder = 6; m.name = 'sectionresult'; scene.add(m); SEC.bandMs.push(m); });
+    SEC.band = SEC.bandMs[0] || null; }
+  // ---- the Section view (2026-11-10): the cut unfolded, each segment seen square on in its own strip of the canvas (parallel
+  // projection), side by side as the line runs; the end strips run on past the ends as far as the building does. Its own pan
+  // (drag) and zoom (wheel) on a 2D view: t along the cut, height above level 0.
+  const secDir = () => (SEC.o && SEC.o.flip ? -1 : 1);
+  const secSX = (t) => { const r = canvas.getBoundingClientRect(); return r.width / 2 + secDir() * (t - SEC.v.cx) * SEC.v.k; };
+  const secSY = (y) => { const r = canvas.getBoundingClientRect(); return r.height / 2 - (y - SEC.v.cz) * SEC.v.k; };
+  function secPanels() { const o = SEC.o, n = o.segs.length, W = canvas.getBoundingClientRect().width, P = o.segs.map((g, i) => { const ta = i ? g.s0 : -SEC.e0, tb = i < n - 1 ? g.s0 + g.len : o.len + SEC.e1, xa = secSX(ta), xb = secSX(tb); return { i, g, x0: Math.round(Math.min(xa, xb)), x1: Math.round(Math.max(xa, xb)) }; });
+    const lo = P.reduce((a, q) => (q.x0 < a.x0 ? q : a)), hi = P.reduce((a, q) => (q.x1 > a.x1 ? q : a)); lo.x0 = Math.min(lo.x0, 0); hi.x1 = Math.max(hi.x1, Math.round(W)); return P; }   // the end strips run on to the edges of the view
+  function secViewRender() { const o = SEC.o, r = canvas.getBoundingClientRect(), W = r.width, H = r.height; if (!SEC.ocam) SEC.ocam = new T.OrthographicCamera(-1, 1, 1, -1, 0.01, 10000);
+    const oc = SEC.ocam, D = 600, cp = R.clippingPlanes, bg = scene.background; R.setScissorTest(true); R.autoClear = false; R.setViewport(0, 0, W, H); R.setScissor(0, 0, W, H); R.clear(); if (!SEC.bgScene) SEC.bgScene = new T.Scene(); SEC.bgScene.background = bg || new T.Color(0xe8ecf1); R.render(SEC.bgScene, oc);   /* past the ends: the sky, not black */
+    try { for (const P of secPanels()) { const w = P.x1 - P.x0; if (w < 1 || P.x1 < 0 || P.x0 > W) continue; const tc = SEC.v.cx + ((P.x0 + P.x1) / 2 - W / 2) / SEC.v.k * secDir(), q = secAt(o, tc).p, g = P.g, n3 = new T.Vector3(g.look[0], 0, -g.look[1]);
+        oc.left = -w / 2 / SEC.v.k; oc.right = w / 2 / SEC.v.k; oc.top = H / 2 / SEC.v.k; oc.bottom = -H / 2 / SEC.v.k; oc.near = 0.01; oc.far = D + 4000; oc.up.set(0, 1, 0);
+        const tgt = new T.Vector3(q[0], SEC.v.cz, -q[1]); oc.position.copy(tgt).addScaledVector(n3, -D); oc.lookAt(tgt); oc.updateProjectionMatrix(); oc.updateMatrixWorld();
+        R.setViewport(P.x0, 0, w, H); R.setScissor(P.x0, 0, w, H); R.clippingPlanes = SEC.passes[P.i]; scene.background = bg; R.render(scene, oc); secCaps(oc, P.i); R.autoClear = false; } }
+    finally { R.clippingPlanes = cp; scene.background = bg; R.setScissorTest(false); R.setViewport(0, 0, W, H); R.autoClear = true; } }
+  function secFit() { const o = SEC.o, r = canvas.getBoundingClientRect(), b0 = grp ? siteFree(grp) : null, b = b0 && !b0.isEmpty() ? b0 : new T.Box3(new T.Vector3(-5, 0, -5), new T.Vector3(5, 6, 5)), y0 = Math.max(b.min.y, -3), y1 = Math.max(y0 + 3, b.max.y), ta = -SEC.e0, tb = o.len + SEC.e1;
+    SEC.v = { k: Math.max(0.5, Math.min(r.width * 0.9 / Math.max(1, tb - ta), r.height * 0.78 / (y1 - y0))), cx: (ta + tb) / 2, cz: (y0 + y1) / 2 }; }
+  function secNav() { if (SEC.nav) return; SEC.nav = true; let drag = null; const inPane = (e) => { const r = canvas.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };   // on the window: overlays above the canvas pass it on
+    window.addEventListener('wheel', (e) => { if (!SEC.view || !inPane(e)) return; e.preventDefault(); e.stopImmediatePropagation(); const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, f = Math.exp(-e.deltaY * 0.0015);
+      const t = SEC.v.cx + (mx - r.width / 2) / SEC.v.k * secDir(), z = SEC.v.cz - (my - r.height / 2) / SEC.v.k; SEC.v.k = Math.max(0.3, Math.min(400, SEC.v.k * f)); SEC.v.cx = t - (mx - r.width / 2) / SEC.v.k * secDir(); SEC.v.cz = z + (my - r.height / 2) / SEC.v.k; render(); }, { passive: false, capture: true });
+    window.addEventListener('pointerdown', (e) => { if (!SEC.view || !inPane(e) || e.target.closest?.('button,input,select,a,[role=dialog]')) return; e.preventDefault(); e.stopImmediatePropagation(); drag = { x: e.clientX, y: e.clientY, cx: SEC.v.cx, cz: SEC.v.cz }; }, true);
+    window.addEventListener('pointermove', (e) => { if (!SEC.view || !drag) return; e.stopImmediatePropagation(); SEC.v.cx = drag.cx - (e.clientX - drag.x) / SEC.v.k * secDir(); SEC.v.cz = drag.cz + (e.clientY - drag.y) / SEC.v.k; render(); }, true);
+    window.addEventListener('pointerup', () => { drag = null; }, true); }
+  api.section = (o) => { SEC.o = o || null; const key = o ? [JSON.stringify(o.pts), o.flip, o.far].join('|') : '', moved = key !== SEC.key; SEC.key = key; if (!R) return;
+    if (!o && SEC.view) api.secView(false); secApply(); if (o && SEC.view && moved) secFit(); render(); };
   api.secView = (on) => { if (!R || !cam || !ctl) return false;
-    if (on && SEC.o && !WALK.on) { if (EL.on) api.elev.exit();
-      if (!SEC.view) SEC.saved = { pos: cam.position.clone(), target: ctl.target.clone(), fov: cam.fov, near: cam.near, far: cam.far, rot: ctl.enableRotate, minP: ctl.minPolarAngle, maxP: ctl.maxPolarAngle, mb: { ...ctl.mouseButtons }, ssp: ctl.screenSpacePanning };
-      const was = SEC.view; SEC.view = true; ctl.enableRotate = false; ctl.minPolarAngle = ctl.maxPolarAngle = Math.PI / 2; ctl.mouseButtons = { ...ctl.mouseButtons, MIDDLE: T.MOUSE.PAN, RIGHT: T.MOUSE.PAN }; ctl.screenSpacePanning = true; if (!was && typeof upd3D === 'function') upd3D(); secApply(); secPlace(); }
-    else if (!on && SEC.view) { SEC.view = false; const s = SEC.saved; if (s) { cam.position.copy(s.pos); ctl.target.copy(s.target); cam.fov = s.fov; cam.near = s.near; cam.far = s.far; ctl.enableRotate = s.rot; ctl.minPolarAngle = s.minP; ctl.maxPolarAngle = s.maxP; ctl.mouseButtons = s.mb; ctl.screenSpacePanning = s.ssp; cam.updateProjectionMatrix(); ctl.update(); } if (typeof upd3D === 'function') upd3D(); secApply(); }
+    if (on && SEC.o && !WALK.on) { if (EL.on) api.elev.exit(); const was = SEC.view; SEC.view = true; if (!was) { SEC.saved = { en: ctl.enabled }; ctl.enabled = false; } secNav(); if (!was && typeof upd3D === 'function') upd3D(); secApply(); secFit(); }
+    else if (!on && SEC.view) { SEC.view = false; ctl.enabled = SEC.saved ? SEC.saved.en : true; if (typeof upd3D === 'function') upd3D(); secApply(); }
     render(); return SEC.view; };
   api.secViewOn = () => SEC.view;
+  api.secFit = () => { if (SEC.view) { secFit(); render(); } };
   api.secStyle = (st) => { if (st && Number.isFinite(st.opacity)) SEC.op = Math.max(0, Math.min(1, st.opacity)); if (st && 'bands' in st) SEC.bands = !!st.bands; secBandMesh(); render(); return { opacity: SEC.op, bands: SEC.bands }; };
-  api.secState = () => ({ has: !!SEC.o, cut: SEC.cut, view: SEC.view, planes: R ? R.clippingPlanes.length : 0, caps: SEC.caps, band: !!SEC.band, opacity: SEC.op, bands: SEC.bands, fov: cam ? cam.fov : null,
-    dir: cam ? (() => { const d = new T.Vector3(); cam.getWorldDirection(d); return [+d.x.toFixed(4), +(-d.z).toFixed(4), +d.y.toFixed(4)]; })() : null, levels: SEC.svg && SEC.svg.style.display !== 'none' ? SEC.svg.querySelectorAll('line[stroke-dasharray="16 4 2 4"]').length : 0, notes: SEC.o && SEC.o.bands && SEC.band ? { rooms: SEC.o.bands.notes.rooms.length, flows: SEC.o.bands.notes.flows.length, across: SEC.o.bands.notes.flows.filter((q) => q.k).length, zn: SEC.o.bands.notes.zn } : null });
-  // levels as a section draws them (Revit's level datums): a dash-dot line across the cut at each level, its head with the name and height
+  api.secState = () => ({ has: !!SEC.o, cut: SEC.cut, view: SEC.view, segs: SEC.o ? SEC.o.segs.length : 0, passes: SEC.passes ? SEC.passes.length : 0, planes: R ? R.clippingPlanes.length : 0, caps: SEC.caps, band: !!SEC.band, bands: SEC.bandMs ? SEC.bandMs.length : 0, opacity: SEC.op,
+    panels: SEC.view ? secPanels().map((P) => [P.x0, P.x1]) : null, scale: SEC.view ? SEC.v.k : null, levels: SEC.svg && SEC.svg.style.display !== 'none' ? SEC.svg.querySelectorAll('line[stroke-dasharray="16 4 2 4"]').length : 0, folds: SEC.svg && SEC.svg.style.display !== 'none' ? SEC.svg.querySelectorAll('line[data-fold]').length : 0,
+    notes: SEC.o && SEC.o.bands && SEC.band ? { rooms: SEC.o.bands.notes.rooms.length, flows: SEC.o.bands.notes.flows.length, across: SEC.o.bands.notes.flows.filter((q) => q.k).length, zn: SEC.o.bands.notes.zn } : null });
+  // over the Section view: the levels as a section draws them (Revit's level datums, a dash-dot line across with a head, name and
+  // height), a thin line where the cut is unfolded at a joint, and a result's notes
   function secOverlay() { const want = SEC.view && SEC.o && api.on && !EL.on;
     if (!want) { if (SEC.svg) SEC.svg.style.display = 'none'; return; }
     if (!SEC.svg) { SEC.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); SEC.svg.setAttribute('class', 'secov'); SEC.svg.setAttribute('aria-hidden', 'true'); Object.assign(SEC.svg.style, { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: '2', fontFamily: 'inherit' }); canvas.parentElement.append(SEC.svg); }
     const o = SEC.o, r = canvas.getBoundingClientRect(); SEC.svg.style.display = ''; SEC.svg.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`);
     const lv = (typeof M !== 'undefined' && M.levels) ? [...M.levels].sort((a, b) => a.z - b.z) : []; let st = []; try { st = api.storeys(); } catch (e) { }
-    const ext = Math.max(1.5, o.len * 0.08), A = [o.a[0] - o.u[0] * ext, o.a[1] - o.u[1] * ext], B = [o.b[0] + o.u[0] * ext, o.b[1] + o.u[1] * ext], f = (v) => v.toFixed(1); let h = '';
-    for (const l of lv) { const s = st.find((x) => x.id === l.id && !x.roof), y = s ? s.y : l.z, p = api.toCss(A[0], A[1], y), q = api.toCss(B[0], B[1], y); if (!p || !q) continue;
-      const [L, E] = p[0] <= q[0] ? [p, q] : [q, p], cx = E[0] + 9, cy = E[1];
-      h += `<line x1="${f(L[0])}" y1="${f(L[1])}" x2="${f(E[0])}" y2="${f(E[1])}" stroke="#2f6fd6" stroke-width="1" stroke-dasharray="16 4 2 4"/>`
-        + `<circle cx="${f(cx)}" cy="${f(cy)}" r="6" fill="#fff" stroke="#2f6fd6" stroke-width="1.2"/><path d="M${f(cx)} ${f(cy - 6)}A6 6 0 0 1 ${f(cx + 6)} ${f(cy)}L${f(cx)} ${f(cy)}ZM${f(cx)} ${f(cy + 6)}A6 6 0 0 1 ${f(cx - 6)} ${f(cy)}L${f(cx)} ${f(cy)}Z" fill="#2f6fd6"/>`
-        + `<text x="${f(cx + 11)}" y="${f(cy - 3)}" font-size="11" font-weight="600" fill="#1f2a3a">${esc(l.name || l.id)}</text><text x="${f(cx + 11)}" y="${f(cy + 11)}" font-size="10.5" fill="#4b5563" font-family="ui-monospace,Menlo,monospace">${(l.z || 0) >= 0 ? '+' : ''}${(l.z || 0).toFixed(2)}</text>`; }
-    const N = SEC.band && o.bands && o.bands.notes; if (N) { const off = SEC.bandOff || 0, P = (t, z) => api.toCss(o.a[0] + o.u[0] * t, o.a[1] + o.u[1] * t, z + off), lab = (x0, y0, t, col, anc = 'middle') => `<text x="${f(x0)}" y="${f(y0)}" text-anchor="${anc}" font-size="10.5" font-weight="600" fill="${col}" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="ui-monospace,Menlo,monospace">${t}</text>`;
-      if (N.zn != null) { const p = P(-ext, N.zn), q = P(o.len + ext, N.zn); if (p && q) { const [L, E] = p[0] <= q[0] ? [p, q] : [q, p]; h += `<line x1="${f(L[0])}" y1="${f(L[1])}" x2="${f(E[0])}" y2="${f(E[1])}" stroke="#d9480f" stroke-width="1.2" stroke-dasharray="6 4"/>` + lab(L[0] + 4, L[1] - 5, `Neutral plane (stack alone) ${N.zn >= 0 ? '+' : ''}${N.zn.toFixed(2)}`, '#d9480f', 'start'); } }
-      for (const r2 of N.rooms) { const q = P(r2.t, r2.z); if (q) h += `<text x="${f(q[0])}" y="${f(q[1])}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2a3a" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(r2.txt)}</text>`; }
-      for (const fl of N.flows) { const c = P(fl.t, fl.z); if (!c) continue; const lw = 1.4 + 2.6 * fl.w;
-        if (fl.k) { const c2 = P(fl.t + fl.k * 0.5, fl.z); if (!c2) continue; const dl = Math.hypot(c2[0] - c[0], c2[1] - c[1]) || 1, ux = (c2[0] - c[0]) / dl, uy = (c2[1] - c[1]) / dl, L = 16 + 22 * fl.w, a = [c[0] - ux * L / 2, c[1] - uy * L / 2], b = [c[0] + ux * L / 2, c[1] + uy * L / 2], hd = 5 + 2 * fl.w;
+    const xa = secSX(-SEC.e0), xb = secSX(o.len + SEC.e1), L0 = Math.min(xa, xb), E0 = Math.max(xa, xb), f = (v) => v.toFixed(1); let h = '';
+    for (const J of o.segs.slice(1)) { const x = secSX(J.s0); h += `<line data-fold="1" x1="${f(x)}" y1="0" x2="${f(x)}" y2="${f(r.height)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 4"/>`; }
+    for (const l of lv) { const s2 = st.find((x) => x.id === l.id && !x.roof), y = secSY(s2 ? s2.y : l.z), cx = Math.min(E0 + 9, r.width - 150);
+      h += `<line x1="${f(L0)}" y1="${f(y)}" x2="${f(E0)}" y2="${f(y)}" stroke="#2f6fd6" stroke-width="1" stroke-dasharray="16 4 2 4"/>`
+        + `<circle cx="${f(cx)}" cy="${f(y)}" r="6" fill="#fff" stroke="#2f6fd6" stroke-width="1.2"/><path d="M${f(cx)} ${f(y - 6)}A6 6 0 0 1 ${f(cx + 6)} ${f(y)}L${f(cx)} ${f(y)}ZM${f(cx)} ${f(y + 6)}A6 6 0 0 1 ${f(cx - 6)} ${f(y)}L${f(cx)} ${f(y)}Z" fill="#2f6fd6"/>`
+        + `<text x="${f(cx + 11)}" y="${f(y - 3)}" font-size="11" font-weight="600" fill="#1f2a3a">${esc(l.name || l.id)}</text><text x="${f(cx + 11)}" y="${f(y + 11)}" font-size="10.5" fill="#4b5563" font-family="ui-monospace,Menlo,monospace">${(l.z || 0) >= 0 ? '+' : ''}${(l.z || 0).toFixed(2)}</text>`; }
+    const N = SEC.band && o.bands && o.bands.notes; if (N) { const off = SEC.bandOff || 0, P = (t, z) => [secSX(t), secSY(z + off)], lab = (x0, y0, t, col, anc = 'middle') => `<text x="${f(x0)}" y="${f(y0)}" text-anchor="${anc}" font-size="10.5" font-weight="600" fill="${col}" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="ui-monospace,Menlo,monospace">${t}</text>`;
+      if (N.zn != null) { const y = secSY(N.zn + off); h += `<line x1="${f(L0)}" y1="${f(y)}" x2="${f(E0)}" y2="${f(y)}" stroke="#d9480f" stroke-width="1.2" stroke-dasharray="6 4"/>` + lab(L0 + 4, y - 5, `Neutral plane (stack alone) ${N.zn >= 0 ? '+' : ''}${N.zn.toFixed(2)}`, '#d9480f', 'start'); }
+      for (const r2 of N.rooms) { const q = P(r2.t, r2.z); h += `<text x="${f(q[0])}" y="${f(q[1])}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2a3a" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(r2.txt)}</text>`; }
+      for (const fl of N.flows) { const c = P(fl.t, fl.z), lw = 1.4 + 2.6 * fl.w;
+        if (fl.k) { const ux = fl.k * secDir(), uy = 0, L = 16 + 22 * fl.w, a = [c[0] - ux * L / 2, c[1]], b = [c[0] + ux * L / 2, c[1]], hd = 5 + 2 * fl.w;
           h += `<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0] - ux * hd)}" y2="${f(b[1] - uy * hd)}" stroke="${fl.col}" stroke-width="${f(lw)}" stroke-linecap="round"/><path d="M${f(b[0])} ${f(b[1])}L${f(b[0] - ux * hd * 1.6 - uy * hd)} ${f(b[1] - uy * hd * 1.6 + ux * hd)}L${f(b[0] - ux * hd * 1.6 + uy * hd)} ${f(b[1] - uy * hd * 1.6 - ux * hd)}Z" fill="${fl.col}"/>` + lab(c[0], c[1] - 9 - lw, `${Math.round(fl.q)} L/s`, fl.col); }
         else h += `<circle cx="${f(c[0])}" cy="${f(c[1])}" r="7" fill="#fff" stroke="${fl.col}" stroke-width="1.6"/>` + (fl.toward ? `<circle cx="${f(c[0])}" cy="${f(c[1])}" r="2.4" fill="${fl.col}"/>` : `<path d="M${f(c[0] - 3.6)} ${f(c[1] - 3.6)}L${f(c[0] + 3.6)} ${f(c[1] + 3.6)}M${f(c[0] + 3.6)} ${f(c[1] - 3.6)}L${f(c[0] - 3.6)} ${f(c[1] + 3.6)}" stroke="${fl.col}" stroke-width="1.6"/>`) + lab(c[0], c[1] + 19, `${Math.round(fl.q)} L/s`, fl.col); } }
     SEC.svg.innerHTML = h; }
@@ -7584,15 +7615,24 @@ if (window.__WSROLE) {
     studyCell(c) { STUDY_CELL = c > 0 ? Math.max(0.25, +c) : 0; return STUDY_CELL; },
     pickPoint(cb) { PICK1 = typeof cb === 'function' ? cb : null; stage.style.cursor = PICK1 ? 'crosshair' : ''; },
     // the section (2026-11-07): draw its line on the plan (two clicks; cb(true) once drawn, cb(false) on Esc), read it, change it, view it
-    sectionDraw(cb) { if (!secPlanOk()) return false; PICK1 = null; SEC2.draw = { a: null, p: null, cb: typeof cb === 'function' ? cb : null }; stage.style.cursor = 'crosshair'; flash('Section: click where the cut starts, then where it ends. Esc to stop.'); draw(); return true; },
-    sectionCancel() { if (SEC2.draw) secDrawEnd(false); },
-    section() { const s = secOf(); return s ? { ...JSON.parse(JSON.stringify(M.section)), len: +s.len.toFixed(3), look: s.look } : null; },
-    sectionSet(o) { if (!M.section && o) return false; const before = snapM(); if (!o) delete M.section; else { for (const k of ['flip', 'on']) if (k in o) M.section[k] = !!o[k]; if ('far' in o) M.section.far = Number.isFinite(o.far) && o.far > 0 ? Math.round(o.far * 10) / 10 : null; if (o.a && o.b) { M.section.a = o.a; M.section.b = o.b; } } commit(before); return true; },
+    section() { const s = secOf(); return s ? { ...JSON.parse(JSON.stringify(M.section)), pts: s.pts, len: +s.len.toFixed(3), look: s.look, segs: s.segs.map((g) => ({ a: g.a, b: g.b, u: g.u, look: g.look, len: +g.len.toFixed(3), s0: +g.s0.toFixed(3) })) } : null; },
+    // o: null removes it; { pts, flip, on, far, name } sets what is given (the line made where there is none)
+    sectionSet(o) { const before = snapM(); if (!o) { if (!M.section) return false; delete M.section; SECF = null; }
+      else { const S0 = M.section || { name: 'A', on: true, flip: false, far: null };
+        if (Array.isArray(o.pts)) { const P = o.pts.filter((q) => Array.isArray(q) && Number.isFinite(+q[0]) && Number.isFinite(+q[1])).map((q) => [+(+q[0]).toFixed(3), +(+q[1]).toFixed(3)]); if (P.length < 2) return false; S0.pts = P; delete S0.a; delete S0.b; }
+        else if (o.a && o.b) { S0.pts = [o.a, o.b]; delete S0.a; delete S0.b; } else if (!M.section) return false;
+        for (const k of ['flip', 'on']) if (k in o) S0[k] = !!o[k]; if ('far' in o) S0.far = Number.isFinite(o.far) && o.far > 0 ? Math.round(o.far * 10) / 10 : null; if (o.name) S0.name = String(o.name).slice(0, 3);
+        M.section = S0; if (!secOf()) { if (before) M.section = JSON.parse(before).section; return false; } }
+      commit(before); return true; },
+    sectionProfile(o) { return secProfile(studyPrisms(), o); },
+    sectionField(o) { SECF = o && o.vals ? { ...o } : null; secSync(); return !!SECF; },
+    sectionAt(t) { const s = secOf(); return s ? secAt(s, t).p : null; },
+    planSceneAt(lv, tool) { return STC.planScene(M, S || STC.build(M), lv, tool); },
     sectionView(on) { if (!window.S3 || !S3.secView) return false; if (on && CAM !== '3d') return false; return S3.secView(!!on); },
     sectionStyle(o) { return window.S3 && S3.secStyle ? S3.secStyle(o) : null; },
     sectionPNG(lines) { return window.S3 && S3.secPNG ? S3.secPNG(lines) : null; },
     snapAt(w, h, scale) { return window.S3 && S3.on && S3.snapAt ? S3.snapAt(w, h, scale) : null; }, fitBox(b, y, zoom, low) { if (window.S3 && S3.fitBox) S3.fitBox(b, y || 0, zoom || 1, !!low); }, camMove(o) { return window.S3 && S3.camMove ? S3.camMove(o) : null; }, camView() { return window.S3 && S3.on && S3.camState ? S3.camState() : null; }, camViewSet(o) { return !!(window.S3 && S3.on && S3.camRestore && S3.camRestore(o)); },
-    sectionState() { const st = window.S3 && S3.secState ? S3.secState() : null; return { section: !!secOf(), drawing: !!SEC2.draw, ...(st || {}) }; },
+    sectionState() { const st = window.S3 && S3.secState ? S3.secState() : null; return { section: !!secOf(), field: !!SECF, ...(st || {}) }; },
     surfaceCell(c) { SURF_CELL = c > 0 ? Math.max(0.2, +c) : 0; return SURF_CELL; },
     // the size of a run before it starts (2026-11-01), for the time estimate: ground cells and their size, the flow grid for a
     // given cap, and the squares on the building's facades and roofs
@@ -7615,7 +7655,7 @@ if (window.__WSROLE) {
     surfacePaint(o) { const R = RAMPS_TOP[o && o.ramp] || RAMPS_TOP.ladybug; if (!o || !SURF.list || !SURF.list.length) { if (window.S3 && S3.surface) S3.surface(null); return; }
       const col = (v) => { if (!Number.isFinite(v)) return null; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rampAtTop(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo))); return [m[1] / 255, m[2] / 255, m[3] / 255]; };
       if (window.S3 && S3.on && S3.surface) S3.surface({ list: SURF.list, cols: Array.from(o.vals, col) }); },   /* Array.from: a Float32Array's map would keep only numbers */
-    clearStudy() { flowStop(); egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    clearStudy() { flowStop(); if (SECF) { SECF = null; secSync(); } egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }
