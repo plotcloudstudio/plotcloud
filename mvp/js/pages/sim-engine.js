@@ -172,7 +172,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   // the shared conditions and the batch panel's changes, and is recorded as the page recorded it
   if (sim.id === 'daylight' && batch) {
     app.innerHTML = `<div class="wrap"><p role="status">Daylight · running…</p></div>`; tell({ stage: 'running' });
-    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=day-20261101-2'), DAYM = await import('../interior/daylight.js?v=day-20261101-2');
+    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=day-20261110-1'), DAYM = await import('../interior/daylight.js?v=day-20261110-1');
       const r = await studioScene(v, site, p.name, 'daylight', level?.id); if (!r.ok) throw Error(r.why || 'The model could not be read.'); const sc = JSON.parse(r.scene);
       const { shared: sh, inputs } = await DR.daylightInputs(p, OVd), out = await DAYM.run(sc, { level: 'draft', ...inputs });
       const rec = DR.daylightRecord(p, v, sh, out, { level: level?.id, origin: sc.origin, settings: { batchOverrides: OVd } }); tell({ ok: true, settings: rec.settings, results: rec.results });
