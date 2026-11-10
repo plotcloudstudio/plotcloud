@@ -1297,7 +1297,7 @@ const STC = (() => {
   // everything the analyses need, from the model
   function build(M) {
     const L = {}; const rooms = [];
-    for (const lv of M.levels) { const R = rasterLevel(M, lv.id); L[lv.id] = R; for (const r of R.rooms) { const [lx, ly] = labelPoint(R, r); r.lx = lx; r.ly = ly; r.key = lv.id + ':' + r.id; r.z0 = lv.z; r.h = lv.h; r.vol = r.area * lv.h; r.gi = rooms.length; rooms.push(r); } }
+    for (const lv of M.levels) { const R = rasterLevel(M, lv.id); L[lv.id] = R; for (const r of R.rooms) { const [lx, ly] = labelPoint(R, r); r.lx = lx; r.ly = ly; r.key = lv.id + ':' + r.id; r.z0 = lv.z; r.h = lv.ceilH > 0 && lv.ceilH < lv.h ? lv.ceilH : lv.h; r.vol = r.area * r.h;   /* a level's ceiling height where set (2026-11-10): the room's air and sound volume stops at the suspended ceiling */ r.gi = rooms.length; rooms.push(r); } }
     // names: a stored name point inside the room wins; else "Room n" by level
     const names = M.names || [];
     for (const lv of M.levels) { let n = 1; for (const r of rooms.filter((q) => q.lv === lv.id)) { const nm = names.find((p) => p.lv === lv.id && roomAtR(L[lv.id], p.x, p.y) === r.id); r.name = nm ? nm.name : `${lv.name} · Room ${n}`; r.nameRef = nm || null; n++; } }
@@ -7560,7 +7560,15 @@ if (window.__WSROLE) {
     flowAnim(o) { if (o) flowStart(o); else flowStop(); },
     structGrid(o = {}) {
       const span = o.span || 7.5, out = [];
-      for (const m of massList(M)) { const P = m.outer; if (!P || P.length < 3) continue; const n = P.length; let best = 0, ang = 0;
+      // no masses (a building drawn with walls, 2026-11-10): the building itself, its footprint the outline of its walls (convex hull),
+      // its storeys the levels with walls, at their own floor-to-floor height
+      const bld = () => { const lvs = (M.levels || []).filter((l) => M.walls.some((w) => w.lv === l.id)).sort((a, b) => a.z - b.z); if (!lvs.length) return []; const pts = [];
+        for (const w of M.walls) if (w.lv === lvs[0].id) pts.push(w.a.slice(), w.b.slice()); pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]); const cr = (o2, a2, b2) => (a2[0] - o2[0]) * (b2[1] - o2[1]) - (a2[1] - o2[1]) * (b2[0] - o2[0]), lo = [], hi = [];
+        for (const p2 of pts) { while (lo.length >= 2 && cr(lo.at(-2), lo.at(-1), p2) <= 0) lo.pop(); lo.push(p2); } for (const p2 of pts.slice().reverse()) { while (hi.length >= 2 && cr(hi.at(-2), hi.at(-1), p2) <= 0) hi.pop(); hi.push(p2); }
+        const hull = lo.slice(0, -1).concat(hi.slice(0, -1)); if (hull.length < 3) return []; const top = lvs.at(-1).z + lvs.at(-1).h;
+        return [{ id: 'building', name: M.name || 'Building', use: 'building', outer: hull, base: lvs[0].z, h: top, fh: lvs[0].h, storeys: lvs.length }]; };
+      const list = massList(M).length ? massList(M) : bld();
+      for (const m of list) { const P = m.outer; if (!P || P.length < 3) continue; const n = P.length; let best = 0, ang = 0;
         for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L > best) { best = L; ang = Math.atan2(b[1] - a[1], b[0] - a[0]); } }
         const ca = Math.cos(ang), sa = Math.sin(ang), loc = (q) => [q[0] * ca + q[1] * sa, -q[0] * sa + q[1] * ca], glob = (u) => [u[0] * ca - u[1] * sa, u[0] * sa + u[1] * ca], L = P.map(loc);
         const u0 = Math.min(...L.map((q) => q[0])), u1 = Math.max(...L.map((q) => q[0])), v0 = Math.min(...L.map((q) => q[1])), v1 = Math.max(...L.map((q) => q[1])), nu = Math.max(1, Math.ceil((u1 - u0) / span - 1e-6)), nv = Math.max(1, Math.ceil((v1 - v0) / span - 1e-6)), du = (u1 - u0) / nu, dv = (v1 - v0) / nv;

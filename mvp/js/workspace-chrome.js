@@ -26,7 +26,7 @@ import * as VWS from './interior/views.js?v=vw-20261101-1';
 import * as CAMS from './interior/cameras.js?v=cam-20261101-1';
 import * as DAY from './interior/daylight.js?v=day-20261110-1';
 import { daylightInputs, daylightRecord } from './daylight-run.js?v=day-20261110-1';
-import * as EGX from './interior/egress.js?v=eg-20261109-1';
+import * as EGX from './interior/egress.js?v=eg-20261110-1';
 import * as ACU from './interior/acoustics.js?v=acu-20261106-1';
 import { keep as PKEEP } from '../../emb/lib/plansim.js?v=1';
 import { mountProps } from './project-props.js?v=grids-20261101-1';
@@ -834,11 +834,11 @@ export function mountChrome(app, api) {
         ['First person out', T(Math.min(...outs))], ['3 · Travel incl. queueing: median · longest', `${T(P(trav, 0.5))} · ${T(Math.max(...trav))}`],
         ['Queueing at doors and stairs: mean · longest', `${T(qu.reduce((a, b) => a + b, 0) / Math.max(1, qu.length))} · ${T(Math.max(...qu))}`], ['Walk: median · longest', `${fmt(P(dist, 0.5))} m · ${fmt(Math.max(...dist))} m`],
         ['Last person out (run shown)', T(last)],
-        ...B.levels.map((L, li) => [`${esc(L.name)} clear after`, Number.isFinite(rep.perLevel[li]) ? T(rep.perLevel[li]) : 'nobody there']),
+        ...B.levels.map((L, li) => [L, li]).filter(([L]) => L.rooms.length).map(([L, li]) => [`${esc(L.name)} clear after`, Number.isFinite(rep.perLevel[li]) ? T(rep.perLevel[li]) : 'nobody there']),
         ...exits.map((e) => [`Exit: ${exName(e.d)}`, `${fmt(e.n)} people · last at ${T(e.last)} · ${fmt(e.n / Math.max(1, e.last - Math.min(...outs) + 1) * 60)} per min`]),
         ...stairsUsed.map((x) => [`Stair: ${esc(x.S.name)}`, `${fmt(x.n)} people · longest queue ${fmt(x.q)}`]),
         ...(dd && rep.doorMax[di] > 0 ? [['Longest door queue', `${fmt(rep.doorMax[di])} waiting at ${exName(dd)}`]] : []),
-        ['People', `${fmt(rep.n)} (${B.levels.map((L, li) => `${esc(L.name)} ${ppl.filter((q) => q.li === li).length}`).join(' · ')}), ${fmt(nImp)} walking slowly`], ['Building use', esc(use.name)],
+        ['People', `${fmt(rep.n)} (${B.levels.map((L, li) => [L, li]).filter(([L]) => L.rooms.length).map(([L, li]) => `${esc(L.name)} ${ppl.filter((q) => q.li === li).length}`).join(' · ')}), ${fmt(nImp)} walking slowly`], ['Building use', esc(use.name)],
         ['Runs', `${runs.length}, seed ${ST.egSeed}`], ...(bad ? [['<span class="sp-warn">Not everyone out within 60 min</span>', `${bad} of ${runs.length} runs: someone could not reach a way out (check doors and stairs)`]] : [])],
       method: `The whole building: ${NL} level${NL === 1 ? '' : 's'} of the model on a ${fmt(B.c, 1)} m grid (rooms, walls, doors, furniture), joined by ${B.stairs.length} stair${B.stairs.length === 1 ? '' : 's'}; ${fmt(rep.n)} people placed by room use (occupant load factors after IBC 2021 Table 1004.5). In each of ${runs.length} runs the fire starts in ${ST.egFire ? 'the room you chose' : 'a random occupied room'}: its occupants set off within 10 to 30 s; everyone else hears the alarm after ${T(detect)} (detection and alarm) and sets off after a pre-movement time drawn for each person (lognormal, ${use.p1} s first to ${use.p99} s at the 99th percentile, ${esc(use.name.toLowerCase())}, after PD 7974-6:2019). Each walks to the nearest way out (outside doors on the exit level, the stairs from other levels), at 1.19 m/s on average (4 % at about 0.6 m/s), slowed in a crowd; doors let through 1.32 people per second per metre and stair flights 1.1, with queues at both (SFPE Handbook). The run nearest the median is played back; the purple trails are every route taken in it. Evacuation time (RSET) = detection and alarm + pre-movement + travel with queueing. A screening of evacuation time: no fire or smoke is computed (no available safe egress time, ASET), routes through the room of fire origin stay open, lifts are not used, and it is not a code compliance check`,
       foot: `${fmt(rep.n)} people, P50 of ${runs.length} runs, the run nearest it played back`,
@@ -1013,9 +1013,9 @@ export function mountChrome(app, api) {
           ['Patients moved per run, median', fmt(P(runs.map(moved), 0.5))], ['Waiting for staff, mean per patient (median run)', T(P(runs.map((x) => x.staffWait), 0.5))],
           ...(dd ? [['Busiest door (run shown)', `${esc(B.levels[dd.li].name)}: ${esc(nameOf(dd.li, dd.sides[0]))} – ${esc(nameOf(dd.li, dd.sides[1]))}${dd.comp ? ' (smoke door)' : ''}, ${fmt(rep.doorMax[di])} waiting`]] : []),
           ...(down && B.stairs.length ? [['Longest stair queue (run shown)', `${fmt(rep.stairMax[si])} on ${esc(B.stairs[si].name)}, ${esc(B.levels[B.stairs[si].lo].name)}–${esc(B.levels[B.stairs[si].hi].name)}`]] : []),
-          ...B.levels.map((L, li) => [`${esc(L.name)} (run shown)`, Number.isFinite(rep.perLevel[li]) ? `${down ? 'out' : 'moved'} after ${T(rep.perLevel[li])}` : 'not moved']),
+          ...B.levels.map((L, li) => [L, li]).filter(([L]) => L.rooms.length).map(([L, li]) => [`${esc(L.name)} (run shown)`, Number.isFinite(rep.perLevel[li]) ? `${down ? 'out' : 'moved'} after ${T(rep.perLevel[li])}` : 'not moved']),   /* levels with rooms (not a roof) */
           ['Fire starts', ST.egFire ? `in ${esc(ST.egFire.name || 'the room you chose')}` : `random each run · shown: ${esc(rep.fire.level)}, compartment ${rep.fire.comp + 1}`],
-          ['Smoke compartments', B.levels.map((L) => `${esc(L.name)} ${L.nComp}`).join(' · ')], ['People', `${fmt(pop.pats.length)} patients (${esc(MIXN)}) · ${fmt(pop.staff.length)} staff (1 to ${ST.egRatio})`],
+          ['Smoke compartments', B.levels.filter((L) => L.rooms.length).map((L) => `${esc(L.name)} ${L.nComp}`).join(' · ')], ['People', `${fmt(pop.pats.length)} patients (${esc(MIXN)}) · ${fmt(pop.staff.length)} staff (1 to ${ST.egRatio})`],
           ['Runs', `${runs.length}, seed ${ST.egSeed}`], ...(bad ? [['<span class="sp-warn">Runs not finished in 60 min</span>', `${bad} of ${runs.length}: someone could not reach the goal (check doors and stairs)`]] : [])],
         method: `The whole building: ${NL} level${NL === 1 ? '' : 's'} of the model on a ${fmt(B.c, 1)} m grid (rooms, walls, doors, furniture), joined by ${B.stairs.length} stair${B.stairs.length === 1 ? '' : 's'}. In each of ${runs.length} runs the fire starts in ${ST.egFire ? 'the room you chose' : 'a random compartment with patients'}; its patients are moved through a smoke door into the next compartment on the same floor (progressive horizontal evacuation)${down ? ', and after a decision delay of 1 to 3 minutes the fire floor and every floor above go down the stairs and out' : ''}. Each run draws each patient's mobility (${esc(MIXN)}), walking speeds and reaction times; a patient who cannot walk alone waits for one member of staff (two for a bed). Walking speeds slow in a crowd and doors and stair flights limit the flow (SFPE Handbook). Context: NBC 2020 care and treatment occupancies and CSA Z8000-18 plan for horizontal relocation first. A screening of evacuation time with the staff on duty: no fire or smoke is computed (no available safe egress time), lifts are not used`,
         foot: `${fmt(pop.pats.length)} patients and ${fmt(pop.staff.length)} staff, P50 of ${runs.length} runs, the run nearest it played back`,
@@ -1248,7 +1248,7 @@ export function mountChrome(app, api) {
         results: { walk: +R.avg.toFixed(1), pairs: R.ok.length }, settings: { level: pl.lv, weighted: ST.circW === 'use', label: `Circulation, ${pl.level} (Workspace)` } }; }
     if (id === 'structure') {
       const sys = systemOf(), [, sname, deadOf, depthOf, fcol, sdesc] = SYSTEMS.find((x) => x[0] === sys), span = +ST.span, qa = +ST.bearing, ms = w.structGrid({ span });
-      if (!ms.length) throw Error('Draw a mass first: the column grid is laid out in the masses.');
+      if (!ms.length) throw Error('Draw a mass or the building’s walls first: the column grid is laid out in its footprint.');
       const cols = [], rows = [], tint = {}; let nMax = 0, pMax = 0, worst = null, weight = 0;
       for (const m of ms) { const sp = Math.max(...m.spans), D = deadOf(sp), Lv = LIVE[m.use] ?? 2.4, roofD = D, snow = 1.0, wf = 1.25 * D + 1.5 * Lv, wr = 1.25 * roofD + 1.5 * snow, n = m.storeys;
         const service = m.area * ((n - 1) * (D + Lv) + roofD + snow), p = service / Math.max(1, m.area); weight += service; if (p > pMax) { pMax = p; worst = m; }
@@ -1936,7 +1936,7 @@ export function mountChrome(app, api) {
   };
   const timer = setInterval(tick, 400); tick();
   // a study asked for from another page (an old study link): its card opens once the 3D view is ready
-  { let want = null; try { want = sessionStorage.getItem('pc-ws-open-study'); sessionStorage.removeItem('pc-ws-open-study'); } catch { } if (want && IN_VIEW[want]) { const t = setInterval(() => { if (INST.persp.ready) { clearInterval(t); openStudy(want); } }, 300); setTimeout(() => clearInterval(t), 60000); } }
+  { let want = null; try { want = sessionStorage.getItem('pc-ws-open-study'); sessionStorage.removeItem('pc-ws-open-study'); const set = JSON.parse(sessionStorage.getItem('pc-ws-study-set') || 'null'); sessionStorage.removeItem('pc-ws-study-set'); if (set) for (const [k, v] of Object.entries(set)) if (/^eg[A-Z]/.test(k) && k in ST) ST[k] = v; } catch { }   /* an example opens with its study set up (2026-11-10) */ if (want && IN_VIEW[want]) { const t = setInterval(() => { if (INST.persp.ready) { clearInterval(t); openStudy(want); } }, 300); setTimeout(() => clearInterval(t), 60000); } }
   // ---- the name of an icon on hover (2026-10-31): a dark label with a small arrow, above the bottom tools, beside the rails,
   // below the top bar; it takes over from the browser's own tooltip
   const tip = el('div', 'sp-tip'); tip.hidden = true; root.append(tip);
