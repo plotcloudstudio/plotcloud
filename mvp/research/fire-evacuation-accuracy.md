@@ -1,0 +1,255 @@
+## Research status and authorship
+
+PlotCloud technical research note, 10 November 2026. It is written in the structure of a graduate thesis (questions, literature, method, verification, case study, limitations, references), but it is not a submitted or examined thesis and it has not been peer reviewed. The software and the text were developed with AI assistance. No real evacuation, drill or patient data were collected. Every number in the results tables was calculated by the published code and test scripts listed at the end; none was written in by hand. This note shows that the simulation does what its equations say (verification). It does not show that its predictions match real evacuations (validation): that needs drill data the project does not have yet.
+
+## Abstract
+
+Fire Evacuation in PlotCloud estimates how long a building takes to clear: everyone out, or a hospital's progressive horizontal evacuation and then down the stairs. It is a grid-based, stochastic model with hydraulic flow limits after the SFPE Handbook, pre-movement times after PD 7974-6, and parameters for people with walking aids, children and patients who need staff to move them. This note asks four questions. Does the engine implement its equations correctly? How many runs are needed for stable results? How sensitive are the results to the grid, to random incidents and to hospital staffing? And what can honestly be claimed about its accuracy? Eighteen verification tests modelled on IMO MSC.1/Circ.1533 and the verification categories of NIST TN 1822 and ISO 20414 all pass. Speeds, flows and pre-movement distributions match their analytical values within 0–3 %, and a three-storey building matches an SFPE hand calculation within 5.6 %. The study found and fixed four defects, including a crowd-density window that slowed a lone walker on a fine grid and en-suite bathrooms counted as occupied rooms. The 0.5 m grid keeps only about 1.0 m of a 1.8 m clear corridor; this is now documented, and the Refined setting uses a 0.25 m grid. Mean evacuation time settles within 1 % after about 20 runs, but the 90th percentile needs about 50, now the default. In the example hospital, the assumed staffing and patient-preparation times change the median evacuation time by 27–35 %, far more than the grid (7 %) or random incidents (1–7 %). So the inputs about people, not the numerics, dominate the uncertainty. The model is suitable for comparing design options under stated assumptions. It is not a prediction of a real evacuation time and not a code-compliance check.
+
+## 1 · Introduction
+
+Architects meet evacuation questions early: where to put a second stair, how wide a corridor or cross-corridor door must be, how many beds a smoke compartment can hold, and whether a ward can be cleared with the night staff. Codes answer these with prescriptive rules: travel distance, exit width per person, compartment sizes. Performance-based design asks a different question: does the required safe escape time (RSET) stay below the available safe escape time (ASET) with a margin? PD 7974-6 (BSI 2019) divides RSET into detection, alarm, pre-movement and travel. Purser and Bensilum (2001) showed that pre-movement, not walking, is often the largest and most uncertain part.
+
+PlotCloud's simulation is a design-stage screening tool inside the architect's model. Earlier versions showed purple routes and timings but had not been checked against analytical answers, and their parameters had been chosen by judgement. This note sets out the evidence for each parameter and verifies the engine. It then measures how much each uncertain input matters, and reports what changed in the product as a result.
+
+Research questions:
+
+- RQ1 · Verification: do the walking speeds, flows, pre-movement times and route choices produced by the engine match their analytical values?
+- RQ2 · Numerical uncertainty: how do the grid size and the number of random runs affect results?
+- RQ3 · Behavioural and operational uncertainty: how sensitive are results to incidents (falls, children, a blocked exit), staffing and patient preparation?
+- RQ4 · Accuracy: what accuracy can be claimed, and for what use?
+
+## 2 · Literature review
+
+### 2.1 Evacuation time and its stages
+
+The RSET–ASET comparison is the basis of fire safety engineering for life safety (BSI 2019). RSET = detection + alarm + pre-movement + travel, where travel includes queueing at doors and stairs. PD 7974-6 gives pre-movement distributions by occupancy category. Purser and Bensilum (2001) analysed recorded evacuations and found that pre-movement times are often long and widely spread. A model that treats pre-movement as one number therefore hides the most important uncertainty, so PlotCloud draws it at random for each person from a lognormal set by the building use.
+
+### 2.2 Movement data
+
+Fruin (1971) and Predtechenskii and Milinskii (1978) established the relationships between density, speed and flow that underlie the hydraulic method. Weidmann (1993) compiled free walking speeds. The SFPE hydraulic model (Gwynne and Rosenbaum 2016) is the standard hand-calculation method. Speed falls linearly with density above 0.54 persons/m², S = k(1 − 0.266 D). The maximum specific flow is 1.32 persons/s per metre of effective width through doors and corridors, and 1.01 on a 7/11 stair. Effective width is the clear width less a boundary layer, 0.15 m each side for doors and stairs. On the level k is 1.40, giving 1.19 m/s at low density; on a 7/11 stair k is 1.08, giving 0.92 m/s along the line of travel. Proulx (1995) measured evacuations of apartment buildings and their pre-movement and travel times.
+
+### 2.3 People who move differently
+
+Boyce, Shields and Silcock (1999) measured the horizontal speeds of people with disabilities. As reproduced in the SFPE Handbook's movement chapters, people using walking aids moved at roughly 0.8 m/s on average, from about 0.57 m/s with a walking frame to about 0.94 m/s with crutches: markedly slower than the 1.19 m/s hydraulic default. Larusdottir and Dederichs (2011) measured children in 16 evacuation experiments in ten Danish day-care centres. Children aged 3–6 walked at 0.84 m/s on the level (SD 0.25, range 0.42–1.36). On spiral stairs they walked at 0.13–0.58 m/s depending on the stair and familiarity, and those aged 0–2 walked at 0.60 m/s on the level. They also gave flow models for children through doors and a fuller analysis of stairs (Larusdottir and Dederichs 2012).
+
+### 2.4 Hospitals
+
+Hospitals are not evacuated like offices. Patients who cannot walk depend on staff. Codes therefore plan for progressive horizontal evacuation into the next smoke compartment on the same floor, with vertical evacuation as a later stage (Department of Health 2015, HTM 05-02; CSA Z8000-18; NFPA 101, health care occupancies). Hunt, Galea and Lawrence (2015) measured trained hospital staff using four movement-assist devices (stretcher, carry chair, evacuation chair, rescue sheet) through 11 floors of a hospital stair. They reported preparation times and horizontal and vertical speeds. Joyce, Lawrence and Galea (2020) collected device parameters for their planning tool HEPTAD, in their words for demonstration purposes only. These include preparation times of 29 s for an evacuation chair, 53 s for a rescue sheet and 31 s for a hospital bed, after Hunt et al. and Hoondert and Peters (2019).
+
+### 2.5 Models and their verification and validation
+
+Kuligowski, Peacock and Hoskins (2010) review building evacuation models: hydraulic hand methods, coarse networks, fine grids (cellular) and continuous models such as the social-force model (Helbing and Molnár 1995). For grid models, distance fields computed with Dijkstra's algorithm (Dijkstra 1959) are a common way to find routes. Ronchi et al. (2013, NIST TN 1822) set out verification and validation for evacuation models: component tests, functional checks, qualitative checks and quantitative validation. ISO 20414:2020 turned this into a protocol. The IMO's MSC.1/Circ.1533 (2016) gives eleven simple component tests that are widely reused for buildings. Ronchi, Reneke and Peacock (2014) proposed convergence criteria for deciding how many stochastic runs are enough. Smedberg, Ronchi and Kinsey (2021) extended this to several outputs at once.
+
+### 2.6 The gap this note addresses
+
+The literature gives well-sourced values for movement, and methods for verification and run counts. What it does not give is measured rates for incidents such as falls during an evacuation. The approach here is to use sourced values where they exist, to label everything else as an assumption, and to measure how much each assumption matters.
+
+## 3 · Method
+
+### 3.1 The model
+
+Each level of the building model is a grid (0.5 m; 0.25 m at the Refined setting). A cell is walkable inside a room and blocked within half a wall's thickness plus 0.45 of a cell from the wall's centre line. Door openings are cut through the walls. Stairs join levels in order. For every goal (the outside doors, the stairs down, the next smoke compartment) a distance field is computed with Dijkstra's algorithm on eight neighbours. Each person moves cell to cell down the field, at most one person per cell. Speed falls with the density in a square of about 2.5 m around the person, following SFPE: v = v₀ (1 − 0.266 D)/(1 − 0.266 × 0.54) above 0.54 persons/m². Doors and stair flights hold tokens that refill at the SFPE specific flow times the effective width, and a person needs a token to pass, so queues form at the right capacity. The time step is 0.5 s.
+
+### 3.2 Parameters and their sources
+
+| Parameter | Value | Source |
+|---|---|---|
+| Free walking speed, level | 1.19 m/s, SD 0.2 (0.6–1.6) | SFPE, k = 1.40 (Gwynne and Rosenbaum 2016) |
+| Free walking speed, stair (7/11) | 0.92 m/s, SD 0.15 | SFPE, k = 1.08 |
+| Speed with a walking aid | 0.8 m/s, SD 0.15; 4 % of people | Boyce et al. 1999 |
+| Children (in families' rooms) | 0.84 m/s level, 0.48 m/s stair; about 15 % of people, each with an adult at the slower pace | Larusdottir and Dederichs 2011 |
+| Door specific flow | 1.32 p/s/m of effective width | SFPE |
+| Stair specific flow | 1.01 p/s/m of effective width | SFPE, 7/11 stair |
+| Boundary layer | 0.15 m each side | SFPE |
+| Pre-movement | lognormal through the use's 1st and 99th percentiles (office 30–120 s; hotel 120–900 s) | after PD 7974-6 and Purser and Bensilum 2001; PlotCloud's values, to edit |
+| Occupant load | by room name, m² per person | IBC 2021 Table 1004.5 |
+| Patient preparation | 29 s (helped, evacuation chair), 31 s (bed), +53 s at the stair (rescue sheet) | Joyce et al. 2020 Table 2, after Hunt et al. 2015 and Hoondert and Peters 2019 |
+| Staff per patient | 1 helped, 2 for a bed; day ratio 1:4, night 1:8; never fewer than 2 on a floor with patients | assumption, to edit |
+
+### 3.3 Incidents (assumptions, not measured rates)
+
+In each run, independently and at random:
+
+- a person trips after 3–28 m and stays down 5 s to 2 min (median 20 s), holding their cell so that others pass round. The chance is 1.5 % for an adult, 5 % for a child and 6 % for someone with a walking aid;
+- a fall on a stair (0.8 %, or 3 % for children and walking-aid users) holds that flight for 5–90 s;
+- in 15 % of runs, one of the outside doors is found blocked;
+- nobody passes through the room of fire origin, except its own occupants on their way out (and, as a recorded exception, people for whom it is the only way out);
+- in hospital mode, 10 % of staff are held up for 30 s to 2 min, and 3 % of the patients who walk alone trip.
+
+No published study gives these rates for building evacuations. They are there to show which designs are fragile, and Section 6 measures their effect.
+
+### 3.4 Experiments
+
+Verification (Section 4) uses small synthetic geometries with fixed inputs, each with an analytical answer. Convergence (Section 5) runs a three-storey block of waiting rooms 300 times. Sensitivity (Section 6) varies one input at a time on synthetic blocks. The case study (Section 7) runs the PlotCloud example hospital in the browser, 50 runs per variant. All runs are seeded, so the results can be reproduced exactly.
+
+## 4 · Verification (RQ1)
+
+| Test | What it checks | Expected | Measured | Difference |
+|---|---|---|---|---|
+| V1 | Speed in a corridor, 40 m at 1 m/s (IMO test 1), 0.5 m grid | 39.5 s | 39.5 s | 0 % |
+| V1b | The same, 0.25 m grid | 39.5 s | 39.5 s | 0 % |
+| V2 | One stair flight at 0.5 m/s (IMO tests 2–3), mean of 200 runs | 14.0 s | 14.1 s | 0.9 % |
+| V3 | 100 people through a 1 m door (IMO test 4) | 0.92 p/s | 0.93 p/s | 0.6 % |
+| V3b | Through a 2 m door | 2.24 p/s | 2.25 p/s | 0.3 % |
+| V3c | 1 m door, 0.25 m grid | 0.92 p/s | 0.93 p/s | 0.6 % |
+| V4a–c | Pre-movement, office: 1st, 50th and 99th percentiles (IMO test 5), 2,000 people | 30 / 60 / 120 s | 31.0 / 59.8 / 119.2 s | 3.2 / −0.3 / −0.7 % |
+| V5 | 20 people round a corner (IMO test 6) | all out, no wall crossed | all out | pass |
+| V6a | Adult walking speed, mean (IMO test 7), 1,913 people | 1.19 m/s | 1.19 m/s | −0.3 % |
+| V6b | Walking-aid speed, mean, 87 people | 0.80 m/s | 0.82 m/s | 1.9 % |
+| V7 | Nearest exit taken, uncongested (IMO test 10) | 6 of 6 | 6 of 6 | pass |
+| V8 | An exit found blocked: the other used | 6 of 6 | 6 of 6 | pass |
+| V9 | The room of fire origin avoided: a longer walk round | longer than 24.5 m | 28.7 m | pass |
+| V10 | A three-storey office block, 72 people, against an SFPE hand calculation | 83.3 s | 88.0 s | 5.6 % |
+
+All 18 tests pass, including the two grid measurements in Section 5. In V1 the expected time is measured to the doorway cells, where the engine counts a person as out. V10's hand calculation takes the stair as the controlling component: 48 people from the upper floors at 1.11 persons/s, plus the walk to the stair and from its foot. The engine is 4.7 s slower. That is the expected direction, since the hand method ignores the time the queue takes to form and the slowing on the landing as the floors merge.
+
+Defects found and fixed during this study:
+
+- On a 0.25 m grid, the crowd-density window of 5 × 5 cells covered only 1.56 m². A person alone therefore counted as 0.64 persons/m² and slowed themselves by about 3 % (V1b first measured 41.0 s). The window is now about 2.5 m square on any grid.
+- En-suite bathrooms were given occupants. The word "ensuite" was missing from the list of spaces with no occupant load, and an en-suite opens only into its patient room. When the fire started in that patient room, the person in the en-suite had no way out (14 people stuck in 50 runs of the example hospital). En-suites now carry no load. A person whose only way out is through the room of fire origin now takes it, and is reported as a design finding.
+- In the hospital model, an "IT room" counted as a patient room because the name contains "room", and the floor then had one member of staff for a bed patient who needs two. That run never finished and was reported as 0 s. Support rooms are now excluded, and a floor with patients always has at least two staff.
+- Earlier versions used the full clear width for door and stair flows, with a stair flow of 1.1. They now use the effective width and the SFPE 7/11 value of 1.01, which reduces stair capacity by about a third for a 1.1 m flight.
+
+## 5 · Numerical uncertainty (RQ2)
+
+### 5.1 The grid
+
+| Grid | Walkable width kept of a 2 m corridor (1.8 m clear) |
+|---|---|
+| 0.5 m | 1.0 m (−44 %) |
+| 0.25 m | 1.5 m (−17 %) |
+
+Walls must block at least one cell wherever they are, which costs width on a coarse grid. Door and stair capacities are set by tokens, not by the cells, so the flow tests (V3, V3c) are unaffected. But corridors, and crowding in them, are modelled narrower than they are. In the example hospital the 0.25 m grid gives a median 7 % lower in hospital mode (15.1 against 16.2 min) and the same median in Everyone out (Section 7). The Refined setting now uses the 0.25 m grid.
+
+### 5.2 How many runs
+
+300 runs of a three-storey block of waiting rooms (96 people, Everyone out, alarm at 60 s, incidents on):
+
+| Runs | Mean | 90th percentile | 95 % confidence interval of the mean |
+|---|---|---|---|
+| 10 | 328.7 s | 347.0 s | ± 13.2 s |
+| 20 | 337.4 s | 371.5 s | ± 12.0 s |
+| 50 | 337.7 s | 374.0 s | ± 7.6 s |
+| 100 | 338.0 s | 376.0 s | ± 6.0 s |
+| 300 | 336.9 s | 383.5 s | ± 4.0 s |
+
+The running mean stays within 1 % from run to run after 20 runs, a simplified form of the criterion of Ronchi et al. (2014). The 90th percentile is the figure that matters for design, since it says what a bad but plausible evacuation looks like, and it keeps rising until about 50 runs. At 20 runs it is still 3 % below the 300-run value. The default is now 50 runs (the earlier default was 20); for presentation, 100.
+
+## 6 · Behavioural and operational sensitivity (RQ3)
+
+### 6.1 Incidents (Everyone out, the waiting-room block, 100 runs each)
+
+| Variant | Median | 90th percentile |
+|---|---|---|
+| No incidents | 317.5 s | 358.0 s |
+| Default incidents | 333.0 s | 376.0 s |
+| Falls twice as likely | 340.0 s | 379.0 s |
+| No falls (children and blocked exits only) | 331.0 s | 374.0 s |
+| Twice the children (30 %) | 345.0 s | 401.0 s |
+| A third of people with walking aids | 347.5 s | 387.0 s |
+
+Together the incidents add about 5 % to the median and the 90th percentile. Most of this comes from children walking at the pace of the slower of the pair, and from the occasional blocked exit; falls add little in this building. Doubling the share of children adds 12 % to the 90th percentile over the no-incident case. A building used by many families, such as a paediatric clinic or a school, should be tested with a higher child share.
+
+### 6.2 Hospital (a three-storey ward block, horizontal then down, 50 runs each)
+
+| Variant | Median | 90th percentile | Horizontal stage, median |
+|---|---|---|---|
+| Day staffing 1:4, preparation times | 18.6 min | 23.2 min | 3.7 min |
+| No preparation times (the earlier model) | 14.9 min | 17.9 min | 3.1 min |
+| Night staffing 1:8 | 30.1 min | 41.8 min | 4.9 min |
+| More dependent patients (20 % walk, 40 % helped, 40 % bed) | 23.8 min | 29.3 min | 3.6 min |
+| No incidents | 18.6 min | 23.2 min | 3.6 min |
+
+Staffing and patient dependency dominate. Night staffing alone adds 62 % to the median. Preparation times, which the earlier model left out, add 25 %. The random incidents hardly change the hospital totals, because the time is set by staff going back and forth for dependent patients, not by the walkers.
+
+## 7 · Case study: the PlotCloud example hospital
+
+The example is a generic three-storey inpatient building, about 61 × 27 m. It has an entrance and clinics on the ground floor and two inpatient units above, with 52 single patient rooms in all. Each inpatient floor is divided into two smoke compartments by cross-corridor doors, and two exit stairs serve every floor. In each of 50 runs the fire starts in a random compartment with patients.
+
+| Hospital mode, horizontal then down | Patients · staff | 10th % | Median | 90th % | Horizontal stage |
+|---|---|---|---|---|---|
+| Day staffing 1:4 | 52 · 14 | 12.5 min | 16.2 min | 21.8 min | 4.5 min |
+| Night staffing 1:8 | 52 · 8 | 17.6 min | 21.9 min | 33.3 min | 5.4 min |
+| Day, no preparation times | 52 · 14 | 10.2 min | 12.8 min | 16.5 min | 4.0 min |
+| Day, no incidents | 52 · 14 | 13.0 min | 16.0 min | 22.0 min | 4.5 min |
+| Day, 0.25 m grid | 52 · 14 | 12.4 min | 15.1 min | 20.6 min | 4.4 min |
+
+| Everyone out (clinic use) | People | 10th % | Median | 90th % | Incidents per run |
+|---|---|---|---|---|---|
+| Alarm at 60 s | 244 | 4.5 min | 5.0 min | 6.2 min | 4.6 |
+| Alarm at 60 s, no incidents | 244 | 4.6 min | 5.1 min | 5.8 min | 0 |
+| Alarm at 60 s, 0.25 m grid | 244 | 4.5 min | 5.0 min | 6.1 min | 4.4 |
+| Alarm at 3 min | 244 | 6.5 min | 7.0 min | 8.2 min | 4.6 |
+
+What a design team would take from this:
+
+- Horizontal relocation clears the fire compartment in about 4.5 minutes by day. That is the figure to compare with the time a compartment can be held, and it is much shorter than full evacuation.
+- Full vertical evacuation takes 16 minutes by day, with a 90th percentile of 22 minutes. At night the median is 22 minutes and the 90th percentile 33. The night shift, not the stair width, is the constraint. That argues for planning around horizontal relocation and staff deployment rather than more stair capacity.
+- Everyone out is controlled by the alarm and pre-movement. Moving the alarm from 60 s to 3 minutes moves the median by 2 minutes, almost one for one. Detection and staff response are worth more than wider exits here.
+- In 6 of 50 runs one outside door was found blocked. With all incidents on, the 90th percentile rose 0.4 min over the no-incident case. The design has enough exit redundancy for this.
+
+## 8 · How accurate is it? (RQ4)
+
+There are three kinds of error, and they are of different sizes:
+
+- Numerical, meaning whether the code does what its equations say: within 0–3 % for speeds, flows and pre-movement, and 5.6 % against a building-scale hand calculation (Section 4). This is small, and it is the only kind this note has measured directly.
+- Discretisation: up to 7 % in the hospital case on the 0.5 m grid, mainly through narrowed corridors (Section 5). The Refined setting reduces this.
+- Input uncertainty, meaning parameters about people that nobody can know exactly for a building not yet built: 25–62 % for staffing and preparation in hospitals, and about 5–12 % for incidents and children (Sections 6–7). This is the largest by far.
+
+How far the predictions are from real evacuations is unknown until they are compared with measured drills. Evacuation models are known to differ from each other and from experiments when given the same building. That is why TN 1822 and ISO 20414 ask for validation against data, which this note does not provide. The results should therefore be read as comparative: option A against option B, day against night, one stair against two, under the same stated assumptions. They are not a forecast of the minutes a real evacuation will take, not an RSET for a fire engineering submission without a qualified engineer's review, and not evidence of code compliance.
+
+## 9 · Limitations
+
+- There is no fire or smoke model and no ASET. The room of fire origin is avoided, but smoke spread, visibility and tenability are not computed.
+- Lifts are not used for evacuation. Refuges, and assistance on the stair beyond a rescue-sheet transfer, are simplified.
+- There is no counterflow by firefighters, no behaviour such as investigating, gathering belongings or helping others beyond parent–child pairs and hospital staff, and no route choice by familiarity. People take the shortest available route.
+- Stairs are queues with a travel time, not geometry: the flight length is taken as 1.75 × the rise.
+- The incident rates and some hospital parameters are assumptions. The device times come from a small number of trials with trained teams.
+- The 0.5 m grid narrows corridors (Section 5.1).
+- No empirical validation has been done.
+
+## 10 · What changed in PlotCloud because of this study
+
+- Door and stair flows use effective widths and the SFPE 7/11 stair flow (1.01 p/s/m). The stair walking speed is 0.92 m/s.
+- Walking-aid speed is 0.8 m/s (Boyce et al. 1999) instead of 0.6. Children walk at 0.84 m/s on the level and 0.48 m/s on stairs (Larusdottir and Dederichs 2011).
+- In hospital mode, patients take preparation time before an assisted move (29 s chair, 31 s bed), and bed patients take 53 s at the stair for a rescue-sheet transfer (Joyce et al. 2020, Hunt et al. 2015).
+- The crowd density is measured over a fixed area on any grid. En-suites carry no occupants. Support rooms are not patient rooms. A floor with patients has at least two staff.
+- A room whose only way out is through the room of fire origin is reported in the results.
+- The Refined setting uses a 0.25 m grid, and the default number of runs is 50.
+- The study card's method text names these sources, marks the incident rates as assumptions and links to this note.
+
+## 11 · Conclusion
+
+The engine reproduces the hydraulic values it is built on and passes component tests modelled on IMO MSC.1/Circ.1533. Its numerical error is small compared with the uncertainty in the people it models. For architects, the practical lesson from the hospital case matches the literature. Evacuation time in care buildings is set mostly by staff and patient dependency, and by detection and pre-movement, more than by exit width. The simulation is most useful for comparing options under the same assumptions, and its results should be read alongside those assumptions. The next step is validation: comparing it with recorded drills, especially hospital drills with timed patient movements.
+
+## References
+
+- BSI (2019). PD 7974-6:2019. The application of fire safety engineering principles to fire safety design of buildings. Part 6: Human factors: Life safety strategies. Occupant evacuation, behaviour and condition (Sub-system 6). British Standards Institution.
+- Boyce, K. E., Shields, T. J. and Silcock, G. W. H. (1999). Toward the characterization of building occupancies for fire safety engineering: capabilities of disabled people moving horizontally and on an incline. Fire Technology, 35(1), 51–67.
+- CSA Group (2018). CSA Z8000-18, Canadian health care facilities.
+- Department of Health (2015). Health Technical Memorandum 05-02: Firecode. Guidance in support of functional provisions (fire safety in the design of healthcare premises). London.
+- Dijkstra, E. W. (1959). A note on two problems in connexion with graphs. Numerische Mathematik, 1, 269–271.
+- Fruin, J. J. (1971). Pedestrian Planning and Design. Metropolitan Association of Urban Designers and Environmental Planners, New York.
+- Gwynne, S. M. V. and Rosenbaum, E. R. (2016). Employing the hydraulic model in assessing emergency movement. In M. J. Hurley (ed.), SFPE Handbook of Fire Protection Engineering, 5th ed. Springer.
+- Helbing, D. and Molnár, P. (1995). Social force model for pedestrian dynamics. Physical Review E, 51(5), 4282–4286.
+- Hunt, A., Galea, E. R. and Lawrence, P. J. (2015). An analysis and numerical simulation of the performance of trained hospital staff using movement assist devices to evacuate people with reduced mobility. Fire and Materials, 39(4), 407–429. [doi:10.1002/fam.2215](https://doi.org/10.1002/fam.2215)
+- IMO (2016). MSC.1/Circ.1533, Revised guidelines on evacuation analysis for new and existing passenger ships. International Maritime Organization.
+- ISO (2020). ISO 20414:2020, Fire safety engineering. Verification and validation protocol for building fire evacuation models.
+- Joyce, M. S., Lawrence, P. J. and Galea, E. R. (2020). Hospital Evacuation Planning Tool for Assistance Devices (HEPTAD). Fire and Materials. [doi:10.1002/fam.2856](https://doi.org/10.1002/fam.2856)
+- Kuligowski, E. D., Peacock, R. D. and Hoskins, B. L. (2010). A Review of Building Evacuation Models, 2nd edition. NIST Technical Note 1680.
+- Larusdottir, A. R. and Dederichs, A. S. (2011). A step towards including children's evacuation parameters and behavior in fire safe building design. Fire Safety Science, 10, 187–195. [doi:10.3801/IAFSS.FSS.10-187](https://doi.org/10.3801/IAFSS.FSS.10-187)
+- Larusdottir, A. R. and Dederichs, A. S. (2012). Evacuation of children: movement on stairs and on horizontal plane. Fire Technology, 48(1), 43–53.
+- NFPA (current edition). NFPA 101, Life Safety Code: new and existing health care occupancies. National Fire Protection Association.
+- Predtechenskii, V. M. and Milinskii, A. I. (1978). Planning for Foot Traffic Flow in Buildings. Amerind Publishing, New Delhi.
+- Proulx, G. (1995). Evacuation time and movement in apartment buildings. Fire Safety Journal, 24(3), 229–246.
+- Purser, D. A. and Bensilum, M. (2001). Quantification of behaviour for engineering design standards and escape time calculations. Safety Science, 38(2), 157–182.
+- Ronchi, E., Kuligowski, E. D., Reneke, P. A., Peacock, R. D. and Nilsson, D. (2013). The Process of Verification and Validation of Building Fire Evacuation Models. NIST Technical Note 1822.
+- Ronchi, E., Reneke, P. A. and Peacock, R. D. (2014). A method for the analysis of behavioural uncertainty in evacuation modelling. Fire Technology, 50(6), 1545–1571. [doi:10.1007/s10694-013-0352-7](https://doi.org/10.1007/s10694-013-0352-7)
+- Smedberg, E., Ronchi, E. and Kinsey, M. J. (2021). Multifactor variance assessment for determining the number of repeat simulation runs in evacuation modelling. Fire Technology, 57.
+- Weidmann, U. (1993). Transporttechnik der Fussgänger. Schriftenreihe des IVT Nr. 90, ETH Zürich.
+- Hoondert, P. and Peters, B. (2019). New design approach for fire safe hospital wards. Interflam 2019, 597–608 (as cited by Joyce et al. 2020).
+
+## Data and code
+
+[Engine source](https://github.com/plotcloudstudio/plotcloud/blob/main/mvp/js/interior/egress.js) · [Verification and sensitivity script](https://github.com/plotcloudstudio/plotcloud/blob/main/tests/validation/egress-verification.mjs) · [Hospital case script](https://github.com/plotcloudstudio/plotcloud/blob/main/tests/validation/egress-hospital-case.cjs) · [Verification results (JSON)](research/egress-verification.json) · [Hospital case results (JSON)](research/egress-hospital-case.json) · [This note as text](research/fire-evacuation-accuracy.md)

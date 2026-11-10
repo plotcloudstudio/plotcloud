@@ -2898,7 +2898,8 @@ cv.addEventListener('pointerdown', (e) => {
   else if (h.k === 'end') { const w = wallById(h.id), pt = w[h.e].slice(), fol = []; for (const q of lvWalls()) for (const e2 of ['a', 'b']) if ((q !== w || e2 !== h.e) && near(q[e2], pt)) fol.push([q, e2]); drag = { k: 'end', w, e: h.e, fol, b }; }
   else if(h.k==='fence'){const f=selObj();drag={k:'fence',f,p0:p,points:f.points.map(q=>q.slice()),b};}
   else if (h.k === 'mass') { const m = selObj(); SEL = { k: 'mass', id: m.id }; drag = h.v != null ? { k: 'massv', m, v: h.v, b } : { k: 'mass', m, p0: p, points: m.points.map((q) => q.slice()), b }; }
-  else if (h.k === 'ctx') { const o = selObj(); if (o && o.xy) drag = h.v != null ? { k: 'ctxv', o, v: h.v, b } : { k: 'ctx', o, p0: siteOfM(M, p), xy: o.xy.map((q) => q.slice()), b }; }   // site context (Edit site model, 2026-10-31)
+  else if (h.k === 'ctx') { const o = selObj(); if (o && o.xy) drag = h.v != null ? { k: 'ctxv', o, v: h.v, b } : { k: 'ctx', o, p0: siteOfM(M, p), xy: o.xy.map((q) => q.slice()), b }; }
+  else if (SITEK.has(h.k)) { const P = sitePts(h); SEL = { k: h.k, id: h.id }; if (P && CAM !== '3d') {   /* in 3D: picked and edited in its card; moved and reshaped on the plan */ if (h.ins != null) { const a = P.pts[h.ins], c = P.pts[(h.ins + 1) % P.pts.length]; P.pts.splice(h.ins + 1, 0, [+((a[0] + c[0]) / 2).toFixed(2), +((a[1] + c[1]) / 2).toFixed(2)]); drag = { k: 'sitev', P, v: h.ins + 1, b, moved: true }; } else if (h.v != null) drag = { k: 'sitev', P, v: h.v, b }; else { P.org = P.o.water && Array.isArray(P.o.water.centre) ? P.o.water.centre.map((r) => r.slice()) : null; drag = { k: 'site', P, p0: siteOfM(M, p), pts: P.pts.map((q) => q.slice()), b }; } } }   // the site itself (Edit site model, 2026-11-10)   // site context (Edit site model, 2026-10-31)
   else if (h.k === 'op') { drag = { k: 'op', o: selObj(), b }; }
   else if (h.k === 'furn') { const f = selObj(); drag = { k: 'furn', f, dx: f.x - p[0], dy: f.y - p[1], b }; }
   else if (h.k === 'void' || h.k === 'floor') { const v=selObj();if(v.auto){flash('This floor follows its walls. Move the walls to change its outline.');return;}drag={k:'void',v,points:v.points?.map(p=>p.slice()),holes:v.holes?.map(h=>h.map(p=>p.slice())),x0:v.x,y0:v.y, dx: v.x - p[0], dy: v.y - p[1], b }; }
@@ -2913,6 +2914,8 @@ cv.addEventListener('pointermove', (e) => {
     else if (drag.k === 'bend') { const w = drag.w, P = arcPts(w.a, w.b, p), nb = P.length > 2 && P.sweep ? Math.tan(P.sweep * P.dir / 4) : 0; if (Math.abs(nb) > 0.01) w.bulge = +nb.toFixed(6); else delete w.bulge; const A = STC.arcOf(w); tipAt(e, A ? `R ${A.r.toFixed(2)} m · ${A.len.toFixed(2)} m along` : 'straight'); }   /* drag the middle of an arc wall: the curve through the pointer */
     else if (drag.k === 'end') { const other = drag.w[drag.e === 'a' ? 'b' : 'a'], q = snapPt(p, other, e.shiftKey); drag.w[drag.e] = q; for (const [w2, e2] of drag.fol) w2[e2] = q.slice(); tipAt(e, `${Math.round(STC.wallLen(drag.w) * 1000)} mm`); }
     else if (drag.k === 'ctx') { const q = siteOfM(M, p), dx = q[0] - drag.p0[0], dy = q[1] - drag.p0[1]; drag.o.xy = drag.xy.map((r) => [+(r[0] + dx).toFixed(2), +(r[1] + dy).toFixed(2)]); drag.o.edited = true; drag.o.ll = []; M.site.version++; tipAt(e, `Moved ${Math.hypot(dx, dy).toFixed(2)} m`); }
+    else if (drag.k === 'site') { const q = siteOfM(M, p), dx = q[0] - drag.p0[0], dy = q[1] - drag.p0[1]; drag.P.pts.splice(0, drag.P.pts.length, ...drag.pts.map((r) => [+(r[0] + dx).toFixed(2), +(r[1] + dy).toFixed(2), ...r.slice(2)])); siteMoved(drag.P, [dx, dy]); tipAt(e, `Moved ${Math.hypot(dx, dy).toFixed(2)} m`); }
+    else if (drag.k === 'sitev') { const q = siteOfM(M, p), r0 = drag.P.pts[drag.v]; drag.P.pts[drag.v] = [+q[0].toFixed(2), +q[1].toFixed(2), ...r0.slice(2)]; siteMoved(drag.P); tipAt(e, drag.P.closed ? `${fmtA(areaOf(drag.P.pts))} m²` : `${pathLen(drag.P.pts).toFixed(1)} m long`); }
     else if (drag.k === 'ctxv') { const q = siteOfM(M, p); drag.o.xy[drag.v] = [+q[0].toFixed(2), +q[1].toFixed(2)]; drag.o.area = +areaOf(drag.o.xy).toFixed(1); drag.o.edited = true; drag.o.ll = []; M.site.version++; tipAt(e, `${fmtA(drag.o.area)} m² footprint`); }
     else if(drag.k==='fence'){const dx=sg(p[0]-drag.p0[0]),dy=sg(p[1]-drag.p0[1]);drag.f.points=drag.points.map(q=>[q[0]+dx,q[1]+dy]);}
     else if (drag.k === 'mass') { const dx = sg(p[0] - drag.p0[0]), dy = sg(p[1] - drag.p0[1]); drag.m.points = drag.points.map((q) => [+(q[0] + dx).toFixed(3), +(q[1] + dy).toFixed(3)]); tipAt(e, `Moved ${dx.toFixed(2)}, ${dy.toFixed(2)} m`); }
@@ -5340,6 +5343,46 @@ addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('i
   }
   $('#pp_x', box).addEventListener('click', () => { SEL = null; changedSel(); }); const del = $('#pp_del', box); if (del) del.addEventListener('click', delSel);
 }; }
+// ---- the site itself in Edit site model (2026-11-10): its areas (water, planting, paving, ground cover), roads and paths, and the
+// plot boundary, as well as the neighbouring buildings: picked on the plan, moved, reshaped (drag a corner; drag the + on an edge to
+// add one; double-click a corner to remove it) and deleted. Points stay in the site's own coordinates.
+const SITEK = new Set(['sarea', 'sroad', 'parcel']);
+const siteEditOn = () => !!M.site && CAM !== '3d' && VIEW2D === 'plan' && !(window.__ws && window.__ws.locks && window.__ws.locks.has('Site'));
+const pathLen = (P) => P.slice(1).reduce((a, q, i) => a + Math.hypot(q[0] - P[i][0], q[1] - P[i][1]), 0);
+const segDistS = (q, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / L2)); return Math.hypot(q[0] - a[0] - t * dx, q[1] - a[1] - t * dy); };
+const roadId = (r, i) => r.id || 'road' + i;
+function siteObjOf(s) { const st = M.site; if (!st || !s) return null; if (s.k === 'sarea') return (st.areas || []).find((a) => a.id === s.id) || null; if (s.k === 'sroad') return (st.roads || []).find((r, i) => roadId(r, i) === s.id) || null; if (s.k === 'parcel') return st.parcel && st.parcel.pts ? st.parcel : null; return null; }
+function sitePts(s) { const o = siteObjOf(s); if (!o || !Array.isArray(o.pts)) return null; return { o, pts: o.pts, closed: s.k !== 'sroad', k: s.k }; }
+// a water area's own centre line moves with it; any edit makes the site new to the studies (version) and is marked as the person's
+function siteMoved(P, d) { const o = P.o; if (d && o.water && Array.isArray(o.water.centre) && P.org) o.water.centre = P.org.map((r) => [+(r[0] + d[0]).toFixed(2), +(r[1] + d[1]).toFixed(2), ...r.slice(2)]); o.edited = true; M.site.version++; }
+const siteUnlocked = () => !!M.site && !(window.__ws && window.__ws.locks && window.__ws.locks.has('Site'));
+function siteAt(sq, tv) { const st = M.site;
+  for (const a of (st.areas || []).filter((x) => x.pts && x.pts.length > 2).sort((x, y) => areaOf(x.pts) - areaOf(y.pts))) if (inPoly(sq, a.pts)) return { k: 'sarea', id: a.id };   // the smallest area under the pointer: the water in the garden
+  for (const [i, r] of (st.roads || []).entries()) { if (!r.pts || r.pts.length < 2) continue; const hw = (r.width || 4) / 2; for (let j = 0; j + 1 < r.pts.length; j++) if (segDistS(sq, r.pts[j], r.pts[j + 1]) <= hw + tv) return { k: 'sroad', id: roadId(r, i) }; }
+  const pc = st.parcel && st.parcel.pts; if (pc && pc.length > 2) for (let j = 0; j < pc.length; j++) if (segDistS(sq, pc[j], pc[(j + 1) % pc.length]) < tv * 1.5) return { k: 'parcel', id: 'parcel' };
+  return null; }
+{ const _ht = hitTest; hitTest = function (p, opt = {}) {
+  if (CAM === '3d') { const h = _ht(p, opt); if (!siteUnlocked()) return h; const ud = P3.hit && P3.hit.ud; if (ud && ud.k === 'site' && ud.water) return { k: 'sarea', id: ud.water };   // the 3D view: the water itself, or what lies on the ground under the pointer
+    if (h) return h; return ud && ud.k === 'site' && ud.id === 'terrain' && P3.hit.p ? siteAt(siteOfM(M, P3.hit.p), 1) : null; }
+  if (!siteEditOn()) return _ht(p, opt);
+  const tv = 7 * VP.d / V.s, toP = (q) => SITEC.siteToPlan(M.site, q, M.north || 0);
+  if (SEL && SITEK.has(SEL.k)) { const P = sitePts(SEL); if (P) { const pl = P.pts.map(toP), i = pl.findIndex((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < tv); if (i >= 0) return { k: SEL.k, id: SEL.id, v: i };
+      const n = pl.length, m = P.closed ? n : n - 1; for (let j = 0; j < m; j++) { const a = pl[j], c = pl[(j + 1) % n], mid = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2]; if (Math.hypot(mid[0] - p[0], mid[1] - p[1]) < tv) return { k: SEL.k, id: SEL.id, ins: j }; } } }
+  const h = _ht(p, opt); if (h && h.k !== 'room') return h;
+  return siteAt(siteOfM(M, p), tv) || h; }; }
+{ const _s = selObj; selObj = function (s = SEL) { if (s && SITEK.has(s.k)) return siteObjOf(s); return _s(s); }; }
+function siteDel(s) { const st = M.site; if (!st || !s) return false; if (s.k === 'parcel') { flash('The site boundary can be reshaped (drag its corners), not deleted.'); return false; } const b = snapM();
+  if (s.k === 'sarea') st.areas = (st.areas || []).filter((a) => a.id !== s.id); else st.roads = (st.roads || []).filter((r, i) => roadId(r, i) !== s.id);
+  st.version++; if (SEL && SEL.k === s.k && SEL.id === s.id) SEL = null; commit(b); return true; }
+{ const _d = delSel; delSel = function () { if (SEL && SITEK.has(SEL.k)) { siteDel(SEL); return; } return _d(); }; }
+cv.addEventListener('dblclick', (e) => { if (!siteEditOn() || !SEL || !SITEK.has(SEL.k)) return; const [sx, sy] = evP(e), h = hitTest(S2W(sx, sy)); if (!h || h.k !== SEL.k || h.v == null) return; const P = sitePts(h); if (!P || P.pts.length <= (P.closed ? 3 : 2)) { flash(P && P.closed ? 'An area needs at least three corners.' : 'A road needs at least two points.'); return; }
+  const b = snapM(); P.pts.splice(h.v, 1); siteMoved(P); commit(b); });
+// the selection on the plan: its outline, a square at each corner, a + in the middle of each edge
+function drawSiteSel() { if (!siteEditOn() || !SEL || !SITEK.has(SEL.k)) return; const P = sitePts(SEL); if (!P) return; const d = VP.d || 1, Q = P.pts.map((q) => W2S(SITEC.siteToPlan(M.site, q, M.north || 0))); g.save();
+  g.strokeStyle = '#d8402a'; g.lineWidth = 2 * d; g.setLineDash([6 * d, 4 * d]); g.beginPath(); Q.forEach((q, i) => (i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]))); if (P.closed) g.closePath(); g.stroke(); g.setLineDash([]);
+  const n = Q.length, m = P.closed ? n : n - 1; g.fillStyle = '#fff'; g.strokeStyle = '#9ca3af'; g.lineWidth = 1.2 * d; for (let j = 0; j < m; j++) { const a = Q[j], c = Q[(j + 1) % n], x = (a[0] + c[0]) / 2, y = (a[1] + c[1]) / 2; g.beginPath(); g.arc(x, y, 4.5 * d, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x - 2.5 * d, y); g.lineTo(x + 2.5 * d, y); g.moveTo(x, y - 2.5 * d); g.lineTo(x, y + 2.5 * d); g.stroke(); }
+  g.fillStyle = '#fff'; g.strokeStyle = '#d8402a'; g.lineWidth = 1.5 * d; for (const q of Q) { g.fillRect(q[0] - 4 * d, q[1] - 4 * d, 8 * d, 8 * d); g.strokeRect(q[0] - 4 * d, q[1] - 4 * d, 8 * d, 8 * d); } g.restore(); }
+{ const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawSiteSel(); } catch (e) { } return r; }; }
 window.__mass = { hit: (p) => hitTest(p), siteFigures, massList: () => massList(M), addMass, addCtx, get MSNAP() { return MSNAP; }, load: (m) => useModel(STC.migrate(JSON.parse(JSON.stringify(m))), { saved: true }) };
 
 // ===== Sun on the site and schemes (2026-10-25) =====
@@ -5522,7 +5565,7 @@ function drawWalk2() { const o = WK.o; if (!o || CAM === '3d' || !WK.cv || (o.lv
 // rampStops, frames: [Float32Array (x, y, z, level index, visible) per unit, one per second], kinds, cols { kind: colour }, speed,
 // play, t (s), onTime(t), fit }. Plan coordinates.
 const EGO = { o: null, raf: 0, last: 0, t: 0, cur: null };
-const EG_COLS = { amb: '#3d4250', asst: '#d9921a', bed: '#c8352b', staff: '#2f6fd6', occ: '#3d4250', imp: '#d9921a' };
+const EG_COLS = { amb: '#3d4250', asst: '#d9921a', bed: '#c8352b', staff: '#2f6fd6', occ: '#3d4250', imp: '#d9921a', child: '#16a34a' };
 function egressShow(o) {
   cancelAnimationFrame(EGO.raf); EGO.raf = 0; EGO.o = o; EGO.cur = null; secSync();
   if (!o) { if (window.S3 && S3.egress) S3.egress(null); if (CAM !== '3d') draw(); return; }
@@ -5535,13 +5578,27 @@ function egressShow(o) {
       x.beginPath(); x.moveTo(e[0], e[1]); x.lineTo(e[0] - ux * hd - uy * hd * 0.6, e[1] - uy * hd + ux * hd * 0.6); x.lineTo(e[0] - ux * hd + uy * hd * 0.6, e[1] - uy * hd - ux * hd * 0.6); x.closePath(); x.fill(); }
     // footprints (2026-11-09): every person's route on this level through the whole run, in translucent purple like Circulation's
     // walks, so the routes many take build up dark; the room of fire origin marked
+    // the stairs, the exits and the smoke doors (2026-11-10): a stair hatched with its outline, an exit a green bar marked EXIT (one found
+    // blocked in the run shown crossed out in red), a smoke door an orange bar
+    // stairs and outside doors (2026-11-10): the stair fill under the routes, outlines, doors and labels over them
+    const drawMarks = (pass) => { if (!L.marks) return; const P = (q) => [(q[0] - b.x0) * k, (b.y1 - q[1]) * k], M2 = L.marks, lab = (t, q, col) => { x.font = `800 ${Math.max(11, Math.round(0.9 * k))}px Inter,system-ui,sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = Math.max(3, 0.25 * k); const tw = x.measureText(t).width / 2 + 4, th = Math.max(11, 0.9 * k) / 2 + 4; q = [Math.max(tw, Math.min(x.canvas.width - tw, q[0])), Math.max(th, Math.min(x.canvas.height - th, q[1]))]; x.strokeStyle = '#fff'; x.strokeText(t, q[0], q[1]); x.fillStyle = col; x.fillText(t, q[0], q[1]); };
+      for (const S of M2.stairs || []) { const Q = S.pts.map(P), xs = Q.map((q) => q[0]), ys = Q.map((q) => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); x.globalAlpha = 1;
+        if (pass) { x.strokeStyle = '#111827'; x.lineWidth = Math.max(2, 0.14 * k); x.beginPath(); Q.forEach((q, i) => (i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]))); x.closePath(); x.stroke(); lab(S.name || 'STAIR', [(x0 + x1) / 2, (y0 + y1) / 2], '#111827'); continue; }
+        x.fillStyle = '#e7e5e4'; x.beginPath(); Q.forEach((q, i) => (i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]))); x.closePath(); x.fill(); x.save(); x.clip(); x.strokeStyle = '#a8a29e'; x.lineWidth = Math.max(1, 0.05 * k); const st = Math.max(4, 0.28 * k); x.beginPath(); for (let t = x0 - (y1 - y0); t < x1; t += st) { x.moveTo(t, y1); x.lineTo(t + (y1 - y0), y0); } x.stroke(); x.restore(); }
+      if (pass) for (const [A, B2, kind] of M2.doors || []) { const a = P(A), c = P(B2), col = kind === 'exit' ? '#16a34a' : kind === 'blocked' ? '#dc2626' : '#ea580c'; x.globalAlpha = 1; x.strokeStyle = col; x.lineCap = 'butt'; x.lineWidth = Math.max(4, (kind === 'smoke' ? 0.3 : 0.5) * k); x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(c[0], c[1]); x.stroke();
+        const m2 = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2]; if (kind === 'blocked') { const r2 = Math.max(6, 0.6 * k); x.lineWidth = Math.max(2, 0.12 * k); x.beginPath(); x.moveTo(m2[0] - r2, m2[1] - r2); x.lineTo(m2[0] + r2, m2[1] + r2); x.moveTo(m2[0] + r2, m2[1] - r2); x.lineTo(m2[0] - r2, m2[1] + r2); x.stroke(); }
+        if (kind !== 'smoke') { const dx = c[0] - a[0], dy = c[1] - a[1], L2 = Math.hypot(dx, dy) || 1; const off = Math.max(14, 1.3 * k), cA = [m2[0] - dy / L2 * off, m2[1] + dx / L2 * off], cB = [m2[0] + dy / L2 * off, m2[1] - dx / L2 * off], mid = [x.canvas.width / 2, x.canvas.height / 2], d2 = (q) => (q[0] - mid[0]) ** 2 + (q[1] - mid[1]) ** 2; lab(kind === 'blocked' ? 'BLOCKED' : 'EXIT', d2(cA) < d2(cB) ? cA : cB, col);   /* on the inside, not clipped by the sheet edge */ } } };
+    drawMarks(0);
     if (o.trails && o.frames && o.frames.length) { const li = o.levels.indexOf(L), F = o.frames, m = F[0].length / 5, P = (X, Y) => [(X - b.x0) * k, (b.y1 - Y) * k];
       x.globalAlpha = o.trailAlpha || 0.16; x.strokeStyle = o.trailCol || '#5b21b6'; x.lineWidth = Math.max(1.2, 0.22 * k); x.lineJoin = 'round'; x.lineCap = 'round';
-      for (let i = 0; i < m; i++) { let on = false; x.beginPath(); let px = 0, py = 0;
+      // by time (2026-11-10): each person's route coloured by when they got out, lighter the sooner, darker the later; the later drawn last
+      const TT = o.trailT, tv = TT ? TT.filter(Number.isFinite) : [], t0 = tv.length ? Math.min(...tv) : 0, t1 = tv.length ? Math.max(...tv) : 1, R2 = o.trailStops || [[0, '#ddd2fb'], [0.5, '#8b5cf6'], [1, '#2e1065']], order = [...Array(m).keys()]; if (TT) order.sort((p2, q2) => (Number.isFinite(TT[p2]) ? TT[p2] : -1) - (Number.isFinite(TT[q2]) ? TT[q2] : -1)); if (TT) x.globalAlpha = o.trailAlpha || 0.42;
+      for (const i of order) { let on = false; x.beginPath(); let px = 0, py = 0; if (TT) x.strokeStyle = Number.isFinite(TT[i]) ? rampAtTop(R2, (TT[i] - t0) / Math.max(1e-6, t1 - t0)) : '#cbd5e1';
         for (let f = 0; f < F.length; f++) { const A = F[f], q = i * 5, vis = A[q + 4] > 0.5 && A[q + 3] === li; if (!vis) { on = false; continue; } const X = A[q], Y = A[q + 1];
           if (on && Math.hypot(X - px, Y - py) > 2.6) on = false; const s2 = P(X, Y); if (on) x.lineTo(s2[0], s2[1]); else x.moveTo(s2[0], s2[1]); on = true; px = X; py = Y; }
         x.stroke(); }
       x.globalAlpha = 1; }
+    drawMarks(1);
     if (o.fire && o.fire.lv === L.lv) { const s2 = [(o.fire.x - b.x0) * k, (b.y1 - o.fire.y) * k], rr = Math.max(6, 0.7 * k); x.fillStyle = '#dc2626'; x.globalAlpha = 0.95; x.beginPath(); x.arc(s2[0], s2[1], rr, 0, 7); x.fill(); x.strokeStyle = '#fff'; x.lineWidth = Math.max(1.5, rr * 0.22); x.stroke();
       x.fillStyle = '#dc2626'; x.font = `700 ${Math.round(rr * 1.3)}px Inter,system-ui,sans-serif`; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText('Fire', s2[0] + rr * 1.5, s2[1]); x.globalAlpha = 1; }
     L.cv = c; L.k = k; }
@@ -7305,6 +7362,7 @@ if (window.__WSROLE) {
     if(CAM==='3d')P3upd(e);if(!e.altKey&&CAM==='3d'&&WS.gb&&S3.gizmo.hit(e.clientX,e.clientY))return;
     const raw=e.altKey?null:(cycleCurrent()||hitTest(S2W(...evP(e)))),hit=raw?{k:raw.k==='end'?'wall':raw.k,id:raw.id}:null,p=point(e);
     if(raw&&raw.k==='end'&&raw.e==='mid'&&CAM!=='3d')return;   /* an arc wall's middle handle: Plan Studio's own drag bends it (2026-11-07) */
+    if(raw&&SITEK.has(raw.k)&&CAM!=='3d'&&!(pickMods.add||pickMods.remove||pickMods.toggle)){if(!SEL||KEY(SEL)!==KEY(raw)){WS.sel=KEY({k:raw.k,id:raw.id});hub()?.select(WS.role,{k:raw.k,id:raw.id});}return;}   /* the site's areas, roads and boundary in Edit site model: Plan Studio's own drag moves and reshapes them (2026-11-10) */
     if(hit&&(pickMods.add||pickMods.remove||pickMods.toggle)){hub()?.select(WS.role,hit,pickMods);e.stopImmediatePropagation();e.preventDefault();return;}
     if(hit){if(!multi.some(s=>KEY(s)===KEY(hit))){SEL=hit;WS.sel=KEY(SEL);hub()?.select(WS.role,hit);changedSel();}
       const records=multi.map(s=>({s,o:selObj(s)})).filter(r=>r.o&&!r.o.locked&&!r.o.auto&&['wall','furn','imp','floor','void','fence','mass','op','ceil','light','note','ctx'].includes(r.s.k));
@@ -7506,7 +7564,7 @@ if (window.__WSROLE) {
       if (!xs.length) return { lv, level: L.name, z: L.z || 0, segs, rooms, box: null };
       return { lv, level: L.name, z: L.z || 0, segs, rooms, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } }; },
     walkShow(o) { walkShow(o); },
-    egressShow(o) { egressShow(o); }, egressSeek(t) { if (!EGO.o) return; EGO.t = Math.max(0, Math.min(EGO.o.frames.length - 1, t)); egressFrame(); }, egressPlay(on) { if (!EGO.o) return; if (!on) { cancelAnimationFrame(EGO.raf); EGO.raf = 0; return; } if (!EGO.raf) egressShow({ ...EGO.o, t: EGO.t, play: true }); }, egressState() { return EGO.o ? { t: EGO.t, n: EGO.o.frames.length, playing: !!EGO.raf, shown: (EGO.cur || []).filter(Boolean).length, trails: !!EGO.o.trails, fire: EGO.o.fire || null, purple: EGO.o.levels.map((L) => { if (!L.cv) return 0; const d = L.cv.getContext('2d').getImageData(0, 0, L.cv.width, L.cv.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 0 && d[i + 2] > d[i + 1] + 40 && d[i] > d[i + 1] + 10) n++; return n; }) } : null; },
+    egressShow(o) { egressShow(o); }, egressSeek(t) { if (!EGO.o) return; EGO.t = Math.max(0, Math.min(EGO.o.frames.length - 1, t)); egressFrame(); }, egressPlay(on) { if (!EGO.o) return; if (!on) { cancelAnimationFrame(EGO.raf); EGO.raf = 0; return; } if (!EGO.raf) egressShow({ ...EGO.o, t: EGO.t, play: true }); }, egressState() { return EGO.o ? { t: EGO.t, n: EGO.o.frames.length, playing: !!EGO.raf, shown: (EGO.cur || []).filter(Boolean).length, trails: !!EGO.o.trails, fire: EGO.o.fire || null, marks: EGO.o.levels.map((L) => L.marks ? { stairs: (L.marks.stairs || []).length, doors: (L.marks.doors || []).map((d) => d[2]) } : null), timed: !!EGO.o.trailT, purple: EGO.o.levels.map((L) => { if (!L.cv) return 0; const d = L.cv.getContext('2d').getImageData(0, 0, L.cv.width, L.cv.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 0 && d[i + 2] > d[i + 1] + 40 && d[i] > d[i + 1] + 10) n++; return n; }) } : null; },
     // the whole building for the evacuation study (2026-11-06): every level's plan scene (one origin) and the stairs between levels
     buildingScene() { const SB = S || STC.build(M), lv = lvSorted(); return { levels: lv.map((l) => ({ id: l.id, name: l.name, z: l.z || 0, h: l.h || 3, sc: STC.planScene(M, SB, l.id, 'wayfinding') })),
       stairs: (M.furn || []).filter(isStairF).map((f) => ({ id: f.id, lv: f.lv, top: (lvAbove(f.lv) || {}).id || null, corners: STC.furnCorners(f), w: f.w, d: f.d, name: f.name || (REG[f.gen.id] && REG[f.gen.id].name) || 'Stair' })) }; },
@@ -7543,6 +7601,15 @@ if (window.__WSROLE) {
     _genFurn(lv, id, x, y, rot) { return JSON.parse(JSON.stringify(genFurn(lv, id, x, y, rot || 0))); },   // a generated piece (a stair) for the browser checks; not added to the model
     /* level(): see level(id) above; with no id it returns the current level (a second definition here used to replace the setter, 2026-11-01) */
     // the site's water bodies (2026-11-06): what each is (as set, or read from the terrain) and its edits; studies read waterSpecs()
+    // the site's elements for the Workspace's card (2026-11-10): an area, a road or path, the plot boundary
+    siteEl(s) { const P = sitePts(s); if (!P) return null; const o = P.o; return { k: s.k, id: s.id, name: o.name || (s.k === 'parcel' ? 'Site boundary' : s.k === 'sroad' ? 'Road' : 'Area'), kind: o.kind || o.cls || '', width: o.width ?? null, area: P.closed ? +areaOf(P.pts).toFixed(1) : null, length: +pathLen(P.closed ? P.pts.concat([P.pts[0]]) : P.pts).toFixed(1), n: P.pts.length, edited: !!o.edited, water: o.kind === 'water' }; },
+    siteElSet(s, v) { const P = sitePts(s); if (!P) return false; const o = P.o, b = snapM(); if (v.name != null) o.name = String(v.name).slice(0, 80);
+      if (v.kind && s.k === 'sarea') { o.kind = v.kind; if (v.kind !== 'water') delete o.water; } if (v.cls && s.k === 'sroad') o.cls = v.cls; if (v.width != null && s.k === 'sroad' && +v.width > 0 && +v.width <= 60) o.width = +(+v.width).toFixed(2);
+      o.edited = true; M.site.version++; commit(b); return true; },
+    siteElDel(s) { return siteDel(s); },
+    sitePlanPt(s) { const P = sitePts(s); if (!P) return null; const c = P.pts.reduce((a2, q) => [a2[0] + q[0] / P.pts.length, a2[1] + q[1] / P.pts.length], [0, 0]); return SITEC.siteToPlan(M.site, c, M.north || 0); },   // for tests: an element's middle on the plan
+    siteDebug(p) { return { editOn: siteEditOn(), cam: CAM, view: VIEW2D, sel: SEL, hit: p ? hitTest(p) : null, drag: drag ? drag.k : null, tool: TOOL }; },
+    siteSelect(s) { if (!s || !siteObjOf(s)) return false; SEL = { k: s.k, id: s.id }; changedSel(); return true; },
     waters() { const st = M.site; if (!st) return []; return (st.areas || []).filter((a) => a.kind === 'water' && a.pts && a.pts.length > 2).map((a) => { const o = waterSpecOf(st, a); return o ? { id: a.id, name: a.name || 'Water', set: { ...(a.water || {}) }, type: o.type, level: o.level, outlet: o.outlet ?? o.level, depth: o.depth, speed: o.speed, discharge: o.discharge, area: o.area, length: o.length, falls: o.falls.map((f) => ({ drop: +f.drop.toFixed(2), w: +f.w.toFixed(1), top: +f.top.toFixed(2), bot: +f.bot.toFixed(2) })) } : null; }).filter(Boolean); },
     waterSpecs() { const st = M.site; if (!st) return []; const toP = (p) => SITEC.siteToPlan(st, p, M.north || 0); return (st.areas || []).filter((a) => a.kind === 'water' && a.pts && a.pts.length > 2).map((a) => { const o = waterSpecOf(st, a); if (!o) return null;
       return { id: a.id, name: a.name || 'Water', type: o.type, level: o.level, depth: o.depth, speed: o.speed, discharge: o.discharge, pts: a.pts.map(toP), centre: o.centre ? o.centre.map((p) => [...toP(p), p[2], p[3]]) : null, falls: o.falls.map((f) => { const q = toP(f.p), q2 = toP([f.p[0] + f.dir[0], f.p[1] + f.dir[1]]); return { p: q, dir: [q2[0] - q[0], q2[1] - q[1]], w: f.w, top: f.top, bot: f.bot, drop: f.drop, lw: WTR.fallPower(o, f) }; }) }; }).filter(Boolean); },   // in plan coordinates
@@ -7621,6 +7688,7 @@ if (window.__WSROLE) {
       STM2 = o || null; if (CAM !== '3d') draw(); if (!(window.S3 && S3.on && S3.streams)) return; if (!o) { S3.streams(null); return; }
       S3.streams({ lines: o.lines.map((L) => ({ ...L, pts: L.pts.map((q) => [q[0], q[1], gz(q) + 0.35]) })), heads: (o.heads || []).map((H) => ({ ...H, p: [H.p[0], H.p[1], gz(H.p) + 0.4] })) }); },
     studyCell(c) { STUDY_CELL = c > 0 ? Math.max(0.25, +c) : 0; return STUDY_CELL; },
+    toScreen(p) { const q = W2S(p), c = ((CAM === '3d' && window.S3 && S3.on) ? cv3 : cv).getBoundingClientRect(); return [q[0] + c.left, q[1] + c.top]; },
     pickPoint(cb) { PICK1 = typeof cb === 'function' ? cb : null; stage.style.cursor = PICK1 ? 'crosshair' : ''; },
     // the section (2026-11-07): draw its line on the plan (two clicks; cb(true) once drawn, cb(false) on Esc), read it, change it, view it
     section() { const s = secOf(); return s ? { ...JSON.parse(JSON.stringify(M.section)), pts: s.pts, len: +s.len.toFixed(3), look: s.look, segs: s.segs.map((g) => ({ a: g.a, b: g.b, u: g.u, look: g.look, len: +g.len.toFixed(3), s0: +g.s0.toFixed(3) })) } : null; },

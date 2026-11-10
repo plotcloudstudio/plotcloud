@@ -76,3 +76,5 @@ body.pc-public #app{padding:0;max-width:none}
 .lp-public .public-article h2{font-size:26px;line-height:1.22;font-weight:600;letter-spacing:-.025em}.lp-public-about .wrap>a:first-child,.lp-public-blog .wrap>a:first-child{display:none}
 
 .lp-public .resource-engine{height:calc(100dvh - 96px);margin-top:16px;background:#fff;border:1px solid #e3e8ee;border-radius:10px;overflow:hidden}.lp-public:has(.resource-engine) .lp-public-footer{display:none}.lp-public .resource-engine>header{padding:10px 18px}.lp-public .resource-engine h1{font-size:18px}
+.article-table{overflow-x:auto;margin:14px 0 18px}.article-table table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.4}.article-table th,.article-table td{border-bottom:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}.article-table th{font-weight:600;background:#f8fafc}
+.cms-post-detail h3{font-size:16px;margin:18px 0 6px}

@@ -1,0 +1,116 @@
+{
+ "hospital": [
+  {
+   "name": "Day staffing 1:4",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 12.5,
+   "p50": 16.2,
+   "p90": 21.8,
+   "stage1P50": 4.5,
+   "unfinished": 0,
+   "seconds": 5.9
+  },
+  {
+   "name": "Night staffing 1:8",
+   "runs": 50,
+   "patients": 52,
+   "staff": 8,
+   "p10": 17.6,
+   "p50": 21.9,
+   "p90": 33.3,
+   "stage1P50": 5.4,
+   "unfinished": 0,
+   "seconds": 3.6
+  },
+  {
+   "name": "Day, no preparation times",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 10.2,
+   "p50": 12.8,
+   "p90": 16.5,
+   "stage1P50": 4,
+   "unfinished": 0,
+   "seconds": 3.3
+  },
+  {
+   "name": "Day, no incidents",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 13,
+   "p50": 16,
+   "p90": 22,
+   "stage1P50": 4.5,
+   "unfinished": 0,
+   "seconds": 3.2
+  },
+  {
+   "name": "Day, 0.25 m grid",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 12.4,
+   "p50": 15.1,
+   "p90": 20.6,
+   "stage1P50": 4.4,
+   "unfinished": 0,
+   "seconds": 5.7
+  }
+ ],
+ "everyone": [
+  {
+   "name": "Clinic use, alarm 60 s",
+   "runs": 50,
+   "people": 244,
+   "p10": 4.5,
+   "p50": 5,
+   "p90": 6.2,
+   "incidentsPerRun": 4.6,
+   "blockedRuns": 6,
+   "unfinished": 0,
+   "seconds": 4.2
+  },
+  {
+   "name": "Clinic use, alarm 60 s, no incidents",
+   "runs": 50,
+   "people": 244,
+   "p10": 4.6,
+   "p50": 5.1,
+   "p90": 5.8,
+   "incidentsPerRun": 0,
+   "blockedRuns": 0,
+   "unfinished": 0,
+   "seconds": 2.5
+  },
+  {
+   "name": "Clinic use, alarm 60 s, 0.25 m grid",
+   "runs": 50,
+   "people": 244,
+   "p10": 4.5,
+   "p50": 5,
+   "p90": 6.1,
+   "incidentsPerRun": 4.4,
+   "blockedRuns": 6,
+   "unfinished": 0,
+   "seconds": 4.9
+  },
+  {
+   "name": "Clinic use, alarm 3 min",
+   "runs": 50,
+   "people": 244,
+   "p10": 6.5,
+   "p50": 7,
+   "p90": 8.2,
+   "incidentsPerRun": 4.6,
+   "blockedRuns": 6,
+   "unfinished": 0,
+   "seconds": 2.9
+  }
+ ],
+ "generated": "2026-11-10",
+ "model": "PlotCloud example hospital (example-hospital-inpatient-v4)"
+}
