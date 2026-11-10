@@ -352,75 +352,84 @@
     {
      "level": "Level 1",
      "n": 32,
-     "occ": 20,
+     "occ": 18,
      "older": 6,
      "child": 4,
      "imp": 2,
-     "wheel": 0
+     "wheel": 1,
+     "hearing": 1,
+     "vision": 0,
+     "cognitive": 0
     },
     {
      "level": "Level 2",
      "n": 32,
-     "occ": 20,
+     "occ": 18,
      "older": 6,
      "child": 4,
      "imp": 2,
-     "wheel": 0
+     "wheel": 1,
+     "hearing": 1,
+     "vision": 0,
+     "cognitive": 0
     },
     {
      "level": "Level 3",
      "n": 32,
-     "occ": 20,
+     "occ": 18,
      "older": 6,
      "child": 4,
      "imp": 2,
-     "wheel": 0
+     "wheel": 1,
+     "hearing": 1,
+     "vision": 0,
+     "cognitive": 0
     }
    ],
    "rows": [
     {
      "name": "Everyone an adult (no groups)",
-     "people": 96,
-     "p50": 310.5,
-     "p90": 358.5,
-     "othersP50": 310.5,
+     "people": 99,
+     "p50": 309.5,
+     "p90": 362.5,
+     "othersP50": 309.5,
      "wheelLastP50": null,
      "unfinished": 0
     },
     {
      "name": "The use's mix of groups",
      "people": 96,
-     "p50": 350.5,
-     "p90": 395,
-     "othersP50": 350.5,
-     "wheelLastP50": null,
+     "p50": 468,
+     "p90": 569,
+     "othersP50": 355,
+     "wheelLastP50": 468,
      "unfinished": 0
     },
     {
      "name": "The mix, no incidents",
      "people": 96,
-     "p50": 345.5,
-     "p90": 390,
-     "othersP50": 345.5,
-     "wheelLastP50": null,
+     "p50": 466,
+     "p90": 560,
+     "othersP50": 353,
+     "wheelLastP50": 466,
      "unfinished": 0
     },
     {
      "name": "Two more wheelchair users on each upper floor",
      "people": 96,
-     "p50": 508,
-     "p90": 665,
-     "othersP50": 359,
-     "wheelLastP50": 508,
+     "p50": 544,
+     "p90": 644,
+     "othersP50": 365,
+     "wheelLastP50": 544,
      "unfinished": 0
     },
     {
      "name": "The same, helpers at the stair after 4 min instead of 2",
      "people": 96,
-     "p50": 703.5,
-     "p90": 1030,
-     "othersP50": 360.5,
-     "wheelLastP50": 703.5,
+     "p50": 763.5,
+     "p90": 1096,
+     "othersP50": 365.5,
+     "wheelLastP50": 763.5,
      "unfinished": 0
     }
    ]

@@ -10,7 +10,7 @@
    "p90": 21.4,
    "stage1P50": 4.5,
    "unfinished": 0,
-   "seconds": 6
+   "seconds": 5.8
   },
   {
    "name": "Night staffing 1:8",
@@ -22,7 +22,7 @@
    "p90": 34,
    "stage1P50": 5.2,
    "unfinished": 0,
-   "seconds": 3.6
+   "seconds": 3.2
   },
   {
    "name": "Day, no preparation times",
@@ -34,7 +34,7 @@
    "p90": 16.4,
    "stage1P50": 4,
    "unfinished": 0,
-   "seconds": 3.5
+   "seconds": 3.1
   },
   {
    "name": "Day, no incidents",
@@ -46,7 +46,7 @@
    "p90": 21.7,
    "stage1P50": 4.5,
    "unfinished": 0,
-   "seconds": 3.6
+   "seconds": 3.1
   },
   {
    "name": "Day, 0.25 m grid",
@@ -58,7 +58,7 @@
    "p90": 20.6,
    "stage1P50": 4.4,
    "unfinished": 0,
-   "seconds": 5.5
+   "seconds": 4.9
   }
  ],
  "everyone": [
@@ -66,85 +66,85 @@
    "name": "Clinic use, alarm 60 s",
    "runs": 50,
    "people": 244,
-   "p10": 6.2,
-   "p50": 7.2,
-   "p90": 9.3,
-   "incidentsPerRun": 6.7,
+   "p10": 6.3,
+   "p50": 7.3,
+   "p90": 9.1,
+   "incidentsPerRun": 7.2,
    "blockedRuns": 6,
    "groups": {
-    "occ": 152,
-    "older": 42,
+    "occ": 138,
+    "older": 45,
     "child": 30,
     "imp": 15,
     "wheel": 5
    },
-   "wheelLast": 7.2,
-   "othersLast": 5.7,
+   "wheelLast": 7.3,
+   "othersLast": 5.3,
    "unfinished": 0,
-   "seconds": 3.7
+   "seconds": 3.5
   },
   {
    "name": "Clinic use, alarm 60 s, no incidents",
    "runs": 50,
    "people": 244,
    "p10": 6.4,
-   "p50": 7.5,
-   "p90": 10.2,
+   "p50": 7.6,
+   "p90": 9.7,
    "incidentsPerRun": 0,
    "blockedRuns": 0,
    "groups": {
-    "occ": 152,
-    "older": 42,
+    "occ": 138,
+    "older": 45,
     "child": 30,
     "imp": 15,
     "wheel": 5
    },
-   "wheelLast": 7.5,
-   "othersLast": 5.8,
+   "wheelLast": 7.6,
+   "othersLast": 7.3,
    "unfinished": 0,
-   "seconds": 2.9
+   "seconds": 2.7
   },
   {
    "name": "Clinic use, alarm 60 s, 0.25 m grid",
    "runs": 50,
    "people": 244,
    "p10": 6.4,
-   "p50": 7.6,
-   "p90": 8.9,
-   "incidentsPerRun": 6.5,
+   "p50": 7.3,
+   "p90": 9.8,
+   "incidentsPerRun": 6.6,
    "blockedRuns": 6,
    "groups": {
-    "occ": 152,
-    "older": 42,
+    "occ": 138,
+    "older": 45,
     "child": 30,
     "imp": 15,
     "wheel": 5
    },
-   "wheelLast": 7.6,
-   "othersLast": 5.7,
+   "wheelLast": 7,
+   "othersLast": 7.3,
    "unfinished": 0,
-   "seconds": 5.1
+   "seconds": 5.2
   },
   {
    "name": "Clinic use, alarm 3 min",
    "runs": 50,
    "people": 244,
-   "p10": 8.2,
-   "p50": 9.2,
-   "p90": 11.3,
-   "incidentsPerRun": 6.8,
+   "p10": 8.4,
+   "p50": 9.3,
+   "p90": 10.7,
+   "incidentsPerRun": 7.1,
    "blockedRuns": 6,
    "groups": {
-    "occ": 152,
-    "older": 42,
+    "occ": 138,
+    "older": 45,
     "child": 30,
     "imp": 15,
     "wheel": 5
    },
-   "wheelLast": 9.2,
-   "othersLast": 7.7,
+   "wheelLast": 9.3,
+   "othersLast": 7.3,
    "unfinished": 0,
-   "seconds": 2.8
+   "seconds": 3
   },
   {
    "name": "Clinic use, everyone an adult (no groups)",
@@ -165,7 +165,7 @@
    "wheelLast": 0,
    "othersLast": 5.2,
    "unfinished": 0,
-   "seconds": 2.3
+   "seconds": 2.4
   }
  ],
  "generated": "2026-11-10",

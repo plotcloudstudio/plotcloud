@@ -136,8 +136,11 @@ Table 2. Occupant groups. Speeds are mean (SD), truncated to the range shown; pr
 | Children | 0.84 (0.25), 0.42–1.36 | 0.48 (0.1) | with their adult | 5 % / 3 % | {{larus2011}} |
 | Walking-aid users | 0.8 (0.15), 0.45–1.1 | 0.35 (0.05) | ×1.2 | 6 % / 3 % | {{boyce1999}}; factors assumed |
 | Wheelchair users | 0.69 (0.15), 0.4–1.0 | carried 0.35 | ×1.2 | 0.5 % / – | {{boyce1999}}; descent assumed |
+| Hard of hearing | as adults | as adults | ×1, alerted 30 s–2 min late without visual alarm signals | 1.5 % / 0.8 % | assumption |
+| Low vision | 0.8 (0.15), 0.45–1.1 | 0.5 (0.1) | ×1.2 | 3 % / 2 % | assumption |
+| Cognitive or learning disability | as adults | as adults | ×1.5 | 1.5 % / 0.8 % | assumption |
 
-By default the groups share the occupant load of each floor by the building use. For example, the shop, clinic or assembly use has 62 % adults, 18 % older adults, 12 % children, 6 % walking-aid users and 2 % wheelchair users. The designer can set any number per floor and group, including more people than the occupant load. Children are placed first in rooms that families use, and each walks with an adult of the same room (or the nearest within 15 m) at the slower pace of the two. Above the ground floor, a wheelchair user waits in the stair's refuge for helpers and an evacuation chair: a lognormal wait with a median of 2 min (an assumption), plus about 29 s to transfer {{joyce2020}}. They are then carried down at 0.35 m/s (an assumption), taking two places in the stair flow.
+By default the groups share the occupant load of each floor by the building use. For example, the shop, clinic or assembly use has 57 % adults, 18 % older adults, 12 % children, 6 % walking-aid users, 2 % wheelchair users, 2 % people hard of hearing, 1 % with low vision and 2 % with a cognitive or learning disability. The last three groups follow the advice to plan for people who need help because of their mobility, vision, hearing or cognition; their values are assumptions. The designer can set any number per floor and group, including more people than the occupant load. Children are placed first in rooms that families use, and each walks with an adult of the same room (or the nearest within 15 m) at the slower pace of the two. Above the ground floor, a wheelchair user waits in the stair's refuge for helpers and an evacuation chair: a lognormal wait with a median of 2 min (an assumption), plus about 29 s to transfer {{joyce2020}}. They are then carried down at 0.35 m/s (an assumption), taking two places in the stair flow.
 
 ### 3.4. Incidents
 
@@ -229,7 +232,7 @@ Table 7. Occupant groups, everyone out, the same block, shop, clinic or assembly
 |---|---|---|---|---|
 """ + '\n'.join(f"| {r['name']} | {f1(r['p50'])} | {f1(r['p90'])} | {f1(r['othersP50'])} | {f1(r['wheelLastP50']) if r['wheelLastP50'] else '–'} |" for r in gr) + f"""
 
-The use's mix of groups adds {pc(gM['p50'], gA['p50'])} % to the median over a population of adults only, through slower walking, longer pre-movement and children paired with adults. Two wheelchair users on each upper floor change the picture. Everyone else is out at about the same time, but the evacuation now ends with the wheelchair users carried down the stair, a median of {f1(gW['wheelLastP50'])} s. If help reaches the stair after 4 min instead of 2, that becomes {f1(gW4['wheelLastP50'])} s. For a building with wheelchair users above the ground floor, the arrangements for assisted descent, not the exit widths, set the total time.
+The use's mix of groups adds {pc(gM['p50'], gA['p50'])} % to the median over a population of adults only. The mix includes wheelchair users on the upper floors, and they set the end: everyone else is out by a median of {f1(gM['othersP50'])} s ({pc(gM['othersP50'], gA['p50'])} % more than the adults-only case, from slower walking, longer pre-movement and children paired with adults), while the last wheelchair user, carried down the stair after waiting for help, is out at {f1(gM['wheelLastP50'])} s. With two more wheelchair users on each upper floor the end moves to {f1(gW['wheelLastP50'])} s. If help reaches the stair after 4 min instead of 2, that becomes {f1(gW4['wheelLastP50'])} s. For a building with wheelchair users above the ground floor, the arrangements for assisted descent, not the exit widths, set the total time.
 
 ### 6.3. Hospital staffing and preparation
 
@@ -297,6 +300,8 @@ The following changes were made as a result of this study:
 - In hospital mode, patients take preparation time before an assisted move.
 - A room whose only way out is through the fire room is reported.
 - People are shown grey until alerted and yellow while getting ready, and the results chart has a line for each group.
+- Escape routes are drawn from every starting room, down the stairs and out of the door to an assembly point outside. Main routes are solid with direction chevrons and alternatives dashed. The fire origin, an assumed smoke zone and blocked exits each have their own pattern and symbol, not only a colour. Queues appear as numbered badges during playback, and route cards give people, distance, estimated time, the narrowest point, queueing, smoke and the alternative for each route.
+- Scenarios (as set, an assumed smoke zone, the main exit blocked) can be compared side by side with the same people and seeds. Everyone out warns when the model has patient rooms, since it treats every occupant as able to leave on their own.
 - The Refined setting uses a 0.25 m grid, and the default is 50 runs.
 - A code-check mode screens the model's means of egress against the Ontario Building Code 2024, Part 3: number of exits, travel distance, distance between exits, exit width for the occupant load, minimum widths of exit doors and stairs, corridor widths, doorways for beds and dead-end corridors. It is a screening for the design team, not a compliance determination.
 - An available safe escape time (ASET) can be entered, or read from an FDS device file at a tenability threshold, and is compared with the evacuation time.
