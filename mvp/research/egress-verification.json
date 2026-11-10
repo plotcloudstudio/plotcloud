@@ -12,7 +12,11 @@
   "prepBed": 31,
   "prepSheet": 53,
   "vChild": 0.84,
-  "vChildStair": 0.48
+  "vChildStair": 0.48,
+  "vWheel": 0.69,
+  "vOlder": 1,
+  "vChairStair": 0.35,
+  "refugeWait": 120
  },
  "tests": [
   {
@@ -304,9 +308,9 @@
   "hospital": [
    {
     "name": "Day staffing 1:4, preparation times on",
-    "p10": 12.2,
-    "p50": 18.6,
-    "p90": 23.2,
+    "p10": 12,
+    "p50": 17.6,
+    "p90": 22.7,
     "stage1": 3.7,
     "unfinished": 0
    },
@@ -320,29 +324,107 @@
    },
    {
     "name": "Night staffing 1:8",
-    "p10": 15.7,
-    "p50": 30.1,
-    "p90": 41.8,
+    "p10": 15.5,
+    "p50": 29.7,
+    "p90": 41.6,
     "stage1": 4.9,
     "unfinished": 0
    },
    {
     "name": "More dependent patients (20 % walk, 40 % helped, 40 % bed)",
-    "p10": 14,
-    "p50": 23.8,
-    "p90": 29.3,
+    "p10": 13.5,
+    "p50": 23.4,
+    "p90": 29.1,
     "stage1": 3.6,
     "unfinished": 0
    },
    {
     "name": "No incidents",
-    "p10": 11.5,
-    "p50": 18.6,
-    "p90": 23.2,
+    "p10": 11.4,
+    "p50": 18.1,
+    "p90": 23,
     "stage1": 3.6,
     "unfinished": 0
    }
-  ]
+  ],
+  "groups": {
+   "defaults": [
+    {
+     "level": "Level 1",
+     "n": 32,
+     "occ": 20,
+     "older": 6,
+     "child": 4,
+     "imp": 2,
+     "wheel": 0
+    },
+    {
+     "level": "Level 2",
+     "n": 32,
+     "occ": 20,
+     "older": 6,
+     "child": 4,
+     "imp": 2,
+     "wheel": 0
+    },
+    {
+     "level": "Level 3",
+     "n": 32,
+     "occ": 20,
+     "older": 6,
+     "child": 4,
+     "imp": 2,
+     "wheel": 0
+    }
+   ],
+   "rows": [
+    {
+     "name": "Everyone an adult (no groups)",
+     "people": 96,
+     "p50": 310.5,
+     "p90": 358.5,
+     "othersP50": 310.5,
+     "wheelLastP50": null,
+     "unfinished": 0
+    },
+    {
+     "name": "The use's mix of groups",
+     "people": 96,
+     "p50": 350.5,
+     "p90": 395,
+     "othersP50": 350.5,
+     "wheelLastP50": null,
+     "unfinished": 0
+    },
+    {
+     "name": "The mix, no incidents",
+     "people": 96,
+     "p50": 345.5,
+     "p90": 390,
+     "othersP50": 345.5,
+     "wheelLastP50": null,
+     "unfinished": 0
+    },
+    {
+     "name": "Two more wheelchair users on each upper floor",
+     "people": 96,
+     "p50": 508,
+     "p90": 665,
+     "othersP50": 359,
+     "wheelLastP50": 508,
+     "unfinished": 0
+    },
+    {
+     "name": "The same, helpers at the stair after 4 min instead of 2",
+     "people": 96,
+     "p50": 703.5,
+     "p90": 1030,
+     "othersP50": 360.5,
+     "wheelLastP50": 703.5,
+     "unfinished": 0
+    }
+   ]
+  }
  },
  "summary": {
   "tests": 18,

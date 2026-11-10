@@ -119,6 +119,15 @@ const block = (n, roomName = 'Office') => { const lv = (i) => level(i, 38, 14, (
   for (const [name, o] of [['Day staffing 1:4, preparation times on', {}], ['Day staffing, no preparation times (the model before)', { prep: false }], ['Night staffing 1:8', { ratio: 8 }], ['More dependent patients (20 % walk, 40 % helped, 40 % bed)', { mix: { amb: 0.2, asst: 0.4, bed: 0.4 } }], ['No incidents', { incidents: false }]]) out.experiments.hospital.push({ name, ...(await set(o)) });
   console.log('E3 hospital', JSON.stringify(out.experiments.hospital)); }
 
+// ---- E4 · occupant groups (everyone out, the waiting-room block, 'shop, clinic or assembly' use, 50 runs each) ----------------------
+{ const b = block(3, 'Waiting'), B0 = E.prepare(b), base = E.occupants(B0), def = E.groupCounts(B0, base, 'retail'), allAdults = {}, wheel4 = {};
+  B0.levels.forEach((L, i) => { allAdults[L.id] = { occ: def[i].n, older: 0, child: 0, imp: 0, wheel: 0 }; wheel4[L.id] = { ...def[i], occ: def[i].occ - (i ? 2 : 0), wheel: (def[i].wheel || 0) + (i ? 2 : 0) }; });
+  const set = async (o) => { const r = await E.run(b, { strategy: 'all', use: 'retail', detect: 60, runs: 50, seed: 11, ...o }), wl = r.runs.map((x) => Math.max(0, ...x.people.filter((q) => q.kind === 'wheel').map((q) => q.tOut))).filter((v) => v > 0), oth = r.runs.map((x) => Math.max(...x.people.filter((q) => q.kind !== 'wheel').map((q) => q.tOut)));
+    return { people: r.rep.n, p50: r2(r.med, 1), p90: r2(r.p90, 1), othersP50: r2(pct(oth, 0.5), 1), wheelLastP50: wl.length ? r2(pct(wl, 0.5), 1) : null, unfinished: r.runs.reduce((a2, x) => a2 + x.unfinished, 0) }; };
+  out.experiments.groups = { defaults: def.map((d, i) => ({ level: B0.levels[i].name, ...d })), rows: [] };
+  for (const [name, o] of [['Everyone an adult (no groups)', { counts: allAdults, incidents: false }], ['The use\'s mix of groups', {}], ['The mix, no incidents', { incidents: false }], ['Two more wheelchair users on each upper floor', { counts: wheel4 }], ['The same, helpers at the stair after 4 min instead of 2', { counts: wheel4, refugeWait: 240 }]]) out.experiments.groups.rows.push({ name, ...(await set(o)) });
+  console.log('E4 groups', JSON.stringify(out.experiments.groups)); }
+
 out.summary = { tests: out.tests.length, passed: out.tests.filter((t) => t.pass).length };
 writeFileSync(new URL('../../mvp/research/egress-verification.json', import.meta.url), JSON.stringify(out, null, 1));
 console.log(`${out.summary.passed} of ${out.summary.tests} verification tests pass; written mvp/research/egress-verification.json`);

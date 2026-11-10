@@ -7,10 +7,11 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const art = p.locator('#fire-evacuation-accuracy'); const txt = await art.innerText(); assert.match(txt, /How accurate is the fire evacuation simulation/);
     const tables = await art.locator('.article-table table').count(), refs = await art.locator('li', { hasText: 'Fire Technology' }).count();
     if (!tables) { await art.locator('a, button').filter({ hasText: /read|open|more/i }).first().click().catch(() => {}); await p.waitForTimeout(1500); }
-    const body = await p.locator('body').innerText(); assert.match(body, /Verification \(RQ1\)/); assert.match(body, /Ronchi, E\., Reneke, P\. A\. and Peacock, R\. D\. \(2014\)/); assert.match(body, /18 tests pass|All 18 tests pass/);
-    const nT = await p.locator('.article-table table').count(); assert(nT >= 7, 'the tables render: ' + nT);
-    assert(await p.evaluate(() => { const im = document.querySelector('#fire-evacuation-accuracy img'); return !im || (im.complete && im.naturalWidth > 600); }), 'the image loads');
+    const body = await p.locator('.sd-article').innerText(); for (const k of [/PlotCloud Research Notes/, /not peer reviewed/, /Article info/i, /Keywords/, /Highlights/, /Abstract/, /1\. Introduction/, /4\. Verification/, /Table 3\./, /Fig\. 1\./, /CRediT authorship contribution statement/, /Declaration of competing interest/, /Data availability/, /References/, /E\. Ronchi, P\.A\. Reneke, R\.D\. Peacock/]) assert.match(body, k);
+    const nT = await p.locator('.sd-article .article-table table').count(), nC = await p.locator('.sd-article .cite').count(), nR = await p.locator('.sd-refs li').count(); assert(nT >= 10, 'the tables: ' + nT); assert(nC > 30 && nR >= 20, `citations ${nC}, references ${nR}`);
+    assert(await p.locator('.sd-article .cite').first().getAttribute('title'), 'a citation shows its reference');
+    await p.waitForFunction(() => [...document.querySelectorAll('.sd-article img')].every((im) => im.complete && im.naturalWidth > 600), null, { timeout: 30000 });
     for (const f of ['research/egress-verification.json', 'research/egress-hospital-case.json', 'research/fire-evacuation-accuracy.md']) { const r = await p.request.get(base + '/mvp/' + f); assert.equal(r.status(), 200, f); }
     await p.screenshot({ path: (process.env.SHOT_DIR || require('os').tmpdir()) + '/blog-evac.png', fullPage: false });
-    console.log('PASS the research note on the blog:', nT, 'tables,', refs, 'list items citing Fire Technology'); assert.deepEqual(errs, []);
+    console.log('PASS the research article on the blog:', nT, 'tables,', nC, 'citations,', nR, 'references'); const sd = process.env.SHOT_DIR || require('os').tmpdir(); await p.locator('.sd-head').screenshot({ path: sd + '/blog-head.png' }); await p.locator('.sd-front').screenshot({ path: sd + '/blog-front.png' }); await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300); await p.screenshot({ path: sd + '/blog-phone.png' }); assert.deepEqual(errs, []);
   } finally { await b.close(); } })().catch((e) => { console.error(e); process.exit(1); });

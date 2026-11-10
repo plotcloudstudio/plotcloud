@@ -14,13 +14,24 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(2500);
     const fr = (k) => p.frames().find((f) => f.url().includes('ws=' + k));
     await p.evaluate(() => window.__wsStudy.open('fire-evacuation')); await p.waitForTimeout(1500);
-    // 1 · everyone out, random fire: marks, timed routes, incidents
+    // 1 · everyone out, random fire: marks, timed routes, incidents; the people on each floor by group (2026-11-10)
+    await p.selectOption('.sp-studycard [data-eg=use]', 'retail'); await p.waitForTimeout(500);
+    const pop = await p.$$eval('.sp-studycard .sp-egpop tbody tr', (rs) => rs.map((r) => [r.cells[0].textContent, ...[...r.querySelectorAll('input')].map((i) => +i.value)]));
+    assert(pop.length >= 3 && pop.some((r) => r[3] > 0) && pop.some((r) => r[2] > 0), 'groups by floor, with older adults and children: ' + JSON.stringify(pop));
+    await p.fill('.sp-studycard [data-egc="L2:wheel"]', '3'); await p.dispatchEvent('.sp-studycard [data-egc="L2:wheel"]', 'change'); await p.fill('.sp-studycard [data-egc="L3:child"]', '12'); await p.dispatchEvent('.sp-studycard [data-egc="L3:child"]', 'change'); await p.waitForTimeout(400);
+    assert.equal(await p.inputValue('.sp-studycard [data-egc="L2:wheel"]'), '3'); assert(await p.locator('.sp-studycard [data-eg=popreset]').count(), 'a way back to the building use');
     await p.selectOption('.sp-studycard [data-eg=runs]', '20');
     await p.click('.sp-studycard [data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 420000 });
     let r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, method: s.res?.method, csv: [].concat(s.res?.csv?.() || []).join("\n") }; });
     assert.equal(r.err, ''); const row = (k) => (r.rows.find((x) => x[0] === k) || [])[1];
     assert.match(row('Incidents in the run shown') || '', /falls?[\s\S]*children walking with a parent/); assert.match(row('Runs with an exit found blocked') || '', /^\d+ of 20$/);
-    assert.match(r.method, /trip and stay down/); assert.match(r.method, /lighter for the people out sooner/); assert.match(r.csv, /child with a parent/);
+    assert.match(r.method, /trip and stay down/); assert.match(r.method, /lighter for the people out sooner/); assert.match(r.csv, /children with an adult/); assert.match(r.csv, /wheelchair users/);
+    const grp = (k) => (r.rows.find((x) => x[0].startsWith(k)) || [])[0] || ''; assert.match(grp('Wheelchair users'), /\((\d+)\)/); assert(+grp('Wheelchair users').match(/\((\d+)\)/)[1] >= 3, grp('Wheelchair users')); assert.match((r.rows.find((x) => x[0].startsWith('Wheelchair users')) || [])[1], /waited .* at the stair/);
+    assert.match(grp('Children'), /Children \(\d+\)/); assert.match(grp('Older adults'), /Older adults/);
+    const svg = await p.locator('.sp-studycard svg.sp-hist').innerHTML(); for (const c of ['#eab308', '#0891b2', '#16a34a', '#a16207']) assert(svg.includes(c), 'a line for ' + c); assert.match(await p.locator('.sp-studycard .sp-eglegend').innerText(), /Alerted[\s\S]*Children[\s\S]*Wheelchair/);
+    const st0 = await fr('persp').evaluate(() => { window.__ws.egressPlay(false); window.__ws.egressSeek(0); return window.__ws.egressState().now; }); assert(st0.unaware > 50, 'grey before the alarm: ' + JSON.stringify(st0));
+    const st1 = await fr('persp').evaluate(() => { window.__ws.egressSeek(75); return window.__ws.egressState().now; }); assert(st1.alerted > 20, 'yellow once alerted: ' + JSON.stringify(st1));
+    console.log('PASS groups by floor, their lines in the chart, grey then yellow:', JSON.stringify(st0), JSON.stringify(st1));
     let st = await fr('persp').evaluate(() => window.__ws.egressState()); assert(st.timed, 'routes shaded by time'); const mk = st.marks.filter((m) => m && (m.stairs || m.doors.length));
     assert(mk.length >= 3 && mk.every((m) => m.stairs >= 2), 'two stairs drawn on every floor: ' + JSON.stringify(st.marks)); assert(mk.some((m) => m.doors.includes('exit')), 'the outside doors drawn'); assert(mk.some((m) => m.doors.includes('smoke')), 'the smoke doors drawn');
     const legend = await p.locator('.sp-legend').innerText(); assert.match(legend, /Out last[\s\S]*Out first/);
