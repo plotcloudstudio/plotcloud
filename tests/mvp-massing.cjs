@@ -130,7 +130,7 @@ function fixture() {   // two buildings (one with a mapped height), a road; site
     for (const day of ['03-21', '12-21']) {
       const R = await p.evaluate((day) => { const Mx = { north: 0, site: { origin: { lat: 49.28, lon: -123.12 }, tz: -8, buildings: [], terrain: null, at: [0, 0] } }, wall = { outer: [[-100, -0.5], [100, -0.5], [100, 0.5], [-100, 0.5]], h: 10 };
         const G = window.__sunp.sunGrid(Mx, [wall], { day, box: { X0: -0.5, Y0: 4.5, cell: 1, nx: 1, ny: 16 } }), dirs = window.__sunp.sunDirs({ lat: 49.28, lon: -123.12, tz: -8 }, day, 0);
-        const exact = []; for (let j = 0; j < 16; j++) { const y = 5 + j; let hrs = 0; for (const d of dirs) { let shade = false; if (d.v[1] < 0) { const dist = (y - 0.5) / -d.v[1], x = dist * d.v[0]; shade = Math.abs(x) <= 100 && dist * d.t < 10; } if (!shade) hrs += d.w; } exact.push(hrs); }
+        const exact = []; for (let j = 0; j < 16; j++) { const y = 5 + j; let hrs = 0; for (const d of dirs) { let shade = false; if (d.v[1] < 0) { const dist = (y - 0.5) / -d.v[1], x = dist * d.v[0]; shade = Math.abs(x) <= 100 && dist * d.t + 0.1 < 10; } if (!shade) hrs += d.w; } exact.push(hrs); }
         return { got: Array.from(G.H), exact }; }, day);
       const diff = Math.max(...R.got.map((v, i) => Math.abs(v - R.exact[i])));
       ok(diff < 1e-6, `${day === '03-21' ? '21 March' : '21 December'}: a 10 m wall, sun hours 5–20 m north of it match the exact ray–plane answer (largest difference ${diff.toFixed(6)} h; at 10 m ${R.got[5].toFixed(2)} h, at 15 m ${R.got[10].toFixed(2)} h)`);

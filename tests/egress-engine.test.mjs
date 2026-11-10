@@ -36,3 +36,20 @@ test('then down the stairs: the fire floor and those above leave by the stair an
   assert(out.rep.frames.length > 50 && out.rep.frames[0].length === (out.rep.nPat + out.rep.nStaff) * 5);
   console.log(`down: P50 ${out.med.toFixed(0)} s, P90 ${out.p90.toFixed(0)} s; stage 1 ${out.runs.map((x) => x.t1.toFixed(0)).join('/')} s`);
 });
+// everyone out (2026-11-09): the same block as offices; the alarm, pre-movement and travel stages in order, everyone out by the
+// exit, a later alarm gives a later evacuation, and the run shown keeps its frames (for the purple trails)
+const officeBlock = (n) => { const b = wardBlock(n); for (const L of b.levels) for (const r of L.sc.rooms) r.name = r.name.replace(/^Ward/, 'Office'); return b; };
+test('everyone out: occupants by room use, stages in order, all out by the exit', async () => {
+  const B = E.prepare(officeBlock(3)), ppl = E.occupants(B);
+  assert.equal(ppl.length, 3 * 8 * 3, 'each 40 m² office: 40 / 13.9 ≈ 3 people'); assert(ppl.every((q) => !/Corridor|Stair/.test(q.roomName)), 'nobody counted in corridors and stairs');
+  const out = await E.run(officeBlock(3), { strategy: 'all', use: 'office', detect: 60, runs: 6, seed: 5 });
+  for (const x of out.runs) { assert.equal(x.unfinished, 0); assert.equal(x.exitUse.reduce((a, e) => a + e.n, 0), x.n, 'everyone leaves by an exit door');
+    for (const q of x.people) { assert(q.tStart >= q.tAlarm && q.tOut > q.tStart, JSON.stringify(q)); if (!q.own) assert.equal(q.tAlarm, 60); else assert(q.tStart <= 30); } }
+  assert(out.runs.some((x) => x.stairMax.some((q) => q > 0)), 'people queue for the stair');
+  assert(out.rep.frames.length > 30 && out.rep.frames[0].length === out.rep.n * 5 && out.rep.kinds.every((k) => k === 'occ' || k === 'imp'));
+  const late = await E.run(officeBlock(3), { strategy: 'all', use: 'office', detect: 180, runs: 6, seed: 5 });
+  assert(late.med > out.med + 60, `a 3 min alarm: ${late.med} s against ${out.med} s`);
+  const hotel = await E.run(officeBlock(3), { strategy: 'all', use: 'hotel', detect: 60, runs: 6, seed: 5 });
+  assert(hotel.med > out.med, `asleep and unfamiliar takes longer: ${hotel.med} s against ${out.med} s`);
+  console.log(`everyone out: office P50 ${out.med.toFixed(0)} s, alarm at 3 min ${late.med.toFixed(0)} s, hotel ${hotel.med.toFixed(0)} s; ${out.rep.n} people`);
+});
