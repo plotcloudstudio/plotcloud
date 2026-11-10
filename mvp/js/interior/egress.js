@@ -14,7 +14,8 @@
 
 const NB8 = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
 const CIRC = /corridor|hall|lobby|passage|circulation|走廊|过道|大厅/i;
-const NOT_PATIENT = /corridor|hall|lobby|passage|circulation|stair|lift|elevator|toilet|\bwc\b|bath|shower|store|storage|utility|clean|dirty|plant|station|office|nurse|staff|reception|kitchen|走廊|楼梯|卫生|储/i;
+// spaces with 'room' in their name that are not where patients stay (2026-11-10: the hospital example's support and public rooms)
+const NOT_PATIENT = /corridor|hall|lobby|passage|circulation|stair|lift|elevator|toilet|\bwc\b|bath|shower|ensuite|washroom|store|storage|utility|clean|dirty|soiled|plant|station|office|nurse|staff|reception|kitchen|ante|vestibule|lounge|consult|exam|procedure|chapel|multifaith|imaging|x-ray|control|lab|specimen|pharmacy|medication|change|locker|mechanical|electrical|server|receiving|security|registration|waiting|caf[eé]|gift|entrance|records|janitor|housekeeping|linen|equipment|nourishment|走廊|楼梯|卫生|储/i;
 const PATIENT = /ward|patient|bed|icu|recovery|room|病房|病室/i;
 const STAFFROOM = /nurse|station|staff|护士/i;
 export const DEFAULTS = { cell: 0.5, mix: { amb: 0.4, asst: 0.35, bed: 0.25 }, ratio: 4, strategy: 'horizontal', runs: 20, seed: 1, fire: 'random', horizon: 3600 };
@@ -222,7 +223,7 @@ export function simulate(B, pop, seed, o = {}) {
 const LOAD = [[/corridor|hall(way)?\b|lobby|passage|circulation|landing|stair|lift|elevator|toilet|\bwc\b|bath|shower|washroom|restroom|shaft|duct|走廊|过道|楼梯|电梯|卫生间|厕所|浴室/i, 0],
   [/class|lecture|seminar|tutorial|教室|课室/i, 1.9], [/meeting|conference|assembly|auditorium|theat|cinema|hall|chapel|worship|会议|礼堂|报告厅/i, 1.4], [/dining|restaurant|cafe|café|canteen|bar\b|餐厅|食堂|咖啡/i, 1.4],
   [/retail|shop|sales|showroom|商店|零售|商铺/i, 5.6], [/gym|fitness|exercise|dance|健身/i, 4.6], [/librar|reading|图书|阅览/i, 4.6], [/lab|workshop|studio|实验|工作室/i, 4.6],
-  [/ward|patient|bed bay|icu|病房/i, 22.3], [/bed|living|dining room|apartment|suite|unit|guest|hotel|dwelling|lounge|family|卧室|客厅|起居|公寓|客房/i, 18.6], [/kitchen|厨房/i, 18.6],
+  [/ward|patient|isolation|bed bay|icu|病房/i, 22.3], [/bed|living|dining room|apartment|suite|unit|guest|hotel|dwelling|lounge|family|卧室|客厅|起居|公寓|客房/i, 18.6], [/kitchen|厨房/i, 18.6],
   [/stor|plant|mechanical|electrical|utility|server|garage|parking|库|机房|设备|车库/i, 27.9], [/office|work|admin|reception|办公|前台/i, 13.9]];
 export const USES = { office: { name: 'Office (awake, familiar)', p1: 30, p99: 120 }, school: { name: 'School (awake, staff-led)', p1: 30, p99: 120 },
   retail: { name: 'Shop or assembly (awake, unfamiliar)', p1: 30, p99: 180 }, residential: { name: 'Homes (may be asleep)', p1: 60, p99: 600 }, hotel: { name: 'Hotel (asleep, unfamiliar)', p1: 120, p99: 900 } };
