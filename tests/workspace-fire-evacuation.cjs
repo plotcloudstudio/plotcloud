@@ -39,10 +39,11 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.selectOption('.sp-studycard [data-eg=runs]', '10'); await p.selectOption('.sp-studycard [data-eg=detect]', '60');
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const ra = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view, results: s.res?.results, csv: s.res?.csv?.().slice(0, 3) }; });
-    assert.equal(ra.err, ''); assert.equal(ra.view, 'trails', 'the routes first'); assert.equal(ra.results.notFinished, 0, JSON.stringify(ra.rows)); assert(ra.results.people > 20, JSON.stringify(ra.results));
+    assert.equal(ra.err, ''); assert.equal(ra.view, 'routes', 'the escape routes first'); assert.equal(ra.results.notFinished, 0, JSON.stringify(ra.rows)); assert(ra.results.people > 20, JSON.stringify(ra.results));
     const keys = ra.rows.map((x) => x[0]).join(' | ');
     for (const k of [/Everyone out \(RSET\)/, /1 · Detection and alarm/, /2 · Pre-movement/, /First person out/, /3 · Travel incl\. queueing/, /Queueing at doors and stairs/, /Last person out/, /Level 1 clear after/, /Level 2 clear after/, /Exit: Level 1/, /Stair: /]) assert.match(keys, k);
     assert.match(ra.csv[0], /alarm_s,pre_movement_s,starts_walking_s,out_s,travel_s,queueing_s,distance_m,exit/);
+    await p.click('.sp-studycard [data-st-view=trails]'); await p.waitForTimeout(800);
     const st = await fr3s().evaluate(() => window.__ws.egressState()); assert(st.trails && st.purple[0] > 500 && st.purple[1] > 500, 'purple routes on both floors: ' + JSON.stringify(st.purple)); assert(st.fire, 'the room of fire origin marked');
     await p.screenshot({ path: (process.env.SHOT_DIR || require('os').tmpdir()) + '/evac-routes.png' });
     console.log('PASS everyone out:', ra.rows.slice(0, 9).map((x) => x.join(' ')).join(' · '), '· purple px', st.purple.join('/'));
