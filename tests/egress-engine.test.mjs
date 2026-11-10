@@ -46,7 +46,7 @@ test('everyone out: occupants by room use, stages in order, all out by the exit'
   for (const x of out.runs) { assert.equal(x.unfinished, 0); assert.equal(x.exitUse.reduce((a, e) => a + e.n, 0), x.n, 'everyone leaves by an exit door');
     for (const q of x.people) { assert(q.tStart >= q.tAlarm && q.tOut > q.tStart, JSON.stringify(q)); if (!q.own) assert.equal(q.tAlarm, 60); else assert(q.tStart <= 30); } }
   assert(out.runs.some((x) => x.stairMax.some((q) => q > 0)), 'people queue for the stair');
-  assert(out.rep.frames.length > 30 && out.rep.frames[0].length === out.rep.n * 5 && out.rep.kinds.every((k) => k === 'occ' || k === 'imp'));
+  assert(out.rep.frames.length > 30 && out.rep.frames[0].length === out.rep.n * 5 && out.rep.kinds.every((k) => E.GROUP_KEYS.includes(k)) && out.rep.kinds.includes('older'));
   const late = await E.run(officeBlock(3), { strategy: 'all', use: 'office', detect: 180, runs: 6, seed: 5 });
   assert(late.med > out.med + 60, `a 3 min alarm: ${late.med} s against ${out.med} s`);
   const hotel = await E.run(officeBlock(3), { strategy: 'all', use: 'hotel', detect: 60, runs: 6, seed: 5 });

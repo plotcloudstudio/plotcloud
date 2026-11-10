@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=hosp-20261110-1';
+import { mountChrome } from '../workspace-chrome.js?v=evac-20261110-3';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -165,7 +165,7 @@ export function render(app, [pid]) {
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=hosp-20261110-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=evac-20261110-2`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -272,7 +272,8 @@ export function render(app, [pid]) {
     hist() { return INST.plan.ready ? INST.plan.ws.hist() : { u: 0, r: 0 }; },
     command(action){if(action==='delete'&&UI.sels.length)delIds([...UI.sels]);else if(action==='selectAll')activePane().ws.selectAll?.();},
     box(role, items, mods) { boxPick(items.map(psId), mods); },
-    select(role, s, mods = {}) { if (mods.add || mods.remove || mods.toggle) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
+    select(role, s, mods = {}) { if (s && ['sarea', 'sroad', 'parcel'].includes(s.k)) { window.__wsSiteEl?.open(s, role); return; } window.__wsSiteEl?.close();   // the site's areas, roads and boundary (Edit site model): their own card
+      if (mods.add || mods.remove || mods.toggle) { pick(s ? psId(s) : null, mods); return; } if (dead) return; const id = s ? psId(s) : null;
       if (!id) { if (UI.sels.some((x) => PS.test(x))) setSel([], { from: role }); return; }   // empty space in a pane clears a Plan Studio pick; an imported mesh picked in Shaded stays
       if (UI.sels.length === 1 && UI.sels[0] === id) return;
       if (comp(id)) setSel([id], { from: role }); else pendSel = { id, role }; },   // just made (placed, drawn): selected once it is listed

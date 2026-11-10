@@ -1,0 +1,173 @@
+{
+ "hospital": [
+  {
+   "name": "Day staffing 1:4",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 12.3,
+   "p50": 15.6,
+   "p90": 21.3,
+   "stage1P50": 4.5,
+   "unfinished": 0,
+   "seconds": 8.9
+  },
+  {
+   "name": "Night staffing 1:8",
+   "runs": 50,
+   "patients": 52,
+   "staff": 8,
+   "p10": 16.9,
+   "p50": 21.8,
+   "p90": 32.8,
+   "stage1P50": 5.4,
+   "unfinished": 0,
+   "seconds": 5
+  },
+  {
+   "name": "Day, no preparation times",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 10.2,
+   "p50": 12.8,
+   "p90": 16.5,
+   "stage1P50": 4,
+   "unfinished": 0,
+   "seconds": 6.8
+  },
+  {
+   "name": "Day, no incidents",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 12.4,
+   "p50": 15.6,
+   "p90": 21.3,
+   "stage1P50": 4.5,
+   "unfinished": 0,
+   "seconds": 8.9
+  },
+  {
+   "name": "Day, 0.25 m grid",
+   "runs": 50,
+   "patients": 52,
+   "staff": 14,
+   "p10": 12.1,
+   "p50": 14.8,
+   "p90": 20,
+   "stage1P50": 4.4,
+   "unfinished": 0,
+   "seconds": 12.6
+  }
+ ],
+ "everyone": [
+  {
+   "name": "Clinic use, alarm 60 s",
+   "runs": 50,
+   "people": 244,
+   "p10": 6.3,
+   "p50": 7,
+   "p90": 9.6,
+   "incidentsPerRun": 7.3,
+   "blockedRuns": 6,
+   "groups": {
+    "occ": 152,
+    "older": 42,
+    "child": 30,
+    "imp": 15,
+    "wheel": 5
+   },
+   "wheelLast": 7,
+   "othersLast": 7,
+   "unfinished": 0,
+   "seconds": 7.7
+  },
+  {
+   "name": "Clinic use, alarm 60 s, no incidents",
+   "runs": 50,
+   "people": 244,
+   "p10": 6.3,
+   "p50": 7.4,
+   "p90": 8.9,
+   "incidentsPerRun": 0,
+   "blockedRuns": 0,
+   "groups": {
+    "occ": 152,
+    "older": 42,
+    "child": 30,
+    "imp": 15,
+    "wheel": 5
+   },
+   "wheelLast": 7.4,
+   "othersLast": 4.8,
+   "unfinished": 0,
+   "seconds": 3.3
+  },
+  {
+   "name": "Clinic use, alarm 60 s, 0.25 m grid",
+   "runs": 50,
+   "people": 244,
+   "p10": 6,
+   "p50": 6.8,
+   "p90": 9.3,
+   "incidentsPerRun": 7.2,
+   "blockedRuns": 6,
+   "groups": {
+    "occ": 152,
+    "older": 42,
+    "child": 30,
+    "imp": 15,
+    "wheel": 5
+   },
+   "wheelLast": 6.8,
+   "othersLast": 5.9,
+   "unfinished": 0,
+   "seconds": 8
+  },
+  {
+   "name": "Clinic use, alarm 3 min",
+   "runs": 50,
+   "people": 244,
+   "p10": 8.3,
+   "p50": 9,
+   "p90": 11.6,
+   "incidentsPerRun": 7.3,
+   "blockedRuns": 6,
+   "groups": {
+    "occ": 152,
+    "older": 42,
+    "child": 30,
+    "imp": 15,
+    "wheel": 5
+   },
+   "wheelLast": 9,
+   "othersLast": 9,
+   "unfinished": 0,
+   "seconds": 6.3
+  },
+  {
+   "name": "Clinic use, everyone an adult (no groups)",
+   "runs": 50,
+   "people": 244,
+   "p10": 4.5,
+   "p50": 5.1,
+   "p90": 5.6,
+   "incidentsPerRun": 0,
+   "blockedRuns": 0,
+   "groups": {
+    "occ": 244,
+    "older": 0,
+    "child": 0,
+    "imp": 0,
+    "wheel": 0
+   },
+   "wheelLast": 0,
+   "othersLast": 5.1,
+   "unfinished": 0,
+   "seconds": 5.2
+  }
+ ],
+ "generated": "2026-11-10",
+ "model": "PlotCloud example hospital (example-hospital-inpatient-v4)"
+}

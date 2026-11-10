@@ -1,0 +1,433 @@
+{
+ "generated": "2026-11-10",
+ "engine": "mvp/js/interior/egress.js",
+ "move": {
+  "doorFs": 1.32,
+  "stairFs": 1.01,
+  "layer": 0.15,
+  "vLevel": 1.19,
+  "vStair": 0.92,
+  "vAid": 0.8,
+  "prepChair": 29,
+  "prepBed": 31,
+  "prepSheet": 53,
+  "vChild": 0.84,
+  "vChildStair": 0.48,
+  "vWheel": 0.69,
+  "vOlder": 1,
+  "vChairStair": 0.35,
+  "refugeWait": 120
+ },
+ "tests": [
+  {
+   "id": "V1",
+   "name": "Speed in a corridor, 0.5 m grid",
+   "ref": "IMO MSC.1/Circ.1533 test 1",
+   "expected": 39.5,
+   "measured": 39.5,
+   "unit": "s",
+   "errorPct": 0,
+   "pass": true,
+   "note": "tolerance: one time step (0.5 s)"
+  },
+  {
+   "id": "V1b",
+   "name": "Speed in a corridor, 0.25 m grid",
+   "ref": "IMO MSC.1/Circ.1533 test 1",
+   "expected": 39.5,
+   "measured": 39.5,
+   "unit": "s",
+   "errorPct": 0,
+   "pass": true,
+   "note": "tolerance: one time step (0.5 s)"
+  },
+  {
+   "id": "V2",
+   "name": "Speed on a stair (one flight, 0.5 m/s)",
+   "ref": "IMO MSC.1/Circ.1533 tests 2-3",
+   "expected": 14,
+   "measured": 14.13,
+   "unit": "s",
+   "errorPct": 0.9,
+   "pass": true,
+   "note": "flight length 7 m (the rise × 1.75); mean of 200 runs, range 11.91-16.04 s"
+  },
+  {
+   "id": "V3",
+   "name": "Flow through a 1 m door, 100 people, 0.5 m grid",
+   "ref": "IMO test 4; SFPE specific flow",
+   "expected": 0.92,
+   "measured": 0.93,
+   "unit": "p/s",
+   "errorPct": 0.6,
+   "pass": true,
+   "note": "IMO limit 1.33 p/s; 0 not out"
+  },
+  {
+   "id": "V3b",
+   "name": "Flow through a 2 m door, 100 people, 0.5 m grid",
+   "ref": "IMO test 4; SFPE specific flow",
+   "expected": 2.24,
+   "measured": 2.25,
+   "unit": "p/s",
+   "errorPct": 0.3,
+   "pass": true,
+   "note": "IMO limit 2.66 p/s; 0 not out"
+  },
+  {
+   "id": "V3c",
+   "name": "Flow through a 1 m door, 100 people, 0.25 m grid",
+   "ref": "IMO test 4; SFPE specific flow",
+   "expected": 0.92,
+   "measured": 0.93,
+   "unit": "p/s",
+   "errorPct": 0.6,
+   "pass": true,
+   "note": "IMO limit 1.33 p/s; 0 not out"
+  },
+  {
+   "id": "V4a",
+   "name": "Pre-movement, 1st percentile (office)",
+   "ref": "IMO test 5; PD 7974-6",
+   "expected": 30,
+   "measured": 30.95,
+   "unit": "s",
+   "errorPct": 3.2,
+   "pass": true,
+   "note": "2000 people"
+  },
+  {
+   "id": "V4b",
+   "name": "Pre-movement, median (office)",
+   "ref": "IMO test 5; PD 7974-6",
+   "expected": 60,
+   "measured": 59.84,
+   "unit": "s",
+   "errorPct": -0.3,
+   "pass": true,
+   "note": ""
+  },
+  {
+   "id": "V4c",
+   "name": "Pre-movement, 99th percentile (office)",
+   "ref": "IMO test 5; PD 7974-6",
+   "expected": 120,
+   "measured": 119.18,
+   "unit": "s",
+   "errorPct": -0.7,
+   "pass": true,
+   "note": ""
+  },
+  {
+   "id": "V5",
+   "name": "Rounding a corner, 20 people",
+   "ref": "IMO test 6",
+   "expected": 0,
+   "measured": 0,
+   "unit": "people not out",
+   "errorPct": null,
+   "pass": true,
+   "note": "shortest walk 17.91 m against the corner-hugging path 17 m"
+  },
+  {
+   "id": "G1",
+   "name": "Walkable width of a 2 m corridor (1.8 m clear), 0.5 m grid",
+   "ref": "discretisation",
+   "expected": 1.8,
+   "measured": 1,
+   "unit": "m",
+   "errorPct": -44.4,
+   "pass": true,
+   "note": "reported, not a pass/fail test"
+  },
+  {
+   "id": "G1b",
+   "name": "Walkable width of a 2 m corridor (1.8 m clear), 0.25 m grid",
+   "ref": "discretisation",
+   "expected": 1.8,
+   "measured": 1.5,
+   "unit": "m",
+   "errorPct": -16.7,
+   "pass": true,
+   "note": "reported, not a pass/fail test"
+  },
+  {
+   "id": "V6a",
+   "name": "Walking speed, mean (adults)",
+   "ref": "IMO test 7; SFPE 1.19 m/s",
+   "expected": 1.19,
+   "measured": 1.19,
+   "unit": "m/s",
+   "errorPct": -0.3,
+   "pass": true,
+   "note": "SD 0.2 m/s (input 0.2, truncated 0.6-1.6); 1913 people"
+  },
+  {
+   "id": "V6b",
+   "name": "Walking speed, mean (walking aids)",
+   "ref": "IMO test 7; Boyce et al. 1999",
+   "expected": 0.8,
+   "measured": 0.82,
+   "unit": "m/s",
+   "errorPct": 1.9,
+   "pass": true,
+   "note": "87 people, share 4.4 % (input 4 %)"
+  },
+  {
+   "id": "V7",
+   "name": "Nearest exit taken (uncongested)",
+   "ref": "IMO test 10",
+   "expected": 6,
+   "measured": 6,
+   "unit": "of 6 people",
+   "errorPct": 0,
+   "pass": true,
+   "note": ""
+  },
+  {
+   "id": "V8",
+   "name": "An exit found blocked: all use the other",
+   "ref": "model feature",
+   "expected": 6,
+   "measured": 6,
+   "unit": "of 6 people",
+   "errorPct": 0,
+   "pass": true,
+   "note": ""
+  },
+  {
+   "id": "V9",
+   "name": "Not through the room of fire origin",
+   "ref": "model feature",
+   "expected": 24.54,
+   "measured": 28.74,
+   "unit": "m walked",
+   "errorPct": 17.1,
+   "pass": true,
+   "note": "24.54 m through the meeting room without the fire, 28.74 m round by the corridor with it; its own occupant out in 15 s"
+  },
+  {
+   "id": "V10",
+   "name": "Three-storey office block against an SFPE hand calculation",
+   "ref": "SFPE hydraulic method (Gwynne & Rosenbaum 2016)",
+   "expected": 83.34,
+   "measured": 88,
+   "unit": "s",
+   "errorPct": 5.6,
+   "pass": true,
+   "note": "72 people, 48 on the upper floors; controlling: stair (1.11 p/s on the stair, 1.72 p/s at the exit)"
+  }
+ ],
+ "experiments": {
+  "convergence": {
+   "building": "three-storey block of waiting rooms, everyone out, alarm 60 s, shop or assembly pre-movement, incidents on",
+   "people": 96,
+   "runs": 300,
+   "mean": 336.9,
+   "sd": 35,
+   "p10": 297.5,
+   "p50": 331,
+   "p90": 383.5,
+   "min": 270,
+   "max": 533.5,
+   "runsMean1pct": 20,
+   "runsP90_1pct": 20,
+   "runsMean0_5pct": 22,
+   "ci95": 4,
+   "at": [
+    {
+     "n": 10,
+     "mean": 328.7,
+     "p90": 347,
+     "ci95": 13.2
+    },
+    {
+     "n": 20,
+     "mean": 337.4,
+     "p90": 371.5,
+     "ci95": 12
+    },
+    {
+     "n": 50,
+     "mean": 337.7,
+     "p90": 374,
+     "ci95": 7.6
+    },
+    {
+     "n": 100,
+     "mean": 338,
+     "p90": 376,
+     "ci95": 6
+    },
+    {
+     "n": 300,
+     "mean": 336.9,
+     "p90": 383.5,
+     "ci95": 4
+    }
+   ]
+  },
+  "incidents": [
+   {
+    "name": "No incidents",
+    "p50": 317.5,
+    "p90": 358,
+    "mean": 318.9
+   },
+   {
+    "name": "Default incidents",
+    "p50": 333,
+    "p90": 376,
+    "mean": 338
+   },
+   {
+    "name": "Falls twice as likely",
+    "p50": 340,
+    "p90": 379,
+    "mean": 342
+   },
+   {
+    "name": "No falls",
+    "p50": 331,
+    "p90": 374,
+    "mean": 333.2
+   },
+   {
+    "name": "Twice the children",
+    "p50": 345,
+    "p90": 401,
+    "mean": 349.6
+   },
+   {
+    "name": "A third of people slow (walking aids)",
+    "p50": 347.5,
+    "p90": 387,
+    "mean": 349.7
+   }
+  ],
+  "hospital": [
+   {
+    "name": "Day staffing 1:4, preparation times on",
+    "p10": 12,
+    "p50": 17.6,
+    "p90": 22.7,
+    "stage1": 3.7,
+    "unfinished": 0
+   },
+   {
+    "name": "Day staffing, no preparation times (the model before)",
+    "p10": 10.6,
+    "p50": 14.9,
+    "p90": 17.9,
+    "stage1": 3.1,
+    "unfinished": 0
+   },
+   {
+    "name": "Night staffing 1:8",
+    "p10": 15.5,
+    "p50": 29.7,
+    "p90": 41.6,
+    "stage1": 4.9,
+    "unfinished": 0
+   },
+   {
+    "name": "More dependent patients (20 % walk, 40 % helped, 40 % bed)",
+    "p10": 13.5,
+    "p50": 23.4,
+    "p90": 29.1,
+    "stage1": 3.6,
+    "unfinished": 0
+   },
+   {
+    "name": "No incidents",
+    "p10": 11.4,
+    "p50": 18.1,
+    "p90": 23,
+    "stage1": 3.6,
+    "unfinished": 0
+   }
+  ],
+  "groups": {
+   "defaults": [
+    {
+     "level": "Level 1",
+     "n": 32,
+     "occ": 20,
+     "older": 6,
+     "child": 4,
+     "imp": 2,
+     "wheel": 0
+    },
+    {
+     "level": "Level 2",
+     "n": 32,
+     "occ": 20,
+     "older": 6,
+     "child": 4,
+     "imp": 2,
+     "wheel": 0
+    },
+    {
+     "level": "Level 3",
+     "n": 32,
+     "occ": 20,
+     "older": 6,
+     "child": 4,
+     "imp": 2,
+     "wheel": 0
+    }
+   ],
+   "rows": [
+    {
+     "name": "Everyone an adult (no groups)",
+     "people": 96,
+     "p50": 310.5,
+     "p90": 358.5,
+     "othersP50": 310.5,
+     "wheelLastP50": null,
+     "unfinished": 0
+    },
+    {
+     "name": "The use's mix of groups",
+     "people": 96,
+     "p50": 350.5,
+     "p90": 395,
+     "othersP50": 350.5,
+     "wheelLastP50": null,
+     "unfinished": 0
+    },
+    {
+     "name": "The mix, no incidents",
+     "people": 96,
+     "p50": 345.5,
+     "p90": 390,
+     "othersP50": 345.5,
+     "wheelLastP50": null,
+     "unfinished": 0
+    },
+    {
+     "name": "Two more wheelchair users on each upper floor",
+     "people": 96,
+     "p50": 508,
+     "p90": 665,
+     "othersP50": 359,
+     "wheelLastP50": 508,
+     "unfinished": 0
+    },
+    {
+     "name": "The same, helpers at the stair after 4 min instead of 2",
+     "people": 96,
+     "p50": 703.5,
+     "p90": 1030,
+     "othersP50": 360.5,
+     "wheelLastP50": 703.5,
+     "unfinished": 0
+    }
+   ]
+  }
+ },
+ "summary": {
+  "tests": 18,
+  "passed": 18
+ }
+}

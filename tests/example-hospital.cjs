@@ -12,6 +12,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 1 · the card on the projects page, next to Fallingwater
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-hospital]', { timeout: 30000 });
     const card = await p.locator('.ph-example:has([data-hospital])').innerText(); assert.match(card, /Hospital · inpatient building[\s\S]*52 single rooms[\s\S]*Fire evacuation/);
+    await p.waitForFunction(() => { const im = document.querySelector('[data-hospital] img'); return im && im.complete && im.naturalWidth >= 640; }, null, { timeout: 30000 }).catch(() => {});
     assert(await p.evaluate(() => { const im = document.querySelector('[data-hospital] img'); return im && im.complete && im.naturalWidth >= 640; }), 'the cover picture loads');
     await p.click('.ph-thumb[data-hospital]'); await p.waitForFunction(() => location.hash.startsWith('#/workspace') && window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 400000 });
     await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(2500);
