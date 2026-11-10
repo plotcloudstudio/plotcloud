@@ -243,7 +243,7 @@ Night staffing adds {pc(hNight['p50'], hDay['p50'])} % to the median, and the pr
 
 ## 7. Case study: the PlotCloud example hospital
 
-The example is a generic three-storey inpatient building of about 61 × 27 m, with an entrance and clinics on the ground floor and two inpatient units above (52 single patient rooms). Each inpatient floor has two smoke compartments separated by cross-corridor doors, and two exit stairs serve every floor. In each run the fire starts in a random compartment with patients (hospital mode) or a random occupied room (everyone out).
+The example is a generic three-storey inpatient building of about 61 × 27 m, with an entrance and clinics on the ground floor and two inpatient units above (52 single patient rooms). Each inpatient floor has two smoke compartments separated by cross-corridor doors, and two exit stairs with 1.65 m flights serve every floor, entered at the ends of both corridors. Its means of egress meets every check of the software's Ontario Building Code screening (Section 10). Before that screening, the stairs had 1.4 m flights and were entered 8 m in from the corridors' ends, leaving dead-end corridors; both were corrected. In each run the fire starts in a random compartment with patients (hospital mode) or a random occupied room (everyone out).
 
 ![Fig. 1. Routes of the run nearest the median in the example hospital, hospital mode: each route shaded by when that person reached safety (lighter sooner, darker later); stairs outlined and labelled, exits in green, smoke doors in orange.](img/research/evacuation-routes.jpg?v=20261110-2)
 
@@ -263,7 +263,7 @@ What a design team would take from this case:
 
 - Horizontal relocation clears the fire compartment in about {f1(cDay['stage1P50'])} minutes by day. That is the figure to compare with the time a compartment can be held, and it is far shorter than full evacuation.
 - Full vertical evacuation takes {f1(cDay['p50'])} minutes by day (90th percentile {f1(cDay['p90'])}) and {f1(cNight['p50'])} at night (90th percentile {f1(cNight['p90'])}). The night shift, not the stair width, is the constraint. This argues for planning around horizontal relocation and staff deployment rather than more stair capacity.
-- For everyone out, a realistic mix of people raises the median from {f1(eAd['p50'])} to {f1(eMix['p50'])} min. The {grp['wheel']} wheelchair users waiting at the stairs for assisted descent are among the last out.
+- For everyone out, a realistic mix of people raises the median from {f1(eAd['p50'])} to {f1(eMix['p50'])} min. In the run shown, the {grp['wheel']} wheelchair users, waiting at the stairs for assisted descent, are {'the last out: ' + f1(eMix['wheelLast']) + ' min, against ' + f1(eMix['othersLast']) + ' min for everyone else' if eMix['wheelLast'] > eMix['othersLast'] else 'not the last out'}.
 - An alarm at 3 minutes instead of 60 s moves the median by {f1(e3['p50'] - eMix['p50'])} min. Detection and staff response are worth more here than wider exits.
 
 ## 8. Discussion: how accurate is it?
@@ -298,6 +298,10 @@ The following changes were made as a result of this study:
 - A room whose only way out is through the fire room is reported.
 - People are shown grey until alerted and yellow while getting ready, and the results chart has a line for each group.
 - The Refined setting uses a 0.25 m grid, and the default is 50 runs.
+- A code-check mode screens the model's means of egress against the Ontario Building Code 2024, Part 3: number of exits, travel distance, distance between exits, exit width for the occupant load, minimum widths of exit doors and stairs, corridor widths, doorways for beds and dead-end corridors. It is a screening for the design team, not a compliance determination.
+- An available safe escape time (ASET) can be entered, or read from an FDS device file at a tenability threshold, and is compared with the evacuation time.
+- Drill records can be loaded and compared with the runs, which supports the validation this article calls for. A protocol describes what to record.
+- A brief for the fire engineer can be downloaded, with the inputs, sources, results, ASET, drill comparison, code check, limitations and a review block.
 
 ## 11. Conclusions
 
