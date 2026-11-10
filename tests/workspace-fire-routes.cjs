@@ -37,7 +37,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert(st.zones.some((z) => z && z.fire) && st.zones.some((z) => z && z.smoke), 'the fire room and the smoke zone: ' + JSON.stringify(st.zones));
     await p.screenshot({ path: `${out}/routes-3d.png` });
     // queues during playback: find a moment with a queue
-    const qmax = await fr3().evaluate(() => { let best = [0, 0]; const s0 = window.__ws.egressState(); for (let t = 0; t < s0.n; t += 3) { window.__ws.egressSeek(t); const q = window.__ws.egressState().queuesNow; const n = q.reduce((a, x) => Math.max(a, x[3]), 0); if (n > best[1]) best = [t, n]; } window.__ws.egressSeek(best[0]); window.__ws.egressPlay(false); return best; });
+    const qmax = st.queueMax; await fr3().evaluate((t) => { window.__ws.egressPlay(false); window.__ws.egressSeek(t); }, qmax[0]); const qnow = await fr3().evaluate(() => window.__ws.egressState().queuesNow); assert(qnow.length > 0, 'badges at that moment');
     assert(qmax[1] >= 2, 'a queue of 2 or more at some moment: ' + qmax); await p.waitForTimeout(500); await p.screenshot({ path: `${out}/routes-queue.png` });
     console.log('PASS routes, zones and queues:', JSON.stringify(st.routes), 'queue', qmax[1], 'at', qmax[0], 's ·', sm[1]);
     // the scenario shown, switched: the main exit blocked
