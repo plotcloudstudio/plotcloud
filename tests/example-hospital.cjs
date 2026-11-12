@@ -23,7 +23,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS the example:', JSON.stringify(m));
     // 3 · every study in Add simulation (not the ones coming soon)
     await p.click('#addSimBtn'); await p.waitForTimeout(300); const list = await p.$$eval('.w2-simmenu:not([hidden]) [data-addsim]', (bs) => bs.map((x) => [x.dataset.addsim, x.textContent.trim().replace(/\s+/g, ' ')]).filter(([, t]) => !/Coming soon/.test(t))); await p.keyboard.press('Escape'); await p.mouse.click(800, 880); await p.waitForTimeout(300);
-    assert(list.length >= 22, 'the studies: ' + list.length); const res = [];
+    assert(list.length >= 20 && !list.some(([i]) => i === 'movementdepth'), 'the studies: ' + list.length); const res = [];
     for (const [id, label] of list) { await p.click('.sp-studycard [data-st=close]', { timeout: 1500 }).catch(() => {}); await p.waitForTimeout(250); await p.evaluate((i) => window.__wsStudy.open(i), id); await p.waitForTimeout(2000);
       if (id === 'fire-evacuation') await p.click('.sp-studycard [data-st-mode=down]');
       const t0 = Date.now(); await p.click('.sp-studycard [data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 420000 });

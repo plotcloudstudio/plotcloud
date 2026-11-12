@@ -40,6 +40,18 @@ export const STUDIES = {
   climate: { category: 'table', covers: ['T01'], method: 'EPW charts and wind rose', test: 'tests/environment-ui.cjs' },
   passive: { category: 'table', covers: ['T02'], method: 'Passive strategy opportunity hours (weather only, not indoor comfort)', test: 'tests/environment-ui.cjs' },
 };
+// How far each study's numbers can be trusted (2026-11-12, P0): shown on every result so a screening estimate is not read as a
+// verified or reference result. 'reference' agrees with a reference tool on the same inputs; 'verified' has passed tests against
+// analytical answers (not validated against measurements); 'screening' is an estimate for comparing options; 'rule' applies rules
+// of thumb.
+export const MATURITY = {
+  reference: { label: 'Matches Ladybug', note: 'Agrees with the Ladybug reference calculation on the same inputs (tests/validation/lb_sunhours.py).' },
+  verified: { label: 'Verified, not validated', note: 'Passes tests against analytical answers; not yet compared with measured evacuations.', link: '#/blog/fire-evacuation-accuracy' },
+  screening: { label: 'Screening estimate', note: 'An estimate for comparing design options, not a certified or code-compliant result.' },
+  rule: { label: 'Rule of thumb', note: 'Preliminary sizing by rules of thumb; to be checked by an engineer.' },
+};
+const MATURITY_OF = { sunhours: 'reference', skyview: 'reference', 'fire-evacuation': 'verified', structure: 'rule' };
+export const maturityOf = (id) => MATURITY[MATURITY_OF[id] || 'screening'];
 // Target capability map (plan §4.2–4.4). Entries without an existing study are listed with what they need.
 const T = (id, category, name, needs, engine) => ({ id, category, name, needs, engine });
 export const TARGETS = [

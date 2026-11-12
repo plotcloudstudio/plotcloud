@@ -38,7 +38,7 @@ export const SIMS = [
     blurb: 'Integration and connectivity of the plan as a visibility graph.', inputs: ['Floor plan'], metrics: [['integration', 'Mean integration', '', 2, /^mean int/i], ['connectivity', 'Mean connectivity', '', 0, /^mean conn/i]] },
   { id: 'movementdepth', group: 'Space & movement', name: 'Movement & spatial depth', tool: 'movementdepth', view: 'plan',
     blurb: 'Steps of depth from the entrance and likely movement.', inputs: ['Floor plan', 'Entrances'], metrics: [['integration', 'Mean integration', '', 2, /^mean int/i], ['connectivity', 'Mean connectivity', '', 0, /^mean conn/i]] },
-  { id: 'evac', group: 'Space & movement', name: 'Circulation', tool: 'evac', view: 'plan',
+  { id: 'evac', group: 'Space & movement', name: 'Everyday circulation', tool: 'evac', view: 'plan',
     blurb: 'Where people walk between the places they use.', inputs: ['Floor plan', 'Destinations and use'], metrics: [['walk', 'Average walk', 'm', 1, /^avg walk/i], ['pairs', 'Pairs', '', 0, /^pairs/i]] },
   { id: 'isovist', group: 'Space & movement', name: 'Isovist safety', tool: 'isovist', view: 'plan',
     blurb: 'What an observer can see at child, wheelchair or adult eye height.', inputs: ['Floor plan', 'Observer'], metrics: [['blind', 'Blind floor', '%', 1, /^blind/i], ['seen', 'Seen floor', 'm²', 0, /^seen/i]] },
