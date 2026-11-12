@@ -256,7 +256,7 @@ Table 9. Hospital mode, horizontal then down, 50 runs each.
 |---|---|---|---|---|---|
 """ + '\n'.join(f"| {r['name']} | {r['patients']} · {r['staff']} | {f1(r['p10'])} | {f1(r['p50'])} | {f1(r['p90'])} | {f1(r['stage1P50'])} |" for r in ch) + f"""
 
-Table 10. Everyone out, clinic use (shop, clinic or assembly), 50 runs each. People by group: {grp['occ']} adults, {grp['older']} older adults, {grp['child']} children, {grp['imp']} walking-aid users, {grp['wheel']} wheelchair users.
+Table 10. Everyone out, clinic use (shop, clinic or assembly), 50 runs each. People by group: {grp['occ']} adults, {grp['older']} older adults, {grp['child']} children, {grp['imp']} walking-aid users, {grp['wheel']} wheelchair users. Computed before 12 November 2026, when Everyone out still counted the occupants of the patient rooms as people who walk out on their own (see the last point below).
 
 | Variant | 10th %, min | Median, min | 90th %, min | Incidents per run |
 |---|---|---|---|---|
@@ -301,7 +301,7 @@ The following changes were made as a result of this study:
 - A room whose only way out is through the fire room is reported.
 - People are shown grey until alerted and yellow while getting ready, and the results chart has a line for each group.
 - Escape routes are drawn from every starting room, down the stairs and out of the door to an assembly point outside. Main routes are solid with direction chevrons and alternatives dashed. The fire origin, an assumed smoke zone and blocked exits each have their own pattern and symbol, not only a colour. Queues appear as numbered badges during playback, and route cards give people, distance, estimated time, the narrowest point, queueing, smoke and the alternative for each route.
-- Scenarios (as set, an assumed smoke zone, the main exit blocked) can be compared side by side with the same people and seeds. Everyone out warns when the model has patient rooms, since it treats every occupant as able to leave on their own.
+- Scenarios (as set, an assumed smoke zone, the main exit blocked) can be compared side by side with the same people and seeds. Since 12 November 2026, Everyone out no longer treats inpatients as able to leave on their own: one inpatient per bed is moved by the staff on duty (day 1 to 4), after an assumed clinical preparation of 2 min on a general ward and 10 min in an ICU, bed patients onto a rescue sheet at the stair. On this example (office use, alarm at 60 s, 10 runs) the median rises to 23.3 min (90th percentile 28.4 min), against 15.7 min for the hospital mode's full vertical evacuation by day, which moves only the patients and staff; Table 10 was computed before this change.
 - The Refined setting uses a 0.25 m grid, and the default is 50 runs.
 - A code-check mode screens the model's means of egress against the Ontario Building Code 2024, Part 3: number of exits, travel distance, distance between exits, exit width for the occupant load, minimum widths of exit doors and stairs, corridor widths, doorways for beds and dead-end corridors. It is a screening for the design team, not a compliance determination.
 - An available safe escape time (ASET) can be entered, or read from an FDS device file at a tenability threshold, and is compared with the evacuation time.

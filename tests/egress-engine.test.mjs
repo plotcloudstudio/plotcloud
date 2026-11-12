@@ -53,3 +53,14 @@ test('everyone out: occupants by room use, stages in order, all out by the exit'
   assert(hotel.med > out.med, `asleep and unfamiliar takes longer: ${hotel.med} s against ${out.med} s`);
   console.log(`everyone out: office P50 ${out.med.toFixed(0)} s, alarm at 3 min ${late.med.toFixed(0)} s, hotel ${hotel.med.toFixed(0)} s; ${out.rep.n} people`);
 });
+
+// P0 (2026-11-12): in Everyone out, the people in patient rooms are inpatients moved by staff, not occupants who walk out on their own
+test('everyone out: inpatients wait for staff, are prepared and moved; it takes far longer than everyone walking', async () => {
+  const pat = await E.run(wardBlock(3), { strategy: 'all', use: 'retail', runs: 3, seed: 5 }), walk = await E.run(wardBlock(3), { strategy: 'all', use: 'retail', runs: 3, seed: 5, patients: false });
+  const P = pat.rep.patients; assert(P && P.n > 0 && P.staff >= 2, JSON.stringify(P)); assert.equal(P.out, P.n, 'every patient out'); assert.equal(pat.rep.unfinished, 0); assert.equal(pat.rep.stuck, 0);
+  assert(P.asst + P.bed > 0 && P.waitMean > 0 && P.clinMean > 60, 'patients who need help wait for staff and for the clinical preparation');
+  assert(pat.med > 2 * walk.med, `with patients ${pat.med} s against everyone walking ${walk.med} s`);
+  assert(pat.rep.people.filter((p) => p.kind === 'staff').every((p) => Number.isFinite(p.tOut)), 'the staff leave last');
+  const fast = await E.run(wardBlock(3), { strategy: 'all', use: 'retail', runs: 3, seed: 5, clinPrep: 0, ratio: 2 }); assert(fast.med < pat.med, 'more staff and no preparation: sooner');
+  console.log(`everyone out with inpatients: P50 ${pat.med} s (everyone walking ${walk.med} s; 1:2 staff, no preparation ${fast.med} s);`, JSON.stringify(P));
+});

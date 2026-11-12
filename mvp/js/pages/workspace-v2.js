@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=cut-20261110-1';
+import { mountChrome } from '../workspace-chrome.js?v=p0-20261112-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -825,7 +825,7 @@ export function render(app, [pid]) {
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
   // "Add simulation" on the left rail: pick a study, then the same pre-flight and handoff as Send to Simulation
   const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
-  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+[...SIMS,...PLANNED_SIMS].filter(x=>(x.category||categoryOf(x.id))===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}" ${x.status==='planned'?'data-planned="true"':''}>${esc(x.name)}${x.status==='planned'?'<span class="study-soon">Coming soon</span>':''}</button>`).join('')+'</div>').join('');
+  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>x.id!=='movementdepth'&&(x.category||categoryOf(x.id))===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}" ${x.status==='planned'?'data-planned="true"':''}>${esc(x.name)}${x.status==='planned'?'<span class="study-soon">Coming soon</span>':''}</button>`).join('')+'</div>').join('');
   const addInt=$('#addSimInt',app);let menuBtn=addSim;   // two entries (2026-11-01): Building simulations and Interior simulations, each with its own list
   document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
   const disposeSimPreview=mountSimulationPreview(simMenu,addSim,[...SIMS,...PLANNED_SIMS]);

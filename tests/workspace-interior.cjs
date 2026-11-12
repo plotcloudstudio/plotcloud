@@ -21,7 +21,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     M.names = [{ lv, x: X + 3, y: Y + 2.5, name: 'Bedroom' }, { lv, x: X + 9, y: Y + 2.5, name: 'Bathroom' }, { lv, x: X + 15, y: Y + 2.5, name: 'Study' }, { lv, x: X + 4.5, y: Y + 9.5, name: 'Living' }, { lv, x: X + 13.5, y: Y + 9.5, name: 'Kitchen' }, { lv, x: X + 9, y: Y + 6, name: 'Corridor' }];
     const snap = JSON.stringify(M); ws.apply(snap, false); __ws2.hub.change('plan', snap, false); }); await p.waitForTimeout(2500);
     await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=evac]'); await p.waitForTimeout(800);
-    const card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Circulation[\s\S]*Level 1[\s\S]*5 rooms as places[\s\S]*Living/); assert.doesNotMatch(card, /Corridor/);
+    const card = await p.locator('.sp-studycard').innerText(); assert.match(card, /circulation[\s\S]*Level 1[\s\S]*5 rooms as places[\s\S]*Living/i); assert.doesNotMatch(card, /Corridor/);
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view }; });
     assert.equal(r.err, ''); assert.deepEqual(r.rows[1], ['Pairs walked', '10 of 10']); assert.match(r.rows[0][1], /^\d+(\.\d)? m$/); assert.equal(r.view, 'walks');
@@ -45,9 +45,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim=wayfinding]'); await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     const wf = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows }; }); assert.equal(wf.err, ''); assert.deepEqual(wf.rows[2], ['Rooms seen from the start', '5 of 5']); assert.doesNotMatch(JSON.stringify(wf.rows), /no way in/);
     console.log(`PASS Wayfinding on Level 1: every room reached (doorways walkable), ${wf.rows[0][1]} decision points`);
-    // Space syntax and Movement depth (2026-11-01): the study page's visibility graph, in the Workspace, on the floor of this level
+    // Space syntax and Movement depth (2026-11-01; Movement depth a view of Space syntax, no menu entry, since 2026-11-12): the study page's visibility graph, in the Workspace, on the floor of this level
     for (const [id, view] of [['spacesyntax', 'integ'], ['movementdepth', 'flowdepth']]) {
-      await p.click('#addSimInt'); await p.click(`.w2-simmenu [data-addsim=${id}]`); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });
+      if (id === 'movementdepth') { await p.click('.sp-studycard [data-st=close]').catch(() => {}); await p.evaluate(() => window.__wsStudy.open('movementdepth')); } else { await p.click('#addSimInt'); await p.click(`.w2-simmenu [data-addsim=${id}]`); } await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });   // Movement depth: a view of Space syntax since 2026-11-12, opened by its old link
       assert.match(await p.locator('.sp-studycard').innerText(), /Draft · estimated time/); assert.equal(await p.locator('.sp-studycard [data-st-set^="ssLevel"]').count(), 0, 'the detail comes from the quality above Add simulation (2026-11-09)');
       await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
       const ss = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, view: s.res?.view, n: s.res?.cells, rows: s.res?.rows, fin: s.res ? Array.from(s.res.vals).filter(Number.isFinite).length : 0, views: Object.keys(s.res?.views || {}) }; });
