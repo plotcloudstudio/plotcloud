@@ -6633,7 +6633,7 @@ window.S3 = (() => {
   api.hits = (cx, cy) => { if (!R || !grp) return []; const out = [], seen = new Set(); for (const h of ray(cx, cy).intersectObjects(grp.children, true)) { const ud = tagOf(h.object); if (!ud) continue; const key = `${ud.k}:${ud.id}`; if (seen.has(key)) continue; seen.add(key); out.push({ ud, p: [h.point.x, -h.point.z], z: h.point.y, distance: h.distance }); } return out; };
   api.hit = (cx, cy) => api.hits(cx, cy)[0] || null;
   // the plan point under the pointer on any surface (the topographic block, roofs), for reading a study result (2026-10-31)
-  api.probe = (cx, cy) => { if (!R || !scene) return null; for (const h of ray(cx, cy).intersectObjects(scene.children, true)) { if (!h.object.isMesh) continue; if (h.object.name === 'surfaceresult') { const r = [h.point.x, -h.point.z]; r.surf = SRF.idx ? SRF.idx[Math.floor(h.faceIndex / 2)] : null; return r; } let o = h.object, skip = false; while (o) { if (o.name === 'sunpath' || o.name === 'structure' || o.name === 'flowanim' || o.name === 'floorsheet' || o.name === 'streams') { skip = true; break; }   /* the painted building squares are read like the building: a probe hit on them returns their point */ o = o.parent; } if (!skip) return [h.point.x, -h.point.z]; } return api.plane(cx, cy, 0); };
+  api.probe = (cx, cy) => { if (!R || !scene) return null; for (const h of ray(cx, cy).intersectObjects(scene.children, true)) { if (!h.object.isMesh) continue; if (h.object.name === 'surfaceresult') { const r = [h.point.x, -h.point.z]; r.surf = SRF.face ? SRF.face[h.faceIndex] : SRF.idx ? SRF.idx[Math.floor(h.faceIndex / 2)] : null; return r; } let o = h.object, skip = false; while (o) { if (o.name === 'sunpath' || o.name === 'structure' || o.name === 'flowanim' || o.name === 'floorsheet' || o.name === 'streams') { skip = true; break; }   /* the painted building squares are read like the building: a probe hit on them returns their point */ o = o.parent; } if (!skip) return [h.point.x, -h.point.z]; } return api.plane(cx, cy, 0); };
   // moving particles as short coloured streaks just above the ground: pos Float32Array [x0,y0,z0,x1,y1,z1]… (world), col likewise
   const FLA = { g: null }, ISO = { dir: null };
   api.flowAnim = (o) => { if (!scene) return; if (!o) { if (FLA.g) { scene.remove(FLA.g); FLA.g.geometry.dispose(); FLA.g.material.dispose(); FLA.g = null; render(); } return; }
@@ -7097,10 +7097,13 @@ window.S3 = (() => {
   // ---- results on the building (2026-10-31): one coloured square per sample, just off its face
   const SRF = { m: null };
   api.surface = (o) => { if (!scene) return; if (SRF.m) { scene.remove(SRF.m); SRF.m.geometry.dispose(); SRF.m.material.dispose(); SRF.m = null; } if (!o) { render(); return; }
-    const L = o.list.filter((x, i) => o.cols[i]), pos = new Float32Array(L.length * 18), cl = new Float32Array(L.length * 18); let k = 0; SRF.idx = [];
-    o.list.forEach((S0, i) => { const c = o.cols[i]; if (!c) return; SRF.idx.push(i); const P = (a, b) => [S0.p[0] + a * S0.u[0] + b * S0.v[0] + S0.n[0] * 0.02, S0.p[1] + a * S0.u[1] + b * S0.v[1] + S0.n[1] * 0.02, S0.p[2] + a * S0.u[2] + b * S0.v[2] + S0.n[2] * 0.02];
-      for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]]) { const q = P(a, b); pos[k] = q[0]; pos[k + 1] = q[2]; pos[k + 2] = -q[1]; cl[k] = c[0]; cl[k + 1] = c[1]; cl[k + 2] = c[2]; k += 3; } });
-    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(cl, 3));
+    const L = o.list.filter((x, i) => o.cols[i]), pos = new Float32Array(L.length * 18), cl = new Float32Array(L.length * 18); let k = 0; SRF.idx = []; SRF.face = [];
+    // each sample painted as its own piece of the model's face (2026-11-13), 1.5 cm off it; older samples (a square) as before
+    o.list.forEach((S0, i) => { const c = o.cols[i]; if (!c) return; SRF.idx.push(i); const put = (q) => { pos[k] = q[0]; pos[k + 1] = q[2]; pos[k + 2] = -q[1]; cl[k] = c[0]; cl[k + 1] = c[1]; cl[k + 2] = c[2]; k += 3; };
+      if (S0.tri) { SRF.face.push(i); const t = S0.tri, d = 0.015; for (let v = 0; v < 3; v++) put([t[v * 3] + S0.n[0] * d, t[v * 3 + 1] + S0.n[1] * d, t[v * 3 + 2] + S0.n[2] * d]); return; }
+      const P = (a, b) => [S0.p[0] + a * S0.u[0] + b * S0.v[0] + S0.n[0] * 0.02, S0.p[1] + a * S0.u[1] + b * S0.v[1] + S0.n[1] * 0.02, S0.p[2] + a * S0.u[2] + b * S0.v[2] + S0.n[2] * 0.02];
+      SRF.face.push(i, i); for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]]) put(P(a, b)); });
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos.slice(0, k), 3)); geo.setAttribute('color', new T.BufferAttribute(cl.slice(0, k), 3));
     const m = new T.Mesh(geo, new T.MeshBasicMaterial({ vertexColors: true, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.name = 'surfaceresult'; m.renderOrder = 3; scene.add(m); SRF.m = m; render(); };
   // ---- live drag (2026-10-31, after SketchUp): while dragging, the picked objects (and the gumball) are moved on screen as they
   // are; the scene is rebuilt once, on release. keys: ['k:id'…]; liveSet takes plan metres and radians
@@ -7720,26 +7723,24 @@ if (window.__WSROLE) {
       if (window.S3 && S3.on && S3.sunPath) S3.sunPath({ lines, suns: (o.suns || []).map((p) => world(p.az, p.alt)), sunR: Math.max(1.5, R / 45), now: o.now && o.now.alt > 0 ? world(o.now.az, o.now.alt) : null });
       SPATH2 = { cx, cy, R, nb, plan, o }; if (CAM !== '3d') draw();
     },
-    // results on the building itself (2026-10-31, as Ladybug paints a model): sample squares on every facade and roof of the
-    // design, faces inside the building left out; each has its centre, outward normal and two half-sides
+    // results on the building itself (2026-10-31, as Ladybug paints a model). 2026-11-13: each sample is a piece of the model's own
+    // surface, a sub-triangle of a real face, so a colour never runs past the wall, rail or roof it sits on: walls as built (their own
+    // height, arcs, split around windows and doors, glass as glass), masses as their boxes, imported models triangle by triangle.
+    // Each sample: the value point p (0.1 m out from the face), its outward normal and the triangle that is painted (tri)
     surfaceSamples(o = {}) {
-      const T = importTris(), pr = studyPrisms().filter((P) => !P.room && !P.imp && P.h - (P.b || 0) > 0.3).map((P) => Object.assign(prismOf(P.outer, P.h), { b: P.b || 0 })); if (!pr.length && !T) { SURF.list = []; return SURF; }
-      const area = pr.reduce((a, P) => { let per = 0; for (let i = 0; i < P.outer.length; i++) { const p = P.outer[i], q = P.outer[(i + 1) % P.outer.length]; per += Math.hypot(q[0] - p[0], q[1] - p[1]); } return a + per * (P.h - P.b) + areaOf(P.outer); }, 0);
-      const cell = SURF_CELL ? Math.max(0.2, SURF_CELL) : STUDY_CELL ? Math.max(0.25, STUDY_CELL) : Math.max(0.5, Math.sqrt((area + (T ? T.n * 2 : 0)) / (o.max || 20000))), list = [], inside = (q, z, self) => pr.some((P) => P !== self && z > P.b && z < P.h && q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer));
-      for (const P of pr) { const O = P.outer, ccw = polySigned(O) > 0;
-        for (let i = 0; i < O.length; i++) { const a = O[i], b = O[(i + 1) % O.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.05) continue; const d = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], n = ccw ? [d[1], -d[0]] : [-d[1], d[0]], nu = Math.max(1, Math.round(L / cell)), nv = Math.max(1, Math.round((P.h - P.b) / cell)), du = L / nu, dv = (P.h - P.b) / nv;
-          for (let u = 0; u < nu; u++) for (let v = 0; v < nv; v++) { const t = (u + 0.5) * du, z = P.b + (v + 0.5) * dv, q = [a[0] + d[0] * t + n[0] * 0.1, a[1] + d[1] * t + n[1] * 0.1]; if (inside(q, z, P)) continue;
-            list.push({ p: [q[0], q[1], z], n: [n[0], n[1], 0], u: [d[0] * du / 2, d[1] * du / 2, 0], v: [0, 0, dv / 2], roof: false }); } }
-        const nx = Math.max(1, Math.round((P.bb[2] - P.bb[0]) / cell)), ny = Math.max(1, Math.round((P.bb[3] - P.bb[1]) / cell)), cx = (P.bb[2] - P.bb[0]) / nx, cy = (P.bb[3] - P.bb[1]) / ny;
-        for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const q = [P.bb[0] + (i + 0.5) * cx, P.bb[1] + (j + 0.5) * cy]; if (!inPoly(q, O) || inside(q, P.h + 0.1, P)) continue;
-          list.push({ p: [q[0], q[1], P.h + 0.1], n: [0, 0, 1], u: [cx / 2, 0, 0], v: [0, cy / 2, 0], roof: true }); } }
-      // imported models: each triangle, split into pieces about the sample size; facing out as the model's own normal says
-      if (T) { const P = T.P, cap = 150000; for (let t = 0; t < T.n && list.length < cap; t++) { const b = t * 9, A = [P[b], P[b + 1], P[b + 2]], B = [P[b + 3], P[b + 4], P[b + 5]], C = [P[b + 6], P[b + 7], P[b + 8]], e1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], e2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]];
-          let nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const ar = Math.hypot(...nn) / 2; if (ar < 1e-4) continue; nn = nn.map((v) => v / (2 * ar)); if (nn[2] < -0.5) continue;   /* undersides left out */
-          const k = Math.max(1, Math.min(12, Math.round(Math.sqrt(ar) / cell))), roof = nn[2] > 0.7;
-          for (let i = 0; i < k; i++) for (let j = 0; j < k - i; j++) for (const up of [0, 1]) { if (up && j === k - i - 1) continue; const a0 = (i + (up ? 2 / 3 : 1 / 3)) / k, b0 = (j + (up ? 2 / 3 : 1 / 3)) / k, p = [A[0] + e1[0] * a0 + e2[0] * b0, A[1] + e1[1] * a0 + e2[1] * b0, A[2] + e1[2] * a0 + e2[2] * b0], h = Math.sqrt(ar / (k * k)) * 0.75;
-            const uu = Math.hypot(nn[0], nn[1]) > 0.1 ? [-nn[1], nn[0], 0].map((v) => v / Math.hypot(nn[0], nn[1])) : [1, 0, 0], vv = [nn[1] * uu[2] - nn[2] * uu[1], nn[2] * uu[0] - nn[0] * uu[2], nn[0] * uu[1] - nn[1] * uu[0]];
-            list.push({ p: [p[0] + nn[0] * 0.1, p[1] + nn[1] * 0.1, p[2] + nn[2] * 0.1], n: nn, u: uu.map((v) => v * h), v: vv.map((v) => v * h), roof, imp: true }); } } }
+      const T = importTris(), F = surfFaces(); if (!F.tris.length && !T) { SURF.list = []; return SURF; }
+      let area = 0; for (const t of F.tris) area += t.ar; if (T) area += T.n * 2;
+      const cell = SURF_CELL ? Math.max(0.2, SURF_CELL) : STUDY_CELL ? Math.max(0.25, STUDY_CELL) : Math.max(0.5, Math.sqrt(area / (o.max || 20000))), list = [], solids = F.solids;
+      const inside = (q, z, self) => solids.some((P) => P.id !== self && z > P.b && z < P.h && q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer));
+      // one triangle split into k² pieces about the sample size; the pieces keep their corners, the value point sits 0.1 m out
+      const addTri = (A, B, C, extra, self) => { const e1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], e2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]; let nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const ar = Math.hypot(...nn) / 2; if (ar < 1e-4) return; nn = nn.map((v) => v / (2 * ar)); if (nn[2] < -0.5) return;   /* undersides left out */
+        const k = Math.max(1, Math.min(160, Math.round(Math.sqrt(ar) / cell))), roof = nn[2] > 0.7, at = (a, b) => [A[0] + e1[0] * a + e2[0] * b, A[1] + e1[1] * a + e2[1] * b, A[2] + e1[2] * a + e2[2] * b];
+        for (let i = 0; i < k; i++) for (let j = 0; j < k - i; j++) for (const up of [0, 1]) { if (up && j === k - i - 1) continue; if (list.length >= 150000) return;
+          const c = up ? [[i + 1, j], [i + 1, j + 1], [i, j + 1]] : [[i, j], [i + 1, j], [i, j + 1]], V = c.map(([a, b]) => at(a / k, b / k)), g = [(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][1] + V[1][1] + V[2][1]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3], p = [g[0] + nn[0] * 0.1, g[1] + nn[1] * 0.1, g[2] + nn[2] * 0.1];
+          if (self != null && inside(p, p[2], self)) continue;   /* a face against another solid: hidden, left out */
+          list.push({ p, n: nn, tri: [...V[0], ...V[1], ...V[2]], roof, ...extra }); } };
+      for (const t of F.tris) { if (list.length >= 150000) break; addTri(t.A, t.B, t.C, t.glass ? { glass: true } : {}, t.self); }
+      if (T) { const P = T.P; for (let t = 0; t < T.n && list.length < 150000; t++) { const b = t * 9; addTri([P[b], P[b + 1], P[b + 2]], [P[b + 3], P[b + 4], P[b + 5]], [P[b + 6], P[b + 7], P[b + 8]], { imp: true }, null); } }
       SURF.list = list; SURF.cell = cell; return { cell, n: list.length, roofs: list.filter((x) => x.roof).length };
     },
     // sun hours on each sample: the day's sun directions that face it and reach it past the design and the surroundings
@@ -7775,7 +7776,7 @@ if (window.__WSROLE) {
     studySize(o = {}) { if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       const span = Math.max(b.nx, b.ny) * b.cell, fc = Math.max(STUDY_CELL ? Math.max(0.5, STUDY_CELL) : (o.maxCells ? Math.max(0.5, 240 / o.maxCells) : 1.5), span / (o.maxCells || 160)), sv = this.surfaceSamples();
       return { cells: b.nx * b.ny, cell: b.cell, flowCells: Math.round(b.nx * b.cell / fc) * Math.round(b.ny * b.cell / fc), flowCell: fc, flowSide: Math.round(span / fc), samples: sv ? sv.n || 0 : 0, surfCell: SURF.cell || 0, imports: !!importTris() }; },
-    surfaceList() { return (SURF.list || []).map((x) => ({ p: x.p, n: x.n, roof: x.roof })); },
+    surfaceList(full) { return (SURF.list || []).map((x) => (full ? { p: x.p, n: x.n, roof: x.roof, tri: x.tri, imp: !!x.imp, glass: !!x.glass } : { p: x.p, n: x.n, roof: x.roof })); },
     surfaceSun(day, o = {}) {
       const site = M.site; if (!site || !SURF.list) return null; const dirs = sunDirs({ lat: site.origin.lat, lon: site.origin.lon, tz: site.tz }, /^\d\d-\d\d$/.test(day || '') ? day : '03-21', M.north || 0, o.step || 15, o.h0 ?? 0, o.h1 ?? 24), T = importTris();
       const pr = studyPrisms().filter((P) => !P.imp).map((P) => prismOf(P.outer, P.h)).concat(SITEC.contextMasses(site, M.north || 0).map((m) => prismOf(m.outer, m.h)));
@@ -7817,6 +7818,34 @@ if (window.__WSROLE) {
     for (let t = 0; t < n; t++) { const b = t * 9, i0 = Math.max(0, Math.floor((Math.min(P[b], P[b + 3], P[b + 6]) - x0) / c)), i1 = Math.min(nx - 1, Math.floor((Math.max(P[b], P[b + 3], P[b + 6]) - x0) / c)), j0 = Math.max(0, Math.floor((Math.min(P[b + 1], P[b + 4], P[b + 7]) - y0) / c)), j1 = Math.min(ny - 1, Math.floor((Math.max(P[b + 1], P[b + 4], P[b + 7]) - y0) / c));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) B[j * nx + i].push(t); }
     return (ITRI.T = { P, n, B, x0, y0, c, nx, ny, zt, stamp: new Uint32Array(n), gen: 1 }); }
+  // the faces the results are painted on (2026-11-13): masses as their boxes (sides and top), walls as built: each solid piece between
+  // the openings of a wall, its own height (w.h, else up to the slab above), arcs along the arc, glass in the windows; plus the solids
+  // that hide a face (a face inside another solid is not painted). Plan metres, z up
+  function surfFaces() { const tris = [], solids = []; let sid = 0;
+    const quad = (a, b, c, d, extra) => { tris.push({ A: a, B: b, C: c, ...extra }); tris.push({ A: a, B: c, C: d, ...extra }); };
+    const area3 = (a, b, c) => { const e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; return Math.hypot(e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]) / 2; };
+    // a prism from a plan outline (counter-clockwise or not), z0 to z1: its sides outward and its top
+    const prism = (O, z0, z1, extra = {}) => { if (O.length < 3 || z1 - z0 < 0.005) return; const id = sid++, ccw = polySigned(O) > 0, xs = O.map((q) => q[0]), ys = O.map((q) => q[1]); solids.push({ id, outer: O, b: z0, h: z1, bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] });
+      for (let i = 0; i < O.length; i++) { const p = O[i], q = O[(i + 1) % O.length]; if (Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.003) continue; const a = ccw ? p : q, b = ccw ? q : p; quad([a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1], { ...extra, self: id }); }
+      for (const [a, b, c] of earTris(ccw ? O : O.slice().reverse())) tris.push({ A: [a[0], a[1], z1], B: [b[0], b[1], z1], C: [c[0], c[1], z1], ...extra, self: id }); };
+    for (const m of massList(M)) prism(m.outer, m.base || 0, m.h);
+    for (const lv of M.levels) { for (const w of M.walls) { if (w.lv !== lv.id || (M.hiddenIds || []).includes(w.id)) continue; const H = w.h || (WBP.slabAnchor(M.levels, lv.id) || { wallH: lv.h }).wallH, t = w.t || 0.2, z = lv.z;
+        const os = M.ops.filter((q) => q.wall === w.id).map((q) => [q.pos - q.w / 2, q.pos + q.w / 2, q]).sort((a, b) => a[0] - b[0]);
+        const A = w.bulge && STC.arcOf(w) ? STC.arcOf(w) : null, L = A ? A.len : Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue; const dir = A ? null : [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L];
+        // the outline of the stretch s0..s1 of the wall, between offsets k0 and k1 across it
+        const band = (s0, s1, k0, k1) => { if (A) { const n = Math.max(1, Math.ceil(Math.abs(A.sweep) * (s1 - s0) / A.len / 0.1)), out = []; for (let i = 0; i <= n; i++) out.push(STC.arcAt(w, s0 + (s1 - s0) * i / n, k0)); for (let i = n; i >= 0; i--) out.push(STC.arcAt(w, s0 + (s1 - s0) * i / n, k1)); return out; }
+          const nx = -dir[1], ny = dir[0], P0 = (s, k) => [w.a[0] + dir[0] * s + nx * k, w.a[1] + dir[1] * s + ny * k]; return [P0(s0, k0), P0(s1, k0), P0(s1, k1), P0(s0, k1)]; };
+        const piece = (s0, s1, z0, z1, glass) => { if (s1 - s0 < 0.005 || z1 - z0 < 0.005) return; const O = band(s0, s1, glass ? -0.01 : -t / 2, glass ? 0.01 : t / 2);
+          if (A) { for (let i = 0; i + 1 < O.length / 2; i++) { const n2 = O.length, q = [O[i], O[i + 1], O[n2 - 2 - i], O[n2 - 1 - i]]; prism(q, z + z0, z + z1, glass ? { glass: true } : {}); } } else prism(O, z + z0, z + z1, glass ? { glass: true } : {}); };
+        let s = 0; for (const [a, b, q] of os) { if (a > s) piece(s, a, 0, H); piece(a, b, 0, Math.min(q.sill || 0, H)); if (q.head < H) piece(a, b, q.head, H); if (q.kind === 'win') piece(a, b, q.sill || 0, Math.min(q.head, H), true); else if ((q.open ?? 1) < 0.05) piece(a, b, 0, Math.min(q.head, H)); s = Math.max(s, b); }
+        if (L > s) piece(s, L, 0, H); } }
+    for (const t of tris) t.ar = area3(t.A, t.B, t.C);
+    return { tris, solids }; }
+  // a simple polygon (counter-clockwise) cut into triangles by ear clipping
+  function earTris(O) { const V = O.map((q, i) => i), out = [], cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    const inTri = (p, a, b, c) => cross(a, b, p) >= 0 && cross(b, c, p) >= 0 && cross(c, a, p) >= 0;
+    for (let guard = 0; V.length > 3 && guard < 5000; guard++) { let cut = false; for (let i = 0; i < V.length; i++) { const a = O[V[(i + V.length - 1) % V.length]], b = O[V[i]], c = O[V[(i + 1) % V.length]]; if (cross(a, b, c) <= 1e-9) continue; if (V.some((j) => j !== V[i] && j !== V[(i + V.length - 1) % V.length] && j !== V[(i + 1) % V.length] && inTri(O[j], a, b, c))) continue; out.push([a, b, c]); V.splice(i, 1); cut = true; break; } if (!cut) break; }
+    if (V.length === 3) out.push([O[V[0]], O[V[1]], O[V[2]]]); return out; }
   // does the ray from (q, z0) toward the sun (plan v, rise t per metre) hit an imported triangle? (buckets walked along the ray)
   function triShade(T, q, z0, d) { if (!T || z0 >= T.zt) return false; const g = ++T.gen, P = T.P, L = (T.zt - z0) / Math.max(1e-6, d.t), dx = d.v[0], dy = d.v[1], dz = d.t, stp = T.c * 0.5;
     for (let s = 0; s <= L + T.c; s += stp) { const x = q[0] + dx * s, y = q[1] + dy * s, i = Math.floor((x - T.x0) / T.c), j = Math.floor((y - T.y0) / T.c); if (i < -1 || j < -1 || i > T.nx || j > T.ny) { if (s > 2 * T.c && (i < -2 || j < -2 || i > T.nx + 1 || j > T.ny + 1)) break; continue; } if (i < 0 || j < 0 || i >= T.nx || j >= T.ny) continue;
