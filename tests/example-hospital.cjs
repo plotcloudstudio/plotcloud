@@ -8,7 +8,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
   try {
     const p = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message)); const base = process.env.TEST_BASE || 'http://127.0.0.1:8765', out = process.env.SHOT_DIR || require('os').tmpdir();
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
-    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); });
+    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); localStorage.setItem('pc-unfold', '1'); });
     // 1 · the card on the projects page, next to Fallingwater
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-hospital]', { timeout: 30000 });
     const card = await p.locator('.ph-example:has([data-hospital])').innerText(); assert.match(card, /Hospital · inpatient building[\s\S]*52 single rooms[\s\S]*Fire evacuation/);

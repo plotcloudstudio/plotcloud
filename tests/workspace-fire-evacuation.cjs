@@ -9,7 +9,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
   try {
     const p = pg = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message)); const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
-    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); });
+    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); localStorage.setItem('pc-unfold', '1'); });
     await p.goto(base + '/mvp/#/new-project'); await p.waitForFunction(() => window.__newProjectMap, null, { timeout: 30000 });
     await p.evaluate(() => window.__newProjectMap.place(49.2448, -123.0071, 'QA ward block')); await p.waitForFunction(() => window.__newProjectMap.osm, null, { timeout: 120000 });
     await p.click('#npStart'); await p.waitForFunction(() => location.hash.startsWith('#/workspace') && window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 180000 });

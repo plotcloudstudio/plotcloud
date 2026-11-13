@@ -489,7 +489,7 @@ body.sp-full .pc-start-min{top:62px!important;right:60px!important}
 .w2.sp .sp-q[data-q=refined] .sp-q-tr b{background:#f97316}
 .w2.sp .sp-qticks{display:flex;justify-content:space-between;font-size:10px;color:var(--sp-sub);margin:2px 0 4px}
 /* a run, top centre: time left, the clock time it should end; then done or failed */
-.w2.sp .sp-runbar{position:absolute;z-index:32;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:min(760px,calc(100% - 760px));min-width:320px;padding:8px 12px;font:12px/1.35 Inter,system-ui,sans-serif;color:var(--sp-ink);white-space:nowrap;overflow:hidden}
+.w2.sp .sp-runbar{position:absolute;z-index:32;top:64px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:min(760px,calc(100% - 760px));min-width:320px;padding:8px 12px;font:12px/1.35 Inter,system-ui,sans-serif;color:var(--sp-ink);white-space:nowrap;overflow:hidden}
 .w2.sp .sp-runbar[hidden]{display:none}
 .w2.sp .sp-runbar .sp-run-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#f59e0b;animation:sp-run 1.2s ease-in-out infinite}
 .w2.sp .sp-runbar[data-state=done] .sp-run-dot{background:#16a34a;animation:none}
@@ -629,3 +629,31 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 .w2.sp .sp-symbols{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:10.5px;color:#475569;margin:6px 0}.w2.sp .sp-symbols span{display:flex;align-items:center;gap:5px}.w2.sp .sp-codesum tr.on td{background:#f5f3ff;font-weight:600}
 /* method maturity (2026-11-12, P0) */
 .w2.sp .sp-mat{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:9px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font:600 10px/16px Inter,system-ui,sans-serif;white-space:nowrap;vertical-align:1px;text-decoration:none;cursor:help}
+/* P1b (2026-11-12): the study card reads Settings → Start → Results → Export; less common settings fold under Advanced */
+.w2.sp .sp-sect{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#6b7280;margin:6px 14px 4px}
+.w2.sp .sp-adv{margin:8px 0;border-top:1px solid #eceff3;padding-top:6px}
+.w2.sp .sp-adv>summary{cursor:pointer;color:#2f5bd3;font-size:12px;list-style-position:inside;display:list-item}
+.w2.sp .sp-adv[open]>summary{margin-bottom:4px}
+.w2.sp .sp-set{margin-top:10px}
+.w2.sp .sp-set>summary{font-weight:600;color:#1f2937}
+.w2.sp .sp-studycard>.sp-foot{border-radius:10px;margin:0 14px 10px;border:1px solid #eef0f2}
+.w2.sp .sp-studycard>.sp-set{margin:10px 14px 0}.w2.sp .sp-studycard>.sp-set>.sp-foot{border-radius:10px;border:1px solid #eef0f2}
+.w2.sp .sp-studycard>.sp-expacts{margin:8px 14px 12px;display:flex;flex-wrap:wrap}.w2.sp .sp-studycard>.sp-expacts .btn{margin:0;width:auto;padding:6px 10px}
+.w2.sp .sp-set>.sp-foot{margin-top:4px}
+.w2.sp .sp-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f59e0b;margin:0 4px 1px 6px;vertical-align:middle}
+.w2.sp .sp-dotl{font-size:11px;color:#b45309;font-weight:400}
+.w2.sp .sp-expacts{align-items:center;gap:6px;border-top:1px solid #eceff3;padding-top:8px;margin-top:8px}
+.w2.sp .sp-expacts .sp-flabel{margin:0 4px 0 0}
+/* the project workflow in the Workspace (2026-11-12, P1b): numbers, the current step named, a tick when done; names on hover */
+.w2.sp .sp-flow{display:flex;align-items:center;gap:2px;padding:4px 6px;height:44px;box-sizing:border-box}
+.w2.sp .sp-flow a{display:inline-flex;align-items:center;gap:6px;padding:4px 6px;border-radius:7px;color:var(--sp-sub,#6b7280);text-decoration:none;font:500 11.5px Inter,system-ui,sans-serif;white-space:nowrap}
+.w2.sp .sp-flow a:hover{background:#f3f4f6;color:var(--sp-ink,#111827)}
+.w2.sp .sp-flow a i{font-style:normal;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid #d1d5db;font-size:10.5px;font-weight:600}
+.w2.sp .sp-flow a[data-done=true] i{background:#16a34a;border-color:#16a34a;color:#fff}
+.w2.sp .sp-flow a:not([aria-current]):not(:hover){font-size:0;gap:0}
+.w2.sp .sp-flow a:not([aria-current]):hover{font-size:11.5px}
+.w2.sp .sp-flow a[aria-current]{color:var(--sp-ink,#111827);background:#eef5fb}
+.w2.sp .sp-flow a[aria-current] i{border-color:#3f88c5;color:#3f88c5}
+.w2.sp .sp-flow a[aria-current][data-done=true] i{color:#fff}
+.w2.sp .sp-flowsep{color:#c4c9d0;font-size:11px}
+.w2.sp .sp-tr .sp-tlink{display:inline-flex;align-items:center;height:32px;padding:0 8px;border-radius:8px;color:var(--sp-ink,#111827);text-decoration:none;font:500 11.5px Inter,system-ui,sans-serif;white-space:nowrap}.w2.sp .sp-tr .sp-tlink:hover{background:#f3f4f6}

@@ -2,6 +2,7 @@
 // #/project/<id> is the project's home: details, Simple/Advanced, readiness per study, parameters with sources and single
 // overrides, use template, daylight target, plans and lineage, executable suggestions with "adopt and run Plan B", plan
 // comparison, report revisions with PPTX/PDF/HTML/evidence and the offline review file, and feedback → Plan C.
+import { workflowState } from '../onboarding.js';
 import * as S from '../store.js';
 import * as C from '../project-contract.js';
 import * as P from '../parameters.js';
@@ -74,7 +75,7 @@ function overview(app, p) {
   app.innerHTML = `<div class="wrap pj" data-mode="${mode()}"><a href="#/home">← Projects</a>
     <span class="eyebrow" style="margin-top:20px">Project</span><h1 class="display md" id="pjName"></h1><p class="lede" id="pjSummary"></p>
     <div class="pj-mode" role="radiogroup" aria-label="Project mode"><b>Mode</b><label><input type="radio" name="pjMode" value="simple"> Simple</label><label><input type="radio" name="pjMode" value="advanced"> Advanced</label><span class="note" id="pjModeNote"></span></div>
-    <nav class="acts" aria-label="Project workflow" style="margin-top:12px"><a class="btn" href="#/project-settings/${esc(p.id)}">1 Site analysis</a><a class="btn" href="#/workspace/${esc(p.id)}">2 Plan Studio · Workbench</a><a class="btn" href="#/simulations">3 Simulation</a><a class="btn" href="#/rendering?project=${esc(p.id)}">4 Rendering</a><a class="btn" href="#/boards?project=${esc(p.id)}">5 Boards</a><a class="btn ghost" href="#/tables?project=${esc(p.id)}">Tables</a><a class="btn ghost" href="#/results/${esc(p.id)}">Results</a></nav><p class="note">Steps can be taken in any order; imported models can go straight to Simulation.</p>
+    <nav class="acts" aria-label="Project workflow" style="margin-top:12px">${workflowState(p).map((w) => `<a class="btn" href="${w.id === 'site' ? `#/project-settings/${esc(p.id)}` : w.id === 'sim' ? `#/workspace/${esc(p.id)}?add=sim` : esc(w.href)}" data-flow="${w.id}" data-done="${w.done}">${w.done ? '✓' : w.n} ${esc(w.id === 'site' ? 'Site analysis' : w.id === 'plan' ? 'Plan Studio · Workbench' : w.t)}</a>`).join('')}<a class="btn ghost" href="#/tables?project=${esc(p.id)}">Tables</a><a class="btn ghost" href="#/results/${esc(p.id)}">Results</a></nav><p class="note">Steps can be taken in any order; imported models can go straight to Simulation.</p>
     <section class="card" id="pjReady"><h2>What can run now</h2><div class="pj-status" id="pjReadyList"></div><div class="acts" style="margin-top:12px"><button class="btn" type="button" id="pjPackage">Run default study package</button><span class="note" id="pjPackageNote"></span></div></section>
     <section class="card" id="pjDetails"><h2>Project details</h2><form id="pjForm" class="grid g2"></form></section>
     <section class="card" id="pjParams"><h2>Inputs and their sources</h2><p class="note" id="pjProv"></p><div class="pc-scroll"><table class="pc-table" id="pjParamTable"></table></div></section>
