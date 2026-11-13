@@ -154,7 +154,7 @@ export function mountChrome(app, api) {
   card.querySelector('.sp-x').onclick = () => openCard(false);
   const pops = {};
   for (const k of ['stats', 'spaces', 'q', 'xl', 'sec', 'sun', 'snap', 'vis']) { const c = el('section', `sp-card sp-pop sp-pop-${k}`); c.hidden = true; c.dataset.pop = k; root.append(c); pops[k] = c; }
-  pops.sec.style.right = '60px'; pops.q.style.left = '60px'; pops.q.style.width = '280px'; pops.xl.style.left = '60px'; pops.xl.style.width = '340px';
+  pops.sec.style.right = '60px'; pops.q.style.left = '60px'; pops.q.style.width = '280px'; pops.xl.style.left = '60px'; pops.xl.style.width = '420px';
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
   // the panels card and a study panel share the left side: the card covers the study panel while it is open
@@ -349,25 +349,55 @@ export function mountChrome(app, api) {
   // ---- Generate pictures (2026-11-09): tick the simulations, choose a view or a series for each, see each one's time and the
   // total, then generate: they run one after another at the quality set above Add simulation, and each picture joins the list
   const GENK = 'pc-ws-gen:' + p.id, GEN_IDS = ['sunhours', 'radiation', 'skyview', 'utci', 'wind', 'daylight', 'vent', 'acoustics', 'spacesyntax', 'fire-evacuation'];
+  // the figures each study is usually issued with (2026-11-13): ticked ones by default (on), the others to add. A map figure is one
+  // view of a run (switching views needs no new run); a mode needs its own run; interior studies go floor by floor (every level with
+  // rooms); a chart is the study card's chart as a picture; months and seasons are a series on one colour scale
+  const FIGSETS = {
+    sunhours: [['hours', 'Sun hours', { on: 1 }], ['two', '2 h or more', { on: 1 }], ['seasons', '4 seasons', { kind: 'seasons' }], ['months', '12 months', { kind: 'months' }], ['chart', 'Chart', { kind: 'chart' }]],
+    radiation: [['kwh', 'kWh/m²', { on: 1 }], ['share', 'Share of open ground', { on: 1 }], ['months', '12 months', { kind: 'months' }], ['chart', 'Chart', { kind: 'chart' }]],
+    skyview: [['sky', 'Sky view', { on: 1 }], ['low', 'Under 50 %', { on: 1 }], ['chart', 'Chart', { kind: 'chart' }]],
+    utci: [['comfort', 'Comfort', { on: 1 }], ['heat', 'Heat stress', { on: 1 }], ['cold', 'Cold stress', { on: 1 }], ['chart', 'Chart', { kind: 'chart' }]],
+    wind: [['comfort', 'Comfort (Lawson)', { on: 1, mode: 'yearly' }], ['risk', 'Risk', { on: 1, mode: 'yearly' }], ['speedup', 'Speed-up', { on: 1, mode: 'yearly' }], ['speed', 'Prevailing wind speed', { mode: 'single' }], ['chart', 'Chart', { kind: 'chart', mode: 'yearly' }]],
+    daylight: [['sda', 'sDA', { on: 1, mode: 'plan' }], ['ase', 'ASE', { on: 1, mode: 'plan' }], ['df', 'Daylight factor', { on: 1, mode: 'plan' }], ['opt2', 'LEED option 2', { mode: 'plan' }], ['chart', 'Chart', { kind: 'chart', mode: 'plan' }]],
+    vent: [['ach', 'Air changes', { on: 1, mode: 'one' }], ['fresh', 'Outdoor air share', { on: 1, mode: 'one' }], ['chart', 'Room chart', { on: 1, kind: 'chart', mode: 'one' }], ['hours', 'Hours at target (year)', { mode: 'year' }]],
+    acoustics: [['ratio', 'Against target', { on: 1 }], ['rt', 'Reverberation', { on: 1 }], ['sti', 'Speech clarity', { on: 1 }], ['chart', 'Room chart', { on: 1, kind: 'chart' }]],
+    spacesyntax: [['integ', 'Integration', { on: 1 }], ['conn', 'Connectivity', { on: 1 }], ['flowdepth', 'Movement + depth', { on: 1 }], ['r3', 'Integration R3', {}], ['gate', 'Agents', {}]],
+    'fire-evacuation': [['routes', 'Escape routes', { on: 1, mode: 'all' }], ['density', 'Peak crowding', { on: 1, mode: 'all' }], ['time', 'Time out', { on: 1, mode: 'all' }], ['chart', 'Chart', { on: 1, kind: 'chart', mode: 'all' }], ['trails', 'Footprints', { mode: 'all' }], ['travel', 'Code check: travel distance', { mode: 'code' }]],
+    section: [['section', 'Section', { on: 1, kind: 'section' }]] };
+  const PER_LEVEL = new Set(['daylight', 'acoustics', 'spacesyntax']);
+  const figsAll = (id) => (FIGSETS[id] || [['view', 'View', { on: 1 }]]).map(([k, label, o]) => ({ k, label, kind: o.kind || 'view', view: o.kind ? null : k, mode: o.mode || null, on: !!o.on }));
+  const figDefault = (id) => figsAll(id).filter((x) => x.on).map((x) => x.k);
+  // the picks: { figs: [...] } per study; the old single choice ('view', 'months', 'seasons') read as the default set or that series
+  const migratePick = (id, v) => (v && typeof v === 'object' && Array.isArray(v.figs) ? v : v === 'months' || v === 'seasons' ? { figs: [v] } : { figs: figDefault(id) });
   XL.gen = (() => { try { return { pick: {}, cam: {}, ...(JSON.parse(localStorage.getItem(GENK)) || {}) }; } catch { return { pick: {}, cam: {} }; } })(); XL.gen.cam ||= {};
+  for (const id of Object.keys(XL.gen.pick)) XL.gen.pick[id] = migratePick(id, XL.gen.pick[id]);
   const genSave = () => { try { localStorage.setItem(GENK, JSON.stringify({ pick: XL.gen.pick, cam: XL.gen.cam })); } catch { } };
   const genList = () => [...GEN_IDS.filter((id) => (api.sims || []).some((x) => x.id === id)).map((id) => ({ id, name: simName(id), series: !!SERIES[id] })), ...(secPane()?.section?.() ? [{ id: 'section', name: `Section ${secPane().section().name || 'A'}`, series: false }] : [])];
+  const figsOf = (id) => { const P = XL.gen.pick[id]; if (!P) return []; return figsAll(id).filter((x) => P.figs.includes(x.k)); };
+  // the floors an interior study goes through: every level with rooms (the model's own order)
+  const genLevels = () => { try { return INST.persp.ws.buildingScene().levels.filter((l) => (l.sc?.rooms || []).length).map((l) => ({ id: l.id, name: l.name.split(' · ')[0] })); } catch { return []; } };
   const nPics = (kind) => (kind === 'months' ? 12 : kind === 'seasons' ? 4 : 1);
+  // the work for one study: its runs (one per mode, times the floors for an interior study) and the figures (export items) they give
+  function planOf(id) { const F = figsOf(id), L = PER_LEVEL.has(id) ? Math.max(1, genLevels().length) : 1, ser = F.filter((x) => x.kind === 'months' || x.kind === 'seasons'), maps = F.filter((x) => x.kind === 'view' || x.kind === 'chart');
+    const modes = [...new Set(maps.map((x) => x.mode || ''))]; return { F, L, ser, maps, modes, runs: maps.length ? modes.length * L : 0, items: maps.length * L + ser.length + F.filter((x) => x.kind === 'section').length, frames: ser.reduce((a, x) => a + nPics(x.kind), 0) }; }
   // each one's time: the estimate where the study has one, else its last run on this computer, else not known before it runs
-  function timeOf(id, kind) { if (id === 'section') return { ms: 4000, src: 'est' }; const n = nPics(kind); let ms = null, src = 'est';
+  function timeOf(id) { if (id === 'section') return { ms: 4000, src: 'est' }; const P = planOf(id); let ms = null, src = 'est';
     try { const e = estimate(id); if (e && e.ms) ms = e.ms; } catch { } if (ms == null) { const L = simLog()[id]; if (L && L.ms) { ms = L.ms; src = 'last'; } }
-    return ms == null ? null : { ms: ms * n + n * 600, src }; }   // + about 0.6 s a picture to frame and capture it
+    return ms == null ? null : { ms: ms * (P.runs + P.frames) + (P.items + P.frames) * 600, src }; }   // + about 0.6 s a picture to frame and capture it
   const clockAt = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  function drawGen(host) { const G = genList(), on = G.filter((g) => XL.gen.pick[g.id]), T = on.map((g) => timeOf(g.id, XL.gen.pick[g.id])), known = T.filter(Boolean), tot = known.reduce((a, t) => a + t.ms, 0), pics = on.reduce((a, g) => a + nPics(XL.gen.pick[g.id]), 0), busy = !!XL.gen.running || ST.busy;
-    const opt = (g) => { const k = XL.gen.pick[g.id] || 'view'; return g.series ? `<select class="xl-gk" data-gk="${g.id}" ${busy ? 'disabled' : ''} aria-label="${esc(g.name)}: what to make">${[['view', 'View'], ['months', '12 months'], ['seasons', '4 seasons']].map(([v, n]) => `<option value="${v}" ${k === v ? 'selected' : ''}>${n}</option>`).join('')}</select>` : '<span class="xl-gk">View</span>'; };
-    const tm = (g) => { if (!XL.gen.pick[g.id]) return ''; const t = timeOf(g.id, XL.gen.pick[g.id]); const same = NOGRID[g.id] ? `<i class="xl-same" title="No grid (${esc(NOGRID[g.id])}): the same at every quality">same at every quality</i>` : ''; return t ? `${dur(t.ms).replace(/^about /, '~')}${t.src === 'last' ? '<i title="From its last run on this computer">*</i>' : ''}${same}` : `<i title="Not known before its first run">first run</i>${same}`; };
-    host.innerHTML = `<h3>Generate pictures</h3><p class="sp-note" style="margin-top:0">Tick what to make; they run one after another at ${esc(qualOf().name)} quality and each picture joins the export list below.</p>
-      <div class="xl-gl">${G.map((g) => `<div class="xl-gr${XL.gen.pick[g.id] ? ' on' : ''}"><label><input type="checkbox" data-gp="${g.id}" ${XL.gen.pick[g.id] ? 'checked' : ''} ${busy ? 'disabled' : ''}> ${esc(g.name)}</label>${opt(g)}<span class="xl-t">${tm(g)}</span>${g.id !== 'section' && XL.gen.pick[g.id] ? `<button type="button" class="xl-pv${XL.gen.cam[g.id] ? ' set' : ''}" data-gpv="${g.id}" ${busy ? 'disabled' : ''} title="${XL.gen.cam[g.id] ? 'The pictures are taken from the view you set. Click to look again or change it.' : 'Run it once and set the 3D view the pictures are taken from'}">${XL.gen.cam[g.id] ? 'View set ✓' : 'Preview'}</button>` : '<span></span>'}</div>`).join('')}</div>
-      <div class="xl-tot">${on.length ? `<b>${pics} picture${pics === 1 ? '' : 's'} · about ${dur(tot).replace(/^about /, '')}${known.length < on.length ? ` + ${on.length - known.length} not yet timed` : ''}</b><span>done around ${clockAt(Date.now() + tot)}${known.some((t) => t.src === 'last') ? ' · * from the last run' : ''}</span>` : '<span>Nothing ticked.</span>'}</div>
-      <div class="xl-acts"><button type="button" class="btn sm primary" data-g="go" ${on.length && !busy ? '' : 'disabled'}>${XL.gen.running ? `Generating ${XL.gen.running.k + 1} of ${XL.gen.running.n}…` : `Generate ${pics || ''} picture${pics === 1 ? '' : 's'}`}</button></div>
+  function drawGen(host) { const G = genList(), on = G.filter((g) => XL.gen.pick[g.id]), T = on.map((g) => timeOf(g.id)), known = T.filter(Boolean), tot = known.reduce((a, t) => a + t.ms, 0), busy = !!XL.gen.running || ST.busy;
+    const plans = on.map((g) => planOf(g.id)), items = plans.reduce((a, x) => a + x.items, 0), runs = plans.reduce((a, x) => a + x.runs + (x.ser.length ? x.ser.length : 0), 0), lvs = genLevels();
+    const tm = (g) => { if (!XL.gen.pick[g.id]) return ''; const t = timeOf(g.id); const same = NOGRID[g.id] ? `<i class="xl-same" title="No grid (${esc(NOGRID[g.id])}): the same at every quality">same at every quality</i>` : ''; return t ? `${dur(t.ms).replace(/^about /, '~')}${t.src === 'last' ? '<i title="From its last run on this computer">*</i>' : ''}${same}` : `<i title="Not known before its first run">first run</i>${same}`; };
+    const chips = (g) => { if (!XL.gen.pick[g.id] || g.id === 'section') return ''; const P = planOf(g.id), sel = XL.gen.pick[g.id].figs;
+      return `<div class="xl-figs" role="group" aria-label="${esc(g.name)}: figures to make">${figsAll(g.id).map((x) => `<button type="button" class="xl-fig" data-gf="${g.id}:${x.k}" aria-pressed="${sel.includes(x.k)}" ${busy ? 'disabled' : ''}>${esc(x.label)}</button>`).join('')}</div>
+        <p class="xl-fnote">${P.items} figure${P.items === 1 ? '' : 's'}${PER_LEVEL.has(g.id) ? ` · every level: ${esc(lvs.map((l) => l.name.replace(/^Level /, 'L')).join(', ') || 'this level')}` : ''}${P.modes.filter(Boolean).length > 1 ? ` · ${P.modes.length} runs (one per mode)` : ''}</p>`; };
+    host.innerHTML = `<h3>Generate pictures</h3><p class="sp-note" style="margin-top:0">Tick the studies and the figures each one gives; they run one after another at ${esc(qualOf().name)} quality and each figure joins the export list below.</p>
+      <div class="xl-gl">${G.map((g) => `<div class="xl-gr${XL.gen.pick[g.id] ? ' on' : ''}"><div class="xl-gh"><label><input type="checkbox" data-gp="${g.id}" ${XL.gen.pick[g.id] ? 'checked' : ''} ${busy ? 'disabled' : ''}> <span class="xl-gn">${esc(g.name)}</span></label><span class="xl-t">${tm(g)}</span>${g.id !== 'section' && XL.gen.pick[g.id] ? `<button type="button" class="xl-pv${XL.gen.cam[g.id] ? ' set' : ''}" data-gpv="${g.id}" ${busy ? 'disabled' : ''} title="${XL.gen.cam[g.id] ? 'The pictures are taken from the view you set. Click to look again or change it.' : 'Run it once and set the 3D view the pictures are taken from'}">${XL.gen.cam[g.id] ? 'View set ✓' : 'Preview'}</button>` : '<span></span>'}</div>${chips(g)}</div>`).join('')}</div>
+      <div class="xl-tot">${on.length ? `<b>${items} figure${items === 1 ? '' : 's'} from ${runs} run${runs === 1 ? '' : 's'} · about ${dur(tot).replace(/^about /, '')}${known.length < on.length ? ` + ${on.length - known.length} not yet timed` : ''}</b><span>done around ${clockAt(Date.now() + tot)}${known.some((t) => t.src === 'last') ? ' · * from the last run' : ''}</span>` : '<span>Nothing ticked.</span>'}</div>
+      <div class="xl-acts"><button type="button" class="btn sm primary" data-g="go" ${on.length && items && !busy ? '' : 'disabled'}>${XL.gen.running ? `Generating ${XL.gen.running.k + 1} of ${XL.gen.running.n}…` : `Generate ${items || ''} figure${items === 1 ? '' : 's'}`}</button></div>
       ${XL.gen.last ? `<p class="sp-note xl-glast">${XL.gen.last}</p>` : ''}`;
-    host.querySelectorAll('[data-gp]').forEach((x) => x.onchange = () => { if (x.checked) XL.gen.pick[x.dataset.gp] = XL.gen.pick[x.dataset.gp] || 'view'; else delete XL.gen.pick[x.dataset.gp]; genSave(); drawGen(host); });
-    host.querySelectorAll('select[data-gk]').forEach((x) => x.onchange = () => { XL.gen.pick[x.dataset.gk] = x.value; genSave(); drawGen(host); });
+    host.querySelectorAll('[data-gp]').forEach((x) => x.onchange = () => { if (x.checked) XL.gen.pick[x.dataset.gp] = XL.gen.pick[x.dataset.gp] || { figs: figDefault(x.dataset.gp) }; else delete XL.gen.pick[x.dataset.gp]; genSave(); drawGen(host); });
+    host.querySelectorAll('[data-gf]').forEach((x) => x.onclick = () => { const [id, k] = x.dataset.gf.split(':'), P = XL.gen.pick[id]; if (!P) return; P.figs = P.figs.includes(k) ? P.figs.filter((y) => y !== k) : [...P.figs, k]; genSave(); drawGen(host); });
     host.querySelectorAll('[data-gpv]').forEach((x) => x.onclick = () => genPreview(x.dataset.gpv));
     const go = host.querySelector('[data-g=go]'); if (go) go.onclick = () => genRun(); }
   // Preview (2026-11-09): run the study once, frame its result in 3D (or go back to the view set before); the person orbits, pans
@@ -385,21 +415,43 @@ export function mountChrome(app, api) {
       else if (k === 'clear') { delete XL.gen.cam[id]; genSave(); back(); } else back(); });
     root.append(bar); }
   const genCam = async (id) => { const c = XL.gen.cam[id]; if (c && INST.persp.ws.camViewSet?.(c)) await new Promise((r) => setTimeout(r, 120)); };
-  async function genRun() { const G = genList().filter((g) => XL.gen.pick[g.id]); if (!G.length || XL.gen.running || ST.busy) return;
-    const times = G.map((g) => timeOf(g.id, XL.gen.pick[g.id])?.ms || 0), done = [], failed = [], keepId = ST.id; XL.gen.running = { k: 0, n: G.length }; XL.gen.last = '';
-    closePops(); BATCH = { n: G.length, k: 0, later: 0, final: false, cancel: false };
-    for (let k = 0; k < G.length; k++) { const g = G[k], kind = XL.gen.pick[g.id]; Object.assign(BATCH, { k, later: times.slice(k + 1).reduce((a, t) => a + t, 0), final: k === G.length - 1 }); XL.gen.running.k = k; let ok = false, why = '';
-      try { if (g.id === 'section') ok = await xlAddSection();
-        else { openStudy(g.id); await new Promise((r) => setTimeout(r, 400));
-          if (kind === 'view') { await runStudy(); if (ST.res) await genCam(g.id); ok = !!ST.res && !!(await xlAddView()); if (!ST.res) why = ST.err; }
-          else { const out = await runSeries(kind, { preview: false }); ok = !!out && await xlAddSeries(g.id, kind, out.frames, out.q); if (!out) why = ST.err; } } }
-      catch (e) { why = e.message || String(e); }
-      (ok ? done : failed).push(ok ? g.name : `${g.name}${why ? ': ' + plain(why) : ''}`); if (BATCH.cancel) break; }
+  const setLv = async (id) => { if (!id) return; for (const I2 of Object.values(INST)) if (I2?.ready) { try { I2.ws.level(id); } catch { } } await new Promise((r) => setTimeout(r, 500)); };
+  async function genRun() { const G = genList().filter((g) => XL.gen.pick[g.id] && planOf(g.id).items); if (!G.length || XL.gen.running || ST.busy) return;
+    const times = G.map((g) => timeOf(g.id)?.ms || 0), done = [], failed = [], keep = { id: ST.id, lv: curLv(), modes: {}, view: ST.res ? ST.res.view : null }; XL.gen.running = { k: 0, n: G.length }; XL.gen.last = '';
+    closePops(); BATCH = { n: G.length, k: 0, later: 0, final: false, cancel: false }; let made = 0;
+    for (let k = 0; k < G.length; k++) { const g = G[k], P = planOf(g.id); Object.assign(BATCH, { k, later: times.slice(k + 1).reduce((a, t) => a + t, 0), final: k === G.length - 1 }); XL.gen.running.k = k; let n = 0; const why = [];
+      try { if (g.id === 'section') { if (await xlAddSection()) n++; else why.push('no section'); }
+        else {
+          // map views and charts: one run per mode (and floor), then every view of that run is painted and captured
+          const mk = SPEC[g.id]?.mode?.[0], lvs = PER_LEVEL.has(g.id) ? genLevels() : [null];
+          for (const mode of P.modes) { if (BATCH.cancel) break; if (mk && mode) { if (!(mk in keep.modes)) keep.modes[mk] = ST[mk]; ST[mk] = mode; }
+            const fs = P.maps.filter((x) => (x.mode || '') === mode);
+            for (const lv of lvs.length ? lvs : [null]) { if (BATCH.cancel) break; if (lv) await setLv(lv.id); openStudy(g.id); await new Promise((r) => setTimeout(r, 400)); ST.res = null; await runStudy(); if (!ST.res) { why.push(`${lv ? lv.name + ': ' : ''}${ST.err || 'did not run'}`); continue; } await genCam(g.id);
+              for (const x of fs) { const at = lv ? lv.name : '';
+                if (x.kind === 'chart') { if (await xlAddChart(at)) n++; else why.push(`${x.label}${at ? ' (' + at + ')' : ''}: no chart`); continue; }
+                const r = ST.res; if (r.views && r.views[x.view]) { applyView(r, x.view); paintRes(r); drawStudy(); await new Promise((res) => setTimeout(res, 350)); } else if (r.views && !r.views[x.view]) { why.push(`${x.label}: not in this result`); continue; }
+                if (await xlAddView(at)) n++; } } }
+          // series: months or seasons, one item each on one colour scale
+          for (const x of P.ser) { if (BATCH.cancel) break; openStudy(g.id); await new Promise((r) => setTimeout(r, 300)); const out = await runSeries(x.kind, { preview: false }); if (out && await xlAddSeries(g.id, x.kind, out.frames, out.q)) n++; else why.push(`${x.label}: ${ST.err || 'did not run'}`); } } }
+      catch (e) { why.push(e.message || String(e)); }
+      made += n; if (n) done.push(`${g.name} (${n})`); if (why.length) failed.push(`${g.name}: ${plain(why.join('; '))}`); if (BATCH.cancel) break; }
+    // back to the way the person left it: modes, level, the open study and its view
+    for (const [mk, v] of Object.entries(keep.modes)) ST[mk] = v; if (keep.lv) await setLv(keep.lv);
     const stopped = BATCH.cancel; BATCH = null; XL.gen.running = null;
-    XL.gen.last = `${done.length ? `Added: ${esc(done.join(', '))}.` : ''}${failed.length ? ` <span class="sp-warn">Could not make: ${esc(failed.join('; '))}.</span>` : ''}${stopped ? ' Stopped.' : ''}`;
-    runBar(failed.length && !done.length ? 'error' : 'done', { batch: `${done.length} of ${G.length} made for the export list${failed.length ? `, ${failed.length} could not run` : ''}` });
-    if (keepId && keepId !== ST.id && !stopped) { /* the study last open stays as the generation left it */ }
+    XL.gen.last = `${done.length ? `Added ${made} figure${made === 1 ? '' : 's'}: ${esc(done.join(', '))}.` : ''}${failed.length ? ` <span class="sp-warn">Not made: ${esc(failed.join(' · '))}.</span>` : ''}${stopped ? ' Stopped.' : ''}`;
+    runBar(failed.length && !done.length ? 'error' : 'done', { batch: `${made} figure${made === 1 ? '' : 's'} from ${done.length} of ${G.length} studies made for the export list${failed.length ? `, some could not be made` : ''}` });
     if (pops.xl.hidden) togglePop('xl', app.querySelector('.sp-xlb')); else drawXL(); }
+  // a study's chart as a picture (2026-11-13): the card's chart (SVG), drawn at print size on white, with the study's results and method
+  async function xlAddChart(at = '') { const r = ST.res, id = ST.id; if (!r) return false; drawStudy(); await new Promise((res) => setTimeout(res, 100));
+    const svgs = [...studyCard.querySelectorAll('.sp-stage svg')].filter((x) => x.viewBox?.baseVal?.width > 80), svg = svgs.find((x) => x.classList.contains('sp-hist')) || svgs.sort((a, b) => b.viewBox.baseVal.width * b.viewBox.baseVal.height - a.viewBox.baseVal.width * a.viewBox.baseVal.height)[0]; if (!svg) return false;
+    const vb = svg.viewBox.baseVal, scale = 1600 / vb.width, c2 = svg.cloneNode(true);
+    // inline the styles the page's CSS gives (text font and colour, line and shape paint), so the picture looks as on screen
+    const src = [svg, ...svg.querySelectorAll('*')], dst = [c2, ...c2.querySelectorAll('*')]; src.forEach((el2, n) => { const cs = getComputedStyle(el2), d2 = dst[n]; if (!d2.setAttribute) return; for (const pr of ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'font-family', 'font-size', 'font-weight', 'text-anchor']) { const v = cs.getPropertyValue(pr); if (v && !d2.getAttribute(pr)) d2.setAttribute(pr, v); } });
+    c2.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); c2.setAttribute('width', Math.round(vb.width * scale)); c2.setAttribute('height', Math.round(vb.height * scale)); c2.removeAttribute('class'); c2.style.cssText = '';
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(c2)), img = new Image(); img.src = url; try { await img.decode(); } catch { return false; }
+    const pad = 40, cv = document.createElement('canvas'); cv.width = Math.round(vb.width * scale) + pad * 2; cv.height = Math.round(vb.height * scale) + pad * 2; const g2 = cv.getContext('2d'); g2.fillStyle = '#fff'; g2.fillRect(0, 0, cv.width, cv.height); g2.drawImage(img, pad, pad);
+    const m = await xlMod(), blob = await m.canvasBlob(cv, 'image/png'); if (!blob) return false; const ttl = `${simName(id)} · chart${at ? ' · ' + at : ''}`;
+    return xlAdd({ kind: 'view', study: id, title: ttl, sub: `${simName(id)} · ${qualOf().name} · ${maturityOf(id).label}`, pictures: [{ label: ttl, blob }], cols: 1, legend: null, rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
   // what every item records: how it was computed
   const basisLine = (q = qualOf(), cell = 0) => { const c = xlCtx(); return `Quality ${q.name}${cell ? ` · ground grid ${fmt(cell, 2)} m` : ''} · model ${c.version} · conditions revision ${c.revision ?? '–'}${c.site ? ' · ' + c.site : ''}`; };
   const legendOf = (V, r) => { const cols = V.legendCols || INST.persp.ws.rampColors?.(r.ramp) || ['#ddd', '#333']; return { lo: V.lo, hi: V.hi, unit: V.unit || r.unit || '', dec: V.dec ?? r.dec ?? 1, stops: V.legendLabels ? cols.slice().reverse() : cols }; };
@@ -419,10 +471,10 @@ export function mountChrome(app, api) {
         rows: V ? (R.rows || []).slice(0, 10).map(([k, v]) => [X.plain(k), X.plain(v)]) : [], method: V ? X.plain(R.method || '') : 'A vertical cut through the model along the section line, each segment seen square on in a parallel view and unfolded side by side where the line turns; cut faces filled where closed solids are cut.', basis: basisLine(), objective: V ? objectiveOf(study) : 'A vertical section through the building along the section line, to read the spaces, levels and cut construction.', inputs: inputsFor(study, V ? R : null, qualOf(), [['Section', `${s.name || 'A'}, ${shape}`]]), notes: vent ? ['On the cut: one value per room (the airflow network treats each room as fully mixed), not air speed or temperature.'] : [] });
       return true; } finally { if (!was) await sectionView(false); } }
   // the study's view as it is now, at print size (about 1800 px wide), with its legend, key results and method
-  async function xlAddView() { const r = ST.res, id = ST.id; if (!r || !INST.persp.ready) return; if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 400)); }
+  async function xlAddView(at = '') { const r = ST.res, id = ST.id; if (!r || !INST.persp.ready) return; if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 400)); }
     const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1800 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (!c) return;
     const m = await xlMod(), V = (r.views && r.views[r.view]) || r, blob = await m.canvasBlob(c);
-    return xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name} · ${maturityOf(id).label}`, pictures: [{ label: m.plain(V.title || r.title || ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
+    return xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)) + (at ? ' · ' + at : ''), sub: `${simName(id)} · ${qualOf().name} · ${maturityOf(id).label}${at ? ' · ' + at : ''}`, pictures: [{ label: m.plain(V.title || r.title || '') + (at ? ' · ' + at : ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
   // ---- section (2026-11-07, after Revit's Section): the line is part of the model, drawn and edited on the plan (drag the line or a
   // head, click an arrow to flip, drag the dashed far edge); here: draw it, the Section view (square to the cut, parallel, with the
   // levels), the 3D cutaway, the far clip, and a study's result on the cut where the study has one through the height of a room

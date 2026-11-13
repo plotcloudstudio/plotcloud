@@ -30,10 +30,11 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 2 · Generate pictures: tick Sun hours (4 seasons), Natural ventilation (a view) and the section; each one's time and the total
     await p.click('.sp-xlb'); await p.waitForTimeout(800); const rows = await p.$$eval('.xl-gr label', (ls) => ls.map((l) => l.textContent.trim()));
     assert(rows.includes('Sun Hours') || rows.some((r) => /Sun hours/i.test(r)), 'Sun hours listed: ' + rows); assert(rows.some((r) => /Section A/.test(r)), 'the section listed: ' + rows);
-    await p.check('[data-gp=sunhours]'); await p.waitForTimeout(200); await p.selectOption('select[data-gk=sunhours]', 'seasons'); await p.check('[data-gp=vent]'); await p.check('[data-gp=section]'); await p.waitForTimeout(400);
+    await p.check('[data-gp=sunhours]'); await p.waitForTimeout(200); for (const k of ['hours', 'two', 'seasons']) await p.click(`[data-gf="sunhours:${k}"]`);   // figure sets (2026-11-13): the 4 seasons only
+    await p.check('[data-gp=vent]'); await p.waitForTimeout(200); for (const k of ['fresh', 'chart']) await p.click(`[data-gf="vent:${k}"]`); await p.check('[data-gp=section]'); await p.waitForTimeout(400);
     const gen = await p.evaluate(() => ({ t: [...document.querySelectorAll('.xl-gr.on')].map((r) => [r.querySelector('label').textContent.trim(), r.querySelector('.xl-t').textContent.trim()]), tot: document.querySelector('.xl-tot').innerText, go: document.querySelector('[data-g=go]').textContent }));
     const tSun = gen.t.find(([n]) => /Sun hours/i.test(n))[1], tVent = gen.t.find(([n]) => /ventilation/i.test(n))[1]; assert.match(tSun, /^~\d+ (s|min)|^~a second/, 'Sun hours: an estimate ' + tSun); assert.match(tVent, /first run|~/, 'ventilation: ' + tVent);
-    assert.match(gen.tot, /6 pictures · about[\s\S]*done around \d/, gen.tot); assert.match(gen.go, /Generate 6 pictures/);
+    assert.match(gen.tot, /3 figures from 2 runs · about[\s\S]*done around \d/, gen.tot); assert.match(gen.go, /Generate 3 figures/);
     await p.screenshot({ path: out + '/xl-generate.png' });
     console.log('PASS Generate pictures:', JSON.stringify(gen.t), '|', gen.tot.replace(/\s+/g, ' '));
     // 2b · Preview after the time: runs the study once, the person sets the 3D view, Use this view keeps it; the pictures come from it
@@ -52,7 +53,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 3 · generate: one after another, the run at the top says which; all three join the list
     await p.click('[data-g=go]'); await p.waitForFunction(() => /1 of 3 · Sun hours/i.test(document.querySelector('.sp-runbar')?.innerText || ''), null, { timeout: 30000 });
     await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent === 3, null, { timeout: 900000 });
-    await p.waitForFunction(() => /3 of 3 made for the export list/.test(document.querySelector('.sp-runbar')?.innerText || ''), null, { timeout: 60000 });
+    await p.waitForFunction(() => /3 figures from 3 of 3 studies made for the export list/.test(document.querySelector('.sp-runbar')?.innerText || ''), null, { timeout: 60000 });
     assert.equal(await p.locator('.sp-pop-sec [data-sec=xl]').count(), 0, 'no Add to export list on the Section card');
     const snapCams = await p.evaluate(() => window.__snapCams.slice(0, 4)); assert.equal(snapCams.length, 4); for (const c of snapCams) assert(c.p.every((v, k) => Math.abs(v - cam1.p[k]) < 1e-6) && c.t.every((v, k) => Math.abs(v - cam1.t[k]) < 1e-6), 'the 4 season pictures from the view set: ' + JSON.stringify([c, cam1]));
     console.log('PASS generated: 3 items');
