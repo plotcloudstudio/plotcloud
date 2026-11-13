@@ -7734,8 +7734,8 @@ if (window.__WSROLE) {
       const inside = (q, z, self) => solids.some((P) => P.id !== self && z > P.b && z < P.h && q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer));
       // one triangle split into k² pieces about the sample size; the pieces keep their corners, the value point sits 0.1 m out
       const addTri = (A, B, C, extra, self) => { const e1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], e2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]; let nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const ar = Math.hypot(...nn) / 2; if (ar < 1e-4) return; nn = nn.map((v) => v / (2 * ar)); if (nn[2] < -0.5) return;   /* undersides left out */
-        const k = Math.max(1, Math.min(12, Math.round(Math.sqrt(ar) / cell))), roof = nn[2] > 0.7, at = (a, b) => [A[0] + e1[0] * a + e2[0] * b, A[1] + e1[1] * a + e2[1] * b, A[2] + e1[2] * a + e2[2] * b];
-        for (let i = 0; i < k; i++) for (let j = 0; j < k - i; j++) for (const up of [0, 1]) { if (up && j === k - i - 1) continue;
+        const k = Math.max(1, Math.min(160, Math.round(Math.sqrt(ar) / cell))), roof = nn[2] > 0.7, at = (a, b) => [A[0] + e1[0] * a + e2[0] * b, A[1] + e1[1] * a + e2[1] * b, A[2] + e1[2] * a + e2[2] * b];
+        for (let i = 0; i < k; i++) for (let j = 0; j < k - i; j++) for (const up of [0, 1]) { if (up && j === k - i - 1) continue; if (list.length >= 150000) return;
           const c = up ? [[i + 1, j], [i + 1, j + 1], [i, j + 1]] : [[i, j], [i + 1, j], [i, j + 1]], V = c.map(([a, b]) => at(a / k, b / k)), g = [(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][1] + V[1][1] + V[2][1]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3], p = [g[0] + nn[0] * 0.1, g[1] + nn[1] * 0.1, g[2] + nn[2] * 0.1];
           if (self != null && inside(p, p[2], self)) continue;   /* a face against another solid: hidden, left out */
           list.push({ p, n: nn, tri: [...V[0], ...V[1], ...V[2]], roof, ...extra }); } };
