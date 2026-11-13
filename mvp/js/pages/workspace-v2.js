@@ -21,7 +21,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=p0-20261112-1';
+import { mountChrome } from '../workspace-chrome.js?v=p1b-20261112-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -113,7 +113,7 @@ function ensureStudio(p) {
   return true;
 }
 
-export function render(app, [pid]) {
+export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/{id}?add=sim (2026-11-12)
   const p = (pid && S.project(pid)) || currentProject();
   if (!p) { app.innerHTML = '<div class="wrap"><p>No project yet. <a href="#/">Create one on Home.</a></p></div>'; return; }
   setCurrent(p);

@@ -8,7 +8,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const p = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message));
     const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
-    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); });
+    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); localStorage.setItem('pc-unfold', '1'); });
     await p.goto(base + '/mvp/#/new-project'); await p.waitForFunction(() => window.__newProjectMap, null, { timeout: 30000 });
     await p.evaluate(() => window.__newProjectMap.place(49.2448, -123.0071, 'QA site')); await p.waitForFunction(() => window.__newProjectMap.osm, null, { timeout: 120000 });
     await p.click('#npStart'); await p.waitForFunction(() => window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 180000 });
@@ -37,7 +37,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // finer grids from Project props (2026-11-01): the building surface grid, the ground grid and the flow detail; the card gives a
     // time estimate before Start and counts it during the run, and the result uses the finer grids
     const before = await p.evaluate(() => window.__wsStudy.state().res.slist?.length || __ws2.inst.persp.ws.surfaceList().length);
-    await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'), pr = A.currentProject(), c = S.conditionsOf(pr); S.updateConditions(pr, { ...c.site }, { ...c.defaults, grid: '2', surfGrid: '0.25', flowDetail: 'Fine' }); S.save(); });
+    await p.evaluate(async () => { const S = await import('./js/store.js'), A = await import('./js/app.js'), pr = A.currentProject(), c = S.conditionsOf(pr); S.updateConditions(pr, { ...c.site }, { ...c.defaults, grid: '2', surfGrid: '0.25', flowDetail: 'Fine' }); S.save(); localStorage.setItem('pc-unfold', '1'); });
     await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=sunhours]'); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 });
     const est = await p.locator('.sp-studycard .sp-est').innerText(); assert.match(est, /(Draft|Standard|Refined) · estimated time: .*ground [\d,]+ cells at 2(\.00)? m.*building [\d,]+ squares at 0\.25 m/, est);
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });

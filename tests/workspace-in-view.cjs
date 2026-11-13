@@ -8,7 +8,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const p = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message));
     const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
-    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); });
+    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); localStorage.setItem('pc-unfold', '1'); });
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-view]');
     assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('#nav [data-nav]')].map((a) => a.dataset.nav)), ['home', 'resources', 'pricing']);
     console.log('PASS main nav: Dashboard, Resources, Pricing (the Workspace, its studies and results are reached from the Dashboard)');

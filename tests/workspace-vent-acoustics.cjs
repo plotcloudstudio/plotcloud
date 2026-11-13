@@ -8,7 +8,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
   try {
     const p = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = []; p.on('pageerror', (e) => errs.push(e.message)); const base = process.env.TEST_BASE || 'http://127.0.0.1:8765';
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
-    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); });
+    await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); localStorage.setItem('pc-unfold', '1'); });
     await p.goto(base + '/mvp/#/new-project'); await p.waitForFunction(() => window.__newProjectMap, null, { timeout: 30000 });
     await p.evaluate(() => window.__newProjectMap.place(49.2448, -123.0071, 'QA vent block')); await p.waitForFunction(() => window.__newProjectMap.osm, null, { timeout: 120000 });
     await p.click('#npStart'); await p.waitForFunction(() => location.hash.startsWith('#/workspace') && window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 180000 });
@@ -36,7 +36,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS the network: rooms on both levels, total', Math.round(d.total), 'L/s (ajar', Math.round(d.half), ', stack alone', Math.round(d.still), '), openings in', d.inS, 'out', d.outS);
     // the study, from Add simulation › Interior: one wind
     await p.click('#addSimInt'); await p.click('.w2-simmenu [data-addsim="vent"]'); await p.waitForTimeout(1500);
-    let card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Natural Ventilation[\s\S]*One wind[\s\S]*Through the year[\s\S]*Windows[\s\S]*Doors[\s\S]*Target/i); assert.equal(await p.locator('.sp-host').count(), 0, 'it runs in the Workspace, not on the old page');
+    let card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Natural Ventilation[\s\S]*One wind[\s\S]*Through the year[\s\S]*Windows[\s\S]*Target[\s\S]*Advanced: doors[\s\S]*Doors/i); assert.equal(await p.locator('.sp-host').count(), 0, 'it runs in the Workspace, not on the old page');
     await p.waitForFunction(() => /m\/s at 10 m|Without the project weather/.test(document.querySelector('.sp-studycard')?.innerText || ''), null, { timeout: 120000 });
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 180000 });
     let r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view, results: s.res?.results }; });
