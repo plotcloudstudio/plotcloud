@@ -260,6 +260,10 @@ function summary() {
 }
 function roomAt(p) { const G = GC.G, cx = Math.floor(p[0] / G.c), cy = Math.floor(p[1] / G.c); if (cx < 0 || cy < 0 || cx >= G.W || cy >= G.H) return -1; return GC.R.room[cy * G.W + cx]; }
 function luxAt(e, i) { if (!YEAR) buildYear(); if (YEAR.alt[i] <= 0.5) return 0; const L = Lof(i); return hourLux(e.sk, e.ir, L, i)[0]; }
+// the illuminance at one hour of the project weather on every spot of the last run (2026-11-14), from the coefficients it kept: a frame
+// of the daylight played through the day and the year. m 1–12, d 1–31, h 0–23 (local standard time, the EPW's hour)
+export function luxFrame(m, d, h, res = RES) { if (!res || !res.ev) return null; const MD = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; let doy = d - 1; for (let k = 0; k < m - 1; k++) doy += MD[k]; const i = Math.max(0, Math.min(8759, doy * 24 + h));
+  return Float32Array.from(res.ev, (e) => (e && e.sk ? luxAt(e, i) : NaN)); }
 export const LEVELS = {
   draft: { name: 'Draft', T: 15, cand: [[0.5, 180], [0.75, 144], [1, 120]] },
   standard: { name: 'Standard', T: 180, cand: [[0.2, 360], [0.25, 360], [0.3, 360], [0.4, 240], [0.5, 180]] },
