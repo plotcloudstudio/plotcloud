@@ -123,3 +123,10 @@ export function run(sc, o) {
   EYE = +o.eye || 1.0; TGT = +o.tgt || 0; GC = { key: '' }; analyse(); return { A, CMP };
 }
 export { CMP };
+// a walk round the room of the last run, and the isovist at any point of it (2026-11-14): the rays only (about a millisecond), with the
+// hazards seen from there; the room's own region bounds the walk (an ellipse round its middle, kept to the room)
+export function polyAt(v, E = EYE) { if (!SC || !A || !A.S) return null; const rays = castRays(A.S, v, E); return { poly: rays.map((r, k) => [v[0] + Math.cos(k * DA) * r.end, v[1] + Math.sin(k * DA) * r.end]), haz: SC.haz.map((h) => sees(A.S, v, E, h.x, h.y, h.h)) }; }
+export function walkPath(n = 48) { if (!A || !A.reg || !A.G) return []; const G = A.G; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < A.reg.length; i++) if (A.reg[i]) { const x = (i % G.W + 0.5) * G.c, y = (((i / G.W) | 0) + 0.5) * G.c; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (!Number.isFinite(x0)) return []; const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = Math.max(0.6, (x1 - x0) * 0.3), ry = Math.max(0.6, (y1 - y0) * 0.3), inR = (x, y) => { const i = Math.floor(x / G.c), j = Math.floor(y / G.c); return i >= 0 && j >= 0 && i < G.W && j < G.H && A.reg[j * G.W + i]; };
+  const out = []; for (let k = 0; k < n; k++) { const a = 2 * Math.PI * k / n, x = cx + rx * Math.cos(a), y = cy + ry * Math.sin(a); if (inR(x, y)) out.push([x, y]); } return out; }

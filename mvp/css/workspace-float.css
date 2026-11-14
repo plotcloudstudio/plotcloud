@@ -679,3 +679,8 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 .w2.sp .sp-sound .sp-v3{position:relative;height:320px;border-radius:8px;overflow:hidden;background:#0a0e16}
 .w2.sp .sp-sound .sp-v3 canvas:not(.v3hud){width:100%!important;height:100%!important;display:block}
 .w2.sp .sp-sound .v3hud{position:absolute;right:8px;top:8px;width:230px;height:110px;pointer-events:none;border-radius:6px}
+/* the playback bar (2026-11-14): ▶, scrubber, ■, and what the frame is */
+.w2.sp .sp-tline{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;margin:8px 14px 0}
+.w2.sp .sp-tline .btn{margin:0;min-width:30px;padding:4px 8px}
+.w2.sp .sp-tline input[type=range]{width:100%}
+.w2.sp .sp-tline .sp-tll{grid-column:1 / -1;margin:0;font-variant-numeric:tabular-nums}
