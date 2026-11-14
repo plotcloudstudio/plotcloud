@@ -178,7 +178,8 @@ export function stop() { STOP = true; }
 export async function run(sc, o, onProg) {
   STOP = false; const p = plan(sc, o), t0 = performance.now(), R = await computeVGA(p.sp, p.nr, onProg || (() => {})); if (!R) throw Error('Stopped.');
   const secs = (performance.now() - t0) / 1000; try { localStorage.setItem(RATEK, String(Math.max(1e-13, (secs - 0.3) / (R.N ** 3 / 32 + R.N * p.nr * Math.max(8, GC.S.length) * 3 + R.N * R.N * 4)))); } catch (e) { }
-  if (o.agents) { const A = runAgents(R, o.agents); for (let s = 0; s < (o.steps || 1500); s++) A.step(); R.gate = A.gate; R.agentN = o.agents; R.agentSteps = o.steps || 1500;
+  if (o.agents) { const A = runAgents(R, o.agents), nt = Math.min(48, o.agents), tr = A.ag.slice(0, nt).map((g) => [[g.x, g.y]]);   // the walks of the first agents, kept to be played back (2026-11-14)
+    for (let s = 0; s < (o.steps || 1500); s++) { A.step(); if (s < 480 && s % 2 === 1) A.ag.slice(0, nt).forEach((g, n) => tr[n].push([g.x, g.y])); } R.agentTrails = tr; R.gate = A.gate; R.agentN = o.agents; R.agentSteps = o.steps || 1500;
     const fr = robust(R.gate), ir = robust(R.integ); R.flowdepth = Float32Array.from(R.integ, (v, k) => 0.65 * Math.sqrt(clamp((R.gate[k] - fr[0]) / (fr[1] - fr[0]), 0, 1)) + 0.35 * clamp((v - ir[0]) / (ir[1] - ir[0]), 0, 1)); }
   return { R, G: GC.G, reg: GC.R.reg, area: GC.R.area, approx: GC.R.approx, plan: p };
 }
