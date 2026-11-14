@@ -665,3 +665,9 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 .w2.sp .sp-flow a[aria-current][data-done=true] i{color:#fff}
 .w2.sp .sp-flowsep{color:#c4c9d0;font-size:11px}
 .w2.sp .sp-tr .sp-tlink{display:inline-flex;align-items:center;height:32px;padding:0 8px;border-radius:8px;color:var(--sp-ink,#111827);text-decoration:none;font:500 11.5px Inter,system-ui,sans-serif;white-space:nowrap}.w2.sp .sp-tr .sp-tlink:hover{background:#f3f4f6}
+/* motion (2026-11-14): a new result's chart bars grow from the axis; none with reduced motion */
+@keyframes spGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.w2.sp svg.sp-grow rect{transform-box:fill-box;transform-origin:50% 100%;animation:spGrow .7s cubic-bezier(.2,.8,.2,1) both}
+.w2.sp svg.sp-grow polyline:not([stroke-dasharray]){stroke-dasharray:1600;stroke-dashoffset:1600;animation:spDraw 1.1s ease-out .15s forwards}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.w2.sp svg.sp-grow rect,.w2.sp svg.sp-grow polyline{animation:none;stroke-dashoffset:0}}
