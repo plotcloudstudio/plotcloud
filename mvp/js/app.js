@@ -91,6 +91,7 @@ export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
+  document.body.classList.toggle('pc-project-entry', key === 'new-project');
   const publicRoute=['pricing','about','blog','login','resources','legal','founder','admin'].includes(key);
   // the Workspace, its simulations and a project's results are one place, reached from the Dashboard (2026-10-30)
   const navKey = ['workspace', 'simulations', 'results', 'project', 'activity'].includes(key) ? 'home' : key;
@@ -111,10 +112,10 @@ export async function route() {
       const toolName=[...MODEL_TOOLS,...RESOURCES.utilities,...RESOURCES.refs].find(t=>t.tool===resource)?.name||({stairs3d:'Stair generator',doors3d:'Door generator'})[resource];
       renderGate(publicRoute?publicPage(app,key,params):app, toolName || 'This tool');
       if (key === 'batch-run' && params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Active membership required.'},location.origin);
-      document.title = 'Membership access · PlotCloud'; return;
+      document.title = 'Membership access · SimuSite'; return;
     }
   }
-  const recover=error=>{app.innerHTML=`<div class="wrap"><h1 class="display md">This page could not finish loading.</h1><p>Your saved projects and results are kept. Reload to try again, or return to Workspace.</p><details><summary>Technical details</summary><p>${esc(error.message||'Page unavailable')}</p></details><button type="button" class="btn accent" id="retryPageLoad">Reload page</button> <a class="btn" href="#/workspace">Open Workspace</a> <a class="btn" href="#/simulations">Browse studies</a></div>`;$('#retryPageLoad',app).onclick=()=>location.reload();document.title='Page recovery · PlotCloud';};
+  const recover=error=>{app.innerHTML=`<div class="wrap"><h1 class="display md">This page could not finish loading.</h1><p>Your saved projects and results are kept. Reload to try again, or return to Workspace.</p><details><summary>Technical details</summary><p>${esc(error.message||'Page unavailable')}</p></details><button type="button" class="btn accent" id="retryPageLoad">Reload page</button> <a class="btn" href="#/workspace">Open Workspace</a> <a class="btn" href="#/simulations">Browse studies</a></div>`;$('#retryPageLoad',app).onclick=()=>location.reload();document.title='Page recovery · SimuSite';};
   let mod;try{mod=await PAGES[key]();}catch(error){if(isCurrent()){document.body.classList.remove('pc-public');recover(error);}return;}
 
   if(!isCurrent())return;
@@ -136,7 +137,7 @@ export async function route() {
       refreshProjectContext(project);
     }
   }
-  document.title = 'PlotCloud — ' + (key==='login'&&params.has('signup')?'Get started':TITLES[key]);
+  document.title = 'SimuSite — ' + (key==='login'&&params.has('signup')?'Get started':TITLES[key]);
   window.scrollTo(0, 0);
 }
 export const refreshWho = who;

@@ -5,22 +5,22 @@
 .lp-public.lp-public-resources .resource-engine{height:calc(100dvh - 118px);min-height:530px;margin:16px auto 24px;max-width:1600px;box-shadow:0 4px 16px #14233505}
 .lp-public.lp-public-resources .resource-engine>header{padding:16px 20px;align-items:center;gap:16px;background:#fff}
 .lp-public.lp-public-resources .resource-engine h1{font:650 23px/1.15 Inter,system-ui,sans-serif;letter-spacing:-.025em;margin:5px 0}
-.lp-public.lp-public-resources .resource-engine header p{margin:0;font-size:11px;line-height:1.5;color:#627286}
-.resource-tool-back{font-size:10px;font-weight:550;color:#627286!important;text-decoration:none}
+.lp-public.lp-public-resources .resource-engine header p{margin:0;font-size:11px;line-height:1.5;color:var(--brand-muted)}
+.resource-tool-back{font-size:10px;font-weight:550;color:var(--brand-muted)!important;text-decoration:none}
 .resource-tool-actions{display:flex;align-items:end;gap:12px;flex-shrink:0}
-.resource-tool-actions label{display:grid;gap:5px;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#627286}
-.resource-tool-actions select{font:12px Inter,system-ui,sans-serif;letter-spacing:0;text-transform:none;padding:9px 28px 9px 10px;border:1px solid #d2dbe6;border-radius:6px;min-height:36px}
+.resource-tool-actions label{display:grid;gap:5px;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--brand-muted)}
+.resource-tool-actions select{font:12px Inter,system-ui,sans-serif;letter-spacing:0;text-transform:none;padding:9px 28px 9px 10px;border:1px solid var(--pc-ui-border-strong);border-radius:6px;min-height:36px}
 .resource-tool-actions .btn{font-size:11px;padding:9px 12px;min-height:36px;border-radius:6px}
 .lp-public.lp-public-resources .resource-utility{max-width:1040px!important}
 .lp-public.lp-public-resources .resource-utility-header h1{font-size:36px;line-height:1.15;margin:12px 0 28px}
-.lp-public.lp-public-resources #utilityBody{font-family:Inter,system-ui,sans-serif;color:#142335}
-.lp-public.lp-public-resources #utilityBody>.resource-filter{padding:24px;border:1px solid #e0e6ed;border-radius:10px;background:#fff;align-items:start}
-.lp-public.lp-public-resources .resource-table{background:#fff;border:1px solid #e0e6ed;border-radius:8px}
+.lp-public.lp-public-resources #utilityBody{font-family:Inter,system-ui,sans-serif;color:var(--brand-ink)}
+.lp-public.lp-public-resources #utilityBody>.resource-filter{padding:24px;border:1px solid var(--brand-border);border-radius:10px;background:#fff;align-items:start}
+.lp-public.lp-public-resources .resource-table{background:#fff;border:1px solid var(--brand-border);border-radius:8px}
 .lp-public.lp-public-resources .resource-table th,.lp-public.lp-public-resources .resource-table td{padding:14px 18px;font-size:13px;line-height:1.5}
-.lp-public.lp-public-resources .resource-table thead th{background:#f0f4f8;font-size:11px;font-weight:600;color:#526276}
-.lp-public.lp-public-resources .resource-output{background:#fff;border-color:#e0e6ed;border-radius:8px;font-size:22px;line-height:1.5}
+.lp-public.lp-public-resources .resource-table thead th{background:var(--brand-soft);font-size:11px;font-weight:600;color:var(--pc-ui-secondary)}
+.lp-public.lp-public-resources .resource-output{background:#fff;border-color:var(--brand-border);border-radius:8px;font-size:22px;line-height:1.5}
 .lp-public.lp-public-resources .resource-credit{background:#fff;padding:14px 18px;gap:12px}
-.lp-public.lp-public-resources .resource-swatches{border-radius:8px;overflow:hidden;border:1px solid #e0e6ed}
+.lp-public.lp-public-resources .resource-swatches{border-radius:8px;overflow:hidden;border:1px solid var(--brand-border)}
 .lp-public.lp-public-resources .resource-swatches span{font:11px Inter,system-ui,sans-serif;padding:12px 4px}
 .lp-public.lp-public-resources .resource-utility .btn{margin-top:12px}
 .lp-public.lp-public-resources .resource-reference{padding:20px 0;font-size:13px}
