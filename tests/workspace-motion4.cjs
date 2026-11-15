@@ -28,7 +28,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.waitForFunction(() => window.__wsStudy?.open && window.__ws2?.inst.persp.ready, null, { timeout: 240000 }); await p.waitForTimeout(1000);   // the Workspace of this project, built
     // water sound ripples
     await run('watersound'); B = await bar(); assert(B && B.n === 20, 'ripples ' + JSON.stringify(B)); await seek(0); const r0 = (await ms()).ovSum; B = await seek(5); const r1 = (await ms()).ovSum; assert.notEqual(r0, r1, 'the rings move'); assert.match(B.label, /illustration/);
-    await p.evaluate(() => document.querySelector('.sp-studycard [data-tl=reset]').click()); await p.waitForTimeout(400); await p.screenshot({ path: `${out}/m4-water.png` }); console.log('PASS water sound ripples');
+    await p.evaluate(() => document.querySelector('.sp-studycard [data-tl=reset]').click()); await p.waitForTimeout(400); await p.screenshot({ path: `${out}/m4-water.png`, timeout: 120000 }); console.log('PASS water sound ripples');
     // sky dome at a spot: the same value as the study's cell
     await run('skyview'); const cell = await p.evaluate(() => { const r = window.__wsStudy.state().res; let best = -1; for (let c = 0; c < r.vals.length; c++) if (Number.isFinite(r.vals[c]) && r.vals[c] > 20 && r.vals[c] < 95) { best = c; break; } return best < 0 ? null : { v: r.vals[best], pt: [r.X0 + (best % r.nx + 0.5) * r.cell, r.Y0 + (Math.floor(best / r.nx) + 0.5) * r.cell] }; });
     assert(cell, 'a partly open cell'); const dm = await p.evaluate((pt) => window.__wsStudy.dome(pt), cell.pt); assert(dm && Math.abs(dm.sky - cell.v) < 5, `dome ${dm && dm.sky} vs cell ${cell.v}`); assert(await p.locator('.sp-dome svg circle').count() > 100);

@@ -1570,7 +1570,7 @@ export function mountChrome(app, api) {
       // ripples (2026-11-14): rings spreading from each fall and riffle over the computed level, the nearest source's; an illustration of
       // where the sound comes from, the colours stay the computed level
       const Dn = new Float32Array(vals.length).fill(NaN); for (let c = 0; c < vals.length; c++) { if (!Number.isFinite(vals[c])) continue; const x = g.X0 + (c % g.nx + 0.5) * g.cell, y = g.Y0 + (((c / g.nx) | 0) + 0.5) * g.cell; let d = Infinity; for (const s0 of src) d = Math.min(d, Math.hypot(x - s0.x, y - s0.y)); Dn[c] = d; }
-      const RIP = 20, lam = Math.max(4, g.cell * 4), timeline = src.length ? { n: RIP, ms: 110, label: () => `Ripples from ${src.length} source${src.length === 1 ? '' : 's'} (an illustration of where the sound comes from; the colours are the computed level)`,
+      const RIP = 20, lam = Math.max(4, g.cell * 4), timeline = src.length ? { n: RIP, ms: 200, label: () => `Ripples from ${src.length} source${src.length === 1 ? '' : 's'} (an illustration of where the sound comes from; the colours are the computed level)`,
         show: (i, r2) => { if (r2.view !== 'level') { groundVals(null); return; } const ph = i / RIP; groundVals(Float32Array.from(vals, (v, c) => (Number.isFinite(v) ? v + 4 * Math.max(0, Math.cos(2 * Math.PI * (Dn[c] / lam - ph))) * Math.max(0, Math.min(1, (v - 40) / 25)) : NaN))); },
         reset: () => groundVals(null) } : null;
       return { ...g, cells: st.n, avg: st.avg, slist: sl, timeline, views: {
