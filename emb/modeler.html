@@ -5541,7 +5541,8 @@ function walkShow(o) {
 }
 function walkMarks() {   // a study's own marks on its sheet: lines (windows to screen, sight lines) and dots (onlookers, observers)
   const o = WK.o, g2 = WK.g, k = WK.k, b = o.box, V2 = (p) => [(p[0] - b.x0) * k, (b.y1 - p[1]) * k];
-  for (const l of o.lines || []) { const a = V2(l.a), c = V2(l.b); g2.strokeStyle = l.col || '#d8402a'; g2.lineWidth = Math.max(2, (l.w || 0.2) * k); g2.globalAlpha = l.al ?? 1; g2.beginPath(); g2.moveTo(a[0], a[1]); g2.lineTo(c[0], c[1]); g2.stroke(); }
+  for (const l of o.lines || []) { const a = V2(l.a), c = V2(l.b); g2.strokeStyle = g2.fillStyle = l.col || '#d8402a'; g2.lineWidth = Math.max(2, (l.w || 0.2) * k); g2.globalAlpha = l.al ?? 1; g2.beginPath(); g2.moveTo(a[0], a[1]); g2.lineTo(c[0], c[1]); g2.stroke();
+    if (l.head) { const dx = c[0] - a[0], dy = c[1] - a[1], ln = Math.hypot(dx, dy) || 1, ux = dx / ln, uy = dy / ln, h = Math.max(5, g2.lineWidth * 3.2); g2.beginPath(); g2.moveTo(c[0] + ux * h * 0.4, c[1] + uy * h * 0.4); g2.lineTo(c[0] - ux * h - uy * h * 0.6, c[1] - uy * h + ux * h * 0.6); g2.lineTo(c[0] - ux * h + uy * h * 0.6, c[1] - uy * h - ux * h * 0.6); g2.closePath(); g2.fill(); } }   /* an arrow (views, 2026-11-14) */
   for (const l of o.paths || []) { if (!l.pts || l.pts.length < 2) continue; g2.strokeStyle = l.col || '#3b6fb6'; g2.lineWidth = Math.max(1.5, (l.w || 0.12) * k); g2.lineJoin = 'round'; g2.globalAlpha = l.al ?? 0.85; g2.beginPath(); l.pts.forEach((q, i) => { const p = V2(q); i ? g2.lineTo(p[0], p[1]) : g2.moveTo(p[0], p[1]); }); g2.stroke(); }
   for (const d of o.dots || []) { const p = V2(d.p), r = Math.max(2, (d.r || 0.25) * k); g2.fillStyle = d.col || '#111'; g2.globalAlpha = d.al ?? 0.8; if (d.square) g2.fillRect(p[0] - r, p[1] - r, 2 * r, 2 * r); else { g2.beginPath(); g2.arc(p[0], p[1], r, 0, 7); g2.fill(); }
     if (d.ring) { g2.globalAlpha = 1; g2.strokeStyle = '#fff'; g2.lineWidth = Math.max(1, r * 0.25); g2.beginPath(); g2.arc(p[0], p[1], r, 0, 7); g2.stroke(); }
@@ -7648,6 +7649,10 @@ if (window.__WSROLE) {
     // counts as its wall bodies and each room's bounding box up to its ceiling. Returns the figures; draws the result in 3D.
     // directions from a ground cell to the sky, each with a weight: what each ground cell sees of each set (2026-10-31).
     // dirSets: [[{ az (° from true north), alt (°), w }]]. Same shading as Sun hours (masses, the building, surroundings, terrain).
+    // the sky dome at one spot of the ground (2026-11-14): which of the given sky directions are clear from 0.1 m above it, past the design,
+    // the surroundings and the terrain, as the sky view study tests each cell; null under a building
+    skyMaskAt(x, y, vecs) { const pr = studyPrisms(), nb = M.north || 0, box = { X0: x - 0.05, Y0: y - 0.05, cell: 0.1, nx: 1, ny: 1 }, out = [];
+      for (const v of vecs) { if (!(v[2] > 0)) { out.push(0); continue; } const g = sunGrid(M, pr, { box, dirs: [rayDir({ vec: v, w: 1 }, nb)] }); if (!g || !Number.isFinite(g.H[0])) return null; out.push(g.H[0] > 0 ? 1 : 0); } return out; },
     rayGrid(dirSets, o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
       const pr = studyPrisms(), box = studyBox(pr, o.pad), out = [], t0 = performance.now(), nb = M.north || 0;

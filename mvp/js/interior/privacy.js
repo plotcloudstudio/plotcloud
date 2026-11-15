@@ -68,3 +68,6 @@ function figures() {
 export async function run(scene, o, prog) { SC = { ...scene, walls: scene.walls || [], open: scene.open || [], rooms: scene.rooms || [], furn: scene.furn || [] }; OPTS = o; RES = null;
   await analyse({ say() {}, prog: prog || (() => {}) }); if (!RES) throw Error('Stopped.'); return { SC, RES, F: figures(), winRoom, needOf }; }
 export { EXP, NEED, NEEDT, LIMIT };
+// one onlooker of the last run (2026-11-14): the floor spots they see and the windows they see them through, for a passer-by walked
+// along the street; the same test as the study, for one person (about spots × walls)
+export function seesFrom(i) { if (!RES || !RES.obs[i]) return null; const ob = RES.obs[i], seen = [], wins = new Set(); for (const k of RES.cells) { const w = sees(ob, centre(RES.R, k), 1.2, RES.o, RES.z0); if (w) { seen.push(k); wins.add(w); } } return { ob, seen, wins: [...wins] }; }
