@@ -6443,7 +6443,7 @@ window.S3 = (() => {
   // round the target so the clip loops seamlessly, with the title, the legend and a stamp saying it is computed; WebM from the browser
   api.record = (o = {}) => new Promise((resolve) => { if (!R || !cam || typeof MediaRecorder === 'undefined') { resolve(null); return; } api.motionFinish();
     const W = o.w || 1080, Hh = o.h || 1350, ms = Math.max(2000, o.ms || 8000), cv2 = document.createElement('canvas'); cv2.width = W; cv2.height = Hh; const g = cv2.getContext('2d');
-    const st = cv2.captureStream(30), mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m)) || '', rec = new MediaRecorder(st, mime ? { mimeType: mime, videoBitsPerSecond: 8e6 } : {}), parts = [];
+    const st = cv2.captureStream(30), mime = [o.mime, 'video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => m && MediaRecorder.isTypeSupported(m)) || '', rec = new MediaRecorder(st, mime ? { mimeType: mime, videoBitsPerSecond: 8e6 } : {}), parts = [];
     rec.ondataavailable = (e) => { if (e.data && e.data.size) parts.push(e.data); }; rec.onstop = () => resolve(parts.length ? new Blob(parts, { type: mime || 'video/webm' }) : null);
     const off0 = cam.position.clone().sub(ctl.target), sw = (o.sway ?? 16) * Math.PI / 180, t0 = performance.now(), L = o.legend, ink = '#111827';
     const overlay = () => { const pad = Math.round(W * 0.045); g.save();
