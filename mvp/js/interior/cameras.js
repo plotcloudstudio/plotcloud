@@ -199,11 +199,24 @@ export async function run(sc, o, onProg = () => {}) {
   const prog = (f) => { if (STOP) throw Error('Stopped.'); onProg(f); };
   const C = await candidates(prog); if (!C.list.length) throw Error('No place on the walls sees any floor: draw closed walls, or check the model.');
   const cnt = new Uint16Array(C.Tn), sel = [], curve = [], N = Math.max(1, Math.round(+o.n || 4)), want = +o.want || 0.95, covOf = () => { let s = 0; for (let t = 0; t < C.Tn; t++) if (cnt[t]) s++; return s / C.Tn; };
-  for (let n = 1; n <= 30; n++) { if (!grow(C, cnt, sel, null)) break; swaps(C, cnt, sel, null); const cov = covOf(); curve.push({ n, cov, sel: sel.slice(), cost: sel.reduce((s, j) => s + C.list[j].price, 0) });
+  for (let n = 1; n <= (o.mode === 'all' ? 80 : 30); n++) { if (!grow(C, cnt, sel, null)) break; swaps(C, cnt, sel, null); const cov = covOf(); curve.push({ n, cov, sel: sel.slice(), cost: sel.reduce((s, j) => s + C.list[j].price, 0) });
     prog(0.3 + 0.7 * Math.min(1, o.mode === 'all' ? cov / want : n / N)); await tick(); if (cov >= C.reach / C.Tn - 1e-9) break; if (o.mode !== 'all' && n >= N) break; if (o.mode === 'all' && cov >= want - 1e-9) break; }
   const pick = o.mode === 'all' ? curve.find((p) => p.cov >= want - 1e-9) || curve[curve.length - 1] : curve.find((p) => p.n === N) || curve[curve.length - 1], L = C.list;
   SC.cams = pick.sel.map((j) => ({ x: +L[j].x.toFixed(3), y: +L[j].y.toFixed(3), dir: L[j].dir, type: L[j].type })); coverage();
-  return { COV, cams: SC.cams.map((q, k) => ({ ...q, col: camCol(k), poly: COV.masks[k].poly, name: TY(q.type).name, range: rangeOf(TY(q.type)) })), G: GC.G, R: GC.R, curve, pick, reach: C.reach / C.Tn, want, N };
+  // the search counts watch points every 25 cm; the result is measured on the floor cells. When everything is wanted, cameras are
+  // added for the slivers the coarse points missed, measured on the floor cells, until the target is met or no position sees more
+  // (2026-11-15: 100% asked gave 99.9%)
+  let topUp = 0, blocked = false;
+  if (o.mode === 'all') { const G = GC.G, reg = GC.R.reg, c = G.c;
+    while (COV.frac < want - 1e-9 && SC.cams.length < 80) { prog(0.98);
+      const unc = []; for (let i = 0; i < reg.length; i++) if (reg[i] && !COV.cnt[i]) unc.push(i); if (!unc.length) break;
+      const smp = unc.length > 600 ? unc.filter((_, k) => k % Math.ceil(unc.length / 600) === 0) : unc, ux = smp.map((i) => ((i % G.W) + 0.5) * c), uy = smp.map((i) => (((i / G.W) | 0) + 0.5) * c);
+      const score = []; for (let j = 0; j < L.length; j++) { const T = TY(L[j].type), R = rangeOf(T), half = isFish(T) ? 9 : T.fov / 2 * Math.PI / 180, dir = L[j].dir * Math.PI / 180; let g = 0;
+        for (let k = 0; k < smp.length; k++) { const dx = ux[k] - L[j].x, dy = uy[k] - L[j].y, r = Math.hypot(dx, dy); if (r > R) continue; if (half < Math.PI) { let a = Math.atan2(dy, dx); if (a < 0) a += 2 * Math.PI; if (angDiff(a, dir) > half) continue; } g++; } if (g) score.push([g, j]); }
+      score.sort((a, b) => b[0] - a[0]); let best = null, bg = 0; const U = new Uint8Array(reg.length); for (const i of unc) U[i] = 1;
+      for (const [, j] of score.slice(0, 60)) { const cam = { x: +L[j].x.toFixed(3), y: +L[j].y.toFixed(3), dir: L[j].dir, type: L[j].type }; let g = 0; for (const i of camMask(cam)) if (U[i]) g++; if (g > bg || (g === bg && g && best && L[j].price < TY(best.type).price)) { bg = g; best = cam; } }
+      if (!best || !bg) { blocked = true; break; } SC.cams.push(best); topUp++; coverage(); await tick(); } }
+  return { topUp, blocked, COV, cams: SC.cams.map((q, k) => ({ ...q, col: camCol(k), poly: COV.masks[k].poly, name: TY(q.type).name, range: rangeOf(TY(q.type)) })), G: GC.G, R: GC.R, curve, pick, reach: C.reach / C.Tn, want, N };
 }
 export { LEVELS, TYPES, BLUES_, CAMCOL };
 const BLUES_ = [[198, 219, 239], [107, 174, 214], [33, 113, 181], [8, 48, 107]];   // the page's How many see it colours

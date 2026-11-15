@@ -1,4 +1,4 @@
-// Results on the building fit the model (2026-11-13), on the Fallingwater case: Sun hours and Wind flow paint the facades and roofs
+// Results on the building fit the model (2026-11-13), on the Fallingwater case: Sun hours and Solar radiation paint the facades and roofs (Wind flow leaves them plain since 2026-11-15)
 // with pieces of the model's own faces, so no colour runs past a wall, a parapet or a rail:
 // · every sample is a triangle of a real face, drawn 1.5 cm off it
 // · no drawn corner lies outside the model (walls, masses, imported parts) by more than 5 cm
@@ -29,7 +29,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
         for (const wl of st) { const dx = wl.b[0] - wl.a[0], dy = wl.b[1] - wl.a[1], L2 = Math.hypot(dx, dy); if (L2 < 0.05) continue; const t = ((c[0] - wl.a[0]) * dx + (c[1] - wl.a[1]) * dy) / (L2 * L2); if (t < 0 || t > 1) continue; const d = Math.abs((c[0] - wl.a[0]) * dy - (c[1] - wl.a[1]) * dx) / L2; if (d <= (wl.t || 0.2) / 2 + 0.03 && Math.abs(lv[wl.lv].z - zLv) < 0.01 && d < bd) { bd = d; best = wl; } }   /* a wall of the sample's own floor */
         if (!best) continue; const zt = Math.max(...[2, 5, 8].map((i) => x.tri[i])) - top(best); if (zt > 0.03) { over++; overMax = Math.max(overMax, zt); if (over <= 4) (window.__ov ||= []).push({ c: c.map((v) => +v.toFixed(2)), z: +zc.toFixed(2), zmax: +Math.max(...[2, 5, 8].map((i) => x.tri[i])).toFixed(2), top: +top(best).toFixed(2), wall: best.id, h: best.h, lv: best.lv, roof: x.roof, glass: x.glass }); } }
       return { ov: window.__ov || [], n: L.length, missing, imp: L.filter((s) => s.imp).length, roofs: L.filter((s) => s.roof).length, out, worst: +worst.toFixed(3), over, overMax: +overMax.toFixed(2) }; });
-    for (const id of ['sunhours', 'wind']) { const r = await run(id); assert.equal(r.err, '', id + ': ' + r.err); assert(r.n > 500 && r.fin > 100, id + ' values: ' + JSON.stringify(r));
+    for (const id of ['sunhours', 'radiation']) { const r = await run(id); assert.equal(r.err, '', id + ': ' + r.err); assert(r.n > 500 && r.fin > 100, id + ' values: ' + JSON.stringify(r));
       const c = await check(); assert.equal(c.missing, 0, 'every sample is a piece of a face'); assert(c.imp > 100 && c.roofs > 50, JSON.stringify(c)); assert.equal(c.out, 0, 'no corner outside the model: ' + JSON.stringify(c)); assert.equal(c.over, 0, 'no colour above a wall top: ' + JSON.stringify(c));
       await p.screenshot({ path: `${out}/surface-fit-${id}.png` }); console.log(`PASS ${id}: ${r.n} samples (${r.fin} with a value) fit the model:`, JSON.stringify(c)); }
     await p.evaluate(() => __ws2.inst.persp.ws.camMove({ orbit: [0.35, 0.12], zoom: 0.3 })); await p.waitForTimeout(800); await p.screenshot({ path: `${out}/surface-fit-close.png` });   // a close look at the terraces and rails

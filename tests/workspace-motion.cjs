@@ -27,7 +27,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 4 · a motion clip, 4:5
     await p.click('.sp-studycard [data-st=exp]'); await p.waitForTimeout(300);
     const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 120000 }), p.click('.sp-studycard [data-st=vid][data-v="4:5"]')]); const f = `${out}/${dl.suggestedFilename()}`; await dl.saveAs(f);
-    const clip = await p.evaluate(() => window.__wsStudy.state().lastClip); assert(clip && clip.size > 20000 && clip.w === 1080 && clip.h === 1350 && /webm/.test(clip.type), JSON.stringify(clip)); assert.match(dl.suggestedFilename(), /^wind-flow-4x5\.webm$/); assert(fs.statSync(f).size === clip.size);
+    const clip = await p.evaluate(() => window.__wsStudy.state().lastClip); assert(clip && clip.size > 20000 && clip.w === 1080 && clip.h === 1350 && /webm|mp4/.test(clip.type), JSON.stringify(clip)); assert.match(dl.suggestedFilename(), /mp4/.test(clip.type) ? /^wind-flow-4x5\.mp4$/ : /^wind-flow-4x5\.webm$/);   /* MP4 where the browser records it (2026-11-15) */ assert(fs.statSync(f).size === clip.size);
     console.log('PASS the motion clip:', dl.suggestedFilename(), Math.round(clip.size / 1024) + ' kB');
     // 5 · reduced motion: nothing animates
     await p.emulateMedia({ reducedMotion: 'reduce' }); await run('skyview'); m = await ms(); assert(m.off && m.active.length === 0, 'no reveal with reduced motion: ' + JSON.stringify(m)); console.log('PASS reduced motion');
