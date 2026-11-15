@@ -16,7 +16,7 @@ import * as CL from '../../emb/lib/climate.js';
 import { speedRatio } from './wind-lbm.js?v=wind-20261031-5';
 import { stormwater } from './stormwater-grid.js?v=water-20261106-1';
 import * as WTRL from '../../emb/lib/water.js?v=water-20261106-1';
-import { canUse } from './beta-access.js';
+import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261114-1';
 import * as WAY from './interior/wayfinding.js?v=way-20261031-2';
@@ -1739,7 +1739,7 @@ export function mountChrome(app, api) {
       monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
   let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-4'));
   async function runSeries(kind, opts = {}) {
-    const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; }
+    const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id, p)) { ST.err = paidNote(simName(id)); drawStudy(); return; }
     if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }
     const list = def[kind], keep = ST[def.key], keepRes = ST.res, q = qualOf(), frames = []; syncLevels();
     // the estimate: one run per frame, at this quality
@@ -1779,7 +1779,7 @@ export function mountChrome(app, api) {
     try { for (let i = 0; i < frames.length; i++) { P.paint(i); const c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (c) pics.push({ label: frames[i].label, blob: await X.canvasBlob(c) }); await new Promise((r) => setTimeout(r, 0)); } } finally { P.restore(); }
     if (pics.length === frames.length) await xlAdd(P.item(pics)); return pics.length === frames.length; }
   async function runStudy() {
-    if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
+    if (ST.busy) return; if (!canUse(ST.id, p)) { ST.err = paidNote(simName(ST.id)); drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
     const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; runBar('tick'); }, 1000);
     try { for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
       ST.estAtRun = estimate(ST.id); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridFor(ST.id)); INST.persp.ws.surfaceCell?.(surfOf()); drawStudy(); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
@@ -1915,7 +1915,7 @@ export function mountChrome(app, api) {
     const seg = (attr, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" ${attr}="${k}" aria-selected="${cur === k}">${esc(n)}</button>`).join('')}</div>`;
     const about = typeof sp.about === 'function' ? sp.about() : sp.about || '', views = viewsOf(id), cur = r ? r.view : ST.view[id] || views[0]?.[0], area = AREAS.find((a) => a[0] === ST.area) || AREAS[0];
     const stage = ST.busy ? `<div class="sp-stage run"><h3>Solving…</h3><p class="sp-note">${esc(ST.progress || 'Working on the ground grid')}</p><p class="sp-note sp-elapsed">${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}</p></div>`
-      : ST.err ? `<div class="sp-stage"><h3>Could not run</h3><p class="sp-note sp-errtext">${esc(ST.err)}</p></div>`
+      : ST.err ? `<div class="sp-stage"><h3>Could not run</h3><p class="sp-note sp-errtext">${esc(ST.err)}</p>${/needs monthly access/.test(ST.err) ? '<p class="sp-acts sp-acts1"><a class="btn sm primary" href="#/pricing">See monthly access</a></p>' : ''}</div>`
       : !r ? `<div class="sp-stage"><h3>Click ▶ Start to begin</h3><p class="sp-note">${esc(about)}</p>${sp.noArea ? '' : `<p class="sp-note">Study area: ${esc(area[0] + '×')}${ST.areaInfo ? `, about ${fmt(ST.areaInfo.w)} × ${fmt(ST.areaInfo.h)} m (blue on the site)` : ''}. Change area makes it smaller or larger.</p>`}${sp.noArea ? '' : estLine(estFor())}</div>`
       : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${r.chartHTML ? r.chartHTML() : chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' + estLine(estFor()) : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' + estLine(estFor()) : ''}</div>`;
     const hh = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;

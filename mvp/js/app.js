@@ -78,6 +78,7 @@ export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab
   const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;
   if(/^#\/(?:studio|workspace-archive)(?:\/|$|\?)/.test(location.hash))history.replaceState(null,'',location.hash.replace(/^#\/(?:studio|workspace-archive)/,'#/workspace'));
+  if(/^#\/home-classic(?:\?|$)/.test(location.hash))history.replaceState(null,'','#/');   // the old homepage (2026-11-15): one homepage, its outdated copy no longer served
   if(/^#\/library(?:\?|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/library','#/resources/files'));
   if(/^#\/res\//.test(location.hash))history.replaceState(null,'',location.hash.replace('#/res/','#/resources/item/'));
   if(/^#\/showroom(?:\/|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/showroom','#/resources/showroom'));
@@ -108,7 +109,7 @@ export async function route() {
   const feature = SIMS.some(s => s.id === study) ? study : resourceTools.includes(resource) ? 'resource:' + resource : null;
   if (feature) {
     await checkAccess(); if (!isCurrent()) return;
-    if (!canUse(feature)) {
+    if (!canUse(feature, currentProject())) {
       const toolName=[...MODEL_TOOLS,...RESOURCES.utilities,...RESOURCES.refs].find(t=>t.tool===resource)?.name||({stairs3d:'Stair generator',doors3d:'Door generator'})[resource];
       renderGate(publicRoute?publicPage(app,key,params):app, toolName || 'This tool');
       if (key === 'batch-run' && params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Active membership required.'},location.origin);

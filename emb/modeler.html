@@ -7151,6 +7151,9 @@ window.S3 = (() => {
     return c.toDataURL('image/png'); };
   // ---- a picture of the view at a given size (2026-11-09: the tiles of a series preview, the sheet's frames): the same camera,
   // the same scene, w × h CSS pixels at the device pixel ratio (scale: more pixels for print); the view itself is put back
+  // let go of the 3D view's GPU memory at once when the Workspace closes (2026-11-15): left to the browser, removing the frame
+  // freed its WebGL objects one by one and held the page for seconds before the next page could draw
+  api.release = () => { try { api.on = false; scene?.traverse?.((o) => { o.geometry?.dispose?.(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach((x) => { for (const k in x) if (x[k] && x[k].isTexture) x[k].dispose(); x.dispose?.(); }); }); R?.renderLists?.dispose?.(); R?.dispose?.(); R?.forceContextLoss?.(); } catch (e) { console.warn(e); } };
   api.snapAt = (w, h, scale = 1) => { if (!R || !cam) return null; api.motionFinish(); const s0 = R.getSize(new T.Vector2()), pr = R.getPixelRatio(), a = cam.aspect, on = api.on;
     try { R.setPixelRatio(pr * scale); R.setSize(Math.max(16, Math.round(w)), Math.max(16, Math.round(h)), false); cam.aspect = w / h; cam.updateProjectionMatrix(); api.on = true; render();
       const c = document.createElement('canvas'); c.width = R.domElement.width; c.height = R.domElement.height; c.getContext('2d').drawImage(R.domElement, 0, 0); return c; }

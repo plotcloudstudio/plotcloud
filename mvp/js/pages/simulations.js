@@ -36,7 +36,7 @@ function catalog(app, params, access) {
   app.innerHTML = `<div class="wrap">
     <span class="eyebrow">Simulations</span>
     <div class="split" style="margin-top:16px"><h1 class="display">Choose a study.<br><span>Run it on a version.</span></h1>
-      <p class="lede">All simulations are currently free to use. No payment or activation code is required. Browse all ${SIMS.length} current analysis tools. Each runs its PlotCloud engine on a version of your model, using its recorded project conditions; save the result to that version, then compare it in Results.</p></div>
+      <p class="lede">Sun hours and Daylight are free on every project, and every study runs free on the example projects; the other studies on your own projects need monthly access (<a href="#/pricing">Pricing</a>). Browse all ${SIMS.length} current analysis tools. Each runs its PlotCloud engine on a version of your model, using its recorded project conditions; save the result to that version, then compare it in Results.</p></div>
     ${p ? `<p class="badge-pill" style="margin-top:32px;text-transform:none;letter-spacing:0;font:500 14px var(--sans)">Running on&nbsp;<b>${esc(p.name)}</b>&nbsp;· ${v ? `v${v.n}` : 'no saved version yet'} · ${esc((S.siteOf(p)?.label || '').split(',')[0])}</p>` : ''}
     <div class="card" style="margin-top:24px"><h2>New to simulation?</h2><p>Start with an editable example or check your own project. Run a study, save the result, then compare one design change.</p><a class="btn accent" href="#/start-study">Start a guided study</a> <a class="btn" href="#/local-compute">Local reference engines</a><p class="note">Radiance daylight factor and reviewed EnergyPlus jobs run on your computer or a school workstation. Separate engine installation is required.</p></div>
     <div class="pills" role="group" aria-label="Filter" style="margin-top:36px" id="filters">${groups.map((x) => `<button type="button" data-g="${x}" aria-pressed="${x === g}">${x}</button>`).join('')}</div>
@@ -53,7 +53,7 @@ function catalog(app, params, access) {
   const card = (s) => `<article class="card sim" data-scope="${s.scope}" data-category="${categoryOf(s.id)}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true">${thumbnail(s)}</a>
       <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
-      <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id) ? 'Enter' : 'Unlock'}</a>${LIVE}${ready(s)}</div></article>`;
+      <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id, p) ? 'Enter' : 'Monthly access'}</a>${LIVE}${ready(s)}</div></article>`;
   const draw = () => { $('#grid', app).innerHTML = CATEGORIES.filter((c) => g === 'All' || c.label === g).map((c) => `<h2 class="sim-cat" data-category-heading="${c.id}" style="grid-column:1/-1;margin:28px 0 4px">${esc(c.label)}</h2>${SIMS.filter((s) => categoryOf(s.id) === c.id).map(card).join('')}`).join('');
     $$('#filters button', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === g))); };
   $$('#filters button', app).forEach((b) => b.onclick = () => { g = b.dataset.g; try { localStorage.setItem('pc-mvp-simgroup', g); } catch (e) { } draw(); }); draw();

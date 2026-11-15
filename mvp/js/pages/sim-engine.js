@@ -135,7 +135,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
     if (params.get('batch')) { window.parent.postMessage({ pcBatch: params.get('batch'), ok: false, why: `${sim.name} runs in the Workspace: open the project and choose it from Add simulation.` }, location.origin); return; }
     const p0 = currentProject(); if (p0) { try { sessionStorage.setItem('pc-ws-open-study', sim.id); } catch (e) { } location.hash = '#/workspace/' + p0.id; return; }
     app.innerHTML = `<div class="wrap"><span class="eyebrow">Simulation</span><h1 class="display md">${esc(sim.name)} runs in the Workspace</h1><p class="lede">Open a project, then choose ${esc(sim.name)} under Add simulation › ${sim.id === 'watersound' ? 'Exterior' : 'Interior'}. ${sim.id === 'watersound' ? 'It runs on the site’s water and your building. ' : ''}${sim.id === 'watersound' ? '' : sim.id === 'fire-evacuation' ? 'It runs on the whole building: every level, its rooms, doors and stairs.' : sim.id === 'vent' ? 'It runs on the whole building: every level, its rooms, windows, doors and stairs.' : 'It runs on the level you are on, with the rooms, walls, doors and furniture of your model.'}</p><p><a class="btn accent" href="#/new-project">Start a project</a> <a class="btn" href="#/home">Dashboard</a></p></div>`; return; }
-  if (!canUse(sim.id)) {
+  if (!canUse(sim.id, currentProject())) {
     renderGate(app, sim.name);
     if (params.get('batch')) window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Active membership required.'},location.origin);
     return;

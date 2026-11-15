@@ -15,13 +15,14 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
+import { canUse } from '../beta-access.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
 import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=motion5-20261115-4';
+import { mountChrome } from '../workspace-chrome.js?v=motion5-20261115-5';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
@@ -165,7 +166,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=motion5-20261115-4`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=motion5-20261115-5`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -825,7 +826,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
   // "Add simulation" on the left rail: pick a study, then the same pre-flight and handoff as Send to Simulation
   const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
-  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>x.id!=='movementdepth'&&(x.category||categoryOf(x.id))===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}" ${x.status==='planned'?'data-planned="true"':''}>${esc(x.name)}${x.status==='planned'?'<span class="study-soon">Coming soon</span>':''}</button>`).join('')+'</div>').join('');
+  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>x.id!=='movementdepth'&&(x.category||categoryOf(x.id))===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}" ${x.status==='planned'?'data-planned="true"':''}>${esc(x.name)}${x.status==='planned'?'<span class="study-soon">Coming soon</span>':canUse(x.id,p)?'':'<span class="study-soon" title="Free on the example projects; on your own projects it needs monthly access">Monthly access</span>'}</button>`).join('')+'</div>').join('');
   const addInt=$('#addSimInt',app);let menuBtn=addSim;   // two entries (2026-11-01): Building simulations and Interior simulations, each with its own list
   document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
   const disposeSimPreview=mountSimulationPreview(simMenu,addSim,[...SIMS,...PLANNED_SIMS]);
@@ -905,5 +906,6 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; disposeSimPreview();document.removeEventListener('click',simOutside);disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
+  return () => { dead = true; for (const f of app.querySelectorAll('iframe')) { try { f.contentWindow?.S3?.release?.(); } catch { } }   /* the 3D view's GPU memory let go at once (2026-11-15): seconds faster to the next page */
+    disposeSimPreview();document.removeEventListener('click',simOutside);disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }
