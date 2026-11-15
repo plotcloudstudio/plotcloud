@@ -49,9 +49,12 @@ export const MATURITY = {
   verified: { label: 'Verified, not validated', note: 'Passes tests against analytical answers; not yet compared with measured evacuations.', link: '#/blog/fire-evacuation-accuracy' },
   screening: { label: 'Screening estimate', note: 'An estimate for comparing design options, not a certified or code-compliant result.' },
   rule: { label: 'Rule of thumb', note: 'Preliminary sizing by rules of thumb; to be checked by an engineer.' },
+  radiance: { label: 'Matches Radiance', note: 'The daylight factor agrees with Radiance (rtrace, CIE overcast sky) in two test rooms, one open and one facing a building, within max(0.5 points, 25 %) at every point, at Fine detail (tests/validation/daylight_df.py). Only the daylight factor is checked; sDA and ASE are screening estimates.' },
 };
 const MATURITY_OF = { sunhours: 'reference', skyview: 'reference', 'fire-evacuation': 'verified', structure: 'rule' };
-export const maturityOf = (id) => MATURITY[MATURITY_OF[id] || 'screening'];
+// one view of a study can be checked when its others are not (2026-11-15): the daylight factor of Daylight against Radiance
+const MATURITY_VIEW = { 'daylight:df': 'radiance' };
+export const maturityOf = (id, view) => MATURITY[(view && MATURITY_VIEW[id + ':' + view]) || MATURITY_OF[id] || 'screening'];
 // Target capability map (plan §4.2–4.4). Entries without an existing study are listed with what they need.
 const T = (id, category, name, needs, engine) => ({ id, category, name, needs, engine });
 export const TARGETS = [

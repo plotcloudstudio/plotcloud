@@ -206,6 +206,11 @@ export async function run(sc, o, onProg = () => {}) {
   // the search counts watch points every 25 cm; the result is measured on the floor cells. When everything is wanted, cameras are
   // added for the slivers the coarse points missed, measured on the floor cells, until the target is met or no position sees more
   // (2026-11-15: 100% asked gave 99.9%)
+  // what each number of cameras covers, measured on the floor cells (2026-11-15), for the coverage-against-cameras chart: the
+  // search's own sets, then each camera the top-up added
+  const toCam = (j) => ({ x: +L[j].x.toFixed(3), y: +L[j].y.toFixed(3), dir: L[j].dir, type: L[j].type }), chosen = SC.cams, fine = [];
+  for (const c of curve) { if (STOP) throw Error('Stopped.'); SC.cams = c.sel.map(toCam); coverage(); fine.push({ n: c.n, cov: COV.frac, cost: c.cost, pick: c === pick }); if (c === pick && o.mode !== 'all') break; }
+  SC.cams = chosen; coverage();
   let topUp = 0, blocked = false;
   if (o.mode === 'all') { const G = GC.G, reg = GC.R.reg, c = G.c;
     while (COV.frac < want - 1e-9 && SC.cams.length < 80) { prog(0.98);
@@ -215,8 +220,9 @@ export async function run(sc, o, onProg = () => {}) {
         for (let k = 0; k < smp.length; k++) { const dx = ux[k] - L[j].x, dy = uy[k] - L[j].y, r = Math.hypot(dx, dy); if (r > R) continue; if (half < Math.PI) { let a = Math.atan2(dy, dx); if (a < 0) a += 2 * Math.PI; if (angDiff(a, dir) > half) continue; } g++; } if (g) score.push([g, j]); }
       score.sort((a, b) => b[0] - a[0]); let best = null, bg = 0; const U = new Uint8Array(reg.length); for (const i of unc) U[i] = 1;
       for (const [, j] of score.slice(0, 60)) { const cam = { x: +L[j].x.toFixed(3), y: +L[j].y.toFixed(3), dir: L[j].dir, type: L[j].type }; let g = 0; for (const i of camMask(cam)) if (U[i]) g++; if (g > bg || (g === bg && g && best && L[j].price < TY(best.type).price)) { bg = g; best = cam; } }
-      if (!best || !bg) { blocked = true; break; } SC.cams.push(best); topUp++; coverage(); await tick(); } }
-  return { topUp, blocked, COV, cams: SC.cams.map((q, k) => ({ ...q, col: camCol(k), poly: COV.masks[k].poly, name: TY(q.type).name, range: rangeOf(TY(q.type)) })), G: GC.G, R: GC.R, curve, pick, reach: C.reach / C.Tn, want, N };
+      if (!best || !bg) { blocked = true; break; } SC.cams.push(best); topUp++; coverage(); fine.push({ n: SC.cams.length, cov: COV.frac, cost: SC.cams.reduce((a, q) => a + (+TY(q.type).price || 0), 0), top: true }); await tick(); }
+    if (topUp) { for (const f of fine) f.pick = false; fine[fine.length - 1].pick = true; } }
+  return { topUp, blocked, fine, COV, cams: SC.cams.map((q, k) => ({ ...q, col: camCol(k), poly: COV.masks[k].poly, name: TY(q.type).name, range: rangeOf(TY(q.type)) })), G: GC.G, R: GC.R, curve, pick, reach: C.reach / C.Tn, want, N };
 }
 export { LEVELS, TYPES, BLUES_, CAMCOL };
 const BLUES_ = [[198, 219, 239], [107, 174, 214], [33, 113, 181], [8, 48, 107]];   // the page's How many see it colours

@@ -229,9 +229,15 @@ export async function render(app, [pid], params) {
     const hit = under.find((x) => ITEMS.some((i) => i.id === x)); if (hit) pickItem(hit, false); }
 
   // ---- one simulation: both versions' results side by side, the figures with B − A, and the result field point by point
+  // maps saved in the Workspace sit on squares fixed to the model's origin with nested sizes (2026-11-15); when the two versions were
+  // saved at different sizes (the study area grew), the finer one is merged onto the coarser squares, so the two line up
+  function alignFields(fa, fb) { if (!fa || !fb || fa.src !== 'workspace' || fb.src !== 'workspace' || fa.step === fb.step) return [fa, fb];
+    const st = Math.max(fa.step, fb.step), merge = (f) => { if (f.step === st) return f; const acc = new Map(); for (let i = 0; i < f.pts.length; i += 3) { const k = Math.floor(f.pts[i] / st) + ',' + Math.floor(f.pts[i + 1] / st), a = acc.get(k); if (a) { a[0] += f.pts[i + 2]; a[1]++; } else acc.set(k, [f.pts[i + 2], 1]); }
+      const pts = []; for (const [k, [sm, m]] of acc) { const [I, J] = k.split(',').map(Number); pts.push((I + 0.5) * st, (J + 0.5) * st, Math.round(sm / m * 100) / 100); } return { ...f, step: st, pts, n: pts.length / 3 }; };
+    return [merge(fa), merge(fb)]; }
   function simCompare() {
     const sim = SIMS.find((s) => s.id === C.sim) || SIMS.find((s) => p.runs.some((r) => r.simId === s.id && (r.versionId === A.id || r.versionId === B.id))) || SIMS[0]; C.sim = sim.id; $('#simSel', app).value = sim.id;
-    const ra = S.lastRun(p, A.id, sim.id), rb = S.lastRun(p, B.id, sim.id), fa = ra?.results?.field, fb = rb?.results?.field, both = fa && fb && fa.label===fb.label && fa.unit===fb.unit;
+    const ra = S.lastRun(p, A.id, sim.id), rb = S.lastRun(p, B.id, sim.id), [fa, fb] = alignFields(ra?.results?.field, rb?.results?.field), both = fa && fb && fa.label===fb.label && fa.unit===fb.unit;
     const thr = C.thr[sim.id + (C.pct ? '%' : '')] ?? (C.pct ? 10 : sim.id === 'sunhours' ? 0.5 : both ? defThr(fa, fb) : 0);
     const D = both ? fieldDiff(fa, fb, { threshold: thr, pct: C.pct }) : null;
     const running = (v) => batch.items().find((x) => x.simId === sim.id && x.versionId === v.id && (x.status === 'queued' || x.status === 'running'));
