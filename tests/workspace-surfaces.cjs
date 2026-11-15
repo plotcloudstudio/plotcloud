@@ -27,7 +27,12 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
       const r = await p.evaluate(() => { const s = window.__wsStudy.state(), sv = s.res?.svals ? Array.from(s.res.svals) : [], vw = {}; for (const [k, v] of Object.entries(s.res?.views || {})) vw[k] = v.svals ? Array.from(v.svals).filter(Number.isFinite).length : 0;
         const sl = __ws2.inst.persp.ws.surfaceList(), onImp = sl.map((S0, i) => (S0.p[0] > 29 && !S0.roof ? sv[i] : null)).filter((v) => v !== null);
         return { imp: onImp.length, impFin: onImp.filter(Number.isFinite).length, err: s.err, n: sv.length, fin: sv.filter(Number.isFinite).length, lo: Math.min(...sv.filter(Number.isFinite)), hi: Math.max(...sv.filter(Number.isFinite)), rows: (s.res?.rows || []).map((x) => x.join(': ')), ms: s.res?.ms, vw }; });
-      assert(!r.err, id + ' ' + r.err); assert(r.fin > 20, `${id}: values on the building ${JSON.stringify(r)}`);
+      assert(!r.err, id + ' ' + r.err);
+      if (id === 'wind') {   // since 2026-11-15 the buildings stay plain on the yearly wind (one class all round a facade said nothing); an upright slice along the prevailing wind instead
+        const vs = await p.evaluate(() => { const v = window.__wsStudy.state().res.vslice; return v && { nx: v.nx, ny: v.ny, fin: Array.from(v.vals).filter(Number.isFinite).length, nan: Array.from(v.vals).filter((x) => !Number.isFinite(x)).length, on: __ws2.inst.persp.ws.vplaneOn() }; });
+        assert(vs && vs.on && vs.fin > 1000 && vs.nan > 10, 'the upright slice, cut by the buildings: ' + JSON.stringify(vs)); assert.equal(r.fin, 0, 'the buildings plain'); for (const k of views) assert.equal(r.vw[k], 0, k + ' plain');
+        assert.match(await p.locator('.sp-legend').innerText(), /Upright slice · wind from/); console.log('PASS wind: buildings plain, the upright slice', JSON.stringify(vs)); continue; }
+      assert(r.fin > 20, `${id}: values on the building ${JSON.stringify(r)}`);
       assert(r.impFin > 10, `${id}: values on the imported tower's facades ${r.impFin} of ${r.imp}`);
       for (const k of views) assert(r.vw[k] > 20, `${id}: the ${k} view paints the building too ${JSON.stringify(r.vw)}`);
       if (['radiation', 'skyview'].includes(id)) assert(r.rows.some((x) => /^Facades, mean/.test(x)) && r.rows.some((x) => /^Roofs, mean/.test(x)), id + ' rows ' + r.rows);

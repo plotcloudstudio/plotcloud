@@ -5723,6 +5723,9 @@ function secFieldBands(s) { const F = SECF; if (!s || !F) return null; const K =
       const cx = (i + 0.5) * cw, cy = H - (j + 0.5) * ch, sc = Math.min(1.2, m) * L / 2, ux = vx / m, uy = -vy / m, hx = cx + ux * sc, hy = cy + uy * sc, hd = Math.max(2, L * 0.22);
       x.beginPath(); x.moveTo(cx - ux * sc, cy - uy * sc); x.lineTo(hx, hy); x.stroke(); x.beginPath(); x.moveTo(hx, hy); x.lineTo(hx - ux * hd - uy * hd * 0.55, hy - uy * hd + ux * hd * 0.55); x.lineTo(hx - ux * hd + uy * hd * 0.55, hy - uy * hd - ux * hd * 0.55); x.closePath(); x.fill(); } }
   const l0 = [...M.levels].sort((a, b) => (a.z || 0) - (b.z || 0))[0] || { id: LV, z: 0 }; return { canvas: c, z0: F.z0, z1: F.z1, t0: F.t0, t1: F.t1, lv0: l0.id, zl: l0.z || 0, notes: { rooms: F.labels || [], flows: [], zn: null } }; }
+function fieldCanvas(F) { const K = Math.max(2, Math.min(12, 2400 / Math.max(F.nx, F.ny))), W = F.nx * K, H = F.ny * K, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), R = F.stops || RAMPS_TOP.ladybug, lo = F.lo ?? 0, sp = Math.max(1e-9, (F.hi ?? 1) - lo);
+  for (let j = 0; j < F.ny; j++) for (let i = 0; i < F.nx; i++) { const v = F.vals[j * F.nx + i]; if (!Number.isFinite(v)) continue; x.fillStyle = rampAtTop(R, Math.max(0, Math.min(1, (v - lo) / sp))); x.fillRect(i * K, H - (j + 1) * K, K + 0.5, K + 0.5); }
+  return c; }
 function secSync() { if (!window.S3 || !S3.section) return; const s = secOf(); try { S3.section(s ? { ...s, bands: SECF ? secFieldBands(s) : secBands(s) } : null); } catch (e) { console.warn(e); } }
 // the mark on the plan: the polyline dash-dotted, a head at each end with the section's letter and an arrow the way it looks
 function drawSecMark() { const s = secOf(); if (!s) return; const d = VP.d, r = 9 * d, ink = s.on ? '#1f2a3a' : '#8b93a0'; g.save();
@@ -5733,7 +5736,7 @@ function drawSecMark() { const s = secOf(); if (!s) return; const d = VP.d, r = 
   g.restore(); }
 // the cut through the model as a vertical profile (2026-11-10, for wind in section): along the unfolded cut every ds metres from
 // t0 to t1, solid where a mass, the building (its storeys: base to top) or a surrounding building stands, or below the terrain
-function secProfile(prisms, o = {}) { const s = secOf(); if (!s) return null; const ds = Math.max(0.2, +o.ds || 0.5), dz = Math.max(0.2, +o.dz || ds), t0 = o.t0 ?? -40, t1 = o.t1 ?? s.len + 40;
+function secProfile(prisms, o = {}) { const s = o.line ? (() => { const a = o.line.a, b = o.line.b, len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return { segs: [{ a, u: [(b[0] - a[0]) / len, (b[1] - a[1]) / len], s0: 0 }], len }; })() : secOf(); if (!s) return null;   /* o.line { a, b }: a straight cut of its own (the wind's upright slice, 2026-11-15) */ const ds = Math.max(0.2, +o.ds || 0.5), dz = Math.max(0.2, +o.dz || ds), t0 = o.t0 ?? -40, t1 = o.t1 ?? s.len + 40;
   const pr = prisms.map((P) => Object.assign(prismOf(P.outer, P.h), { b: P.b || 0 })).concat(M.site ? SITEC.contextMasses(M.site, M.north || 0).map((m) => Object.assign(prismOf(m.outer, m.h), { b: 0 })) : []);
   const gAt = (q) => { if (!M.site || !M.site.terrain) return 0; const t = siteOfM(M, q); return SITEC.groundAt(M.site.terrain, t[0], t[1]); };
   const nx = Math.max(4, Math.round((t1 - t0) / ds)), cols = []; let top = 0, g0 = Infinity;
@@ -7186,6 +7189,15 @@ window.S3 = (() => {
       for (const q of [[H.p[0] + d[0] * s2, H.p[1] + d[1] * s2, H.p[2]], [H.p[0] - d[0] * s2 * 0.5 + n[0] * s2 * 0.6, H.p[1] - d[1] * s2 * 0.5 + n[1] * s2 * 0.6, H.p[2]], [H.p[0] - d[0] * s2 * 0.5 - n[0] * s2 * 0.6, H.p[1] - d[1] * s2 * 0.5 - n[1] * s2 * 0.6, H.p[2]]]) push(q, c); }
     const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new T.Float32BufferAttribute(col, 3));
     const m = new T.Mesh(geo, new T.MeshBasicMaterial({ vertexColors: true, side: T.DoubleSide, transparent: true, opacity: 0.92, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 })); m.name = 'streams'; m.renderOrder = 6; scene.add(m); STM.m = m; render(); };
+  // ---- an upright slice through the flow (2026-11-15): a picture standing on the line a → b from z0 to z1, seen from both sides,
+  // see-through where it has no value (inside the buildings), so the buildings show through the cut
+  const VPL = { m: null };
+  api.vplane = (o) => { if (!scene) return; if (VPL.m) { scene.remove(VPL.m); VPL.m.geometry.dispose(); VPL.m.material.map?.dispose(); VPL.m.material.dispose(); VPL.m = null; } if (!o) { render(); return; }
+    const a = o.a, b = o.b, pos = new Float32Array([a[0], o.z0, -a[1], b[0], o.z0, -b[1], b[0], o.z1, -b[1], a[0], o.z1, -a[1]]), uv = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2)); geo.setIndex([0, 1, 2, 0, 2, 3]);
+    const tex = new T.CanvasTexture(o.canvas); tex.colorSpace = T.SRGBColorSpace || tex.colorSpace; tex.minFilter = T.LinearFilter; tex.magFilter = T.LinearFilter;
+    const m = new T.Mesh(geo, new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: o.opacity ?? 0.9, side: T.DoubleSide, depthWrite: false })); m.name = 'vplane'; m.renderOrder = 5; scene.add(m); VPL.m = m; render(); };
+  api.vplaneOn = () => !!VPL.m;
   // ---- results on the building (2026-10-31): one coloured square per sample, just off its face
   const SRF = { m: null };
   api.surface = (o) => { if (!scene) return; if (SRF.m) { scene.remove(SRF.m); SRF.m.geometry.dispose(); SRF.m.material.dispose(); SRF.m = null; } if (!o) { render(); return; }
@@ -7868,6 +7880,7 @@ if (window.__WSROLE) {
       commit(before); return true; },
     sectionProfile(o) { return secProfile(studyPrisms(), o); },
     sectionField(o) { SECF = o && o.vals ? { ...o } : null; secSync(); return !!SECF; },
+    vplane(o) { if (!(window.S3 && S3.vplane)) return false; S3.vplane(o && o.vals ? { ...o, canvas: fieldCanvas(o) } : null); return !!o; }, vplaneOn() { return !!(window.S3 && S3.vplaneOn && S3.vplaneOn()); },
     sectionAt(t) { const s = secOf(); return s ? secAt(s, t).p : null; },
     planSceneAt(lv, tool) { return STC.planScene(M, S || STC.build(M), lv, tool); },
     sectionView(on) { if (!window.S3 || !S3.secView) return false; if (on && CAM !== '3d') return false; return S3.secView(!!on); },
@@ -7899,7 +7912,7 @@ if (window.__WSROLE) {
     surfacePaint(o) { const R = RAMPS_TOP[o && o.ramp] || RAMPS_TOP.ladybug; if (!o || !SURF.list || !SURF.list.length) { if (window.S3 && S3.surface) S3.surface(null); return; }
       const col = (v) => { if (!Number.isFinite(v)) return null; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rampAtTop(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo))); return [m[1] / 255, m[2] / 255, m[3] / 255]; };
       if (window.S3 && S3.on && S3.surface) S3.surface({ list: SURF.list, cols: Array.from(o.vals, col) }); },   /* Array.from: a Float32Array's map would keep only numbers */
-    clearStudy() { flowStop(); if (window.S3 && S3.streaks) S3.streaks(null); if (SECF) { SECF = null; secSync(); } egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    clearStudy() { flowStop(); if (window.S3 && S3.streaks) S3.streaks(null); if (window.S3 && S3.vplane) S3.vplane(null); if (SECF) { SECF = null; secSync(); } egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }

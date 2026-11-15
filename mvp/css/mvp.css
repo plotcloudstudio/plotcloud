@@ -544,6 +544,8 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .who-b { display: inline-flex; align-items: center; gap: 8px; }
 .who-m { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; min-width: 230px; display: grid; gap: 2px; padding: 6px; background: var(--card); border: 1px solid var(--line2); border-radius: 14px; box-shadow: 0 18px 44px rgba(0,0,0,.32); }
 .who-m[hidden] { display: none; }
+/* the menu keeps its own ink inside a dark site header, whose links inherit the header's white (2026-11-15) */
+.who-m, header.top .who-m, :root[data-pc-ui] body > header.top .who-m :is(a, b, button) { color: var(--ink); }
 .who-m a, .who-m button { text-align: left; padding: 9px 12px; border-radius: 9px; border: 0; background: none; color: var(--ink); text-decoration: none; font: inherit; font-size: 14px; cursor: pointer; }
 .who-m a:hover, .who-m button:hover { background: var(--chip); }
 .who-id { display: grid; padding: 8px 12px 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; } .who-id small { color: var(--mut2); font-size: 12px; }
