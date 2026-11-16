@@ -1,7 +1,7 @@
 import {esc} from '../app.js';
 
 export async function render(app,[id='terms']) {
-  const res=await fetch('legal-content.json?v=public-launch-20261031-1');
+  const res=await fetch('legal-content.json?v=pricing-20261115-1');
   if(!res.ok)throw Error('Policy text could not load.');
   const data=await res.json(),titles={terms:'Terms of use',privacy:'Privacy policy',license:'Resource license',refunds:'Refund policy'};
   if(!titles[id])id='terms';

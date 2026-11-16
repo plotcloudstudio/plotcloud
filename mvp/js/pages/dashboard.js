@@ -1,3 +1,4 @@
+import { status as accessStatus, accessDate } from '../beta-access.js';
 import {caseCard,openCase} from '../fallingwater-dashboard.js';
 // Dashboard (#/home): the page after logging in. Pick up where you left off, what needs attention, your projects
 // (new, open, rename, duplicate, archive, delete), recent activity, the simulations you use most, plan and storage.
@@ -22,13 +23,12 @@ export function render(app) {
 
   app.innerHTML = `<div class="wrap db">
     <header class="db-hi">
-      <div><span class="eyebrow">Dashboard</span><h1 class="display sm" style="margin-top:10px">${hello}, ${esc(first)}.</h1><p class="lede" id="where" style="margin-top:10px"></p></div>
+      <div><span class="eyebrow">Activity &amp; storage</span><h1 class="display sm" style="margin-top:10px">${hello}, ${esc(first)}.</h1><p class="lede" id="where" style="margin-top:10px"></p><p class="note"><a href="#/home">← Your projects</a></p></div>
       <div class="db-go" id="go"></div>
     </header>
-    ${caseCard()}
     <section class="db-attn" id="attn" aria-label="Needs attention"></section>
     <div class="db-main">
-      <section aria-labelledby="h-proj">
+      <section aria-labelledby="h-proj" hidden>   <!-- the project list is the Dashboard's (#/home); kept for its wiring (2026-11-15) -->
         <div class="db-bar"><h2 id="h-proj" class="db-h">Your projects</h2><span class="sp"></span>
           <input class="inp" id="q" type="search" placeholder="Search projects" aria-label="Search projects">
           <select class="inp" id="sort" aria-label="Sort projects"><option value="recent">Last changed</option><option value="name">Name</option><option value="results">Most results</option></select>
@@ -128,8 +128,9 @@ export function render(app) {
   $('#arch', app).onclick = () => { showArch = !showArch; projects(); };
 
   function side() {
-    const since = A.user.since ? new Date(A.user.since) : new Date(), left = Math.max(0, 7 - Math.floor((Date.now() - since) / 86400000)), trial = (A.user.plan || 'trial') === 'trial';
-    $('#plan', app).innerHTML = `<h3 class="db-h3">Plan</h3><p class="db-big">${trial ? 'Pro trial' : 'Pro'}</p><p class="note">${trial ? (left ? `${left} day${left > 1 ? 's' : ''} left of 7. ` : 'The trial has ended. ') + 'No payment is taken.' : 'View your current access in Account.'}</p><a class="btn sm accent" href="#/pricing">See plans</a>`;
+    // the person's real access (2026-11-15; was a made-up 7-day "Pro trial" that nothing enforced)
+    const acc = accessStatus();
+    $('#plan', app).innerHTML = `<h3 class="db-h3">Plan</h3><p class="db-big">${acc.active ? 'Monthly access' : 'Free'}</p><p class="note">${acc.active ? `Active until ${esc(accessDate(acc.expiresAt))}.` : 'Sun hours and Daylight on every project; every study on the example projects.'}</p><a class="btn sm accent" href="#/pricing">${acc.active ? 'Your access' : 'See monthly access'}</a>`;
     const use = S.storageUse(), pc = Math.min(100, 100 * use / S.QUOTA), media = S.projects().reduce((n, p) => n + p.runs.filter((r) => r.results?.thumb).length, 0);
     $('#store', app).innerHTML = `<h3 class="db-h3">Storage in this browser</h3><div class="db-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pc)}" aria-label="Storage used"><i style="width:${pc.toFixed(1)}%"></i></div>
       <p class="note">${size(use)} of about ${size(S.QUOTA)} · ${S.projects().length} project${S.projects().length === 1 ? '' : 's'} · ${media} result picture${media === 1 ? '' : 's'}</p><p class="note">${A.lastBackup ? `Last backup ${ago(A.lastBackup)}.` : 'Not backed up yet.'} <a href="#/account?tab=data">Backup and space</a></p><p class="note">${S.PERSISTED ? 'The browser keeps it until you clear it.' : 'The browser may clear it when the disk is full: keep a backup.'}</p>`;

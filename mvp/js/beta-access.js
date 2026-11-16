@@ -2,7 +2,14 @@ import * as Cloud from './cloud.js';
 import {checkTestingAccess,allowsTestingStudy,mountTestingAccess} from './simulation-test-access.js?v=private-testing-20261027-1';
 // Manual beta entitlements. Only hashes and expiry dates are public; never trust a local plan/paid flag.
 export const BETA = Object.freeze({ name: 'PlotCloud', email: 'plotcloud@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
-export const FREE_STUDIES = Object.freeze(["fire-evacuation", "sunhours", "radiation", "utci", "daylight", "wind", "vent", "stormwater", "snow", "acoustics", "spacesyntax", "movementdepth", "evac", "isovist", "views", "wayfinding", "privacy", "cameras", "structure", "climate", "passive", "skyview", "shadebenefit", "solarenvelope", "watersound"]);
+// What is free (2026-11-15, as Pricing, Log in and the Terms say): Sun hours and Daylight on any project; every study on the
+// example projects (Fallingwater, the hospital, the courtyard sample), to try before paying; every Resources tool. The other
+// studies on a person's own projects need monthly access
+export const FREE_STUDIES = Object.freeze(["sunhours", "daylight"]);
+export const TRY_NOTE = 'Every study runs free on the example projects (Fallingwater, the hospital, the courtyard sample).';
+export const isTryProject = (p) => !!(p && (p.caseStudy || p.sample));
+// served from this computer (development and the browser tests): every study open, unless pc-dev-gate is 1 to try the gate
+const devOpen = () => { try { return typeof location !== 'undefined' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname) && localStorage.getItem('pc-dev-gate') !== '1'; } catch { return false; } };
 const KEY = 'pc-beta-access-code-v1';
 let serverChecked=0,serverUser='',serverInflight=null,leaseDeadline=0;
 let verified = { active: false, reason: 'code-required' }, lastCode = '', checked = 0, inflight = null, generation = 0;
@@ -11,7 +18,8 @@ export const isFreeStudy = id => FREE_STUDIES.includes(id) || String(id).startsW
 const readCode = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
 export const normalizeCode = value => String(value || '').replace(/\s+/g, '').toUpperCase();
 export function status() { return { ...verified, active: verified.active && (verified.source==='account' ? performance.now()<leaseDeadline : Date.parse(verified.expiresAt)>Date.now()) }; }
-export const canUse = id => isFreeStudy(id) || status().active || allowsTestingStudy(id);
+export const canUse = (id, p) => isFreeStudy(id) || (isTryProject(p) && !String(id).startsWith('resource:')) || status().active || allowsTestingStudy(id) || devOpen();
+export const paidNote = (name) => `${name} on your own projects needs monthly access. Sun hours and Daylight are free on every project, and every study runs free on the example projects.`;
 export async function hashCode(value) { const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizeCode(value))); return [...new Uint8Array(bytes)].map(v => v.toString(16).padStart(2, '0')).join(''); }
 export function matchingGrant(ledger, digest, now = Date.now()) {
   if (ledger?.schema !== 1 || !Array.isArray(ledger.grants)) return null;
@@ -67,9 +75,9 @@ export function mountActivation(host, { onSuccess = () => location.reload() } = 
   form.onsubmit = async e => { e.preventDefault(); button.disabled = true; message.textContent = 'Verifying your code…'; try { const grant = await activateCode(new FormData(form).get('code')); message.textContent = 'Access active until ' + accessDate(grant.expiresAt); onSuccess(grant); } catch (error) { message.textContent = error.message; } finally { button.disabled = false; } };
 }
 export function renderGate(host, name = 'This tool') {
-  host.innerHTML = `<div class="wrap resource-page"><a class="text-link" href="#/resources">← Resources</a><br><span class="eyebrow">Membership access</span><h1 class="display md" style="margin-top:18px">${esc(name)} requires<br>active access.</h1><p class="lede" style="margin-top:18px">All simulation studies are currently free. Resource tools require active access.</p><div class="grid g2" style="margin-top:30px"><section class="card"><h2>Already received your code?</h2><p class="note">Enter the code sent after your e-transfer was verified. A payment email or a local account plan does not activate access.</p><div id="betaActivate"></div></section><section class="card"><h2>One month. Repeated use.</h2><p>CAD 16.99 for one calendar month, plus applicable taxes. No per-run charge for the included browser tools. No automatic renewal.</p><a class="btn accent" style="margin-top:20px" href="${esc(requestURL())}">Request payment details</a><p class="note" style="margin-top:14px">E-transfer recipient: ${BETA.email}. Wait for written order details before sending. Simulation results depend on the model, inputs and method. Review the stated limitations.</p><a href="#/pricing">View pricing and payment steps →</a></section></div><p class="note" style="margin-top:24px"><a href="#/simulations/sunhours">Open free Sun hours</a> · <a href="#/simulations/daylight">Open free Daylight</a> · <a href="#/legal/refunds">Refund policy</a></p></div>`;
+  host.innerHTML = `<div class="wrap resource-page"><a class="text-link" href="#/simulations">← Simulations</a><br><span class="eyebrow">Membership access</span><h1 class="display md" style="margin-top:18px">${esc(name)} requires<br>active access.</h1><p class="lede" style="margin-top:18px">Sun hours and Daylight are free on every project, and every study runs free on the example projects. The other studies on your own projects need monthly access.</p><div class="grid g2" style="margin-top:30px"><section class="card"><h2>Already received your code?</h2><p class="note">Enter the code sent after your e-transfer was verified. A payment email or a local account plan does not activate access.</p><div id="betaActivate"></div></section><section class="card"><h2>One month. Repeated use.</h2><p>CAD 16.99 for one calendar month, plus applicable taxes. No per-run charge for the included browser tools. No automatic renewal.</p><a class="btn accent" style="margin-top:20px" href="${esc(requestURL())}">Request payment details</a><p class="note" style="margin-top:14px">E-transfer recipient: ${BETA.email}. Wait for written order details before sending. Simulation results depend on the model, inputs and method. Review the stated limitations.</p><a href="#/pricing">View pricing and payment steps →</a></section></div><p class="note" style="margin-top:24px"><a href="#/simulations/sunhours">Open free Sun hours</a> · <a href="#/simulations/daylight">Open free Daylight</a> · <a href="#/legal/refunds">Refund policy</a></p></div>`;
   if(Cloud.configured()){
-    const lead=host.querySelector('.lede');lead.textContent='All simulation studies are currently free. Resource tools require an active account membership.';
+    const lead=host.querySelector('.lede');lead.textContent='Sun hours and Daylight are free on every project, and every study runs free on the example projects. The other studies on your own projects need an active account membership.';
     host.querySelector('h2').textContent='Your registered account';
     host.querySelector('#betaActivate').previousElementSibling.textContent='Access is linked to your confirmed registration email and expires automatically after the granted period.';
   }

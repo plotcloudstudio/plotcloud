@@ -1,4 +1,6 @@
 // Fixes of 2026-11-15:
+// · Cameras: coverage against the number of cameras, the chosen set marked, the last per cents' cost in words
+// · Daylight: the daylight factor view says it matches Radiance (tests/validation/daylight_df.py); sDA stays a screening estimate
 // · the avatar menu reads in the dark site header (its name, Dashboard, Account settings were white on white)
 // · Cameras, Cover everything at 100 %: the floor is covered in full (the search's 25 cm points missed slivers of the floor cells)
 // · Wind flow: the buildings stay plain, with an upright slice along the wind in the wind's colours; on Single direction · Pressure the
@@ -23,7 +25,16 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.evaluate(() => window.__wsStudy.open('cameras')); await p.waitForTimeout(1000); await p.click('.sp-studycard [data-st-mode="all"]'); await p.waitForTimeout(300); await p.selectOption('.sp-studycard [data-cam=camWant]', '1'); await p.waitForTimeout(300); await run();
     const cam = await p.evaluate(() => { const r = window.__wsStudy.state().res; return { avg: r.avg, rows: r.rows.map((x) => x.join(': ')), foot: r.foot }; });
     assert(cam.avg >= 100 - 1e-6 || cam.rows.some((x) => /^Short of the 100% asked/.test(x)), 'everything covered, or said why not: ' + JSON.stringify(cam)); assert.match(cam.rows[0], /^Floor covered: 100(\.0)?%/, cam.rows[0]);
-    console.log('PASS cameras at 100%:', cam.rows[0], '·', cam.rows[1], '·', cam.foot);
+    const cc = await p.evaluate(() => ({ dots: document.querySelectorAll('.sp-studycard .sp-camcurve circle').length, red: document.querySelectorAll('.sp-studycard .sp-camcurve circle[fill="#d8402a"]').length, note: document.querySelector('.sp-studycard .sp-camnote')?.textContent || '' }));
+    assert(cc.dots >= 5 && cc.red === 1, 'the coverage curve, the chosen set marked: ' + JSON.stringify(cc)); assert.match(cc.note, /The last [\d.]+% of the floor took \d+ more cameras?/, cc.note);
+    await p.screenshot({ path: `${out}/fix-cam-curve.png`, clip: { x: 0, y: 60, width: 380, height: 780 } });
+    console.log('PASS cameras at 100%:', cam.rows[0], '·', cam.rows[1], '·', cam.foot); console.log('PASS the coverage curve:', cc.dots, 'points ·', cc.note);
+    // Daylight: the daylight factor view carries the Radiance check, sDA does not
+    await p.evaluate(() => window.__wsStudy.open('daylight')); await p.waitForTimeout(1000); await run();
+    const mat = async (v) => { await p.click(`.sp-studycard [data-st-view=${v}]`); await p.waitForTimeout(600); return p.locator('.sp-studyres .sp-mat').innerText(); };
+    const mDf = await mat('df'), mSda = await mat('sda'); assert.equal(mDf, 'Matches Radiance'); assert.equal(mSda, 'Screening estimate');
+    assert.match(await p.getAttribute('.sp-studyres .sp-mat', 'title'), /comparing design options/); await mat('df'); assert.match(await p.getAttribute('.sp-studyres .sp-mat', 'title'), /Radiance .*daylight_df\.py/);
+    console.log('PASS daylight labels: DF', mDf, '· sDA', mSda);
     // wind, the year: buildings plain, the upright slice
     await p.evaluate(() => window.__wsStudy.open('wind')); await p.waitForTimeout(1000); await run();
     const wy = await p.evaluate(() => { const r = window.__wsStudy.state().res, v = r.vslice; return { sv: Object.values(r.views).filter((x) => x.svals).length, on: __ws2.inst.persp.ws.vplaneOn(), v: v && { nx: v.nx, ny: v.ny, fin: Array.from(v.vals).filter(Number.isFinite).length, hole: Array.from(v.vals).filter((x) => !Number.isFinite(x)).length, hi: v.hi, dn: v.dn } }; });

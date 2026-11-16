@@ -17,7 +17,7 @@ export function createBatch(host, { onChange } = {}) {
   }
   async function runOne(it) {
     await checkAccess();
-    if (!canUse(it.simId)) { Object.assign(it, {status:'failed',why:'Paid beta access required. Request an activation code from Pricing.'}); emit(); return; }
+    if (!canUse(it.simId, S.project(it.projectId))) { Object.assign(it, {status:'failed',why:'Monthly access required for this study on your own projects (Pricing).'}); emit(); return; }
     return new Promise((resolve) => {
       const p = S.project(it.projectId), v = p && S.version(p, it.versionId);
       if (!v) { Object.assign(it, { status: 'failed', why: 'That version is gone.' }); emit(); resolve(); return; }

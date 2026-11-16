@@ -16,14 +16,14 @@ import * as CL from '../../emb/lib/climate.js';
 import { speedRatio } from './wind-lbm.js?v=wind-20261031-5';
 import { stormwater } from './stormwater-grid.js?v=water-20261106-1';
 import * as WTRL from '../../emb/lib/water.js?v=water-20261106-1';
-import { canUse } from './beta-access.js';
+import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261114-1';
 import * as WAY from './interior/wayfinding.js?v=way-20261031-2';
 import * as SSX from './interior/spacesyntax.js?v=ss-20261114-1';
 import * as ISO from './interior/isovist.js?v=iso-20261114-1';
 import * as VWS from './interior/views.js?v=vw-20261101-1';
-import * as CAMS from './interior/cameras.js?v=cam-20261115-1';
+import * as CAMS from './interior/cameras.js?v=cam-20261115-2';
 import * as DAY from './interior/daylight.js?v=day-20261114-1';
 import { daylightInputs, daylightRecord } from './daylight-run.js?v=day-20261114-1';
 import * as EGX from './interior/egress.js?v=eg-20261112-1';
@@ -451,7 +451,7 @@ export function mountChrome(app, api) {
     const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(c2)), img = new Image(); img.src = url; try { await img.decode(); } catch { return false; }
     const pad = 40, cv = document.createElement('canvas'); cv.width = Math.round(vb.width * scale) + pad * 2; cv.height = Math.round(vb.height * scale) + pad * 2; const g2 = cv.getContext('2d'); g2.fillStyle = '#fff'; g2.fillRect(0, 0, cv.width, cv.height); g2.drawImage(img, pad, pad);
     const m = await xlMod(), blob = await m.canvasBlob(cv, 'image/png'); if (!blob) return false; const ttl = `${simName(id)} · chart${at ? ' · ' + at : ''}`;
-    return xlAdd({ kind: 'view', study: id, title: ttl, sub: `${simName(id)} · ${qualOf().name} · ${maturityOf(id).label}`, pictures: [{ label: ttl, blob }], cols: 1, legend: null, rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
+    return xlAdd({ kind: 'view', study: id, title: ttl, sub: `${simName(id)} · ${qualOf().name} · ${maturityOf(id, r && !r.onSection ? r.view : null).label}`, pictures: [{ label: ttl, blob }], cols: 1, legend: null, rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
   // what every item records: how it was computed
   const basisLine = (q = qualOf(), cell = 0) => { const c = xlCtx(); return `Quality ${q.name}${cell ? ` · ground grid ${fmt(cell, 2)} m` : ''} · model ${c.version} · conditions revision ${c.revision ?? '–'}${c.site ? ' · ' + c.site : ''}`; };
   const legendOf = (V, r) => { const cols = V.legendCols || INST.persp.ws.rampColors?.(r.ramp) || ['#ddd', '#333']; return { lo: V.lo, hi: V.hi, unit: V.unit || r.unit || '', dec: V.dec ?? r.dec ?? 1, stops: V.legendLabels ? cols.slice().reverse() : cols }; };
@@ -474,7 +474,7 @@ export function mountChrome(app, api) {
   async function xlAddView(at = '') { const r = ST.res, id = ST.id; if (!r || !INST.persp.ready) return; if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 400)); }
     const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1800 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (!c) return;
     const m = await xlMod(), V = (r.views && r.views[r.view]) || r, blob = await m.canvasBlob(c);
-    return xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)) + (at ? ' · ' + at : ''), sub: `${simName(id)} · ${qualOf().name} · ${maturityOf(id).label}${at ? ' · ' + at : ''}`, pictures: [{ label: m.plain(V.title || r.title || '') + (at ? ' · ' + at : ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
+    return xlAdd({ kind: 'view', study: id, title: m.plain(V.title || r.title || simName(id)) + (at ? ' · ' + at : ''), sub: `${simName(id)} · ${qualOf().name} · ${maturityOf(id, r && !r.onSection ? r.view : null).label}${at ? ' · ' + at : ''}`, pictures: [{ label: m.plain(V.title || r.title || '') + (at ? ' · ' + at : ''), blob }], cols: 1, legend: legendOf(V, r), rows: (r.rows || []).map(([k, v]) => [m.plain(k), m.plain(v)]), method: m.plain(r.method || ''), basis: basisLine(qualOf(), r.cell), objective: objectiveOf(id), inputs: inputsFor(id, r) }); }
   // ---- section (2026-11-07, after Revit's Section): the line is part of the model, drawn and edited on the plan (drag the line or a
   // head, click an arrow to flip, drag the dashed far edge); here: draw it, the Section view (square to the cut, parallel, with the
   // levels), the 3D cutaway, the far clip, and a study's result on the cut where the study has one through the height of a room
@@ -1411,7 +1411,7 @@ export function mountChrome(app, api) {
           const mk = { dots: marks.dots.slice(0, i + 1).map((d, k) => (k === i ? { ...d, r: 0.5 } : d)), paths: marks.paths.slice(0, i + 1) };
           views2().forEach((w2) => w2.walkShow?.({ walks: [], T: 0, box, lv: w2.level?.(), z: sc.settings?.floorZ || 0, view: 'count', fit: false, fit2: false, solid: true, ...mk, density: { X0: o[0], Y0: o[1], cell: G.c, nx: G.W, ny: G.H, vals: cnt, lo: 0, hi: 4 }, rampStops: cStops })); },
         reset: () => { if (ST.res) paintRes(ST.res); } } : null;
-      return { X0: o[0], Y0: o[1], cell: G.c, nx: G.W, ny: G.H, cells: regN, avg: COV.frac * 100, timeline, paint: (r, fit) => show(r, fit), chartNote: 'Share of the floor by how many cameras see it; hover a bar for its value.',
+      return { X0: o[0], Y0: o[1], cell: G.c, nx: G.W, ny: G.H, cells: regN, avg: COV.frac * 100, timeline, paint: (r, fit) => show(r, fit), chartNote: 'Share of the floor by how many cameras see it; hover a bar for its value.', chartHTML: () => chart(ST.res) + camCurve(out.fine || [], cams.length),
         views: { count: { vals: count, unit: 'cameras', ramp: 'heat', lo: 0, hi: 4, dec: 0, avg: COV.frac * 100, title: `Cameras · ${lv.name.toLowerCase()} at ${+ST.camTgt ? fmt(+ST.camTgt, 1) + ' m' : 'the floor'}`, legendCols: cStops.map((x) => x[1]), legendLabels: ['4 or more', '1', 'Not covered'], stops: cStops },
           cam: { vals: which, unit: 'camera', ramp: 'heat', lo: 0, hi: Math.max(1, nC - 1), dec: 0, avg: COV.frac * 100, title: 'Cameras · which camera sees it', legendCols: wStops.map((x) => x[1]), legendLabels: [`Camera ${nC}`, '', 'Camera 1'], stops: wStops } },
         rows: [['Floor covered', `${pc(COV.frac)} of ${fmt(COV.area, 1)} m²`], ['Cameras', `${cams.length} (${[...new Set(cams.map((c) => c.name))].join(', ')})`], ['Cost (example prices)', '$' + fmt(COV.cost, 2)], ['Seen by 2 or more', fmt(COV.ov[2] + COV.ov[3], 1) + ' m²'], ...(unreach > 0.05 ? [['Out of reach of any position', fmt(unreach, 1) + ' m²']] : []), ...(ST.camMode === 'all' && COV.frac < out.want - 1e-9 ? [[`Short of the ${pc(out.want)} asked`, `${fmt((1 - COV.frac) * COV.area, 2)} m² is not seen from any camera position tried (behind furniture, in narrow nooks or past the range of the detail asked); shown uncovered`]] : []), ['Detail', `${lv.name} (${lv.ppm} px/m), camera at ${fmt(ST.camH, 1)} m`]],
@@ -1739,7 +1739,7 @@ export function mountChrome(app, api) {
       monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
   let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-4'));
   async function runSeries(kind, opts = {}) {
-    const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; }
+    const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id, p)) { ST.err = paidNote(simName(id)); drawStudy(); return; }
     if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }
     const list = def[kind], keep = ST[def.key], keepRes = ST.res, q = qualOf(), frames = []; syncLevels();
     // the estimate: one run per frame, at this quality
@@ -1779,7 +1779,7 @@ export function mountChrome(app, api) {
     try { for (let i = 0; i < frames.length; i++) { P.paint(i); const c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (c) pics.push({ label: frames[i].label, blob: await X.canvasBlob(c) }); await new Promise((r) => setTimeout(r, 0)); } } finally { P.restore(); }
     if (pics.length === frames.length) await xlAdd(P.item(pics)); return pics.length === frames.length; }
   async function runStudy() {
-    if (ST.busy) return; if (!canUse(ST.id)) { ST.err = 'This study needs PlotCloud Beta access (Pricing).'; drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
+    if (ST.busy) return; if (!canUse(ST.id, p)) { ST.err = paidNote(simName(ST.id)); drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
     const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; runBar('tick'); }, 1000);
     try { for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
       ST.estAtRun = estimate(ST.id); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridFor(ST.id)); INST.persp.ws.surfaceCell?.(surfOf()); drawStudy(); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
@@ -1790,13 +1790,29 @@ export function mountChrome(app, api) {
     clearInterval(tick); ST.busy = false; ST.progress = ''; runBar(ST.res ? 'done' : ST.err ? 'error' : 'stopped'); if (!ST.res) { clearAll(); showArea(); } drawStudy();
   }
   // a result is kept with the saved version it was computed on: unsaved edits are saved as a version first
+  // what Results → Compare versions needs from a saved result (2026-11-15): the map on the ground as points (model metres, about
+  // 2,400 cells at most, each the mean of the grid cells in it), a picture of the view, and the figures as plain text. Before, a
+  // result saved here kept only its few headline numbers, so two versions could not be compared on a map
+  const plainOf = (h) => String(h ?? '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+  function fieldOf(r) { const V = (r.views && r.views[r.view]) || r, vals = V.vals || r.vals, nx = r.nx, ny = r.ny, c = r.cell;
+    if (!vals || !nx || !ny || vals.length !== nx * ny || !(c > 0) || !Number.isFinite(r.X0) || !Number.isFinite(r.Y0)) return null;
+    let n = 0; for (const v of vals) if (Number.isFinite(v)) n++; if (!n) return null;
+    // on squares fixed to the model's origin (not to this run's grid, which moves when the model grows), of a size from a short nested list
+    // (0.25, 0.5, 1, 2, 4 … m), so two versions' points fall on the same squares, or on squares Compare can merge, and only real changes differ
+    const NICE = [0.25, 0.5, 1, 2, 4, 8, 16, 32], need = Math.max(c, c * Math.sqrt(n / 2400)), st = NICE.find((x) => x >= need - 1e-9) || Math.ceil(need), r2 = (x) => Math.round(x * 100) / 100;
+    const acc = new Map(); for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const v = vals[j * nx + i]; if (!Number.isFinite(v)) continue; const x = r.X0 + (i + 0.5) * c, y = r.Y0 + (j + 0.5) * c, key = Math.floor(x / st) + ',' + Math.floor(y / st), a = acc.get(key); if (a) { a[0] += v; a[1]++; } else acc.set(key, [v, 1]); }
+    const pts = []; for (const [key, [sm, m]] of acc) { const [I, J] = key.split(',').map(Number); pts.push(r2((I + 0.5) * st), r2((J + 0.5) * st), r2(sm / m)); }
+    return { label: plainOf(V.title || r.title || simName(ST.id)), unit: V.unit || r.unit || '', step: st, pts, n: pts.length / 3, src: 'workspace' }; }
+  function compareKit(r) { const out = {}; try { const f = fieldOf(r); if (f) out.field = f; } catch (e) { console.warn(e); }
+    try { const cv = UI.view === 'persp' && INST.persp.ready ? INST.persp.ws.snapAt?.(640, 400, 1) : null; if (cv) out.thumb = cv.toDataURL('image/jpeg', 0.8); } catch { }
+    out.kpis = (r.rows || []).slice(0, 12).map(([k, v]) => [plainOf(k), plainOf(v)]).filter(([k, v]) => k && v); return out; }
   async function saveStudy() {
     if (!ST.res || ST.busy) return; ST.busy = true; drawStudy();
     try { if (dirty()) { const before = baseline()?.id; $('#saveV')?.click(); for (let i = 0; i < 100 && baseline()?.id === before; i++) await new Promise((r) => setTimeout(r, 100)); if (baseline()?.id === before) throw Error('The version could not be saved.'); }
       const v = baseline(), r = ST.res; if (!v) throw Error('Save a version first.');
       // the project's shared conditions this result used (2026-11-01), so Results can say when they change afterwards
       const shc = S.clone(S.conditionsOf(p)), sharedConditions = r.settings?.sharedConditions || { revision: shc.revision, signature: S.conditionsSignature(p, ST.id), site: S.clone(shc.site || {}), defaults: S.clone(shc.defaults || {}), studyOnlyOverrides: false, effective: { lat: shc.site?.lat, lon: shc.site?.lon, north: shc.site?.north ?? 0, tz: shc.site?.tz } };
-      S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, inheritedFrom: 'Project shared conditions', method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString() }, 'workspace');
+      S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, inheritedFrom: 'Project shared conditions', method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString(), ...compareKit(r) }, 'workspace');
       ST.saved = 'v' + v.n; ST.key = studyModel(INST.persp.ws); logRun(ST.id, r, 'v' + v.n); }
     catch (e) { ST.err = e.message; }
     ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();
@@ -1869,11 +1885,23 @@ export function mountChrome(app, api) {
     ST.seq = -1; next(); }
   // the clip's format (2026-11-15): MP4 (H.264) where this browser records it, which Instagram and most phones take; else WebM, said so
   const clipFmt = () => { try { if (typeof MediaRecorder === 'undefined') return null; const m = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((x) => MediaRecorder.isTypeSupported(x)); return m ? { mime: m, ext: /mp4/.test(m) ? 'mp4' : 'webm', name: /mp4/.test(m) ? 'MP4' : 'WebM' } : null; } catch { return null; } };
+  // coverage against the number of cameras (2026-11-15), measured on the floor cells: what each more camera buys, the chosen set
+  // marked, and in words what the last per cents cost
+  function camCurve(F, nCh) { if (!F || F.length < 2) return ''; const W = 260, H = 130, L = 30, B = 22, n1 = Math.max(...F.map((f) => f.n)), c0 = Math.max(0, Math.floor(Math.min(...F.map((f) => f.cov)) * 10) / 10);
+    const X = (n) => L + (n - 1) / Math.max(1, n1 - 1) * (W - L - 8), Y = (c) => 8 + (1 - (c - c0) / Math.max(1e-9, 1 - c0)) * (H - B - 8), pk = F.find((f) => f.pick) || F[F.length - 1], pc = (v) => { const x = v * 100; return fmt(x, x > 0 && x < 0.1 ? 2 : (x > 0 && x < 1) || (x > 99.5 && x < 100) ? 1 : 0) + '%'; };
+    const first = (t) => F.find((f) => f.cov >= t - 1e-9), a95 = first(0.95), a99 = first(0.99), base = [...F].reverse().find((f) => !f.top), words = [];
+    if (base && pk.cov > base.cov + 1e-6 && F.some((f) => f.top)) words.push(`The last ${pc(pk.cov - base.cov)} of the floor took ${pk.n - base.n} more camera${pk.n - base.n === 1 ? '' : 's'} (${base.n} → ${pk.n}).`);
+    if (a95 && a95.n < pk.n) words.push(`95% needs ${a95.n} camera${a95.n === 1 ? '' : 's'}${a99 && a99.n !== a95.n && a99.n < pk.n ? `, 99% needs ${a99.n}` : ''}.`);
+    const path = F.map((f, i) => `${i ? 'L' : 'M'}${X(f.n).toFixed(1)},${Y(f.cov).toFixed(1)}`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" class="sp-hist sp-camcurve" role="img" aria-label="Floor covered against the number of cameras"><line x1="${L}" y1="${H - B + 0.5}" x2="${W - 6}" y2="${H - B + 0.5}" stroke="#d1d5db"/><line x1="${L - 0.5}" y1="6" x2="${L - 0.5}" y2="${H - B}" stroke="#d1d5db"/>
+      <path d="${path}" fill="none" stroke="#2f6fd6" stroke-width="2"/>${F.map((f) => `<circle cx="${X(f.n).toFixed(1)}" cy="${Y(f.cov).toFixed(1)}" r="${f.pick ? 4.5 : 2.2}" fill="${f.pick ? '#d8402a' : f.top ? '#9db8e6' : '#2f6fd6'}"><title>${f.n} camera${f.n === 1 ? '' : 's'}: ${pc(f.cov)} of the floor${f.cost ? ` · cost ${fmt(f.cost)}` : ''}${f.top ? ' (added for slivers)' : ''}</title></circle>`).join('')}
+      <text x="${L - 4}" y="12" text-anchor="end">100%</text><text x="${L - 4}" y="${H - B}" text-anchor="end">${fmt(c0 * 100)}%</text><text x="${L}" y="${H - 6}">1</text><text x="${W - 6}" y="${H - 6}" text-anchor="end">${n1} cameras</text></svg>
+      <p class="sp-note sp-camnote">Floor covered against the number of cameras (red: the ${nCh} chosen). ${words.join(' ')}</p>`; }
   async function recordClip(aspect = '4:5') { const r = ST.res, id = ST.id; if (!r || ST.vidBusy) return; ST.vidBusy = true; drawStudy();
     try { if (UI.view !== 'persp') { await goView('persp'); await new Promise((res) => setTimeout(res, 500)); }
       const [a, bb] = aspect.split(':').map(Number), W = 1080, H = Math.round(W * bb / a), V = (r.views && r.views[r.view]) || r, L = legendOf(V, r), LL = V.legendLabels || r.legendLabels, m = await xlMod();
       const startedDay = id === 'sunhours' && !PLAY.t; if (startedDay) playDay();
-      const blob = await INST.persp.ws.record?.({ w: W, h: H, ms: 8000, mime: clipFmt()?.mime, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name} · ${xlCtx().project}`, stamp: `Computed in PlotCloud · ${maturityOf(id).label}`, legend: L ? { stops: L.stops, lo: LL ? m.plain(LL[LL.length - 1]) : fmt(L.lo, L.dec), hi: LL ? m.plain(LL[0]) : fmt(L.hi, L.dec), unit: L.unit } : null });   /* a classed legend: its end classes */
+      const blob = await INST.persp.ws.record?.({ w: W, h: H, ms: 8000, mime: clipFmt()?.mime, title: m.plain(V.title || r.title || simName(id)), sub: `${simName(id)} · ${qualOf().name} · ${xlCtx().project}`, stamp: `Computed in PlotCloud · ${maturityOf(id, r && !r.onSection ? r.view : null).label}`, legend: L ? { stops: L.stops, lo: LL ? m.plain(LL[LL.length - 1]) : fmt(L.lo, L.dec), hi: LL ? m.plain(LL[0]) : fmt(L.hi, L.dec), unit: L.unit } : null });   /* a classed legend: its end classes */
       if (startedDay) playDay();
       if (blob) { const u = URL.createObjectURL(blob), el = document.createElement('a'); el.href = u; el.download = `${simName(id).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${aspect.replace(':', 'x')}.${/mp4/.test(blob.type) ? 'mp4' : 'webm'}`; document.body.append(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); ST.lastClip = { size: blob.size, type: blob.type, aspect, w: W, h: H, file: el.download }; }
       else ST.lastClip = { err: 'This browser cannot record video here.' }; }
@@ -1887,7 +1915,7 @@ export function mountChrome(app, api) {
     const seg = (attr, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" ${attr}="${k}" aria-selected="${cur === k}">${esc(n)}</button>`).join('')}</div>`;
     const about = typeof sp.about === 'function' ? sp.about() : sp.about || '', views = viewsOf(id), cur = r ? r.view : ST.view[id] || views[0]?.[0], area = AREAS.find((a) => a[0] === ST.area) || AREAS[0];
     const stage = ST.busy ? `<div class="sp-stage run"><h3>Solving…</h3><p class="sp-note">${esc(ST.progress || 'Working on the ground grid')}</p><p class="sp-note sp-elapsed">${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}</p></div>`
-      : ST.err ? `<div class="sp-stage"><h3>Could not run</h3><p class="sp-note sp-errtext">${esc(ST.err)}</p></div>`
+      : ST.err ? `<div class="sp-stage"><h3>Could not run</h3><p class="sp-note sp-errtext">${esc(ST.err)}</p>${/needs monthly access/.test(ST.err) ? '<p class="sp-acts sp-acts1"><a class="btn sm primary" href="#/pricing">See monthly access</a></p>' : ''}</div>`
       : !r ? `<div class="sp-stage"><h3>Click ▶ Start to begin</h3><p class="sp-note">${esc(about)}</p>${sp.noArea ? '' : `<p class="sp-note">Study area: ${esc(area[0] + '×')}${ST.areaInfo ? `, about ${fmt(ST.areaInfo.w)} × ${fmt(ST.areaInfo.h)} m (blue on the site)` : ''}. Change area makes it smaller or larger.</p>`}${sp.noArea ? '' : estLine(estFor())}</div>`
       : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${r.chartHTML ? r.chartHTML() : chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' + estLine(estFor()) : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' + estLine(estFor()) : ''}</div>`;
     const hh = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
@@ -2005,7 +2033,7 @@ export function mountChrome(app, api) {
       ${r ? `<details class="sp-set sp-adv" data-adv="__set" ${ST.unfold || ST.advOpen.__set ? 'open' : ''}><summary>Settings${changed ? ' <i class="sp-dot"></i><span class="sp-dotl">changed: Start again to update</span>' : ''}</summary>${SETTINGS}</details>
       <div class="sp-acts sp-acts1 sp-expacts"><span class="sp-flabel">Export</span><button type="button" class="btn sm" data-st="xlview" ${ST.busy || stale || changed ? 'disabled' : ''} title="Add this view and its results to the Export list (PDF, slides)">Add to Export list</button><button type="button" class="btn sm" data-st="expopen">CSV · PNG…</button></div>` : ''}`;
     resCard.hidden = !r; legend.hidden = !r;
-    if (r) { const MT = maturityOf(ST.id); resCard.innerHTML = `<header><b>${esc(r.title)}</b>${MT.link ? `<a class="sp-mat" href="${MT.link}" target="_blank" rel="noopener" title="${esc(MT.note)}">${esc(MT.label)}</a>` : `<span class="sp-mat" title="${esc(MT.note)}">${esc(MT.label)}</span>`}</header><div class="sp-stbody">${r.rows.map(([k, v]) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`).join('')}
+    if (r) { const MT = maturityOf(ST.id, r.onSection ? null : r.view); resCard.innerHTML = `<header><b>${esc(r.title)}</b>${MT.link ? `<a class="sp-mat" href="${MT.link}" target="_blank" rel="noopener" title="${esc(MT.note)}">${esc(MT.label)}</a>` : `<span class="sp-mat" title="${esc(MT.note)}">${esc(MT.label)}</span>`}</header><div class="sp-stbody">${r.rows.map(([k, v]) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`).join('')}
         <h4>How this was found</h4><p class="sp-note">${r.method} ${r.foot || `${fmt(r.cells)} cells, ${fmt(r.prisms)} building parts and ${fmt(r.context)} surrounding buildings${r.terrain ? ', on the terrain' : ''}`}; ${fmt(r.ms)} ms in this browser. A design check for early design, not a compliance result.</p>
         ${ST.saved ? `<p class="sp-note">Saved to results with ${esc(ST.saved)}.</p>` : `<button type="button" class="btn sm primary" data-st="save" ${stale || changed || ST.busy ? 'disabled' : ''}>Save to results</button>`} <button type="button" class="btn sm" data-st="clear">Clear from view</button></div>`;
       const cols = (r.legendCols || INST.persp.ws?.rampColors?.(r.ramp)) || [];
