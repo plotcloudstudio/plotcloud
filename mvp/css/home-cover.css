@@ -370,3 +370,14 @@ body.pc-project-entry > header.top .brand { margin-top: 18px; }
 .lp-feature-tour header h2 span, .lp-compare-story h2 span { color: var(--brand-primary); }
 .lp-feature-tour header .lp-hero-eyebrow, .lp-compare-story .lp-hero-eyebrow { margin-bottom: 0; }
 .lp-compare-story h2 { font-weight: 650; letter-spacing: -.04em; }
+
+/* the full-width study wall again (2026-11-16, the user's choice): the heading and its words above, the wall across the page, the
+   five steps under it; the heading keeps the site's green second line */
+.lp-hero.lp-hero-full { min-height: 0; padding-bottom: clamp(36px, 5vw, 60px); }
+.lp-hero-full .lp-hero-lead { align-items: end; }
+.lp-hero-full .lp-hero-lead h1 { font-size: clamp(42px, 5.6vw, 84px); line-height: 1; letter-spacing: -.055em; font-weight: 650; }
+.lp-hero-full .lp-hero-lead h1 span { color: var(--brand-primary); }
+.lp-hero-full .lp-hero-summary p { margin-bottom: 0; }
+.lp-hero-full .lp-hero-cta { margin-top: 20px; }
+.lp-hero-full .lp-wall { border-radius: 16px; }
+@media (max-width: 640px) { .lp-hero-full .lp-hero-lead h1 { font-size: clamp(36px, 10vw, 54px); } }

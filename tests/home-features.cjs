@@ -1,5 +1,5 @@
 // The homepage and the shared page language (2026-11-16):
-// · the cover: words beside the study wall, the five workflow steps under it
+// · the cover: the heading and its words above the full-width study wall, the five workflow steps under it
 // · the four cards in workflow order: Site analysis switches study and scope at once (no Calculate); Furniture: drag a piece in,
 //   drag it to move it (it stays inside the walls), click to turn it, drag it off to remove it; Reports: the tabs change the figures
 //   and the bars, from the saved results; Illustration: the line model starts in view and takes another ink
@@ -12,9 +12,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
     await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.save(); }); await p.goto(base + '/mvp/#/'); await p.waitForSelector('.lp-feature-card');
     // the cover
-    const cover = await p.evaluate(() => { const l = document.querySelector('.lp-hero-lead').getBoundingClientRect(), w = document.querySelector('.lp-hero-split .lp-wall').getBoundingClientRect(), h1 = document.querySelector('.lp-hero-lead h1');
-      return { side: w.left > l.right - 2, steps: [...document.querySelectorAll('.lp-flow li b')].map((x) => x.textContent), green: getComputedStyle(h1.querySelector('span')).color, lines: Math.round(h1.getBoundingClientRect().height / parseFloat(getComputedStyle(h1).lineHeight)) }; });
-    assert(cover.side, 'the wall beside the words'); assert.deepEqual(cover.steps, ['Site analysis', 'Plan Studio', 'Simulation', 'Rendering', 'Boards']); assert.equal(cover.lines, 2, 'the heading on two lines'); assert.equal(cover.green, 'rgb(33, 100, 76)');
+    const cover = await p.evaluate(() => { const l = document.querySelector('.lp-hero-lead').getBoundingClientRect(), w = document.querySelector('.lp-hero-full .lp-wall').getBoundingClientRect(), h1 = document.querySelector('.lp-hero-lead h1');
+      return { side: w.top >= l.bottom - 12 && w.width >= l.width - 2,   /* the words slide in by 8 px */ steps: [...document.querySelectorAll('.lp-flow li b')].map((x) => x.textContent), green: getComputedStyle(h1.querySelector('span')).color, lines: Math.round(h1.getBoundingClientRect().height / parseFloat(getComputedStyle(h1).lineHeight)) }; });
+    assert(cover.side, 'the full-width wall under the words'); assert.deepEqual(cover.steps, ['Site analysis', 'Plan Studio', 'Simulation', 'Rendering', 'Boards']); assert.equal(cover.lines, 2, 'the heading on two lines'); assert.equal(cover.green, 'rgb(33, 100, 76)');
     const order = await p.$$eval('.lp-feature-card h3', (h) => h.map((x) => x.textContent)); assert.deepEqual(order, ['Site analysis', 'Furniture', 'Reports', 'Illustration']);
     console.log('PASS the cover and the card order:', JSON.stringify(cover.steps));
     // 01 Site analysis
