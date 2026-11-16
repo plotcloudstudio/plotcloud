@@ -690,3 +690,20 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 .w2.sp .sp-domesvg{display:block;width:100%;height:auto}
 @keyframes spSpin{to{transform:rotate(360deg)}}.w2.sp .sp-domespin{animation:spSpin 60s linear infinite}
 @media (prefers-reduced-motion:reduce){.w2.sp .sp-domespin{animation:none}}
+/* ---- The Workspace's top bar in the site's language (2026-11-16): the project card, the level, the five steps and the links
+   take the homepage's borders, radius, brand green and mono step numbers; the tools, panels and canvas are unchanged */
+.sp-tl>.sp-card,.sp-tl>*>.sp-card,.sp-tr.sp-card,.sp-tr{border:1px solid var(--brand-border,#dbe5dd)!important;border-radius:12px;box-shadow:0 1px 2px #1835230d,0 8px 24px #18352312}
+.sp-tl .sp-card{border:1px solid var(--brand-border,#dbe5dd);border-radius:12px;box-shadow:0 1px 2px #1835230d,0 8px 24px #18352312}
+.w2.sp .sp-pname{font:600 13px Inter,system-ui,sans-serif;color:var(--brand-ink,#192820)}
+.w2.sp .sp-pname small{color:var(--brand-muted,#52675a)}
+.w2.sp .sp-level button{color:var(--brand-ink,#192820)}
+.w2.sp .sp-level button:hover:not(:disabled),.sp-tr :is(.sp-b,.sp-mask):hover:not(:disabled),.sp-tr .sp-home:hover{background:var(--pc-ui-subtle,#eef4ef)!important}
+.w2.sp .sp-flow a{color:var(--brand-muted,#52675a)}
+.w2.sp .sp-flow a:hover{background:var(--pc-ui-subtle,#eef4ef);color:var(--brand-ink,#192820)}
+.w2.sp .sp-flow a i{font-family:var(--pc-ui-mono,monospace);font-weight:700;border-color:var(--brand-border,#dbe5dd);color:var(--brand-muted,#52675a)}
+.w2.sp .sp-flow a[data-done=true] i{background:var(--brand-primary,#21644c);border-color:var(--brand-primary,#21644c);color:#fff}
+.w2.sp .sp-flow a[aria-current]{background:var(--brand-soft,#e6f1e9);color:var(--brand-dark,#19382d);font-weight:600}
+.w2.sp .sp-flow a[aria-current] i{border-color:var(--brand-primary,#21644c);color:var(--brand-primary,#21644c)}
+.w2.sp .sp-flow a[aria-current][data-done=true] i{color:#fff}
+.w2.sp .sp-tr .sp-tlink{color:var(--brand-ink,#192820);font-weight:600}
+.w2.sp .sp-tr .sp-tlink:hover{background:var(--brand-soft,#e6f1e9);color:var(--brand-dark,#19382d)}
