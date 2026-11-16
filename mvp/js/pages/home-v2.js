@@ -4,34 +4,37 @@ import {PLANNED_SIMS} from '../planned-simulations.js';
 import {simulationPresentation} from '../simulation-presentation.js';
 import {mountDriftWall} from '../drift-wall.js';
 import {publicNav,bindPublicNav,publicBrand} from '../public-chrome.js';
-import {featureMarkup, mountFeatures, comparisonMarkup} from '../home-feature-demos.js?v=2';
+import {featureMarkup, mountFeatures, comparisonMarkup} from '../home-feature-demos.js?v=3';
 
 export function render(app) {
   document.body.classList.add('lp-full');
   app.innerHTML = `<div class="lp">
   ${publicNav()}
 
-  <header class="lp-hero lp-hero-drift" aria-labelledby="lpHeroTitle">
-    <div class="lp-hero-lead" data-enter>
-      <h1 id="lpHeroTitle">Simulate your site<br class="lp-hero-break"> and building.</h1>
-      <div class="lp-hero-summary">
-        <p>Study sun, daylight, wind and circulation on one model. Compare design versions and export the results for review.</p>
-        <a class="lp-btn lp-big" href="#/new-project">Start a project <span aria-hidden="true">↗</span></a>
+  <header class="lp-hero lp-hero-drift lp-hero-split" aria-labelledby="lpHeroTitle">
+    <div class="lp-hero-grid">
+      <div class="lp-hero-lead" data-enter>
+        <span class="lp-hero-eyebrow">Building simulation for early design</span>
+        <h1 id="lpHeroTitle">Simulate your site<br><span>and building.</span></h1>
+        <p class="lp-hero-text">Study sun, daylight, wind and circulation on one model. Compare design versions and export the results for review.</p>
+        <div class="lp-hero-cta"><a class="lp-btn lp-big" href="#/new-project">Start a project <span aria-hidden="true">↗</span></a><a class="lp-hero-alt" href="#/start-study">Try an example <span aria-hidden="true">→</span></a></div>
+        <ul class="lp-hero-facts"><li><b>Sun, wind, daylight, people, water</b> on the same model</li><li><b>Runs in your browser</b>, your model stays with you</li><li><b>Every result</b> tied to the model version it ran on</li></ul>
+      </div>
+      <div class="lp-wall">
+        <div class="lp-drift-controls">
+          <div class="lp-drift-caption" id="lpDriftCaption"><b>Explore the studies</b><span>Interactive previews</span></div>
+          <button type="button" id="lpDriftPause" aria-pressed="false">Pause wall</button>
+        </div>
+        <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
       </div>
     </div>
-    <div class="lp-wall">
-      <div class="lp-drift-controls">
-        <div class="lp-drift-caption" id="lpDriftCaption"><b>Explore the studies</b><span>Interactive previews</span></div>
-        <button type="button" id="lpDriftPause" aria-pressed="false">Pause wall</button>
-      </div>
-      <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
-    </div>
+    <ol class="lp-flow" aria-label="The workflow">${[['Site analysis', 'Site, terrain and context'], ['Plan Studio', 'Draw or import the building'], ['Simulation', 'Run studies on a version'], ['Rendering', 'Interior views, with a render service'], ['Boards', 'Figures and reports to export']].map(([t, d], i) => `<li><span>0${i + 1}</span><b>${t}</b><small>${d}</small></li>`).join('')}</ol>
   </header>
 
   ${featureMarkup}
   <section class="lp-compare-story" aria-labelledby="lpCompareTitle">
     <div class="lp-compare-heading">
-      <div><h2 id="lpCompareTitle">Compare two layouts on the same site.</h2>
+      <div><span class="lp-hero-eyebrow">Version comparison</span><h2 id="lpCompareTitle">Compare two layouts<br><span>on the same site.</span></h2>
       <p>Compare baseline glazing with larger south windows in the Courtyard Studio model. Both plans use the same site, view and daylight study settings.</p></div>
       <a class="lp-btn lp-big" href="#/new-project">Start a project <span aria-hidden="true">↗</span></a>
     </div>

@@ -6,9 +6,9 @@ export async function render(app) {
   const access = await checkAccess();
   const request = esc(requestURL()), email = BETA.email, accountMode=Cloud.configured();
   app.innerHTML = `<div class="wrap">
-    <div style="text-align:center"><span class="eyebrow">Pricing</span>
+    <div class="page-head"><span class="eyebrow">Pricing</span>
       <h1 class="display" style="margin-top:18px">Better-informed design.<br><span>A stronger design report.</span></h1>
-      <p class="lede" style="margin:22px auto 0;font-size:18px">Use simulation data to refine your design, compare alternatives, and support your report with clear evidence behind every decision.</p>
+      <p class="lede">Use simulation data to refine your design, compare alternatives, and support your report with clear evidence behind every decision.</p>
       <p class="note" style="margin-top:14px">Features may change and results may contain errors. We do not promise grades, assessment outcomes or professional compliance.</p></div>
     <div class="grid g2" style="margin-top:44px;align-items:stretch">
       <article class="pplan"><div><span class="eyebrow">Start with the essentials</span><p style="margin-top:10px"><span class="price">CAD 0</span></p><p class="muted">Try the workflow before paying.</p></div>

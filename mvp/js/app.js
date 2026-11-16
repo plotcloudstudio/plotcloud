@@ -92,7 +92,7 @@ export async function route() {
   const [, page = '', ...rest] = location.hash.replace(/^#/, '').split('/');
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const key = PAGES[page.split('?')[0]] ? page.split('?')[0] : '';
-  document.body.classList.toggle('pc-project-entry', key === 'new-project');
+  document.body.classList.toggle('pc-project-entry', key === 'new-project'); document.body.dataset.page = key || 'home';   // the page's own styles key on it; the shared page language skips the Workspace (2026-11-16)
   const publicRoute=['pricing','about','blog','login','resources','legal','founder','admin'].includes(key);
   // the Workspace, its simulations and a project's results are one place, reached from the Dashboard (2026-10-30)
   const navKey = ['workspace', 'simulations', 'results', 'project', 'activity'].includes(key) ? 'home' : key;
