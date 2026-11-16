@@ -65,19 +65,20 @@ const PAGES = {
   'local-compute':()=>import('./pages/local-compute.js?v=study-unified-20261028-2'),
   'comparison-report':()=>import('./pages/comparison-report.js'),
   'start-study':()=>import('./pages/start-study.js'),
-  project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'), rendering:()=>import('./pages/rendering.js'),
-  boards:()=>import('./pages/rendering.js').then(m=>({render:(a,r,q)=>m.render(a,['boards'],q)})),
+  project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'),
   admin: () => import('./pages/admin.js'),
   '': () => import('./pages/home-v2.js?v=guest-start-20261102-1'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=master-models-snow-20261031-5'), legal:()=>import('./pages/legal.js'),
   about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
-const TITLES = { founder:'Founder workspace', 'comparison-report':'Simulation comparison report', about:'About', blog:'Blog', project:'Project', tables:'Tables', rendering:'Rendering', boards:'Boards', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
+const TITLES = { founder:'Founder workspace', 'comparison-report':'Simulation comparison report', about:'About', blog:'Blog', project:'Project', tables:'Tables', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
 export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab
   const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;
   if(/^#\/(?:studio|workspace-archive)(?:\/|$|\?)/.test(location.hash))history.replaceState(null,'',location.hash.replace(/^#\/(?:studio|workspace-archive)/,'#/workspace'));
+  { const m=/^#\/(?:rendering|boards)(?:\?(.*))?$/.exec(location.hash); if(m){ const pid=new URLSearchParams(m[1]||'').get('project'); history.replaceState(null,'',pid?'#/project/'+pid:'#/home'); } }   // Rendering and Boards removed (2026-11-16): the project report is the one export
+  if(/^#\/activity(?:\?|$)/.test(location.hash))history.replaceState(null,'','#/home');   // Activity & storage removed (2026-11-16)
   if(/^#\/home-classic(?:\?|$)/.test(location.hash))history.replaceState(null,'','#/');   // the old homepage (2026-11-15): one homepage, its outdated copy no longer served
   if(/^#\/library(?:\?|$)/.test(location.hash))history.replaceState(null,'',location.hash.replace('#/library','#/resources/files'));
   if(/^#\/res\//.test(location.hash))history.replaceState(null,'',location.hash.replace('#/res/','#/resources/item/'));

@@ -16,15 +16,14 @@ export function steps(p) {
     { id: 'report', t: 'Export a report', done: (p.reportRevisions || []).length > 0 || (p.exports || []).length > 0, href: `#/project/${p.id}` },   // the project report, or a PDF, slides or ZIP from the Workspace Export list
   ];
 }
-// the five steps of the project workflow (2026-11-12, P1b), each marked done from the project's own data; shown in the Workspace and on
+// the four steps of the project workflow (2026-11-12, P1b; rendering and boards removed 2026-11-16: the report is the one export), each marked done from the project's own data; shown in the Workspace and on
 // the project page, so both say the same. Steps can be taken in any order.
 export function workflowState(p) { const st = steps(p), d = (id) => st.find((x) => x.id === id).done;
   return [
     { id: 'site', n: 1, t: 'Site analysis', done: d('site') && d('weather'), href: `#/project-settings/${p.id}` },
     { id: 'plan', n: 2, t: 'Plan Studio', done: d('building'), href: `#/workspace/${p.id}` },
     { id: 'sim', n: 3, t: 'Simulation', done: p.runs.length > 0, href: `#/workspace/${p.id}?add=sim` },
-    { id: 'render', n: 4, t: 'Rendering', done: (p.renders || []).length > 0, href: `#/rendering?project=${p.id}` },
-    { id: 'boards', n: 5, t: 'Boards', done: (p.boards || []).length > 0 || (p.exports || []).length > 0 || (p.reportRevisions || []).length > 0, href: `#/boards?project=${p.id}` },
+    { id: 'report', n: 4, t: 'Report', done: (p.exports || []).length > 0 || (p.reportRevisions || []).length > 0, href: `#/project/${p.id}` },
   ]; }
 export function mountChecklist(p, host = document.body) {
   if (!p.onboarding) return () => { };   // only projects started from the map (#/new-project) get the checklist
