@@ -381,3 +381,30 @@ body.pc-project-entry > header.top .brand { margin-top: 18px; }
 .lp-hero-full .lp-hero-cta { margin-top: 20px; }
 .lp-hero-full .lp-wall { border-radius: 16px; }
 @media (max-width: 640px) { .lp-hero-full .lp-hero-lead h1 { font-size: clamp(36px, 10vw, 54px); } }
+
+/* ---- One header (2026-11-16): the public bar is full width and 64 px tall, the logo 24 px from the left as in the signed-in
+   header, the links right after it, Log in / Get started at the right; light, with a hairline under it. The project-entry map
+   no longer moves its logo inwards */
+body .lp .lp-nav, body .lp-full .lp-nav, body .lp-public .lp-nav { position: sticky; top: 0; z-index: 60; box-sizing: border-box; width: 100%; max-width: none; min-height: 64px; height: 64px; margin: 0; padding: 0 24px; gap: 28px; justify-content: flex-start; border: 0; border-bottom: 1px solid var(--brand-border); border-radius: 0; background: #ffffffee; backdrop-filter: blur(8px); box-shadow: none; color: var(--brand-ink); }
+body .lp .lp-nav .lp-logo, body .lp-full .lp-nav .lp-logo { align-self: center; margin: 0; }
+body .lp .lp-nav .lp-logo img { width: 132px; height: auto; }
+body .lp .lp-nav .lp-logo-light { display: block !important; }
+body .lp .lp-nav .lp-logo-dark { display: none !important; }
+body .lp .lp-nav .lp-links { margin: 0; gap: 22px; justify-content: flex-start; }
+body .lp .lp-nav .lp-links a { color: var(--brand-ink); }
+body .lp .lp-nav .lp-cta { margin-left: auto; }
+body .lp .lp-nav .lp-login { color: var(--brand-ink); }
+body .lp .lp-nav .lp-btn { background: var(--brand-primary); color: #fff !important; }
+.lp-hero.lp-hero-drift { margin-top: 0; padding-top: clamp(40px, 6vw, 72px); }
+body.pc-project-entry > header.top { min-height: 0; padding-inline: 24px; }
+body.pc-project-entry > header.top .brand { margin-top: 0; align-self: center; }
+@media (max-width: 640px) { body .lp .lp-nav, body .lp-full .lp-nav, body .lp-public .lp-nav { padding: 0 14px; gap: 12px; } body .lp .lp-nav .lp-logo img { width: 104px; } }
+body .lp > .lp-nav { width: auto; margin-inline: -24px; }
+body.pc-project-entry > header.top { min-height: 64px; }
+@media (max-width: 640px) { body .lp > .lp-nav { margin-inline: -14px; } }
+@media (max-width: 640px) {
+  body .lp > .lp-nav { margin-inline: -14px; padding: 0 16px; }
+  body .lp .lp-nav .lp-logo img { width: 132px; }
+  body.pc-project-entry > header.top { padding-inline: 16px; }
+  body.pc-project-entry > header.top .logo { width: 132px; }
+}

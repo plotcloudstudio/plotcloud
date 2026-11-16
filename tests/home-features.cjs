@@ -14,7 +14,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // the cover
     const cover = await p.evaluate(() => { const l = document.querySelector('.lp-hero-lead').getBoundingClientRect(), w = document.querySelector('.lp-hero-full .lp-wall').getBoundingClientRect(), h1 = document.querySelector('.lp-hero-lead h1');
       return { side: w.top >= l.bottom - 12 && w.width >= l.width - 2,   /* the words slide in by 8 px */ steps: [...document.querySelectorAll('.lp-flow li b')].map((x) => x.textContent), green: getComputedStyle(h1.querySelector('span')).color, lines: Math.round(h1.getBoundingClientRect().height / parseFloat(getComputedStyle(h1).lineHeight)) }; });
-    assert(cover.side, 'the full-width wall under the words'); assert.deepEqual(cover.steps, ['Site analysis', 'Plan Studio', 'Simulation', 'Rendering', 'Boards']); assert.equal(cover.lines, 2, 'the heading on two lines'); assert.equal(cover.green, 'rgb(33, 100, 76)');
+    assert(cover.side, 'the full-width wall under the words'); assert.deepEqual(cover.steps, ['Site analysis', 'Plan Studio', 'Simulation', 'Report']); assert.equal(cover.lines, 2, 'the heading on two lines'); assert.equal(cover.green, 'rgb(33, 100, 76)');
     const order = await p.$$eval('.lp-feature-card h3', (h) => h.map((x) => x.textContent)); assert.deepEqual(order, ['Site analysis', 'Furniture', 'Reports', 'Illustration']);
     console.log('PASS the cover and the card order:', JSON.stringify(cover.steps));
     // 01 Site analysis

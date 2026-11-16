@@ -1,6 +1,5 @@
 // The homepage pairs the study wall with a saved study comparison.
 import {SIMS} from '../data.js';
-import {PLANNED_SIMS} from '../planned-simulations.js';
 import {simulationPresentation} from '../simulation-presentation.js';
 import {mountDriftWall} from '../drift-wall.js';
 import {publicNav,bindPublicNav,publicBrand} from '../public-chrome.js';
@@ -25,7 +24,7 @@ export function render(app) {
       </div>
       <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
     </div>
-    <ol class="lp-flow" aria-label="The workflow">${[['Site analysis', 'Site, terrain and context'], ['Plan Studio', 'Draw or import the building'], ['Simulation', 'Run studies on a version'], ['Rendering', 'Interior views, with a render service'], ['Boards', 'Figures and reports to export']].map(([t, d], i) => `<li><span>0${i + 1}</span><b>${t}</b><small>${d}</small></li>`).join('')}</ol>
+    <ol class="lp-flow" aria-label="The workflow">${[['Site analysis', 'Site, terrain and context'], ['Plan Studio', 'Draw or import the building'], ['Simulation', 'Run studies on a version'], ['Report', 'Figures and the report to export']].map(([t, d], i) => `<li><span>0${i + 1}</span><b>${t}</b><small>${d}</small></li>`).join('')}</ol>
   </header>
 
   ${featureMarkup}
@@ -39,7 +38,7 @@ export function render(app) {
   </section>
   <footer class="lp-foot">${publicBrand()}<a href="#/pricing">Pricing</a><a href="#/resources">Resources</a><a href="#/legal">Legal</a></footer>
 </div>`;
-  const wallStudies = [...SIMS, ...PLANNED_SIMS].map(sim => {
+  const wallStudies = SIMS.filter((sim) => sim.status !== 'planned').map(sim => {   // only studies that run (2026-11-16: no "Coming soon" on the wall)
     const study = simulationPresentation(sim);
     return study.id === 'watersound' ? { ...study, image: 'img/fallingwater-cover.jpg' } : study;
   });

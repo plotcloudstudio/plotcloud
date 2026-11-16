@@ -2,7 +2,7 @@
 // · before a run the settings come first, then Start; less common settings fold under Advanced, marked when changed
 // · after a run the results come first, the settings fold below Start again, then Export (Add to Export list, CSV · PNG)
 // · the project workflow in the Workspace: five steps, Plan Studio current, Simulation done once a result is saved; Simulation opens
-//   Add simulation here; Results and Report & boards at the top right
+//   Add simulation here; Results and Report at the top right (four steps since 2026-11-16: rendering and boards removed)
 // · exporting from the Export list ticks "Export a report" in the getting-started checklist
 const { chromium } = require('playwright'), assert = require('node:assert/strict'), os = require('node:os');
 (async () => {
@@ -18,8 +18,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const steps = () => p.evaluate(async (id) => { const S = await import('./js/store.js'), O = await import('./js/onboarding.js'), pr = S.project(id); return { steps: Object.fromEntries(O.steps(pr).map((x) => [x.id, x.done])), exports: (pr.exports || []).length }; }, pid);
     // the workflow and the links
     const flow = () => p.$$eval('.sp-flow a', (as) => as.map((a) => [a.dataset.flow, a.dataset.done, a.getAttribute('aria-current') || '', a.getAttribute('href')]));
-    let f = await flow(); assert.deepEqual(f.map((x) => x[0]), ['site', 'plan', 'sim', 'render', 'boards']); assert.equal(f.find((x) => x[0] === 'plan')[2], 'step'); assert.equal(f.find((x) => x[0] === 'sim')[1], 'false');
-    assert.equal(f.find((x) => x[0] === 'render')[3], `#/rendering?project=${pid}`); assert.equal(f.find((x) => x[0] === 'boards')[3], `#/boards?project=${pid}`);
+    let f = await flow(); assert.deepEqual(f.map((x) => x[0]), ['site', 'plan', 'sim', 'report']); assert.equal(f.find((x) => x[0] === 'plan')[2], 'step'); assert.equal(f.find((x) => x[0] === 'sim')[1], 'false');
+    assert.equal(f.find((x) => x[0] === 'report')[3], `#/project/${pid}`);
     assert.equal(await p.getAttribute('.sp-tr [data-sp=results]', 'href'), `#/results/${pid}`); assert.equal(await p.getAttribute('.sp-tr [data-sp=report]', 'href'), `#/project/${pid}`);
     await p.click('.sp-flow [data-flow=sim]'); await p.waitForSelector('.w2-simmenu:not([hidden])', { timeout: 5000 }); assert.match(await p.evaluate(() => location.hash), new RegExp(`^#/workspace/${pid}$`), 'stays in the Workspace');
     await p.keyboard.press('Escape'); await p.mouse.click(800, 880); await p.waitForTimeout(300);
@@ -50,7 +50,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     if (await p.locator('.sp-pop-xl').isHidden()) await p.click('.sp-xlb'); await p.waitForTimeout(800);
     const [d] = await Promise.all([p.waitForEvent('download', { timeout: 240000 }), p.click('.sp-pop-xl [data-xl=pdf]')]); assert.match(d.suggestedFilename(), /\.pdf$/);
     await p.waitForTimeout(800); st = await steps(); assert.equal(st.steps.report, true, 'Export a report ticked: ' + JSON.stringify(st)); assert.equal(st.exports, 1);
-    f = await flow(); assert.equal(f.find((x) => x[0] === 'boards')[1], 'true', 'an export counts for step 5');
+    f = await flow(); assert.equal(f.find((x) => x[0] === 'report')[1], 'true', 'an export counts for step 4');
     console.log('PASS the loop: result saved, view added, PDF exported; checklist', JSON.stringify(st.steps));
     // the project page shows the same steps
     await p.goto(base + `/mvp/#/project/${pid}`); await p.waitForSelector('[aria-label="Project workflow"] [data-flow]'); const pj = await p.$$eval('[aria-label="Project workflow"] [data-flow]', (as) => as.map((a) => [a.dataset.flow, a.dataset.done]));

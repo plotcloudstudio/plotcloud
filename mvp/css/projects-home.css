@@ -97,3 +97,20 @@
 .ph-example .ph-thumb span{position:absolute;top:10px;left:10px;background:#183247;color:#fff;padding:4px 9px;border-radius:5px;font-size:12px;font-weight:650}
 .ph-example .ph-thumb:hover img{filter:brightness(1.05)}
 .ph-example-results{border:0;background:none;padding:4px 0;color:var(--ink,#183247);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
+/* the "Add new project" tile keeps its white words; several projects at once (2026-11-16): a tick box on each card and row, a bar */
+#app .ph-new, #app .ph-new b { color: #fff !important; }
+.ph-card { position: relative; }
+.ph-card > .ph-pick { position: absolute; top: 8px; left: 8px; z-index: 3; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; background: #ffffffe6; box-shadow: 0 1px 3px #0002; opacity: 0; transition: opacity .15s; cursor: pointer; }
+.ph-card:hover > .ph-pick, .ph-card.is-picked > .ph-pick, .ph-card > .ph-pick:focus-within, .ph-main:has(.ph-selbar:not([hidden])) .ph-card > .ph-pick { opacity: 1; }
+.ph-pick input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand-primary, #21644c); cursor: pointer; }
+.ph-card.is-picked .ph-thumb { outline: 2px solid var(--brand-primary, #21644c); outline-offset: 2px; }
+.ph-rows .ph-pickcol { width: 34px; padding-right: 0; }
+.ph-rows .ph-pickcol .ph-pick { display: grid; place-items: center; }
+.ph-rows tr.is-picked td { background: var(--brand-soft, #e6f1e9); }
+.ph-selbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--brand-border, #dbe5dd); border-radius: 10px; background: #fff; box-shadow: 0 6px 20px #18352314; }
+.ph-selbar[hidden] { display: none; }
+.ph-selbar b { margin-right: auto; font-size: 14px; }
+.ph-selbar .ph-danger { background: #b12e32; border-color: #b12e32; color: #fff; }
+.ph-selbar .ph-danger:hover { background: #8f2226; }
+.ph-card > .ph-pick { z-index: 5; background: #fff; border: 1px solid var(--brand-border, #dbe5dd); }
+.ph-card .ph-folder { left: 42px; }

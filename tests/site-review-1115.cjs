@@ -1,7 +1,7 @@
 // The site review of 2026-11-15:
 // · what is free matches Pricing, Log in and the Terms: Sun hours and Daylight on any project, every study on the example projects,
 //   the other studies on your own projects need monthly access (the gate is tried with pc-dev-gate=1, as on the live site)
-// · the Activity page no longer shows a made-up "Pro trial"; it shows the real access
+// · Activity & storage is gone: #/activity opens the Dashboard
 // · Resources lists no files that cannot be downloaded (the records stay at #/resources/files)
 // · the old homepage is no longer served; Results lists only the studies a batch runs, the others on one line of links
 // · leaving the Workspace for Report & boards: the project page draws (the 3D view's GPU memory is let go first)
@@ -24,12 +24,12 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS the claims agree: Pricing, Terms, Simulations; the old homepage redirects');
     // Resources: no files nobody can download
     await p.goto(base + '/mvp/#/resources'); await p.waitForSelector('.resource-page h1'); const rs = await p.evaluate(() => ({ h1: document.querySelector('.resource-page h1').innerText, notAttached: (document.body.innerText.match(/source file not attached/g) || []).length, files: !!document.querySelector('#resourceGrid') }));
-    assert.equal(rs.notAttached, 0); assert.equal(rs.files, false); assert.match(rs.h1, /Tools and references/);
+    assert.equal(rs.notAttached, 0); assert.equal(rs.files, false); assert.match(rs.h1, /Simulation resources/);
     await p.goto(base + '/mvp/#/resources/files'); await p.waitForSelector('#resourceGrid .resource-card'); assert((await p.$$eval('#resourceGrid .resource-card', (x) => x.length)) >= 10, 'the records kept at #/resources/files');
     console.log('PASS Resources: tools and references only;', 'the file records kept at #/resources/files');
-    // Activity: the real access, no made-up trial
-    await p.goto(base + '/mvp/#/activity'); await p.waitForSelector('#plan .db-big'); const plan = await p.locator('#plan').innerText();
-    assert.doesNotMatch(plan, /trial/i); assert.match(plan, /^Plan\s+Free/i); console.log('PASS Activity shows the real plan:', plan.replace(/\s+/g, ' '));
+    // Activity & storage was removed (2026-11-16): its address opens the Dashboard, which has no link to it
+    await p.goto(base + '/mvp/#/activity'); await p.waitForFunction(() => location.hash === '#/home', null, { timeout: 15000 }); await p.waitForSelector('.ph-main');
+    assert.equal(await p.locator('a[href="#/activity"]').count(), 0, 'no Activity link'); console.log('PASS #/activity opens the Dashboard; no Activity & storage link');
     if (local) {
       // the gate on your own project
       const own = await p.evaluate(async () => { const S = await import('./js/store.js'), D = await import('./js/data.js'); const q = S.createProject('QA own project', D.sampleModel('A')); S.save(); return q.id; });

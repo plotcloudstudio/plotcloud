@@ -4,7 +4,7 @@ import {openHospital} from '../hospital-example.js?v=hosp-20261110-5';
 // Categories & Tags, Tutorials, What's new, latest change, signed-in user), and the project browser with a count, sort,
 // grid / list / map views, search and a large "Add new project" card that opens the map (#/new-project).
 // Everything here is real project data in this browser (or synced to the cloud account when signed in). The earlier
-// dashboard (needs-attention list, activity, storage) stays available at #/activity.
+// dashboard's Activity & storage page was removed (2026-11-16); #/activity opens this page.
 import * as S from '../store.js';
 import * as C from '../cloud.js';
 import { $, $$, esc, toast, setCurrent, refreshWho } from '../app.js';
@@ -62,7 +62,6 @@ export function render(app, [section], params) {
         <div class="ph-sep"></div>
         <a href="#/start-study">${svg('book')}Tutorials</a>
         <button type="button" id="phNews">${svg('spark')}What’s new</button>
-        <a href="#/activity">${svg('chart')}Activity &amp; storage</a>
       </div>
       <div class="ph-bottom"><a class="ph-news" href="#" id="phLatest"><small>New in the changelog</small><b>${esc(CHANGES[0][1])}</b></a>
         <div class="ph-who"><span class="ph-avatar">${esc(initial)}</span><div>${A.user?`<small>Logged in as ${esc(first)}</small><button type="button" id="phOut">Log out</button>`:'<small>Projects saved in this browser</small><a href="#/login?next=home">Log in</a>'}</div></div></div>
@@ -72,7 +71,7 @@ export function render(app, [section], params) {
       <label>Sort by: <select class="ph-sort" id="phSort"><option value="created">Created</option><option value="edited">Last edited</option><option value="name">Name</option><option value="results">Most results</option></select></label>
       <div class="ph-views" role="group" aria-label="View">${['grid', 'list', 'map'].map((v) => `<button type="button" data-view="${v}" aria-pressed="${v === view}" aria-label="${v[0].toUpperCase() + v.slice(1)} view">${svg(v)}</button>`).join('')}</div>
       <div class="ph-search">${svg('search')}<input id="phQ" type="search" placeholder="Search projects" aria-label="Search projects"></div></div>
-      <div class="ph-body" id="phBody"></div></section></div>
+      <div class="ph-selbar" id="phSel" hidden role="region" aria-label="Selected projects"></div><div class="ph-body" id="phBody"></div></section></div>
     <dialog class="ph-dialog" id="phDlg"><h2>What’s new</h2><ul>${CHANGES.map(([d, t, s]) => `<li><b>${esc(t)}</b> <small>${esc(d)}</small><br><span>${esc(s)}</span></li>`).join('')}</ul><form method="dialog"><button class="btn">Close</button></form></dialog>`;
   $('#phSort', app).value = sort;
   const news = () => $('#phDlg', app).showModal(); $('#phNews', app).onclick = news; $('#phLatest', app).onclick = (e) => { e.preventDefault(); news(); };
@@ -81,6 +80,19 @@ export function render(app, [section], params) {
   $('#phQ', app).oninput = (e) => { q = e.target.value.toLowerCase(); draw(); };
   for (const b of $$('[data-view]', app)) b.onclick = () => { view = b.dataset.view; setPref({ view }); for (const x of $$('[data-view]', app)) x.setAttribute('aria-pressed', String(x === b)); draw(); };
   let mapObj = null;
+  // several projects at once (2026-11-16): tick boxes on the cards and rows, a bar with what to do with the ticked ones; Delete moves
+  // them to Deleted (restorable, as one at a time); in Deleted they can be restored or deleted for good (typing DELETE)
+  const sel = new Set();
+  const pick = (id, name) => `<label class="ph-pick" title="Select"><input type="checkbox" data-pick="${esc(id)}" ${sel.has(id) ? 'checked' : ''} aria-label="Select ${esc(name)}"></label>`;
+  function selBar() {
+    const bar = $('#phSel', app), ids = [...sel].filter((id) => S.project(id)); sel.clear(); ids.forEach((id) => sel.add(id));
+    if (!sel.size) { bar.hidden = true; bar.innerHTML = ''; return; } bar.hidden = false; const n = sel.size, word = `${n} project${n === 1 ? '' : 's'}`;
+    bar.innerHTML = `<b>${n} selected</b>${where === 'deleted' ? `<button type="button" class="btn sm" data-sel="restore">Restore</button><button type="button" class="btn sm ph-danger" data-sel="purge">Delete permanently</button>` : `<button type="button" class="btn sm ph-danger" data-sel="delete">Move to Deleted</button>`}<button type="button" class="btn sm ghost" data-sel="clear">Clear</button>`;
+    bar.querySelector('[data-sel=clear]').onclick = () => { sel.clear(); draw(); };
+    bar.querySelector('[data-sel=delete]')?.addEventListener('click', () => { const at = new Date().toISOString(); for (const id of sel) { const p = S.project(id); if (p) p.deletedAt = at; } S.save(); sel.clear(); toast(`${word} moved to Deleted`); render(app, [section], params); });
+    bar.querySelector('[data-sel=restore]')?.addEventListener('click', () => { for (const id of sel) { const p = S.project(id); if (p) delete p.deletedAt; } S.save(); sel.clear(); toast(`${word} restored`); render(app, [section], params); });
+    bar.querySelector('[data-sel=purge]')?.addEventListener('click', () => { if (prompt(`Delete ${word} with all their versions and results permanently? Type DELETE to confirm.`) !== 'DELETE') return; for (const id of sel) { const p = S.project(id); if (p) S.deleteProject(p); } S.save(); sel.clear(); toast(`${word} deleted permanently`); render(app, [section], params); });
+  }
 
   function list() {
     let L = where === 'deleted' ? all().filter((p) => p.deletedAt) : live();
@@ -92,7 +104,7 @@ export function render(app, [section], params) {
   }
   function card(p) {
     const t = thumbOf(p), del = !!p.deletedAt;
-    return `<article class="ph-card" data-id="${esc(p.id)}"><a class="ph-thumb" href="${del ? '#' : '#/workspace/' + esc(p.id)}" data-open="${esc(p.id)}" aria-label="Open ${esc(p.name)}">${t ? `<img src="${t}" alt="">` : svg('folder').replace('<svg', '<svg class="ph-folder"')}</a>
+    return `<article class="ph-card${sel.has(p.id) ? ' is-picked' : ''}" data-id="${esc(p.id)}">${pick(p.id, p.name)}<a class="ph-thumb" href="${del ? '#' : '#/workspace/' + esc(p.id)}" data-open="${esc(p.id)}" aria-label="Open ${esc(p.name)}">${t ? `<img src="${t}" alt="">` : svg('folder').replace('<svg', '<svg class="ph-folder"')}</a>
       <div class="ph-actions">${del ? `<button type="button" data-restore="${esc(p.id)}" title="Restore" aria-label="Restore ${esc(p.name)}">${svg('restore')}</button><button type="button" data-purge="${esc(p.id)}" title="Delete permanently" aria-label="Delete ${esc(p.name)} permanently">${svg('trash')}</button>`
         : `<button type="button" data-fav="${esc(p.id)}" aria-pressed="${!!p.favorite}" title="Favorite" aria-label="Favorite ${esc(p.name)}">${svg('star')}</button><button type="button" data-tags="${esc(p.id)}" title="Tags" aria-label="Tags for ${esc(p.name)}">${svg('tag')}</button><button type="button" data-rename="${esc(p.id)}" title="Rename" aria-label="Rename ${esc(p.name)}">${svg('edit')}</button><button type="button" data-dup="${esc(p.id)}" title="Duplicate" aria-label="Duplicate ${esc(p.name)}">${svg('copy')}</button><button type="button" data-del="${esc(p.id)}" title="Delete" aria-label="Delete ${esc(p.name)}">${svg('trash')}</button>`}</div>
       <div class="ph-meta"><b title="${esc(p.name)}">${esc(p.name)}</b><span class="ph-stats"><span title="Saved results">${svg('chart')}${p.runs.length}</span><span title="Saved versions">${svg('layers')}${p.versions.length}</span></span></div>
@@ -105,8 +117,8 @@ export function render(app, [section], params) {
       body.innerHTML = Object.keys(counts).length ? `<table class="ph-list"><thead><tr><th>Tag</th><th>Projects</th></tr></thead><tbody>${Object.entries(counts).sort().map(([t, n]) => `<tr><td><a href="#/home?tag=${encodeURIComponent(t)}">${esc(t)}</a></td><td>${n}</td></tr>`).join('')}</tbody></table>` : '<p class="ph-empty">No tags yet. Hover a project and choose the tag button to add categories such as “Housing” or “Competition”.</p>'; return; }
     body.classList.toggle('ph-body-map', view === 'map');
     // list: a picture, the name and its versions, then dates, results and tags (categories)
-    if (view === 'list') body.innerHTML = `<table class="ph-list ph-rows"><thead><tr><th>Projects</th><th>Created</th><th>Last edited</th><th>Results</th><th>Category</th></tr></thead><tbody>${L.map((p) => { const t = thumbOf(p), del = !!p.deletedAt;
-      return `<tr data-id="${esc(p.id)}"><td><a class="ph-row" href="${del ? '#' : '#/workspace/' + esc(p.id)}" data-open="${esc(p.id)}"><span class="ph-rthumb">${t ? `<img src="${t}" alt="">` : ''}</span><span><b>${esc(p.name)}${p.favorite ? ' ★' : ''}</b><small>${p.versions.length} version${p.versions.length === 1 ? '' : 's'}</small></span></a></td><td>${day(p.created)}</td><td>${del ? 'Deleted ' + ago(p.deletedAt) : ago(p.updated || p.created)}</td><td>${p.runs.length}</td><td>${(p.tags || []).map((x) => `<span class="ph-chip">${esc(x)}</span>`).join(' ')}</td></tr>`; }).join('')}</tbody></table>${L.length ? '' : '<p class="ph-empty">No projects here.</p>'}`;
+    if (view === 'list') body.innerHTML = `<table class="ph-list ph-rows"><thead><tr><th class="ph-pickcol"><label class="ph-pick" title="Select all"><input type="checkbox" data-pickall ${L.length && L.every((p) => sel.has(p.id)) ? 'checked' : ''} aria-label="Select all projects"></label></th><th>Projects</th><th>Created</th><th>Last edited</th><th>Results</th><th>Category</th></tr></thead><tbody>${L.map((p) => { const t = thumbOf(p), del = !!p.deletedAt;
+      return `<tr data-id="${esc(p.id)}"${sel.has(p.id) ? ' class="is-picked"' : ''}><td class="ph-pickcol">${pick(p.id, p.name)}</td><td><a class="ph-row" href="${del ? '#' : '#/workspace/' + esc(p.id)}" data-open="${esc(p.id)}"><span class="ph-rthumb">${t ? `<img src="${t}" alt="">` : ''}</span><span><b>${esc(p.name)}${p.favorite ? ' ★' : ''}</b><small>${p.versions.length} version${p.versions.length === 1 ? '' : 's'}</small></span></a></td><td>${day(p.created)}</td><td>${del ? 'Deleted ' + ago(p.deletedAt) : ago(p.updated || p.created)}</td><td>${p.runs.length}</td><td>${(p.tags || []).map((x) => `<span class="ph-chip">${esc(x)}</span>`).join(' ')}</td></tr>`; }).join('')}</tbody></table>${L.length ? '' : '<p class="ph-empty">No projects here.</p>'}`;
     // map: the project cards in a column beside a light map of where each project is; hover and click link the two
     else if (view === 'map') { body.innerHTML = `<div class="ph-split"><div class="ph-col">${L.map(card).join('') || '<p class="ph-empty">No projects here.</p>'}</div><div class="ph-mapwrap"><div class="ph-mapview" id="phMap"></div>
         <div class="ph-mapsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input id="phLoc" type="search" placeholder="Search for a location" autocomplete="off" aria-label="Search for a location"><div class="ph-hits" id="phHits" hidden></div></div></div></div>`;
@@ -135,6 +147,9 @@ export function render(app, [section], params) {
     for(const example of app.querySelectorAll('[data-hospital]'))example.onclick=()=>{const p=openHospital({study:example.dataset.hospital||null});setCurrent(p);location.hash='#/workspace/'+p.id;};
     for(const example of app.querySelectorAll('[data-fallingwater]'))example.onclick=()=>{const p=openCase();setCurrent(p);location.hash='#/'+(example.dataset.fallingwater==='results'?'results':'workspace')+'/'+p.id;};
     const P = (id) => S.project(id);
+    for (const c of $$('[data-pick]', app)) c.onchange = () => { c.checked ? sel.add(c.dataset.pick) : sel.delete(c.dataset.pick); c.closest('.ph-card, tr')?.classList.toggle('is-picked', c.checked); const all = $('[data-pickall]', app); if (all) all.checked = list().every((p) => sel.has(p.id)); selBar(); };
+    const all = $('[data-pickall]', app); if (all) all.onchange = () => { for (const p of list()) all.checked ? sel.add(p.id) : sel.delete(p.id); draw(); };
+    selBar();
     for (const a of $$('[data-open]', app)) a.addEventListener('click', () => { const p = P(a.dataset.open); if (p && !p.deletedAt) setCurrent(p); });
     for (const b of $$('[data-fav]', app)) b.onclick = () => { const p = P(b.dataset.fav); p.favorite = !p.favorite; S.save(); draw(); };
     for (const b of $$('[data-rename]', app)) b.onclick = () => { const p = P(b.dataset.rename), n = prompt('Project name', p.name); if (n?.trim()) { S.renameProject(p, n); draw(); } };

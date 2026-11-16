@@ -34,7 +34,7 @@ const BY = new Map(PRESETS.map((m) => [m.id, m]));
 export const preset = (id) => BY.get(id) || null;
 // the editable fields of a layer: what each holds and what uses it today
 export const FIELDS = [
-  ['color', 'Colour', 'color', '', 'Used by the 3D view and rendering requests'],
+  ['color', 'Colour', 'color', '', 'Used by the 3D view'],
   ['reflectance', 'Light reflectance', 'number', '0–1', 'Kept with the model; studies use their own settings for now'],
   ['vt', 'Light transmittance', 'number', '0–1', 'Glass. Kept with the model; studies use their own settings for now'],
   ['rw', 'Sound insulation Rw', 'number', 'dB', 'Kept with the model; studies use their own settings for now'],
