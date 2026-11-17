@@ -1,7 +1,7 @@
 import * as Cloud from './cloud.js';
 import {checkTestingAccess,allowsTestingStudy,mountTestingAccess} from './simulation-test-access.js?v=private-testing-20261027-1';
 // Manual beta entitlements. Only hashes and expiry dates are public; never trust a local plan/paid flag.
-export const BETA = Object.freeze({ name: 'PlotCloud', email: 'plotcloud@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
+export const BETA = Object.freeze({ name: 'PlotCloud', email: 'plotcloudstudio@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
 // What is free (2026-11-15, as Pricing, Log in and the Terms say): Sun hours and Daylight on any project; every study on the
 // example projects (Fallingwater, the hospital, the courtyard sample), to try before paying; every Resources tool. The other
 // studies on a person's own projects need monthly access
