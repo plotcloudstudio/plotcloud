@@ -105,3 +105,36 @@ body:not([data-page=workspace]) #app .about-checks .eyebrow{color:#9fc7b1}
 #app .sim-res p{margin:0;font-size:14.5px;line-height:1.5;color:var(--brand-muted);flex:1}
 #app .sim-res-cta{margin-top:6px;color:var(--brand-primary);font-weight:600;font-size:14px}
 #app .resource-notice{margin:18px 0 0;padding:10px 14px;border-radius:10px;background:var(--brand-soft);color:var(--brand-dark)}
+
+/* About · founders, testimonials and client logos (2026-11-17); sample items are tagged until real content replaces them */
+#app .about-team,#app .about-quotes,#app .about-clients{margin-bottom:56px}
+#app .about-team .cms-team-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:22px}
+#app .about-team .card{position:relative;background:#fff;border:1px solid var(--brand-border);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:6px}
+#app .about-team .card img,#app .about-initials{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--pc-ui-subtle,#eef4ef);color:var(--brand-primary);display:grid;place-items:center;font-weight:650;font-size:20px;margin-bottom:8px}
+#app .about-team .card h3{margin:0;font-size:18px;font-weight:650;letter-spacing:-.02em;color:var(--brand-ink)}
+#app .about-team .card .eyebrow{margin:0}
+#app .about-team .card p{margin:6px 0 0;font-size:15px;line-height:1.55;color:var(--pc-ui-secondary,#43584d)}
+#app .about-linkedin{margin-top:auto;padding-top:10px;font-size:14px;font-weight:600;color:var(--brand-primary);text-decoration:none}
+#app .about-linkedin.is-empty{color:var(--pc-ui-secondary,#43584d);font-weight:500}
+#app .sample-tag{position:absolute;top:12px;right:12px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:650;color:#7a5a12;background:#fbf0d2;border:1px solid #efd99a;border-radius:999px;padding:2px 8px}
+#app .sample-note{margin:8px 0 0;font-size:14px;color:var(--pc-ui-secondary,#43584d)}
+#app .is-sample{border-style:dashed!important}
+#app .about-quotegrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:22px}
+#app .about-quote{position:relative;margin:0;background:var(--pc-ui-subtle,#eef4ef);border:1px solid var(--brand-border);border-radius:14px;padding:24px}
+#app .about-quote blockquote{margin:0 0 14px;font-size:16px;line-height:1.55;color:var(--brand-ink)}
+#app .about-quote blockquote::before{content:'\201C';color:var(--brand-primary);font-size:28px;line-height:0;margin-right:4px;vertical-align:-8px}
+#app .about-quote figcaption{font-size:14px;color:var(--pc-ui-secondary,#43584d);display:grid;gap:2px}#app .about-quote figcaption b{color:var(--brand-ink);font-weight:600}
+#app .about-logos{list-style:none;margin:22px 0 0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+#app .about-logos li{position:relative;min-height:72px;background:#fff;border:1px solid var(--brand-border);border-radius:12px;display:grid;place-items:center;padding:12px;text-align:center;font-size:14px;font-weight:600;color:var(--pc-ui-secondary,#43584d)}
+#app .about-logos li a{color:inherit;text-decoration:none;display:grid;place-items:center;width:100%;height:100%}
+#app .about-logos img{max-width:100%;max-height:40px;object-fit:contain;filter:grayscale(1);opacity:.8}
+#app .about-logos .sample-tag{top:6px;right:6px;font-size:9px;padding:1px 6px}
+@media (max-width:900px){#app .about-team .cms-team-grid,#app .about-quotegrid{grid-template-columns:1fr 1fr}#app .about-logos{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){#app .about-team .cms-team-grid,#app .about-quotegrid{grid-template-columns:1fr}#app .about-logos{grid-template-columns:1fr 1fr}}
+
+/* Resources published from the Founder workspace (2026-11-17) */
+#app .res-card .res-cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;margin:4px 0 6px}
+#app .res-page{max-width:860px}#app .res-page .display{margin:10px 0 8px}#app .res-authors{margin:0 0 8px;font-size:15px;color:var(--pc-ui-secondary,#43584d)}
+#app .res-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+#app .res-video{position:relative;aspect-ratio:16/9;margin:18px 0;border-radius:12px;overflow:hidden;background:#000}#app .res-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#app .res-body{font-size:16px;line-height:1.65;color:var(--pc-ui-secondary,#43584d)}#app .res-body h2{font-size:22px;margin:26px 0 8px;color:var(--brand-ink)}

@@ -24,7 +24,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS the claims agree: Pricing, Terms, Simulations; the old homepage redirects');
     // Resources: no files nobody can download
     await p.goto(base + '/mvp/#/resources'); await p.waitForSelector('.resource-page h1'); const rs = await p.evaluate(() => ({ h1: document.querySelector('.resource-page h1').innerText, notAttached: (document.body.innerText.match(/source file not attached/g) || []).length, files: !!document.querySelector('#resourceGrid') }));
-    assert.equal(rs.notAttached, 0); assert.equal(rs.files, false); assert.match(rs.h1, /Simulation resources/);
+    assert.equal(rs.notAttached, 0); assert.equal(rs.files, false); assert.match(rs.h1, /Tools and references/);
     await p.goto(base + '/mvp/#/resources/files'); await p.waitForSelector('#resourceGrid .resource-card'); assert((await p.$$eval('#resourceGrid .resource-card', (x) => x.length)) >= 10, 'the records kept at #/resources/files');
     console.log('PASS Resources: tools and references only;', 'the file records kept at #/resources/files');
     // Activity & storage was removed (2026-11-16): its address opens the Dashboard, which has no link to it

@@ -1,4 +1,4 @@
-import {publishedContent,aboutDefault,initialPosts,researchPosts,categories,escapeText,bodyHTML,postHTML,teamHTML} from '../site-content.js';
+import {publishedContent,aboutDefault,initialPosts,researchPosts,categories,escapeText,bodyHTML,postHTML,aboutExtrasHTML} from '../site-content.js';
 // Public information pages. Original product notes, grounded in current workflows.
 export async function renderAbout(app,rest,params,{isCurrent=()=>true}={}){
   // About (2026-11-16): the order of an architect-led company page (who we are, the problem, the approach, what we believe, how we
@@ -21,17 +21,17 @@ export async function renderAbout(app,rest,params,{isCurrent=()=>true}={}){
   { const L=String(about.headline||'').split('\n'); app.querySelector('header h1').innerHTML=escapeText(L[0])+(L.length>1?'<br><span>'+L.slice(1).map(escapeText).join('<br>')+'</span>':''); }   // the second line in green, as on every page (2026-11-16)
   app.querySelector('header .lede').textContent=about.intro;
   const story=app.querySelector('#aboutStory');story.innerHTML='<div class="about-sechead"><span class="eyebrow">Our story</span><h2>'+escapeText(about.storyTitle)+'</h2></div><div class="about-storybody">'+bodyHTML(about.story)+'<p class="note">Early-design screening does not establish code compliance or replace professional engineering verification.</p></div>';
-  story.insertAdjacentHTML('afterend',teamHTML(about));
+  story.insertAdjacentHTML('afterend',aboutExtrasHTML(about));
 }
 export async function renderBlog(app,rest=[],params,{isCurrent=()=>true}={}){
-  app.innerHTML='<div class="wrap"><span class="eyebrow">PlotCloud Blog</span><h1 class="display md">From the studio.<br><span>Into the world.</span></h1><p class="lede">Campus visits, product updates and notes from the PlotCloud team.</p><p role="status">Loading stories…</p></div>';
+  app.innerHTML='<div class="wrap"><span class="eyebrow">PlotCloud Research Notes</span><h1 class="display md">Research notes.<br><span>From the studio.</span></h1><p class="lede">How the studies are built, checked and documented: verification, case studies and the sources of the example models.</p><p role="status">Loading stories…</p></div>';
   const published=await publishedContent();if(!isCurrent())return;
   const managed=published===null?initialPosts:published.filter(d=>d.kind==='blog');
   const posts=[...researchPosts.filter(p=>!managed.some(x=>x.id===p.id)),...managed];
   if(rest[0]){
     const post=posts.find(p=>p.id===rest[0]);app.innerHTML='<div class="wrap cms-blog"><a class="text-link" href="#/blog">← All stories</a>'+(post?postHTML(post,{detail:true}):'<h1>Story not found.</h1><p>This story may have been unpublished.</p>')+'</div>';return;
   }
-  app.innerHTML=`<div class="wrap cms-blog"><header class="page-head"><span class="eyebrow">PlotCloud Blog</span><h1 class="display md">From the studio.<br><span>Into the world.</span></h1><p class="lede">Campus visits, product updates and notes from the PlotCloud team.</p></header><nav class="cms-blog-filter" aria-label="Story categories">${Object.entries({all:'All stories',...categories}).map(([id,label])=>`<button class="btn" type="button" data-blog-category="${id}" aria-pressed="${id==='all'}">${label}</button>`).join('')}</nav><div id="cmsStories"></div></div>`;
+  app.innerHTML=`<div class="wrap cms-blog"><header class="page-head"><span class="eyebrow">PlotCloud Research Notes</span><h1 class="display md">Research notes.<br><span>From the studio.</span></h1><p class="lede">How the studies are built, checked and documented: verification, case studies and the sources of the example models.</p></header>${posts.every(p=>p.content?.format==='article')?'':`<nav class="cms-blog-filter" aria-label="Story categories">${Object.entries({all:'All stories',...categories}).map(([id,label])=>`<button class="btn" type="button" data-blog-category="${id}" aria-pressed="${id==='all'}">${label}</button>`).join('')}</nav>`}<div id="cmsStories"></div></div>`;
   const draw=category=>{app.querySelectorAll('[data-blog-category]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.blogCategory===category)));const selected=posts.filter(p=>category==='all'||p.content.category===category);app.querySelector('#cmsStories').innerHTML=selected.map(p=>postHTML(p)).join('')||'<p class="cms-empty">No stories in this category have been published yet.</p>';};
   app.querySelectorAll('[data-blog-category]').forEach(b=>b.onclick=()=>draw(b.dataset.blogCategory));draw('all');
 }

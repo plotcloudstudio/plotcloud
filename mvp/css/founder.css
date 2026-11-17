@@ -2,3 +2,6 @@
 .payment-memo-note{border-left:3px solid #294f78;background:#eef3f8;padding:16px 18px;margin-top:20px;color:#17344e;font-size:14px;line-height:1.65}
 @media(max-width:900px){.cms-layout{grid-template-columns:200px minmax(0,1fr);gap:16px}.cms-editor{padding:20px}.cms-team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.founder-heading{align-items:start}.cms-tabs a{margin-left:0}}
 @media(max-width:640px){.cms-layout{grid-template-columns:1fr}.cms-library{position:static}.cms-library #cmsDocuments{max-height:220px;overflow:auto}.founder-heading{display:block}.founder-heading>.btn{margin-top:18px}.founder-heading .display{font-size:34px}.cms-field-pair,.cms-team-grid{grid-template-columns:1fr}.cms-tabs{gap:16px}.cms-person{padding:14px}.cms-editor{padding:18px}.cms-preview{padding:18px}.cms-history-row{align-items:start;flex-direction:column}}
+
+/* uploads, checkboxes, steps, the resources editor (2026-11-17) */
+.cms-filefield{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}.cms-filefield .f{margin:0}.cms-check{display:flex;gap:8px;align-items:center;font-size:14px}.cms-check input{width:auto;margin:0}.cms-editor h3{margin:26px 0 8px;font-size:16px}.cms-steps{padding-left:20px;line-height:1.6}.cms-steps li{margin:6px 0}

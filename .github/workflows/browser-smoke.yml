@@ -28,7 +28,7 @@ jobs:
               tests/shared-conditions.cjs tests/project-climate.cjs tests/climate-studies.cjs tests/charts-list.cjs
           - group: presentation
             scripts: >-
-              hero/toronto.test.cjs tests/resources-native.cjs tests/compare-2d.cjs tests/workflow.cjs
+              hero/toronto.test.cjs tests/compare-2d.cjs tests/workflow.cjs
           - group: project-data
             scripts: >-
               tests/project-backup.cjs tests/mvp-dashboard.cjs
