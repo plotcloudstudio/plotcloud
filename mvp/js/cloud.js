@@ -166,16 +166,39 @@ export async function rpc(name, body = {}) {
   return call('/rest/v1/rpc/' + name, { method:'POST', body });
 }
 // a founder's file for the site (2026-11-17): PDFs and images go to the public site-files bucket; the policies let only founders write
-export async function uploadSiteFile(file){
+export async function uploadSiteFile(file,{any=false}={}){
   if(!user())throw new Error('Log in to your registered account first.');
   const c=cfg();if(!c)throw new Error('Cloud accounts are not set up on this site.');
-  if(!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(file.type||''))throw new Error('Upload a PDF, PNG, JPEG or WebP file.');
-  if(file.size>25*1024*1024)throw new Error('Files are limited to 25 MB.');
+  // a free library file may be any type (CAD, Rhino, zip…), up to 50 MB; everything else is a PDF or an image up to 25 MB
+  if(!any&&!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(file.type||''))throw new Error('Upload a PDF, PNG, JPEG or WebP file.');
+  if(file.size>(any?50:25)*1024*1024)throw new Error(any?'Library files are limited to 50 MB each.':'Files are limited to 25 MB.');
   await fresh();
   const safe=String(file.name||'file').normalize('NFKD').replace(/[^\w.\-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'file',path=`${new Date().getFullYear()}/${crypto.randomUUID()}-${safe}`;
-  const r=await fetch(c.url+'/storage/v1/object/site-files/'+path,{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+session.access_token,'Content-Type':file.type,'x-upsert':'false'},body:file});
+  const r=await fetch(c.url+'/storage/v1/object/site-files/'+path,{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+session.access_token,'Content-Type':file.type||'application/octet-stream','x-upsert':'false'},body:file});
   if(!r.ok){let m=r.statusText;try{const j=await r.json();m=j.message||j.error||j.msg||m;}catch{}throw new Error(m||'Upload failed');}
   return {path:'site-files/'+path,url:c.url+'/storage/v1/object/public/site-files/'+path,name:safe,size:file.size,type:file.type};
+}
+// the resource library's members-only files (2026-11-17): a private bucket; founders upload, and founders and people with active
+// access get a five-minute signed link (Supabase checks the bucket's read rule against the signed-in person)
+export async function uploadLibraryFile(file){
+  if(!user())throw new Error('Log in to your registered account first.');
+  const c=cfg();if(!c)throw new Error('Cloud accounts are not set up on this site.');
+  if(file.size>50*1024*1024)throw new Error('Library files are limited to 50 MB each.');
+  await fresh();
+  const safe=String(file.name||'file').normalize('NFKD').replace(/[^\w.\-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'file',path=`${new Date().getFullYear()}/${crypto.randomUUID()}-${safe}`;
+  const r=await fetch(c.url+'/storage/v1/object/library-files/'+path,{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+session.access_token,'Content-Type':file.type||'application/octet-stream','x-upsert':'false'},body:file});
+  if(!r.ok){let m=r.statusText;try{const j=await r.json();m=j.message||j.error||j.msg||m;}catch{}throw new Error(m||'Upload failed');}
+  return {path:'library-files/'+path,name:safe,size:file.size,type:file.type};
+}
+export async function libraryLink(path){
+  if(!user())throw new Error('Log in to download this file.');
+  const c=cfg();if(!c)throw new Error('Cloud accounts are not set up on this site.');
+  const m=/^library-files\/([A-Za-z0-9][A-Za-z0-9/_.-]{0,250})$/.exec(String(path||''));if(!m)throw new Error('This file is not in the library.');
+  await fresh();
+  const r=await fetch(c.url+'/storage/v1/object/sign/library-files/'+m[1],{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:300})});
+  if(!r.ok)throw new Error(r.status===400||r.status===403||r.status===404?'This file is for members with active access.':'The download link could not be made.');
+  const j=await r.json(),u=j.signedURL||j.signedUrl;if(!u)throw new Error('The download link could not be made.');
+  return c.url+'/storage/v1'+(u.startsWith('/')?u:'/'+u)+'&download='+encodeURIComponent(m[1].split('/').pop());
 }
 export async function publicRpc(name){
   if(name!=='pc_public_site_content')throw new Error('Unknown public operation.');

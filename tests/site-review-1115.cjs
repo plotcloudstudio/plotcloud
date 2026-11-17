@@ -2,7 +2,7 @@
 // · what is free matches Pricing, Log in and the Terms: Sun hours and Daylight on any project, every study on the example projects,
 //   the other studies on your own projects need monthly access (the gate is tried with pc-dev-gate=1, as on the live site)
 // · Activity & storage is gone: #/activity opens the Dashboard
-// · Resources lists no files that cannot be downloaded (the records stay at #/resources/files)
+// · Resources lists no files that cannot be downloaded (the library shows published files only)
 // · the old homepage is no longer served; Results lists only the studies a batch runs, the others on one line of links
 // · leaving the Workspace for Report & boards: the project page draws (the 3D view's GPU memory is let go first)
 const { chromium } = require('playwright'), assert = require('node:assert/strict'), os = require('node:os');
@@ -24,9 +24,10 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS the claims agree: Pricing, Terms, Simulations; the old homepage redirects');
     // Resources: no files nobody can download
     await p.goto(base + '/mvp/#/resources'); await p.waitForSelector('.resource-page h1'); const rs = await p.evaluate(() => ({ h1: document.querySelector('.resource-page h1').innerText, notAttached: (document.body.innerText.match(/source file not attached/g) || []).length, files: !!document.querySelector('#resourceGrid') }));
-    assert.equal(rs.notAttached, 0); assert.equal(rs.files, false); assert.match(rs.h1, /Tools and references/);
-    await p.goto(base + '/mvp/#/resources/files'); await p.waitForSelector('#resourceGrid .resource-card'); assert((await p.$$eval('#resourceGrid .resource-card', (x) => x.length)) >= 10, 'the records kept at #/resources/files');
-    console.log('PASS Resources: tools and references only;', 'the file records kept at #/resources/files');
+    // since 2026-11-17 the resource library is back (files the founder publishes, free or for members); still nothing that cannot be reached
+    assert.equal(rs.notAttached, 0); assert.equal(rs.files, true); assert.match(rs.h1, /Tools and files/);
+    await p.goto(base + '/mvp/#/resources/files'); await p.waitForSelector('#resourceGrid'); await p.waitForTimeout(500); assert.equal(await p.locator('#resourceGrid .resource-card').count(), 0, 'no record without a file'); assert.match(await p.locator('#resourceGrid').innerText(), /Nothing in the library yet/);
+    console.log('PASS Resources: tools, references and the library; no file listed that cannot be downloaded');
     // Activity & storage was removed (2026-11-16): its address opens the Dashboard, which has no link to it
     await p.goto(base + '/mvp/#/activity'); await p.waitForFunction(() => location.hash === '#/home', null, { timeout: 15000 }); await p.waitForSelector('.ph-main');
     assert.equal(await p.locator('a[href="#/activity"]').count(), 0, 'no Activity link'); console.log('PASS #/activity opens the Dashboard; no Activity & storage link');

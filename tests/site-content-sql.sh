@@ -17,6 +17,8 @@ P="psql -h /tmp -p $PGPORT -U postgres -v ON_ERROR_STOP=1 -q"
 $P -c "create database plotcloud" >/dev/null
 $P -d plotcloud -f "$HERE/backend/supabase-base.sql" 2>&1 | grep -v NOTICE || true
 $P -d plotcloud -c "alter table auth.users add column if not exists email_confirmed_at timestamptz" >/dev/null   # as on Supabase; the test base file has no such column
+# a small stand-in for Supabase Storage (buckets and objects with row level security), so the bucket policies are applied and tried
+$P -d plotcloud -c "create schema if not exists storage; create table if not exists storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]); create table if not exists storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text); alter table storage.objects enable row level security; grant usage on schema storage to anon,authenticated; grant select,insert,update,delete on storage.objects to anon,authenticated;" >/dev/null
 # the file the founder pastes, twice
 $P -d plotcloud -f "$ROOT/supabase/setup-plotcloud.sql" 2>&1 | grep -v NOTICE || true
 $P -d plotcloud -f "$ROOT/supabase/setup-plotcloud.sql" 2>&1 | grep -v NOTICE || true
@@ -79,4 +81,25 @@ fails user $OWNER "select public.pc_site_edit('publish','post-ev',null,null,1)" 
 as_user $OWNER "select public.pc_site_edit('save','post-ev','blog','{\"title\":\"A talk\",\"category\":\"event\",\"body\":\"B\",\"eventDate\":\"2026-12-03\",\"location\":\"Toronto\"}'::jsonb,1)" >/dev/null
 as_user $OWNER "select public.pc_site_edit('publish','post-ev',null,null,2)" >/dev/null
 as_anon "select public.pc_public_site_content()" | grep -q '"post-ev"' && pass "Blog: an event needs its date and place, then publishes"
+# the resource library (2026-11-17): free and members-only items; the private bucket is read by founders and members only
+fails user $OWNER "select public.pc_site_edit('save','lib-x','resource','{\"type\":\"library\",\"title\":\"T\",\"summary\":\"S\",\"category\":\"music\"}'::jsonb,0)" "Choose a library category"
+fails user $OWNER "select public.pc_site_edit('save','lib-x','resource','{\"type\":\"library\",\"title\":\"T\",\"summary\":\"S\",\"category\":\"cad\",\"access\":\"members\",\"file\":\"https://x.test/a.zip\"}'::jsonb,0)" "must be uploaded to the private library"
+fails user $OWNER "select public.pc_site_edit('save','lib-x','resource','{\"type\":\"library\",\"title\":\"T\",\"summary\":\"S\",\"category\":\"cad\",\"access\":\"free\",\"file\":\"library-files/2026/a.zip\"}'::jsonb,0)" "must be an https address"
+as_user $OWNER "select public.pc_site_edit('save','lib-1','resource','{\"type\":\"library\",\"title\":\"Detail set\",\"summary\":\"S\",\"category\":\"cad\",\"access\":\"members\",\"formats\":\"dwg, pdf\"}'::jsonb,0)" >/dev/null
+fails user $OWNER "select public.pc_site_edit('publish','lib-1',null,null,1)" "needs its file before publishing"
+as_user $OWNER "select public.pc_site_edit('save','lib-1','resource','{\"type\":\"library\",\"title\":\"Detail set\",\"summary\":\"S\",\"category\":\"cad\",\"access\":\"members\",\"formats\":\"dwg, pdf\",\"file\":\"library-files/2026/abc-details.zip\"}'::jsonb,1)" >/dev/null
+as_user $OWNER "select public.pc_site_edit('publish','lib-1',null,null,2)" >/dev/null
+as_anon "select public.pc_public_site_content()" | grep -q '"lib-1"' && pass "library: category, access and file rules; a members-only item published"
+[ "$($D -c "select public from storage.buckets where id='library-files'")" = f ] || { echo "FAIL the library bucket must be private"; exit 1; }
+$D -c "insert into storage.objects(bucket_id,name) values ('library-files','2026/abc-details.zip'),('site-files','2026/free.pdf')" >/dev/null
+MEMBER=44444444-4444-4444-8444-444444444444
+$D -c "insert into auth.users (id,email,encrypted_password,email_confirmed_at) values ('$MEMBER','member@test.invalid','x',now()); insert into private.pc_memberships(user_id,starts_at,expires_at,access_type) values ('$MEMBER',now()-interval '1 day',now()+interval '30 days','month')" >/dev/null
+seen() { if [ "$1" = anon ]; then as_anon "select count(*) from storage.objects where bucket_id='library-files'"; else as_user "$1" "select count(*) from storage.objects where bucket_id='library-files'"; fi; }
+[ "$(seen $MEMBER)" = 1 ] && [ "$(seen $OWNER)" = 1 ] && [ "$(seen $USER2)" = 0 ] && [ "$(seen anon)" = 0 ] || { echo "FAIL library read: member $(seen $MEMBER) founder $(seen $OWNER) other $(seen $USER2) visitor $(seen anon)"; exit 1; }
+$D -c "update private.pc_memberships set expires_at=now()-interval '1 minute', starts_at=now()-interval '31 days' where user_id='$MEMBER'" >/dev/null
+[ "$(seen $MEMBER)" = 0 ] || { echo "FAIL an expired member still reads the library"; exit 1; }
+[ "$(as_anon "select count(*) from storage.objects where bucket_id='site-files'")" = 1 ] || { echo "FAIL public site files"; exit 1; }
+pass "library bucket: private; a member and the founder read it, another user, a visitor and an expired member do not; site files stay public"
+fails user $USER2 "insert into storage.objects(bucket_id,name) values ('library-files','x/evil.zip')" "row-level security"
+pass "only founders upload to the library"
 echo "ALL PASS"

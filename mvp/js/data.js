@@ -92,8 +92,6 @@ export const RESOURCES = {
   refs: [
     { name: 'Building code finder', tool: 'code-bc', blurb: 'BC and Ontario code sections by topic.' },
     { name: 'Accessibility finder', tool: 'access-bc', blurb: 'Ramps, landings, clearances.' },
-    { name: 'LEED v5 finder', tool: 'leed', blurb: 'Plan credits and points.' },
-    { name: 'Ergonomics cheat sheet', tool: 'ergo', blurb: 'Interior dimensions that work.' },
     { name: 'Scale & sheets', tool: 'scale', blurb: 'Scales, sheet sizes and units.' },
   ],
 };
