@@ -1,6 +1,6 @@
 # Registered accounts and access management
 
-Owner's intended administrator email: plotcloud@gmail.com. The site remains on GitHub Pages; Supabase supplies Auth and the private membership database. The browser receives only a publishable/anon project key and the user's session, never the service-role key. The owner supplied project `cgxszynizkbiblfiaowf` on 2026-10-27; its public configuration is now in the website. Hosted database initialization, authentication delivery, owner assignment and cross-account isolation still require verification. The execution environment's outbound allowlist blocks this Supabase host, so no hosted verification is claimed. The Admin route includes read-only live endpoint checks that run from the visitor's browser. Local profiles cannot be searched remotely.
+Owner's intended administrator email: plotcloudstudio@gmail.com. The site remains on GitHub Pages; Supabase supplies Auth and the private membership database. The browser receives only a publishable/anon project key and the user's session, never the service-role key. The owner supplied project `cgxszynizkbiblfiaowf` on 2026-10-27; its public configuration is now in the website. Hosted database initialization, authentication delivery, owner assignment and cross-account isolation still require verification. The execution environment's outbound allowlist blocks this Supabase host, so no hosted verification is claimed. The Admin route includes read-only live endpoint checks that run from the visitor's browser. Local profiles cannot be searched remotely.
 
 ## Connect once
 
@@ -8,12 +8,12 @@ Owner's intended administrator email: plotcloud@gmail.com. The site remains on G
 2. In SQL Editor, run `supabase/migrations/20261025000000_cloud_projects.sql`, then `supabase/migrations/20261026000000_memberships.sql` and `supabase/migrations/20261027000000_membership_durations.sql`. The Admin setup panel offers the combined `supabase/setup-plotcloud.sql` and Copy buttons.
 3. Configure the production Site URL and redirect URL as `https://plotcloudstudio.github.io/plotcloud/mvp/`. Enable email confirmation. Configure production SMTP for registration/confirmation emails; the default Supabase mail sender has limits. Do not promise instant delivery.
 4. Put the Project URL and public/anon key into `mvp/js/backend-config.js` and deploy. Do not use a service-role key or database password. `supabase/README.md` also documents a local-only configuration for testing.
-5. Register plotcloud@gmail.com through the website and confirm the email. This is separate from signing up to the Supabase dashboard. Then, as the project owner in SQL Editor, run `supabase/appoint-admin.sql` to deliberately appoint the confirmed account. It refuses missing or unconfirmed accounts. The equivalent assignment is:
+5. Register plotcloudstudio@gmail.com through the website and confirm the email. This is separate from signing up to the Supabase dashboard. Then, as the project owner in SQL Editor, run `supabase/appoint-admin.sql` to deliberately appoint the confirmed account. It refuses missing or unconfirmed accounts. The equivalent assignment is:
 
 ```sql
 insert into private.pc_admins(user_id)
 select id from auth.users
-where lower(email)='plotcloud@gmail.com' and email_confirmed_at is not null
+where lower(email)='plotcloudstudio@gmail.com' and email_confirmed_at is not null
 on conflict do nothing;
 ```
 
@@ -30,7 +30,7 @@ Duplicate request IDs are idempotent; a payment/authorization reference cannot g
 
 ## Limits and deferred automation
 
-This implements manual verification and account grants, replacing the proposed email-triggered code delivery. No Gmail automation, bank API or email-based payment verification is enabled. Do not infer a completed payment from an e-transfer invitation. Wealthsimple's official setup separates Autodeposit registration from business email notifications: https://help.wealthsimple.com/hc/en-ca/articles/51594844256155-Set-up-a-business-email-for-account-notifications-and-Interac-e-Transfer-transactions . Receipt instructions: https://help.wealthsimple.com/hc/en-ca/articles/13080474718491-Receive-Interac-e-Transfer-transactions-in-your-chequing-account . Register plotcloud@gmail.com only after checking it should route to that account; an Autodeposit email can belong to one institution at a time.
+This implements manual verification and account grants, replacing the proposed email-triggered code delivery. No Gmail automation, bank API or email-based payment verification is enabled. Do not infer a completed payment from an e-transfer invitation. Wealthsimple's official setup separates Autodeposit registration from business email notifications: https://help.wealthsimple.com/hc/en-ca/articles/51594844256155-Set-up-a-business-email-for-account-notifications-and-Interac-e-Transfer-transactions . Receipt instructions: https://help.wealthsimple.com/hc/en-ca/articles/13080474718491-Receive-Interac-e-Transfer-transactions-in-your-chequing-account . Register plotcloudstudio@gmail.com only after checking it should route to that account; an Autodeposit email can belong to one institution at a time.
 
 The membership database and admin operations have server-side authorization. Simulation computation is still public client-side JavaScript. These access checks do not make public source/computation tamper-proof; moving private paid computations to an authenticated service is a separate change. Seller/order disclosure requirements in the paid-service policies still apply before accepting transfers.
 

@@ -2,7 +2,7 @@
 # The founder content database on a real PostgreSQL 16 (2026-11-17): the complete setup file applied twice (it must be rerunnable),
 # then, acting as a founder and as a visitor through the same functions PostgREST exposes: a paper is saved, refused until it has
 # its PDF or link, published and read back; a tutorial with a video from an unlisted host is refused; the About page's LinkedIn,
-# testimonials and clients round-trip; a non-founder is refused; the two retired studio notes are gone.
+# testimonials and clients round-trip; a non-founder is refused; the two retired studio notes are gone; the owner appointment SQL.
 # Needs the PostgreSQL 16 server binaries (PGBIN) and psql. Usage: tests/site-content-sql.sh
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"
@@ -66,4 +66,10 @@ assert a['team'][0]['linkedin'].startswith('https://www.linkedin.com/') and len(
 print('PASS About: LinkedIn, a testimonial and a client published')"
 # the storage policy wrapper exists for founders only
 [ "$(as_user $OWNER "select public.pc_can_upload_site_files()")" = t ] && [ "$(as_user $USER2 "select public.pc_can_upload_site_files()")" = f ] && pass "site-files upload right: founder yes, others no"
+# the owner appointment (supabase/appoint-admin.sql): refused until plotcloudstudio@gmail.com is registered and confirmed, then appointed
+$P -d plotcloud -f "$ROOT/supabase/appoint-admin.sql" >/dev/null 2>&1 && { echo "FAIL appointment ran without the account"; exit 1; }
+OWNER2=33333333-3333-4333-8333-333333333333
+$D -c "insert into auth.users (id,email,encrypted_password,email_confirmed_at) values ('$OWNER2','plotcloudstudio@gmail.com','x',now())"
+$P -d plotcloud -f "$ROOT/supabase/appoint-admin.sql" >/dev/null
+[ "$($D -c "select count(*) from private.pc_admins where user_id='$OWNER2'")" = 1 ] && [ "$(as_user $OWNER2 "select public.pc_can_upload_site_files()")" = t ] && pass "appoint-admin.sql: refused before plotcloudstudio@gmail.com exists, then appoints it"
 echo "ALL PASS"

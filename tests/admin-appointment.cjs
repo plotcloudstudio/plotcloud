@@ -4,7 +4,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{PGlite}=requir
  await db.exec(fs.readFileSync('supabase/migrations/20261026000000_memberships.sql','utf8'));
  const sql=fs.readFileSync('supabase/appoint-admin.sql','utf8');
  await assert.rejects(()=>db.exec(sql),/confirm its email first/);await db.exec('rollback');
- await db.query("insert into auth.users(id,email)values('11111111-1111-4111-8111-111111111111','plotcloud@gmail.com')");
+ await db.query("insert into auth.users(id,email)values('11111111-1111-4111-8111-111111111111','plotcloudstudio@gmail.com')");
  await assert.rejects(()=>db.exec(sql),/confirm its email first/);await db.exec('rollback');
  await db.query("update auth.users set email_confirmed_at=now()");
  await db.exec('set role authenticated');await assert.rejects(()=>db.exec(sql),/permission denied/);await db.exec('rollback;reset role');

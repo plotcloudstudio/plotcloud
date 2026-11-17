@@ -1,6 +1,6 @@
 -- PlotCloud complete database setup: projects, accounts and month/year/permanent access.
 -- Run as project owner in Supabase SQL Editor. No administrator is assigned automatically.
--- After confirming plotcloud@gmail.com, separately run appoint-admin.sql.
+-- After confirming plotcloudstudio@gmail.com, separately run appoint-admin.sql.
 
 -- PlotCloud cloud accounts and projects (2026-10-25)
 -- Run once in your Supabase project: Dashboard › SQL Editor › New query › paste this file › Run.

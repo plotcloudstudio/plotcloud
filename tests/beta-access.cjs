@@ -25,8 +25,8 @@ const {chromium}=require('playwright');
  const base=process.env.TEST_BASE||'http://127.0.0.1:8781';
  const go=async hash=>{await page.goto(base+'/mvp/'+hash);await page.waitForTimeout(600);};
  await go('#/pricing'); await page.locator('h1').filter({hasText:'A stronger design report.'}).waitFor();
- let text=await page.locator('#app').innerText();assert(text.includes('CAD 16.99'));assert(text.includes('plotcloud@gmail.com'));assert(!/annual|yearly|7.day trial|79\s*\/\s*yr/i.test(text));
- const mail=await page.locator('a').filter({hasText:'Request monthly access'}).getAttribute('href');assert(mail.startsWith('mailto:plotcloud@gmail.com?'));assert(decodeURIComponent(mail).includes('Before I send'));
+ let text=await page.locator('#app').innerText();assert(text.includes('CAD 16.99'));assert(text.includes('plotcloudstudio@gmail.com'));assert(!/annual|yearly|7.day trial|79\s*\/\s*yr/i.test(text));
+ const mail=await page.locator('a').filter({hasText:'Request monthly access'}).getAttribute('href');assert(mail.startsWith('mailto:plotcloudstudio@gmail.com?'));assert(decodeURIComponent(mail).includes('Before I send'));
  await page.locator('input[name="code"]').fill('INVALID');await page.locator('button[type="submit"]').click();await page.getByText('This code is invalid, not yet active, expired or revoked.',{exact:false}).waitFor();
  await page.evaluate(()=>localStorage.setItem('pc-plan','pro'));
  await go('#/simulations/wind');assert((await page.locator('#app').innerText()).includes('needs'));assert.equal(await page.locator('#eng').count(),0);
@@ -42,7 +42,7 @@ const {chromium}=require('playwright');
  console.log('PASS valid activation, paid engine/resource entry and revocation');
  await go('#/pricing');fs.mkdirSync('/workspace/artifacts',{recursive:true});await page.screenshot({path:'/workspace/artifacts/pricing-beta-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/workspace/artifacts/pricing-beta-mobile.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
- for(const path of ['terms','privacy','refunds']){await go('#/legal/'+path);const t=await page.locator('#app').innerText();assert(t.includes('plotcloud@gmail.com'));assert(!t.includes('{{ADDRESS}}'));}
+ for(const path of ['terms','privacy','refunds']){await go('#/legal/'+path);const t=await page.locator('#app').innerText();assert(t.includes('plotcloudstudio@gmail.com'));assert(!t.includes('{{ADDRESS}}'));}
  assert.deepEqual(errors,[]);assert.deepEqual(JSON.parse(fs.readFileSync('mvp/beta-access-ledger.json','utf8')).grants,[]);
  console.log('PASS responsive Pricing, policies, no page errors, production ledger empty');
  }finally{await browser.close();}

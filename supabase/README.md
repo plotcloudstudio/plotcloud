@@ -61,7 +61,7 @@ The account access migration and administrator setup are documented in [docs/acc
 
 ## Complete setup from the administrator page
 
-Open `mvp/#/admin`. The setup panel provides **Copy database setup SQL**, **Copy owner appointment SQL** and a link to this project's SQL Editor. The combined [setup-plotcloud.sql](setup-plotcloud.sql) installs the account/project, private membership and month/year/permanent migrations in order; it is safe to rerun and does not appoint anyone automatically. Register and confirm `plotcloud@gmail.com`, then run [appoint-admin.sql](appoint-admin.sql) deliberately as project owner. Return to the website and log in again. The public project key cannot perform these owner operations. A local PostgreSQL-compatible test verifies installation, row isolation, administrator checks, membership changes and expiry; it is not evidence that hosted initialization has been performed.
+Open `mvp/#/admin`. The setup panel provides **Copy database setup SQL**, **Copy owner appointment SQL** and a link to this project's SQL Editor. The combined [setup-plotcloud.sql](setup-plotcloud.sql) installs the account/project, private membership and month/year/permanent migrations in order; it is safe to rerun and does not appoint anyone automatically. Register and confirm `plotcloudstudio@gmail.com`, then run [appoint-admin.sql](appoint-admin.sql) deliberately as project owner. Return to the website and log in again. The public project key cannot perform these owner operations. A local PostgreSQL-compatible test verifies installation, row isolation, administrator checks, membership changes and expiry; it is not evidence that hosted initialization has been performed.
 
 ## Founder content: Blog, About, Resources (2026-11-17)
 
@@ -72,7 +72,7 @@ may write); videos are linked from YouTube, Bilibili or Vimeo. To switch it on:
 
 1. Supabase Dashboard › **SQL Editor › New query**: paste [`setup-plotcloud.sql`](setup-plotcloud.sql) and **Run** (safe to run again).
 2. **Authentication › URL configuration**: Site URL `https://plotcloudstudio.github.io/plotcloud/mvp/`, and the same as a redirect URL.
-3. Register `plotcloud@gmail.com` on the site (Log in › Create account) and confirm the email.
+3. Register `plotcloudstudio@gmail.com` on the site (Log in › Create account) and confirm the email.
 4. SQL Editor again: paste [`appoint-admin.sql`](appoint-admin.sql) and **Run**.
 5. Log in on the site: the avatar menu shows **Manage site content**.
 

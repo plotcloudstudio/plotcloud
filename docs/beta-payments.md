@@ -8,7 +8,7 @@ The Pricing message is “Better-informed design. A stronger design report.” S
 
 ## Order and payment
 
-1. A customer requests order details by email at plotcloud@gmail.com. The website opens a draft; it does not send email or verify bank payments.
+1. A customer requests order details by email at plotcloudstudio@gmail.com. The website opens a draft; it does not send email or verify bank payments.
 2. Before accepting payment, provide the required seller identity/contact details (including a business address where required), final price and taxes, scope, exact access dates, delivery timing and refund terms in writing. Public Gmail contact does not replace a legally required address. Do not accept a paid order until the required disclosures can be supplied.
 3. The customer sends the agreed e-transfer using their own bank. Verify receipt in the bank, not a screenshot, email claim, or website button. Never request passwords, security answers or banking codes.
 4. Issue a code only after receipt is verified, with a confirmed start time:

@@ -1,4 +1,4 @@
-import {mountAdminSetup} from '../admin-setup.js?v=admin-setup-20261027-1';
+import {mountAdminSetup} from '../admin-setup.js?v=mail-20261117-1';
 import { $, esc, toast } from '../app.js';
 import * as C from '../cloud.js';
 const planLabel=v=>({month:'1 Month',year:'1 Year',permanent:'Permanent'}[v]||'—');
