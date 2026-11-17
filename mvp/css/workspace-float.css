@@ -711,3 +711,6 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 .w2.sp .sp-sched td{text-align:left;white-space:nowrap}.w2.sp .sp-sched td:nth-child(n+3){text-align:right}
 .w2.sp .sp-link{border:0;background:none;padding:0;margin-left:4px;color:#1d4ed8;font:inherit;font-size:10px;text-decoration:underline;cursor:pointer}
 .w2.sp .sp-ideas{margin:4px 0 6px;padding-left:18px;display:grid;gap:8px;font-size:11.5px;line-height:1.4}.w2.sp .sp-ideas li>b{display:block;color:#111827}.w2.sp .sp-ideas li>span{display:block;color:#475569}.w2.sp .sp-ideas .btn{margin-top:4px}
+/* the other studies of the same group, at the top of the study card (2026-11-17) */
+.w2.sp .sp-sibs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:2px 0 8px}.w2.sp .sp-sibs>span{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#7d8b9e;margin-right:2px}
+.w2.sp .sp-sibs button{border:1px solid #d5dbe3;background:#fff;border-radius:999px;padding:2px 8px;font:inherit;font-size:11px;color:#334155;cursor:pointer}.w2.sp .sp-sibs button[aria-current]{background:#0f172a;border-color:#0f172a;color:#fff;cursor:default}

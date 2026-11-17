@@ -37,7 +37,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('.sp-studycard [data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 900000 });
     const after = await p.evaluate(() => { const c = document.querySelector('.sp-studycard'), at = (s) => [...c.querySelectorAll('*')].indexOf(c.querySelector(s)); return { stage: at('.sp-stage'), run: at('[data-st=run]'), set: at('details.sp-set'), exp: at('.sp-expacts'), open: c.querySelector('details.sp-set')?.open, sect: !!c.querySelector(':scope > .sp-sect') }; });
     assert(after.stage >= 0 && after.run > after.stage && after.set > after.run && after.exp > after.set && !after.open && !after.sect, 'results, Start again, settings, export: ' + JSON.stringify(after));
-    await p.click('.sp-studycard details.sp-set > summary'); await p.selectOption('.sp-studycard [data-eg=detect]', '120'); await p.waitForTimeout(400);
+    // open the settings without waiting on navigations (none happen; the evacuation playback keeps the page busy in software GL)
+    await p.evaluate(() => document.querySelector('.sp-studycard details.sp-set > summary').click()); await p.waitForFunction(() => document.querySelector('.sp-studycard details.sp-set')?.open); await p.selectOption('.sp-studycard [data-eg=detect]', '120'); await p.waitForTimeout(400);
     assert.match(await p.locator('.sp-studycard .sp-pill').innerText(), /Settings changed/); assert.match(await p.locator('.sp-studycard details.sp-set > summary').innerText(), /changed: Start again/);
     assert(await p.isDisabled('.sp-studycard [data-st=xlview]'), 'no export of a result that no longer matches the settings');
     await p.selectOption('.sp-studycard [data-eg=detect]', '60'); await p.waitForTimeout(400); assert.match(await p.locator('.sp-studycard .sp-pill').innerText(), /Up to date/);
