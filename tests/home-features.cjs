@@ -37,7 +37,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS Furniture: drag in at true size, move inside the walls, turn, drag off, keyboard');
     // 03 Reports
     const rep = p.locator('.lp-card-report'); await rep.scrollIntoViewIfNeeded(); const t1 = await rep.locator('.lp-rep-body').innerText(); assert.match(t1, /Floor average[\s\S]*\+0\.69[\s\S]*2\.37/);
-    await rep.locator('[data-rep=vent]').click(); const t2 = await rep.locator('.lp-rep-body').innerText(); assert.match(t2, /Air changes[\s\S]*\+16\.1[\s\S]*51\.2/); assert((await rep.locator('.lp-bars > span').count()) >= 4);
+    await rep.locator('[data-rep=vent]').click(); const t2 = await rep.locator('.lp-rep-body').innerText(); { const ev = require('fs').readFileSync(require('path').join(__dirname, '../mvp/js/fallingwater-results.js'), 'utf8'), achs = [...ev.matchAll(/"ach": ([\d.]+)/g)].map((m) => +m[1]), runs = [...ev.matchAll(/"open": [\d.]+,[\s\S]*?"ach": ([\d.]+)/g)].map((m) => +m[1]); void achs; const d = (runs[1] - runs[0]).toFixed(1), b = runs[1].toFixed(1); assert.match(t2, new RegExp(`Air changes[\\s\\S]*\\+${d.replace('.', '\\.')}[\\s\\S]*${b.replace('.', '\\.')}`), 'the saved runs: +' + d + ' and ' + b); } assert((await rep.locator('.lp-bars > span').count()) >= 4);
     assert.equal(await rep.locator('a[href$="fallingwater-ventilation.pdf"]').count(), 1); console.log('PASS Reports: tabs over the saved results');
     // 04 Illustration
     const ill = p.locator('.lp-card-illustration'); await ill.scrollIntoViewIfNeeded(); await p.waitForFunction(() => document.querySelector('.lp-card-illustration').dataset.live === '1', null, { timeout: 60000 });

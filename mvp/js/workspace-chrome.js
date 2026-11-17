@@ -26,7 +26,7 @@ import * as VWS from './interior/views.js?v=vw-20261101-1';
 import * as CAMS from './interior/cameras.js?v=cam-20261115-2';
 import * as DAY from './interior/daylight.js?v=day-20261114-1';
 import { daylightInputs, daylightRecord } from './daylight-run.js?v=day-20261114-1';
-import * as EGX from './interior/egress.js?v=eg-20261112-1';
+import * as EGX from './interior/egress.js?v=fw-20261116-1';
 import * as ECODE from './interior/egresscode.js?v=code-20261110-1';
 import { maturityOf } from './capabilities.js';
 import { workflowState } from './onboarding.js';
