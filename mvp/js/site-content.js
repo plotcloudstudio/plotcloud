@@ -1,7 +1,8 @@
 import * as Cloud from './cloud.js';
 import {hospitalResearchPost} from '../research/hospital-evacuation-article.js';
+import {fallingwaterModelPost} from '../research/fallingwater-model-article.js';
 import {evacuationAccuracyPost} from '../research/fire-evacuation-article.js';
-export const researchPosts=[evacuationAccuracyPost,hospitalResearchPost];
+export const researchPosts=[fallingwaterModelPost,evacuationAccuracyPost,hospitalResearchPost];
 
 export const categories={campus:'Campus visits',release:'Product updates',studio:'Studio notes'};
 export const aboutDefault={headline:'Understand the building.\nImprove the next decision.',intro:'PlotCloud is a browser workspace for architects and architecture students exploring building performance in early design.',storyTitle:'Keep your existing workflow',story:'Use supported imports and exports alongside your CAD and modelling tools. PlotCloud supports design exploration; study methods and limitations remain part of the result.',teamIntro:'',team:[]};

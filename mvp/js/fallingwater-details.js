@@ -1,7 +1,7 @@
 // Editable layer groups for details traced approximately from HABS plans and sections (2026-11-06: rounded ochre parapets, the
 // rear trellis, the hearth boulder and kettle, built-ins, the guest house, its pool and the covered walkway up the hill).
 // Positions and sizes are approximate: a diagrammatic reconstruction for study, not as-built survey data.
-import * as H from './fallingwater-habs.js?v=arc-20261107-1';
+import * as H from './fallingwater-habs.js?v=habs-20261116-1';
 export function details(xy, ground = () => 0, opt = {}){
  const groups={};
  const tri=(name,layer,a,b,c)=>{const g=groups[name]??={layer,p:[]};g.p.push(...a,...b,...c);};
@@ -42,8 +42,9 @@ export function details(xy, ground = () => 0, opt = {}){
  const arcRun=(name,layer,c,r,a0,a1,z,w,h,round,P2=xy)=>{const n=Math.max(6,Math.round(Math.abs(a1-a0)/10));for(let k=0;k<n;k++){const p=(t)=>{const a=(a0+(a1-a0)*t)*Math.PI/180;return P2(c[0]+r*Math.cos(a),c[1]+r*Math.sin(a));};run(name,layer,p(k/n),p((k+1)/n),z,w,h,round);}};
  { const A=H.HATCH_PARAPET;arcRun('Hatch landing parapet','Terrace rails',A.c,A.r,A.a0,A.a1,-.57,.25,1.53,true); }
  // the boulder of the site, left rising through the living-room floor in front of the hearth, and Wright's red kettle in the fireplace
- { const [x,y]=xy(1510,1510);rock('Hearth boulder','Stonework',x,y,-.2,1.1,.8,.42,2); }
- { const [x,y]=xy(1405,1520);ball('Kettle in the hearth','Kettle',x,y,.05,.28); }
+ // the boulder's stippled outline on sheet 4 (1430–1600 × 1395–1600 px); the kettle in the half-round niche the sheet draws at the hearth's south end
+ { const [x,y]=xy(1515,1498);rock('Hearth boulder','Stonework',x,y,-.2,1.04,1.25,.42,2); }
+ { const [x,y]=xy(1405,1607);ball('Kettle in the hearth','Kettle',x,y,.05,.24); }
  // built-in seats along the glazing (walnut), as the plans show them
  { const [a,b]=xy(1415,2290),[c,d]=xy(1930,2245);box('Living room window seat','Built-in joinery',(a+c)/2,(b+d)/2,0,c-a,d-b,.42); }
  { const [a,b]=xy(1305,1940),[c,d]=xy(1410,1640);box('Living room window seat','Built-in joinery',(a+c)/2,(b+d)/2,0,c-a,d-b,.42); }
