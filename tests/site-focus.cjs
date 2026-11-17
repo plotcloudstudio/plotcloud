@@ -32,12 +32,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.goto(base + '/mvp/#/boards'); await p.waitForFunction(() => location.hash === '#/home', null, { timeout: 15000 });
     await p.goto(base + '/mvp/#/activity'); await p.waitForFunction(() => location.hash === '#/home', null, { timeout: 15000 });
     console.log('PASS four steps on the homepage; #/rendering → the project, #/boards and #/activity → the Dashboard');
-    // Resources: what the studies use; the retired tools send old links here with a note
-    await p.goto(base + '/mvp/#/resources'); await p.waitForSelector('.sim-res'); const rs = await p.$$eval('.resource-section h2', (h) => h.map((x) => x.textContent));
-    assert.deepEqual(rs, ['Sample models', 'Weather', 'Methods and validation', 'Templates']); assert.doesNotMatch(await p.evaluate(() => document.body.innerText), /Stair generator|Facade studio|LEED|Colour palettes|Color palettes|Building code finder/);
-    const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-res-drill]')]); assert.equal(dl.suggestedFilename(), 'plotcloud-drill-template.csv');
-    await p.goto(base + '/mvp/#/resources/tool/stairs3d'); await p.waitForFunction(() => /#\/resources\?retired=/.test(location.hash), null, { timeout: 15000 }); await p.waitForSelector('.resource-notice'); assert.match(await p.locator('.resource-notice').innerText(), /retired/);
-    console.log('PASS Resources: sample models, weather, methods and validation, templates; old tool links land here with a note');
+    // Resources: the library and the tools (2026-11-17: restored), the Blog research notes only, Get started opens the Dashboard
+    await p.goto(base + '/mvp/#/resources'); await p.waitForSelector('.resource-tools'); const rs = await p.$$eval('.resource-section h2', (h) => h.map((x) => x.textContent));
+    assert.deepEqual(rs.slice(0, 3), ['Model-building tools', 'Design utilities', 'References']); assert.match(await p.evaluate(() => document.body.innerText), /Stair generator/);
+    await p.goto(base + '/mvp/#/resources/tool/stairs3d'); await p.waitForSelector('.resource-engine, #resourceEngine, .resource-page', { timeout: 15000 }); assert.match(await p.evaluate(() => document.body.innerText), /Stair generator/);
+    await p.goto(base + '/mvp/#/blog'); await p.waitForSelector('#app h1'); await p.waitForTimeout(1200); const posts = await p.$$eval('#app a[href^="#/blog/"]', (as) => [...new Set(as.map((a) => a.getAttribute('href')))]); assert.deepEqual(posts.sort(), ['#/blog/fallingwater-model-sources', '#/blog/fire-evacuation-accuracy'], 'research notes only: ' + posts);
+    await p.goto(base + '/mvp/#/'); await p.waitForSelector('.lp-nav .lp-btn'); assert.equal(await p.getAttribute('.lp-nav .lp-btn', 'href'), '#/home', 'Get started opens the Dashboard');
+    console.log('PASS Resources: tools, utilities, references and the library; the Blog lists the two research notes; Get started → Dashboard');
     // My Projects: several at once
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('.ph-grid .ph-card[data-id]'); assert.equal(await p.locator('a[href="#/activity"]').count(), 0, 'no Activity & storage link');
     assert(await p.locator('.ph-new').evaluate((e) => getComputedStyle(e).color === 'rgb(255, 255, 255)'), 'Add new project in white');

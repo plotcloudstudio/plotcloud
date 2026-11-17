@@ -62,3 +62,19 @@ The account access migration and administrator setup are documented in [docs/acc
 ## Complete setup from the administrator page
 
 Open `mvp/#/admin`. The setup panel provides **Copy database setup SQL**, **Copy owner appointment SQL** and a link to this project's SQL Editor. The combined [setup-plotcloud.sql](setup-plotcloud.sql) installs the account/project, private membership and month/year/permanent migrations in order; it is safe to rerun and does not appoint anyone automatically. Register and confirm `plotcloud@gmail.com`, then run [appoint-admin.sql](appoint-admin.sql) deliberately as project owner. Return to the website and log in again. The public project key cannot perform these owner operations. A local PostgreSQL-compatible test verifies installation, row isolation, administrator checks, membership changes and expiry; it is not evidence that hosted initialization has been performed.
+
+## Founder content: Blog, About, Resources (2026-11-17)
+
+The Founder workspace (`#/founder`, shown in the avatar menu as "Manage site content" to administrators) publishes research notes to
+the Blog, the About page's founders, testimonials and client logos, and papers, tutorials and news to Resources, with drafts, publish,
+unpublish and a revision history. PDFs and images upload to the public `site-files` bucket (25 MB, PDF/PNG/JPEG/WebP; only founders
+may write); videos are linked from YouTube, Bilibili or Vimeo. To switch it on:
+
+1. Supabase Dashboard › **SQL Editor › New query**: paste [`setup-plotcloud.sql`](setup-plotcloud.sql) and **Run** (safe to run again).
+2. **Authentication › URL configuration**: Site URL `https://plotcloudstudio.github.io/plotcloud/mvp/`, and the same as a redirect URL.
+3. Register `plotcloud@gmail.com` on the site (Log in › Create account) and confirm the email.
+4. SQL Editor again: paste [`appoint-admin.sql`](appoint-admin.sql) and **Run**.
+5. Log in on the site: the avatar menu shows **Manage site content**.
+
+Checked locally by `tests/site-content-sql.sh` on a real PostgreSQL 16 (the setup file applied twice; a paper saved, refused until it
+has its PDF, published and read by a visitor; a tutorial's video host validated; the About lists round-tripped; non-founders refused).

@@ -158,6 +158,18 @@ export async function rpc(name, body = {}) {
   if (!['pc_is_admin','pc_access_status','pc_admin_search','pc_admin_access','pc_admin_history','pc_site_edit'].includes(name)) throw new Error('Unknown account operation.');
   return call('/rest/v1/rpc/' + name, { method:'POST', body });
 }
+// a founder's file for the site (2026-11-17): PDFs and images go to the public site-files bucket; the policies let only founders write
+export async function uploadSiteFile(file){
+  if(!user())throw new Error('Log in to your registered account first.');
+  const c=cfg();if(!c)throw new Error('Cloud accounts are not set up on this site.');
+  if(!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(file.type||''))throw new Error('Upload a PDF, PNG, JPEG or WebP file.');
+  if(file.size>25*1024*1024)throw new Error('Files are limited to 25 MB.');
+  await fresh();
+  const safe=String(file.name||'file').normalize('NFKD').replace(/[^\w.\-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'file',path=`${new Date().getFullYear()}/${crypto.randomUUID()}-${safe}`;
+  const r=await fetch(c.url+'/storage/v1/object/site-files/'+path,{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+session.access_token,'Content-Type':file.type,'x-upsert':'false'},body:file});
+  if(!r.ok){let m=r.statusText;try{const j=await r.json();m=j.message||j.error||j.msg||m;}catch{}throw new Error(m||'Upload failed');}
+  return {path:'site-files/'+path,url:c.url+'/storage/v1/object/public/site-files/'+path,name:safe,size:file.size,type:file.type};
+}
 export async function publicRpc(name){
   if(name!=='pc_public_site_content')throw new Error('Unknown public operation.');
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);

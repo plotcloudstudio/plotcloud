@@ -6,7 +6,7 @@ export function publicBrand() {
   return '<a class="lp-logo" href="#/" aria-label="SimuSite home"><img class="lp-logo-light" src="img/brand/simusite.svg" alt="" width="554" height="136"><img class="lp-logo-dark" src="img/brand/simusite-on-dark.svg" alt="" width="554" height="136"></a>';
 }
 export function publicNav(active='',{light=false}={}){
-  const start='#/new-project';
+  const start='#/home';   // Get started opens the Dashboard (2026-11-17)
   return `<nav class="lp-nav${light?' lp-nav-light':''}" aria-label="Main">${publicBrand()}<button type="button" class="lp-menu" aria-expanded="false" aria-controls="lpNavLinks">Menu</button><div class="lp-links" id="lpNavLinks">${links.map(([id,name])=>`<a href="#/${id}"${active===id?' aria-current="page"':''}>${name}</a>`).join('')}</div><div class="lp-cta"><a class="lp-login" href="#/login"${active==='login'?' aria-current="page"':''}>Log in</a><a class="lp-btn" href="${start}"${active==='signup'?' aria-current="page"':''}>Get started</a></div></nav>`;
 }
 export function bindPublicNav(root){
