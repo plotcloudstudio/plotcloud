@@ -72,4 +72,11 @@ OWNER2=33333333-3333-4333-8333-333333333333
 $D -c "insert into auth.users (id,email,encrypted_password,email_confirmed_at) values ('$OWNER2','plotcloudstudio@gmail.com','x',now())"
 $P -d plotcloud -f "$ROOT/supabase/appoint-admin.sql" >/dev/null
 [ "$($D -c "select count(*) from private.pc_admins where user_id='$OWNER2'")" = 1 ] && [ "$(as_user $OWNER2 "select public.pc_can_upload_site_files()")" = t ] && pass "appoint-admin.sql: refused before plotcloudstudio@gmail.com exists, then appoints it"
+# Blog: an event needs its date and place; then published
+fails user $OWNER "select public.pc_site_edit('save','post-kind','blog','{\"title\":\"T\",\"category\":\"talk\",\"body\":\"B\"}'::jsonb,0)" "Unknown blog category"
+as_user $OWNER "select public.pc_site_edit('save','post-ev','blog','{\"title\":\"A talk\",\"category\":\"event\",\"body\":\"B\"}'::jsonb,0)" >/dev/null
+fails user $OWNER "select public.pc_site_edit('publish','post-ev',null,null,1)" "Events require a date and a place"
+as_user $OWNER "select public.pc_site_edit('save','post-ev','blog','{\"title\":\"A talk\",\"category\":\"event\",\"body\":\"B\",\"eventDate\":\"2026-12-03\",\"location\":\"Toronto\"}'::jsonb,1)" >/dev/null
+as_user $OWNER "select public.pc_site_edit('publish','post-ev',null,null,2)" >/dev/null
+as_anon "select public.pc_public_site_content()" | grep -q '"post-ev"' && pass "Blog: an event needs its date and place, then publishes"
 echo "ALL PASS"

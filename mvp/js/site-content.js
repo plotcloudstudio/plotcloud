@@ -6,7 +6,13 @@ import {evacuationAccuracyPost} from '../research/fire-evacuation-article.js';
 export const researchPosts=[fallingwaterModelPost,evacuationAccuracyPost];
 void hospitalResearchPost;
 
-export const categories={campus:'Campus visits',release:'Product updates',studio:'Studio notes'};
+// Blog posts (2026-11-17): research notes and offline events. New posts are a research note, an event (talk, workshop, exhibition)
+// or a campus visit; product updates and studio notes still read but are no longer offered in the editor
+export const categories={research:'Research',event:'Event',campus:'Campus visit',release:'Product updates',studio:'Studio notes'};
+export const blogKinds={research:'Research',events:'Events'};
+export const isEventPost=(p)=>['event','campus'].includes(p?.content?.category);
+export const isResearchPost=(p)=>p?.content?.format==='article'||p?.content?.category==='research';
+export const upcoming=(p)=>isEventPost(p)&&/^\d{4}-\d{2}-\d{2}$/.test(p.content.eventDate||'')&&p.content.eventDate>=new Date().toISOString().slice(0,10);
 // The About page's founders, testimonials and client logos (2026-11-17) start as labelled samples: every sample item carries
 // sample:true and is shown with a "Sample" tag until the founder replaces it in the Founder workspace (#/founder › About & team).
 // The first card is the founder's own, to be completed with their name, role and LinkedIn there. Nothing here is a real claim.
@@ -52,7 +58,7 @@ export function articleHTML(post){
 }
 export function postHTML(post,{detail=false}={}){
   const c=post.content||{};if(detail&&c.format==='article')return articleHTML(post);
-  const image=safeImage(c.image),meta=[c.format==='article'?(c.articleType||'Research article'):(categories[c.category]||categories.studio),c.university,c.location,c.eventDate,c.version&&'Version '+c.version].filter(Boolean);
+  const image=safeImage(c.image),meta=[upcoming(post)?'Upcoming':'',c.format==='article'?(c.articleType||'Research article'):(categories[c.category]||categories.studio),c.university,c.location,c.eventDate,c.version&&'Version '+c.version].filter(Boolean);
   return `<article class="card public-article${detail?' cms-post-detail':''}${image?'':' cms-post-no-image'}" id="${escapeText(post.id)}">${image?`<img src="${escapeText(image)}" alt="${escapeText(c.imageAlt||c.title)}" loading="lazy">`:''}<div><span class="eyebrow">${meta.map(escapeText).join(' · ')}</span><h2>${escapeText(c.title)}</h2>${post.publishedAt?`<p class="note">Published ${escapeText(new Date(post.publishedAt).toLocaleDateString('en-CA',{dateStyle:'medium'}))}</p>`:''}${detail?bodyHTML(c.body):`<p>${escapeText(c.summary||String(c.body||'').slice(0,220))}</p><a href="#/blog/${encodeURIComponent(post.id)}">Read story →</a>`}</div></article>`;
 }
 const sampleTag=(o)=>o&&o.sample?'<span class="sample-tag" title="Sample content, not a real person, quote or client">Sample</span>':'';

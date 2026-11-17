@@ -36,9 +36,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.goto(base + '/mvp/#/resources'); await p.waitForSelector('.resource-tools'); const rs = await p.$$eval('.resource-section h2', (h) => h.map((x) => x.textContent));
     assert.deepEqual(rs.slice(0, 3), ['Model-building tools', 'Design utilities', 'References']); assert.match(await p.evaluate(() => document.body.innerText), /Stair generator/);
     await p.goto(base + '/mvp/#/resources/tool/stairs3d'); await p.waitForSelector('.resource-engine, #resourceEngine, .resource-page', { timeout: 15000 }); assert.match(await p.evaluate(() => document.body.innerText), /Stair generator/);
-    await p.goto(base + '/mvp/#/blog'); await p.waitForSelector('#app h1'); await p.waitForTimeout(1200); const posts = await p.$$eval('#app a[href^="#/blog/"]', (as) => [...new Set(as.map((a) => a.getAttribute('href')))]); assert.deepEqual(posts.sort(), ['#/blog/fallingwater-model-sources', '#/blog/fire-evacuation-accuracy'], 'research notes only: ' + posts);
+    await p.goto(base + '/mvp/#/blog'); await p.waitForSelector('[data-blog-category=research]'); await p.waitForTimeout(1200); await p.click('[data-blog-category=research]'); const posts = await p.$$eval('#app a[href^="#/blog/"]', (as) => [...new Set(as.map((a) => a.getAttribute('href')))]); assert.deepEqual(posts.sort(), ['#/blog/fallingwater-model-sources', '#/blog/fire-evacuation-accuracy'], 'the research notes: ' + posts);
     await p.goto(base + '/mvp/#/'); await p.waitForSelector('.lp-nav .lp-btn'); assert.equal(await p.getAttribute('.lp-nav .lp-btn', 'href'), '#/home', 'Get started opens the Dashboard');
-    console.log('PASS Resources: tools, utilities, references and the library; the Blog lists the two research notes; Get started → Dashboard');
+    console.log('PASS Resources: tools, utilities, references and the library; the Research filter on the Blog lists the two research notes; Get started → Dashboard');
     // My Projects: several at once
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('.ph-grid .ph-card[data-id]'); assert.equal(await p.locator('a[href="#/activity"]').count(), 0, 'no Activity & storage link');
     assert(await p.locator('.ph-new').evaluate((e) => getComputedStyle(e).color === 'rgb(255, 255, 255)'), 'Add new project in white');
