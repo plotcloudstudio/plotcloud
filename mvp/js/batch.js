@@ -17,7 +17,8 @@ export function createBatch(host, { onChange } = {}) {
   }
   async function runOne(it) {
     await checkAccess();
-    if (!canUse(it.simId, S.project(it.projectId))) { Object.assign(it, {status:'failed',why:'Monthly access required for this study on your own projects (Pricing).'}); emit(); return; }
+    { const p0 = S.project(it.projectId), v0 = p0 && S.version(p0, it.versionId);   // an example is free only on its shipped building, also in a saved version
+    if (!canUse(it.simId, p0, v0 && v0.model)) { Object.assign(it, {status:'failed',why:'Monthly access required for this study on your own projects (Pricing).'}); emit(); return; } }
     return new Promise((resolve) => {
       const p = S.project(it.projectId), v = p && S.version(p, it.versionId);
       if (!v) { Object.assign(it, { status: 'failed', why: 'That version is gone.' }); emit(); resolve(); return; }

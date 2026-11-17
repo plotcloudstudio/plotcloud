@@ -57,17 +57,24 @@ export async function signUp(email, password, name) {
 }
 export async function signIn(email, password) { const r = await call('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password }, auth: false }); setSession(r); begin(); return { ok: true }; }
 export async function emailLink(email) { await call('/auth/v1/otp?redirect_to=' + encodeURIComponent(back()), { method: 'POST', body: { email, create_user: true }, auth: false }); return { sent: true }; }
+// passwords (2026-11-17): at least 10 characters with letters and a number, as the project's Auth settings require
+export const PASSWORD_RULE = 'At least 10 characters, with letters and at least one number.';
+export const passwordOk = (pw) => typeof pw === 'string' && pw.length >= 10 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
+// a forgotten password: Supabase emails a link back to the site, which then asks for a new one (see captureRedirect)
+export async function resetPassword(email) { await call('/auth/v1/recover?redirect_to=' + encodeURIComponent(back()), { method: 'POST', body: { email }, auth: false }); return { sent: true }; }
+export async function setPassword(password) { if (!passwordOk(password)) throw new Error(PASSWORD_RULE); await call('/auth/v1/user', { method: 'PUT', body: { password } }); return { ok: true }; }
 export async function signOut() { try { if (session) await call('/auth/v1/logout', { method: 'POST' }); } catch (e) { } setSession(null); state = {}; write(STK, null); const A = S.account(); A.user = null; S.save(); status.phase = 'signed-out'; emit(); }
 // a link from an email (sign-in link, confirmation) comes back as #access_token=…&refresh_token=… (or #error=…); read it before the router
 export function captureRedirect() {
   const h = location.hash; if (!/(^#|&)(access_token|error_description)=/.test(h)) return null;
-  const q = new URLSearchParams(h.slice(1)); history.replaceState(null, '', location.pathname + location.search + (q.get('access_token') ? '#/home' : '#/login'));
+  const q = new URLSearchParams(h.slice(1)), recovery = q.get('type') === 'recovery';   // a password-reset link signs in, then asks for a new password
+  history.replaceState(null, '', location.pathname + location.search + (q.get('access_token') ? (recovery ? '#/login?set=1' : '#/home') : '#/login'));
   if (q.get('error_description')) return { error: q.get('error_description') };
   let claims = {}; try { claims = JSON.parse(atob(q.get('access_token').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch (e) { }
   setSession({ access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_at: +q.get('expires_at') || claims.exp || undefined, expires_in: +q.get('expires_in') || 3600,
     user: claims.sub ? { id: claims.sub, email: claims.email || '', user_metadata: claims.user_metadata || {} } : null });
   if (started) { toAccount(); setTimeout(sync, 0); }   // a link opened in a tab already running the site (on a fresh load, start() does this)
-  return { pending: true };
+  return { pending: true, recovery };
 }
 function begin() { toAccount(); emit(); sync(); }
 

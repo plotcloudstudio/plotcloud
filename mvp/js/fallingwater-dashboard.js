@@ -1,4 +1,5 @@
 import * as S from './store.js';
+import {fabricSig} from './beta-access.js';
 import {caseModel,title,site,source} from './fallingwater-case.js';
 import evidence from './fallingwater-results.js';
 
@@ -8,9 +9,9 @@ export const caseCard=()=>`<section class="pc-case" aria-labelledby="fallingwate
 
 export function openCase(){
  try{const key='pc-mvp-ws2',ui=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...ui,view:'persp'}));}catch{} 
- let p=S.projects().find(p=>p.caseStudy?.id==='fallingwater-habs-site500-v9'&&!p.deletedAt);
- if(p)return p;
- p=S.createProject(title + " (500 m site)",caseModel());
+ let p=S.projects().find(p=>p.caseStudy?.id==='fallingwater-habs-site500-v9'&&!p.deletedAt&&!p.copyOf);
+ if(p){if(p.trySig?.v!==2){p.trySig=fabricSig(caseModel());S.save();}return p;}
+ p=S.createProject(title + " (500 m site)",caseModel());p.trySig=fabricSig(p.draft);
  p.site=S.clone(site);p.siteLinked=false;p.caseStudy={id:'fallingwater-habs-site500-v9',source,generated:evidence.generated,engine:evidence.engine,engineHash:evidence.engineHash,modelHash:evidence.modelHash};
  S.updateConditions(p,site,p.sharedConditions.defaults,{keepRevision:true});
  for(const r of evidence.runs){

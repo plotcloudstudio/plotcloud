@@ -1,4 +1,5 @@
 import * as Cloud from './cloud.js';
+import { sampleModel } from './data.js';
 import {checkTestingAccess,allowsTestingStudy,mountTestingAccess} from './simulation-test-access.js?v=private-testing-20261027-1';
 // Manual beta entitlements. Only hashes and expiry dates are public; never trust a local plan/paid flag.
 export const BETA = Object.freeze({ name: 'PlotCloud', email: 'plotcloudstudio@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
@@ -7,7 +8,36 @@ export const BETA = Object.freeze({ name: 'PlotCloud', email: 'plotcloudstudio@g
 // studies on a person's own projects need monthly access
 export const FREE_STUDIES = Object.freeze(["sunhours", "daylight"]);
 export const TRY_NOTE = 'Every study runs free on the example projects (Fallingwater, the hospital, the courtyard sample).';
-export const isTryProject = (p) => !!(p && (p.caseStudy || p.sample));
+// An example is free only while its building is the one it shipped with (2026-11-17). Its fingerprint: the 25 cm squares the walls'
+// centre lines cross, level by level (the Workspace joins wall pieces that run on in a line when it opens a model, so the list of
+// walls changes but these squares do not), and a hash of the levels, masses, imported pieces and sample blocks. Furniture and floor slabs are
+// left out (moving furniture to try a study is fine; the Workspace adds a slab under rooms that have none). Drawing or importing your own building into an example, or duplicating it, makes it
+// your own project. The fingerprint is set when the example is made or reopened.
+const r2 = (v) => Math.round((+v || 0) * 100) / 100, CELL = 0.25;
+export function fabricSig(model) {
+  const s = (model && model.studio) || {}, rows = [], cells = new Set();
+  for (const l of s.levels || []) rows.push(['L', l.id, r2(l.z)]);
+  for (const m of s.masses || []) rows.push(['M', r2(m.x), r2(m.y), r2(m.w), r2(m.d), r2(m.h)]);
+  for (const i of s.imports || []) rows.push(['I', i.id, i.tris || 0]);
+  if (!(model && model.studio)) for (const c of (model && model.components) || []) if (c.g) rows.push(['C', c.type || '', r2(c.g.x), r2(c.g.y), r2(c.g.w), r2(c.g.d), r2(c.g.h)]);   // the sample's blocks; a plan model's blocks are derived from it
+  for (const w of s.walls || []) { const a = w.a || [0, 0], b = w.b || [0, 0], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(L / 0.1));
+    for (let k = 0; k <= n; k++) { const x = a[0] + (b[0] - a[0]) * k / n, y = a[1] + (b[1] - a[1]) * k / n; cells.add(`${w.lv}|${Math.floor(x / CELL)}|${Math.floor(y / CELL)}`); } }
+  const txt = rows.map((r) => r.join(',')).sort().join(';');
+  let h = 0x811c9dc5; for (let i = 0; i < txt.length; i++) { h ^= txt.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return { v: 2, other: rows.length + ':' + h.toString(16), cells: [...cells].sort().join(' ') };
+}
+// the same building: the same levels and pieces, and walls on the same squares, give or take what the Workspace's tidying
+// moves (a joined wall can shift by a centimetre or two): at most 6 squares more (a wall of about 1.5 m) and 5 % fewer
+function sameFabric(want, got) {
+  if (!want || want.v !== 2 || want.other !== got.other) return false;
+  const W = new Set(want.cells ? want.cells.split(' ') : []), G = new Set(got.cells ? got.cells.split(' ') : []);
+  let more = 0, fewer = 0; for (const c of G) if (!W.has(c)) more++; for (const c of W) if (!G.has(c)) fewer++;
+  return more <= 6 && fewer <= Math.max(6, W.size * 0.05);
+}
+let sampleSigs = null;
+const expectedSigs = (p) => p.trySig ? [p.trySig] : p.sample ? (sampleSigs ||= ['A', 'B'].map((v) => fabricSig(sampleModel(v)))) : [];
+// model: the model a run uses (a saved version in a batch); by default the project's working draft
+export const isTryProject = (p, model) => { if (!p || p.copyOf || !(p.caseStudy || p.sample)) return false; const got = fabricSig(model || p.draft); return expectedSigs(p).some((w) => sameFabric(w, got)); };
 // served from this computer (development and the browser tests): every study open, unless pc-dev-gate is 1 to try the gate
 const devOpen = () => { try { return typeof location !== 'undefined' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname) && localStorage.getItem('pc-dev-gate') !== '1'; } catch { return false; } };
 const KEY = 'pc-beta-access-code-v1';
@@ -18,7 +48,7 @@ export const isFreeStudy = id => FREE_STUDIES.includes(id) || String(id).startsW
 const readCode = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
 export const normalizeCode = value => String(value || '').replace(/\s+/g, '').toUpperCase();
 export function status() { return { ...verified, active: verified.active && (verified.source==='account' ? performance.now()<leaseDeadline : Date.parse(verified.expiresAt)>Date.now()) }; }
-export const canUse = (id, p) => isFreeStudy(id) || (isTryProject(p) && !String(id).startsWith('resource:')) || status().active || allowsTestingStudy(id) || devOpen();
+export const canUse = (id, p, model) => isFreeStudy(id) || (isTryProject(p, model) && !String(id).startsWith('resource:')) || status().active || allowsTestingStudy(id) || devOpen();
 export const paidNote = (name) => `${name} on your own projects needs monthly access. Sun hours and Daylight are free on every project, and every study runs free on the example projects.`;
 export async function hashCode(value) { const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizeCode(value))); return [...new Uint8Array(bytes)].map(v => v.toString(16).padStart(2, '0')).join(''); }
 export function matchingGrant(ledger, digest, now = Date.now()) {
