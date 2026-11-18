@@ -850,7 +850,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 <script type="module">
 import {selectedByRect,moveObject} from './emb/lib/workbench-selection.js?v=rhino-selection-20261027-1';
 import {centerModel,isImportedBuildingObject} from './emb/lib/workbench-center.js?v=center-building-20261027-1';
-import * as WTR from './emb/lib/water.js?v=water-20261106-1';
+import * as WTR from './emb/lib/water.js?v=water-20261118-1';
 import { MODELS as GM, CATS as GCATS, GROUPS as GGROUPS, COLORS as GCOL, defaults as gDefaults, buildModel as gBuild, materialColor as gColor, paramVisible as gVis } from 'pc/models.js';
 import { t as gT } from 'pc/i18n.js';
 import { partGeometry as gGeom } from 'pc/geom.js';
@@ -1153,6 +1153,16 @@ const SITEC = (() => {
   const siteToPlan = (site, p, north) => { const q = toPlan(p, north), a = (site && site.at) || [0, 0]; return [q[0] + a[0], q[1] + a[1]]; };
   // terrain height at a site point (bilinear on the terrain grid), 0 when there is no terrain
   function groundAt(T, x, y) { if (!T || !T.grid) return 0; const g = T.grid, fx = (x - g.x0) / g.step, fy = (y - g.y0) / g.step, i = Math.max(0, Math.min(g.nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(g.ny - 2, Math.floor(fy))), u = Math.min(1, Math.max(0, fx - i)), v = Math.min(1, Math.max(0, fy - j)), Z = (a, b) => g.z[b * g.nx + a]; return Z(i, j) * (1 - u) * (1 - v) + Z(i + 1, j) * u * (1 - v) + Z(i, j + 1) * (1 - u) * v + Z(i + 1, j + 1) * u * v; }
+  // the ground as the 3D terrain draws it (2026-11-18, water on the site): the same grid cut into the same two triangles per cell
+  // (corners a = (i, j), b = (i+1, j), c = (i, j+1), d = (i+1, j+1); triangles a b c and b d c), so a surface placed with it lies on the
+  // drawn ground exactly, where the bilinear groundAt can sit up to a few decimetres off inside a cell on uneven ground
+  // where a segment (site metres) crosses the grid lines and the cells' diagonals of that ground, as fractions along it
+  function groundBreaks(T, a, b) { if (!T || !T.grid) return []; const g = T.grid, out = [], dx = b[0] - a[0], dy = b[1] - a[1], fx0 = (a[0] - g.x0) / g.step, fy0 = (a[1] - g.y0) / g.step, fdx = dx / g.step, fdy = dy / g.step;
+    const cross = (f0, fd) => { if (Math.abs(fd) < 1e-12) return; const lo = Math.min(f0, f0 + fd), hi = Math.max(f0, f0 + fd); for (let k = Math.ceil(lo); k <= Math.floor(hi); k++) { const t = (k - f0) / fd; if (t > 0 && t < 1) out.push(t); } };
+    cross(fx0, fdx); cross(fy0, fdy); cross(fx0 + fy0, fdx + fdy);   // x lines, y lines, and the diagonals u + v = 1 (i + j + 1 = const)
+    return out.sort((p, q) => p - q); }
+  function groundMeshAt(T, x, y) { if (!T || !T.grid) return 0; const g = T.grid, fx = (x - g.x0) / g.step, fy = (y - g.y0) / g.step, i = Math.max(0, Math.min(g.nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(g.ny - 2, Math.floor(fy))), u = Math.min(1, Math.max(0, fx - i)), v = Math.min(1, Math.max(0, fy - j)), Z = (a, b) => g.z[b * g.nx + a];
+    return u + v <= 1 ? Z(i, j) + (Z(i + 1, j) - Z(i, j)) * u + (Z(i, j + 1) - Z(i, j)) * v : Z(i + 1, j + 1) + (Z(i, j + 1) - Z(i + 1, j + 1)) * (1 - u) + (Z(i + 1, j) - Z(i + 1, j + 1)) * (1 - v); }
   // a building on a slope stands on the lowest ground under its outline (LOD1 convention)
   const groundUnder = (site, b) => site.terrain ? Math.min(...b.xy.map((p) => groundAt(site.terrain, p[0], p[1]))) : 0;
   function contextMasses(site, north) { return simBuildings(site).map((b) => { const g0 = groundUnder(site, b); return { id: b.id, role: 'context', ref: b.src.ref, base: g0 + (b.base || 0), h: g0 + b.h, hSource: b.hSource, outer: b.xy.map((p) => siteToPlan(site, p, north)), holes: b.holes.map((r) => r.map((p) => siteToPlan(site, p, north))) }; }); }
@@ -1207,7 +1217,7 @@ const SITEC = (() => {
 
   return { frame, tmFwd, tmInv, vincenty, area, centroid, inside, cleanRing, checkFootprint, selfCrossing, parseLength, heightFrom, H_LABEL, STOREY, osmRaw, extrasFromOSM, siteFromOSM, groundFromOpen,
     parseOSMXML, parseOSMJSON, parseGeoJSON, parseAny, inBoundary, buildContext, newSite, addSource, setHeight, setExcluded, estimateMissing, simBuildings,
-    review, readiness, simHash, isStale, reimport, resolve, toPlan, siteToPlan, contextMasses, groundAt, groundUnder, terrainForPlan, guessDST };
+    review, readiness, simHash, isStale, reimport, resolve, toPlan, siteToPlan, contextMasses, groundAt, groundMeshAt, groundBreaks, groundUnder, terrainForPlan, guessDST };
 })();
 
 
@@ -2354,7 +2364,9 @@ function changed(live, keepProps) {
   if (!live) { stateUI(); queueDraft(); sendStateUI(); }
   secSync();
 }
-function analyse() { RES = null; if (window.S3 && S3.on) upd3D(); }
+// a pane the Workspace keeps hidden (2026-11-18): its 3D scene is rebuilt when it is shown or a study needs it, not after every edit
+let S3STALE = false;
+function analyse() { RES = null; if (window.S3 && S3.on) { if (window.__pcHidden) { S3STALE = true; return; } S3STALE = false; upd3D(); } }
 const live = () => RES && RES.S === S;
 
 // ---------- colors ----------
@@ -2385,7 +2397,7 @@ const fwdD = (q) => { const k = rotK(); if (!k) return q; const d = VP.d, cw = V
 const W2S_ = null; void W2S_;
 const S2W = (x, y) => (CAM === '3d' && P3.p) ? P3.p : [(x - V.ox) / V.s, (V.oy - y) / V.s];
 const P3_HIT = new Set(['win', 'door', 'hole']);
-function P3upd(e) { if (!window.S3 || !S3.on) return false; const lv = lvObj(); if (['lsplant','lswater','lspave'].includes(TOOL)) { P3.p = S3.hits(e.clientX, e.clientY).find(h => h.ud.k === 'site' && h.ud.id === 'terrain')?.p ?? S3.plane(e.clientX, e.clientY, 0); return !!P3.p; } P3.hit = S3.hit(e.clientX, e.clientY); P3.p = (!drag && P3_HIT.has(TOOL) && P3.hit) ? P3.hit.p : S3.plane(e.clientX, e.clientY, lv.z); return !!P3.p; }
+function P3upd(e) { if (!window.S3 || !S3.on) return false; const lv = lvObj(); if (['lsplant','lswater','lspave','lswrect','lswcirc','lswell','lswfree'].includes(TOOL)) { P3.p = S3.hits(e.clientX, e.clientY).find(h => h.ud.k === 'site' && h.ud.id === 'terrain')?.p ?? S3.plane(e.clientX, e.clientY, 0); return !!P3.p; } P3.hit = S3.hit(e.clientX, e.clientY); P3.p = (!drag && P3_HIT.has(TOOL) && P3.hit) ? P3.hit.p : S3.plane(e.clientX, e.clientY, lv.z); return !!P3.p; }
 function pick3D(opt) { const h = P3.hit && P3.hit.ud; if (!h) return null; if (opt && opt.only && h.k === 'room') return null; const L = h.k === 'room' ? null : LAYER_OF[h.k]; if (L && !VIS[L]) return null; return { k: h.k, id: h.id }; }
 function drawOverlay3D() {
   if(drawing?.kind==='floor'&&window.S3?.on)upd3D();
@@ -2445,7 +2457,7 @@ function blitRaster(lvId, c) { const R = S.L[lvId], p = W2S([R.x0, R.y0 + R.H * 
 
 // ---------- plan drawing ----------
 const WSPEC = new WeakMap();
-function waterSpecOf(st, a) { const c = WSPEC.get(a); if (c && c.v === st.version && c.w === JSON.stringify(a.water || null)) return c.o; let o = null; try { o = WTR.spec(a, (x, y) => (st.terrain ? SITEC.groundAt(st.terrain, x, y) : 0)); } catch (e) { } WSPEC.set(a, { v: st.version, w: JSON.stringify(a.water || null), o }); return o; }
+function waterSpecOf(st, a) { const c = WSPEC.get(a); if (c && c.v === st.version && c.w === JSON.stringify(a.water || null)) return c.o; let o = null; try { o = WTR.spec(a, Object.assign((x, y) => (st.terrain ? SITEC.groundMeshAt(st.terrain, x, y) : 0), { breaks: (p, q) => SITEC.groundBreaks(st.terrain, p, q) })); } catch (e) { } WSPEC.set(a, { v: st.version, w: JSON.stringify(a.water || null), o }); return o; }
 function drawWater2(st, P, d) { g.save();
   for (const a of st.areas) { if (a.kind !== 'water') continue; const o = waterSpecOf(st, a); if (!o) continue;
     if (o.centre && V.s > 0.4 * d) { const C = o.centre, step = Math.max(6, 60 * d / V.s); g.strokeStyle = 'rgba(30,96,140,.75)'; g.fillStyle = 'rgba(30,96,140,.75)'; g.lineWidth = 1.4 * d;
@@ -3579,6 +3591,7 @@ function miniPlan(x, w, h, d, hl, view) {
 }
 const HEAVY = { pieces: 400, tris: 40000 };
 function heavyModel() { const I = (M && M.imports) || []; if (I.length > HEAVY.pieces) return true; let t = 0; for (const o of I) { t += o.tris || 0; if (t > HEAVY.tris) return true; } return false; }
+const MINI3Q = { s: '', at: 0, t: 0 };   // the overview's 3D picture waiting for the edits to stop
 async function miniDraw() {
   const cvm = $('#miniCv'), list = $('#miniRooms'); if (!cvm || !S) return; const to3 = CAM !== '3d';
   $('[data-rt="plan"]').textContent = to3 ? '3D view' : '2D view';
@@ -3591,7 +3604,12 @@ async function miniDraw() {
   if (!to3 || heavyModel()) { miniPlan(x, w, h, d); return; }
   const snap=snapM()+'|'+JSON.stringify(drawing)+'|'+LV + '|' + w; const paint = (img) => { const k = Math.min(w / img.width, h / img.height); x.drawImage(img, (w - img.width * k) / 2, (h - img.height * k) / 2, img.width * k, img.height * k); };
   if (MINI3 && MINI3.s === snap) { paint(MINI3.img); return; } if (miniBusy) { miniSoon(); return; }
-  miniBusy = true; try { const url = await S3.snap(previewModel(),S,{lv: lvSorted().slice(-1)[0].id, colOf: () => '#efe3cf' }, 520, Math.round(520 * h / w)); const img = new Image(); await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = url; }); MINI3 = { s: snap, img }; if (CAM !== '3d') paint(img); } catch (e) { x.fillStyle = '#86909c'; x.font = `${12 * d}px ${FB}`; x.textAlign = 'center'; x.fillText('3D preview unavailable', w / 2, h / 2); } miniBusy = false;
+  // the 3D picture after an edit (2026-11-18): it builds the whole building again off screen, so it waits until the edits stop (2.5 s of
+  // quiet) and the panel is in view; until then the last picture stays. Delete and every other edit no longer wait for it
+  if (MINI3) paint(MINI3.img); if (!cvm.offsetParent || document.hidden) return; if (miniBusy) { miniSoon(); return; }
+  if (!MINI3Q.at || MINI3Q.s !== snap) { MINI3Q.s = snap; MINI3Q.at = performance.now(); clearTimeout(MINI3Q.t); MINI3Q.t = setTimeout(miniDraw, 2600); return; }
+  if (performance.now() - MINI3Q.at < 2500) { clearTimeout(MINI3Q.t); MINI3Q.t = setTimeout(miniDraw, 2600 - (performance.now() - MINI3Q.at)); return; }
+  MINI3Q.at = 0; miniBusy = true; try { const W3 = 360, H3 = Math.max(60, Math.round(W3 * h / w)), src = await S3.snap(previewModel(),S,{lv: lvSorted().slice(-1)[0].id, colOf: () => '#efe3cf' }, W3, H3, true), img = document.createElement('canvas'); img.width = W3; img.height = H3; img.getContext('2d').drawImage(src, 0, 0); MINI3 = { s: snap, img }; if (CAM !== '3d') { x.clearRect(0, 0, w, h); paint(img); } } catch (e) { x.fillStyle = '#86909c'; x.font = `${12 * d}px ${FB}`; x.textAlign = 'center'; x.fillText('3D preview unavailable', w / 2, h / 2); } miniBusy = false;
 }
 $$('[data-rt]').forEach((b) => b.addEventListener('click', () => { MINI = b.dataset.rt === 'rooms' ? 'rooms' : 'view'; $$('[data-rt]').forEach((q) => q.setAttribute('aria-selected', String(q === b))); miniDraw(); }));
 $('#miniCv').addEventListener('click', () => setCam(CAM === '3d' ? 'plan' : '3d'));
@@ -5275,7 +5293,7 @@ function massKpiUI() {
 { const _sc = setCam; setCam = async function (c) { const r = await _sc(c); massKpiUI(); return r; }; }
 // tools: two ways to draw a mass, and a missing neighbour
 RECT.add('massrect');
-Object.assign(HINT, { lsplant: 'Click the corners of the planted area. Click the first corner again, press Enter or double-click to close it.', lswater: 'Trace the shoreline. Click the first point or press Enter to close. Backspace removes a point; Esc cancels.', lspave: 'Click the corners of the paved area. Click the first corner again, press Enter or double-click to close it.', mass: 'Click the corners of the mass. Click the first corner again, press Enter or double-click to close it. Esc cancels.', massrect: 'Drag a rectangle for a mass.', ctxadd: 'Click the corners of a neighbouring building that is missing from the map. Enter or double-click closes it; set its height afterwards.' });
+Object.assign(HINT, { lswrect: 'Drag from one corner of the pool to the other. Esc cancels.', lswcirc: 'Click the centre, drag out to the radius, release. Esc cancels.', lswell: 'Press at the centre, drag to the end of the long axis, release; move for the short axis and click. Esc cancels.', lswfree: 'Press and draw the outline, release to close it (simplified, checked for crossings). Esc cancels.', lsplant: 'Click the corners of the planted area. Click the first corner again, press Enter or double-click to close it.', lswater: 'Trace the shoreline. Click the first point or press Enter to close. Backspace removes a point; Esc cancels.', lspave: 'Click the corners of the paved area. Click the first corner again, press Enter or double-click to close it.', mass: 'Click the corners of the mass. Click the first corner again, press Enter or double-click to close it. Esc cancels.', massrect: 'Drag a rectangle for a mass.', ctxadd: 'Click the corners of a neighbouring building that is missing from the map. Enter or double-click closes it; set its height afterwards.' });
 { const pane = $('[data-lp="draw"] .kl-scroll'), ic = (d) => `<svg viewBox="0 0 48 48" aria-hidden="true">${d}</svg>`;
   const T = (t, n, svg, title) => `<button type="button" class="tl" data-tool="${t}" aria-pressed="false" title="${title}">${svg}<span>${n}</span></button>`;
   if (pane) { pane.insertAdjacentHTML('afterbegin', `<section class="ks" id="ksMass"><button type="button" class="ks-h" aria-expanded="true"><b>Massing</b><i class="chev"></i></button><div class="ks-b"><div class="tls">`
@@ -5286,16 +5304,46 @@ Object.assign(HINT, { lsplant: 'Click the corners of the planted area. Click the
     pane.insertAdjacentHTML('beforeend', `<section class="ks" id="ksLand"><button type="button" class="ks-h" aria-expanded="true"><b>Landscape</b><i class="chev"></i></button><div class="ks-b"><div class="tls">`
       + T('lsplant', 'Planting', ic('<path d="M8 38c4-10 10-14 16-14s12 4 16 14z" fill="#b9d3a0" stroke="#5f7d4a" stroke-width="2" stroke-linejoin="round"/><circle cx="24" cy="16" r="7" fill="#9cc27f" stroke="#5f7d4a" stroke-width="2"/>'), 'Planting: draw its outline')
       + T('lswater', 'Water', ic('<path d="M8 34c4-3 8-3 12 0s8 3 12 0 6-3 8-1M8 26c4-3 8-3 12 0s8 3 12 0 6-3 8-1" fill="none" stroke="#3d85c6" stroke-width="2.4" stroke-linecap="round"/>'), 'Water: draw its outline')
+      + T('lswrect', 'Water rectangle', ic('<rect x="9" y="14" width="30" height="20" rx="1" fill="#cfe6ee" stroke="#3d85c6" stroke-width="2.2"/>'), 'Rectangular water: drag from corner to corner')
+      + T('lswcirc', 'Water circle', ic('<circle cx="24" cy="24" r="13" fill="#cfe6ee" stroke="#3d85c6" stroke-width="2.2"/><circle cx="24" cy="24" r="1.8" fill="#3d85c6"/>'), 'Round water: click the centre, drag the radius')
+      + T('lswell', 'Water ellipse', ic('<ellipse cx="24" cy="24" rx="16" ry="9" fill="#cfe6ee" stroke="#3d85c6" stroke-width="2.2" transform="rotate(-15 24 24)"/>'), 'Oval water: centre, drag the long axis, move for the short one, click')
+      + T('lswfree', 'Water freehand', ic('<path d="M10 28c-2-9 8-15 15-12s13-2 14 6-6 13-15 12-12-1-14-6z" fill="#cfe6ee" stroke="#3d85c6" stroke-width="2.2"/>'), 'Freehand water: press and draw its outline, release to close')
       + T('lspave', 'Paving', ic('<path d="M8 14h32v22H8z" fill="#e6e4df" stroke="#7b818a" stroke-width="2"/><path d="M8 25h32M19 14v11M30 25v11" stroke="#7b818a" stroke-width="1.6"/>'), 'Paving: draw its outline')
       + '</div></div></section>');
     const h = $('#ksMass .ks-h'); h.addEventListener('click', () => { const s = h.closest('.ks'); s.classList.toggle('shut'); h.setAttribute('aria-expanded', String(!s.classList.contains('shut'))); }); } }
 const POLYT = new Set(['mass', 'ctxadd', 'lsplant', 'lswater', 'lspave']);
 // landscape on the site (2026-10-31): planting, water and paving outlines, kept with the site's areas (site metres)
 const LS_KIND = { lsplant: 'green', lswater: 'water', lspave: 'paving' }, LS_NAME = { green: 'Planting', water: 'Water', paving: 'Paving' };
-function addArea(kind, pts) {
+// water shapes (2026-11-18): rectangle (drag), circle (centre, drag the radius), ellipse (centre, drag the long axis, then move for the
+// short one and click), freehand (press, draw, release). Each ends as an ordinary water area: its outline in pts (site metres), and
+// its shape kept (site metres, rotation in radians in the site frame) so its sizes stay editable; a still, level pond by default
+const WSHAPE = { lswrect: 'rectangle', lswcirc: 'circle', lswell: 'ellipse', lswfree: 'freeform' }, WSHAPE_NAME = { rectangle: 'Rectangular pool', circle: 'Round pool', ellipse: 'Oval pool', freeform: 'Water' };
+function wShapePts(sh) { if (sh.type === 'rectangle') { const u = [Math.cos(sh.rot || 0), Math.sin(sh.rot || 0)], v = [-u[1], u[0]], hw = sh.w / 2, hl = sh.l / 2; return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => [+(sh.cx + u[0] * i * hw + v[0] * j * hl).toFixed(3), +(sh.cy + u[1] * i * hw + v[1] * j * hl).toFixed(3)]); }
+  const ra = sh.type === 'circle' ? sh.r : sh.a, rb = sh.type === 'circle' ? sh.r : sh.b, t0 = sh.rot || 0, out = []; for (let k = 0; k < 48; k++) { const t = 2 * Math.PI * k / 48, x = ra * Math.cos(t), y = rb * Math.sin(t); out.push([+(sh.cx + x * Math.cos(t0) - y * Math.sin(t0)).toFixed(3), +(sh.cy + x * Math.sin(t0) + y * Math.cos(t0)).toFixed(3)]); } return out; }
+// the shape being drawn, in plan metres (the preview and the finish)
+function wShapePlan(D) { const a = D.a, b = D.b || D.a, dx = b[0] - a[0], dy = b[1] - a[1];
+  if (D.shape === 'rectangle') return { type: 'rectangle', cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2, w: Math.abs(dx), l: Math.abs(dy), rot: 0 };
+  if (D.shape === 'circle') return { type: 'circle', cx: a[0], cy: a[1], r: Math.hypot(dx, dy) };
+  if (D.shape === 'ellipse') { const A = Math.hypot(dx, dy), rot = Math.atan2(dy, dx), c = D.c || b, B = A > 1e-9 ? Math.abs(((c[0] - a[0]) * dy - (c[1] - a[1]) * dx) / A) : 0; return { type: 'ellipse', cx: a[0], cy: a[1], a: A, b: Math.max(0.3, Math.min(B, A * 4)), rot }; }
+  return null; }
+// a freehand line: simplified (Douglas–Peucker, 0.25 m), closed; null when it crosses itself or holds too little
+function wFreeform(P) { const tol = 0.25, dp = (pts) => { if (pts.length < 3) return pts; const A = pts[0], B = pts[pts.length - 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1e-9; let md = -1, mi = 0; for (let i = 1; i < pts.length - 1; i++) { const d = Math.abs((pts[i][0] - A[0]) * (B[1] - A[1]) - (pts[i][1] - A[1]) * (B[0] - A[0])) / L; if (d > md) { md = d; mi = i; } } return md > tol ? dp(pts.slice(0, mi + 1)).slice(0, -1).concat(dp(pts.slice(mi))) : [A, B]; };
+  // a closed loop: split at the point farthest from the start, each half simplified (its start and end nearly meet otherwise)
+  let far = 0, fd = -1; for (let i = 1; i < P.length; i++) { const d2 = Math.hypot(P[i][0] - P[0][0], P[i][1] - P[0][1]); if (d2 > fd) { fd = d2; far = i; } }
+  let Q = far > 0 ? dp(P.slice(0, far + 1)).slice(0, -1).concat(dp(P.slice(far))) : P.slice(); if (Q.length > 2 && Math.hypot(Q[0][0] - Q.at(-1)[0], Q[0][1] - Q.at(-1)[1]) < 0.5) Q.pop(); if (Q.length < 3) return { err: 'Draw a larger closed shape.' };
+  const cr = (a, b, c, d) => { const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])); return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0; }, n = Q.length;
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) { if (i === 0 && j === n - 1) continue; if (cr(Q[i], Q[(i + 1) % n], Q[j], Q[(j + 1) % n])) return { err: 'The outline crosses itself: draw it again without crossing.' }; }
+  return areaOf(Q) < 1 ? { err: 'That outline is too small.' } : { pts: Q }; }
+// plan → site for a shape: its centre moved and its rotation turned as the site frame is
+function wShapeToSite(sh) { const c = siteOfM(M, [sh.cx, sh.cy]), e = siteOfM(M, [sh.cx + 1, sh.cy]), dr = Math.atan2(e[1] - c[1], e[0] - c[0]), out = { ...sh, cx: +c[0].toFixed(3), cy: +c[1].toFixed(3) }; if ('rot' in sh) out.rot = +((sh.rot || 0) + dr).toFixed(5); return out; }
+function finishWShape() { const D = drawing; drawing = null; MSNAP = null; if (!D) return draw();
+  if (D.shape === 'freeform') { const r = wFreeform(D.pts || []); if (r.err) { flash(r.err); draw(); return; } addArea('water', r.pts, { shape: { type: 'freeform' }, water: { type: 'pond', place: 'level' }, name: 'Water' }); return; }
+  const sh = wShapePlan(D); if (!sh || (sh.type === 'rectangle' && (sh.w < 1 || sh.l < 1)) || (sh.type === 'circle' && sh.r < 0.5) || (sh.type === 'ellipse' && sh.a < 0.5)) { flash('Drag a larger shape (at least 1 m across).'); draw(); return; }
+  const ss = wShapeToSite(sh), sitePts = wShapePts(ss), planPts = sitePts.map((q) => SITEC.siteToPlan(M.site, q, M.north || 0)); addArea('water', planPts, { shape: ss, water: { type: 'pond', place: 'level' }, name: WSHAPE_NAME[sh.type] }); }
+function addArea(kind, pts, extra) {
   if (!M.site) { flash('This project has no site yet. Choose one on the map first.'); draw(); return; }
   let xy = pts.map((q) => siteOfM(M, q)).map((q) => [+q[0].toFixed(2), +q[1].toFixed(2)]); if (polySigned(xy) < 0) xy = xy.reverse(); if (areaOf(xy) < 1) { flash('That outline is too small.'); draw(); return; }
-  const b = snapM(); M.site.areas = M.site.areas || []; M.site.areas.push({ id: STC.uid('a_you_'), kind, name: LS_NAME[kind], pts: xy, added: true, src: { provider: 'You', ref: 'drawn by you', at: new Date().toISOString() } }); M.site.version++; commit(b);
+  const b = snapM(); M.site.areas = M.site.areas || []; M.site.areas.push({ id: STC.uid('a_you_'), kind, name: (extra && extra.name) || LS_NAME[kind], pts: xy, added: true, src: { provider: 'You', ref: 'drawn by you', at: new Date().toISOString() }, ...(extra && extra.shape ? { shape: extra.shape } : {}), ...(extra && extra.water ? { water: extra.water } : {}) }); M.site.version++; commit(b);
   flash(`${LS_NAME[kind]} added: ${Math.round(areaOf(xy))} m².`); }
 function finishPoly() { const D = drawing; drawing = null; typed = ''; MSNAP = null; if (!D || D.pts.length < 3) { draw(); if (D) flash('An outline needs at least three corners.'); return; } if (D.kind === 'mass') addMass(D.pts); else if (LS_KIND[D.kind]) addArea(LS_KIND[D.kind], D.pts); else addCtx(D.pts); }
 cv.addEventListener('pointerdown', (e) => { if ((!POLYT.has(TOOL) && TOOL !== 'massrect') || e.button !== 0 || SPACE) return; if (CAM === '3d' && !P3upd(e)) return; e.preventDefault(); e.stopImmediatePropagation(); cv.focus({ preventScroll: true });
@@ -5307,6 +5355,18 @@ cv.addEventListener('pointermove', (e) => { if (!POLYT.has(TOOL) && !(TOOL === '
   e.stopImmediatePropagation(); if (drawing && drawing.kind === TOOL) drawing.cur = massSnap(p, drawing.pts[drawing.pts.length - 1], e.shiftKey); else massSnap(p); draw(); }, true);
 cv.addEventListener('dblclick', (e) => { if (drawing && POLYT.has(drawing.kind)) { e.stopImmediatePropagation(); finishPoly(); } }, true);
 addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('input,textarea,select')) return; if (drawing && POLYT.has(drawing.kind) && (e.key === 'Enter' || e.key === 'Escape' || e.key === 'Backspace')) { e.stopImmediatePropagation(); e.preventDefault(); if (e.key === 'Enter') finishPoly(); else if (e.key === 'Backspace' && drawing.pts.length > 1) { drawing.pts.pop(); draw(); } else { drawing = null; MSNAP = null; draw(); } } }, true);
+// the water shapes' pointer: press, drag, release (the ellipse: a second click for its short axis); in plan or on the 3D ground
+cv.addEventListener('pointerdown', (e) => { const sh = WSHAPE[TOOL]; if (!sh || e.button !== 0 || SPACE) return; if (CAM === '3d' && !P3upd(e)) return; e.preventDefault(); e.stopImmediatePropagation(); cv.focus({ preventScroll: true });
+  if (drawing && drawing.kind === TOOL && drawing.stage === 2) { finishWShape(); return; }
+  const p0 = S2W(...evP(e)), q = sh === 'freeform' ? [p0[0], p0[1]] : massSnap(p0); drawing = { kind: TOOL, shape: sh, a: q, b: q, c: null, stage: 1, pts: sh === 'freeform' ? [q] : null }; if (e.isTrusted) cv.setPointerCapture(e.pointerId); draw(); }, true);   // a freehand line is not snapped (a snapped start would jump off the stroke)
+cv.addEventListener('pointermove', (e) => { const sh = WSHAPE[TOOL]; if (!sh) return; if (CAM === '3d' && !P3upd(e)) return; e.stopImmediatePropagation(); const p = S2W(...evP(e)), D = drawing && drawing.kind === TOOL ? drawing : null;
+  if (!D) { massSnap(p); draw(); return; }
+  if (sh === 'freeform') { if (D.stage === 1) { const L = D.pts[D.pts.length - 1]; if (Math.hypot(p[0] - L[0], p[1] - L[1]) > 0.3) D.pts.push([p[0], p[1]]); } }
+  else if (D.stage === 2) D.c = [p[0], p[1]]; else D.b = massSnap(p); draw(); }, true);
+cv.addEventListener('pointerup', (e) => { const sh = WSHAPE[TOOL], D = drawing && drawing.kind === TOOL ? drawing : null; if (!sh || !D || D.stage !== 1) return; e.stopImmediatePropagation();
+  if (sh === 'ellipse') { if (Math.hypot(D.b[0] - D.a[0], D.b[1] - D.a[1]) < 0.5) { drawing = null; flash('Press at the centre and drag out to the end of the long axis.'); draw(); return; } D.stage = 2; D.c = D.b; draw(); return; }
+  finishWShape(); }, true);
+addEventListener('keydown', (e) => { if (drawing && WSHAPE[drawing.kind] && e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); drawing = null; MSNAP = null; draw(); } }, true);
 { const _fr = finishRect; finishRect = function () { if (!drawing || drawing.kind !== 'massrect') return _fr(); const D = drawing; drawing = null; if (!D.b) return draw(); const x0 = Math.min(D.a[0], D.b[0]), y0 = Math.min(D.a[1], D.b[1]), x1 = Math.max(D.a[0], D.b[0]), y1 = Math.max(D.a[1], D.b[1]);
   if (x1 - x0 < 2 || y1 - y0 < 2) { draw(); flash('Drag a larger rectangle (at least 2 m each way).'); return; } addMass([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]); }; }
 { const _dp = drawPreview; drawPreview = function () { _dp(); const d = VP.d;
@@ -5316,8 +5376,12 @@ addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('i
     if (P.length > 2) { g.closePath(); g.fillStyle = drawing.kind === 'mass' ? 'rgba(233,195,158,.35)' : water ? 'rgba(84,124,143,.28)' : 'rgba(150,145,135,.25)'; g.fill(); } g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke();
     for (const q of drawing.pts) { const s = screen(q); g.fillStyle = '#fff'; g.fillRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); g.strokeRect(s[0] - 3 * d, s[1] - 3 * d, 6 * d, 6 * d); }
     if (P.length > 2) { const c = screen(SITEC.centroid(P)); tag(c[0], c[1], `${fmtA(areaOf(P))} m²`, { force: true, col: C.accent }); } g.restore(); }
+  if (drawing && WSHAPE[drawing.kind]) { const D = drawing, sh = D.shape === 'freeform' ? null : wShapePlan(D), P = sh ? (() => { const ss = { ...sh }; return wShapePts(ss); })() : (D.pts || []).concat(D.cur ? [D.cur] : []);
+    const screen = CAM === '3d' && M.site ? (q) => { const [x, y] = siteOfM(M, q); return S3.toScreen(q[0], q[1], M.site.terrain ? SITEC.groundMeshAt(M.site.terrain, x, y) : 0); } : W2S;
+    if (P.length > 1) { g.save(); g.beginPath(); P.forEach((q, i) => { const s2 = screen(q); i ? g.lineTo(s2[0], s2[1]) : g.moveTo(s2[0], s2[1]); }); if (D.shape !== 'freeform' || D.stage !== 1) g.closePath(); g.fillStyle = 'rgba(61,133,198,.22)'; if (P.length > 2) g.fill(); g.strokeStyle = C.accent; g.lineWidth = 2 * d; g.stroke(); g.restore();
+      const c = screen(sh ? [sh.cx, sh.cy] : SITEC.centroid(P)), txt = !sh ? `${fmtA(areaOf(P))} m²` : sh.type === 'rectangle' ? `${sh.w.toFixed(1)} × ${sh.l.toFixed(1)} m · ${fmtA(sh.w * sh.l)} m²` : sh.type === 'circle' ? `R ${sh.r.toFixed(2)} m · Ø ${(2 * sh.r).toFixed(2)} m` : `${(2 * sh.a).toFixed(1)} × ${(2 * sh.b).toFixed(1)} m (axes)`; tag(c[0], c[1], txt, { force: true, col: C.accent }); } }
   if (drawing && drawing.kind === 'massrect' && drawing.b) { const w = Math.abs(drawing.b[0] - drawing.a[0]), h = Math.abs(drawing.b[1] - drawing.a[1]), s = W2S([(drawing.a[0] + drawing.b[0]) / 2, Math.max(drawing.a[1], drawing.b[1])]); tag(s[0], s[1] - 12 * d, `${w.toFixed(1)} × ${h.toFixed(1)} m · ${fmtA(w * h)} m²`, { force: true, col: C.accent }); }
-  if (MSNAP && (POLYT.has(TOOL) || TOOL === 'massrect' || (drag && drag.k === 'massv'))) { const s = W2S(MSNAP); g.save(); g.strokeStyle = C.accent; g.lineWidth = 1.6 * d; g.beginPath(); g.arc(s[0], s[1], 6 * d, 0, 7); g.stroke(); g.restore(); } }; }
+  if (MSNAP && (POLYT.has(TOOL) || WSHAPE[TOOL] || TOOL === 'massrect' || (drag && drag.k === 'massv'))) { const s = W2S(MSNAP); g.save(); g.strokeStyle = C.accent; g.lineWidth = 1.6 * d; g.beginPath(); g.arc(s[0], s[1], 6 * d, 0, 7); g.stroke(); g.restore(); } }; }
 // picking, selection, deleting
 { const _ht = hitTest; hitTest = function (p, opt = {}) {
   if (CAM === '3d') { const h = _ht(p, opt); if (h && h.k === 'site') return h.id && h.id !== 'terrain' && M.site && M.site.buildings.some((b) => b.id === h.id) ? { k: 'ctx', id: h.id } : null; return h; }
@@ -5381,7 +5445,7 @@ const roadId = (r, i) => r.id || 'road' + i;
 function siteObjOf(s) { const st = M.site; if (!st || !s) return null; if (s.k === 'sarea') return (st.areas || []).find((a) => a.id === s.id) || null; if (s.k === 'sroad') return (st.roads || []).find((r, i) => roadId(r, i) === s.id) || null; if (s.k === 'parcel') return st.parcel && st.parcel.pts ? st.parcel : null; return null; }
 function sitePts(s) { const o = siteObjOf(s); if (!o || !Array.isArray(o.pts)) return null; return { o, pts: o.pts, closed: s.k !== 'sroad', k: s.k }; }
 // a water area's own centre line moves with it; any edit makes the site new to the studies (version) and is marked as the person's
-function siteMoved(P, d) { const o = P.o; if (d && o.water && Array.isArray(o.water.centre) && P.org) o.water.centre = P.org.map((r) => [+(r[0] + d[0]).toFixed(2), +(r[1] + d[1]).toFixed(2), ...r.slice(2)]); o.edited = true; M.site.version++; }
+function siteMoved(P, d) { const o = P.o; if (o.shape && o.shape.type !== 'polygon' && o.shape.type !== 'freeform') { if (d) { const c = SITEC.centroid(o.pts); o.shape = { ...o.shape, cx: +c[0].toFixed(3), cy: +c[1].toFixed(3) }; } else o.shape = { type: 'polygon', was: o.shape.type }; } if (d && o.water && Array.isArray(o.water.centre) && P.org) o.water.centre = P.org.map((r) => [+(r[0] + d[0]).toFixed(2), +(r[1] + d[1]).toFixed(2), ...r.slice(2)]); o.edited = true; M.site.version++; }
 const siteUnlocked = () => !!M.site && !(window.__ws && window.__ws.locks && window.__ws.locks.has('Site'));
 function siteAt(sq, tv) { const st = M.site;
   for (const a of (st.areas || []).filter((x) => x.pts && x.pts.length > 2).sort((x, y) => areaOf(x.pts) - areaOf(y.pts))) if (inPoly(sq, a.pts)) return { k: 'sarea', id: a.id };   // the smallest area under the pointer: the water in the garden
@@ -6386,8 +6450,8 @@ window.S3 = (() => {
   // the block's surface is drawn in layers, so a result can be painted into it: ground (green, roads), the result, water, contours
   // Tileable ripples shared by drawn shoreline polygons and the example's modeled creek.
   // ---- site water bodies (2026-11-06, emb/lib/water.js): the surface of each water area (still at one level, or a stream down its
-  // centreline), falls where it drops, and foam at their foot; ripples flow with the water (a texture moved each frame)
-  const WAT = { list: [], raf: 0, last: 0, tex: null };
+  // centreline), falls where it drops, and foam at their foot; all static (2026-11-18)
+  const WAT = { tex: null };   // the water's textures, made once (still water since 2026-11-18: no animation state)
   function waterTex(kind) { const k = kind || 'surface'; WAT.tex = WAT.tex || {}; if (WAT.tex[k]) return WAT.tex[k];
     const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), im = x.createImageData(256, 256);
     for (let j = 0; j < 256; j++) for (let i = 0; i < 256; i++) { const a = i * Math.PI / 128, b = j * Math.PI / 128, o = (j * 256 + i) * 4;
@@ -6398,21 +6462,23 @@ window.S3 = (() => {
       else { const r = Math.hypot(i - 128, j - 128) / 128, n = 0.5 + 0.5 * Math.sin(11 * a + 3 * Math.sin(7 * b)) * Math.sin(9 * b - 2 * a), al = Math.max(0, 1 - r) ** 0.7 * (0.45 + 0.55 * n);
         im.data.set([245, 250, 250, Math.round(235 * al)], o); } }
     x.putImageData(im, 0, 0); return (WAT.tex[k] = c); }
-  const waterGz = (M) => (x, y) => (M.site && M.site.terrain ? SITEC.groundAt(M.site.terrain, x, y) : 0);
+  const waterGz = (M) => Object.assign((x, y) => (M.site && M.site.terrain ? SITEC.groundMeshAt(M.site.terrain, x, y) : 0), { breaks: (p, q) => SITEC.groundBreaks(M.site && M.site.terrain, p, q) });   // the ground as drawn (2026-11-18)
+  // the terrain block is drawn TERR_DROP below the true ground (topoBlock), so building floors at the ground level do not flicker
+  // against it; water is drawn by the same rule, so it lies exactly on the drawn ground. Only the drawing moves: every level a study
+  // reads stays the true one. Flicker between water and ground is kept off by polygonOffset and the draw order, not by lifting it.
+  const TERR_DROP = 0.05;
   function waterGroup(M) {
-    const site = M.site, G = new T.Group(); G.name = 'water'; WAT.list = []; const toP = (x, y) => SITEC.siteToPlan(site, [x, y], M.north || 0), gz = waterGz(M);
+    const site = M.site, G = new T.Group(); G.name = 'water'; const toP = (x, y) => SITEC.siteToPlan(site, [x, y], M.north || 0), gz = waterGz(M);
     for (const a of site.areas || []) { if (a.kind !== 'water' || !a.pts || a.pts.length < 3) continue; let o; try { o = WTR.spec(a, gz); } catch (e) { o = null; } if (!o) continue;
       // the surface: the outline triangulated, split to about 2 m, each point at its level (a stream's falls in steps)
       const ring = a.pts.map((p) => new T.Vector2(p[0], p[1])), idx = T.ShapeUtils.triangulateShape(ring, []), flat = [];
       for (const [i, j, k] of idx) flat.push(a.pts[i][0], a.pts[i][1], a.pts[j][0], a.pts[j][1], a.pts[k][0], a.pts[k][1]);
-      const tri = WTR.subdivide(flat, o.type === 'stream' ? 1.5 : 4), pos = new Float32Array(tri.length / 2 * 3), uv = new Float32Array(tri.length);
-      for (let n = 0; n < tri.length / 2; n++) { const x = tri[n * 2], y = tri[n * 2 + 1], s = WTR.sample(o, x, y), q = toP(x, y); pos.set([q[0], s.z + 0.03, -q[1]], n * 3); uv.set(o.centre ? [s.s / 12, s.d / 12] : [x / 16, y / 16], n * 2); }
+      const step = (site.terrain && site.terrain.grid && site.terrain.grid.step) || 4, tri = WTR.subdivide(flat, o.type === 'stream' ? 1.5 : o.place === 'ground' ? Math.min(1.5, step / 2) : 4), pos = new Float32Array(tri.length / 2 * 3), uv = new Float32Array(tri.length);
+      for (let n = 0; n < tri.length / 2; n++) { const x = tri[n * 2], y = tri[n * 2 + 1], s = WTR.sample(o, x, y), q = toP(x, y); pos.set([q[0], s.z - TERR_DROP, -q[1]], n * 3); uv.set(o.centre ? [s.s / 12, s.d / 12] : [x / 16, y / 16], n * 2); }
       const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2)); geo.computeVertexNormals();
       const tex = new T.CanvasTexture(waterTex('surface')); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.colorSpace = T.SRGBColorSpace;
-      const sm = new T.MeshPhongMaterial({ map: tex, color: 0xffffff, transparent: true, opacity: 0.86, shininess: 80, specular: new T.Color('#cfe8ec'), side: T.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+      const sm = new T.MeshPhongMaterial({ map: tex, color: new T.Color(({ clear: '#ffffff', blue: '#9ec7ea', teal: '#9fdcd4', green: '#b9d9a8', dark: '#7f9fb6' })[(a.water && a.water.color) || 'clear'] || '#ffffff'), transparent: true, opacity: 0.86, shininess: 80, specular: new T.Color('#cfe8ec'), side: T.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
       const me = new T.Mesh(geo, sm); me.name = 'water-surface'; me.renderOrder = 3; me.userData = { k: 'site', water: a.id }; G.add(me);
-      // a stream's ripples run downstream at its speed; a pond's drift slowly
-      WAT.list.push({ tex, du: o.centre ? -o.speed / 12 : 0.002, dv: o.centre ? 0 : 0.0015 });
       // falls: a curtain of falling water from the lip to the pool below, bowed out by the throw, and foam where it lands
       for (const f of o.falls) { const n = [-f.dir[1], f.dir[0]], rows = 8, cols = 8, w = Math.max(0.6, f.w * 1.02); let ft = null;
         for (const [lay, back, op] of [[0, 0, 0.97], [1, -0.22, 0.75]]) { const P = [], U = [], I = [];   // two sheets of falling water, the back one a little behind
@@ -6426,22 +6492,23 @@ window.S3 = (() => {
         { const lip = [f.p[0] - f.dir[0] * 0.5, f.p[1] - f.dir[1] * 0.5], P = [], q0 = toP(lip[0] + n[0] * w / 2, lip[1] + n[1] * w / 2), q1 = toP(lip[0] - n[0] * w / 2, lip[1] - n[1] * w / 2), q2 = toP(f.p[0] - n[0] * w / 2, f.p[1] - n[1] * w / 2), q3 = toP(f.p[0] + n[0] * w / 2, f.p[1] + n[1] * w / 2);
           P.push(q0[0], f.top + 0.05, -q0[1], q1[0], f.top + 0.05, -q1[1], q2[0], f.top + 0.05, -q2[1], q0[0], f.top + 0.05, -q0[1], q2[0], f.top + 0.05, -q2[1], q3[0], f.top + 0.05, -q3[1]);
           const lg = new T.BufferGeometry(); lg.setAttribute('position', new T.Float32BufferAttribute(P, 3)); lg.setAttribute('uv', new T.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2)); const lt = new T.CanvasTexture(waterTex('fall')); lt.wrapS = lt.wrapT = T.RepeatWrapping; lt.colorSpace = T.SRGBColorSpace;
-          const lm = new T.Mesh(lg, new T.MeshBasicMaterial({ map: lt, transparent: true, opacity: 0.8, depthWrite: false, side: T.DoubleSide })); lm.name = 'water-lip'; lm.renderOrder = 5; G.add(lm); WAT.list.push({ tex: lt, du: 0, dv: 0.4 }); }
-        WAT.list.push({ tex: ft, du: 0, dv: 0.55 + 0.25 * Math.sqrt(f.drop) });
+          const lm = new T.Mesh(lg, new T.MeshBasicMaterial({ map: lt, transparent: true, opacity: 0.8, depthWrite: false, side: T.DoubleSide })); lm.name = 'water-lip'; lm.renderOrder = 5; G.add(lm); }
         const foamT = new T.CanvasTexture(waterTex('foam')); foamT.colorSpace = T.SRGBColorSpace; foamT.center.set(0.5, 0.5);
         const fr = Math.max(0.9, w * 0.9), fp = [f.p[0] + f.dir[0] * (Math.min(1.6, 0.35 * f.drop) + fr * 0.55), f.p[1] + f.dir[1] * (Math.min(1.6, 0.35 * f.drop) + fr * 0.55)], fq = toP(...fp);
         const fm = new T.Mesh(new T.CircleGeometry(fr, 28), new T.MeshBasicMaterial({ map: foamT, transparent: true, depthWrite: false })); fm.rotation.x = -Math.PI / 2; fm.position.set(fq[0], f.bot + 0.06, -fq[1]); fm.scale.set(1.6, 1, 1); fm.rotation.z = Math.atan2(-(toP(f.p[0] + f.dir[0], f.p[1] + f.dir[1])[1] - toP(...f.p)[1]), toP(f.p[0] + f.dir[0], f.p[1] + f.dir[1])[0] - toP(...f.p)[0]); fm.name = 'water-foam'; fm.renderOrder = 5; fm.userData = { k: 'site', water: a.id }; G.add(fm);
-        WAT.list.push({ tex: foamT, spin: 0.25 }); } }
-    waterAnim(); return G; }
-  // the ripples move about 15 times a second while the 3D view shows water; Settings: localStorage pc-water-anim = 'off' stops them
-  const waterAnimOn = () => { try { return localStorage.getItem('pc-water-anim') !== 'off'; } catch (e) { return true; } };
-  // still water (2026-11-18): the ripples no longer move; the 3D view is drawn only when something changes, which keeps it fast
-  function waterAnim() { return; if (WAT.raf || !WAT.list.length || !waterAnimOn()) return; WAT.last = performance.now();
-    const tick = (t) => { WAT.raf = 0; if (!WAT.list.length || !waterAnimOn()) return; if (document.hidden || !api.on || window.__pcHidden) { WAT.raf = requestAnimationFrame(tick); return; } const dt = (t - WAT.last) / 1000; if (dt < 0.12) {   /* about 8 a second, and not while this view is hidden in the Workspace (2026-11-18) */ WAT.raf = requestAnimationFrame(tick); return; } WAT.last = t;
-      const d = Math.min(0.2, dt); for (const w of WAT.list) { if (w.spin) w.tex.rotation += w.spin * d; else { w.tex.offset.x += w.du * d; w.tex.offset.y += w.dv * d; } } render(); WAT.raf = requestAnimationFrame(tick); };
-    WAT.raf = requestAnimationFrame(tick); }
-  api.waterAnim = (on) => { try { localStorage.setItem('pc-water-anim', on ? 'on' : 'off'); } catch (e) { } if (on) waterAnim(); else { cancelAnimationFrame(WAT.raf); WAT.raf = 0; } };
-  api._water = () => { const s = scene && scene.getObjectByName('water'); let surf = 0, falls = 0, foam = 0, ys = []; if (s) s.traverse((m) => { if (m.name === 'water-surface') { surf++; const p = m.geometry.attributes.position.array; for (let i = 1; i < p.length; i += 3 * 50) ys.push(p[i]); } if (m.name === 'water-fall') falls++; if (m.name === 'water-foam') foam++; }); return { surf, falls, foam, lo: ys.length ? Math.min(...ys) : null, hi: ys.length ? Math.max(...ys) : null, anim: !!WAT.raf, offset: WAT.list[0] ? +WAT.list[0].tex.offset.x.toFixed(4) : null }; };   // read-only, for the browser checks
+      } }
+    return G; }
+  // still water (2026-11-18): the water is static geometry; the ripple animation, its loop and its setting were removed
+  try { localStorage.removeItem('pc-water-anim'); } catch (e) { }
+  // read-only, for the browser checks (2026-11-18): one water body's 3D surface against the drawn ground under it. The shore: the
+  // vertices on the outline (none may float above the ground); all: every vertex; spread: the range of heights (0 for a level surface)
+  api._waterFit = (id) => { const s = scene && scene.getObjectByName('water'), site = M.site; if (!s || !site) return null; let m0 = null; s.traverse((m) => { if (m.name === 'water-surface' && m.userData.water === id) m0 = m; }); if (!m0) return null;
+    const a = (site.areas || []).find((x) => x.id === id), p = m0.geometry.attributes.position.array, gAt = (sx, sy) => (site.terrain ? SITEC.groundMeshAt(site.terrain, sx, sy) : 0) - TERR_DROP;
+    const onShore = (q) => a.pts.some((r, i) => { const t = a.pts[(i + 1) % a.pts.length], dx = t[0] - r[0], dy = t[1] - r[1], L = dx * dx + dy * dy, u = L ? Math.max(0, Math.min(1, ((q[0] - r[0]) * dx + (q[1] - r[1]) * dy) / L)) : 0; return Math.hypot(q[0] - r[0] - dx * u, q[1] - r[1] - dy * u) < 0.02; });
+    let shoreAbove = -Infinity, above = -Infinity, below = -Infinity, lo = Infinity, hi = -Infinity, n = 0;
+    for (let i = 0; i < p.length; i += 3) { const q = siteOfM(M, [p[i], -p[i + 2]]), g = gAt(q[0], q[1]), y = p[i + 1]; n++; lo = Math.min(lo, y); hi = Math.max(hi, y); above = Math.max(above, y - g); below = Math.max(below, g - y); if (onShore(q)) shoreAbove = Math.max(shoreAbove, y - g); }
+    return { n, shoreAbove: +shoreAbove.toFixed(5), above: +above.toFixed(5), below: +below.toFixed(5), spread: +(hi - lo).toFixed(5), y0: +(lo + TERR_DROP).toFixed(4) }; };
+  api._water = () => { const s = scene && scene.getObjectByName('water'); let surf = 0, falls = 0, foam = 0, ys = []; if (s) s.traverse((m) => { if (m.name === 'water-surface') { surf++; const p = m.geometry.attributes.position.array; for (let i = 1; i < p.length; i += 3 * 50) ys.push(p[i]); } if (m.name === 'water-fall') falls++; if (m.name === 'water-foam') foam++; }); return { surf, falls, foam, lo: ys.length ? Math.min(...ys) : null, hi: ys.length ? Math.max(...ys) : null, anim: false, offset: null }; };   // still water: nothing animates (kept for the browser checks)   // read-only, for the browser checks
   let rippleTile, rippleMap;
   function waterTile() {
     if (rippleTile) return rippleTile;
@@ -6567,7 +6634,7 @@ window.S3 = (() => {
   function topoBlock(M, T0, G1) {
     const B = new T.Group(); B.name = 'site'; B.userData = { k: 'site', id: 'terrain' };
     const nx = T0.nx, ny = T0.ny, n = nx * ny, pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
-    T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - 0.05; pos[3 * i + 2] = -p[1]; uv[2 * i] = (i % nx) / (nx - 1); uv[2 * i + 1] = Math.floor(i / nx) / (ny - 1); });
+    T0.pts.forEach((p, i) => { pos[3 * i] = p[0]; pos[3 * i + 1] = p[2] - TERR_DROP; pos[3 * i + 2] = -p[1]; uv[2 * i] = (i % nx) / (nx - 1); uv[2 * i + 1] = Math.floor(i / nx) / (ny - 1); });
     for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1; idx.push(a, b, c, b, d, c); }
     const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
     const G0 = G1 || (M.site && M.site.terrain && M.site.terrain.grid), tex = G0 && G0.nx === nx && G0.ny === ny ? topoTexture(M.site, G0) : null;
@@ -6804,13 +6871,13 @@ window.S3 = (() => {
   api.overlayVals = (vals) => { if (!TOPO.full) return false; { let sm = 0; for (const v of vals || TOPO.full.vals) if (Number.isFinite(v)) sm += v; TOPO.sum = sm; } if (vals && vals.length !== TOPO.full.vals.length) return false; api.overlay(vals ? { ...TOPO.full, vals, noReveal: true } : { ...TOPO.full, noReveal: true }); TOPO.full = TOPO.full; return true; };
   api.zoom = (k) => { if (!R) return; const v = cam.position.clone().sub(ctl.target); v.multiplyScalar(1 / k); cam.position.copy(ctl.target).add(v); ctl.update(); render(); if (window.zoomUI) window.zoomUI(); };
   api.pct = () => R ? Math.round(d0 / Math.max(1e-6, cam.position.distanceTo(ctl.target)) * 100) : 100;
-  api.snap = async (M, S, o, w, h) => {   // a picture of the whole building for the overview panel
+  api.snap = async (M, S, o, w, h, asCanvas) => {   // a picture of the whole building for the overview panel (asCanvas: the drawn canvas itself, no PNG; 2026-11-18)
     await lib(); if (!SR) { SR = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); SR.outputColorSpace = T.SRGBColorSpace; SS = new T.Scene(); SS.add(new T.HemisphereLight(0xffffff, 0xcfc9bd, 1.9)); const sun = new T.DirectionalLight(0xfff6ea, 1.6); sun.position.set(-14, 26, 10); SS.add(sun); SC = new T.PerspectiveCamera(30, 1, 0.1, 2000); }
     SR.setPixelRatio(1); SR.setSize(w, h, false); SC.aspect = w / h; SC.updateProjectionMatrix();
     const G = buildGroup(M, S, Object.assign({ flows: false }, o)); SS.add(G);
     const b = new T.Box3().setFromObject(G), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6) * 1.15;
     SC.position.set(c.x + r * 0.8, c.y + r * 0.95, c.z + r * 1.05); SC.lookAt(c); SR.render(SS, SC);
-    const url = SR.domElement.toDataURL('image/png'); SS.remove(G); G.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); return url;
+    SS.remove(G); G.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); return asCanvas ? SR.domElement : SR.domElement.toDataURL('image/png');
   };
   // ---- editing in 3D: picking, the ground point under the pointer, and where a plan point lands on screen
   let RC = null;
@@ -7605,7 +7672,7 @@ if (window.__WSROLE) {
 
   // ---- layer locks from the Workspace: a locked layer's objects cannot be picked, and its tools do not start
   const LOCKK = { imp: 'Imported', mass: 'Masses', ctx: 'Site', wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
-  const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', lsplant: 'Site', lswater: 'Site', lspave: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
+  const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', lsplant: 'Site', lswater: 'Site', lspave: 'Site', lswrect: 'Site', lswcirc: 'Site', lswell: 'Site', lswfree: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
   cv.addEventListener('pointerdown', () => { WS.down = true; setTimeout(() => { WS.down = false; }, 0); }, true);
   { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && (h.k === 'imp' ? ((M.imports || []).find((o) => o.id === h.id) || {}).layer || 'Imported' : LOCKK[h.k]); if (L && WS.locks.has(L)) { if (WS.down) say(L !== 'Site' && !WS.locks.has('Site') ? 'Editing the site model: only the site changes. Press Done to edit the design.' : `The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
   { const _t = setTool; setTool = function (t) { const L = TOOLK[t] || (t === 'place' && PICK && REG[PICK] && REG[PICK].kind === 'stair' ? 'Furniture' : null); if (L && WS.locks.has(L)) { say(`The ${L} layer is locked. Unlock it in Layers to draw on it.`); return; } return _t(t); }; }
@@ -7791,7 +7858,7 @@ if (window.__WSROLE) {
     },
     // paint values on the ground: { X0, Y0, cell, nx, ny, vals, lo, hi, ramp: 'sun' | 'heat' | 'sky' }
     paintGrid(o) { const site = M.site, gAt = (x, y) => { if (!site?.terrain) return 0; const q = siteOfM(M, [x, y]); return SITEC.groundAt(site.terrain, q[0], q[1]); };
-      const R = RAMPS[o.ramp] || RAMPS.sun, color = (v) => rampAt(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo));
+      const R = RAMPS[o.ramp] || RAMPS.sun, B = o.bands, color = B ? (v) => { if (v >= 9000) return (B.dark && B.dark[v - 9000]) || B.line || '#123'; let k = 0; while (k + 1 < B.edges.length && v >= B.edges[k + 1]) k++; return B.cols[k]; } : (v) => rampAt(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo));   // bands (2026-11-18): fixed classes and contour lines (cells marked 9999), as on a noise map
       ANA2 = { X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, alpha: o.fade === false ? (o.alpha || 0.5) : 0.78, img: null }; if (CAM !== '3d') { if (o.fit) { FIT_BOX = { x0: o.X0, y0: o.Y0, x1: o.X0 + o.nx * o.cell, y1: o.Y0 + o.ny * o.cell }; fitView(); FIT_BOX = null; } draw(); }
       if (window.S3 && S3.on && S3.overlay) S3.overlay({ X0: o.X0, Y0: o.Y0, cell: o.cell, nx: o.nx, ny: o.ny, vals: o.vals, color, ground: gAt, toSite: (x, y) => siteOfM(M, [x, y]), fade: o.fade, alpha: o.alpha }); },
     viewPNG() { try { const c = [...document.querySelectorAll('canvas')].filter((x) => x.offsetParent && x.width > 200).sort((a, b) => b.width * b.height - a.width * a.height)[0]; if (window.S3 && S3.render) S3.render(); return c ? c.toDataURL('image/png') : null; } catch (e) { return null; } },
@@ -7906,14 +7973,28 @@ if (window.__WSROLE) {
       o.edited = true; M.site.version++; commit(b); return true; },
     siteElDel(s) { return siteDel(s); },
     sitePlanPt(s) { const P = sitePts(s); if (!P) return null; const c = P.pts.reduce((a2, q) => [a2[0] + q[0] / P.pts.length, a2[1] + q[1] / P.pts.length], [0, 0]); return SITEC.siteToPlan(M.site, c, M.north || 0); },   // for tests: an element's middle on the plan
+    wake3D() { if (S3STALE && window.S3 && S3.on) { S3STALE = false; upd3D(); return true; } return false; },   // the hidden pane's 3D brought up to date (2026-11-18)
     siteDebug(p) { return { editOn: siteEditOn(), cam: CAM, view: VIEW2D, sel: SEL, hit: p ? hitTest(p) : null, drag: drag ? drag.k : null, tool: TOOL }; },
     siteSelect(s) { if (!s || !siteObjOf(s)) return false; SEL = { k: s.k, id: s.id }; changedSel(); return true; },
-    waters() { const st = M.site; if (!st) return []; return (st.areas || []).filter((a) => a.kind === 'water' && a.pts && a.pts.length > 2).map((a) => { const o = waterSpecOf(st, a); return o ? { id: a.id, name: a.name || 'Water', set: { ...(a.water || {}) }, type: o.type, level: o.level, outlet: o.outlet ?? o.level, depth: o.depth, speed: o.speed, discharge: o.discharge, area: o.area, length: o.length, falls: o.falls.map((f) => ({ drop: +f.drop.toFixed(2), w: +f.w.toFixed(1), top: +f.top.toFixed(2), bot: +f.bot.toFixed(2) })) } : null; }).filter(Boolean); },
+    waters() { const st = M.site; if (!st) return []; return (st.areas || []).filter((a) => a.kind === 'water' && a.pts && a.pts.length > 2).map((a) => { const o = waterSpecOf(st, a); return o ? { id: a.id, name: a.name || 'Water', set: { ...(a.water || {}) }, shape: a.shape ? { ...a.shape } : { type: 'polygon' }, place: o.place || (o.centre ? 'stream' : 'level'), shore: o.shore ?? null, spill: o.spill || 0, sound: a.water && a.water.sound ? { ...a.water.sound } : null, color: (a.water && a.water.color) || 'clear', type: o.type, level: o.level, outlet: o.outlet ?? o.level, depth: o.depth, speed: o.speed, discharge: o.discharge, area: o.area, length: o.length, falls: o.falls.map((f) => ({ drop: +f.drop.toFixed(2), w: +f.w.toFixed(1), top: +f.top.toFixed(2), bot: +f.bot.toFixed(2) })) } : null; }).filter(Boolean); },
     waterSpecs() { const st = M.site; if (!st) return []; const toP = (p) => SITEC.siteToPlan(st, p, M.north || 0); return (st.areas || []).filter((a) => a.kind === 'water' && a.pts && a.pts.length > 2).map((a) => { const o = waterSpecOf(st, a); if (!o) return null;
-      return { id: a.id, name: a.name || 'Water', type: o.type, level: o.level, depth: o.depth, speed: o.speed, discharge: o.discharge, pts: a.pts.map(toP), centre: o.centre ? o.centre.map((p) => [...toP(p), p[2], p[3]]) : null, falls: o.falls.map((f) => { const q = toP(f.p), q2 = toP([f.p[0] + f.dir[0], f.p[1] + f.dir[1]]); return { p: q, dir: [q2[0] - q[0], q2[1] - q[1]], w: f.w, top: f.top, bot: f.bot, drop: f.drop, lw: WTR.fallPower(o, f) }; }) }; }).filter(Boolean); },   // in plan coordinates
+      const cen = SITEC.centroid(a.pts), ax = WTR.mainAxis(a.pts), snd = a.water && a.water.sound;   // the acoustic source (2026-11-18), apart from the geometry
+      return { id: a.id, name: a.name || 'Water', type: o.type, level: o.level, depth: o.depth, speed: o.speed, discharge: o.discharge, pts: a.pts.map(toP), sound: snd ? { ...snd, at: toP(snd.at || cen), axis: [toP(ax[0]), toP(ax[1])], z: (o.drawLevel ?? o.level) } : null, centre: o.centre ? o.centre.map((p) => [...toP(p), p[2], p[3]]) : null, falls: o.falls.map((f) => { const q = toP(f.p), q2 = toP([f.p[0] + f.dir[0], f.p[1] + f.dir[1]]); return { p: q, dir: [q2[0] - q[0], q2[1] - q[1]], w: f.w, top: f.top, bot: f.bot, drop: f.drop, lw: WTR.fallPower(o, f) }; }) }; }).filter(Boolean); },   // in plan coordinates
     waterSet(id, o) { const a = M.site && (M.site.areas || []).find((x) => x.id === id && x.kind === 'water'); if (!a) return false; const s0 = snapM(), w = { ...(a.water || {}) };
       for (const k of ['type', 'level', 'depth', 'speed', 'discharge']) if (o[k] !== undefined) { if (o[k] === null || o[k] === '' || (k === 'type' && o[k] === 'auto')) delete w[k]; else w[k] = k === 'type' ? String(o[k]) : +o[k]; }
+      if (o.place !== undefined) { if (o.place === 'ground') w.place = 'ground'; else delete w.place; if (w.type === 'drape') delete w.type; }
+      if (o.color !== undefined) { if (o.color && o.color !== 'clear') w.color = String(o.color); else delete w.color; }
+      if (o.sound !== undefined) { if (o.sound && o.sound.kind && o.sound.kind !== 'none') w.sound = { kind: String(o.sound.kind), bands: Array.isArray(o.sound.bands) ? o.sound.bands.slice(0, 6).map(Number) : undefined, at: Array.isArray(o.sound.at) ? o.sound.at.map(Number) : undefined }; else delete w.sound; }
       if (o.name != null) a.name = String(o.name); if (Object.keys(w).length) a.water = w; else delete a.water; M.site.version++; commit(s0); return true; },
+    // a water shape's sizes (2026-11-18): rectangle w, l, rot; circle r; ellipse a, b, rot (metres, rotation in degrees); the outline is
+    // made again from the shape, about its centre
+    waterShape(id, o) { const a = M.site && (M.site.areas || []).find((x) => x.id === id && x.kind === 'water'); if (!a || !a.shape || !['rectangle', 'circle', 'ellipse'].includes(a.shape.type)) return false; const s0 = snapM(), sh = { ...a.shape };
+      for (const k of ['w', 'l', 'r', 'a', 'b']) if (o[k] != null && +o[k] > 0.2) sh[k] = +o[k]; if (o.rot != null && Number.isFinite(+o.rot)) sh.rot = +o.rot * Math.PI / 180;
+      a.shape = sh; a.pts = wShapePts(sh); a.edited = true; M.site.version++; commit(s0); return true; },
+    // a copy of a water body, 2 m to the east and north of it, with the same water and sound settings
+    waterDup(id) { const a = M.site && (M.site.areas || []).find((x) => x.id === id && x.kind === 'water'); if (!a) return null; const s0 = snapM(), c = JSON.parse(JSON.stringify(a)); c.id = STC.uid('a_you_'); c.name = (a.name || 'Water') + ' (copy)'; c.added = true; c.pts = c.pts.map((p) => [+(p[0] + 2).toFixed(3), +(p[1] + 2).toFixed(3), ...p.slice(2)]);
+      if (c.shape && 'cx' in c.shape) { c.shape.cx += 2; c.shape.cy += 2; } if (c.water && Array.isArray(c.water.centre)) c.water.centre = c.water.centre.map((p) => [p[0] + 2, p[1] + 2, ...p.slice(2)]); if (c.water && c.water.sound && c.water.sound.at) c.water.sound.at = [c.water.sound.at[0] + 2, c.water.sound.at[1] + 2];
+      M.site.areas.push(c); M.site.version++; commit(s0); return c.id; },
     // a neighbouring building (site context) for the Workspace's Properties, and its edits (2026-10-31: Edit site model)
     ctx(id) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return null; return { id: b.id, name: b.name || '', h: b.h, levels: b.levels, area: b.area, excluded: !!b.excluded, src: (b.src && b.src.provider) || '', hSource: b.hSource || '', added: !!b.added }; },
     ctxSet(id, o) { const b = M.site && M.site.buildings.find((x) => x.id === id); if (!b) return false; const s0 = snapM();

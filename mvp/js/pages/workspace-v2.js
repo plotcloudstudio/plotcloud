@@ -22,7 +22,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=sa-20261118-2';
+import { mountChrome } from '../workspace-chrome.js?v=water-20261118-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
@@ -48,7 +48,7 @@ const TOOLS = {
     ['Massing', ['Mass outline', 'Rectangle mass']]] },   // neighbouring buildings: Context, in Edit site model
   // landscape on the site (2026-10-31): drawn while editing the site model
   landscape: { label: 'Landscape: planting, water and paving', icon: I('<path d="M4 20h16"/><circle cx="9" cy="9" r="4"/><path d="M9 13v7"/><path d="M14 17c1.5-1 3-1 4.5 0"/>'), sections: [
-    ['Landscape', ['Planting', 'Water', 'Paving']]] },
+    ['Landscape', ['Planting', 'Paving']], ['Water', ['Water', 'Water rectangle', 'Water circle', 'Water ellipse', 'Water freehand']]] },   // water shapes (2026-11-18)
   draw: { label: 'Draw room', icon: I('<rect x="4" y="4" width="16" height="16"/><path d="M4 12h7v8"/>'), sections: [
     ['Draw rooms', ['Straight wall', 'Rectangle room', 'Arc wall', 'Floor']],
     ['Add structure', ['Straight stair', 'L-shaped stair', 'U-shaped stair', 'Spiral stair', 'Accessible ramp', 'Floor opening']]] },
@@ -63,7 +63,7 @@ const TOOLS = {
 };
 const CONTEXT_TOOL = { label: 'Context', sections: [['Context', ['Context building']]] };
 // what each tile starts in Plan Studio (its own tool keys, door models and stair models)
-const TMAP = { Planting: { tool: 'lsplant' }, Water: { tool: 'lswater' }, Paving: { tool: 'lspave' }, 'Context building': { tool: 'ctxadd' }, 'Mass outline': { tool: 'mass' }, 'Rectangle mass': { tool: 'massrect' }, 'Neighbour building': { tool: 'ctxadd' }, 'Straight wall': { tool: 'wall', key: 'W' }, 'Rectangle room': { tool: 'room', key: 'R' }, 'Arc wall': { tool: 'arc', key: 'H' }, Floor: { tool: 'floor', key: 'F' }, Fence: { tool: 'fence' },
+const TMAP = { Planting: { tool: 'lsplant' }, Water: { tool: 'lswater' }, 'Water rectangle': { tool: 'lswrect' }, 'Water circle': { tool: 'lswcirc' }, 'Water ellipse': { tool: 'lswell' }, 'Water freehand': { tool: 'lswfree' }, Paving: { tool: 'lspave' }, 'Context building': { tool: 'ctxadd' }, 'Mass outline': { tool: 'mass' }, 'Rectangle mass': { tool: 'massrect' }, 'Neighbour building': { tool: 'ctxadd' }, 'Straight wall': { tool: 'wall', key: 'W' }, 'Rectangle room': { tool: 'room', key: 'R' }, 'Arc wall': { tool: 'arc', key: 'H' }, Floor: { tool: 'floor', key: 'F' }, Fence: { tool: 'fence' },
   'Straight stair': { stair: 'straight' }, 'L-shaped stair': { stair: 'lshape' }, 'U-shaped stair': { stair: 'ushape' }, 'Spiral stair': { stair: 'spiral' }, 'Accessible ramp': { stair: 'ramp' }, 'Floor opening': { tool: 'void', key: 'O' },
   'Exterior door': { tool: 'door', opm: 'ext' }, 'Interior door': { tool: 'door', opm: 'int', key: 'D' }, 'Exit door': { tool: 'door', opm: 'exit' }, 'Accessible door': { tool: 'door', opm: 'acc' },
   Window: { tool: 'win', opm: 'win', key: 'N' }, 'Wall opening': { tool: 'hole', key: 'E' } };
@@ -172,7 +172,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=sa-20261118-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=water-20261118-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -392,7 +392,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     host.onclick = (e) => e.stopPropagation(); }
   if (UI.view === 'shaded') UI.view = 'persp';   // the Shaded view is gone (2026-10-25): Perspective draws the imports and the site
   if (!['plan', 'persp'].includes(UI.view)) UI.view = 'plan';
-  function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; syncHidden(shownRole()); for (const [r, I2] of Object.entries(INST)) if (I2.ready && r !== 'props') try { I2.win.__pcHidden = r !== shownRole(); } catch { } const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
+  function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; syncHidden(shownRole()); for (const [r, I2] of Object.entries(INST)) if (I2.ready && r !== 'props') try { I2.win.__pcHidden = r !== shownRole(); if (!I2.win.__pcHidden) I2.ws.wake3D?.(); } catch { } const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
   // the View panel (2026-11-01): every way to look at the model behind one button, as the Display panel: Plan, Ceiling plan,
   // Perspective and Isometric (from NE, SE, SW or NW: an all but parallel view at the true isometric angle), then Zoom selected
   // and Fit the model
@@ -638,7 +638,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     $('#addLevel', app).disabled = !activePane().ready;
     const pane = activePane(), w = pane.ready ? pane.ws : null; if (!w) return; const st = w.state();
     const waterHint = $('#siteWaterHint', app);
-    if (waterHint) { const name = {lsplant:'Planting',lswater:'Water',lspave:'Paving'}[st.tool]; waterHint.hidden = !name; if(name)waterHint.textContent = name + ' · Trace boundary · Enter to finish · Esc to cancel'; }
+    if (waterHint) { const name = {lsplant:'Planting',lswater:'Water',lspave:'Paving',lswrect:'Water rectangle',lswcirc:'Water circle',lswell:'Water ellipse',lswfree:'Water freehand'}[st.tool], how = {lswrect:'Drag corner to corner',lswcirc:'Click the centre, drag the radius',lswell:'Drag the long axis, then click the short one',lswfree:'Press and draw, release to close'}[st.tool]; waterHint.hidden = !name; if(name)waterHint.textContent = name + ' · ' + (how || 'Trace boundary · Enter to finish') + ' · Esc to cancel'; }
     $$('#panelBody [data-tool]', app).forEach((b) => { const n = b.dataset.tool, s = b.dataset.furn ? { furn: b.dataset.furn } : TMAP[n]; let on = false;
       if (b.dataset.myfurn) on = st.impPend === b.dataset.myfurn; else if (b.dataset.furn) on = (st.tool === 'place' || st.tool === 'fence') && st.pick === b.dataset.furn; else if (s?.stair) on = st.tool === 'place' && st.pick === s.stair; else if (s?.tool) on = st.tool === s.tool && (!s.opm || st.opm == null || st.opm === s.opm); else if (UI.panel === 'light') { const k = (LIGHTS || []).find(([, nm]) => nm === n); on = !!k && st.light === k[0]; }
       b.setAttribute('aria-pressed', String(on)); });
