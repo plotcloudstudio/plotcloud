@@ -714,3 +714,19 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 /* the other studies of the same group, at the top of the study card (2026-11-17) */
 .w2.sp .sp-sibs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:2px 0 8px}.w2.sp .sp-sibs>span{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#7d8b9e;margin-right:2px}
 .w2.sp .sp-sibs button{border:1px solid #d5dbe3;background:#fff;border-radius:999px;padding:2px 8px;font:inherit;font-size:11px;color:#334155;cursor:pointer}.w2.sp .sp-sibs button[aria-current]{background:#0f172a;border-color:#0f172a;color:#fff;cursor:default}
+/* the floors found in an imported model (2026-11-17) */
+.ipv-floors{border-top:1px solid #e5e7eb;margin-top:8px;padding-top:8px;font-size:12px}.ipv-floors p{margin:3px 0 6px;color:#475569}.ipv-floors ol{list-style:none;margin:6px 0;padding:0;max-height:180px;overflow:auto;border:1px solid #eef2f6;border-radius:6px}
+.ipv-floors li{display:flex;justify-content:space-between;padding:3px 8px;border-bottom:1px solid #f1f5f9}.ipv-floors li.on{background:#eef6f1;font-weight:600}.ipv-floors li span{color:#64748b}.ipv-check{display:flex!important;gap:6px;align-items:center}.ipv-check input{width:auto}
+.ipv-card:has(.ipv-floors:not([hidden])){max-height:calc(100% - 28px);overflow:auto}
+/* the Move panel (2026-11-17): a small white board, after Rhino's, dragged by its title */
+.w2.sp .w2-move{position:absolute;right:76px;bottom:96px;z-index:40;width:272px;background:#fff;border:1px solid #d5dbe3;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.16);font:12px Inter,system-ui,sans-serif;color:#0f172a;padding:0 10px 8px}
+.w2.sp .w2-move[hidden]{display:none}.w2.sp .w2-move.dragging{opacity:.92;box-shadow:0 14px 34px rgba(15,23,42,.24)}
+.w2.sp .w2-move header{display:flex;align-items:center;gap:8px;margin:0 -10px 6px;padding:7px 8px 7px 12px;border-bottom:1px solid #eef2f6;cursor:grab;user-select:none;touch-action:none}.w2.sp .w2-move.dragging header{cursor:grabbing}
+.w2.sp .w2-move header span{color:#64748b;flex:1}.w2.sp .w2-move header button{border:0;background:none;font-size:16px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px}
+.w2.sp .w2-move .mv-pos{margin:0 0 6px;color:#475569;font-size:11.5px}.w2.sp .w2-move .mv-pos b{color:#0f172a;font-weight:600}
+.w2.sp .w2-move .mv-row{display:flex;align-items:center;gap:6px;margin:6px 0;flex-wrap:wrap}.w2.sp .w2-move .mv-row[hidden]{display:none}
+.w2.sp .w2-move label{display:flex;align-items:center;gap:4px;color:#475569}.w2.sp .w2-move input[type=number]{width:62px;padding:3px 5px;border:1px solid #d5dbe3;border-radius:6px;font:inherit}.w2.sp .w2-move select{flex:1;min-width:0;padding:3px 4px;border:1px solid #d5dbe3;border-radius:6px;font:inherit}
+.w2.sp .w2-move .mv-u{color:#94a3b8}.w2.sp .w2-move .mv-file{font-size:11.5px}.w2.sp .w2-move .mv-msg{margin:4px 0 0;color:#166534;font-size:11.5px;min-height:1em}
+/* the box a click on a gumball arrow opens (2026-11-17): a typed distance, and a storey up or down on Z */
+.w2.sp .w2-axpop{position:absolute;z-index:45;width:230px;background:#fff;border:1px solid #d5dbe3;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.18);padding:9px 10px;font:12px Inter,system-ui,sans-serif;color:#0f172a}.w2.sp .w2-axpop[hidden]{display:none}
+.w2.sp .w2-axpop .ap-row{display:flex;align-items:center;gap:6px;margin-top:7px}.w2.sp .w2-axpop input{width:96px;padding:4px 6px;border:1px solid #d5dbe3;border-radius:6px;font:inherit}.w2.sp .w2-axpop .ap-note{margin:6px 0 0;color:#64748b;font-size:11px}

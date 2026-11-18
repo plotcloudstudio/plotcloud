@@ -2499,5 +2499,62 @@ export function mountChrome(app, api) {
   root.addEventListener('pointerout', (e) => { const b = e.target.closest(TIPS); if (b && !b.contains(e.relatedTarget)) tip.hidden = true; });
   root.addEventListener('pointerdown', () => { tip.hidden = true; }, true);
   window.__wsStudy = { dome: (pt) => { domeShow(pt); return DOME.last || null; }, open: openStudy, run: runStudy, state: () => ({ ...ST, res: ST.res && { ...ST.res } }), est: (id, k) => { const e = estimate(id, QUAL.find((q) => q.k === k) || qualOf()); return e ? { ms: Math.round(e.ms), cells: e.cells, cell: e.cell, flowCells: e.flowCells, samples: e.samples, sp: e.sp, n: e.n } : null; }, time: (id, kind) => timeOf(id, kind) };   // for the browser checks
+  // ---- the Move panel (2026-11-17): a small white board after Rhino's, dragged by its title, beside the gumball. Move by typed
+  // distances, a storey up or down, onto a level, a whole imported file (its levels following), or turn by an angle. It follows the
+  // selection and every change, without polling.
+  const MV = { hidden: false, key: '' }, mv = el('section', 'w2-move', `<header data-mv-drag title="Drag to move this panel"><b>Move</b><span data-mv-what></span><button type="button" data-mv="close" aria-label="Hide the Move panel">×</button></header>
+    <p class="mv-pos" data-mv-pos></p>
+    <div class="mv-row mv-d"><label>ΔX<input type="number" step="10" value="0" data-mv-d="x"></label><label>ΔY<input type="number" step="10" value="0" data-mv-d="y"></label><label data-mv-zl>ΔZ<input type="number" step="10" value="0" data-mv-d="z"></label><span class="mv-u">mm</span><button type="button" class="btn sm primary" data-mv="go">Move</button></div>
+    <div class="mv-row" data-mv-zrow><button type="button" class="btn sm" data-mv="up">↑ 1 floor</button><button type="button" class="btn sm" data-mv="down">↓ 1 floor</button><select data-mv-lv aria-label="Move to level"></select></div>
+    <div class="mv-row mv-file" data-mv-file hidden><label><input type="checkbox" data-mv-whole> Whole model <b data-mv-src></b></label><label><input type="checkbox" data-mv-follow checked> Levels follow</label></div>
+    <div class="mv-row" data-mv-trow><label>Turn<input type="number" step="1" value="0" data-mv-turn></label><span class="mv-u">°</span><button type="button" class="btn sm" data-mv="turn">Turn</button></div>
+    <p class="mv-msg" data-mv-msg role="status"></p>`);
+  mv.setAttribute('aria-label', 'Move the selection'); mv.hidden = true; root.append(mv);
+  try { const at = JSON.parse(localStorage.getItem('pc-move-pos') || 'null'); if (at) { mv.style.left = at[0] + 'px'; mv.style.top = at[1] + 'px'; mv.style.right = 'auto'; mv.style.bottom = 'auto'; } } catch { }
+  const mvWs = () => { const a = activePane(); return a.ready ? a.ws : null; }, mvq = (q) => mv.querySelector(q), m3 = (v) => (v / 1000);
+  function mvDraw() { const ws = mvWs(), F = ws && UI.gumball !== false && UI.sels.length ? ws.selFrame?.() : null; mv.hidden = !F || MV.hidden; if (!F) return;
+    const key = UI.sels.join(',') + '|' + (F.levels || []).map((l) => l.id + l.z).join(','); mvq('[data-mv-what]').textContent = UI.sels.length > 1 ? `${UI.sels.length} objects` : ({ imp: 'imported object', mass: 'mass', wall: 'wall', furn: 'furniture', floor: 'floor', op: 'opening', light: 'light', ctx: 'site building', fence: 'fence', void: 'opening in a floor', ceil: 'ceiling panel', group: 'objects' })[F.kind] || F.kind;
+    mvq('[data-mv-pos]').innerHTML = `X <b>${F.x.toFixed(3)}</b> · Y <b>${F.y.toFixed(3)}</b> · base Z <b>${F.z.toFixed(3)}</b> m${F.level ? ` · on <b>${esc(F.level.name)}</b>` : ''}`;
+    const z = F.canZ; mvq('[data-mv-zl]').hidden = !z; mvq('[data-mv-zrow]').hidden = !z; mvq('[data-mv-trow]').hidden = !F.axes.includes('r');
+    if (key !== MV.key) { MV.key = key; mvq('[data-mv-lv]').innerHTML = `<option value="">Move to level…</option>${[...(F.levels || [])].reverse().map((l) => `<option value="${esc(l.id)}">${esc(l.name)} · ${l.z >= 0 ? '+' : ''}${l.z.toFixed(2)} m</option>`).join('')}`; }
+    mvq('[data-mv-file]').hidden = !(z && F.src); mvq('[data-mv-src]').textContent = F.src || ''; }
+  const mvSay = (t) => { mvq('[data-mv-msg]').textContent = t || ''; };
+  function mvAct(k) { const ws = mvWs(); if (!ws) return; const F = ws.selFrame?.(); if (!F) return; const whole = !mvq('[data-mv-file]').hidden && mvq('[data-mv-whole]').checked, follow = mvq('[data-mv-follow]').checked;
+    const lift = (dz) => (whole ? ws.moveImport(F.src, dz, { levels: follow }) : ws.moveSel({ dz }));
+    const ls = F.levels || [], i = Math.max(0, ls.findIndex((l) => F.level && l.id === F.level.id)), storey = (dir) => (dir > 0 ? ls[i]?.h || 3 : -((ls[i - 1] || ls[i])?.h || 3));
+    let ok = false;
+    if (k === 'go') { const d = Object.fromEntries(['x', 'y', 'z'].map((a) => [a, +mvq(`[data-mv-d="${a}"]`).value || 0])); if (!d.x && !d.y && !d.z) { mvSay('Type a distance first.'); return; }
+      ok = d.x || d.y ? ws.moveSel({ dx: m3(d.x), dy: m3(d.y) }) : true; if (d.z) ok = lift(m3(d.z)) && ok; if (ok) for (const a of ['x', 'y', 'z']) mvq(`[data-mv-d="${a}"]`).value = '0'; if (ok) mvSay(`Moved ${['x', 'y', 'z'].filter((a) => d[a]).map((a) => `${a.toUpperCase()} ${d[a] > 0 ? '+' : ''}${d[a]} mm`).join(', ')}${whole && d.z ? ' (whole model)' : ''}.`); }
+    else if (k === 'up' || k === 'down') { const dz = storey(k === 'up' ? 1 : -1); ok = lift(dz); if (ok) mvSay(`${k === 'up' ? 'Up' : 'Down'} one floor: ${dz > 0 ? '+' : ''}${dz.toFixed(2)} m${whole ? ' (whole model' + (follow ? ', levels followed)' : ')') : ''}.`); }
+    else if (k === 'turn') { const a = +mvq('[data-mv-turn]').value || 0; if (!a) { mvSay('Type an angle first.'); return; } ok = ws.turnSel(a); if (ok) mvSay(`Turned ${a}°.`); }
+    mvDraw(); }
+  mv.addEventListener('click', (e) => { const b = e.target.closest('[data-mv]'); if (!b) return; if (b.dataset.mv === 'close') { MV.hidden = true; mvDraw(); return; } mvAct(b.dataset.mv); });
+  mv.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && e.target.matches('[data-mv-d]')) { e.preventDefault(); mvAct('go'); } if (e.key === 'Enter' && e.target.matches('[data-mv-turn]')) { e.preventDefault(); mvAct('turn'); } });
+  mvq('[data-mv-lv]').addEventListener('change', (e) => { const id = e.target.value; e.target.value = ''; if (!id) return; const ws = mvWs(), F = ws?.selFrame?.(); if (!F) return; const l = F.levels.find((x) => x.id === id), whole = !mvq('[data-mv-file]').hidden && mvq('[data-mv-whole]').checked;
+    const dz = +(l.z - F.z).toFixed(4), ok = whole ? ws.moveImport(F.src, dz, { levels: mvq('[data-mv-follow]').checked }) : ws.selToLevel(id); if (ok) mvSay(`Base on ${l.name} (${dz >= 0 ? '+' : ''}${dz.toFixed(2)} m).`); mvDraw(); });
+  // dragged by its title, kept inside the window, the place remembered
+  mvq('[data-mv-drag]').addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; e.preventDefault(); const r = mv.getBoundingClientRect(), host = root.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top; mv.setPointerCapture(e.pointerId); mv.classList.add('dragging');
+    const move = (ev) => { const x = Math.max(0, Math.min(host.width - r.width, ev.clientX - host.left - dx)), y = Math.max(0, Math.min(host.height - 40, ev.clientY - host.top - dy)); Object.assign(mv.style, { left: x + 'px', top: y + 'px', right: 'auto', bottom: 'auto' }); };
+    const up = () => { mv.classList.remove('dragging'); mv.removeEventListener('pointermove', move); mv.removeEventListener('pointerup', up); try { localStorage.setItem('pc-move-pos', JSON.stringify([parseFloat(mv.style.left), parseFloat(mv.style.top)])); } catch { } };
+    mv.addEventListener('pointermove', move); mv.addEventListener('pointerup', up); });
+  let mvRaf = 0; const mvSoon = () => { if (!mvRaf) mvRaf = requestAnimationFrame(() => { mvRaf = 0; mvDraw(); }); };
+  api.onSel?.(() => { MV.hidden = false; mvSay(''); mvSoon(); }); api.onChange?.(() => mvSoon()); mvSoon(); root.addEventListener('pointerup', mvSoon); root.addEventListener('click', mvSoon); { let n = 0; const whenReady = () => { if (activePane().ready) { mvSoon(); return; } if (++n < 200) setTimeout(whenReady, 300); }; whenReady(); }   // a selection kept from before the reload
+  // a click on a gumball arrow (2026-11-17): a small box beside it to type the exact distance in mm; on the blue Z arrow also one
+  // storey up or down (the whole imported model when that is ticked in the Move panel)
+  const ap = el('div', 'w2-axpop'); ap.hidden = true; ap.setAttribute('role', 'dialog'); root.append(ap);
+  const apClose = () => { ap.hidden = true; }, apAway = (e) => { if (!ap.hidden && !ap.contains(e.target)) apClose(); }; document.addEventListener('pointerdown', apAway, true);
+  function axisClick(ax, x, y, frame) { const ws = mvWs(), F = ws?.selFrame?.(); if (!F) return; const fr = frame?.getBoundingClientRect?.() || { left: 0, top: 0 }, host = root.getBoundingClientRect(), name = { x: 'X (red)', y: 'Y (green)', z: 'Z (blue), up and down' }[ax];
+    ap.innerHTML = `<b>Move along ${name}</b>${ax === 'z' ? `<div class="ap-row"><button type="button" class="btn sm" data-ap="up">↑ 1 floor</button><button type="button" class="btn sm" data-ap="down">↓ 1 floor</button></div>` : ''}<div class="ap-row"><input type="number" step="10" data-ap-mm placeholder="${ax === 'z' ? 'e.g. -3000' : 'e.g. 1200'}" aria-label="Distance in millimetres"><span>mm</span><button type="button" class="btn sm primary" data-ap="go">Move</button></div><p class="ap-note" data-ap-note>${ax === 'z' ? `Base now at ${F.z.toFixed(3)} m${F.level ? ' · on ' + esc(F.level.name) : ''}. Positive is up.` : 'Along the object’s own axis. Positive follows the arrow.'}</p>`;
+    ap.dataset.ax = ax; ap.hidden = false; const w = 230; Object.assign(ap.style, { left: Math.min(host.width - w - 8, Math.max(8, fr.left - host.left + x + 14)) + 'px', top: Math.min(host.height - 150, Math.max(8, fr.top - host.top + y - 20)) + 'px' });
+    const inp = ap.querySelector('[data-ap-mm]'); setTimeout(() => inp.focus(), 0); }
+  function apGo(k) { const ws = mvWs(), F = ws?.selFrame?.(); if (!F) return; const ax = ap.dataset.ax, whole = !mvq('[data-mv-file]').hidden && mvq('[data-mv-whole]').checked, follow = mvq('[data-mv-follow]').checked, lift = (dz) => (whole && F.src ? ws.moveImport(F.src, dz, { levels: follow }) : ws.moveSel({ dz }));
+    if (k === 'up' || k === 'down') { mvAct(k); apClose(); return; }
+    const mm = +ap.querySelector('[data-ap-mm]').value; if (!mm) { ap.querySelector('[data-ap-note]').textContent = 'Type a distance in millimetres first.'; return; }
+    const d = mm / 1000, r = (F.rot || 0) * Math.PI / 180; let ok;
+    if (ax === 'z') ok = lift(d); else { const u = ax === 'x' ? [Math.cos(r), Math.sin(r)] : [-Math.sin(r), Math.cos(r)]; ok = ws.moveSel({ dx: +(u[0] * d).toFixed(6), dy: +(u[1] * d).toFixed(6) }); }
+    if (ok) { mvSay(`Moved ${mm > 0 ? '+' : ''}${mm} mm along ${ax.toUpperCase()}${whole && ax === 'z' ? ' (whole model)' : ''}.`); apClose(); mvDraw(); } }
+  ap.addEventListener('click', (e) => { const b = e.target.closest('[data-ap]'); if (b) apGo(b.dataset.ap); });
+  ap.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); apGo('go'); } if (e.key === 'Escape') apClose(); });
+  window.__wsMove = { draw: mvDraw, act: mvAct, el: mv, axisClick, pop: ap };
   return () => { clearInterval(dropT); dropEl.remove(); for (const n of ['dragenter', 'dragover']) window.removeEventListener(n, onOver, true); window.removeEventListener('drop', onDrop, true); document.removeEventListener('click', startCompare, true); disposeProps?.(); delete window.__wsProps; closeHost(); clearInterval(timer); clearInterval(thumbT); document.removeEventListener('click', away); if (window.__wsStudy) delete window.__wsStudy; if (window.__wsHost) delete window.__wsHost; };
 }

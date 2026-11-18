@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { transformImport, importBounds } from './import-review.js?v=import-feedback-20261027-1';
+import { detectFloors, withGround } from './level-detect.js?v=levels-20261117-1';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const UNITS = [['auto', 'From the file'], ['1', 'Metres'], ['0.001', 'Millimetres'], ['0.01', 'Centimetres'], ['0.3048', 'Feet'], ['0.0254', 'Inches']];
@@ -20,7 +21,8 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
         <div class="ipv-size" data-ipv-size></div>
         <label>Units<select data-ipv-unit>${UNITS.map(([v, n]) => `<option value="${v}">${n}${v === 'auto' && audit.sourceUnit ? ` (${esc(audit.sourceUnit)})` : ''}</option>`).join('')}</select></label>
         <label>Up axis<select data-ipv-up><option value="z">Z up</option><option value="y">Y up</option></select></label>
-        <p data-ipv-msg>Check the size against the red figure, a person 1.8 m tall. Change the units if it is far off.</p></section>
+        <p data-ipv-msg>Check the size against the red figure, a person 1.8 m tall. Change the units if it is far off.</p>
+        <div class="ipv-floors" data-ipv-floors hidden><b>Floors</b><p data-ipv-fnote></p><label>Ground floor (1F)<select data-ipv-ground></select></label><ol data-ipv-flist></ol><label class="ipv-check"><input type="checkbox" data-ipv-uselv checked> Make these the project’s levels</label></div></section>
       <p class="ipv-hint">Drag to orbit · right-drag to pan · scroll to zoom</p></div>`;
     document.body.append(root);
     const q = (s) => root.querySelector(s), cv = q('.ipv-cv'), up0 = audit.importedUp === 'y' ? 'y' : 'z'; q('[data-ipv-up]').value = up0;
@@ -53,12 +55,24 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
       scene.add(model);
       q('[data-ipv-size]').innerHTML = `<b>${W.toFixed(2)} × ${D.toFixed(2)} × ${H.toFixed(2)} m</b><span>${current.components.length} object${current.components.length === 1 ? '' : 's'} · ${Math.round(tris).toLocaleString('en-CA')} triangles</span>`;
       const big = Math.max(W, D, H); q('[data-ipv-msg]').textContent = big > 3000 ? 'Over 3 km across: the units are probably wrong (try Millimetres).' : big < 0.5 ? 'Under half a metre across: the units are probably wrong (try Metres).' : 'Check the size against the red figure, a person 1.8 m tall. Change the units if it is far off.';
+      floors();
       ctl.target.set(W / 2, H / 3, -D / 2); cam.position.set(W / 2 + span * 1.1, H / 2 + span * 0.8, -D / 2 + span * 1.3); cam.near = span / 2000; cam.far = span * 50; cam.updateProjectionMatrix(); ctl.update(); }
+    // the floors (2026-11-17): found from the geometry; the person picks the ground floor, which goes to height 0 on import
+    let det = null;
+    function floors() { const box = q('[data-ipv-floors]'); try { det = detectFloors(current.components, current.audit); } catch { det = null; }
+      const st = det ? det.floors.filter((f) => !f.roof) : []; box.hidden = !st.length; if (!st.length) return;
+      const sel = q('[data-ipv-ground]'); sel.innerHTML = st.map((f, i) => `<option value="${i}">${i + 1}${['st', 'nd', 'rd'][i] && i < 3 ? ['st', 'nd', 'rd'][i] : 'th'} from the bottom · now at +${f.z.toFixed(2)} m</option>`).join(''); sel.value = String(det.ground); list(); }
+    function list() { const g = withGround(det, +q('[data-ipv-ground]').value); q('[data-ipv-fnote]').textContent = det.note;
+      q('[data-ipv-flist]').innerHTML = [...g.floors].reverse().map((f) => `<li${f.z === 0 ? ' class="on"' : ''}><b>${esc(f.name)}</b><span>${f.z >= 0 ? '+' : ''}${f.z.toFixed(2)} m${f.roof ? '' : ' · ' + f.h.toFixed(2) + ' m high'}</span></li>`).join(''); }
+    q('[data-ipv-ground]').onchange = list;
     const loop = () => { raf = requestAnimationFrame(loop); ctl.update(); R.render(scene, cam); };
     const finish = (value) => { cancelAnimationFrame(raf); removeEventListener('resize', size); removeEventListener('keydown', key, true); removeEventListener('hashchange', cancel); if (model) model.traverse((o) => { o.geometry?.dispose(); }); R.dispose(); root.remove(); resolve(value); };
     const cancel = () => finish(null), key = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); } };
     q('[data-ipv="cancel"]').onclick = cancel;
-    q('[data-ipv="ok"]').onclick = () => { if (!current) return; current.audit = { ...current.audit, scaleConfirmed: true, destination: { label: destination }, reviewedAt: new Date().toISOString() }; finish(current); };
+    q('[data-ipv="ok"]').onclick = () => { if (!current) return; current.audit = { ...current.audit, scaleConfirmed: true, destination: { label: destination }, reviewedAt: new Date().toISOString() };
+      // the chosen ground floor goes to height 0, and the floors go with the model when they are to become the project's levels
+      if (det && det.floors.length && q('[data-ipv-uselv]').checked && !q('[data-ipv-floors]').hidden) { const g = withGround(det, +q('[data-ipv-ground]').value); for (const c of current.components) c.g.z = +(c.g.z + g.offset).toFixed(4); current.levels = { floors: g.floors, note: det.note, offset: g.offset }; current.audit.levels = { found: det.floors.length, ground: g.floors[g.ground]?.name, offset: g.offset }; }
+      finish(current); };
     q('[data-ipv-unit]').onchange = build; q('[data-ipv-up]').onchange = build;
     addEventListener('resize', size); addEventListener('keydown', key, true); addEventListener('hashchange', cancel, { once: true });
     size(); build(); loop(); q('[data-ipv="ok"]').focus();

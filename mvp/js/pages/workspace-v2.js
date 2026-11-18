@@ -22,14 +22,15 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=groups-20261117-1';
+import { mountChrome } from '../workspace-chrome.js?v=levels-20261117-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261117-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel } from '../viewport.js';
-import { previewImport } from '../import-preview.js?v=ipv-20261031-4';
+import { previewImport } from '../import-preview.js?v=levels-20261117-1';
+import { detectFloors, withGround } from '../level-detect.js?v=levels-20261117-1';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
 import { MODELS, GROUPS } from '../../../furniture/models.js?v=entourage-20261102-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
@@ -148,7 +149,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   const primary = () => UI.sels.at(-1) || null, isSel = (id) => UI.sels.includes(id);
 
   // ---- the one selection (a list; the last one picked is the primary); every region subscribes to it
-  const subs = [];
+  const subs = [], changeSubs = [];   // changeSubs: told after every model change (live: during a drag)
   const selectable = (id) => { const c = comp(id), l = layerOf(c); return !!(c && l && !l.locked && l.visible !== false); };
   function setSel(ids, { params = true, from = null } = {}) {
     ids = [...new Set((Array.isArray(ids) ? ids : [ids]).filter((id) => id && selectable(id)))];
@@ -167,7 +168,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=struct-20261117-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=levels-20261117-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -267,6 +268,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       for (const I2 of ready()) I2.ws.histUI();
       if (!live) { p.draft.studio = JSON.parse(snap); levelUI(); }
       derive(live);
+      for (const f of changeSubs) f(live);
     },
     say(role, t) { if (INST.plan.ready) INST.plan.ws.flash(t); if (role === 'props') toast(t); },
     pushUndo(before) { if (INST.plan.ready) INST.plan.ws.pushUndo(before); },
@@ -426,8 +428,8 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     $('#levelBtn', app).title = current ? `${current.name} · ${current.z.toFixed(2)} m` : 'Choose level';
     $('#levelBtn', app).disabled = !L;
     $('#levelMenu', app).innerHTML = L ? L.list.slice().reverse().map(l => it(`data-level="${esc(l.id)}"`, l.id === L.lv, `${esc(l.short)} · ${esc(l.name)}`, `${l.z.toFixed(2)} m`)).join('') : '';
-    if(L){$('#levelMenu',app).insertAdjacentHTML('beforeend',`<hr><button type="button" role="menuitem" data-level-action="rename">Rename current level…</button><button type="button" role="menuitem" data-level-action="below">Add level below</button><button type="button" role="menuitem" data-level-action="remove" ${L.list.length<2?'disabled title="Keep at least one level"':''}>Delete current level…</button>`);
-    $$('[data-level-action]',app).forEach(button=>button.onclick=()=>{closeMenus();const pane=activePane();if(!pane.ready)return;if(button.dataset.levelAction==='rename'){const name=prompt('Level name',current?.name||'');if(name!==null)pane.ws.renameLevel(name);}else if(button.dataset.levelAction==='below')pane.ws.addLevel('below');else pane.ws.removeLevel();menus();});}
+    if(L){$('#levelMenu',app).insertAdjacentHTML('beforeend',`<hr><button type="button" role="menuitem" data-level-action="rename">Rename current level…</button><button type="button" role="menuitem" data-level-action="below">Add level below</button><button type="button" role="menuitem" data-level-action="remove" ${L.list.length<2?'disabled title="Keep at least one level"':''}>Delete current level…</button>${(activePane().ready&&activePane().ws.importSources?.().length)?'<button type="button" role="menuitem" data-level-action="detect">Find floors in the imported model…</button>':''}`);
+    $$('[data-level-action]',app).forEach(button=>button.onclick=()=>{closeMenus();const pane=activePane();if(!pane.ready)return;if(button.dataset.levelAction==='rename'){const name=prompt('Level name',current?.name||'');if(name!==null)pane.ws.renameLevel(name);}else if(button.dataset.levelAction==='below')pane.ws.addLevel('below');else if(button.dataset.levelAction==='detect')findFloors(pane);else pane.ws.removeLevel();menus();});}
     $('#removeLevel',app).disabled=!L||L.list.length<2;
     $('#removeLevel',app).title=L?.list.length<2?'Keep at least one level':'Delete current level';
     $$('#levelMenu [data-level]', app).forEach(x => x.onclick = () => { closeMenus(); setSel([], { params: false }); for (const pane of ready()) pane.ws.level(x.dataset.level); menus(); });
@@ -448,6 +450,13 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       else showView('shaded');
       menus(); }
 
+  // floors of a model imported earlier (2026-11-17): found from its geometry; the person says which is the ground floor; the model
+  // moves so that floor is at height 0 and the floors become levels (added, none removed, when the project has its own drawing)
+  function findFloors(pane){const srcs=pane.ws.importSources();if(!srcs.length)return;const src=srcs.length===1?srcs[0].src:(prompt('Which imported file? '+srcs.map((x,i)=>`${i+1}: ${x.src}`).join(' · '),'1')||'').trim();const pick=srcs.length===1?srcs[0]:srcs[(+src||0)-1];if(!pick)return;
+    const det=detectFloors(pane.ws.importsOf(pick.src),{}),st=det.floors.filter(x=>!x.roof);if(!st.length){toast(det.note);return;}
+    const ans=prompt(`${det.note}\n\nWhich floor is the ground floor (1F)? Count from the bottom (1 to ${st.length}):\n${st.map((x,i)=>`${i+1}: +${x.z.toFixed(2)} m`).join('  ')}`,String(det.ground+1));if(ans===null)return;
+    const g=withGround(det,(+ans||1)-1);if(g.offset)pane.ws.moveImport(pick.src,g.offset,{levels:false});const res=pane.ws.applyLevels(g.floors,pick.src);
+    toast(`${st.length} floors${det.floors.length>st.length?' and a roof':''} from ${pick.src}: ${res?.replaced?'now the project’s levels':(res?.added||0)+' levels added'}${g.offset?`; the model moved ${Math.abs(g.offset).toFixed(2)} m ${g.offset<0?'down':'up'}`:''}.`);}
   const closeMenus = () => { for (const [b, m] of [['levelBtn', 'levelMenu'], ['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) { $('#' + m, app).hidden = true; $('#' + b, app).setAttribute('aria-expanded', 'false'); } };
   for (const [b, m] of [['levelBtn', 'levelMenu'], ['vBtn', 'vMenu'], ['dBtn', 'dMenu']]) $('#' + b, app).onclick = (e) => { e.stopPropagation(); const was = !$('#' + m, app).hidden; closeMenus(); if (!was) { menus(); $('#' + m, app).hidden = false; $('#' + b, app).setAttribute('aria-expanded', 'true'); } };
   const outside = (e) => { if (!e.target.closest('#cap, .sp-menuwrap')) closeMenus(); if (!e.target.closest('.w3-gearw')) gearMenu(false); }; document.addEventListener('click', outside);
@@ -680,14 +689,16 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       try{const initial=await importModel(f,{unit:$('#unit',host)?.value||'auto',up:$('#up',host)?.value||'auto'});if(dead)return;report('Preview the model, then confirm or cancel the import.');const r=await previewImport(initial,{name:f.name,destination:'Into this project: '+p.name}),by={};if(!r){report('Import cancelled. The existing model is unchanged.');return;}if(dead)return;
         report('Preparing '+r.components.length+' imported component'+(r.components.length===1?'':'s')+'…');
         if (!asNew&&!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
-        const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...classify(c),...(srcLayer?{layer:srcLayer}:{}) }));
+        const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...classify(c),...(srcLayer?{layer:srcLayer}:{}), src: f.name }));
         if(asNew){const layers=[...new Set(list.map(c=>c.layer))].map(name=>({name,color:LAYER_COLORS[name]||'#cfcac0',visible:true,locked:false})),next=S.createProject(f.name.replace(/\.[^.]+$/,''),{units:'m',layers,components:list,...(r.audit?{importAudit:{...r.audit,triangles:r.triangles,fileName:f.name}}:{})});setCurrent(next);location.hash='#/workspace/'+next.id;return;}
         M().meshes = M().meshes || {};for (const c of list) { by[c.layer] = (by[c.layer] || 0) + 1; M().meshes[c.id] = c.mesh; open.add(c.layer); if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#cfcac0', visible: true, locked: false }); }
         for (const I2 of ready()) if (I2.ws.importMeshes) I2.ws.importMeshes(M().meshes);
         INST.plan.ws.addImports(list.map(({ mesh, ...c }) => ({ ...c, tris: Math.round(mesh.length / 9) })));   // Plan Studio keeps it; the sync brings it to the other panes and the project
+        // the floors found in the model become the project's levels (2026-11-17)
+        let lvNote='';if(r.levels?.floors?.length){const res=INST.plan.ws.applyLevels?.(r.levels.floors,f.name);if(res)lvNote=` Floors: ${r.levels.floors.length} found; ${res.replaced?'they are now the project’s levels':res.added?res.added+' added to the project’s levels (none removed)':'the project already has levels at these heights'}${r.levels.offset?`; the model moved ${r.levels.offset>0?'up':'down'} ${Math.abs(r.levels.offset).toFixed(2)} m so its ground floor is at 0`:''}.`;}
         if(r.audit)p.draft.importAudit={...r.audit,triangles:r.triangles,fileName:f.name};
         UI.open = [...open]; saveUI(); persist(); refresh(true);
-        report(`${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`); }
+        report(`${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${lvNote}${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`); }
       catch(error){const message='Import did not finish: '+(error.message||'Unknown reader error')+' Retry the import or choose the file again.';report(message,true);toast(message);}
       finally{importState.busy=false;retry.disabled=false;if(!dead){const pick=$('#pick',app),mode=$('#importMode',app),again=$('#retryImport',app);if(pick){pick.disabled=false;pick.setAttribute('aria-busy','false');pick.textContent='Choose model to import';}for(const el of [mode,$('#unit',app),$('#up',app),again])if(el)el.disabled=false;}}
     };
@@ -903,7 +914,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   // the floating layout (workspace-chrome.js): the model fills the window, the controls above move onto cards and rails
   document.body.classList.add('sp-full');
   { const site = S.conditionsOf(p).site; if (weatherDownloadAvailable() && !site.climate && Number.isFinite(site.lat)) ensureProjectClimate(p).catch(() => { }); }   // weather from the address, ready before a study needs it
-  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, sectionView, select: (ids) => setSel(ids), studio: () => M().studio, layers: () => M().layers, sims: [...SIMS,...PLANNED_SIMS] });
+  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, sectionView, select: (ids) => setSel(ids), onSel: (f) => subs.push(f), onChange: (f) => changeSubs.push(f), studio: () => M().studio, layers: () => M().layers, sims: [...SIMS,...PLANNED_SIMS] });
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel(); tabsUI();
