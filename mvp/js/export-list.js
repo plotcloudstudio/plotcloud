@@ -35,13 +35,15 @@ export function renderList(host, list, { project, modelKey, onChange, onExport, 
   host.innerHTML = `<h3>Export list</h3>${items.length ? `<label class="sp-field">Report title<input class="sp-in" data-xl="title" value="${esc(list.title || 'Building Performance Simulation Report')}" maxlength="120"></label>
     <ol class="xl-items">${items.map((it, i) => `<li class="xl-it${stale(it) ? ' stale' : ''}"><span class="xl-th">${thumb(it)}${it.pictures.length > 1 ? `<i>${it.pictures.length}</i>` : ''}</span><span class="xl-tx"><b>${esc(it.title)}</b><small>${esc(KIND[it.kind])} · ${esc(it.sub || '')}</small>${stale(it) ? '<small class="sp-warn">The model has changed since: add it again to update it.</small>' : ''}</span>
       <span class="xl-bt"><button type="button" data-xl="up" data-i="${i}" ${i ? '' : 'disabled'} aria-label="Move up" title="Move up">↑</button><button type="button" data-xl="down" data-i="${i}" ${i < items.length - 1 ? '' : 'disabled'} aria-label="Move down" title="Move down">↓</button><button type="button" data-xl="del" data-i="${i}" aria-label="Remove ${esc(it.title)}" title="Remove">×</button></span></li>`).join('')}</ol>
-    <div class="xl-acts"><button type="button" class="btn sm primary" data-xl="pdf" ${busy ? 'disabled' : ''}>Report (PDF)</button><button type="button" class="btn sm" data-xl="pptx" ${busy ? 'disabled' : ''}>Slides (PPTX)</button><button type="button" class="btn sm" data-xl="zip" ${busy ? 'disabled' : ''}>Pictures (ZIP)</button></div>
+    <div class="xl-acts"><button type="button" class="btn sm primary" data-xl="pdf" ${busy ? 'disabled' : ''}>Report (PDF)</button><button type="button" class="btn sm" data-xl="pptx" ${busy ? 'disabled' : ''}>Slides (PPTX)</button><button type="button" class="btn sm" data-xl="zip" ${busy ? 'disabled' : ''}>Pictures (ZIP)</button><button type="button" class="btn sm xl-clear" data-xl="clear" ${busy ? 'disabled' : ''} title="Remove every item from the list">Clear list</button></div>
     <p class="sp-note xl-status" aria-live="polite">${busy ? esc(busy) : `${items.length} item${items.length === 1 ? '' : 's'}, ${items.reduce((a, it) => a + it.pictures.length, 0)} pictures. Each page states what it was computed from.`}</p>`
-    : '<p class="sp-note" style="margin-top:0">Nothing yet. Tick the simulations above and Generate pictures; they come here, ready to export together as a report, slides or pictures.</p>'}`;
+    : `<p class="sp-note" style="margin-top:0">${host.__undo ? `List cleared (${host.__undo.length} item${host.__undo.length === 1 ? '' : 's'}). <button type="button" class="sp-link" data-xl="undo">Undo</button>` : 'Nothing yet. Tick the simulations above and Generate pictures; they come here, ready to export together as a report, slides or pictures.'}</p>`}`;
   host.onclick = async (e) => { const b = e.target.closest('[data-xl]'); if (!b || b.tagName === 'INPUT') return; const k = b.dataset.xl, i = +b.dataset.i;
     if (k === 'up' && i > 0) { [items[i - 1], items[i]] = [items[i], items[i - 1]]; onChange(); }
     else if (k === 'down' && i < items.length - 1) { [items[i + 1], items[i]] = [items[i], items[i + 1]]; onChange(); }
     else if (k === 'del') { items.splice(i, 1); onChange(); }
+    else if (k === 'clear') { host.__undo = items.splice(0, items.length); onChange(); }   // one click; Undo brings them back until the next change
+    else if (k === 'undo' && host.__undo) { items.push(...host.__undo); host.__undo = null; onChange(); }
     else if (['pdf', 'pptx', 'zip'].includes(k)) onExport(k); };
   const t = host.querySelector('[data-xl=title]'); if (t) t.onchange = () => { list.title = t.value.trim(); onChange(false); };
 }
@@ -63,6 +65,19 @@ const DOC = {
   acoustics: { name: 'Room Acoustics (Reverberation Time)', refs: ['DIN 18041:2016, Acoustic quality in rooms (reverberation time targets used)', 'ANSI/ASA S12.60 and LEED v4.1 EQ Credit: Acoustic Performance (informative North American references)'], limit: 'Statistical reverberation (Sabine or Eyring) from room volume and finishes; no ray tracing. STI is estimated from reverberation only.' },
   spacesyntax: { name: 'Spatial Configuration (Visibility Graph Analysis)', refs: ['Turner, Doxa, O’Sullivan and Penn (2001), From isovists to visibility graphs, Environment and Planning B 28'], limit: 'Configurational analysis of the plan; it does not predict occupant numbers.' },
   'fire-evacuation': { name: 'Fire Evacuation (Required Safe Egress Time)', refs: ['SFPE Handbook of Fire Protection Engineering, 5th ed. (2016), Employing the Hydraulic Model in Assessing Emergency Movement (walking speeds, specific flows of doors and stairs)', 'BSI PD 7974-6:2019, Human factors: life safety strategies, occupant evacuation, behaviour and condition (detection, alarm and pre-movement times)', 'IBC 2021 Table 1004.5, Maximum floor area allowances per occupant (occupant load)'], limit: 'A screening of the evacuation time (RSET): no fire or smoke is computed, so there is no available safe egress time (ASET) to compare with, and it is not a code compliance check. Pre-movement times and occupant loads are assumptions stated in the inputs; routes through the room of fire origin stay open and lifts are not used.' },
+  shadebenefit: { name: 'Shade Benefit', refs: ['Project weather file (EPW): hourly air temperature (hot and cool hours)'], limit: 'Where the design’s shade falls in hot hours (a benefit) or in cool hours (a cost); no thermal model of the people or the surfaces.' },
+  solarenvelope: { name: 'Solar Envelope', refs: ['Knowles, R. L. (1981). Sun Rhythm Form. MIT Press (the solar envelope concept)'], limit: 'The height limit that keeps the chosen sun on the surrounding buildings; a design aid, not a zoning determination.' },
+  snow: { name: 'Snow Drift Screening', refs: ['Project weather file (EPW): wind in hours at or below 0 °C'], limit: 'Where wind-driven snow tends to drift and scour round the buildings; not a roof snow load calculation.' },
+  stormwater: { name: 'Stormwater Runoff and Ponding', refs: ['Runoff coefficients by surface cover (rational method, informative)'], limit: 'One design storm chosen in the study (not local rainfall statistics) over the modeled ground; no pipes, inlets or infiltration over time.' },
+  watersound: { name: 'Water Sound Levels', refs: [], limit: 'Sound levels from the site’s water as point and line sources spreading over distance; estimates for comparing places, not measurements.' },
+  views: { name: 'Quality Views', refs: ['LEED v4.1 BD+C, EQ Credit: Quality Views (informative)'], limit: 'A screening of view access from the floor; not a LEED submission.' },
+  movementdepth: { name: 'Movement and Depth (Visibility Graph Analysis)', refs: ['Turner, Doxa, O’Sullivan and Penn (2001), From isovists to visibility graphs, Environment and Planning B 28'], limit: 'Configurational analysis of the plan; it does not predict occupant numbers.' },
+  isovist: { name: 'Isovists (Seen and Blind Areas)', refs: ['Benedikt, M. L. (1979). To take hold of space: isovists and isovist fields. Environment and Planning B 6'], limit: 'What can be seen from the chosen points at eye height; furniture taller than the eye blocks the view.' },
+  wayfinding: { name: 'Wayfinding (Visual Depth)', refs: [], limit: 'How many changes of view a route needs from the chosen start; a screening of legibility, not a signage design.' },
+  privacy: { name: 'Visual Privacy', refs: [], limit: 'Lines of sight from the street and from facing buildings into the rooms at eye height; curtains and glazing tints are not modeled.' },
+  evac: { name: 'Circulation (Walks Between Rooms)', refs: [], limit: 'Shortest walks between the rooms, weighted by how often each room is used; not an evacuation analysis.' },
+  cameras: { name: 'Security Camera Coverage', refs: [], limit: 'Floor area seen by the chosen cameras at their mounting height; lighting and image quality are not modeled.' },
+  structure: { name: 'Structural Frame Screening', refs: ['NBC 2020, Division B, Part 4: load combinations (informative)'], limit: 'A structure laid out from the drawn walls and analyzed as a linear 3D frame for early design: no earthquake, second-order (P-Δ), connection or code checks. An engineer designs the structure.' },
   section: { name: 'Building Section', refs: [], limit: '' } };
 const docOf = (it) => DOC[it.study] || { name: it.title, refs: [], limit: '' };
 const usage = (t) => String(t || '').replace(/\bcolour/g, 'color').replace(/\bColour/g, 'Color').replace(/\bcentre/g, 'center').replace(/\bmetres\b/g, 'meters').replace(/\bmetre\b/g, 'meter').replace(/\bmodelled\b/g, 'modeled').replace(/\banalyse/g, 'analyze');
@@ -73,8 +88,12 @@ const usTime = (t) => new Date(t).toLocaleString('en-US', { year: 'numeric', mon
 // a chapter's title: the analysis, then what this one shows (a day, a season set, a wind), written once
 const cap1 = (v) => (v && /^[a-z]{2}/.test(v) ? v.charAt(0).toUpperCase() + v.slice(1) : v || '');   // "sDA300" stays as written
 const variantOf = (it) => { if (it.kind === 'series') return /12 months/.test(it.title) ? (it.study === 'sunhours' ? 'Twelve Months (21st of Each Month)' : 'Monthly') : (it.study === 'sunhours' ? 'Equinoxes and Solstices' : 'Seasonal');
-  const parts = String(it.title).split(' · '), last = parts.length > 1 ? parts.at(-1) : ''; return cap1(last.replace(/^[a-z][a-z ]*, (?=[a-z])/, '')); };   // "air changes, wind from E 4.7 m/s" → "Wind from E 4.7 m/s"
+  // what this item shows: every part of its title but the study's own name (2026-11-18: before, only the last part, so four views of one
+  // level read the same: "Room Acoustics — Level 1" four times)
+  const study = String(it.sub || '').split(' · ')[0].trim().toLowerCase(), all = String(it.title).split(' · ').map((x) => x.trim()).filter(Boolean);
+  return all.length > 1 ? cap1(all.filter((x) => x.toLowerCase() !== study).join(', ')) : ''; };
 const headOf = (it) => { const v = variantOf(it), sec = it.kind === 'section' ? String(it.title).split(' · ')[0] : ''; if (sec) return it.study === 'section' ? `Building ${sec}` : `${sec} — ${docOf(it).name}${v ? ': ' + v : ''}`; return `${docOf(it).name}${v ? ' — ' + v : ''}`; };
+export const headOfItem = (it) => headOf(it);   // for the tests
 const inputsOf = (it) => (it.inputs && it.inputs.length ? it.inputs : [['Basis', it.basis || '']]).concat([['Computed', usTime(it.at)]]);
 // the headline: a series by its range across the figures (lowest and highest), any other by its first result
 const headline = (it) => { const R = it.rows || [];
@@ -96,8 +115,9 @@ export async function exportList(kind, list, ctx) {
 async function pdf(items, title, ctx) {
   const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true }); d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
   d.setProperties({ title, subject: `${ctx.project}${ctx.site ? ' · ' + ctx.site : ''}`, author: ctx.author || '', creator: 'PlotCloud', keywords: 'building performance simulation, screening analysis' });
-  const W = d.internal.pageSize.getWidth(), H = d.internal.pageSize.getHeight(), mg = 16, ink = [17, 24, 39], sub = [75, 85, 99], line = [209, 213, 219], N = items.length + 3, issued = usDate(Date.now());
-  const foot = (n) => { d.setDrawColor(...line); d.setLineWidth(0.2); d.line(mg, H - 12, W - mg, H - 12); d.setFontSize(8); d.setTextColor(...sub); d.text(`${ctx.project} · ${title} · Issued ${issued}`, mg, H - 7.5); d.text(`Page ${n} of ${N}`, W - mg, H - 7.5, { align: 'right' }); };
+  const W = d.internal.pageSize.getWidth(), H = d.internal.pageSize.getHeight(), mg = 16, ink = [17, 24, 39], sub = [75, 85, 99], line = [209, 213, 219], issued = usDate(Date.now());
+  // footers go on last (2026-11-18), once the number of pages is known: the summary and the closing notes can run over several pages
+  const foot = (n, N) => { d.setDrawColor(...line); d.setLineWidth(0.2); d.line(mg, H - 12, W - mg, H - 12); d.setFontSize(8); d.setTextColor(...sub); d.text(`${ctx.project} · ${title} · Issued ${issued}`, mg, H - 7.5); d.text(`Page ${n} of ${N}`, W - mg, H - 7.5, { align: 'right' }); };
   const wrap = (t, w, size, x, y, col = sub, lh = 0.42) => { d.setFontSize(size); d.setTextColor(...col); const ls = d.splitTextToSize(String(t), w); d.text(ls, x, y); return y + ls.length * size * lh; };
   const head = (t, x, y) => { d.setFontSize(9.5); d.setTextColor(...ink); d.text(t, x, y); d.setDrawColor(...line); d.line(x, y + 1.6, x + 12, y + 1.6); return y + 6; };
   const table = (rows, x, y, w, kw = 0.45, size = 8, maxY = H - 22) => { d.setFontSize(size); for (const [k, v] of rows) { if (y > maxY) break; const kl = d.splitTextToSize(plain(k), w * kw - 2), vl = d.splitTextToSize(plain(v), w * (1 - kw)), h = Math.max(kl.length, vl.length) * size * 0.4 + 1.6; d.setTextColor(...sub); d.text(kl, x, y + size * 0.36); d.setTextColor(...ink); d.text(vl, x + w * kw, y + size * 0.36); d.setDrawColor(238, 240, 243); d.line(x, y + h, x + w, y + h); y += h; } return y; };
@@ -109,13 +129,20 @@ async function pdf(items, title, ctx) {
     d.addImage(await dataURL(b0), 'JPEG', x0, y, w2, hh, undefined, 'FAST'); d.setFontSize(8); d.setTextColor(...sub); d.text(`${headOf(items[0])}${items[0].pictures.length > 1 ? ', ' + (items[0].pictures[0].label || '') : ''}`, x0, y + hh + 4.5); y += hh + 10; }
   y = head('Project information', mg, y + 2);
   y = table([['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used by the analyses in this report'], ['Model', ctx.version], ['Project conditions', `Revision ${ctx.revision ?? '—'}`], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Software', 'PlotCloud, web-based building performance screening'], ['Report status', 'Design-stage screening analysis; not a compliance submission']], mg, y, CW, 0.3, 9);
-  foot(1);
   // summary of results, with the contents
   d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text('Summary of Results', mg, 20);
   y = wrap('Each analysis below is described in its own chapter: objective, method, references, inputs and boundary conditions, results, and assumptions and limitations.', W - 2 * mg, 9.5, mg, 30, sub) + 4;
-  const cx = [mg, mg + 10, mg + 82, W - mg - 26, W - mg - 9], hdr = ['No.', 'Analysis', 'Headline result', 'Figures', 'Page']; d.setFontSize(9); d.setTextColor(...sub); hdr.forEach((t, k) => d.text(t, cx[k], y)); d.setDrawColor(...line); d.line(mg, y + 2, W - mg, y + 2); y += 7;
-  items.forEach((it, i) => { d.setFontSize(9.5); const an = d.splitTextToSize(headOf(it), cx[2] - cx[1] - 4), hl = d.splitTextToSize(headline(it), cx[3] - cx[2] - 6), h = Math.max(an.length, hl.length) * 4.2 + 2.4; d.setTextColor(...ink); d.text(String(i + 1), cx[0], y); d.text(an, cx[1], y); d.setTextColor(...sub); d.text(hl, cx[2], y); d.text(String(it.pictures.length), cx[3], y); d.text(String(i + 3), cx[4], y); d.setDrawColor(238, 240, 243); d.line(mg, y + h - 3, W - mg, y + h - 3); y += h; });
-  d.setFontSize(9.5); d.setTextColor(...ink); d.text(String(items.length + 1), cx[0], y); d.text('Assumptions, Limitations and Disclaimer', cx[1], y); d.setTextColor(...sub); d.text(String(N), cx[4], y); foot(2);
+  // the table runs on to further pages instead of over the footer (2026-11-18): measured first, so each chapter's page is known
+  const cx = [mg, mg + 10, mg + 82, W - mg - 26, W - mg - 9], hdr = ['No.', 'Analysis', 'Headline result', 'Figures', 'Page'], maxY = H - 20, y0 = y, yTop = 24;
+  d.setFontSize(9.5); const srows = items.map((it) => { const an = d.splitTextToSize(headOf(it), cx[2] - cx[1] - 4), hl = d.splitTextToSize(headline(it), cx[3] - cx[2] - 6); return { an, hl, h: Math.max(an.length, hl.length) * 4.2 + 2.4 }; });
+  let S = 1; { let yy = y0 + 7; for (const r of srows) { if (yy + r.h - 3 > maxY) { S++; yy = yTop + 7; } yy += r.h; } if (yy + 3 > maxY) S++; }
+  const pageOf = (i) => S + 2 + i, lastPage = pageOf(items.length);
+  const header = (yy) => { d.setFontSize(9); d.setTextColor(...sub); hdr.forEach((t, k) => d.text(t, cx[k], yy)); d.setDrawColor(...line); d.line(mg, yy + 2, W - mg, yy + 2); return yy + 7; };
+  const more = () => { d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(12); d.text('Summary of Results (continued)', mg, 16); return header(yTop); };
+  y = header(y);
+  srows.forEach((r, i) => { const it = items[i]; if (y + r.h - 3 > maxY) y = more(); d.setFontSize(9.5); d.setTextColor(...ink); d.text(String(i + 1), cx[0], y); d.text(r.an, cx[1], y); d.setTextColor(...sub); d.text(r.hl, cx[2], y); d.text(String(it.pictures.length), cx[3], y); d.text(String(pageOf(i)), cx[4], y); d.setDrawColor(238, 240, 243); d.line(mg, y + r.h - 3, W - mg, y + r.h - 3); y += r.h; });
+  if (y + 3 > maxY) y = more();
+  d.setFontSize(9.5); d.setTextColor(...ink); d.text(String(items.length + 1), cx[0], y); d.text('Assumptions, Limitations and Disclaimer', cx[1], y); d.setTextColor(...sub); d.text(String(lastPage), cx[4], y);
   // one chapter per analysis: the figures across the page; under them objective and method | references, inputs | results, limitations
   for (const [i, it] of items.entries()) { d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); const D = docOf(it), n = i + 1;
     d.setTextColor(...ink); d.setFontSize(17); const tt = d.splitTextToSize(`${n}. ${headOf(it)}`, W - 2 * mg).slice(0, 2), ty = (tt.length - 1) * 7; d.text(tt, mg, 19); d.setFontSize(9); d.setTextColor(...sub); d.text(`${it.kind === 'series' ? 'Series' : it.kind === 'section' ? 'Section' : 'Analysis view'} · ${it.pictures.length} figure${it.pictures.length === 1 ? '' : 's'}`, mg, 25.5 + ty);
@@ -136,20 +163,22 @@ async function pdf(items, title, ctx) {
     if (it.rows && it.rows.length) { y3 = head('Results', c3, y3); y3 = table(it.rows.slice(0, 12), c3, y3, colW, 0.52, 7.6, H - 60) + 3; }
     y3 = head('Inputs and Boundary Conditions', c3, y3); y3 = table(inputsOf(it), c3, y3, colW, 0.4, 7.4, H - 50) + 3;
     const lim = [D.limit, ...(it.notes || []).map(usage)].filter(Boolean); if (lim.length) { y3 = head('Assumptions and Limitations', c3, y3); for (const t of lim) { if (y3 > H - 26) break; y3 = wrap(t, colW, 7.2, c3, y3, sub) + 1; } }
-    foot(i + 3); }
+  }
   // assumptions, limitations and disclaimer
   d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Assumptions, Limitations and Disclaimer`, mg, 20);
   y = wrap(LIMITS, W - 2 * mg, 10.5, mg, 31, ink, 0.45) + 5; y = head('By analysis', mg, y + 2);
-  for (const [i, it] of items.entries()) { d.setFontSize(9.5); d.setTextColor(...ink); d.text(`${i + 1}. ${headOf(it)}`, mg, y); y = wrap([docOf(it).limit, `${it.basis || ''} · computed ${usTime(it.at)}`].filter(Boolean).join(' '), W - 2 * mg - 8, 8.4, mg + 6, y + 5, sub) + 3; if (y > H - 30) { foot(N); d.addPage('letter', 'portrait'); d.setFont('DejaVu'); y = 24; } }
+  for (const [i, it] of items.entries()) { d.setFontSize(9.5); d.setTextColor(...ink); d.text(`${i + 1}. ${headOf(it)}`, mg, y); y = wrap([docOf(it).limit, `${it.basis || ''} · computed ${usTime(it.at)}`].filter(Boolean).join(' '), W - 2 * mg - 8, 8.4, mg + 6, y + 5, sub) + 3; if (y > H - 30) { d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); y = 24; } }
   y = head('Site and climate data', mg, y + 3); wrap(`${[ctx.site, ctx.coords].filter(Boolean).join(' · ') || '—'}. Climate data: ${ctx.weather || 'not used by the analyses in this report'}. Project conditions revision ${ctx.revision ?? '—'}. Units: SI.`, W - 2 * mg, 9, mg, y, sub);
-  foot(N);
+  const total = d.getNumberOfPages(); for (let k = 1; k <= total; k++) { d.setPage(k); d.setFont('DejaVu'); foot(k, total); }
   return d.output('blob');
 }
 
 async function pptx(items, title, ctx) {
   const W = 13.333, H = 7.5, issued = usDate(Date.now()), slides = [{ title, blocks: [{ type: 'table', x: 0.5, y: 1.25, w: 6.3, h: 4.6, size: 11, rows: [['Project information', ''], ['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used'], ['Model', ctx.version], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Report status', 'Design-stage screening analysis']] }] }];
   if (items[0]?.pictures[0]) { const im = await imgOf(items[0].pictures[0].blob), h = Math.min(4.6, 5.9 * im.height / im.width); slides[0].blocks.push({ type: 'image', x: W - 0.5 - h * im.width / im.height, y: 1.3, w: h * im.width / im.height, h, jpeg: await bytes(items[0].pictures[0].blob), alt: headOf(items[0]), name: 'Cover figure' }); }
-  slides.push({ title: 'Summary of Results', blocks: [{ type: 'table', x: 0.5, y: 1.25, w: W - 1, h: Math.min(5.5, (items.length + 1) * 0.42), size: 11, rows: [['No.', 'Analysis', 'Headline result'], ...items.map((it, i) => [String(i + 1), headOf(it), headline(it)])] }] });
+  // twelve rows a slide (2026-11-18): a long list runs on to more slides instead of shrinking off the slide
+  const sumRows = items.map((it, i) => [String(i + 1), headOf(it), headline(it)]);
+  for (let k = 0; k < Math.max(1, sumRows.length); k += 12) { const part = sumRows.slice(k, k + 12); slides.push({ title: k ? 'Summary of Results (continued)' : 'Summary of Results', blocks: [{ type: 'table', x: 0.5, y: 1.25, w: W - 1, h: Math.min(5.5, (part.length + 1) * 0.42), size: 11, rows: [['No.', 'Analysis', 'Headline result'], ...part] }] }); }
   for (const [i, it] of items.entries()) { const P = it.pictures, n = i + 1, cols = it.cols || (P.length === 12 ? 4 : P.length === 4 ? 2 : Math.ceil(Math.sqrt(P.length))), rows = Math.ceil(P.length / cols), im0 = await imgOf(P[0].blob), ar = im0.height / im0.width;
     const gx = 0.5, gy = 1.2, gw = 8.6, gh = H - gy - 0.7, gap = 0.08, cap = 0.22, fw = Math.min((gw - (cols - 1) * gap) / cols, ((gh - (rows - 1) * gap) / rows - cap) / ar), fh = fw * ar, blocks = [];
     for (const [k, p] of P.entries()) { const x = gx + (k % cols) * (fw + gap), y = gy + Math.floor(k / cols) * (fh + cap + gap); blocks.push({ type: 'text', x, y: y - 0.04, w: fw, h: cap, paragraphs: [{ text: `Figure ${n}.${k + 1}${p.label ? '  ' + p.label : ''}`, size: 9, bold: true }] }); blocks.push({ type: 'image', x, y: y + cap, w: fw, h: fh, jpeg: await bytes(p.blob), alt: `${headOf(it)} · ${p.label || ''}`, name: `Figure ${n}.${k + 1}` }); }
