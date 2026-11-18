@@ -118,11 +118,11 @@ export function analyseFrame(L, o, SA) {
     const tau = r.V / A / 1000, vm = Math.sqrt(r.s * r.s + 3 * tau * tau), util0 = concreteUtil(meta[i].kind, s, mat, r, SA) ?? vm / allow, I = Math.min(s.Iy || 0, s.Iz || 0), Ncr = I > 0 ? Math.PI ** 2 * mat.E * I / (Lm * Lm) : Infinity;
     const comp = Math.max(0, -r.Nmin), defl = C[(sl.find((c) => c.id === 'S1') || sl[0]).id].members[i].dmid;
     return { ...meta[i], a: M.nodes[m.a], b: M.nodes[m.b], L: Lm, mat: mat.name, N: r.N, Nmin: r.Nmin, Nmax: r.Nmax, V: r.V, M: r.M, s: r.s, vm, util: util0, buckle: comp / (0.9 * Ncr), defl, deflRatio: defl > 1e-6 ? Lm / defl : Infinity, stations: Object.fromEntries(showC.map((c) => [c.id, stations(res, i, C[c.id])])) }; });
-  const reac = [...C[govGrav.id].reac.entries()].map(([n, v]) => ({ p: M.nodes[n], F: v.slice(0, 3), Mo: v.slice(3, 6) }));
+  const reacOf = (c) => [...C[c.id].reac.entries()].map(([n, v]) => ({ p: M.nodes[n], F: v.slice(0, 3), Mo: v.slice(3, 6) })), reac = reacOf(govGrav), reacW = govWindU ? reacOf(govWindU) : null;
   const sumL = C[govGrav.id].F, sumR = C[govGrav.id].Rsum, eqErr = Math.hypot(sumL[0] + sumR[0], sumL[1] + sumR[1], sumL[2] + sumR[2]) / Math.max(1, Math.abs(sumL[2]));
   return { members, combos: showC.map((c) => ({ id: c.id, name: c.name })), gov: { gravity: govGrav.id, wind: govWindU?.id || null, sls: (sl.find((c) => c.id === 'S1') || sl[0]).id, drift: driftW?.c.id || null },
     drift: driftW ? { ratio: driftW.r, hOver: driftW.r > 0 ? Math.round(1 / driftW.r) : Infinity, level: driftW.level, mm: driftW.mm } : null,
-    reac, eq: { loads: sumL, reactions: sumR, err: eqErr }, counts: { nodes: M.nodes.length, members: M.members.length, unknowns: res.unknowns, columns: meta.filter((m) => m.kind === 'column').length, beams: meta.filter((m) => m.kind === 'beam' || m.kind === 'strip').length, braces: meta.filter((m) => m.kind === 'brace').length, diaphragm: meta.filter((m) => m.kind === 'diaphragm').length },
+    reac, reacW, eq: { loads: sumL, reactions: sumR, err: eqErr }, counts: { nodes: M.nodes.length, members: M.members.length, unknowns: res.unknowns, columns: meta.filter((m) => m.kind === 'column').length, beams: meta.filter((m) => m.kind === 'beam' || m.kind === 'strip').length, braces: meta.filter((m) => m.kind === 'brace').length, diaphragm: meta.filter((m) => m.kind === 'diaphragm').length },
     supports: M.supports.map(([n, t]) => ({ p: M.nodes[n], t: Array.isArray(t) ? 'wall' : t })), assumed, method: res.method, ms: Date.now() - t0 };
 }
 
