@@ -4,7 +4,8 @@
 // Everything drawn is computed geometry. Both are screenings for early design, not certified swept-path or bylaw studies.
 import * as G from './geom2d.js';
 import * as V from './vehicles.js';
-import * as SP from './swept-path.js';
+import * as SP from './swept-path.js?v=plan-20261118-1';
+import * as RP from './route-plan.js?v=plan-20261118-1';
 import * as PK from './parking.js';
 import * as CAD from './cad-export.js';
 
@@ -96,7 +97,8 @@ function vehInputs(ctx) { const { ST, esc, fmt } = ctx, A = ST.va, i = A.cur, R 
     <div class="sp-kv"><span>Speed</span><b>${num('data-va="speed"', R.speed, v.speed, 1)} km/h</b></div>${i === 1 ? `<div class="sp-kv"><span>Starts after route 1 by</span><b>${num('data-va="delay"', R.delay, 0, 1)} s</b></div>` : ''}
     <p class="sp-flabel">Obstacles</p>${chk('data-va-obs="proposed"', A.obs.proposed, 'The proposed buildings')}${chk('data-va-obs="context"', A.obs.context, 'The site’s buildings')}${chk('data-va-obs="parking"', A.obs.parking, `Parked cars in the parking layout${ST.pkLast ? ` (option ${esc(ST.pkLast.label)}, ${ST.pkLast.total} stalls)` : ' (none generated yet)'}`)}${chk('data-va-obs="columns"', A.obs.columns, 'Columns of the structure grid')}${chk('data-va-obs="drawn"', A.obs.drawn, `Drawn obstacles (${A.drawn.length})`)}
     <div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="drawobs">Draw an obstacle</button>${A.drawn.length ? '<button type="button" class="btn sm" data-va="clearobs">Clear drawn</button>' : ''}</div>
-    <div class="sp-kv"><span>Clearance to keep</span><b>${num('data-va="clear"', A.clear, 0.3, 0.05)} m</b></div>`; }
+    <div class="sp-kv"><span>Clearance to keep</span><b>${num('data-va="clear"', A.clear, 0.3, 0.05)} m</b></div>
+    ${chk('data-va="avoid"', A.avoid !== false, 'Drive round obstacles the drawn route runs into')}<p class="sp-note">Where the drawn line hits an obstacle, a way round it the vehicle can drive is found (turns no tighter than its least radius, the clearance kept) and driven instead; the drawn line stays on the plan for comparison.</p>`; }
 function parkInputs(ctx) { const { ST, esc } = ctx, P = ST.pk, U = P.kind === 'underground';
   const catRow = (c, k) => `<tr><td>${chk(`data-pk-cat="${k}" data-k="enabled"`, c.enabled, esc(c.name))}</td><td>${num(`data-pk-cat="${k}" data-k="w"`, c.w, '', 0.05)}</td><td>${num(`data-pk-cat="${k}" data-k="l"`, c.l, '', 0.05)}</td><td>${c.accessible ? num(`data-pk-cat="${k}" data-k="count"`, c.count, 0, 1) + ' stalls' : P.mode === 'C' ? num(`data-pk-cat="${k}" data-k="share"`, c.share != null ? Math.round(c.share * 100) : '', 'rest', 1) + ' %' : ''}</td></tr>`;
   return `${sketchBar(ST, esc)}${ST.saMsg ? `<p class="sp-note sp-warn">${esc(ST.saMsg)}</p>` : ''}
@@ -130,7 +132,13 @@ async function computeVeh(ctx) { const ST = ctx.ST, A = ST.va, use = A.routes.ma
   if (!use.length) throw Error('Draw a route first: Draw route, click the start, each turn and the end on the plan, then Finish.');
   const { obstacles, complete, src, S } = obstaclesFor(ctx), q = QK(ctx.qualOf().k), runs = [];
   for (const { r, i } of use) { const v = vehOf(ST, i), e = V.check(v); if (e.length) throw Error(`Route ${i + 1} (${v.name}): ${e.join('; ')}.`);
-    await new Promise((res) => setTimeout(res, 0)); const out = SP.simulate(v, { pts: r.pts, radii: r.radii, reverse: r.rev }, { quality: q, obstacles, clearance: +A.clear || 0.3, speed: +r.speed || v.speed, delay: i ? +r.delay || 0 : 0, complete });
+    await new Promise((res) => setTimeout(res, 0)); const so = { quality: q, obstacles, clearance: +A.clear || 0.3, speed: +r.speed || v.speed, delay: i ? +r.delay || 0 : 0, complete }; let out = SP.simulate(v, { pts: r.pts, radii: r.radii, reverse: r.rev }, so);
+    // the drawn route runs into an obstacle: a way round it, driven instead (2026-11-18); none found: the drawn route as driven, and why
+    if (out.ok && out.collisions.length && A.avoid !== false) { const hitBy = [...new Set(out.collisions.map((c) => c.name))];
+      if (r.rev.some(Boolean)) out.planFail = 'a route with reversing is driven as drawn'; else { await new Promise((res) => setTimeout(res, 0)); const pl = RP.planAround(v, { pts: r.pts }, obstacles, { clearance: +A.clear || 0.3 });
+        if (pl.ok) { const o2 = SP.simulate(v, { pts: r.pts, planned: pl.path }, so); if (o2.ok) { o2.planned = { length: pl.length, drawn: SP.plLength ? SP.plLength(r.pts) : 0, hitBy, under: !!pl.underClearance, moved: pl.moved || [] }; out = o2; } } else out.planFail = pl.error; }
+      out.hitBy = hitBy; }
+    out.drawnPts = r.pts;
     if (!out.ok) throw Error(`Route ${i + 1}: ${out.error}.`); out.routeNo = i; out.col = RCOL[i]; runs.push(out); }
   const pair = runs.length === 2 ? SP.pairConflict(runs[0], runs[1]) : null;
   ST.vehLast = { pk: ST.pkLast && ST.pkLast.sig, runs: runs.map((x) => ({ route: x.routeNo + 1, vehicle: x.vehicle.name, stalls: [...new Set([...x.collisions, ...x.tooNear].filter((c) => /^stall:/.test(c.id)).map((c) => c.id.slice(6)))] })) };
@@ -146,6 +154,7 @@ function vehMarks(ctx, runs, obstacles, S, box, view, t) { const ST = ctx.ST, m 
     for (const [n, P] of Object.entries(r.tracks)) m.paths.push({ pts: P.filter((_, i) => i % 2 === 0), col: /^T/.test(n) ? '#475569' : '#111827', w: 0.03, thin: true, al: 0.75, tag: 'track' });
     if (view !== 'clear') for (const o of r.outlines) for (const B of o.bodies) m.polys.push({ pts: B, col: '#111827', w: 0.035, al: o.end ? 0.9 : 0.45, tag: 'outline' });
     m.paths.push({ pts: r.ref.path.filter((_, i) => i % 4 === 0).map((x) => x.p), col: '#64748b', w: 0.04, dash: [0.4, 0.3], al: 0.9, tag: 'ref' });
+    if (r.planned && r.drawnPts) m.paths.push({ pts: r.drawnPts, col: '#94a3b8', w: 0.035, dash: [0.2, 0.25], al: 0.8, tag: 'drawn' });   // the line as drawn, under the way round
     for (const x of r.infeasible) { const seg = r.poses.filter((p) => p.sRef >= x.s0 - 0.01 && p.sRef <= x.s1 + 0.01).map((p) => [p.x, p.y]); if (seg.length > 1) m.paths.push({ pts: seg, col: '#f97316', w: 0.35, al: 0.75, tag: 'infeasible' }); }
     // direction arrows every 10 m of the route, start and end
     for (let s = 5; s < r.length; s += 10) { const k = r.poses.findIndex((p) => p.s >= s); if (k < 1) continue; const a = r.poses[k - 1], b = r.poses[Math.min(r.poses.length - 1, k + 8)]; m.lines.push({ a: [a.x, a.y], b: [b.x, b.y], col, w: 0.08, head: true, al: 0.9 }); }
@@ -163,6 +172,7 @@ function vehResult(ctx, runs, pair, obstacles, src, S) { const { ST, esc, fmt } 
   const rows = [['Status', `<span class="${worst === 'infeasible' ? 'sp-bad' : ''}">${SN[worst]}</span>`]];
   for (const r of runs) { const pre = runs.length > 1 ? `Route ${r.routeNo + 1} · ` : '';
     rows.push([`${pre}Vehicle`, `${esc(r.vehicle.name)}, ${fmt(V.overallLength(r.vehicle), 2)} × ${fmt(r.vehicle.width, 2)} m, R min ${fmt(r.rMin, 2)} m`], [`${pre}Route`, `${fmt(r.length, 1)} m driven in ${fmt(r.duration, 0)} s at ${fmt(r.speed, 0)} km/h${r.reversing ? `, ${r.reversing} reversing` : ''}`],
+      ...(r.planned ? [[`${pre}Way round`, `the drawn route ran into ${esc(r.planned.hitBy.join(', '))}; driven round ${r.planned.hitBy.length === 1 ? 'it' : 'them'} instead, ${fmt(r.planned.length, 1)} m (the drawn line ${fmt(r.planned.drawn, 1)} m)${r.planned.moved.length ? `; ${r.planned.moved.map((x) => `${x.i === 0 ? 'the start' : x.i === r.drawnPts.length - 1 ? 'the end' : 'point ' + (x.i + 1)} moved ${fmt(x.d, 1)} m, where the vehicle fits`).join(', ')}` : ''}${r.planned.under ? ' <span class="sp-bad">(only with less than the clearance)</span>' : ''}`]] : r.planFail ? [[`${pre}Way round`, `<span class="sp-bad">none found</span>: ${esc(r.planFail)}; the drawn route is shown as driven`]] : []),
       [`${pre}Tightest turn`, Number.isFinite(r.rReached) ? `${fmt(r.rReached, 2)} m (rear axle; the vehicle's least is ${fmt(r.rMin, 2)} m)` : 'straight'], [`${pre}Least clearance`, mc(r)], [`${pre}Collisions`, r.collisions.length ? `<span class="sp-bad">${r.collisions.length}</span>: ${esc(r.collisions.map((c) => `${c.name} (${fmt(c.s0, 1)}–${fmt(c.s1, 1)} m)`).join(', '))}` : 'none'],
       [`${pre}Swept area`, `${fmt(r.swept, 1)} m² (${r.cell} m cells)`]); }
   if (pair) rows.push(['Two vehicles', pair.simultaneous.length ? `<span class="sp-bad">meet at ${pair.simultaneous.map((x) => fmt(x.t0, 1) + ' s').join(', ')}</span>` : pair.envelopesMeet ? 'their paths cross, at different times' : 'their paths do not cross']);
@@ -286,7 +296,7 @@ export function onChange(e, ctx) { const ST = ctx.ST; if (ST.id !== VEH && ST.id
   if (d.va === 'veh') { if (t.value === 'custom') { A.routes[i].veh = 'custom'; A.prof[i] = { ...JSON.parse(JSON.stringify(V.CUSTOM_BASE)) }; } else { A.routes[i].veh = t.value; delete A.prof[i]; } }
   else if (d.vaP) { const v = A.prof[i] || vehOf(ST, i); v[d.vaP] = +t.value; if (d.vaP === 'length') { /* the length is shown; the overhangs and wheelbase drive the outline */ } A.prof[i] = v; }
   else if (d.vaT) { const v = A.prof[i] || vehOf(ST, i); v.trailer[d.vaT] = +t.value; A.prof[i] = v; }
-  else if (d.va === 'on2') A.routes[1].on = !!val; else if (d.va === 'speed') A.routes[i].speed = t.value; else if (d.va === 'delay') A.routes[i].delay = t.value; else if (d.va === 'clear') A.clear = +t.value || 0.3;
+  else if (d.va === 'on2') A.routes[1].on = !!val; else if (d.va === 'speed') A.routes[i].speed = t.value; else if (d.va === 'delay') A.routes[i].delay = t.value; else if (d.va === 'clear') A.clear = +t.value || 0.3; else if (d.va === 'avoid') A.avoid = !!val;
   else if (d.vaObs) A.obs[d.vaObs] = !!val; else if (d.vaRev != null) A.routes[i].rev[+d.vaRev] = !!val; else if (d.vaRad != null) A.routes[i].radii[+d.vaRad] = t.value === '' ? null : +t.value;
   else if (d.pkCat != null) { const c = P.cats[+d.pkCat], k = d.k; c[k] = k === 'enabled' ? !!val : k === 'share' ? (t.value === '' ? null : +t.value / 100) : +t.value; }
   else if (d.pk === 'angle') { P.angle = +t.value; } else if (d.pk === 'aisle') P.aisle = t.value; else if (d.pk === 'oneway') P.oneWay = !!val; else if (d.pk === 'setback') P.setback = +t.value || 0; else if (d.pk === 'wall') P.wall = +t.value || 0;

@@ -33,14 +33,20 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.screenshot({ path: `${shots}/swept-path-1.png` });
     console.log(`PASS a box truck along the drawn route: ${R['Status']}; ${R['Route']}; tightest ${R['Tightest turn']}; least clearance ${R['Least clearance']}; swept ${R['Swept area']}; ${m1.tags.filter((t) => t === 'outline').length} outlines`);
     // 2. against the building: 0.6 m off its south face (the truck is 2.45 m wide): a collision
-    await draw('[data-va=draw]', [[-45, -14.5], [20, -14.5]]); await run(); R = await rows();
+    const avoid = async (on) => { await unfold(); await p.waitForTimeout(150); await p.evaluate((on) => { const c = document.querySelector('.sp-studycard [data-va=avoid]'); if (c.checked !== on) c.click(); }, on); await p.waitForTimeout(200); };
+    await avoid(false); await draw('[data-va=draw]', [[-45, -14.5], [20, -14.5]]); await run(); R = await rows();
     assert.match(R['Status'], /Infeasible/); assert.match(R['Collisions'], /^1: the proposed building/); const m2 = await marks(); assert(m2.tags.includes('obstacle'));
-    console.log(`PASS against the building: ${R['Status']}, ${R['Collisions']}`);
-    // 3. a corner of 3 m radius for the truck (its least is 5.5 m): infeasible on that corner
-    await draw('[data-va=draw]', [[-50, -22], [40, -22], [40, 30]]);
+    console.log(`PASS against the building, driven as drawn: ${R['Status']}, ${R['Collisions']}`);
+    // 2b. the same line with "Drive round obstacles": a way round is found and driven, no collision; the drawn line stays on the plan
+    await avoid(true); await run(); R = await rows(); assert.match(R['Way round'] || '', /ran into the proposed building[^;]*; driven round it instead/, JSON.stringify(R)); assert.equal(R['Collisions'], 'none');
+    const m2b = await marks(); assert(m2b.tags.includes('drawn') && m2b.tags.includes('envelope')); await p.screenshot({ path: `${shots}/swept-path-around.png` });
+    console.log(`PASS with Drive round obstacles: ${R['Way round']}; collisions ${R['Collisions']}; least clearance ${R['Least clearance']}`);
+    // 3. a corner of 3 m radius for the truck (its least is 5.5 m), driven as drawn: infeasible on that corner
+    await avoid(false); await draw('[data-va=draw]', [[-50, -22], [40, -22], [40, 30]]);
     await unfold(); await p.evaluate(() => { const d = document.querySelector('.sp-studycard [data-adv=va-segs]'); if (d) d.open = true; }); await p.fill('.sp-studycard [data-va-rad="1"]', '3'); await p.dispatchEvent('.sp-studycard [data-va-rad="1"]', 'change'); await p.waitForTimeout(200);
     await run(); R = await rows(); assert.match(R['Status'], /Infeasible/); const why = await p.locator('.sp-studycard').innerText(); assert.match(why, /tighter than the vehicle's minimum radius 5\.50 m/); assert((await marks()).tags.includes('infeasible'));
     console.log('PASS a 3 m corner for the box truck: Infeasible, "tighter than the vehicle\'s minimum radius 5.50 m", marked orange');
+    await avoid(true);
     await unfold(); await p.evaluate(() => { const d = document.querySelector('.sp-studycard [data-adv=va-segs]'); if (d) d.open = true; }); await p.fill('.sp-studycard [data-va-rad="1"]', ''); await p.dispatchEvent('.sp-studycard [data-va-rad="1"]', 'change'); await run();
     // 4. the timeline moves the vehicle
     const lab = await p.evaluate(() => { const s = document.querySelector('.sp-studycard [data-tl=seek]'); s.value = String(Math.round(+s.max / 2)); s.dispatchEvent(new Event('input', { bubbles: true })); return 1; }); void lab; await p.waitForTimeout(400);

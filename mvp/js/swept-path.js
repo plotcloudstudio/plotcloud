@@ -52,6 +52,8 @@ export function referencePath(route, v, step = 0.05) {
   return { path, corners, length: s, cusps };
 }
 
+function plannedRef(pl) { const path = []; let s = 0; for (const x of pl) { if (path.length) { const d = dist(path.at(-1).p, x.p); if (d < 1e-4) continue; s += d; } path.push({ p: x.p, s, dir: 1, k: x.k || 0 }); } return { path, corners: [], length: s, cusps: 0, planned: true }; }
+
 // ---- the vehicle's outlines and wheels at a pose ----
 /** pose { x, y, th, phi (trailer heading), delta } → { bodies: [polygon, …], wheels: { name: [x, y] }, hitch } */
 export function shapesAt(v, q) {
@@ -75,7 +77,8 @@ export function shapesAt(v, q) {
  */
 export function simulate(v, route, o = {}) {
   const Q = QUALITY[o.quality] || QUALITY.standard, ds = o.ds || Q.ds, cellE = o.cell || Q.cell, thr = o.clearance ?? CLEAR_DEFAULT, speed = (o.speed || v.speed || 8) / 3.6;
-  const ref = referencePath(route, v, Math.min(0.05, ds)); if (!ref.path.length) return { ok: false, error: ref.error || 'No route' };
+  // a planned path (route-plan.js: a way round the obstacles) is followed as it is: its turns are already within the vehicle's radius
+  const ref = route.planned ? plannedRef(route.planned) : referencePath(route, v, Math.min(0.05, ds)); if (!ref.path.length) return { ok: false, error: ref.error || 'No route' };
   const R = ref.path, L = v.wheelbase, dmax = v.steer * DEG, rateMax = (2 * dmax / (v.lockTime || 4)) / speed, Ld = Math.max(1.5, Math.min(12, L)), art = v.kind === 'artic' && v.trailer;
   const T = art ? v.trailer : null, maxArt = art ? (T.maxArticulation || 70) * DEG : 0;
   if (art && R.some((x) => x.dir < 0)) return { ok: false, error: 'Reversing an articulated vehicle is not simulated in this version: draw the route forward only' };
