@@ -3577,13 +3577,18 @@ function miniPlan(x, w, h, d, hl, view) {
     for (const l of (M.lights || [])) if (l.lv === LV && hl.has(l.id)) { const c = P([l.x, l.y]); x.beginPath(); x.arc(c[0], c[1], 7 * d, 0, 7); x.stroke(); }
   }
 }
+const HEAVY = { pieces: 400, tris: 40000 };
+function heavyModel() { const I = (M && M.imports) || []; if (I.length > HEAVY.pieces) return true; let t = 0; for (const o of I) { t += o.tris || 0; if (t > HEAVY.tris) return true; } return false; }
 async function miniDraw() {
   const cvm = $('#miniCv'), list = $('#miniRooms'); if (!cvm || !S) return; const to3 = CAM !== '3d';
   $('[data-rt="plan"]').textContent = to3 ? '3D view' : '2D view';
   if (MINI === 'rooms') { list.hidden = false; cvm.hidden = true; list.innerHTML = S.rooms.map((r) => `<button type="button" data-room="${r.key}"><span>${esc(rname(r))}</span><small>${M.site ? '≈ ' + Math.round(r.area).toLocaleString('en-CA') : r.area.toFixed(1)} m²</small></button>`).join('') || '<p class="nores">No rooms yet. Draw closed walls.</p>'; return; }
   list.hidden = true; cvm.hidden = false;
   const box = cvm.parentElement.getBoundingClientRect(), d = devicePixelRatio || 1, w = Math.max(50, Math.round(box.width * d)), h = Math.max(50, Math.round(box.height * d)); cvm.width = w; cvm.height = h; const x = cvm.getContext('2d'); x.clearRect(0, 0, w, h);
-  if (!to3) { miniPlan(x, w, h, d); return; }
+  // a large imported model (2026-11-18): no 3D picture for the overview, the plan instead. The picture renders every imported piece
+  // again off screen and reads it back as a PNG on the main thread: thousands of pieces froze the page for seconds after an import and
+  // after every edit
+  if (!to3 || heavyModel()) { miniPlan(x, w, h, d); return; }
   const snap=snapM()+'|'+JSON.stringify(drawing)+'|'+LV + '|' + w; const paint = (img) => { const k = Math.min(w / img.width, h / img.height); x.drawImage(img, (w - img.width * k) / 2, (h - img.height * k) / 2, img.width * k, img.height * k); };
   if (MINI3 && MINI3.s === snap) { paint(MINI3.img); return; } if (miniBusy) { miniSoon(); return; }
   miniBusy = true; try { const url = await S3.snap(previewModel(),S,{lv: lvSorted().slice(-1)[0].id, colOf: () => '#efe3cf' }, 520, Math.round(520 * h / w)); const img = new Image(); await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = url; }); MINI3 = { s: snap, img }; if (CAM !== '3d') paint(img); } catch (e) { x.fillStyle = '#86909c'; x.font = `${12 * d}px ${FB}`; x.textAlign = 'center'; x.fillText('3D preview unavailable', w / 2, h / 2); } miniBusy = false;
@@ -4306,7 +4311,7 @@ const SIMDB = (() => { let p = null; const open = () => p || (p = new Promise((r
   return { add: (st, v) => tx(st, 'readwrite', (s) => s.add(v)), put: (st, v) => tx(st, 'readwrite', (s) => s.put(v)), get: (st, k) => tx(st, 'readonly', (s) => s.get(k)), all: (st) => tx(st, 'readonly', (s) => s.getAll()) }; })();
 let VERS = [], VSEL = [];
 async function verLoad() { try { const [snaps, notes] = await Promise.all([SIMDB.all('snaps'), SIMDB.all('notes')]); const nm = new Map(notes.map((n) => [n.key, n.note])); VERS = snaps.filter((s) => s.pid === M.id).sort((a, b) => a.n - b.n).map((s) => Object.assign({}, s, { note: nm.get(s.key) || '' })); } catch (e) { VERS = null; } VSEL = VSEL.filter((k) => VERS && VERS.some((v) => v.key === k)); verUI(); }
-async function verThumb() { try { if (!window.S3) return null; return await S3.snap(M, S, { lv: lvSorted().slice(-1)[0].id, colOf: () => '#efe3cf' }, 160, 120); } catch (e) { return null; } }
+async function verThumb() { try { if (!window.S3 || heavyModel()) return null; return await S3.snap(M, S, { lv: lvSorted().slice(-1)[0].id, colOf: () => '#efe3cf' }, 160, 120); } catch (e) { return null; } }
 async function simArchive(tool, toolName, lvId, scene) {
   let all = []; try { all = await SIMDB.all('snaps'); } catch (e) { return null; }
   const n = all.filter((s) => s.pid === M.id).reduce((m, s) => Math.max(m, s.n), 0) + 1, lv = lvObj(lvId);
