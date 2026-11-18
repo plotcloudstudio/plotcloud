@@ -17,11 +17,12 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.equal(await left(), ids.length); const n0 = await p.evaluate(() => ({ w: __ws2.model().studio.walls.length, f: (__ws2.model().studio.furn || []).length }));
     await p.evaluate((ids) => { __ws2.UI.sels = ids; }, ids); await p.evaluate(() => { document.activeElement?.blur?.(); document.body.focus(); });
     const t0 = Date.now(); await p.keyboard.press('Delete'); await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); const dt = Date.now() - t0;
+    await p.waitForFunction((ids) => ids.every((c) => { const [, k, i] = c.split(':'); return !(__ws2.model().studio[k === 'wall' ? 'walls' : 'furn'] || []).some((o) => o.id === i); }), ids, { timeout: 30000 }); const dt2 = Date.now() - t0;
     assert.equal(await left(), 0, 'every selected object deleted'); assert.equal((await p.evaluate(() => __ws2.sels())).length, 0, 'selection cleared');
     await p.waitForTimeout(3000); const n1 = await p.evaluate(() => ({ w: __ws2.model().studio.walls.length, f: (__ws2.model().studio.furn || []).length }));
     assert(n0.w - n1.w >= 20 - 2 && n0.f - n1.f === ids.length - ids.filter((c) => c.includes(':wall:')).length, JSON.stringify({ n0, n1 }));   // walls: joined lines may merge
     const in3D = await p.evaluate((ids) => { const st = __ws2.inst.persp.ws.objects(); return ids.filter((c) => { const [, k, i] = c.split(':'); return st.some((o) => o.k === k && o.id === i); }).length; }, ids); assert.equal(in3D, 0, 'gone from the 3D pane too');
-    console.log(`PASS ${ids.length} selected objects deleted in one step; on screen ${dt} ms after Delete; gone from every pane`);
+    console.log(`PASS ${ids.length} selected objects deleted in one step; hidden on screen ${dt} ms after Delete, the model updated by ${dt2} ms; gone from every pane`);
     await p.evaluate(() => __ws2.hub.undo()); await p.waitForTimeout(2500); assert.equal(await left(), ids.length, 'one Undo restores every one');
     await p.evaluate(() => __ws2.hub.redo()); await p.waitForTimeout(2500); assert.equal(await left(), 0, 'Redo deletes them again');
     console.log('PASS one Undo brings all of them back; Redo removes them again');

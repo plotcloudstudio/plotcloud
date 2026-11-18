@@ -6981,6 +6981,11 @@ window.S3 = (() => {
   function highlight(G, sel) { if (!SELM.front) { SELM.front = new T.LineBasicMaterial({ color: 0xe03a2a }); SELM.back = new T.LineBasicMaterial({ color: 0xe03a2a, transparent: true, opacity: 0.28, depthTest: false }); }
     const list = []; G.traverse((m) => { if (!m.isMesh || m.userData.__outline) return; const ud = tagOf(m); if (ud && ud.k === (sel.k==='ctx'?'site':sel.k) && (ud.id === sel.id || (ud.merged && ud.ranges.has(sel.id))) && m.material) list.push(m); });
     for (const m of list) { const part = m.userData.merged ? impPart(m, sel.id) : null; if (!part) m.userData.__selected = true; const eg = new T.EdgesGeometry(part || m.geometry, 25); if (part) part.dispose(); const a = new T.LineSegments(eg, SELM.front), b = new T.LineSegments(eg, SELM.back); a.renderOrder = 10; b.renderOrder = 9; for (const l of [a, b]) { l.raycast = () => {}; l.userData.__outline = 1; l.userData.__disp = 1; m.add(l); } } }
+  // a change shown at once (2026-11-18): the objects about to be deleted hidden in the drawn view and the frame drawn, before the
+  // model is updated (that follows straight after and rebuilds the view as usual). items: [{ k, id }]
+  api.hideNow = (items) => { if (!grp || !R) return 0; const keys = new Set(items.map((s) => s.k + ':' + s.id)); let n = 0;
+    grp.traverse((m) => { if (!m.isMesh && !m.isLine && !m.isLineSegments) return; if (m.userData && m.userData.__outline) { m.visible = false; return; } const u = tagOf(m); if (u && keys.has(u.k + ':' + u.id) && m.visible) { m.visible = false; n++; } });
+    if (HV.g) HV.g.visible = false; render(); return n; };
   api.reselect = (sel) => { if (!grp || !R) return false; const old = []; grp.traverse((m) => { if (m.userData && m.userData.__outline) old.push(m); if (m.userData && m.userData.__selected) delete m.userData.__selected; });
     const geos = new Set(); for (const l of old) { if (l.parent) l.parent.remove(l); if (l.geometry) geos.add(l.geometry); } for (const g of geos) g.dispose();
     const selected = window.__wsSelections || [sel].filter(Boolean); for (const x of selected) highlight(grp, x); render(); return true; };
@@ -7869,6 +7874,7 @@ if (window.__WSROLE) {
       LTOOL = null; const b = document.querySelector(`[data-tool="${o.tool}"]${o.opm ? `[data-opm="${o.opm}"]` : ''}`); if (!b) return false; b.click(); return TOOL === o.tool; },
     hide(id, on) { return commands.execute(on ? new HideCommand(id) : new ShowCommand([id])); },
     del(s) { const o = selObj(s); if (!o) return false; if (o.locked) { say('This piece is locked. Unlock it in the toolbar to delete it.'); return false; } SEL = s; if (s.k === 'furn' || s.k === 'ceil' || s.k === 'note') return commands.execute(new DeleteCommand(s)); delSel(); return true; },
+    hideNow(items){return window.S3&&S3.on&&S3.hideNow?S3.hideNow(items.map((s)=>({k:s.k==='end'?'wall':s.k,id:s.id}))):0;},
     delMany(items){const before=snapM(),history=UNDO.slice(),realChanged=changed,realCommit=commit,realTidy=tidy;WS.rx=true;changed=()=>{};commit=()=>{};tidy=()=>{};try{for(const s of items)WS.del(s);}finally{WS.rx=false;changed=realChanged;commit=realCommit;tidy=realTidy;}tidy();   /* one update for the whole selection (2026-11-18): each delete no longer redraws and re-checks the model */UNDO.splice(0,UNDO.length,...history);if(before!==snapM())UNDO.push(before);if(UNDO.length>120)UNDO.shift();REDO.length=0;changed(false);histUI();},
     dup(s) { if (!['wall', 'furn', 'floor', 'void', 'ceil', 'note', 'light'].includes(s.k)) return false; return commands.execute(new DuplicateCommand(s.k, s.id)); },
     objects() {   // every object, with the name the Workspace's layer tree shows
