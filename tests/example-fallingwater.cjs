@@ -34,6 +34,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
       const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, row: s.res?.rows?.[0], rows: s.res?.rows || [], kpis: s.res?.kpis || null }; });
       const dt = Math.round((Date.now() - t0) / 1000);
       // Solar Envelope needs neighbours to protect; Fallingwater has none, and the study says so instead of inventing a limit
+      // Vehicle swept path and Parking layout (2026-11-18) run on a route or area drawn on the plan: with nothing drawn they say so
+      if ((id === 'vehicle-swept-path' && /Draw a route first/.test(r.err)) || (id === 'parking-layout' && /Draw the parking area first|Set an entrance first/.test(r.err))) { res.push(`${label}: needs a drawn input (${r.err})`); results[id] = { label, na: r.err, rows: [], seconds: dt }; continue; }
       if (id === 'solarenvelope' && /no surrounding buildings/.test(r.err)) { res.push(`${label}: not applicable (${r.err})`); results[id] = { label, na: r.err, rows: [], seconds: dt }; continue; }
       assert.equal(r.err, '', `${label}: ${r.err}`); assert(r.row, `${label}: no result row`);
       res.push(`${label}: ${r.row.join(' ')} (${dt} s)`); results[id] = { label, rows: r.rows, seconds: dt };
