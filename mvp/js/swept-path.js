@@ -1,7 +1,7 @@
 // Vehicle swept path (2026-11-18): a kinematic screening of a vehicle driven along a drawn route. Plan metres, x east, y north.
 // Pure functions, no DOM (the Node tests run the same code).
-// · The route: points clicked on the plan. Each corner between two segments driven the same way is rounded by an arc (the largest
-//   that fits, or a radius the person set), as the CAD swept-path tools do; a corner between a forward and a reversing segment is a
+// · The route: points clicked on the plan. Each corner between two segments driven the same way is rounded by an arc (by default
+//   of 1.25 × the vehicle's least radius, less where the segments leave no room, or a radius the person set), as the CAD swept-path tools do; a corner between a forward and a reversing segment is a
 //   stop where the steering may be turned (a cusp). The reference point is the rear axle's centre (the point the turning radius is
 //   measured to), so R_min = wheelbase / tan(maximum steering angle).
 // · The vehicle: a bicycle model. Steering by pure pursuit, limited to ±the maximum angle and to the rate the lock-to-lock time
@@ -16,7 +16,7 @@ import { rMin } from './vehicles.js';
 
 const DEG = Math.PI / 180;
 export const QUALITY = { draft: { ds: 0.10, cell: 0.05 }, standard: { ds: 0.05, cell: 0.05 }, refined: { ds: 0.025, cell: 0.02 } };
-export const TRACK_TOL = 0.30, CLEAR_DEFAULT = 0.30;
+export const TRACK_TOL = 0.30, CLEAR_DEFAULT = 0.30, AUTO_R = 1.25;   // AUTO_R: a corner drawn without a radius is driven at 1.25 × the least radius (less if the segments leave no room)
 
 // ---- the reference path: segments with their corners rounded ----
 /**
@@ -34,7 +34,7 @@ export function referencePath(route, v, step = 0.05) {
     const turn = wrap(Math.atan2(B.d[1], B.d[0]) - Math.atan2(A.d[1], A.d[0])); if (Math.abs(turn) < 1e-4) continue;
     if (Math.abs(turn) > Math.PI - 1e-3) { corners.push({ i, angle: turn, r: 0, fit: 0, tight: true, uturn: true }); continue; }
     const tanH = Math.tan(Math.abs(turn) / 2), roomA = i - 1 === 0 ? A.L : A.L / 2, roomB = i + 1 === P.length - 1 ? B.L : B.L / 2, fit = Math.min(roomA, roomB) / tanH;
-    const set = route.radii && Number.isFinite(+route.radii[i]) && +route.radii[i] > 0 ? +route.radii[i] : null, r = set != null ? Math.min(set, fit) : Math.min(fit, Math.max(25, R0 * 1.5));
+    const set = route.radii && Number.isFinite(+route.radii[i]) && +route.radii[i] > 0 ? +route.radii[i] : null, r = set != null ? Math.min(set, fit) : Math.min(fit, AUTO_R * R0);   // by default a turn close to the drawn corner, as a driver takes it
     corners.push({ i, angle: turn, r, fit, auto: set == null, set, tight: r < R0 - 1e-6, tan: r * tanH }); }
   for (const c of corners) if (!c.cusp && !c.uturn) { segs[c.i - 1].t1 = c.tan; segs[c.i].t0 = c.tan; }
   // walk the pieces: the straight part of each segment, then the arc of the corner after it

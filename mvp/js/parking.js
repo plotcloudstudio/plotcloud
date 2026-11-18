@@ -88,7 +88,7 @@ export function generate(o) {
   const cands = [];
   for (const deg of dirs.slice(0, o.fixed ? 1 : Q.angles)) { const offs = new Set();
     if (o.fixed) offs.add(+o.fixed.offset || 0); else { for (let k = 0; k < Q.offsets; k++) offs.add(+(M * k / Q.offsets).toFixed(3));
-      if (o.underground && o.grid) { const F = frame(deg * DEG), lines = [...(o.grid.xs || []).map((x) => F.V([x, 0])), ...(o.grid.ys || []).map((y) => F.V([0, y]))], vmin = Math.min(...region.outer.map(F.V)); for (const v of lines.slice(0, 3)) offs.add(+((((v - vmin) % M) + M) % M).toFixed(3)); } }
+      if (o.underground && o.grid) { const F = frame(deg * DEG), lines = [...new Set([...(o.grid.pts || []).map((q) => +F.V(q).toFixed(1)), ...(o.grid.xs || []).map((x) => F.V([x, 0])), ...(o.grid.ys || []).map((y) => F.V([0, y]))])].sort((p, q) => p - q), vmin = Math.min(...region.outer.map(F.V)); for (const v of lines.slice(0, 3)) offs.add(+((((v - vmin) % M) + M) % M).toFixed(3)); } }
     for (const off of offs) cands.push({ deg, off }); }
 
   // ---- one candidate: aisles, cross aisles, reach, rows, stall types ----

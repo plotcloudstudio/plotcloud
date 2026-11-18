@@ -52,6 +52,12 @@ export const SIMS = [
     metrics: [['seen', 'Floor seen from outside', '%', 1, /^floor seen/i], ['private', 'Private floor seen', '%', 1, /^private floor/i]] },
   { id: 'cameras', group: 'Space & movement', name: 'Camera coverage', tool: 'cameras', view: 'plan',
     blurb: 'Where security cameras should go for the detail you need.', inputs: ['Floor plan'], metrics: [['cover', 'Floor covered', '%', 1, /^covered/i], ['cams', 'Cameras', '', 0, /^cameras$/i]] },
+  { id: 'vehicle-swept-path', group: 'Site access', scope: 'Exterior', name: 'Vehicle swept path', tool: 'vehicle-swept-path', view: 'plan', question: 'Can a truck enter, turn and leave this site?', image: 'img/home/vehicle-swept-path.jpg?v=planned-20261104-1',
+    blurb: 'Whether a vehicle can follow a route drawn on the plan, the ground it sweeps, and its clearance to buildings, columns and parked cars.', inputs: ['Vehicle dimensions', 'A route drawn on the plan'],
+    metrics: [['clear', 'Least clearance', 'm', 2, /least clearance/i], ['swept', 'Swept area', 'm²', 1, /swept area/i]] },
+  { id: 'parking-layout', group: 'Site access', scope: 'Exterior', name: 'Parking layout', tool: 'parking-layout', view: 'plan', question: 'How many stalls fit, and how?', image: 'img/home/parking-layout.jpg?v=planned-20261104-1',
+    blurb: 'Stall rows and aisles generated in a drawn area, surface or underground, with stall types, accessible stalls and options to compare.', inputs: ['Parking area and entrances', 'Stall and aisle dimensions'],
+    metrics: [['stalls', 'Stalls', '', 0, /^stalls/i], ['use', 'Stall area', 'm²', 0, /^stall area/i]] },
   { id: 'structure', group: 'Structure', name: 'Structural analysis', tool: 'structure', view: 'wire',
     blurb: 'Confirmed steel and engineered-timber frame screening on your building, with source-linked issues and editable column schemes.', inputs: ['Confirmed member axes and sections', 'Structural materials, supports and load paths'], metrics: [['ratio', 'Stress ratio', '', 2, /stress ratio/i], ['disp', 'Displacement', 'mm', 1, /displacement/i]] },
 ];
