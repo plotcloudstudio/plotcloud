@@ -11,7 +11,7 @@ import * as S from './store.js';
 import * as SL from './structure-layout.js?v=struct-20261117-1';
 import * as SF from './structure-frame.js?v=frame-20261118-2';
 import * as SFU from './structure-frame-ui.js?v=frameui-20261118-1';
-import * as SG from './study-groups.js?v=groups-20261117-1';
+import * as SG from './study-groups.js?v=groups-20261118-1';
 import {plannedStudy} from './planned-simulations.js';
 import { climateFile, ensureProjectClimate } from './project-climate.js';
 import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected-20261027-3';
@@ -361,7 +361,7 @@ export function mountChrome(app, api) {
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261118-3'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261118-4'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
