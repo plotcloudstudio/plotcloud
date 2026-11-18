@@ -4,8 +4,12 @@
 // from the terrain. Pure functions: the modeler builds the 3D surface, falls and foam from them, the 2D plan draws the flow, and the
 // studies (stormwater, outdoor comfort, water sound) read the same bodies.
 //
-// area.water = { type: 'auto' | 'pond' | 'stream' | 'drape', level (m, pond surface), depth (m), speed (m/s),
-//                discharge (m³/s), centre: [[x, y, z, width?]…] (stream surface along its centreline, upstream first) }
+// area.water = { type: 'auto' | 'pond' | 'stream', place: 'level' | 'ground' (still water, 2026-11-18), level (m, pond surface),
+//                depth (m), speed (m/s), discharge (m³/s), centre: [[x, y, z, width?]…] (stream surface along its centreline,
+//                upstream first), sound: { kind, bands, at } (the acoustic source, apart from the geometry: see SOUND) }
+// Still water is static geometry. 'level' (the default): a horizontal surface at one level, as a pond or pool is; its level is the
+// lowest point of its shore unless set, and a level set above that shore is reported (spill) and drawn at the shore, never floating.
+// 'ground': the surface follows the ground (shallow decorative water). The old type 'drape' reads as place 'ground'.
 export const DEF = { depth: 0.8, speed: 0.5 };
 export const TYPES = [['auto', 'From the terrain'], ['pond', 'Still water (pond, lake, pool)'], ['stream', 'Flowing water (stream, river)']];
 
@@ -34,14 +38,29 @@ function widthAt(pts, p) { let d = Infinity; for (let i = 0; i < pts.length; i++
 // falls: a drop of 0.4 m or more over a short run (steeper than about 1 in 3)
 export function fallsOf(C) { const F = []; for (let i = 1; i < C.length; i++) { const a = C[i - 1], b = C[i], drop = a[2] - b[2], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (drop < 0.4 || drop / Math.max(0.05, L) < 0.35) continue;
     const d = [(b[0] - a[0]) / (L || 1), (b[1] - a[1]) / (L || 1)]; F.push({ i, p: [a[0], a[1]], dir: d, w: (a[3] + b[3]) / 2, top: a[2], bot: b[2], drop }); } return F; }
+// the two ends of an outline's main axis (a rill's line of sound sources)
+export function mainAxis(pts) { const A = axes(pts); return [[A.c[0] + A.a[0] * A.s0, A.c[1] + A.a[1] * A.s0], [A.c[0] + A.a[0] * A.s1, A.c[1] + A.a[1] * A.s1]]; }
+// the sound of a water feature (2026-11-18): octave-band sound power levels, 125 Hz to 4 kHz, A-weighted and summed to one level.
+// Presets after a published example of a rill and a fountain (dB per band); editable. Still water with no source makes no sound
+export const BANDS = [125, 250, 500, 1000, 2000, 4000], AW = [-16.1, -8.6, -3.2, 0, 1.2, 1.0];
+export const SOUND = { fountain: { name: 'Fountain', bands: [50, 55, 50, 52, 55, 52] }, rill: { name: 'Rill or cascade', bands: [70, 70, 70, 70, 70, 70] } };
+export const dBA = (bands) => 10 * Math.log10(bands.reduce((s, L, i) => s + 10 ** ((+L + AW[i]) / 10), 0));
+// the lowest ground along an outline, its edges sampled at most 0.5 m apart
+// (a ground made of flat triangles can say where a segment crosses its grid lines and diagonals, gz.breaks(a, b) → [t…]: its lowest
+// point along the segment is then at one of them or an end, so the shore's lowest point is exact)
+export function shoreLow(pts, gz) { let lo = Infinity; const at = (a, b, t) => { const z = gz(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); if (Number.isFinite(z)) lo = Math.min(lo, z); };
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; if (gz.breaks) { at(a, b, 0); for (const t of gz.breaks(a, b)) at(a, b, t); continue; } const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.5)); for (let k = 0; k < n; k++) at(a, b, k / n); } return lo; }
 // a body of water, ready to draw and to study
 export function spec(area, gz = () => 0) {
   const w = area.water || {}, pts = area.pts || []; if (pts.length < 3) return null;
   let type = w.type && w.type !== 'auto' ? w.type : (w.centre && w.centre.length > 1) || elongation(pts) > 3.5 ? 'stream' : 'pond';
   const depth = +w.depth > 0 ? +w.depth : DEF.depth, A = areaOf(pts), o = { id: area.id, name: area.name || 'Water', type, depth, area: A, pts, set: { ...w } };
-  if (type === 'pond' || type === 'drape') { let lo = Infinity; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; for (let k = 0; k < 4; k++) { const z = gz(a[0] + (b[0] - a[0]) * k / 4, a[1] + (b[1] - a[1]) * k / 4); if (Number.isFinite(z)) lo = Math.min(lo, z); } }
-    o.level = Number.isFinite(+w.level) && w.level !== null && w.level !== '' ? +w.level : Number.isFinite(lo) ? +lo.toFixed(2) : 0; o.speed = +w.speed >= 0 && w.speed !== undefined && w.speed !== null && w.speed !== '' ? +w.speed : 0; o.falls = []; o.centre = null; o.length = 0;
-    o.discharge = +w.discharge > 0 ? +w.discharge : 0; return o; }
+  if (type === 'pond' || type === 'drape') { const lo = shoreLow(pts, gz), set = Number.isFinite(+w.level) && w.level !== null && w.level !== '';
+    o.type = 'pond'; o.place = w.place === 'ground' || w.type === 'drape' ? 'ground' : 'level'; o.shore = Number.isFinite(lo) ? +lo.toFixed(3) : 0;
+    o.level = set ? +w.level : o.shore; o.spill = o.place === 'level' && set && +w.level > o.shore + 0.005 ? +(+w.level - o.shore).toFixed(2) : 0;   // set above the lowest shore: it would spill there
+    o.drawLevel = o.spill ? o.shore : o.level;   // drawn at the shore, never floating over lower ground
+    o.speed = +w.speed >= 0 && w.speed !== undefined && w.speed !== null && w.speed !== '' ? +w.speed : 0; o.falls = []; o.centre = null; o.length = 0;
+    o.discharge = +w.discharge > 0 ? +w.discharge : 0; Object.defineProperty(o, 'gz', { value: gz, enumerable: false }); return o; }
   const C = (w.centre && w.centre.length > 1 ? w.centre.map((p) => [p[0], p[1], Number.isFinite(p[2]) ? p[2] : gz(p[0], p[1]), p[3] > 0 ? p[3] : null]) : autoCentre(pts, gz)).map((p) => (p[3] ? p : [p[0], p[1], p[2], widthAt(pts, p)]));
   if (C.length > 1 && C[0][2] < C[C.length - 1][2]) C.reverse();   // upstream first
   if (C.length < 2) { o.type = 'pond'; return spec({ ...area, water: { ...w, type: 'pond' } }, gz); }
@@ -52,7 +71,7 @@ export function spec(area, gz = () => 0) {
   o.level = C[0][2]; o.outlet = C[C.length - 1][2]; return o; }
 // at a point of the surface: its level, the distance down the stream (s) and across it (d), for the ripples that flow with it
 export function sample(o, x, y) {
-  if (!o.centre) return { z: o.level, s: x, d: y };
+  if (!o.centre) return { z: o.place === 'ground' && o.gz ? o.gz(x, y) : o.drawLevel ?? o.level, s: x, d: y };
   const C = o.centre; let best = null, bd = Infinity;
   for (let i = 1; i < C.length; i++) { const a = C[i - 1], b = C[i], ab = [b[0] - a[0], b[1] - a[1]], L2 = dot(ab, ab), u = L2 ? Math.max(0, Math.min(1, ((x - a[0]) * ab[0] + (y - a[1]) * ab[1]) / L2)) : 0, px = a[0] + ab[0] * u, py = a[1] + ab[1] * u, dd = Math.hypot(x - px, y - py);
     if (dd < bd - 1e-9) { bd = dd; best = { i, u, side: Math.sign(ab[0] * (y - a[1]) - ab[1] * (x - a[0])) || 1 }; } }
