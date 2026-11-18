@@ -5501,7 +5501,7 @@ function drawSun() {   // one pixel per cell on a small canvas, drawn scaled: no
     x.putImageData(im, 0, 0); R.img = c; }
   const a = W2S([R.X0, R.Y0 + R.ny * R.cell]); g.save(); g.globalAlpha = 0.62; g.imageSmoothingEnabled = false; g.drawImage(R.img, a[0], a[1], R.nx * R.cell * V.s, R.ny * R.cell * V.s); g.restore();
 }
-{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); drawStreams2(); _dm(); drawStruct2(); drawSunPath2(); drawCtxHandles(); drawGuide(); }; }
+{ const _dm = drawMasses; drawMasses = function () { drawSun(); drawAna2(); drawStreams2(); _dm(); drawSunPath2(); drawCtxHandles(); drawGuide(); }; }
 function drawCtxHandles() { if (CAM === '3d' || !SEL || SEL.k !== 'ctx' || !M.site || (window.__ws && window.__ws.locks && window.__ws.locks.has('Site'))) return; const o = selObj(); if (!o || !o.xy) return; const d = VP.d || 1; g.save(); g.fillStyle = '#fff'; g.strokeStyle = '#d8402a'; g.lineWidth = 1.5 * d; for (const q of o.xy) { const s2 = W2S(SITEC.siteToPlan(M.site, q, M.north || 0)); g.fillRect(s2[0] - 4 * d, s2[1] - 4 * d, 8 * d, 8 * d); g.strokeRect(s2[0] - 4 * d, s2[1] - 4 * d, 8 * d, 8 * d); } g.restore(); }
 { const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawWalk2(); } catch (e) { } return r; }; }   // an interior study over the rooms
 // a Workspace study result in the 2D plan (2026-10-31): the same grid and colours as in 3D, one crisp cell per grid cell
@@ -5666,6 +5666,7 @@ function drawEgressClock() { const o = EGO.o; if (!o || !o.frames || !o.frames.l
   g.font = `700 ${20 * d}px Inter,system-ui,sans-serif`; g.fillText(txt, x + 12 * d, y + 7 * d); g.font = `500 ${12 * d}px Inter,system-ui,sans-serif`; g.fillStyle = '#d1d5db'; g.fillText(sub, x + 12 * d, y + 31 * d);
   g.fillStyle = '#374151'; g.fillRect(x + 80 * d, y + 14 * d, 58 * d, 6 * d); g.fillStyle = '#22c55e'; g.fillRect(x + 80 * d, y + 14 * d, 58 * d * out / Math.max(1, n), 6 * d); g.restore(); EGO.clock = { t, out, n }; }
 { const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawEgress2(); drawEgressQueues(); drawEgressClock(); } catch (e) { } return r; }; }
+{ const _dr = draw; draw = function () { const r = _dr.apply(this, arguments); try { drawStruct2(); } catch (e) { } return r; }; }   // the structure over the rooms (2026-11-17), its labels clear of theirs
 // ---- reading a study result under the pointer (2026-10-31): the Workspace gets the plan point and the pointer position
 let PROBE = null;
 stage.addEventListener('pointermove', (e) => { if (!PROBE) return; let p = null; if (CAM === '3d' && window.S3 && S3.on) p = S3.probe(e.clientX, e.clientY); else { const a = evP(e); p = S2W(a[0], a[1]); } PROBE(p ? { x: p[0], y: p[1], cx: e.clientX, cy: e.clientY, surf: p.surf ?? null, roof: p.surf != null && SURF.list && SURF.list[p.surf] ? SURF.list[p.surf].roof : null } : null); });
@@ -5788,8 +5789,28 @@ function flowDraw() {
     for (let j = st / 2; j < o.ny; j += st) for (let i = st / 2; i < o.nx; i += st) { const c = (j | 0) * o.nx + (i | 0), u = o.ux[c], v = o.uy[c], sp = Math.hypot(u, v); if (!(sp > (o.min || 0.05))) continue; const X = o.X0 + (i + 0.5) * o.cell, Y = o.Y0 + (j + 0.5) * o.cell, L = st * o.cell * 0.22, dx = u / sp, dy = v / sp, a = W2S([X - dx * L, Y - dy * L]), q = W2S([X + dx * L, Y + dy * L]), h = 0.35 * Math.hypot(q[0] - a[0], q[1] - a[1]), ang = Math.atan2(q[1] - a[1], q[0] - a[0]);
       x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(q[0], q[1]); x.lineTo(q[0] - h * Math.cos(ang - 0.5), q[1] - h * Math.sin(ang - 0.5)); x.moveTo(q[0], q[1]); x.lineTo(q[0] - h * Math.cos(ang + 0.5), q[1] - h * Math.sin(ang + 0.5)); x.stroke(); } }
 }
-function drawStruct2() { const o = STR2; if (!o || CAM === '3d') return; g.save();
-  for (const c of o.cols) { const px = Math.max(9, c.s * V.s), a = W2S([c.x, c.y]); g.fillStyle = c.color; g.strokeStyle = '#1f2937'; g.lineWidth = 1; g.fillRect(a[0] - px / 2, a[1] - px / 2, px, px); g.strokeRect(a[0] - px / 2, a[1] - px / 2, px, px); }
+function drawStruct2() { const o = STR2; if (!o || CAM === '3d') return; g.save(); const d = VP.d, lz = (lvObj() || { z: 0 }).z, onLv = (c) => c.z0 === undefined || (c.z0 <= lz + 0.01 && c.z1 > lz + 0.01);
+  // a label with a white ground, kept clear of the others (2026-11-17)
+  const tag = (p, txt, col, ang = 0, size = 10, force = false) => { g.font = `600 ${size * d}px ${FM}`; const tw = g.measureText(txt).width, h = (size + 3) * d, ca = Math.abs(Math.cos(ang)), sa = Math.abs(Math.sin(ang)), bw = ca * (tw + 6 * d) + sa * h, bh = sa * (tw + 6 * d) + ca * h, box = { x: p[0] - bw / 2, y: p[1] - bh / 2, w: bw, h: bh };
+    if (!force && lbHit(box)) return false; LB.push(box); g.save(); g.translate(p[0], p[1]); g.rotate(ang); g.fillStyle = 'rgba(255,255,255,.92)'; g.fillRect(-tw / 2 - 3 * d, -h / 2, tw + 6 * d, h); g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 0, 0.5 * d); g.restore(); return true; };
+  const big = V.s / d > 9, read = (a2) => { let an = Math.atan2(a2[1], a2[0]); if (an > Math.PI / 2) an -= Math.PI; if (an < -Math.PI / 2) an += Math.PI; return an; };
+  // grid lines: dash-dot, a bubble with the name at each end
+  for (const L of o.grid || []) { const a = W2S(L.a), b = W2S(L.b); g.strokeStyle = L.kind === 'added' ? 'rgba(194,65,12,.75)' : 'rgba(30,64,175,.55)'; g.lineWidth = 1 * d; g.setLineDash([10 * d, 3 * d, 2 * d, 3 * d]); g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); g.setLineDash([]);
+    for (const q of [a, b]) { const r = 9 * d; g.beginPath(); g.arc(q[0], q[1], r, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.strokeStyle = L.kind === 'added' ? '#c2410c' : '#1e40af'; g.lineWidth = 1.2 * d; g.stroke(); g.fillStyle = g.strokeStyle; g.font = `700 ${10 * d}px ${FM}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(L.name, q[0], q[1] + 0.5 * d); LB.push({ x: q[0] - r, y: q[1] - r, w: 2 * r, h: 2 * r }); } }
+  // dimension chains: a line, a slash at each end, the distance in mm
+  for (const D of o.dims || []) { const a = W2S(D.a), b = W2S(D.b), an = read([b[0] - a[0], b[1] - a[1]]), ux = Math.cos(an), uy = Math.sin(an); g.strokeStyle = D.total ? '#111827' : '#374151'; g.lineWidth = 0.9 * d; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke();
+    for (const q of [a, b]) { g.beginPath(); g.moveTo(q[0] - (ux - uy) * 4 * d, q[1] - (uy + ux) * 4 * d); g.lineTo(q[0] + (ux - uy) * 4 * d, q[1] + (uy + ux) * 4 * d); g.stroke(); }
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]); g.font = `600 ${10 * d}px ${FM}`; if (g.measureText(D.text).width < L - 6 * d || D.total) tag([(a[0] + b[0]) / 2 - uy * 8 * d, (a[1] + b[1]) / 2 + ux * 8 * d], D.text, D.total ? '#111827' : '#374151', an, 10, true); }
+  // bearing walls on this level: a band in green (thick enough) or red, with the thickness drawn / needed
+  for (const w of o.walls || []) { if (w.lv && w.lv !== LV) continue; const a = W2S(w.a), b = W2S(w.b); g.strokeStyle = w.ok ? 'rgba(22,163,74,.55)' : 'rgba(220,38,38,.7)'; g.lineWidth = Math.max(3 * d, w.t * V.s); g.lineCap = 'butt'; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke();
+    if (big && Math.hypot(b[0] - a[0], b[1] - a[1]) > 60 * d) tag([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], w.label, w.ok ? '#166534' : '#b91c1c', read([b[0] - a[0], b[1] - a[1]]), 9); }
+  // beams at this level's ceiling: dashed, as drawn above the cut, with b x h
+  for (const m of o.beams || []) { if (m.lv && m.lv !== LV) continue; const a = W2S(m.a), b = W2S(m.b); g.strokeStyle = m.color || '#7c3aed'; g.lineWidth = Math.max(2 * d, m.w * V.s); g.globalAlpha = 0.55; g.setLineDash([6 * d, 4 * d]); g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    if (big && Math.hypot(b[0] - a[0], b[1] - a[1]) > 70 * d) tag([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], m.label, '#5b21b6', read([b[0] - a[0], b[1] - a[1]]), 9); }
+  for (const c of o.cols) { if (!onLv(c)) continue; const px = Math.max(9, c.s * V.s), a = W2S([c.x, c.y]); g.fillStyle = c.color; g.strokeStyle = '#1f2937'; g.lineWidth = 1; g.fillRect(a[0] - px / 2, a[1] - px / 2, px, px); g.strokeRect(a[0] - px / 2, a[1] - px / 2, px, px);
+    if (big && c.label) tag([a[0] + px / 2 + 4 * d + 18 * d, a[1] - px / 2 - 7 * d], c.label, '#111827', 0, 9); }
+  // where the load has nothing under it
+  for (const f of o.flags || []) { if (f.lv && f.lv !== LV) continue; const a = W2S(f.at), r = 8 * d; g.beginPath(); g.moveTo(a[0], a[1] - r); g.lineTo(a[0] + r, a[1] + r * 0.8); g.lineTo(a[0] - r, a[1] + r * 0.8); g.closePath(); g.fillStyle = '#dc2626'; g.fill(); g.fillStyle = '#fff'; g.font = `800 ${10 * d}px ${FB}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', a[0], a[1] + 1.5 * d); }
   g.restore(); }
 function drawSunPath2() {
   const P = SPATH2; if (!P || CAM === '3d') return; const line = (pl, col, w) => { if (pl.length < 2) return; g.beginPath(); pl.forEach((p, n) => { const q = W2S(P.plan(p.az, p.alt)); n ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
@@ -6676,7 +6697,10 @@ window.S3 = (() => {
   function tintApply() { if (!grp) return; grp.traverse((m) => { if (!m.isMesh) return; const ud = m.userData; if (!ud || ud.k !== 'mass') return; if (!m.userData.__tint0) m.userData.__tint0 = m.material;
       const c = STRP.tint && STRP.tint[ud.id]; m.material = c ? new T.MeshLambertMaterial({ color: new T.Color(c), transparent: true, opacity: 0.38, depthWrite: false, side: T.DoubleSide }) : m.userData.__tint0; }); }
   api.structure = (o) => { if (!scene) return; if (STRP.g) { scene.remove(STRP.g); STRP.g.traverse((x) => { x.geometry && x.geometry.dispose(); x.material && x.material.dispose(); }); STRP.g = null; } STRP.tint = o ? o.tint : null; tintApply();
-    if (o) { const G = new T.Group(); G.name = 'structure'; for (const c of o.cols) { const h = Math.max(0.5, c.z1 - c.z0), me = new T.Mesh(new T.BoxGeometry(c.s, h, c.s), new T.MeshLambertMaterial({ color: new T.Color(c.color) })); me.position.set(c.x, c.z0 + h / 2, -c.y); G.add(me); } scene.add(G); STRP.g = G; }
+    if (o) { const G = new T.Group(); G.name = 'structure'; for (const c of o.cols) { const h = Math.max(0.5, c.z1 - c.z0), me = new T.Mesh(new T.BoxGeometry(c.s, h, c.s), new T.MeshLambertMaterial({ color: new T.Color(c.color) })); me.position.set(c.x, c.z0 + h / 2, -c.y); G.add(me); }
+      // beams under the floors (2026-11-17), their top at the floor
+      for (const m of o.beams || []) { if (!(m.z > -1e3)) continue; const dx = m.b[0] - m.a[0], dy = m.b[1] - m.a[1], L = Math.hypot(dx, dy); if (L < 0.2) continue; const me = new T.Mesh(new T.BoxGeometry(L, m.h, m.w), new T.MeshLambertMaterial({ color: new T.Color(m.color || '#7c3aed') })); me.position.set((m.a[0] + m.b[0]) / 2, m.z - m.h / 2, -(m.a[1] + m.b[1]) / 2); me.rotation.y = Math.atan2(dy, dx); G.add(me); }
+      scene.add(G); STRP.g = G; }
     render(); };
   { const _u3 = api.update; api.update = (...a) => { _u3(...a); if (STRP.tint) { tintApply(); render(); } }; }
   // ---- an analysis result drawn on the ground (2026-10-30): one flat coloured cell per grid point, just above the terrain
@@ -7829,7 +7853,9 @@ if (window.__WSROLE) {
         out.push({ id: m.id, name: m.name, use: m.use, storeys: m.storeys || Math.max(1, Math.round((m.h - m.base) / (m.fh || 3))), fh: m.fh || 3, base: m.base, top: m.h, area, spans: [du, dv], cols: cols.filter((c) => c.trib > 0.01).map((c) => { const g2 = glob(c.u); return { x: g2[0], y: g2[1], trib: c.trib, edge: c.edge }; }) }); }
       return out;
     },
-    structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = o.cols.map((c) => c.x), ys = o.cols.map((c) => c.y); FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
+    // the walls and levels the structure is laid out from (2026-11-17)
+    structInput() { const hid = new Set(M.hiddenIds || []); return { levels: M.levels.map((l) => ({ id: l.id, z: l.z, h: l.h, name: l.name })), walls: M.walls.filter((w) => !hid.has(w.id)).map((w) => ({ id: w.id, lv: w.lv, a: w.a.slice(), b: w.b.slice(), t: w.t, h: w.h, mat: w.mat || '', layer: w.layer || '', sourceLayer: w.sourceLayer || '', bulge: w.bulge || 0 })), masses: massList(M).length }; },
+    structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = [...o.cols.map((c) => c.x), ...(o.grid || []).flatMap((L) => [L.a[0], L.b[0]])], ys = [...o.cols.map((c) => c.y), ...(o.grid || []).flatMap((L) => [L.a[1], L.b[1]])]; FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
     sunPath(o) {
       if (!o) { SPATH2 = null; if (window.S3 && S3.sunPath) S3.sunPath(null); if (CAM !== '3d') draw(); return; }
       let b; try { b = studyBox(studyPrisms()); } catch (e) { return; } const cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, R = 0.42 * Math.min(b.nx, b.ny) * b.cell, nb = (M.north || 0) * Math.PI / 180, site = M.site;

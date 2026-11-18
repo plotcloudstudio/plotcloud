@@ -6,7 +6,13 @@ import {evacuationAccuracyPost} from '../research/fire-evacuation-article.js';
 export const researchPosts=[fallingwaterModelPost,evacuationAccuracyPost];
 void hospitalResearchPost;
 
-export const categories={campus:'Campus visits',release:'Product updates',studio:'Studio notes'};
+// Blog posts (2026-11-17): research notes and offline events. New posts are a research note, an event (talk, workshop, exhibition)
+// or a campus visit; product updates and studio notes still read but are no longer offered in the editor
+export const categories={research:'Research',event:'Event',campus:'Campus visit',release:'Product updates',studio:'Studio notes'};
+export const blogKinds={research:'Research',events:'Events'};
+export const isEventPost=(p)=>['event','campus'].includes(p?.content?.category);
+export const isResearchPost=(p)=>p?.content?.format==='article'||p?.content?.category==='research';
+export const upcoming=(p)=>isEventPost(p)&&/^\d{4}-\d{2}-\d{2}$/.test(p.content.eventDate||'')&&p.content.eventDate>=new Date().toISOString().slice(0,10);
 // The About page's founders, testimonials and client logos (2026-11-17) start as labelled samples: every sample item carries
 // sample:true and is shown with a "Sample" tag until the founder replaces it in the Founder workspace (#/founder › About & team).
 // The first card is the founder's own, to be completed with their name, role and LinkedIn there. Nothing here is a real claim.
@@ -52,7 +58,7 @@ export function articleHTML(post){
 }
 export function postHTML(post,{detail=false}={}){
   const c=post.content||{};if(detail&&c.format==='article')return articleHTML(post);
-  const image=safeImage(c.image),meta=[c.format==='article'?(c.articleType||'Research article'):(categories[c.category]||categories.studio),c.university,c.location,c.eventDate,c.version&&'Version '+c.version].filter(Boolean);
+  const image=safeImage(c.image),meta=[upcoming(post)?'Upcoming':'',c.format==='article'?(c.articleType||'Research article'):(categories[c.category]||categories.studio),c.university,c.location,c.eventDate,c.version&&'Version '+c.version].filter(Boolean);
   return `<article class="card public-article${detail?' cms-post-detail':''}${image?'':' cms-post-no-image'}" id="${escapeText(post.id)}">${image?`<img src="${escapeText(image)}" alt="${escapeText(c.imageAlt||c.title)}" loading="lazy">`:''}<div><span class="eyebrow">${meta.map(escapeText).join(' · ')}</span><h2>${escapeText(c.title)}</h2>${post.publishedAt?`<p class="note">Published ${escapeText(new Date(post.publishedAt).toLocaleDateString('en-CA',{dateStyle:'medium'}))}</p>`:''}${detail?bodyHTML(c.body):`<p>${escapeText(c.summary||String(c.body||'').slice(0,220))}</p><a href="#/blog/${encodeURIComponent(post.id)}">Read story →</a>`}</div></article>`;
 }
 const sampleTag=(o)=>o&&o.sample?'<span class="sample-tag" title="Sample content, not a real person, quote or client">Sample</span>':'';
@@ -74,7 +80,21 @@ export function clientsHTML(about){
 }
 export const aboutExtrasHTML=(about)=>teamHTML(about)+testimonialsHTML(about)+clientsHTML(about);
 // Resources published from the Founder workspace (2026-11-17): papers, tutorials and news; a card each, a page each
-export const resourceTypes={paper:'Papers',tutorial:'Tutorials',news:'News'};
+export const resourceTypes={paper:'Papers',tutorial:'Tutorials',news:'News',library:'Library files'};
+// the resource library's categories (2026-11-17), the same as the early catalogue's
+export const libraryCategories=[['portfolio','Portfolio & Job Application'],['cad','CAD Resources'],['rhino','Rhino Resources'],['revit','Revit Resources'],['gh','Grasshopper & Parametric'],['models','3D & Case Study Models'],['diagrams','Diagrams & Graphics'],['site','Site & Urban Design'],['pres','Presentation Templates']];
+const libCat=(k)=>(libraryCategories.find((c)=>c[0]===k)||[k,'Library'])[1];
+export const isLibrary=(d)=>d?.content?.type==='library';
+const formatsOf=(c)=>String(c.formats||'').split(/[\s,;\/]+/).map((f)=>f.replace(/^\./,'').trim()).filter(Boolean).slice(0,8);
+const accessTag=(c)=>c.access==='members'?'<span class="lib-tag lib-members">Members</span>':'<span class="lib-tag lib-free">Free</span>';
+// a library file's card, in the early library's style; its page decides how the file is reached (free link, or members' signed link)
+export function libraryCardHTML(item){const c=item.content||{},img=safeImage(c.image),f=formatsOf(c);
+  return `<a class="resource-card lib-card" href="#/resources/pub/${escapeText(item.id)}" data-lib-category="${escapeText(c.category||'')}"><figure>${img?`<img src="${escapeText(img)}" alt="" loading="lazy">`:`<span class="lib-ph">${escapeText((f[0]||'file').toUpperCase())}</span>`}</figure><span class="eyebrow">${escapeText(libCat(c.category))}</span><h3>${escapeText(c.title)}</h3><p>${f.map((x)=>'.'+escapeText(x)).join(' · ')}${c.size?' · '+escapeText(c.size):''}</p>${accessTag(c)}</a>`;}
+function libraryPageHTML(item){const c=item.content||{},img=safeImage(c.image),f=formatsOf(c),free=c.access!=='members',file=free?https(c.file):'';
+  return `<article class="res-page lib-page"><a class="text-link" href="#/resources#library">← Resource library</a><span class="eyebrow">${escapeText(libCat(c.category))}</span><h1 class="display md">${escapeText(c.title)}</h1><p class="lede">${escapeText(c.summary)}</p>
+  <dl class="lib-facts"><dt>File types</dt><dd>${f.length?f.map((x)=>'.'+escapeText(x)).join(' · '):'Not specified'}</dd><dt>Compatibility</dt><dd>${escapeText(c.compatibility||'Not specified')}</dd><dt>Size</dt><dd>${escapeText(c.size||'Not specified')}</dd><dt>License</dt><dd>${escapeText(c.license||'Not specified')}</dd><dt>Access</dt><dd>${free?'Free to download':'Members with active monthly, yearly or permanent access'}</dd></dl>
+  <p class="res-actions" id="libAction" data-access="${free?'free':'members'}" data-file="${escapeText(free?'':String(c.file||''))}">${free?(file?`<a class="btn accent" href="${escapeText(file)}" target="_blank" rel="noopener">Download ↗</a>`:'<span class="note">The file is not attached yet.</span>'):'<span class="note">Members only: checking your access…</span>'}</p>
+  ${img?`<figure class="article-fig"><img src="${escapeText(img)}" alt="${escapeText(c.imageAlt||'')}" loading="lazy"></figure>`:''}<div class="res-body">${bodyHTML(c.body)}</div>${item.publishedAt?`<p class="note">Published ${escapeText(String(item.publishedAt).slice(0,10))}.</p>`:''}</article>`;}
 export function videoEmbed(url){
   let u;try{u=new URL(String(url||''));}catch{return '';}
   if(u.protocol!=='https:')return '';
@@ -87,10 +107,12 @@ export function videoEmbed(url){
 }
 const https=(u)=>{try{const x=new URL(String(u||''));return x.protocol==='https:'?x.href:'';}catch{return '';}};
 export function resourceCardHTML(item){
+  if(isLibrary(item))return libraryCardHTML(item);
   const c=item.content||{},type=resourceTypes[c.type]?c.type:'paper',meta=[c.authors,c.date].filter(Boolean).map(escapeText).join(' · '),img=safeImage(c.image);
   return `<a class="sim-res res-card" href="#/resources/pub/${escapeText(item.id)}"><span class="eyebrow">${escapeText(resourceTypes[type].replace(/s$/,''))}${meta?' · '+meta:''}</span>${img?`<img class="res-cover" src="${escapeText(img)}" alt="" loading="lazy">`:''}<h3>${escapeText(c.title)}</h3><p>${escapeText(c.summary)}</p><span class="sim-res-cta">${type==='tutorial'&&c.video?'Watch':type==='paper'&&(c.file||c.link)?'Read the paper':'Read'} →</span></a>`;
 }
 export function resourcePageHTML(item){
+  if(isLibrary(item))return libraryPageHTML(item);
   const c=item.content||{},type=resourceTypes[c.type]?c.type:'paper',file=https(c.file),link=https(c.link),img=safeImage(c.image);
   const acts=[file?`<a class="btn accent" href="${escapeText(file)}" target="_blank" rel="noopener">${type==='paper'?'Open the PDF':'Download the file'} ↗</a>`:'',link?`<a class="btn" href="${escapeText(link)}" target="_blank" rel="noopener">${type==='paper'?'Publisher\u2019s page':'Open the link'} ↗</a>`:''].join(' ');
   return `<article class="res-page"><a class="text-link" href="#/resources">← Resources</a><span class="eyebrow">${escapeText(resourceTypes[type].replace(/s$/,''))}${c.date?' · '+escapeText(c.date):''}</span><h1 class="display md">${escapeText(c.title)}</h1>${c.authors?`<p class="res-authors">${escapeText(c.authors)}</p>`:''}<p class="lede">${escapeText(c.summary)}</p>${acts?`<p class="res-actions">${acts}</p>`:''}${videoEmbed(c.video)}${img&&!c.video?`<figure class="article-fig"><img src="${escapeText(img)}" alt="${escapeText(c.imageAlt||'')}" loading="lazy"></figure>`:''}<div class="res-body">${bodyHTML(c.body)}</div>${item.publishedAt?`<p class="note">Published ${escapeText(String(item.publishedAt).slice(0,10))}.</p>`:''}</article>`;
@@ -102,4 +124,22 @@ export async function publishedContent(){
 }
 export async function editContent(action,args={}){
   return Cloud.rpc('pc_site_edit',{p_action:action,...args});
+}
+
+// The whole About page from its content (2026-11-17): the public page and the founder editor's live preview both use this, so
+// what the editor shows is what visitors see
+export function aboutPageHTML(content){
+  const about={...aboutDefault,...(content||{})},L=String(about.headline||'').split('\n'),headline=escapeText(L[0])+(L.length>1?'<br><span>'+L.slice(1).map(escapeText).join('<br>')+'</span>':'');
+  const P=[['Start from the deliverable','We work back from the drawing, the figure or the report you have to hand in, and keep only the steps that get you there.'],['Keep your tools','CAD, Rhino and Revit stay where they are. PlotCloud reads your model so you do not redraw it, re-enter settings or re-lay out sheets.'],['Say what a number is','Every result says whether it matches a reference tool, is verified against known answers, or is a screening estimate.'],['Compare on the same baseline','Two options are only compared when the site, the weather and the study settings are the same, and the page says so.'],['Keep the history','Each result belongs to the model version it ran on. Changing the design never overwrites the evidence behind an earlier decision.'],['Pictures are not proof','A rendering shows a space; it does not test it. Light, air, sound and movement are computed, and labelled as such.']];
+  const C=[['Sun hours','Matches Ladybug Direct Sun Hours on the same inputs, point for point.','Reference check'],['Daylight factor','Within tolerance of Radiance (CIE overcast sky) at every test point.','Reference check'],['Fire evacuation','Passes 18 verification tests after IMO MSC.1/Circ.1533.','Verification'],['Everything else','Screening estimates for comparing options, and labelled that way on every result.','Labelled']];
+  return `<div class="wrap about-page">
+  <header class="about-hero"><div class="page-head"><span class="eyebrow">About PlotCloud</span><h1 class="display md">${headline}</h1><p class="lede">${escapeText(about.intro)}</p></div>
+    <aside class="about-glance" aria-label="At a glance"><span class="eyebrow">At a glance</span><ul><li><b>One model</b> for site, plan, simulation and the report</li><li><b>Sun, wind, daylight, people, water</b> and more, computed in your browser</li><li><b>Every result</b> tied to the model version it ran on</li><li><b>Checked</b> against Ladybug and Radiance where a reference exists</li></ul></aside></header>
+  <section class="about-pair"><article class="about-block"><span class="eyebrow">The problem</span><h2>Performance questions arrive after the design is fixed.</h2><p>Sun, daylight and wind are usually checked late, by someone else, in another tool. The model is rebuilt, the settings typed in again, the figures laid out by hand, and by then the plan has moved on.</p></article>
+    <article class="about-block"><span class="eyebrow">Our approach</span><h2>Ask the question on the model you already have.</h2><p>Bring your design in, run the study on a saved version, change one thing and compare. The figures, the method and the limits travel together into the report.</p><a href="#/simulations">See the studies →</a></article></section>
+  <section class="about-beliefs"><div class="about-sechead"><span class="eyebrow">What we believe</span><h2>Six rules we design by.</h2></div><ol>${P.map(([h,t],i)=>`<li><span>0${i+1}</span><div><h3>${h}</h3><p>${t}</p></div></li>`).join('')}</ol></section>
+  <section class="about-checks"><div class="about-sechead"><span class="eyebrow">How we check our numbers</span><h2>Say what each result is, and how far to trust it.</h2></div><div class="about-checkgrid">${C.map(([h,t,k])=>`<div><small>${k}</small><h3>${h}</h3><p>${t}</p></div>`).join('')}</div><a class="about-checklink" href="#/blog/fire-evacuation-accuracy">Read how the fire evacuation model is verified →</a></section>
+  <section id="aboutStory" class="about-story"><div class="about-sechead"><span class="eyebrow">Our story</span><h2>${escapeText(about.storyTitle)}</h2></div><div class="about-storybody">${bodyHTML(about.story)}<p class="note">Early-design screening does not establish code compliance or replace professional engineering verification.</p></div></section>${aboutExtrasHTML(about)}
+  <section class="about-cta"><div><h2>Start with a question you have today.</h2><p>Sun hours and Daylight are free on every project, and every study runs free on the example projects.</p></div><div class="about-ctas"><a class="btn accent" href="#/new-project">Start a project</a><a class="btn" href="#/start-study">Try an example</a></div></section>
+  </div>`;
 }

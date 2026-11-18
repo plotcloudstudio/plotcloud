@@ -4,6 +4,14 @@ import * as C from '../cloud.js';
 
 export function render(app, _, params) {
   let mode = params.get('signup') ? 'signup' : 'login'; const cloud = C.configured();
+  // a password-reset link signed the person in: ask for the new password (2026-11-17)
+  if (cloud && C.user() && params.get('set')) {
+    app.innerHTML = `<div class="auth"><form id="pw" class="card" style="flex:1 1 380px;max-width:440px;padding:28px;display:grid;gap:14px;margin:0 auto" aria-label="Set a new password"><h1 class="display md" style="font-size:34px">Set a new password.</h1><p class="note">For ${C.user().email}. ${C.PASSWORD_RULE}</p><label class="f">New password<input name="password" type="password" autocomplete="new-password" required minlength="10"></label><label class="f">Repeat it<input name="again" type="password" autocomplete="new-password" required minlength="10"></label><button class="btn accent lg" id="pwGo">Save the new password →</button><p class="msg" id="pwMsg" role="status" aria-live="polite"></p></form></div>`;
+    const say = (t, warn) => { const m = $('#pwMsg', app); m.textContent = t; m.className = 'msg' + (warn ? ' warn' : ' ok'); };
+    $('#pw', app).onsubmit = async (e) => { e.preventDefault(); const fd = new FormData(e.target), pw = String(fd.get('password')); if (pw !== String(fd.get('again'))) return say('The two passwords differ.', true); if (!C.passwordOk(pw)) return say(C.PASSWORD_RULE, true);
+      const go = $('#pwGo', app); go.disabled = true; try { await C.setPassword(pw); toast('Password changed'); location.hash = '#/home'; } catch (er) { say(er.message, true); go.disabled = false; } };
+    return;
+  }
   if (cloud && C.user()) { location.hash = '#/' + (params.get('next') || 'home'); return; }
   const next = params.get('next') || 'home';   // the Dashboard, unless the person was on their way somewhere
   const draw = () => {
@@ -20,9 +28,9 @@ export function render(app, _, params) {
         <div class="seg" role="group" aria-label="Log in or create an account" style="display:grid;grid-template-columns:1fr 1fr"><button type="button" data-m="signup" aria-pressed="${up}">Create account</button><button type="button" data-m="login" aria-pressed="${!up}">Log in</button></div>
         ${up ? '<label class="f">Name<input name="name" autocomplete="name" required></label>' : ''}
         <label class="f">Email<input name="email" type="email" autocomplete="email" required placeholder="you@studio.com"></label>
-        <label class="f">Password<input name="password" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" ${cloud?'required minlength="8"':'disabled placeholder="Cloud registration is not connected"'}></label>
+        <label class="f">Password<input name="password" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" ${cloud?'required minlength="10"':'disabled placeholder="Cloud registration is not connected"'}></label>${cloud&&up?`<p class="note" style="margin:-6px 0 0">${C.PASSWORD_RULE}</p>`:''}
         <button class="btn accent lg" id="go">${cloud?(up?'Create account →':'Log in →'):'Continue with local profile →'}</button>
-        ${cloud ? `<button type="button" class="btn" id="link">Email me a sign-in link instead</button>` : ''}
+        ${cloud ? `<button type="button" class="btn" id="link">Email me a sign-in link instead</button>${up ? '' : '<button type="button" class="btn ghost" id="forgot">Forgot your password?</button>'}` : ''}
         <p class="msg" id="authMsg" role="status" aria-live="polite"></p>
         <p class="note" style="text-align:center">${cloud ? 'Your projects stay in this browser and, once you are signed in, are copied to your PlotCloud account so they follow you to your other devices. The sample project stays in the browser.' : 'Cloud accounts are not switched on for this site yet: your details stay in this browser and no password is stored.'}</p>
       </form></div>`;
@@ -30,9 +38,12 @@ export function render(app, _, params) {
     const say = (t, warn) => { const m = $('#authMsg', app); m.textContent = t; m.className = 'msg' + (warn ? ' warn' : ' ok'); };
     if (cloud) $('#link', app).onclick = async () => { const email = String(new FormData($('#f', app)).get('email') || '').trim(); if (!email) return say('Type your email first.', true);
       try { await C.emailLink(email); say(`Sent: open the link in the email to ${email} on this device.`); } catch (er) { say(er.message, true); } };
+    if (cloud) $('#forgot', app)?.addEventListener('click', async () => { const email = String(new FormData($('#f', app)).get('email') || '').trim(); if (!email) return say('Type your email first, then press Forgot your password.', true);
+      try { await C.resetPassword(email); say(`If ${email} has an account, an email with a link to set a new password is on its way.`); } catch (er) { say(er.message, true); } });
     $('#f', app).onsubmit = async (e) => {
       e.preventDefault(); const fd = new FormData(e.target), email = String(fd.get('email')).trim();
       if (cloud) { const go = $('#go', app); go.disabled = true;
+        if (up && !C.passwordOk(String(fd.get('password')))) { say(C.PASSWORD_RULE, true); go.disabled = false; return; }
         try { const r = up ? await C.signUp(email, String(fd.get('password')), String(fd.get('name') || '').trim()) : await C.signIn(email, String(fd.get('password')));
           if (r.confirm) { say(`Almost there: confirm your email with the link sent to ${email}, then come back.`); go.disabled = false; return; }
           refreshWho(); toast(up ? 'Account created · syncing your projects' : 'Signed in · syncing your projects'); location.hash = '#/' + next; }

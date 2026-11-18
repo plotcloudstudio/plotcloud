@@ -22,8 +22,9 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=fw-20261116-1';
+import { mountChrome } from '../workspace-chrome.js?v=groups-20261117-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
+import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261117-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
@@ -166,7 +167,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=site-20261116-2`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=struct-20261117-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -826,13 +827,17 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   $('#sendSim',app).before(studyChoice);studyChoice.onchange=()=>{try{localStorage.setItem('pc-workspace-study',studyChoice.value);}catch{}};
   // "Add simulation" on the left rail: pick a study, then the same pre-flight and handoff as Send to Simulation
   const addSim=$('#addSimBtn',app),simMenu=document.createElement('div');simMenu.className='w2-simmenu';simMenu.setAttribute('role','menu');simMenu.hidden=true;
-  simMenu.innerHTML=CATEGORIES.filter(c=>c.id!=='table').map(c=>`<div class="w2-simsec" data-cat="${c.id}"><div class="w2-simcat">${esc(c.label.replace(/ analysis$/,''))}</div>`+SIMS.filter(x=>x.id!=='movementdepth'&&(x.category||categoryOf(x.id))===c.id).map(x=>`<button type="button" role="menuitem" data-addsim="${x.id}" ${x.status==='planned'?'data-planned="true"':''}>${esc(x.name)}${x.status==='planned'?'<span class="study-soon">Coming soon</span>':canUse(x.id,p)?'':'<span class="study-soon" title="Free on the example projects; on your own projects it needs monthly access">Monthly access</span>'}</button>`).join('')+'</div>').join('');
+  // grouped by the design question (2026-11-17): every study under its own name, a search by name or the words people use
+  const simItem=x=>`<button type="button" role="menuitem" data-addsim="${x.id}" ${x.status==='planned'?'data-planned="true"':''}>${esc(x.name)}${x.status==='planned'?'<span class="study-soon">Coming soon</span>':canUse(x.id,p)?'':'<span class="study-soon" title="Free on the example projects; on your own projects it needs monthly access">Monthly access</span>'}</button>`,simById=Object.fromEntries(SIMS.map(x=>[x.id,x])),grouped=new Set(STUDY_GROUPS.flatMap(g=>g.ids));
+  simMenu.innerHTML=`<label class="w2-simfind"><span class="sr-only">Find a simulation</span><input type="search" data-simfind placeholder="Search: comfort, sDA, wind…" autocomplete="off"></label><p class="w2-simnone" hidden>No simulation matches. Try another word.</p>`+CATEGORIES.filter(c=>c.id!=='table').map(c=>STUDY_GROUPS.filter(g=>g.scope===c.id).map(g=>`<div class="w2-simsec" data-cat="${c.id}" data-group="${g.id}"><div class="w2-simcat">${esc(g.label)}</div>`+g.ids.map(id=>simById[id]).filter(Boolean).map(simItem).join('')+'</div>').join('')+(()=>{const rest=SIMS.filter(x=>x.id!=='movementdepth'&&!grouped.has(x.id)&&(x.category||categoryOf(x.id))===c.id);return rest.length?`<div class="w2-simsec" data-cat="${c.id}" data-group="more"><div class="w2-simcat">More</div>${rest.map(simItem).join('')}</div>`:'';})()).join('');
+  const simFind=simMenu.querySelector('[data-simfind]'),findSims=()=>{const q=simFind.value.trim();simMenu.querySelectorAll('[data-addsim]').forEach(b=>b.hidden=!!q&&!matchesStudy(b.dataset.addsim,simById[b.dataset.addsim]?.name,q));simMenu.querySelectorAll('.w2-simsec').forEach(sec=>sec.hidden=(!q&&sec.dataset.cat!==simMenu.dataset.cat)||![...sec.querySelectorAll('[data-addsim]')].some(b=>!b.hidden));simMenu.querySelector('.w2-simnone').hidden=!q||!!simMenu.querySelector('.w2-simsec:not([hidden])');};
+  simFind.addEventListener('input',findSims);simFind.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();simMenu.querySelector('.w2-simsec:not([hidden]) [data-addsim]:not([hidden])')?.click();}});
   const addInt=$('#addSimInt',app);let menuBtn=addSim;   // two entries (2026-11-01): Building simulations and Interior simulations, each with its own list
   document.body.append(simMenu);   // fixed-position popover; removed with the page (cleanup)
   const disposeSimPreview=mountSimulationPreview(simMenu,addSim,[...SIMS,...PLANNED_SIMS]);
   const placeMenu=()=>{const r=menuBtn.getBoundingClientRect(),h=Math.min(simMenu.scrollHeight,innerHeight*0.7);simMenu.style.left=(r.right+8)+'px';simMenu.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top-h/2))+'px';};
   const closeMenu=()=>{simMenu.hidden=true;addSim.setAttribute('aria-expanded','false');addInt.setAttribute('aria-expanded','false');};
-  const openFor=(btn,cat)=>e=>{e.stopPropagation();const same=!simMenu.hidden&&menuBtn===btn;closeMenu();if(same)return;menuBtn=btn;simMenu.querySelectorAll('[data-cat]').forEach(x=>x.hidden=x.dataset.cat!==cat);simMenu.hidden=false;placeMenu();btn.setAttribute('aria-expanded','true');simMenu.querySelector(`[data-cat="${cat}"] button`)?.focus();};
+  const openFor=(btn,cat)=>e=>{e.stopPropagation();const same=!simMenu.hidden&&menuBtn===btn;closeMenu();if(same)return;menuBtn=btn;simMenu.dataset.cat=cat;simFind.value='';findSims();simMenu.hidden=false;placeMenu();btn.setAttribute('aria-expanded','true');simMenu.querySelector(`[data-cat="${cat}"] button`)?.focus();};
   addSim.onclick=openFor(addSim,'building');addInt.onclick=openFor(addInt,'interior');
   simMenu.onclick=e=>{const b=e.target.closest('[data-addsim]');if(!b)return;closeMenu();if(plannedStudy(b.dataset.addsim)){if(window.__wsHost)window.__wsHost.open(b.dataset.addsim);else location.hash='#/simulations/'+b.dataset.addsim;return;}studyChoice.value=b.dataset.addsim;studyChoice.onchange();$('#sendSim',app).click();};
   simMenu.onkeydown=e=>{if(e.key==='Escape'){closeMenu();addSim.focus();}};

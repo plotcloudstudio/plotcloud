@@ -549,6 +549,9 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .who-m a, .who-m button { text-align: left; padding: 9px 12px; border-radius: 9px; border: 0; background: none; color: var(--ink); text-decoration: none; font: inherit; font-size: 14px; cursor: pointer; }
 .who-m a:hover, .who-m button:hover { background: var(--chip); }
 .who-id { display: grid; padding: 8px 12px 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; } .who-id small { color: var(--mut2); font-size: 12px; }
+/* the founder links and the sync line sit in the menu's column like the other items (2026-11-17) */
+#adminMenuLink { display: grid; gap: 2px; } #adminMenuLink:empty { display: none; }
+.who-sync { display: block; padding: 8px 12px 2px; margin-top: 4px; border-top: 1px solid var(--line); color: var(--mut2); font-size: 12px; }
 .db { display: grid; gap: 40px; padding-top: 36px; }
 .db-hi { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px; align-items: end; }
 .db-go { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

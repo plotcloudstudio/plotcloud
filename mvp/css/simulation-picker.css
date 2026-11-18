@@ -27,3 +27,7 @@
 @media(max-height:590px){.sim-intent-glyph{height:40px}.sim-intent-glyph svg{height:36px}.sim-intent-front{padding:15px 18px}.sim-intent-front h3{font-size:20px}.sim-intent-inputs{display:none}.sim-intent-description{margin:10px 0}.sim-intent-foot{margin-top:10px}}
 @media(prefers-reduced-motion:reduce){.w2-simmenu button{transition:none}.w2-simmenu button.is-previewed,.w2-simmenu button:hover,.w2-simmenu button:focus-visible{transform:none}.sim-intent-card:before,.sim-intent-card:after{transform:none}}
 .sim-intent-image{margin:14px -8px 12px;background:#f2f4f7;border-radius:9px;overflow:hidden}.sim-intent-image img{display:block;width:100%;height:130px;object-fit:contain}.sim-intent-front h3{font-size:21px}@media(max-height:640px){.sim-intent-image img{height:88px}.sim-intent-description{margin:10px 0}.sim-intent-inputs{display:none}}
+/* grouped by design question, with a search (2026-11-17) */
+.w2-simmenu .w2-simfind{display:block;margin:0 0 6px}.w2-simmenu .w2-simfind input{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #d5dbe3;border-radius:8px;font:inherit;font-size:12px;background:#fff}
+.w2-simmenu .w2-simnone{margin:6px 9px;font-size:11.5px;color:#7d8b9e}.w2-simmenu .w2-simsec[hidden],.w2-simmenu [data-addsim][hidden]{display:none}
+.w2-simmenu .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

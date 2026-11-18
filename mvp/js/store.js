@@ -183,6 +183,7 @@ export function runConditionsStatus(p,r){
 export function renameProject(p, name) { p.name = String(name || '').trim() || p.name; p.updated = now(); save(); }
 export function duplicateProject(p) {
   const q = clone(p); Object.assign(q, { id: uid('p'), name: `${p.name.replace(/ \(sample\)$/, '')} copy`, sample: false, archived: false, created: now(), updated: now() }); delete q.batch;
+  if (p.caseStudy || p.sample) { q.copyOf = p.id; delete q.trySig; }   // a copy of an example is your own project (2026-11-17)
   load().projects.unshift(q); save(); return q;
 }
 export function archiveProject(p, on) { p.archived = !!on; p.updated = now(); save(); }

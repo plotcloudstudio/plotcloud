@@ -26,3 +26,8 @@
 .lp-public.lp-public-resources .resource-reference{padding:20px 0;font-size:13px}
 @media(max-width:900px){.lp-public.lp-public-resources .resource-engine>header{align-items:start;flex-wrap:wrap}.resource-tool-actions{flex-wrap:wrap}.resource-tool-actions label>span{display:none}.lp-public.lp-public-resources .resource-engine header p{max-width:40ch}}
 @media(max-width:600px){.lp-public.lp-public-resources .resource-engine{min-height:530px}.lp-public.lp-public-resources .resource-engine>header{padding:14px}.lp-public.lp-public-resources .resource-engine h1{font-size:21px}.lp-public.lp-public-resources .resource-utility-header h1{font-size:30px}.lp-public.lp-public-resources #utilityBody>.resource-filter{padding:18px}.lp-public.lp-public-resources .resource-output{font-size:17px;padding:18px}}
+/* the resource library (2026-11-17): Free / Members tags, a file-type placeholder, the facts of a library file */
+.lib-tag{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.02em}.lib-free{background:#e8f5ee;color:#166534}.lib-members{background:#0f172a;color:#fff}
+.lib-card figure{display:grid;place-items:center;aspect-ratio:16/10;overflow:hidden}.lib-card figure img{width:100%;height:100%;object-fit:cover}.lib-ph{font:700 22px/1 "JetBrains Mono",ui-monospace,monospace;color:#94a3b8;letter-spacing:.06em}
+.lib-facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:18px 0;font-size:14px}.lib-facts dt{color:#64748b}.lib-facts dd{margin:0}
+.resource-filter:has(#resourceAccess){grid-template-columns:1fr 1fr 2fr 1fr}@media(max-width:900px){.resource-filter:has(#resourceAccess){grid-template-columns:1fr 1fr}}
