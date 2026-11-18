@@ -87,8 +87,8 @@ export function mountChrome(app, api) {
 
   // ---- top left: project name (switch projects) and the level pill
   const tl = el('div', 'sp-tl');
-  tl.innerHTML = `<div class="sp-card sp-proj sp-menuwrap"><button type="button" class="sp-pname" aria-haspopup="menu" aria-expanded="false"><span class="sp-pn">${esc(p.name)}</span><small id="spSub"></small>${I(P.chevron, 14)}</button>
-    <div class="w2-menu sp-pmenu" role="menu" hidden>${S.projects().filter((x) => !x.archived).slice(0, 12).map((x) => `<a role="menuitem" href="#/workspace/${x.id}" ${x.id === p.id ? 'aria-current="page"' : ''}>${esc(x.name)}</a>`).join('')}<hr><button type="button" role="menuitem" data-sp="terrain">Site &amp; terrain</button><a role="menuitem" href="#/home">All projects</a><a role="menuitem" href="#/new-project">New project</a></div></div>`;
+  // the project's name only (2026-11-18): no switching projects from here; click the name to rename it (Enter keeps it, Esc cancels)
+  tl.innerHTML = `<div class="sp-card sp-proj"><button type="button" class="sp-pname" title="Rename the project"><span class="sp-pn">${esc(p.name)}</span><small id="spSub"></small></button></div>`;
   const cap = $('#cap'); cap.classList.add('sp-card', 'sp-level'); tl.append(cap);
   root.append(tl);
   // the project workflow (2026-11-12, P1b): five steps, each marked done from the project's data (onboarding.js workflowState); this one
@@ -96,8 +96,12 @@ export function mountChrome(app, api) {
   const flow = el('nav', 'sp-card sp-flow'); flow.setAttribute('aria-label', 'Project workflow'); tl.append(flow);
   const drawFlow = () => { if (!flow.isConnected && flow.parentNode) return; flow.innerHTML = workflowState(p).map((w) => `<a href="${w.href}" data-flow="${w.id}" ${w.id === 'plan' ? 'aria-current="step"' : ''} data-done="${w.done}" title="${esc(w.t)}${w.done ? ' · done' : ''}"><i>${w.done ? '✓' : w.n}</i>${esc(w.t)}</a>`).join('<span class="sp-flowsep" aria-hidden="true">›</span>'); };
   drawFlow(); S.onSave(() => { if (flow.isConnected) drawFlow(); });
-  const pbtn = $('.sp-pname', tl), pmenu = $('.sp-pmenu', tl);
-  pbtn.onclick = (e) => { e.stopPropagation(); pmenu.hidden = !pmenu.hidden; pbtn.setAttribute('aria-expanded', String(!pmenu.hidden)); };
+  const pbtn = $('.sp-pname', tl);
+  pbtn.onclick = (e) => { e.stopPropagation(); const pn = $('.sp-pn', pbtn); if (pbtn.querySelector('input')) return;
+    const inp = document.createElement('input'); inp.className = 'sp-pnin'; inp.value = p.name; inp.maxLength = 120; inp.setAttribute('aria-label', 'Project name'); pn.replaceWith(inp); inp.focus(); inp.select();
+    let done = false; const end = (keep) => { if (done) return; done = true; const v = inp.value.trim(); if (keep && v && v !== p.name) S.renameProject(p, v); const sp = document.createElement('span'); sp.className = 'sp-pn'; sp.textContent = p.name; inp.replaceWith(sp); };
+    inp.onkeydown = (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') { ev.preventDefault(); end(true); } else if (ev.key === 'Escape') { ev.preventDefault(); end(false); } };
+    inp.onblur = () => end(true); inp.onclick = (ev) => ev.stopPropagation(); };
 
   // ---- top right: saved state, undo / redo, export, import, Send to Simulation
   const tr = el('div', 'sp-card sp-tr');
@@ -162,7 +166,7 @@ export function mountChrome(app, api) {
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
   // the panels card and a study panel share the left side: the card covers the study panel while it is open
-  function openCard(on) { root.classList.toggle('sp-card-open', on); if (on) { closePops(); if (!cmp.hidden) openSheet(false); if (!assetsCard.hidden) openAssets(false); } const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
+  function openCard(on) { if (on) solo('card'); root.classList.toggle('sp-card-open', on); if (on) { closePops(); if (!cmp.hidden) openSheet(false); if (!assetsCard.hidden) openAssets(false); } const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
   let lastTab = UI.tab;
   tabList.addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (!t) return;
     if (t.dataset.tab === 'properties' && !UI.sels.length) { e.stopImmediatePropagation(); openData(dat.hidden); return; }   // Project data
@@ -173,9 +177,16 @@ export function mountChrome(app, api) {
   // a selection switches the card to Properties (Workspace): show it
   new MutationObserver(() => { if (UI.tab !== lastTab) { lastTab = UI.tab; if (UI.tab === 'properties' && UI.sels.length) openCard(true); else if (!['layers', 'versions', 'properties'].includes(UI.tab)) openCard(true); } }).observe(tabList, { childList: true });
 
+  // one panel at a time (2026-11-18): opening any panel of the Workspace closes the others (popovers, the panels card, Compare
+  // sketches, Project data, Assets, Project props, the tool palette, the simulations menu). keep: the one being opened
+  function solo(keep) { const X = { card: () => root.classList.contains('sp-card-open') && openCard(false), sheet: () => !cmp.hidden && openSheet(false), data: () => !dat.hidden && openData(false),
+      assets: () => !assetsCard.hidden && openAssets(false), props: () => !propsCard.hidden && openProps(false), pal: () => root.classList.contains('sp-pal-open') && palOpen(false),
+      sim: () => { const m = document.querySelector('.w2-simmenu'); if (m && !m.hidden) { m.hidden = true; document.getElementById('addSimBtn')?.setAttribute('aria-expanded', 'false'); } } };
+    if (SOLO.busy) return; SOLO.busy = true; try { for (const [k, f] of Object.entries(X)) if (k !== keep) { try { f(); } catch { } } closePops(String(keep || '').startsWith('pop:') ? keep.slice(4) : undefined); } finally { SOLO.busy = false; } }
+  const SOLO = { busy: false };
   function closePops(except) { for (const [k, c] of Object.entries(pops)) if (k !== except) { c.hidden = true; app.querySelector(`[data-sp="${k}"]`)?.setAttribute('aria-pressed', 'false'); } }
   function togglePop(k, anchor) {
-    const c = pops[k], on = c.hidden; closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
+    const c = pops[k], on = c.hidden; if (on) solo('pop:' + k); else closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
     if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis(); if (k === 'sec') { closePops(); secEditor(true); return; } if (k === 'q') drawQ(); if (k === 'xl') drawXL();
     if (k === 'q' || k === 'xl') { const sc = app.querySelector('.sp-studycard'); c.style.left = sc && !sc.hidden ? `${Math.round(sc.getBoundingClientRect().right - root.getBoundingClientRect().left + 8)}px` : '60px'; }   // beside an open study, not over it
     if (['stats', 'spaces'].includes(k)) { openCard(false); if (!dat.hidden) openData(false); if (!cmp.hidden) openSheet(false); }
@@ -183,7 +194,7 @@ export function mountChrome(app, api) {
   }
 
   // ---- the palette (tools from the bottom bar, the Project panel from the bottom left): open and closed from its own button
-  const palOpen = (on, project = false) => { root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); if (on && typeof cmp !== 'undefined' && cmp && !cmp.hidden) openSheet(false); if (on && typeof dat !== 'undefined' && dat && !dat.hidden) openData(false); };
+  const palOpen = (on, project = false) => { if (on) solo('pal'); root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); if (on && typeof cmp !== 'undefined' && cmp && !cmp.hidden) openSheet(false); if (on && typeof dat !== 'undefined' && dat && !dat.hidden) openData(false); };
   palOpen(false);
   app.addEventListener('click', (e) => {
     const b = e.target.closest('[data-panel]'); if (!b) return;
@@ -201,15 +212,15 @@ export function mountChrome(app, api) {
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
-    else if (k === 'terrain') { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); openProject('site'); }
+    else if (k === 'terrain') openProject('site');
     else if (k === 'dim') goView(UI.view === 'plan' ? 'persp' : 'plan');
     else if (k === 'props') openProps(propsCard.hidden);
     else if (k === 'assets') openAssets(assetsCard.hidden);
     else if (k === 'zoomSel') doc()?.getElementById('fitSelectedBtn')?.click();
-    else if (k === 'sec') { e.stopPropagation(); closePops(); if (SE.el) secEditor(false); else secEditor(true); }
+    else if (k === 'sec') { e.stopPropagation(); if (SE.el) secEditor(false); else { solo(); secEditor(true); } }
     else if (pops[k]) { e.stopPropagation(); togglePop(k, b); }
   });
-  const away = (e) => { const inPop = e.composedPath().some((n) => n.nodeType === 1 && (n.matches?.('.sp-pop,[data-sp]')));   /* the path as the click went: a popover that redrew under it still holds it */ if (!inPop && !e.target.closest('.sp-pop,[data-sp]')) closePops(); if (!e.target.closest('.sp-proj')) { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); } };
+  const away = (e) => { const inPop = e.composedPath().some((n) => n.nodeType === 1 && (n.matches?.('.sp-pop,[data-sp]')));   /* the path as the click went: a popover that redrew under it still holds it */ if (!inPop && !e.target.closest('.sp-pop,[data-sp]')) closePops(); };
   document.addEventListener('click', away);
 
   // ---- drop a model anywhere (2026-11-09, as a whiteboard takes a file): drag a file over the Workspace, plan or 3D, and a card
@@ -849,6 +860,7 @@ export function mountChrome(app, api) {
 
   const simMenu = document.querySelector('.w2-simmenu');
   if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { void b; });
+    new MutationObserver(() => { if (!simMenu.hidden) solo('sim'); }).observe(simMenu, { attributes: true, attributeFilter: ['hidden'] });
     simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); $('#addSimInt')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
   const simName = (id) => (api.sims.find((x) => x.id === id) || { name: id }).name;
   // ---- every study in this page (2026-10-30): a study that does not run in the Workspace panel itself mounts its own study page
@@ -2330,7 +2342,7 @@ export function mountChrome(app, api) {
     if (INST.persp.ready && INST.persp.ws.thumb) { const key = cols.find((c) => c.current)?.id; if (key && !THUMB.has(key)) { try { const u = await INST.persp.ws.thumb(); if (u) { THUMB.set(key, u); const im = cmp.querySelector(`[data-sketch="${CSS.escape(key)}"] .sp-sk-pic`); if (im) im.innerHTML = `<img src="${u}" alt="">`; } } catch { } } }
   }
   function parkSave() { const sec = app.querySelector('section[data-tab="versions"]'), sv = $('#saveV'), note = $('#note'); if (sec && sv && note && !sec.contains(sv)) { sec.querySelector('#dirty')?.after(note, sv); sv.textContent = 'Save version'; } }
-  function openSheet(on) { if (on && !dat.hidden) openData(false); cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else parkSave(); }
+  function openSheet(on) { if (on) solo('sheet'); if (on && !dat.hidden) openData(false); cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else parkSave(); }
   cmp.addEventListener('click', async (e) => {
     const g = e.target.closest('[data-grp]'), pin = e.target.closest('[data-pin]'), sk = e.target.closest('[data-sketch]'), b = e.target.closest('[data-cmp]');
     if (g) { const x = shut(); x.has(g.dataset.grp) ? x.delete(g.dataset.grp) : x.add(g.dataset.grp); setShut(x); drawCompare(); return; }
@@ -2440,7 +2452,7 @@ export function mountChrome(app, api) {
         <p class="sp-note">Figures come from the model as it is now (heights from storeys × storey height). Simulation results are the last run of each study in this view; “Model changed since” means the model was edited after that run, so run it again before relying on it. Design checks, not compliance results.</p></div>
       <footer><span class="sp-sk-title">Project data</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-dat="csv" title="A CSV file that Excel opens">Export to Excel</button></span></footer>`;
   }
-  function openData(on) { if (on && !cmp.hidden) openSheet(false); dat.hidden = !on; syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); if (!assetsCard.hidden) openAssets(false); drawData(); } }
+  function openData(on) { if (on) solo('data'); if (on && !cmp.hidden) openSheet(false); dat.hidden = !on; syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); if (!assetsCard.hidden) openAssets(false); drawData(); } }
   dat.addEventListener('click', (e) => {
     const g = e.target.closest('[data-dt-grp]'), sel = e.target.closest('[data-dt-sel]'), sk = e.target.closest('[data-dt-study]'), b = e.target.closest('[data-dat]');
     if (g) { const x = dshut(); x.has(g.dataset.dtGrp) ? x.delete(g.dataset.dtGrp) : x.add(g.dataset.dtGrp); setDshut(x); drawData(); return; }
@@ -2512,7 +2524,7 @@ export function mountChrome(app, api) {
         : '<div class="sp-asempty"><b>No furniture of your own yet</b><p>Import a piece (OBJ, GLB, STL, 3DM); it is kept in your account for every project.</p></div>'}
         <button type="button" class="btn sm primary sp-asbtn" data-as="furn">+ Import furniture</button></section>`;
   }
-  function openAssets(on) { assetsCard.hidden = !on; $('[data-sp="assets"]', root)?.setAttribute('aria-pressed', String(on)); if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); drawAssets(); } }
+  function openAssets(on) { if (on) solo('assets'); assetsCard.hidden = !on; $('[data-sp="assets"]', root)?.setAttribute('aria-pressed', String(on)); if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); drawAssets(); } }
   assetsCard.addEventListener('click', (e) => { const b = e.target.closest('[data-as],[data-as-sel]'); if (!b) return;
     if (b.dataset.asSel) { select(['ps:imp:' + b.dataset.asSel]); return; }
     const k = b.dataset.as; if (k === 'close') openAssets(false);
@@ -2524,7 +2536,7 @@ export function mountChrome(app, api) {
   let disposeProps = null;
   const propCounts = () => { const st = studio() || {}, o = INST.plan.ready ? INST.plan.ws.objects() : []; const c = (k) => o.filter((x) => x.k === k).length;
     return { plot: st.site?.parcel?.pts?.length > 2 ? 1 : 0, building: (st.masses || []).length + (st.imports || []).length, story: (st.levels || []).length, space: c('room'), aperture: c('op'), wall: c('wall'), floor: c('floor'), furniture: c('furn'), context: (st.site?.buildings || []).filter((b) => !b.excluded).length, street: (st.site?.roads || []).length }; };
-  function openProps(on) { propsCard.hidden = !on; $('[data-sp="props"]', root)?.setAttribute('aria-pressed', String(on)); disposeProps?.(); disposeProps = null;
+  function openProps(on) { if (on) solo('props'); propsCard.hidden = !on; $('[data-sp="props"]', root)?.setAttribute('aria-pressed', String(on)); disposeProps?.(); disposeProps = null;
     if (on) { document.querySelectorAll('dialog[open]').forEach((d) => d.close()); openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); studyCard.hidden = true; disposeProps = mountProps(propsCard, p, { counts: propCounts, onClose: () => openProps(false) }); } else if (ST.id) studyCard.hidden = false; }
   window.__wsProps = () => openProps(true);   // studies and the site review open these props while in the Workspace
   // links to the old project settings page (studies, the site review) open the props here instead

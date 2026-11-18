@@ -16,6 +16,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const id = await p.evaluate(async () => (await import('./js/hospital-example.js')).openHospital().id); await p.goto(base + '/mvp/#/workspace/' + id);
     await p.waitForFunction(() => window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 400000 }); await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(1500);
 
+    // ---- the project's name, top left: no switcher; click it to rename (Esc cancels, Enter keeps)
+    assert.equal(await p.locator('.sp-pmenu').count(), 0, 'no project switcher'); assert.equal(await p.locator('.sp-proj a[href^="#/workspace/"]').count(), 0);
+    await p.click('.sp-pname'); await p.fill('.sp-pnin', 'Changed then cancelled'); await p.press('.sp-pnin', 'Escape');
+    await p.click('.sp-pname'); await p.fill('.sp-pnin', 'Hospital, scheme B'); await p.press('.sp-pnin', 'Enter'); await p.waitForTimeout(200);
+    const nm = await p.evaluate(async (pid) => { const S = await import('./js/store.js'); return [document.querySelector('.sp-pn').textContent, S.project(pid).name]; }, id);
+    assert.deepEqual(nm, ['Hospital, scheme B', 'Hospital, scheme B'], 'renamed in place and kept');
+    console.log('PASS the project name: no switcher; renamed in place (Esc cancels, Enter keeps)');
     // ---- the study area: no Change area on the card; 5× by default; set in Simulation quality
     await p.evaluate(() => window.__wsStudy.open('sunhours')); await p.waitForSelector('.sp-studycard'); await p.waitForTimeout(500);
     const card = await p.locator('.sp-studycard').innerText(); assert(!/Change area/.test(card.replace(/Change it in Simulation quality/, '')), 'no Change area button'); assert.match(card, /Study area: 5×/);
@@ -23,7 +30,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('.sp-studycard [data-st=qpop]'); await p.waitForSelector('[data-qarea]', { state: 'visible' });
     await p.click('[data-qarea="3"]'); await p.waitForTimeout(300);
     assert.equal(await p.evaluate(() => window.__wsStudy.state().area), 3); assert.match(await p.locator('.sp-studycard').innerText(), /Study area: 3×/);
-    await p.fill('[data-qarea-in]', '4.5'); await p.press('[data-qarea-in]', 'Tab'); await p.waitForTimeout(300);
+    await p.evaluate(() => { const x = document.querySelector('[data-qarea-in]'); x.value = '4.5'; x.dispatchEvent(new Event('change', { bubbles: true })); }); await p.waitForTimeout(300);
     const kept = await p.evaluate(async (pid) => { const S = await import('./js/store.js'); return [window.__wsStudy.state().area, S.conditionsOf(S.project(pid)).defaults.area]; }, id);
     assert.deepEqual(kept, [4.5, 4.5], 'kept with the project defaults'); assert.match(await p.locator('.sp-studycard').innerText(), /Study area: 4\.5×/);
     console.log('PASS study area: no Change area on the card; 5× by default; set to 3× by a chip and 4.5× typed in Simulation quality, kept with the project');

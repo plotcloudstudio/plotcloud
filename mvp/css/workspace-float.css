@@ -750,3 +750,7 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 .w2.sp .sp-qarea{margin:4px 0 6px}
 .w2.sp .sp-qareain input{width:90px}
 .w2.sp .xl-clear{margin-left:auto;color:#b91c1c}
+/* the project's name, renamed in place (2026-11-18): no switcher */
+.w2.sp .sp-pname{grid-template-columns:auto;cursor:text}
+.w2.sp .sp-pname:hover .sp-pn{text-decoration:underline dotted #9ca3af;text-underline-offset:3px}
+.w2.sp .sp-pnin{font:600 14px Inter,system-ui,sans-serif;color:var(--sp-ink);border:1px solid #93c5fd;border-radius:6px;padding:2px 6px;width:100%;min-width:180px;outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
