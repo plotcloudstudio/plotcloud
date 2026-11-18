@@ -73,7 +73,7 @@ const DOC = {
   views: { name: 'Quality Views', refs: ['LEED v4.1 BD+C, EQ Credit: Quality Views (informative)'], limit: 'A screening of view access from the floor; not a LEED submission.' },
   movementdepth: { name: 'Movement and Depth (Visibility Graph Analysis)', refs: ['Turner, Doxa, O’Sullivan and Penn (2001), From isovists to visibility graphs, Environment and Planning B 28'], limit: 'Configurational analysis of the plan; it does not predict occupant numbers.' },
   isovist: { name: 'Isovists (Seen and Blind Areas)', refs: ['Benedikt, M. L. (1979). To take hold of space: isovists and isovist fields. Environment and Planning B 6'], limit: 'What can be seen from the chosen points at eye height; furniture taller than the eye blocks the view.' },
-  wayfinding: { name: 'Wayfinding (Visual Depth)', refs: [], limit: 'How many changes of view a route needs from the chosen start; a screening of legibility, not a signage design.' },
+  wayfinding: { name: 'Wayfinding and Signage Priority', refs: ['Turner, Doxa, O’Sullivan and Penn (2001), From isovists to visibility graphs, Environment and Planning B 28 (visual depth)'], limit: 'Routes from the lift lobbies, stair landings and entrances over the drawn floor; decision points ranked by a Signage Priority Score from stated factors. A screening of where signs are most needed, not a measured navigation success rate; groups are read from room names.' },
   privacy: { name: 'Visual Privacy', refs: [], limit: 'Lines of sight from the street and from facing buildings into the rooms at eye height; curtains and glazing tints are not modeled.' },
   evac: { name: 'Circulation (Walks Between Rooms)', refs: [], limit: 'Shortest walks between the rooms, weighted by how often each room is used; not an evacuation analysis.' },
   cameras: { name: 'Security Camera Coverage', refs: [], limit: 'Floor area seen by the chosen cameras at their mounting height; lighting and image quality are not modeled.' },
@@ -90,8 +90,11 @@ const cap1 = (v) => (v && /^[a-z]{2}/.test(v) ? v.charAt(0).toUpperCase() + v.sl
 const variantOf = (it) => { if (it.kind === 'series') return /12 months/.test(it.title) ? (it.study === 'sunhours' ? 'Twelve Months (21st of Each Month)' : 'Monthly') : (it.study === 'sunhours' ? 'Equinoxes and Solstices' : 'Seasonal');
   // what this item shows: every part of its title but the study's own name (2026-11-18: before, only the last part, so four views of one
   // level read the same: "Room Acoustics — Level 1" four times)
+  // (a section's own name, "Section A", is in the title already; a single part keeps the old form: "air changes, wind from E…" → "Wind from E…")
   const study = String(it.sub || '').split(' · ')[0].trim().toLowerCase(), all = String(it.title).split(' · ').map((x) => x.trim()).filter(Boolean);
-  return all.length > 1 ? cap1(all.filter((x) => x.toLowerCase() !== study).join(', ')) : ''; };
+  if (all.length < 2) return ''; if (it.kind === 'section') return cap1(all.at(-1).replace(/^[a-z][a-z ]*, (?=[a-z])/, ''));   // a section's title is "Section A · study · what": the what, as before
+  const keep = all.filter((x) => x.toLowerCase() !== study);
+  return keep.length === 1 ? cap1(keep[0].replace(/^[a-z][a-z ]*, (?=[a-z])/, '')) : cap1(keep.join(', ')); };
 const headOf = (it) => { const v = variantOf(it), sec = it.kind === 'section' ? String(it.title).split(' · ')[0] : ''; if (sec) return it.study === 'section' ? `Building ${sec}` : `${sec} — ${docOf(it).name}${v ? ': ' + v : ''}`; return `${docOf(it).name}${v ? ' — ' + v : ''}`; };
 export const headOfItem = (it) => headOf(it);   // for the tests
 const inputsOf = (it) => (it.inputs && it.inputs.length ? it.inputs : [['Basis', it.basis || '']]).concat([['Computed', usTime(it.at)]]);

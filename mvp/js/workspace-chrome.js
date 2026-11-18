@@ -23,7 +23,9 @@ import * as WTRL from '../../emb/lib/water.js?v=water-20261106-1';
 import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261114-1';
-import * as WAY from './interior/wayfinding.js?v=way-20261031-2';
+import * as WAY from './interior/wayfinding.js?v=way-20261118-1';
+import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261118-5';
+import * as WUI from './wayfinding-ui.js?v=wfui-20261118-3';
 import * as SSX from './interior/spacesyntax.js?v=ss-20261114-1';
 import * as ISO from './interior/isovist.js?v=iso-20261114-1';
 import * as VWS from './interior/views.js?v=vw-20261101-1';
@@ -358,7 +360,7 @@ export function mountChrome(app, api) {
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261118-1'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261118-3'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
@@ -715,7 +717,7 @@ export function mountChrome(app, api) {
     about: 'Where people walk between the rooms they use on this level: the shortest routes and an ant colony’s walks, which settle on the good routes and build up as dark bands.' };
   SPEC.privacy = { views: [['exp', 'Seen from outside'], ['need', 'Privacy need']], input: 'privacy', noArea: true, interior: true,
     about: 'How much of each room can be seen from the street and from a building opposite, through the windows of this level.' };
-  SPEC.wayfinding = { mode: ['wayEye', [['1.6', 'Standing 1.6 m'], ['1.2', 'Wheelchair 1.2 m']]], views: [['depth', 'Visual depth'], ['routes', 'Routes']], input: 'wayfinding', noArea: true, interior: true,
+  SPEC.wayfinding = { mode: ['wayEye', [['1.6', 'Standing 1.6 m'], ['1.2', 'Wheelchair 1.2 m']]], views: WUI.VIEWS, input: 'wayfinding', noArea: true, interior: true,
     about: 'How easily each room is found from the start: the walk to its door, the decision points on the way, where a sign helps, and how many look-arounds each spot needs.' };
   // Space syntax and Movement depth (2026-11-01): the visibility graph of this level, as the study page computed it; the page's
   // detail levels, analysis heights and colours
@@ -780,7 +782,7 @@ export function mountChrome(app, api) {
   const SNOWS = [['10', '10 cm'], ['30', '30 cm'], ['60', '60 cm']];
   const STORMS = [['25', '25 mm'], ['50', '50 mm'], ['100', '100 mm']], COVERS = [['lawn', 'Mostly planted', 0.25], ['mixed', 'Mixed', 0.5], ['paved', 'Mostly paved', 0.85]];
   const viewsOf = (id) => { const v = SPEC[id]?.views; return typeof v === 'function' ? v() : v || []; };
-  const sigOf = (id) => JSON.stringify([id, qualOf().k, ST.area, gridOf(), surfOf(), flowOf(), ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], isovist: [ST.isoEye, ST.isoTgt, ST.isoView], daylight: [ST.dlLevel, ST.dlTau, ST.dlRf, ST.dlRw, ST.dlRc, ST.dlHead], cameras: [ST.camMode, ST.camN, ST.camWant, ST.camLevel, ST.camH, ST.camTgt, JSON.stringify(ST.camTypes)], views: [ST.vwLevel, ST.vwEye, ST.vwHead, ST.vwFar, ST.vwNature, ST.vwMotion], spacesyntax: [ST.ssLevel, ST.ssVh, ST.ssGlass], movementdepth: [ST.ssLevel, ST.ssVh, ST.ssGlass], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : ''], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], watersound: [ST.wsLoud, INST.persp.ready ? JSON.stringify(INST.persp.ws.waters?.() || []) : ''], 'fire-evacuation': [ST.egStrat, ST.egRatio, ST.egMix, ST.egUse, ST.egDetect, ST.egRuns, ST.egSeed, JSON.stringify(ST.egFire), JSON.stringify(ST.egCounts || null), ST.cdOcc, ST.cdSpr, ST.cdPub, ST.cdLow, ST.cdDoors, ST.egAsetMode, ST.egAset, ST.egFds && ST.egFds.file, ST.egFdsCol, ST.egFdsDir, ST.egFdsThr, ST.egDrill && ST.egDrill.file + ST.egDrill.times.length, ST.egBlock, ST.egSmoke, ST.egAsm, ST.egStrobe, ST.egCmpBlock, ST.egCmpSmoke, ST.egScenShow, ST.egClin], structure: [ST.system, ST.span, ST.bearing, JSON.stringify(ST.stRoles || {}), ST.stWind ?? '0.6', JSON.stringify(ST.stBraces || [])], vent: [ST.vnMode, ST.vnTout, ST.vnTin, ST.vnWin, ST.vnDoors, ST.vnTarget, ST.vnLo, ST.vnHi, ST.vnMode === 'one' ? ST.windDir : '', ST.vnMode === 'one' ? ST.windSpeed : ''], acoustics: [ST.acFormula, ST.acTarget, ST.acPeople, ST.acTemp, ST.acRh, INST.persp.ready ? INST.persp.ws.level?.() : ''], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
+  const sigOf = (id) => JSON.stringify([id, qualOf().k, ST.area, gridOf(), surfOf(), flowOf(), ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], isovist: [ST.isoEye, ST.isoTgt, ST.isoView], daylight: [ST.dlLevel, ST.dlTau, ST.dlRf, ST.dlRw, ST.dlRc, ST.dlHead], cameras: [ST.camMode, ST.camN, ST.camWant, ST.camLevel, ST.camH, ST.camTgt, JSON.stringify(ST.camTypes)], views: [ST.vwLevel, ST.vwEye, ST.vwHead, ST.vwFar, ST.vwNature, ST.vwMotion], spacesyntax: [ST.ssLevel, ST.ssVh, ST.ssGlass], movementdepth: [ST.ssLevel, ST.ssVh, ST.ssGlass], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : '', JSON.stringify([ST.wayDest, ST.wayAccess, ST.wayGroupsSet, ST.wayAcc, ST.wayManual, ST.waySigns, ST.wayW, ST.wayThr])], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], watersound: [ST.wsLoud, INST.persp.ready ? JSON.stringify(INST.persp.ws.waters?.() || []) : ''], 'fire-evacuation': [ST.egStrat, ST.egRatio, ST.egMix, ST.egUse, ST.egDetect, ST.egRuns, ST.egSeed, JSON.stringify(ST.egFire), JSON.stringify(ST.egCounts || null), ST.cdOcc, ST.cdSpr, ST.cdPub, ST.cdLow, ST.cdDoors, ST.egAsetMode, ST.egAset, ST.egFds && ST.egFds.file, ST.egFdsCol, ST.egFdsDir, ST.egFdsThr, ST.egDrill && ST.egDrill.file + ST.egDrill.times.length, ST.egBlock, ST.egSmoke, ST.egAsm, ST.egStrobe, ST.egCmpBlock, ST.egCmpSmoke, ST.egScenShow, ST.egClin], structure: [ST.system, ST.span, ST.bearing, JSON.stringify(ST.stRoles || {}), ST.stWind ?? '0.6', JSON.stringify(ST.stBraces || [])], vent: [ST.vnMode, ST.vnTout, ST.vnTin, ST.vnWin, ST.vnDoors, ST.vnTarget, ST.vnLo, ST.vnHi, ST.vnMode === 'one' ? ST.windDir : '', ST.vnMode === 'one' ? ST.windSpeed : ''], acoustics: [ST.acFormula, ST.acTarget, ST.acPeople, ST.acTemp, ST.acRh, INST.persp.ready ? INST.persp.ws.level?.() : ''], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
   // the map views of a result: the study's own, or made here from its values
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, svals: r.svals, slo: r.slo, shi: r.shi, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
@@ -1366,37 +1368,14 @@ export function mountChrome(app, api) {
         results: { onTarget: out.ok, judged: out.judged, meanRT: +out.mean.toFixed(2), longest: out.longest ? { room: out.longest.r.name, rt: +out.longest.mid.toFixed(2) } : null, lowestSTI: out.low ? +out.low.sti.toFixed(2) : null, rooms: R.map((x) => ({ room: x.r.name, use: x.grp, rt: +x.mid.toFixed(2), target: x.tgt != null ? +x.tgt.toFixed(2) : null, status: x.status, sti: +x.sti.toFixed(2) })) },
         settings: { formula: ST.acFormula, target: ST.acTarget, people: +ST.acPeople, tC: +ST.acTemp, rh: +ST.acRh, level: sc.source?.level, label: `${FN}, ${ST.acTarget === 'auto' ? 'targets by room name' : ACU.TARGET_SHORT[ST.acTarget]}, ${sc.name?.split(' · ').pop() || 'level'} (Workspace)` } }; }
     if (id === 'wayfinding') {
-      const sc = w.planScene('wayfinding'); if (!sc.walls.length || !(sc.rooms || []).length) throw Error('No rooms on this level: draw the rooms first, or pick another level in the Level menu.');
-      const out = await WAY.run(sc, { start: ST.wayStart, furn: ST.wayFurn, eye: +ST.wayEye }, (f) => { ST.progress = `looking around ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; });
-      const { RES, F, SC: S2 } = out, R = RES.R, o = S2.origin || [0, 0], X0 = o[0] + R.x0, Y0 = o[1] + R.y0, toP = (p) => [p[0] + o[0], p[1] + o[1]];
-      const box = { x0: X0, y0: Y0, x1: X0 + R.W * R.c, y1: Y0 + R.H * R.c }, vis = RES.rooms.filter((x) => !x.skip);
-      const dots = [{ p: toP(RES.start.p), col: '#111', r: 0.45, label: 'S', ring: true }, ...(RES.startHidden.length ? [{ p: toP([RES.start.p[0] + 0.7, RES.start.p[1] + 0.7]), col: '#d8402a', r: 0.3, square: true, label: 'i', al: 1 }] : []),
-        ...RES.decisions.flatMap((d, i) => [{ p: toP(d.p), col: '#f39c12', r: 0.4, label: String(i + 1), ink: '#111', ring: true, al: 1 }, ...(d.hidden.length ? [{ p: toP([d.p[0] + 0.65, d.p[1] + 0.65]), col: '#d8402a', r: 0.28, square: true, label: 'i', al: 1 }] : [])]),
-        ...vis.filter((x) => x.door).map((x) => ({ p: toP(x.door), col: '#3b6fb6', r: 0.16, al: 1 }))];
-      const show = (r, fit) => views2().forEach((w2) => { w2.clearStudy?.(); w2.walkShow?.({ walks: [], T: 0, box, lv: w2.level?.(), z: S2.settings?.floorZ || 0, view: r.view, fit: !!fit, fit2: !!fit, solid: false,
-        paths: vis.filter((x) => x.pts).map((x) => ({ pts: x.pts.map(toP), col: r.view === 'routes' ? '#3b6fb6' : '#1e1e1e', w: r.view === 'routes' ? 0.1 : 0.06, al: r.view === 'routes' ? 0.85 : 0.45 })), dots,
-        density: { X0, Y0, cell: R.c, nx: R.W, ny: R.H, vals: r.view === 'depth' ? RES.depth : new Float32Array(R.W * R.H).fill(NaN), lo: 0, hi: 3 }, rampStops: stopsOf(WAY.DEPTH) }); });
-      const dtxt = (d) => (Number.isFinite(d) ? String(d) : '—');
-      // walking to each room in turn (2026-11-14): people walk the route from the start, the decision points on it light up
-      const routed = vis.filter((x) => x.pts && x.pts.length > 1), lenOf = (pts) => pts.reduce((t, q, n) => (n ? t + Math.hypot(q[0] - pts[n - 1][0], q[1] - pts[n - 1][1]) : 0), 0);
-      const onRoute = (d, pts) => pts.some((q) => Math.hypot(q[0] - d.p[0], q[1] - d.p[1]) < 0.9);
-      const timeline = routed.length ? { n: routed.length, ms: 3200, label: (i) => { const x = routed[i], nd = RES.decisions.filter((d) => onRoute(d, x.pts)).length; return `To ${x.r?.name || x.name || 'a room'} · ${fmt(x.len ?? lenOf(x.pts), 1)} m · ${x.turns ?? 0} turn${x.turns === 1 ? '' : 's'} · ${nd} decision point${nd === 1 ? '' : 's'}`; },
-        show: (i) => { const x = routed[i], P = x.pts.map(toP), dl = RES.decisions.map((d, k) => ({ p: toP(d.p), col: onRoute(d, x.pts) ? '#f97316' : '#d1d5db', r: onRoute(d, x.pts) ? 0.55 : 0.32, label: String(k + 1), ink: '#111', ring: true, al: 1 }));
-          views2().forEach((w2) => w2.walkShow?.({ walks: [], agents: [{ pts: P, len: lenOf(P) }], T: 0, box, lv: w2.level?.(), z: S2.settings?.floorZ || 0, view: 'routes', fit: false, fit2: false, solid: false,
-            paths: [...routed.map((y) => ({ pts: y.pts.map(toP), col: '#94a3b8', w: 0.05, al: 0.5 })), { pts: P, col: '#f97316', w: 0.16, al: 1 }], dots: [{ p: toP(RES.start.p), col: '#111', r: 0.45, label: 'S', ring: true }, ...dl],
-            density: { X0, Y0, cell: R.c, nx: R.W, ny: R.H, vals: new Float32Array(R.W * R.H).fill(NaN), lo: 0, hi: 3 }, rampStops: stopsOf(WAY.DEPTH) })); },
-        reset: () => { if (ST.res) paintRes(ST.res); } } : null;
-      return { X0, Y0, cell: R.c, nx: R.W, ny: R.H, cells: R.W * R.H, avg: F.md, timeline, chartNote: 'Share of the floor at each visual depth from the start; hover a bar for its value.', foot: `${vis.length} rooms routed from ${esc(RES.start.name)}, ${RES.decisions.length} decision points`,
-        views: { depth: { legendCols: stopsOf(WAY.DEPTH).map((x) => x[1]), vals: RES.depth, unit: 'look-arounds', ramp: 'heat', lo: 0, hi: 3, dec: 0, avg: F.md, title: 'Wayfinding · visual depth from the start', legendLabels: ['3 or more', '1 · 2', '0 · in sight'] },
-          routes: { legendCols: ['#3b6fb6', '#3b6fb6'], vals: RES.depth, unit: 'walk to each door', ramp: 'heat', lo: 0, hi: 3, dec: 0, avg: F.md, title: 'Wayfinding · routes to each room', legendLabels: ['Route to a door', '', 'Orange: decision point · red: sign'] } },
-        paint: (r, fit) => show(r, fit),
-        probe: (x, y) => { const i = Math.floor((x - X0) / R.c), j = Math.floor((y - Y0) / R.c); if (i < 0 || j < 0 || i >= R.W || j >= R.H) return null; const k = j * R.W + i, d = RES.depth[k], wk = RES.D[k];
-          return `<div class="sp-kv"><span>Visual depth</span><b>${Number.isFinite(d) ? d + (d === 0 ? ' · in sight of the start' : ' look-around' + (d === 1 ? '' : 's')) : '—'}</b></div>${Number.isFinite(wk) ? `<div class="sp-kv"><span>Walk from the start</span><b>${fmt(wk, 1)} m</b></div>` : ''}`; },
-        rows: [['Decision points', String(RES.decisions.length)], ['Signs suggested', String(F.signs)], ['Rooms seen from the start', `${F.seen} of ${F.vis.length}`], ['Mean visual depth', fmt(F.md, 1)], ['Longest route', F.longest ? `${esc(F.longest.r.name)}, ${fmt(F.longest.len, 1)} m` : '—'], ['Hard to find', F.hard.length ? esc(F.hard.map((x) => x.r.name).join(', ')) : 'none'],
-          ...vis.map((x) => [esc(x.r.name), x.unreached ? 'no way in' : `${fmt(x.len, 1)} m · ${x.turns} turns · depth ${dtxt(x.depth)}`]),
-          ...RES.decisions.map((d, i) => [`Decision point ${i + 1}`, `${d.ways} ways · ${d.hidden.length ? 'sign for ' + esc(d.hidden.join(', ')) : 'the way on is in sight'}`])],
-        method: `From ${esc(RES.start.name)}: the shortest walk to every room's door (${fmt(R.c, 2)} m grid, 8 directions, no cutting corners${ST.wayFurn ? ', furniture in the way' : ''}), pulled tight; where routes split, a decision point, and a sign wherever a room's door is not in sight from there (eye ${ST.wayEye} m; furniture taller than the eye blocks the view). Visual depth: 0 where the start sees, 1 where a spot seen from it sees, and so on. The method of the Wayfinding study, for early layout; signage design and lighting are not modelled.`,
-        results: { decisions: RES.decisions.length, signs: F.signs, depth: +F.md.toFixed(2), seen: F.seen }, settings: { start: RES.start.name, eye: +ST.wayEye, furniture: ST.wayFurn, label: `Wayfinding from ${esc(RES.start.name)} (Workspace)` } }; }
+      // Wayfinding for signs (2026-11-18): from the lift lobbies, stair landings and (ground floor) entrances; routes over real floor; the decision
+      // points and their Signage Priority Score (interior/wayfinding-signage.js); the visual depth map of the first start kept (interior/wayfinding.js)
+      const b = w.buildingScene(), lvId = w.level?.(), A = WFS.analyse(b, WUI.optsOf(ST, lvId, qualOf().k === 'refined'));
+      if (A.none) throw Error(A.none); if (!A.routes.some((x) => !x.noRoute)) throw Error(`No valid route from ${A.chosen.map((x) => x.name).join(', ')}: ${[...new Set(A.routes.map((x) => x.reason))].join('; ') || 'no destination rooms chosen'}.`);
+      let depth = null; const s0 = A.chosen[0], lv = b.levels.find((l) => l.id === A.level.id);
+      try { depth = await WAY.run(lv.sc, { point: s0.p, pointName: s0.name, furn: ST.wayFurn, eye: +ST.wayEye }, (f) => { ST.progress = `looking around ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; }); } catch (e) { console.warn(e); }
+      if (ST.waySel && !A.nodes.some((n) => n.no === ST.waySel)) ST.waySel = null;
+      return WUI.resultOf(A, depth, { esc, fmt, ST, views2, stopsOf, DEPTH: WAY.DEPTH, paintRes: (r) => paintRes(r) }); }
     if (id === 'daylight' && ST.dlWhere === 'section') return daylightSection();
     if (id === 'daylight') {
       const sc = w.planScene('daylight'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
@@ -2105,10 +2084,8 @@ export function mountChrome(app, api) {
           ${adv('egHosp', 'Advanced: runs, ASET, method notes', `${runsSeed}${asetHTML()}
           <p class="sp-note">Patients: one per bed in rooms named ward, patient room, bed bay, ICU or recovery (about one per 12 m² where no beds are placed); staff start at the nurse station. Smoke compartments: at doors 0.95 m or wider across a corridor. Stairs: the model's stairs between levels. Exit: an outside door on the lowest level with one.</p>
           <p class="sp-note">Context: the National Building Code of Canada 2020 (care and treatment occupancies) and CSA Z8000-18 plan for patients to be moved horizontally into the next zone on the same floor first, and down the stairs only if needed. Walking, door and stair flows from the SFPE Handbook; mobility shares, reaction times (median 90 s for patients, 30 s for staff) and staffing are assumptions. A screening of evacuation time: no fire or smoke is computed, and it is not a code compliance check.</p>`, egRS || !!egAset())}`; },
-      wayfinding: () => { let sc = null; try { sc = INST.persp.ws.planScene?.('wayfinding'); } catch { } const S0 = sc ? WAY.startsOf(sc) : [];
-        return `<p class="sp-flabel">Start (${esc(sc?.name?.split(' · ').pop() || 'this level')}, change the level in the Level menu)</p>${S0.length ? `<select class="sp-sel" data-way="start">${S0.map((x) => `<option value="${esc(x.id)}" ${x.id === ST.wayStart ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '<p class="sp-note">No rooms on this level yet.</p>'}
-          <label class="sp-check"><input type="checkbox" data-way="furn" ${ST.wayFurn ? 'checked' : ''}> Furniture is in the way when walking</label>
-          <p class="sp-note">Furniture taller than the eye blocks the view; lower pieces are seen over. Doors count as open passages. Corridors, halls, lobbies, landings and stairs are walked through, not destinations.</p>`; },
+      wayfinding: () => { let P = null; try { const w0 = INST.persp.ws, lvId = w0.level?.(), key = lvId + '|' + studyModel(w0).length + '|' + JSON.stringify([ST.wayAccess, ST.wayGroupsSet, ST.wayManual]);
+          if (ST._wfPrev?.key !== key) ST._wfPrev = { key, P: WUI.preview(w0.buildingScene(), lvId, ST) }; P = ST._wfPrev.P; } catch (e) { console.warn(e); } return WUI.settingsHTML(P, ST, esc); },
       privacy: () => { const P = ST.priv, side = (k, n) => `<button type="button" data-priv-side="${k}" aria-pressed="${P.sides.includes(k)}">${n}</button>`, num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-priv="${k}" min="${min}" max="${max}" step="${st}" value="${P[k]}"> ${u}</span></label>`;
         let sc = null; try { sc = INST.persp.ws.planScene?.('privacy'); } catch { } const rooms = sc?.rooms || [], proj = sc?.source?.project || 'sample', nd = PKEEP.get('privacy:' + proj, {});
         return `<p class="sp-flabel">Street on these sides of the plan</p><div class="sp-chips sp-chips-in">${side('top', 'Top')}${side('right', 'Right')}${side('bottom', 'Bottom')}${side('left', 'Left')}</div>
@@ -2197,7 +2174,28 @@ export function mountChrome(app, api) {
   let sfRaf = 0; root.addEventListener('input', (e) => { const t = e.target; if (!t.dataset || t.dataset.sf !== 'scale' || !frameNow()) return; ST.stScale = +t.value; const lab = legend.querySelector('.sp-lbdefv'), au = legend.querySelector('.sp-lbdefa'); if (lab) lab.textContent = '×' + fmt(+t.value); if (au) au.textContent = '';
     if (!sfRaf) sfRaf = requestAnimationFrame(() => { sfRaf = 0; frameRepaint(true); }); });
   studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.stNum || t.dataset.stSel; if (!k || ST.busy) return; ST[k] = t.dataset.stNum ? (Number.isFinite(+t.value) ? +t.value : ST[k]) : t.value; drawStudy(); });
-  studyCard.addEventListener('change', (e) => { const wk = e.target.dataset.way; if (wk) { if (wk === 'start') ST.wayStart = e.target.value; else ST.wayFurn = e.target.checked; drawStudy(); } });
+  // Wayfinding settings and results (2026-11-18)
+  const wfOrigin = () => { try { return INST.persp.ws.planScene('wayfinding').origin || [0, 0]; } catch { return [0, 0]; } };
+  studyCard.addEventListener('change', (e) => { const t = e.target, d = t.dataset; if (ST.id !== 'wayfinding' || ST.busy) return; WUI.settings(ST);
+    if (d.way === 'start') ST.wayStart = t.value; else if (d.way === 'furn') ST.wayFurn = t.checked; else if (d.way === 'acc') ST.wayAcc = t.checked; else if (d.way === 'other') ST.wayDest = { ...ST.wayDest, other: t.checked };
+    else if (d.way === 'room') { ST.wayRoom = t.value; drawStudy(); return; }
+    else if (d.wayGrp != null) { const g = new Set(ST.wayDest.groups); if (t.checked) g.add(d.wayGrp); else g.delete(d.wayGrp); ST.wayDest = { ...ST.wayDest, groups: [...g] }; }
+    else if (d.wayRoom != null) { const g = new Set(ST.wayDest.rooms); if (t.checked) g.add(d.wayRoom); else g.delete(d.wayRoom); ST.wayDest = { ...ST.wayDest, rooms: [...g] }; }
+    else if (d.wayAcc != null) ST.wayAccess = { ...ST.wayAccess, [d.wayAcc]: t.checked ? 'public' : 'staff' };
+    else if (d.wayW) ST.wayW = { ...ST.wayW, [d.wayW]: Math.max(0, +t.value || 0) };
+    else return; drawStudy(); });
+  studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-way-dmode], [data-way-sel], button[data-way]'); if (!b || ST.id !== 'wayfinding' || ST.busy) return; WUI.settings(ST); const d = b.dataset;
+    if (d.wayDmode) { ST.wayDest = { ...ST.wayDest, mode: d.wayDmode }; drawStudy(); return; }
+    if (d.waySel) { const n = ST.res?.wayA?.nodes.find((x) => x.no === +d.waySel); ST.waySel = ST.waySel === +d.waySel ? null : +d.waySel; if (ST.res) { if (n && ST.waySel) ST.res.wayFocus(n); else paintRes(ST.res); } drawStudy(); return; }
+    const pane = activePane(), lvId = INST.persp.ws.level?.();
+    if (d.way === 'pickstart') { ST.wayPick = ST.wayPick === 'start' ? null : 'start'; pane.ws.pickPoint?.(ST.wayPick ? (pt) => { const o = wfOrigin(); ST.wayManual = [...ST.wayManual, { p: [pt[0] - o[0], pt[1] - o[1]], lv: lvId }]; ST.wayPick = null; ST.wayStart = 'all'; drawStudy(); } : null); drawStudy(); return; }
+    if (d.way === 'nomanual') { ST.wayManual = ST.wayManual.filter((m) => m.lv !== lvId); drawStudy(); return; }
+    if (d.way === 'nosigns') { ST.waySigns = ST.waySigns.filter((g) => g.lv !== lvId); drawStudy(); return; }
+    if (d.way === 'addsign') { if (ST.wayPick) { ST.wayPick = null; pane.ws.pickPoint?.(null); drawStudy(); return; } ST.wayPick = 'sign'; let at = null;
+      const second = (pt) => { const o = wfOrigin(), q = [pt[0] - o[0], pt[1] - o[1]]; ST.waySigns = [...ST.waySigns, { p: at, face: Math.round(Math.atan2(q[1] - at[1], q[0] - at[0]) * 180 / Math.PI), lv: lvId }]; ST.wayPick = null; drawStudy(); };
+      pane.ws.pickPoint?.((pt) => { const o = wfOrigin(); at = [pt[0] - o[0], pt[1] - o[1]]; ST.wayPick = 'signface'; drawStudy(); setTimeout(() => pane.ws.pickPoint?.(second), 0); }); drawStudy(); return; }
+    if (d.way === 'entry') { const A = ST.res?.wayA, en = A && A.entrances.find((x) => x.room === ST.wayRoom); const w0 = INST.persp.ws; if (d.v === 'off' || !en) { w0.eyeView?.(null); return; } const o = A.F.SC.origin || [0, 0], P = (p) => [p[0] + o[0], p[1] + o[1]];
+      goView('persp'); setTimeout(() => w0.eyeView?.(d.v === 'out' ? { p: P(en.door), look: P(en.out), lv: lvId } : { p: P(en.cam), look: P(en.door), lv: lvId }), 50); return; } });
   studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.priv; if (k) { ST.priv = { ...ST.priv, [k]: k === 'doors' ? t.checked : +t.value }; drawStudy(); return; }
     if (t.dataset.privneed != null) { let sc = null; try { sc = INST.persp.ws.planScene('privacy'); } catch { } const key = 'privacy:' + (sc?.source?.project || 'sample'), m = PKEEP.get(key, {}); if (t.value) m[t.dataset.privneed] = t.value; else delete m[t.dataset.privneed]; PKEEP.set(key, m); ST.privNeedV = (ST.privNeedV || 0) + 1; drawStudy(); return; } });
   studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-iso="pick"]'); if (!b || ST.busy) return; const pane = activePane(); if (!pane.ready || !pane.ws.pickPoint) return;

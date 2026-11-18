@@ -11,6 +11,7 @@ const depthCol = (d) => ramp(DEPTH, Math.min(d, 3) / 3);
 // ---- the start: each door to the outside, else a room
 function starts() {
   const out = [];
+  if (OPTS.point) out.push({ id: 'pt', name: OPTS.pointName || 'Start', p: OPTS.point.slice() });   // (2026-11-18) a start given by the signage analysis: a lift lobby, a stair landing or an entrance
   SC.open.filter((o) => o.kind === 'door' && o.ext).forEach((o, i) => { const m = [(o.a[0] + o.b[0]) / 2, (o.a[1] + o.b[1]) / 2], dx = o.b[0] - o.a[0], dy = o.b[1] - o.a[1], L = Math.hypot(dx, dy) || 1, n = [-dy / L, dx / L];
     const inRoom = (p) => SC.rooms.some((r) => r.rects.some(([x, y, w, d]) => p[0] >= x && p[0] <= x + w && p[1] >= y && p[1] <= y + d));
     const p = [m[0] + n[0] * 0.5, m[1] + n[1] * 0.5], q = [m[0] - n[0] * 0.5, m[1] - n[1] * 0.5]; out.push({ id: 'd' + i, name: `Door to outside ${i + 1} (${r1(o.w || L)} m)`, p: inRoom(p) ? p : q, door: o }); });
@@ -103,6 +104,6 @@ function figures() {
 }
 
 export function startsOf(scene) { SC = scene; return starts(); }
-export async function run(scene, o, prog) { SC = { ...scene, walls: scene.walls || [], open: scene.open || [], rooms: scene.rooms || [], furn: scene.furn || [] }; OPTS = { start: o.start || '', furn: !!o.furn }; EYE = o.eye || 1.6; RES = null;
+export async function run(scene, o, prog) { SC = { ...scene, walls: scene.walls || [], open: scene.open || [], rooms: scene.rooms || [], furn: scene.furn || [] }; OPTS = { start: o.point ? 'pt' : o.start || '', furn: !!o.furn, point: o.point || null, pointName: o.pointName || '' }; EYE = o.eye || 1.6; RES = null;
   await analyse({ say() {}, prog: prog || (() => {}) }); if (!RES) throw Error('Stopped.'); return { SC, RES, F: figures() }; }
 export { DEPTH, depthCol };

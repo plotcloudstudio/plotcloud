@@ -6759,6 +6759,15 @@ window.S3 = (() => {
     if (!SFR.tubes) return null; const h = ray(cx, cy).intersectObject(SFR.tubes, false); return h.length && h[0].faceIndex != null ? SFR.faceMember[h[0].faceIndex] ?? null : null; };
   api.structFramePreview = (b, kind) => { if (!SFR.g) return; if (SFR.preview) { SFR.g.remove(SFR.preview); SFR.preview.geometry.dispose(); SFR.preview = null; } if (b) { const A = p3(b.a), B = p3(b.b), C = p3([b.b[0], b.b[1], b.a[2]]), D = p3([b.a[0], b.a[1], b.b[2]]), pts = kind === 'X' ? [A, B, C, D] : [A, B];
       const g = new T.BufferGeometry().setFromPoints(pts); const ln = new T.LineSegments(g, new T.LineDashedMaterial({ color: 0xf59e0b, dashSize: 0.3, gapSize: 0.18, depthTest: false })); ln.computeLineDistances(); ln.renderOrder = 20; SFR.g.add(ln); SFR.preview = ln; } render(); };
+  // wayfinding signs in 3D (2026-11-18): a 0.6 × 0.3 m panel on a post, its face at 2.1 m, turned to face the people it serves, in its class colour
+  const SGN = { g: null };
+  api.signs = (list) => { if (!scene) return; if (SGN.g) { scene.remove(SGN.g); SGN.g.traverse((x) => { x.geometry && x.geometry.dispose(); x.material && x.material.dispose(); }); SGN.g = null; } if (!list || !list.length) { render(); return; }
+    const G = new T.Group(); G.name = 'wf-signs';
+    for (const s of list) { const z = s.z || 0, col = new T.Color(s.col || '#d8402a'), face = (s.face || 0) * Math.PI / 180, panel = new T.Mesh(new T.BoxGeometry(0.6, 0.3, 0.04), new T.MeshLambertMaterial({ color: col }));
+      panel.position.set(s.p[0], z + 2.1, -s.p[1]); panel.rotation.y = face - Math.PI / 2; panel.name = 'wf-sign'; G.add(panel);
+      const post = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 2.0, 8), new T.MeshLambertMaterial({ color: 0x4b5563 })); post.position.set(s.p[0], z + 1.0, -s.p[1]); post.name = 'wf-post'; G.add(post); }
+    scene.add(G); SGN.g = G; render(); };
+  api._signs = () => (SGN.g ? SGN.g.children.filter((x) => x.name === 'wf-sign').length : 0);
   api._structFrame = () => { if (!SFR.g) return null; const n = {}; SFR.g.traverse((x) => { if (x.name && x.name.startsWith('sf-')) n[x.name] = (n[x.name] || 0) + 1; }); return { parts: n, tris: SFR.tubes ? SFR.tubes.geometry.attributes.position.count / 3 : 0, model: grp ? grp.visible : null, preview: SFR.preview ? SFR.preview.geometry.attributes.position.count / 2 : 0, bays: SFR.bays ? SFR.bays.length : 0, deform: SFR.on ? SFR.on.deform : 0 }; };
   function tintApply() { if (!grp) return; grp.traverse((m) => { if (!m.isMesh) return; const ud = m.userData; if (!ud || ud.k !== 'mass') return; if (!m.userData.__tint0) m.userData.__tint0 = m.material;
       const c = STRP.tint && STRP.tint[ud.id]; m.material = c ? new T.MeshLambertMaterial({ color: new T.Color(c), transparent: true, opacity: 0.38, depthWrite: false, side: T.DoubleSide }) : m.userData.__tint0; }); }
@@ -7958,6 +7967,10 @@ if (window.__WSROLE) {
     structFrameMode(mode, cb, kindOf) { SFM.mode = mode || null; SFM.cb = cb || null; SFM.kindOf = kindOf || null; SFM.hover = null; if (window.S3 && S3.structFramePreview) S3.structFramePreview(null); },
     structFramePick(cx, cy, what) { return window.S3 && S3.structFramePick ? S3.structFramePick(cx, cy, what) : null; },
     structFrameState() { return window.S3 && S3._structFrame ? S3._structFrame() : null; },
+    // wayfinding (2026-11-18): sign panels in 3D, and an eye-level view from a spot looking at another (the Room Entrance View)
+    signShow(list) { if (window.S3 && S3.signs) S3.signs(list); },
+    signCount() { return window.S3 && S3._signs ? S3._signs() : 0; },
+    async eyeView(o) { if (!o) { if (WALKING) walkExit(); return null; } const ang = Math.atan2(o.look[1] - o.p[1], o.look[0] - o.p[0]); poseSet({ x: +o.p[0].toFixed(3), y: +o.p[1].toFixed(3), angle: ang, lv: o.lv || LV }); if (WALKING) walkExit(); await walkGo(); if (o.eye && window.S3 && S3.walk) { S3.walk.place(o.p[0], o.p[1]); } return window.S3 && S3.walk ? S3.walk.state() : null; },
     // the walls and levels the structure is laid out from (2026-11-17)
     structInput() { const hid = new Set(M.hiddenIds || []); return { levels: M.levels.map((l) => ({ id: l.id, z: l.z, h: l.h, name: l.name })), walls: M.walls.filter((w) => !hid.has(w.id)).map((w) => ({ id: w.id, lv: w.lv, a: w.a.slice(), b: w.b.slice(), t: w.t, h: w.h, mat: w.mat || '', layer: w.layer || '', sourceLayer: w.sourceLayer || '', bulge: w.bulge || 0 })), masses: massList(M).length }; },
     structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = [...o.cols.map((c) => c.x), ...(o.grid || []).flatMap((L) => [L.a[0], L.b[0]])], ys = [...o.cols.map((c) => c.y), ...(o.grid || []).flatMap((L) => [L.a[1], L.b[1]])]; FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
@@ -8002,6 +8015,7 @@ if (window.__WSROLE) {
     studyCell(c) { STUDY_CELL = c > 0 ? Math.max(0.25, +c) : 0; return STUDY_CELL; },
     toScreen(p) { const q = W2S(p), c = ((CAM === '3d' && window.S3 && S3.on) ? cv3 : cv).getBoundingClientRect(); return [q[0] + c.left, q[1] + c.top]; },
     pickPoint(cb) { PICK1 = typeof cb === 'function' ? cb : null; stage.style.cursor = PICK1 ? 'crosshair' : ''; },
+    _pick(p) { if (!PICK1) return false; const f = PICK1; PICK1 = null; stage.style.cursor = ''; f([p[0], p[1]]); return true; },   // tests: a pick at a plan point, as the click gives
     // the section (2026-11-07): draw its line on the plan (two clicks; cb(true) once drawn, cb(false) on Esc), read it, change it, view it
     section() { const s = secOf(); return s ? { ...JSON.parse(JSON.stringify(M.section)), pts: s.pts, len: +s.len.toFixed(3), look: s.look, segs: s.segs.map((g) => ({ a: g.a, b: g.b, u: g.u, look: g.look, len: +g.len.toFixed(3), s0: +g.s0.toFixed(3) })) } : null; },
     // o: null removes it; { pts, flip, on, far, name } sets what is given (the line made where there is none)
@@ -8046,7 +8060,7 @@ if (window.__WSROLE) {
     surfacePaint(o) { const R = RAMPS_TOP[o && o.ramp] || RAMPS_TOP.ladybug; if (!o || !SURF.list || !SURF.list.length) { if (window.S3 && S3.surface) S3.surface(null); return; }
       const col = (v) => { if (!Number.isFinite(v)) return null; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rampAtTop(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo))); return [m[1] / 255, m[2] / 255, m[3] / 255]; };
       if (window.S3 && S3.on && S3.surface) S3.surface({ list: SURF.list, cols: Array.from(o.vals, col) }); },   /* Array.from: a Float32Array's map would keep only numbers */
-    clearStudy() { flowStop(); if (window.S3 && S3.streaks) S3.streaks(null); if (window.S3 && S3.vplane) S3.vplane(null); if (SECF) { SECF = null; secSync(); } egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (window.S3 && S3.structFrame) S3.structFrame(null); STF2 = null; SFM.mode = null; SFM.cb = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    clearStudy() { flowStop(); if (window.S3 && S3.streaks) S3.streaks(null); if (window.S3 && S3.vplane) S3.vplane(null); if (SECF) { SECF = null; secSync(); } egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (window.S3 && S3.structFrame) S3.structFrame(null); STF2 = null; SFM.mode = null; SFM.cb = null; if (window.S3 && S3.signs) S3.signs(null); if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }
