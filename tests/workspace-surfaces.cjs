@@ -52,8 +52,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log(`PASS finer grids from Project props: building ${before} → ${fine.n} squares at 0.25 m, ground cells at ${fine.cell} m; estimated ${Math.round(fine.est)} ms, took ${fine.ms} ms`);
     await p.click('#addSimBtn'); await p.click('.w2-simmenu [data-addsim=wind]'); await p.locator('.sp-studycard .sp-est').waitFor({ timeout: 30000 }); const west = await p.locator('.sp-studycard .sp-est').innerText();
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 600000 });
-    const wf = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, cell: s.res.cell, nx: s.res.nx, ms: s.res.ms, est: s.estAtRun?.ms }; });
-    assert(!wf.err && wf.cell <= 2.01 && wf.nx > 160, JSON.stringify(wf)); assert(wf.est > wf.ms / 8 && wf.est < wf.ms * 8, `wind estimate in range ${JSON.stringify(wf)}`);
+    // since 2026-11-18 the studied area is the building's size times 2.5 (it was the building and 40 m round it, times 3): the wind grid covers that area
+    const wf = await p.evaluate(() => { const s = window.__wsStudy.state(), a = __ws2.inst.persp.ws.studyArea(s.area); return { err: s.err, cell: s.res.cell, nx: s.res.nx, ms: s.res.ms, est: s.estAtRun?.ms, area: s.area, areaW: a?.w }; });
+    assert(!wf.err && wf.cell <= 2.01 && wf.area === 2.5 && wf.nx * wf.cell >= 0.9 * wf.areaW && wf.nx > 30, JSON.stringify(wf)); assert(wf.est > wf.ms / 8 && wf.est < wf.ms * 8, `wind estimate in range ${JSON.stringify(wf)}`);
     console.log(`PASS wind on the Fine flow grid: ${wf.nx} cells across at ${wf.cell.toFixed(2)} m; estimated ${Math.round(wf.est)} ms (${west.split('·')[0].trim()}), took ${wf.ms} ms`);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }

@@ -844,7 +844,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 
 
 <script type="importmap">
-{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "three/addons/exporters/OBJExporter.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/OBJExporter.js", "fflate": "./furniture/fflate.js", "pc/models.js": "./furniture/models.js?v=entourage-20261102-1", "pc/geom.js": "./furniture/geom.js?v=entourage-20261102-1", "pc/": "./furniture/", "pc-base/": "./furniture/", "pc-doors/": "./doors/", "pc-stairs/": "./stairs/" } }
+{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "three/addons/exporters/OBJExporter.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/OBJExporter.js", "fflate": "./furniture/fflate.js", "pc/models.js": "./furniture/models.js?v=entourage-20261102-1", "pc/geom.js": "./furniture/geom.js?v=speed-20261118-1", "pc/": "./furniture/", "pc-base/": "./furniture/", "pc-doors/": "./doors/", "pc-stairs/": "./stairs/" } }
 </script>
 <script src="studio-geometry.js?v=20261021-drawing1"></script>
 <script type="module">
@@ -2340,8 +2340,11 @@ function afterLoad(refit) { if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !sel
 
 // ---------- rebuild and analyze ----------
 let aT = 0;
+// speed (2026-11-18): M3REV counts model changes; LAST3D is the one the 3D view was built from, so a new selection alone only
+// redraws the red outlines instead of rebuilding the scene
+let M3REV = 0, LAST3D = -1;
 function changed(live, keepProps) {
-  cycleClear();
+  M3REV++; cycleClear();
   S = STC.build(M); clearTimeout(aT); aT = setTimeout(analyse, live ? 140 : 30); miniSoon();
   draw(); levelsUI(); layersUI(); if (!keepProps) propsUI(); $('#undo').disabled = !UNDO.length; $('#redo').disabled = !REDO.length;
   const nw = lvWalls().length; $('#empty').hidden = nw > 0 || CAM === '3d' || !!M.site;
@@ -3147,7 +3150,7 @@ $$('[data-ovl]').forEach((c) => c.addEventListener('change', () => { LAY[c.datas
 addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveProject(); } });
 $('#ghost').addEventListener('change', draw);
 function stripTo() { const cp = $('#chartp'), c = $({ air: '#cAir', day: '#cDay', view: '#cView' }[SHOW]); if (!cp || !c) return; const grp = c.closest('.cpg') || c; const left = SHOW === 'air' ? 0 : grp.offsetLeft - 18; if (cp.scrollWidth > cp.clientWidth + 4) cp.scrollTo({ left, behavior: 'smooth' }); }
-function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, imports: (M.imports || []).filter((o) => impOn(o, '3d')), lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit }); }
+function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; LAST3D = M3REV; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, imports: (M.imports || []).filter((o) => impOn(o, '3d')), lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit }); }
 
 // ---------- levels ----------
 const lvShort = (l) => `${lvSorted().findIndex((q) => q.id === l.id) + 1}F`;
@@ -3204,7 +3207,9 @@ $('#clear').addEventListener('click', () => { const n = LAYER === 'Wall' ? lvWal
 $('#undo').addEventListener('click', undo); $('#redo').addEventListener('click', redo);
 
 // ---------- properties of the selection ----------
-function changedSel() { propsUI(); draw(); if (window.S3 && S3.on) upd3D(); }
+const sel3 = () => (SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null);
+function reselect3D() { if (!window.S3 || !S3.on) return; if (LAST3D === M3REV && S3.reselect && S3.reselect(sel3())) return; upd3D(); }
+function changedSel() { propsUI(); draw(); reselect3D(); }
 function genPropsHTML(o) {   // the generator's own parameters, in the Properties panel
   const m = genModel(o.gen.id), v = {...REG[o.gen.id].defaults(m),...o.gen.vals}, F = [], isOp = isOpGen(o), HID = isOp ? ['wall', 'wallL', 'T'] : [];
   F.push(`<div class="cell full sz">${isOp ? `${Math.round(o.w * 1000)} × ${Math.round((o.head - o.sill) * 1000)} mm, sill ${Math.round(o.sill * 1000)}` : `${Math.round(o.w * 1000)} × ${Math.round(o.d * 1000)} × ${Math.round(o.h * 1000)} mm`}</div>`);
@@ -4019,7 +4024,8 @@ function gizmoTarget() {
   if (!F) return null;
   const f = { id: o.id, lv: o.lv || LV, x: F.c[0], y: F.c[1], rot: F.th || 0, w: Math.max(.08, F.hw * 2), d: Math.max(.08, F.hd * 2), h: Math.max(.04, h) };
   // Openings slide along their host; ceiling panels have no rotation in the model.
-  f.axes = kind === 'op' ? ['x'] : kind === 'ceil' || kind === 'light' && isWallType(o.type, o.p) ? ['x', 'y'] : ['floor', 'void', 'fence', 'mass', 'ctx'].includes(kind) ? ['x', 'y', 'r', 'sx', 'sy'] : ['x', 'y', 'r'];
+  f.axes = kind === 'op' ? ['x'] : kind === 'ceil' || kind === 'light' && isWallType(o.type, o.p) ? ['x', 'y'] : ['floor', 'void', 'fence', 'mass', 'ctx'].includes(kind) ? ['x', 'y', 'r', 'sx', 'sy'] : kind === 'imp' ? ['x', 'y', 'r', 'z'] : ['x', 'y', 'r'];
+  f.dz = 0;   // up or down (imports, 2026-11-17)
   f.sx = 1; f.sy = 1;
   const origin = { x: f.x, y: f.y, rot: f.rot };
   const sourcePoints = points?.map(p => p.slice());
@@ -4051,6 +4057,7 @@ function gizmoTarget() {
         }
       } else if (kind === 'imp') {
         Object.assign(o, JSON.parse(JSON.stringify(original))); setImpAng(o, impAng(original) + (f.rot - origin.rot), f.x, f.y);   // any angle (2026-11-01)
+        if (f.dz) o.g.z = +(original.g.z + f.dz).toFixed(4);
       } else {
         const p = transform([original.x, original.y]); o.x = p[0]; o.y = p[1];
         if (kind === 'light') {
@@ -4066,6 +4073,15 @@ function gzTurn(D, p, e) {
   const f = D.f, a = Math.atan2(p[1] - f.y, p[0] - f.x), raw = D.r0 + a - D.a0, quarter = false;
   const st = (quarter ? 90 : e.shiftKey ? 15 : 1) * Math.PI / 180, rot = Math.round(raw / st) * st; f.rot = ((rot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
   const turn = Math.round((rot - D.r0) * 180 / Math.PI); tipAt(e, `${turn >= 0 ? '+' : ''}${turn}° · ${Math.round(f.rot * 180 / Math.PI) % 360}°${quarter ? ' (quarter turns)' : e.shiftKey ? ' · 15° steps' : ' · Shift for 15° steps'}`);
+}
+function nameDetected(src) { const ls = M.levels.filter((l) => l.det === src).sort((a, b) => a.z - b.z), st = ls.filter((l) => !l.roof), g = st.findIndex((l) => l.z > -0.3); const g0 = g < 0 ? st.length : g;
+  const others = new Set(M.levels.filter((l) => l.det !== src).map((l) => l.name)); st.forEach((l, i) => { const n = i < g0 ? 'B' + (g0 - i) : i - g0 + 1 + 'F'; l.name = others.has(n) ? n + ' (' + src.replace(/\.[^.]+$/, '').slice(0, 20) + ')' : n; }); }   // all renamed at once: no clash with each other
+function gzLift(D, e) {
+  const Z = D.zs; if (!Z) return D.dz0 || 0; const ax = Z.t[0] - Z.o[0], ay = Z.t[1] - Z.o[1], px = Math.hypot(ax, ay); if (px < 4) return D.dz0 || 0;
+  const along = ((e.clientX - D.c0[0]) * ax + (e.clientY - D.c0[1]) * ay) / px, raw = (D.dz0 || 0) + along / px * Z.len, base = D.z + raw;
+  let dz = e.shiftKey ? raw : Math.round(raw * 100) / 100, to = '';
+  if (!e.shiftKey) { const l = lvSorted().map((x) => [x, Math.abs(x.z - base)]).sort((a, b) => a[1] - b[1])[0]; if (l && l[1] < 0.3) { dz = +(l[0].z - D.z).toFixed(4); to = ' · on ' + l[0].name; } }
+  tipAt(e, `${dz >= 0 ? '+' : ''}${(dz).toFixed(3)} m · base at ${(D.z + dz).toFixed(3)} m${to}${e.shiftKey ? '' : ' · Shift: free'}`); return dz;
 }
 function gzScale(D, p, e) {
   const f = D.f, ax = D.ax === 'sx' ? 'x' : 'y', dir = ax === 'x' ? [Math.cos(D.r0), Math.sin(D.r0)] : [-Math.sin(D.r0), Math.cos(D.r0)], d0 = (D.p0[0] - D.x0) * dir[0] + (D.p0[1] - D.y0) * dir[1], d = (p[0] - D.x0) * dir[0] + (p[1] - D.y0) * dir[1];
@@ -4187,7 +4203,7 @@ cv.addEventListener('pointerdown', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); e.preventDefault(); WLK = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); return; }
   if (CAM === '3d' && XPL.on) { if (e.button === 0 && TOOL !== 'orbit') setTool('orbit'); return; }
   if (CAM === '3d' && e.button === 0 && !SPACE && TOOL === 'select' && (SEL||window.__wsSelections?.length) && S3.gizmo) { const target = gizmoTarget(), f = target?.f, ax = target && !target.locked ? S3.gizmo.hit(e.clientX, e.clientY) : null;
-    if (ax) { e.stopImmediatePropagation(); e.preventDefault(); cv.focus({ preventScroll: true }); const z = target.z, p = S3.plane(e.clientX, e.clientY, z); if (!p) return; GZD = { ax, f, z, target, p0: p, x0: f.x, y0: f.y, r0: f.rot || 0, a0: Math.atan2(p[1] - f.y, p[0] - f.x), s0: { x: f.sx || 1, y: f.sy || 1 }, before: snapM() }; cv.setPointerCapture(e.pointerId); ftbUI(); return; } }
+    if (ax) { e.stopImmediatePropagation(); e.preventDefault(); cv.focus({ preventScroll: true }); const z = target.z, p = S3.plane(e.clientX, e.clientY, z); if (!p) return; GZD = { ax, f, z, target, p0: p, x0: f.x, y0: f.y, r0: f.rot || 0, a0: Math.atan2(p[1] - f.y, p[0] - f.x), s0: { x: f.sx || 1, y: f.sy || 1 }, before: snapM() }; GZD.c0 = [e.clientX, e.clientY]; if (ax === 'z') { GZD.zs = S3.gizmo.zAxis(); GZD.dz0 = f.dz || 0; } cv.setPointerCapture(e.pointerId); ftbUI(); return; } }
   if (CAM !== 'plan') return;
   if (VIEW2D === 'ceiling') {
     if (e.button !== 0 || SPACE) return;   // middle / right / space: the plan's own pan
@@ -4208,6 +4224,7 @@ cv.addEventListener('pointerdown', (e) => {
 cv.addEventListener('pointerdown', () => { if (drag && drag.k === 'furn' && drag.f && drag.f.locked) { drag = null; flash('This piece is locked. Unlock it in the toolbar to move it.'); } });
 cv.addEventListener('pointermove', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); if (WLK) { S3.walk.look(e.clientX - WLK.x, e.clientY - WLK.y); WLK = { x: e.clientX, y: e.clientY }; } return; }
+  if (GZD && GZD.ax === 'z') { e.stopImmediatePropagation(); const D = GZD, f = D.f; f.dz = gzLift(D, e); D.target.apply(); S = STC.build(M); upd3D(); window.__ws?.onMove?.(); return; }   // up and down (2026-11-17)
   if (GZD) { e.stopImmediatePropagation(); const p = S3.plane(e.clientX, e.clientY, GZD.z); if (!p) return; const f = GZD.f;
     if (GZD.ax === 'sx' || GZD.ax === 'sy') { gzScale(GZD, p, e); }
     else if (GZD.ax === 'r') gzTurn(GZD, p, e);
@@ -4227,7 +4244,10 @@ cv.addEventListener('pointermove', (e) => {
 }, true);
 cv.addEventListener('pointerup', (e) => {
   if (WALKING) { e.stopImmediatePropagation(); WLK = null; return; }
-  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.live && S3.liveEnd) S3.liveEnd();  D.target.apply(); tidy(); commit(D.before); return; }
+  if (GZD) { e.stopImmediatePropagation(); const D = GZD; GZD = null; tipOff(); if (D.live && S3.liveEnd) S3.liveEnd();
+    // a click on an arrow, not a drag (2026-11-17): nothing moves; the Workspace asks for a typed distance (and, on Z, a storey up or down)
+    if (['x', 'y', 'z'].includes(D.ax) && D.c0 && Math.hypot(e.clientX - D.c0[0], e.clientY - D.c0[1]) < 4) { if (snapM() !== D.before) { M = JSON.parse(D.before); afterLoad(false); } window.__ws?.finishTransform?.(); try { window.parent?.__wsMove?.axisClick?.(D.ax, e.clientX, e.clientY, window.frameElement); } catch (err) { } return; }
+    D.target.apply(); tidy(); commit(D.before); return; }
   if (NDRAG) { e.stopImmediatePropagation(); const D = NDRAG; NDRAG = null; if (D.moved) { tidy(); commit(D.before); } return; }
   if (CAM === 'plan' && VIEW2D === 'ceiling') {
     if (drag && drag.k === 'pan') return; e.stopImmediatePropagation();
@@ -5979,7 +5999,7 @@ cv.addEventListener('pointerdown', (e) => { if (TOOL !== 'select' || e.button !=
   const up = () => { cv.removeEventListener('pointermove', mv, true); cv.removeEventListener('pointerup', up, true); if (moved) commit(b); };
   cv.addEventListener('pointermove', mv, true); cv.addEventListener('pointerup', up, true); }, true);
 function setImportMeshes(obj) { IMP_MESH.clear(); for (const [k, v] of Object.entries(obj || {})) if (Array.isArray(v) && v.length) IMP_MESH.set(k, v); draw(); if (window.S3 && S3.on) upd3D(); }
-function addImports(list) { const b = snapM(); for (const c of list) { if (c.mesh) IMP_MESH.set(c.ref || c.id, c.mesh); const o = { id: c.id, name: c.name, layer: c.layer || 'Imported', type: c.type || 'imported', mat: c.mat || 'Imported', tris: c.mesh ? Math.round(c.mesh.length / 9) : c.tris || 0, g: Object.assign({}, c.g) }; for (const k of ['ref', 'lv', 'rot', 'w0', 'd0']) if (c[k] != null) o[k] = c[k]; (M.imports || (M.imports = [])).push(o); } commit(b); return list.length; }
+function addImports(list) { const b = snapM(); for (const c of list) { if (c.mesh) IMP_MESH.set(c.ref || c.id, c.mesh); const o = { id: c.id, name: c.name, layer: c.layer || 'Imported', type: c.type || 'imported', mat: c.mat || 'Imported', tris: c.mesh ? Math.round(c.mesh.length / 9) : c.tris || 0, g: Object.assign({}, c.g) }; for (const k of ['ref', 'lv', 'rot', 'w0', 'd0', 'src']) if (c[k] != null) o[k] = c[k]; (M.imports || (M.imports = [])).push(o); } commit(b); return list.length; }
 window.__imp = { get pending() { return IMP_PEND; }, place: placeImport, thumb: thumbMesh, turn: turnImport, get list() { return M.imports || []; }, setOff(names) { IMP_OFF = new Set(names || []); draw(); if (window.S3 && S3.on) upd3D(); }, setMeshes: setImportMeshes, add: addImports, meshOf };
 
 // ===== From a mass to floors (2026-10-25) =====
@@ -6396,8 +6416,9 @@ window.S3 = (() => {
     waterAnim(); return G; }
   // the ripples move about 15 times a second while the 3D view shows water; Settings: localStorage pc-water-anim = 'off' stops them
   const waterAnimOn = () => { try { return localStorage.getItem('pc-water-anim') !== 'off'; } catch (e) { return true; } };
-  function waterAnim() { if (WAT.raf || !WAT.list.length || !waterAnimOn()) return; WAT.last = performance.now();
-    const tick = (t) => { WAT.raf = 0; if (!WAT.list.length || !waterAnimOn()) return; if (document.hidden || !api.on) { WAT.raf = requestAnimationFrame(tick); return; } const dt = (t - WAT.last) / 1000; if (dt < 0.066) { WAT.raf = requestAnimationFrame(tick); return; } WAT.last = t;
+  // still water (2026-11-18): the ripples no longer move; the 3D view is drawn only when something changes, which keeps it fast
+  function waterAnim() { return; if (WAT.raf || !WAT.list.length || !waterAnimOn()) return; WAT.last = performance.now();
+    const tick = (t) => { WAT.raf = 0; if (!WAT.list.length || !waterAnimOn()) return; if (document.hidden || !api.on || window.__pcHidden) { WAT.raf = requestAnimationFrame(tick); return; } const dt = (t - WAT.last) / 1000; if (dt < 0.12) {   /* about 8 a second, and not while this view is hidden in the Workspace (2026-11-18) */ WAT.raf = requestAnimationFrame(tick); return; } WAT.last = t;
       const d = Math.min(0.2, dt); for (const w of WAT.list) { if (w.spin) w.tex.rotation += w.spin * d; else { w.tex.offset.x += w.du * d; w.tex.offset.y += w.dv * d; } } render(); WAT.raf = requestAnimationFrame(tick); };
     WAT.raf = requestAnimationFrame(tick); }
   api.waterAnim = (on) => { try { localStorage.setItem('pc-water-anim', on ? 'on' : 'off'); } catch (e) { } if (on) waterAnim(); else { cancelAnimationFrame(WAT.raf); WAT.raf = 0; } };
@@ -6785,6 +6806,9 @@ window.S3 = (() => {
   function highlight(G, sel) { if (!SELM.front) { SELM.front = new T.LineBasicMaterial({ color: 0xe03a2a }); SELM.back = new T.LineBasicMaterial({ color: 0xe03a2a, transparent: true, opacity: 0.28, depthTest: false }); }
     const list = []; G.traverse((m) => { if (!m.isMesh || m.userData.__outline) return; const ud = tagOf(m); if (ud && ud.k === (sel.k==='ctx'?'site':sel.k) && ud.id === sel.id && m.material) list.push(m); });
     for (const m of list) { m.userData.__selected = true; const eg = new T.EdgesGeometry(m.geometry, 25), a = new T.LineSegments(eg, SELM.front), b = new T.LineSegments(eg, SELM.back); a.renderOrder = 10; b.renderOrder = 9; for (const l of [a, b]) { l.raycast = () => {}; l.userData.__outline = 1; l.userData.__disp = 1; m.add(l); } } }
+  api.reselect = (sel) => { if (!grp || !R) return false; const old = []; grp.traverse((m) => { if (m.userData && m.userData.__outline) old.push(m); if (m.userData && m.userData.__selected) delete m.userData.__selected; });
+    const geos = new Set(); for (const l of old) { if (l.parent) l.parent.remove(l); if (l.geometry) geos.add(l.geometry); } for (const g of geos) g.dispose();
+    const selected = window.__wsSelections || [sel].filter(Boolean); for (const x of selected) highlight(grp, x); render(); return true; };
   api.selectionPolygons=()=>{const out=new Map();if(!grp||!cam)return out;grp.updateMatrixWorld(true);const r=canvas.getBoundingClientRect(),v=new T.Vector3();grp.traverse(m=>{if(!m.isMesh||m.name==='beam')return;for(let a=m;a;a=a.parent)if(!a.visible)return;const tag=tagOf(m);if(!tag)return;const key=tag.k+':'+tag.id,polys=out.get(key)||[];out.set(key,polys);const p=m.geometry.attributes.position,ix=m.geometry.index,n=ix?ix.count:p.count;for(let i=0;i+2<n;i+=3){const tri=[];for(let j=0;j<3;j++){v.fromBufferAttribute(p,ix?ix.getX(i+j):i+j).applyMatrix4(m.matrixWorld).project(cam);tri.push([r.left+(v.x+1)*r.width/2,r.top+(1-v.y)*r.height/2]);}polys.push(tri);}});return out;};
   api.png = () => { render(); return R.domElement.toDataURL('image/png'); };
   // the whole building as OBJ: every level, roof on, no arrows
@@ -6851,12 +6875,12 @@ window.S3 = (() => {
         // after Rhino's gumball (2026-10-31): thin red X and green Y arrows, a blue quarter arc to turn (between -X and -Y), square
         // handles on dotted lines on the -X and -Y sides to scale along the object's own axes, and a white dot at the centre
         const RX = 0xe2372b, GY = 0x35a845, BZ = 0x2a5bd7, has = (k) => !f.axes || f.axes.includes(k);
-        const arrow = (col, ax) => { const a = new T.Group(); const sh = top(new T.Mesh(new T.CylinderGeometry(0.011, 0.011, 0.74, 8), mb(col))); sh.position.y = 0.37; const cone = top(new T.Mesh(new T.ConeGeometry(0.045, 0.17, 16), mb(col))); cone.position.y = 0.82;
-          const pk = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 0.96, 8), inv); pk.position.y = 0.5; pk.userData.gz = ax; a.add(sh, cone, pk); if (ax === 'x') a.rotation.z = -Math.PI / 2; else a.rotation.x = -Math.PI / 2; a.name = 'gz-' + ax; hd.add(a); GZ.pick.push(pk); };
+        const arrow = (col, ax) => { const a = new T.Group();   /* z: straight up, Rhino's blue (2026-11-17) */ const sh = top(new T.Mesh(new T.CylinderGeometry(0.011, 0.011, 0.74, 8), mb(col))); sh.position.y = 0.37; const cone = top(new T.Mesh(new T.ConeGeometry(0.045, 0.17, 16), mb(col))); cone.position.y = 0.82;
+          const pk = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 0.96, 8), inv); pk.position.y = 0.5; pk.userData.gz = ax; a.add(sh, cone, pk); if (ax === 'x') a.rotation.z = -Math.PI / 2; else if (ax === 'y') a.rotation.x = -Math.PI / 2; a.name = 'gz-' + ax; hd.add(a); GZ.pick.push(pk); };
         const square = (col, ax) => { const end = ax === 'sx' ? new T.Vector3(-0.72, 0, 0) : new T.Vector3(0, 0, 0.72), g = new T.Group(); g.name = 'gz-' + ax;
           const dl = new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), end]), new T.LineDashedMaterial({ color: col, dashSize: 0.035, gapSize: 0.03, depthTest: false, transparent: true })); dl.computeLineDistances(); dl.renderOrder = 1000; g.add(dl);
           const sq = top(new T.Mesh(new T.BoxGeometry(0.065, 0.065, 0.065), mb(col))); sq.position.copy(end); g.add(sq); const pk = new T.Mesh(new T.BoxGeometry(0.17, 0.17, 0.17), inv); pk.position.copy(end); pk.userData.gz = ax; g.add(pk); GZ.pick.push(pk); hd.add(g); };
-        if (has('x')) arrow(RX, 'x'); if (has('y')) arrow(GY, 'y'); if (f.axes && f.axes.includes('sx')) square(RX, 'sx'); if (f.axes && f.axes.includes('sy')) square(GY, 'sy');
+        if (has('x')) arrow(RX, 'x'); if (has('y')) arrow(GY, 'y'); if (f.axes && f.axes.includes('z')) arrow(BZ, 'z'); if (f.axes && f.axes.includes('sx')) square(RX, 'sx'); if (f.axes && f.axes.includes('sy')) square(GY, 'sy');
         if (has('r')) {
           const SW = ARC_SWEEP * Math.PI / 180, A0 = Math.PI / 2, tg = new T.TorusGeometry(0.46, 0.011, 8, 48, SW); tg.rotateZ(A0);
           const arc = top(new T.Mesh(tg, mb(BZ))); arc.rotation.x = Math.PI / 2; arc.name = 'gz-r';
@@ -6871,6 +6895,7 @@ window.S3 = (() => {
       if (GZ.hov) paint('gz-' + GZ.hov, false); GZ.hov = ax || null; if (ax) paint('gz-' + ax, true); render(); },
     hit(cx, cy) { if (!R || !GZ.g || !GZ.pick.length) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const h = ray(cx, cy).intersectObjects(GZ.pick, false); return h.length ? h[0].object.userData.gz : null; },
     state() { if (!GZ.g) return null; const arc = GZ.g.getObjectByName('gz-r'); const out = { pos: GZ.g.position.toArray(), rot: GZ.g.rotation.y, handles: !!GZ.hd, scale: GZ.hd ? GZ.hd.scale.x : 0, sweep: arc ? +(arc.geometry.parameters.arc * 180 / Math.PI).toFixed(3) : null, parts: [] }; GZ.g.traverse((o) => { if (o.name && o.name.startsWith('gz-')) out.parts.push(o.name); }); return out; },
+    zAxis() { if (!GZ.hd) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const r = canvas.getBoundingClientRect(), sc = (v) => { v.project(cam); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, o = new T.Vector3(), t = new T.Vector3(0, 0.82, 0); GZ.hd.getWorldPosition(o); const tw = GZ.hd.localToWorld(t.clone()), len = tw.distanceTo(o); return { o: sc(o.clone()), t: sc(tw.clone()), len }; },
     screen(ax) { if (!GZ.hd) return null; api.preRender(); GZ.g.updateMatrixWorld(true); const pk = GZ.pick.find((p) => p.userData.gz === ax); if (!pk) return null; const v = new T.Vector3(); pk.getWorldPosition(v); if (ax === 'r') { const m = pk.userData.mid, q = new T.Vector3(0.46 * Math.cos(m), 0.46 * Math.sin(m), 0); pk.localToWorld(q); v.copy(q); } v.project(cam); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   };
   api.preRender = () => { if (GZ.hd && GZ.g) { const c = WALK.on ? WALK.cam : cam; GZ.hd.scale.setScalar(Math.max(0.05, c.position.distanceTo(GZ.g.position) * 0.068 * (Math.tan(Math.max(0.5, c.fov || 38) * Math.PI / 360) / Math.tan(19 * Math.PI / 180)))); /* about 90 px on screen, as Rhino's and SketchUp's */ } };
@@ -7503,8 +7528,8 @@ if (window.__WSROLE) {
   const baseTarget=gizmoTarget;
   gizmoTarget=function(){if(multi.length<2)return baseTarget();const saved=SEL,entries=[];try{for(const s of multi){if(!editableSelection(s))continue;const o=selObj(s);if(o.auto||s.k==='op'&&multi.some(w=>w.k==='wall'&&w.id===o.wall))continue;SEL=s;const target=baseTarget();if(target&&!target.locked)entries.push({s,target,start:{x:target.f.x,y:target.f.y,rot:target.f.rot||0}});}}finally{SEL=saved;}if(!entries.length)return null;
     const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(const {target}of entries){const f=target.f,c=Math.abs(Math.cos(f.rot||0)),s=Math.abs(Math.sin(f.rot||0)),w=(f.w*c+f.d*s)/2,d=(f.w*s+f.d*c)/2;lo[0]=Math.min(lo[0],f.x-w);lo[1]=Math.min(lo[1],f.y-d);lo[2]=Math.min(lo[2],target.z);hi[0]=Math.max(hi[0],f.x+w);hi[1]=Math.max(hi[1],f.y+d);hi[2]=Math.max(hi[2],target.z+f.h);}
-    const f={id:'workspace-selection',x:(lo[0]+hi[0])/2,y:(lo[1]+hi[1])/2,rot:0,w:hi[0]-lo[0],d:hi[1]-lo[1],h:hi[2]-lo[2],axes:entries.some(e=>!e.target.f.axes?.includes('r')&&e.s.k!=='furn')?['x','y']:['x','y','r']},origin={x:f.x,y:f.y};
-    return{kind:'group',f,z:lo[2],locked:false,snapRotation:WBP.snapAngle,apply(){WS.groupMoving=true;const c=Math.cos(f.rot),s=Math.sin(f.rot);for(const e of entries){const x=e.start.x-origin.x,y=e.start.y-origin.y;e.target.f.x=f.x+x*c-y*s;e.target.f.y=f.y+x*s+y*c;e.target.f.rot=e.start.rot+f.rot;e.target.apply();}}};
+    const f={id:'workspace-selection',x:(lo[0]+hi[0])/2,y:(lo[1]+hi[1])/2,rot:0,w:hi[0]-lo[0],d:hi[1]-lo[1],h:hi[2]-lo[2],axes:[...(entries.some(e=>!e.target.f.axes?.includes('r')&&e.s.k!=='furn')?['x','y']:['x','y','r']),...(entries.every(e=>e.target.f.axes?.includes('z'))?['z']:[])],dz:0},origin={x:f.x,y:f.y};
+    return{kind:'group',f,z:lo[2],locked:false,snapRotation:WBP.snapAngle,apply(){WS.groupMoving=true;const c=Math.cos(f.rot),s=Math.sin(f.rot);for(const e of entries){const x=e.start.x-origin.x,y=e.start.y-origin.y;e.target.f.x=f.x+x*c-y*s;e.target.f.y=f.y+x*s+y*c;e.target.f.rot=e.start.rot+f.rot;e.target.f.dz=f.dz||0;e.target.apply();}}};
   };
   {const cm=commit;commit=function(before){try{return cm(before);}finally{if(!GZD){WS.groupMoving=false;primePositions();}}};const cancel=cancelGizmo;cancelGizmo=function(){try{return cancel();}finally{WS.groupMoving=false;primePositions();}};}
   // selection and level: watched every frame (Plan Studio sets SEL and LV in many places)
@@ -7533,7 +7558,7 @@ if (window.__WSROLE) {
     if(s.k==='floor'||s.k==='void')pts=floorPoints(o);else if(f)pts=frameCorners(f);else if(o.points)pts=o.points;else if(o.a&&o.b)pts=[o.a,o.b];else return null;
     return[pts.map(screen)];
   }
-  WS.selectMany=items=>{multi=items;window.__wsSelections=items;draw();if(CAM==='3d'){upd3D();gizmoSync();}};
+  WS.selectMany=items=>{const same=JSON.stringify(items)===JSON.stringify(multi);multi=items;window.__wsSelections=items;if(same)return;draw();if(CAM==='3d'){reselect3D();gizmoSync();}};
   WS.selectAll=()=>{const projected=CAM==='3d'?S3.selectionPolygons():null,items=WS.objects().filter(s=>editableSelection(s)&&selectionPolygons(s,projected));hub()?.box(WS.role,items,{});say(`${items.length} objects selected. Hidden and locked objects are excluded.`);return items.length;};
   addEventListener('keydown',e=>{if(e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;const key=e.key.toLowerCase();if((e.ctrlKey||e.metaKey)&&key==='a'){e.preventDefault();e.stopImmediatePropagation();WS.selectAll();}else if((e.key==='Delete'||e.key==='Backspace')&&multi.length){e.preventDefault();e.stopImmediatePropagation();hub()?.command('delete');}else if((e.ctrlKey||e.metaKey)&&['z','y'].includes(key)){e.preventDefault();e.stopImmediatePropagation();if(key==='y'||e.shiftKey)hub()?.redo();else hub()?.undo();}},true);
 
@@ -7853,6 +7878,36 @@ if (window.__WSROLE) {
         out.push({ id: m.id, name: m.name, use: m.use, storeys: m.storeys || Math.max(1, Math.round((m.h - m.base) / (m.fh || 3))), fh: m.fh || 3, base: m.base, top: m.h, area, spans: [du, dv], cols: cols.filter((c) => c.trib > 0.01).map((c) => { const g2 = glob(c.u); return { x: g2[0], y: g2[1], trib: c.trib, edge: c.edge }; }) }); }
       return out;
     },
+    // ---- the Move panel and imported floors (2026-11-17) -------------------------------------------------------------------------
+    // the selection's frame: its centre, base height, turn and whether it moves up and down
+    selFrame() { const t = gizmoTarget(); if (!t) return null; const base = t.z, ls = lvSorted(), at = [...ls].reverse().find((l) => l.z <= base + 0.3) || ls[0];
+      return { kind: t.kind, x: +t.f.x.toFixed(4), y: +t.f.y.toFixed(4), z: +base.toFixed(4), rot: +(((t.f.rot || 0) * 180 / Math.PI) % 360).toFixed(2), canZ: !!t.f.axes?.includes('z'), axes: t.f.axes || [], locked: !!t.locked, level: at ? { id: at.id, name: at.name, z: at.z, h: at.h } : null,
+        levels: ls.map((l) => ({ id: l.id, name: l.name, z: l.z, h: l.h })), src: t.kind === 'imp' ? selObj()?.src || '' : '' }; },
+    // move by dx, dy (m, along the plan's axes) and dz (m, up), as one undo step
+    moveSel({ dx = 0, dy = 0, dz = 0 } = {}) { const t = gizmoTarget(); if (!t || t.locked) { flash('Select something that can move.'); return false; } if (dz && !t.f.axes?.includes('z')) { flash('Only imported objects move up and down; walls, floors and openings belong to their level.'); return false; }
+      const b = snapM(); t.f.x += +dx || 0; t.f.y += +dy || 0; if (dz) t.f.dz = (t.f.dz || 0) + +dz; t.apply(); tidy(); commit(b); if (window.S3 && S3.on) upd3D(); return true; },
+    turnSel(deg) { const t = gizmoTarget(); if (!t || t.locked || !t.f.axes?.includes('r')) { flash('This selection does not turn.'); return false; } const b = snapM(); t.f.rot = (t.f.rot || 0) + (+deg || 0) * Math.PI / 180; t.apply(); tidy(); commit(b); if (window.S3 && S3.on) upd3D(); return true; },
+    // put the selection's base on a level, or move it one storey up or down (by the storey's height)
+    selToLevel(id) { const t = gizmoTarget(), l = lvObj(id); if (!t || !l) return false; return WS.moveSel({ dz: +(l.z - t.z).toFixed(4) }); },
+    selStorey(dir) { const t = gizmoTarget(); if (!t) return false; const ls = lvSorted(), i = Math.max(0, ls.findLastIndex((l) => l.z <= t.z + 0.3)), cur = ls[i] || { h: 3 }, step = dir > 0 ? cur.h || 3 : (ls[i - 1] || cur).h || 3; return WS.moveSel({ dz: dir > 0 ? step : -step }); },
+    // the imported files in the model, and every object from one of them (to move a whole model, or find its floors)
+    importSources() { const n = {}; for (const o of M.imports || []) if (o.src) n[o.src] = (n[o.src] || 0) + 1; return Object.entries(n).map(([src, count]) => ({ src, count })); },
+    importsOf(src) { return (M.imports || []).filter((o) => !src || o.src === src).map((o) => ({ id: o.id, name: o.name, srcLayer: o.layer, g: { ...o.g }, mesh: meshOf(o) || [] })); },
+    // move every object of one imported file up or down; the levels found in it follow and are renamed around the floor at height 0
+    moveImport(src, dz, { levels = true } = {}) { const list = (M.imports || []).filter((o) => o.src === src); if (!list.length || !dz) return false; const b = snapM();
+      for (const o of list) o.g.z = +(o.g.z + dz).toFixed(4);
+      if (levels) { for (const l of M.levels) if (l.det === src) l.z = +(l.z + dz).toFixed(4); nameDetected(src); }
+      tidy(); commit(b); changed(); if (window.S3 && S3.on) upd3D(true); return true; },
+    // the floors found in an import become the project's levels: replacing the default levels of an empty project, otherwise added
+    // where no level is within 0.3 m (nothing removed)
+    applyLevels(floors, src = '') { if (!Array.isArray(floors) || !floors.length) return null; const b = snapM(), empty = !M.walls.length && !(M.floors || []).length && !(M.rooms || []).length && !massList(M, true).length && !(M.furn || []).length;
+      const mk = (f, i) => { let n = i + 1; while (M.levels.some((l) => l.id === 'L' + n)) n++; return { id: 'L' + n, name: String(f.name).slice(0, 80), z: +(+f.z).toFixed(3), h: STC.clamp(+f.h || 3, f.roof ? 0.3 : 2, 12), det: src || 'import', ...(f.roof ? { roof: true } : {}) }; };
+      let added = 0;
+      if (empty) { const keep = M.levels.filter((l) => M.walls.some((w) => w.lv === l.id)); M.levels = keep; for (const f of floors) { M.levels.push(mk(f, M.levels.length)); added++; } }
+      else for (const f of floors) if (!M.levels.some((l) => Math.abs(l.z - f.z) < 0.3)) { M.levels.push(mk(f, M.levels.length)); added++; }
+      for (const o of M.imports || []) if (!src || o.src === src) delete o.lv;   // imports sit on the level their height falls in
+      const ls = lvSorted(); LV = (ls.find((l) => Math.abs(l.z) < 0.3) || ls[0]).id; SEL = null;
+      tidy(); commit(b); changed(); V.user = false; fitView(); if (window.S3 && S3.on) upd3D(true); return { replaced: empty, added, levels: M.levels.length }; },
     // the walls and levels the structure is laid out from (2026-11-17)
     structInput() { const hid = new Set(M.hiddenIds || []); return { levels: M.levels.map((l) => ({ id: l.id, z: l.z, h: l.h, name: l.name })), walls: M.walls.filter((w) => !hid.has(w.id)).map((w) => ({ id: w.id, lv: w.lv, a: w.a.slice(), b: w.b.slice(), t: w.t, h: w.h, mat: w.mat || '', layer: w.layer || '', sourceLayer: w.sourceLayer || '', bulge: w.bulge || 0 })), masses: massList(M).length }; },
     structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = [...o.cols.map((c) => c.x), ...(o.grid || []).flatMap((L) => [L.a[0], L.b[0]])], ys = [...o.cols.map((c) => c.y), ...(o.grid || []).flatMap((L) => [L.a[1], L.b[1]])]; FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
@@ -8031,9 +8086,11 @@ if (window.__WSROLE) {
   // the ground studied: the building and 40 m round it, or the site square when there is no building yet
   // the study area (2026-10-31): the building and 40 m round it, scaled up round its centre (3× by default, so the surroundings
   // that shade or channel wind are in it), at most 600 m a side; set from the study card (Change area). Cells up to 5 m.
-  let STUDY_SCALE = 3, STUDY_CELL = 0, SURF_CELL = 0;   // SURF_CELL: the building surface grid in metres (0: automatic)   // STUDY_CELL: the project's analysis grid in metres (0: automatic)
-  function studyBox(pr, pad = 40) { const b = studyBox0(pr, pad), sc = STUDY_SCALE; if (sc === 1 || !pr.length) return cellFix(b);   // with no building the site square is studied as it is
-    const w = Math.min(600, b.nx * b.cell * sc), h = Math.min(600, b.ny * b.cell * sc), cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, cell = STUDY_CELL ? Math.max(STUDY_CELL, Math.sqrt(w * h / 600000)) : Math.max(2, Math.min(5, Math.sqrt(w * h / 9000)));   /* a set grid, at most 600,000 cells */
+  let STUDY_SCALE = 2.5, STUDY_CELL = 0, SURF_CELL = 0;   // SURF_CELL: the building surface grid in metres (0: automatic)   // STUDY_CELL: the project's analysis grid in metres (0: automatic)
+  // the studied area (2026-11-18): the building's own size times the chosen multiple (2.5× by default), centred on it, at least 30 m
+  // and at most 600 m a side; with no building the site square is studied as it is
+  function studyBox(pr, pad = 40) { if (!pr.length) return cellFix(studyBox0(pr, pad)); const b = studyBox0(pr, 0), sc = Math.max(1, STUDY_SCALE || 2.5);
+    const w = Math.min(600, Math.max(30, b.nx * b.cell * sc)), h = Math.min(600, Math.max(30, b.ny * b.cell * sc)), cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, cell = STUDY_CELL ? Math.max(STUDY_CELL, Math.sqrt(w * h / 600000)) : Math.max(2, Math.min(5, Math.sqrt(w * h / 9000)));   /* a set grid, at most 600,000 cells */
     return { X0: cx - w / 2, Y0: cy - h / 2, cell, nx: Math.max(1, Math.round(w / cell)), ny: Math.max(1, Math.round(h / cell)) }; }
   const cellFix = (b) => { if (!STUDY_CELL || !b) return b; const w = b.nx * b.cell, h = b.ny * b.cell, cell = Math.max(STUDY_CELL, Math.sqrt(w * h / 600000)); return { ...b, cell, nx: Math.max(1, Math.round(w / cell)), ny: Math.max(1, Math.round(h / cell)) }; };
   function studyBox0(pr, pad) { const sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();

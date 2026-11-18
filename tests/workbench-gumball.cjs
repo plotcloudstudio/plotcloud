@@ -22,7 +22,7 @@ const path=require('node:path');
  });
  await p.reload();await p.waitForFunction(()=>window.__ws2?.ready());
  await p.click('#addLevel');await p.waitForTimeout(700);await p.click('#vBtn');
- assert.deepEqual(await p.locator('#vMenu [data-view]').allTextContents(),['Plan','Ceiling plan','Perspective']);
+ assert.deepEqual(await p.locator('#vMenu [data-view]').allTextContents(),['Plan','Ceiling plan','Perspective','Isometric','Section']);
  assert.equal(await p.locator('#vMenu small').count(),0);assert.equal(await p.locator('#vMenu [data-level]').count(),0);
  await p.click('#vMenu [data-view="plan"]');assert.equal((await p.locator('#vBtn').innerText()).trim(),'Plan ▾');
  await p.click('#levelBtn');assert.equal(await p.locator('#levelMenu [data-level]').count(),2);

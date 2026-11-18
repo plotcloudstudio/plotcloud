@@ -3,7 +3,7 @@
 import './pc-en.js';
 import * as THREE from 'three';
 import { MODELS, defaults, buildModel, paramVisible, materialColor } from '../../furniture/models.js?v=entourage-20261102-1';
-import { partGeometry } from '../../furniture/geom.js?v=entourage-20261102-1';
+import { partGeometry } from '../../furniture/geom.js?v=speed-20261118-1';
 import { t } from '../../furniture/i18n.js';
 
 export const furnModel = (id) => MODELS.find((m) => m.id === id) || null;
