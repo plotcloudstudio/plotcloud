@@ -28,6 +28,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
       if (id === 'fire-evacuation') await p.click('.sp-studycard [data-st-mode=down]');
       const t0 = Date.now(); await p.click('.sp-studycard [data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 420000 });
       const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, row: s.res?.rows?.[0], rows: s.res?.rows || [] }; });
+      // Vehicle swept path and Parking layout (2026-11-18) run on a route or area drawn on the plan: with nothing drawn they say so
+      if ((id === 'vehicle-swept-path' && /Draw a route first/.test(r.err)) || (id === 'parking-layout' && /Draw the parking area first|Set an entrance first/.test(r.err))) { res.push(`${label}: needs a drawn input`); continue; }
       if (id === 'fire-evacuation') { const sc = r.rows.find((x) => x[0] === 'Smoke compartments'); assert(sc && /Inpatient unit 2 2 · Level 3 · Inpatient unit 3 2/.test(sc[1]), 'two smoke compartments on each inpatient floor: ' + JSON.stringify(sc)); } assert.equal(r.err, '', `${label}: ${r.err}`); assert(r.row, label + ': a result');
       res.push(`${label}: ${r.row.join(' ')} (${Math.round((Date.now() - t0) / 1000)} s)`); if (['fire-evacuation', 'acoustics', 'daylight', 'wind'].includes(id)) await p.screenshot({ path: `${out}/hospital-${id}.png` }).catch(() => {}); }
     console.log('PASS every study runs on the example:\n  ' + res.join('\n  '));
