@@ -2,7 +2,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-export function partGeometry(p) {
+// speed (2026-11-18): a part's geometry depends only on its parameters, so it is built once and copied after that (copying the
+// arrays is much cheaper than rebuilding a rounded box); a copy, because callers may change or dispose what they get
+const PART_CACHE = new Map();
+export function partGeometry(p) { let k; try { k = JSON.stringify(p); } catch { return buildPart(p); } let g = PART_CACHE.get(k); if (!g) { g = buildPart(p); if (PART_CACHE.size > 4000) PART_CACHE.clear(); PART_CACHE.set(k, g); } return g.clone(); }
+function buildPart(p) {
   let g;
   if(p.kind==='loft'){
     const n=p.seg||12,pos=[],idx=[];

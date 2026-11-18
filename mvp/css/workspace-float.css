@@ -730,3 +730,6 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 /* the box a click on a gumball arrow opens (2026-11-17): a typed distance, and a storey up or down on Z */
 .w2.sp .w2-axpop{position:absolute;z-index:45;width:230px;background:#fff;border:1px solid #d5dbe3;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.18);padding:9px 10px;font:12px Inter,system-ui,sans-serif;color:#0f172a}.w2.sp .w2-axpop[hidden]{display:none}
 .w2.sp .w2-axpop .ap-row{display:flex;align-items:center;gap:6px;margin-top:7px}.w2.sp .w2-axpop input{width:96px;padding:4px 6px;border:1px solid #d5dbe3;border-radius:6px;font:inherit}.w2.sp .w2-axpop .ap-note{margin:6px 0 0;color:#64748b;font-size:11px}
+/* clicks feel immediate (2026-11-18): every button answers on press, before the work behind it is done */
+.w2 button:active:not(:disabled),.w2 .btn:active:not(:disabled),.w2 [role=menuitem]:active{transform:translateY(1px);filter:brightness(.94);transition:none}
+.w2 button,.w2 .btn{touch-action:manipulation}

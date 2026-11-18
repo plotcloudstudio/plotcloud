@@ -22,7 +22,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=levels-20261117-1';
+import { mountChrome } from '../workspace-chrome.js?v=speed-20261118-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261117-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
@@ -139,7 +139,11 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   // A Studio projection is a disposable view cache, not a model edit.
   const signature=m=>{const str=JSON.stringify({...m,components:(m.components||[]).filter(c=>!PS.test(c.id))});let a=2166136261,b=5381;for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b,33)^c;}return `${str.length}:${a}:${b}`;};
   const last = () => p.versions.at(-1),baseline=()=>currentVersion(p)||last();
-  const dirty=()=>{const v=baseline();if(!v)return true;const raw=signature(v.model),current=signature(p.draft),clean=p.workspaceHydration;return current!==raw&&!(clean?.id===v.id&&clean.raw===raw&&clean.normalized===current);};
+  // speed (2026-11-18): REV counts model changes; the unsaved-changes check (two full serialisations) is kept until the model, the
+  // versions or the current version change, instead of being worked out again every 400 ms
+  let REV=0,dirtyMemo=null;const bump=()=>{REV++;dirtyMemo=null;};
+  const dirty=()=>{const k=REV+'|'+p.versions.length+'|'+(baseline()?.id||'');if(dirtyMemo&&dirtyMemo.k===k)return dirtyMemo.v;const v0=dirtyNow();dirtyMemo={k,v:v0};return v0;};
+  const dirtyNow=()=>{const v=baseline();if(!v)return true;const raw=signature(v.model),current=signature(p.draft),clean=p.workspaceHydration;return current!==raw&&!(clean?.id===v.id&&clean.raw===raw&&clean.normalized===current);};
   function rememberHydration(back){const v=baseline();if(!v||dirty())return;p.workspaceHydration={id:v.id,raw:signature(v.model),normalized:signature({...p.draft,studio:JSON.parse(back)})};}
 
   const UI = readUI(); const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(UI)); } catch (e) { } };
@@ -168,7 +172,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=levels-20261117-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=speed-20261118-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -250,29 +254,30 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   // layer materials in the 3D view: each layer's look, which Plan Studio objects belong to which layer, and the imports' layers
   const lookSpec = () => { const names = new Set((M().layers || []).map((l) => l.name)), st = M().studio || {}, ids = {}; for (const k of ['walls', 'floors', 'furn', 'fences']) for (const o of st[k] || []) { const L = names.has(o.sourceLayer) ? o.sourceLayer : names.has(o.layer) ? o.layer : null; if (L) ids[o.id] = L; }   /* Plan Studio keeps a layer of another name as sourceLayer */ return { looks: LM.looks(M().layers), klayer: KLAYER, ids, imports: Object.fromEntries((st.imports || []).map((o) => [o.id, o.layer || 'Imported'])) }; };   // objects on a layer of their own (2026-11-06)
   const tellLooks = () => { for (const I2 of ready()) I2.ws.layerLooks?.(lookSpec()); };
-  function tell(I2) { const w = I2.ws;w.projectLabel?.(p.name);w.layerLooks?.(lookSpec()); if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.illustration?.(illOf()); w.display(UI.disp);
+  function tell(I2) { try { if (!I2.win.__pcInputMark) { I2.win.__pcInputMark = 1; for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown']) I2.win.addEventListener(ev, markInput, { capture: true, passive: true }); } } catch { } const w = I2.ws;w.projectLabel?.(p.name);w.layerLooks?.(lookSpec()); if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.illustration?.(illOf()); w.display(UI.disp);
     const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s);w.selectMany?.(UI.sels.map(psSel).filter(Boolean)); }
   const hub = {
     ready(role, win) {
-      if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true;
+      if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true; try { win.__pcHidden = role !== 'props' && role !== shownRole(); } catch { }
       const back = I2.ws.load(SNAP); if (role === 'plan' && back !== SNAP) { rememberHydration(back);hub.change('plan', back, false); }   // Plan Studio tidies a model it opens: that is the one model from now on
       if(p.caseStudy?.id?.startsWith('fallingwater-habs-')&&I2.ws.levels().list.some(l=>l.id==='L3'))I2.ws.level('L3');
       tell(I2); if (role === 'plan' || !OBJ.length) derive(false);
       paneUI(); if (role === 'plan') { levelUI(); if (converted) toast('This project now uses Plan Studio’s model in every view. Imported meshes and the site are kept as they were.'); }
     },
     change(role, snap, live) {
-      if (dead || (snap === SNAP && live)) return; SNAP = snap;   // the same model again, not live: a drag was let go, so it is kept now
-      for (const [r, I2] of Object.entries(INST)) if (r !== role && I2.ready) I2.ws.apply(snap, live);
+      if (dead || (snap === SNAP && live)) return; SNAP = snap; delete HIDDEN_SNAP[role];   // its own model is newer than anything waiting for it   // the same model again, not live: a drag was let go, so it is kept now
+      bump(); for (const [r, I2] of Object.entries(INST)) { if (r === role || !I2.ready) continue; if (r === shownRole() || r === 'props' || (r === 'persp' && !live && document.querySelector('.sp-studycard:not([hidden])'))) I2.ws.apply(snap, live);   /* a study open: its 3D view stays current */ else if (!live) { HIDDEN_SNAP[r] = snap; syncHiddenSoon(); } }   // speed (2026-11-18): the view not shown is brought up to date when idle, or when shown
       // A newly added level must exist in each model before its selection is forwarded.
-      if (!live && INST[role]?.ready) { const lv = INST[role].ws.state().lv; for (const [r, I2] of Object.entries(INST)) if (r !== role && I2.ready) I2.ws.level(lv); }
+      if (!live && INST[role]?.ready) { const lv = INST[role].ws.state().lv; for (const [r, I2] of Object.entries(INST)) if (r !== role && I2.ready && !HIDDEN_SNAP[r]) I2.ws.level(lv); }   // a view still to be brought up to date gets the level then
       for (const I2 of ready()) I2.ws.histUI();
       if (!live) { p.draft.studio = JSON.parse(snap); levelUI(); }
       derive(live);
       for (const f of changeSubs) f(live);
     },
     say(role, t) { if (INST.plan.ready) INST.plan.ws.flash(t); if (role === 'props') toast(t); },
-    pushUndo(before) { if (INST.plan.ready) INST.plan.ws.pushUndo(before); },
-    undo() { if (INST.plan.ready) INST.plan.ws.undo(); }, redo() { if (INST.plan.ready) INST.plan.ws.redo(); },
+    // the history lives in the Plan view: it is brought up to date first, so an undo starts from the model as it is now
+    pushUndo(before) { syncHidden('plan'); if (INST.plan.ready) INST.plan.ws.pushUndo(before); },
+    undo() { syncHidden('plan'); if (INST.plan.ready) INST.plan.ws.undo(); }, redo() { syncHidden('plan'); if (INST.plan.ready) INST.plan.ws.redo(); },
     hist() { return INST.plan.ready ? INST.plan.ws.hist() : { u: 0, r: 0 }; },
     command(action){if(action==='delete'&&UI.sels.length)delIds([...UI.sels]);else if(action==='selectAll')activePane().ws.selectAll?.();},
     box(role, items, mods) { boxPick(items.map(psId), mods); },
@@ -284,16 +289,24 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     level(role, lv) { if (dead) return; for (const [r, I2] of Object.entries(INST)) if (r !== role && I2.ready) I2.ws.level(lv); levelUI(); },
   };
   window.__wsHub = hub;
+  function shownRole(){return UI.view==='persp'?'persp':'plan';}   // the same pane as activePane()
+  // input in the page or in a view: heavy follow-up work waits until it has been still for a moment
+  let lastInput=0;const markInput=()=>{lastInput=performance.now();};for(const ev of ['pointerdown','pointermove','wheel','keydown'])addEventListener(ev,markInput,{capture:true,passive:true});
+  const whenStill=(f,ms=400)=>{const go=()=>{const wait=lastInput+ms-performance.now();if(wait>0)return setTimeout(go,Math.min(wait+20,400));(window.requestIdleCallback||((g)=>setTimeout(g,0)))(()=>f(),{timeout:1200});};return setTimeout(go,ms);};
+  const HIDDEN_SNAP={};let hiddenT=0;
+  function syncHidden(only){for(const [r,snap]of Object.entries(HIDDEN_SNAP)){if(only&&r!==only)continue;delete HIDDEN_SNAP[r];const I2=INST[r];if(I2?.ready&&!dead){I2.ws.apply(snap,false);const lv=INST[shownRole()]?.ready?INST[shownRole()].ws.state().lv:null;if(lv)I2.ws.level(lv);}}}
+  function syncHiddenSoon(){clearTimeout(hiddenT);hiddenT=whenStill(()=>{hiddenT=0;syncHidden();},700);}
 
   // ---- derived components and the Shaded pane: one component per Plan Studio object (with its meshes in this page only)
   let dT = 0, dRun = false, dAgain = null, dLive = true, pendSel = null;
   function derive(live) {
+    if (live) return;   // speed (2026-11-18): every mesh is regenerated here; during a drag it waits for the release
     if (dRun) { dAgain = dAgain === null ? live : dAgain && live; return; }
     if (dT) { dLive = dLive && live; return; } dLive = live;
-    dT = requestAnimationFrame(async () => { dT = 0; const lv = dLive; dRun = true; try { await deriveNow(lv); } catch (e) { console.warn(e); } dRun = false; if (dAgain !== null) { const a = dAgain; dAgain = null; derive(a); } });
+    dT = whenStill(async () => { dT = 0; const lv = dLive; dRun = true; try { await deriveNow(lv); } catch (e) { console.warn(e); } dRun = false; if (dAgain !== null) { const a = dAgain; dAgain = null; derive(a); } }, 350);
   }
   async function deriveNow(live) {
-    const src = INST.persp.ready ? INST.persp.ws : any(); if (!src || dead) return;
+    syncHidden(); const src = INST.persp.ready ? INST.persp.ws : any(); if (!src || dead) return;
     const ms = await src.meshes(), objs = src.objects(), lvl = src.levels().list; if (dead) return;
     OBJ = objs; HIDDEN = new Set(src.hidden()); CLR = src.clearances();
     const lvZ = new Map(lvl.map((l) => [l.id, l])), by = new Map(ms.map((m) => [m.k + ':' + m.id, m])), out = [];
@@ -323,7 +336,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     if (UI.sels.some((id) => !comp(id))) { UI.sels = UI.sels.filter((id) => comp(id)); saveUI(); }
     drawShaded(!vpFitted); vpFitted = true;
     if (pendSel && comp(pendSel.id)) { const q = pendSel; pendSel = null; setSel([q.id], { from: q.role }); }
-    if (!live) { S.save(); state(); layers(); selPane(); toolUI(); rail(); }
+    if (!live) { bump(); saveSoon(); state(); layers(); selPane(); toolUI(); rail(); }
   }
   // the Shaded pane draws the project's components; Plan Studio's ones with the meshes made above
   let vpFitted = false;
@@ -334,7 +347,10 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   const vp = createViewport2($('#vp', app), { onPick: pick, onBox: boxPick, onHover: (h) => { tabInfo = h; hint(); } });
   vp.setDisplay('shaded'); vp.setView({ kind: 'persp' });
   const clearance = () => { const vis = M().layers.find((l) => l.name === 'Furniture')?.visible !== false; vp.setClearance(UI.clearance && vis ? CLR.filter((r) => !HIDDEN.has(r.id)).map((r) => ({ id: r.id, z: r.z, pts: r.pts })) : []); };
-  const persist = () => { S.save(); state(); };
+  const persist = () => { bump(); saveNow(); state(); };
+  // the whole database is written to browser storage at once; after an edit that waits for a quiet moment instead of holding the click
+  let saveT = 0; const saveNow = () => { clearTimeout(saveT); saveT = 0; S.save(); }, saveSoon = () => { clearTimeout(saveT); saveT = setTimeout(() => { saveT = 0; (window.requestIdleCallback || ((f) => f()))(() => S.save(), { timeout: 1500 }); }, 700); };
+  const flushSave = () => { if (saveT) saveNow(); }; addEventListener('pagehide', flushSave); document.addEventListener('visibilitychange', flushSave);
   const SELHELP = 'Click to select · drag a box: left→right inside, right→left touching · Shift adds, Ctrl removes · Tab cycles what is under the cursor';
   function hint() { const h = $('#hint', app); h.title = SELHELP; h.textContent = tabInfo ? `${tabInfo.name} — ${tabInfo.index + 1} of ${tabInfo.count} under the cursor${tabInfo.count > 1 ? ' · Tab for the next one' : ''} · click to select` : 'View only · right-drag orbits · Shift+right-drag pans · scroll zooms · click or box to select'; }
   $('#addLevel', app).onclick = () => { const pane = activePane(); if (!pane.ready) return; pane.ws.addLevel('above'); pane.el.focus(); };
@@ -376,7 +392,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     host.onclick = (e) => e.stopPropagation(); }
   if (UI.view === 'shaded') UI.view = 'persp';   // the Shaded view is gone (2026-10-25): Perspective draws the imports and the site
   if (!['plan', 'persp'].includes(UI.view)) UI.view = 'plan';
-  function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
+  function showView(v) { const previous = activePane(), st = previous.ready ? previous.ws.state() : null; UI.view = v; syncHidden(shownRole()); for (const [r, I2] of Object.entries(INST)) if (I2.ready && r !== 'props') try { I2.win.__pcHidden = r !== shownRole(); } catch { } const next = activePane(); if (st && next.ready && next !== previous) { if (st.importSpec) next.ws.placeImport(st.importSpec); else next.ws.tool(st.light ? { light: st.light } : (st.tool === 'place' || st.tool === 'fence') && st.pick ? { furn: st.pick } : { tool: st.tool === 'orbit' ? 'select' : st.tool, opm: st.opm }); } toolUI(); saveUI(); $$('.w3-pane', app).forEach((el) => el.classList.toggle('on', el.dataset.pane === v)); if (v === 'shaded') vp.fit(); menus(); }
   // the View panel (2026-11-01): every way to look at the model behind one button, as the Display panel: Plan, Ceiling plan,
   // Perspective and Isometric (from NE, SE, SW or NW: an all but parallel view at the true isometric angle), then Zoom selected
   // and Fit the model
@@ -462,7 +478,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   const outside = (e) => { if (!e.target.closest('#cap, .sp-menuwrap')) closeMenus(); if (!e.target.closest('.w3-gearw')) gearMenu(false); }; document.addEventListener('click', outside);
   const away = () => { closeMenus(); gearMenu(false); }; addEventListener('blur', away);   // a click in a view (an iframe) closes the menus too
   // the panes' own buttons (Explode in the toolbar, Esc out of a walkthrough, the level) change the name in the pill too
-  const levelUI = () => menus(), paneUI = () => { if (['levelMenu', 'vMenu', 'dMenu'].every(id => $('#' + id, app).hidden)) menus(); tabState(); };
+  let paneKey = ''; const levelUI = () => menus(), paneUI = () => { const k = REV + '|' + UI.view + '|' + (INST.plan.ready ? INST.plan.ws.level?.() : '') + '|' + (INST.persp.ready ? INST.persp.ws.level?.() : ''); if (k === paneKey) return; paneKey = k; if (['levelMenu', 'vMenu', 'dMenu'].every(id => $('#' + id, app).hidden)) menus(); tabState(); };
   const paneT = setInterval(paneUI, 700);
 
 
@@ -914,14 +930,14 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   // the floating layout (workspace-chrome.js): the model fills the window, the controls above move onto cards and rails
   document.body.classList.add('sp-full');
   { const site = S.conditionsOf(p).site; if (weatherDownloadAvailable() && !site.climate && Number.isFinite(site.lat)) ensureProjectClimate(p).catch(() => { }); }   // weather from the address, ready before a study needs it
-  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, sectionView, select: (ids) => setSel(ids), onSel: (f) => subs.push(f), onChange: (f) => changeSubs.push(f), studio: () => M().studio, layers: () => M().layers, sims: [...SIMS,...PLANNED_SIMS] });
+  const disposeChrome = mountChrome(app, { p, UI, saveUI, goView, activePane, dirty, baseline, INST, sectionView, rev: () => REV, syncViews: () => syncHidden(), select: (ids) => setSel(ids), onSel: (f) => subs.push(f), onChange: (f) => changeSubs.push(f), studio: () => M().studio, layers: () => M().layers, sims: [...SIMS,...PLANNED_SIMS] });
   // first paint: whatever the draft has (imported meshes, site); the panes add Plan Studio's objects as soon as they start
   drawShaded(true); showView(UI.view);
   state(); layers(); selPane(); rail(); panel(); tabsUI();
   setSel(UI.selProject === p.id ? UI.sels.filter((id) => comp(id)) : [], { params: false });
   // read-only hook for the browser checks in tests
-  window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
+  window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, syncViews: () => syncHidden(), ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { dead = true; for (const f of app.querySelectorAll('iframe')) { try { f.contentWindow?.S3?.release?.(); } catch { } }   /* the 3D view's GPU memory let go at once (2026-11-15): seconds faster to the next page */
+  return () => { clearTimeout(hiddenT); flushSave(); removeEventListener('pagehide', flushSave); document.removeEventListener('visibilitychange', flushSave); clearTimeout(dT); dead = true; for (const f of app.querySelectorAll('iframe')) { try { f.contentWindow?.S3?.release?.(); } catch { } }   /* the 3D view's GPU memory let go at once (2026-11-15): seconds faster to the next page */
     disposeSimPreview();document.removeEventListener('click',simOutside);disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

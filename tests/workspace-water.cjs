@@ -1,5 +1,5 @@
 // Site water in the Workspace (2026-11-06), on the Fallingwater case: Bear Run is a stream with two falls and the guest house a
-// plunge pool, drawn as water in 3D (moving) and 2D; Project data › Site lists each body of water and its card sets it; and the
+// plunge pool, drawn as water in 3D (still, since 2026-11-18) and 2D; Project data › Site lists each body of water and its card sets it; and the
 // water takes part in Stormwater (an outlet), Outdoor comfort (cooling nearby) and Water sound (the falls as sources).
 const { chromium } = require('playwright'), assert = require('node:assert/strict');
 (async () => {
@@ -12,9 +12,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(5000);
     const fr = p.frames().find((f) => f.url().includes('ws=persp'));
     const w1 = await fr.evaluate(() => S3._water()); assert.equal(w1.surf, 2, 'Bear Run and the pool'); assert.equal(w1.falls, 1, 'the main falls under the living-room terrace'); assert.equal(w1.foam, 1); assert(w1.lo < -8 && w1.hi > 5, JSON.stringify(w1));
-    await p.waitForTimeout(4000); const w2 = await fr.evaluate(() => S3._water()); assert(w2.anim && w2.offset !== w1.offset, 'the ripples move: ' + w1.offset + ' → ' + w2.offset);
+    await p.waitForTimeout(4000); const w2 = await fr.evaluate(() => S3._water()); assert(!w2.anim && w2.offset === w1.offset, 'still water (2026-11-18): the ripples do not move: ' + w1.offset + ' → ' + w2.offset);
     const ws = await p.evaluate(() => __ws2.inst.persp.ws.waters()); assert.deepEqual(ws.map((x) => [x.name, x.type, x.falls.length]), [['Bear Run', 'stream', 1], ['Guest house plunge pool', 'pond', 0]]);
-    console.log('PASS water in 3D: Bear Run with', ws[0].falls.map((f) => f.drop + ' m').join(' and '), 'falls, the plunge pool at', ws[1].level, 'm; ripples move');
+    console.log('PASS water in 3D: Bear Run with', ws[0].falls.map((f) => f.drop + ' m').join(' and '), 'falls, the plunge pool at', ws[1].level, 'm; still water');
     // the materials of the house: stone walls and ochre concrete take their own layers' colours
     const looks = await p.evaluate(() => { const st = JSON.parse(__ws2.inst.persp.ws.model()); return { stone: st.walls.filter((w) => (w.sourceLayer || w.layer) === 'Stonework').length, frames: st.ops.filter((o) => o.frame).length, levels: st.levels.map((l) => +l.z.toFixed(3)) }; }); assert(looks.stone > 60 && looks.frames > 15, JSON.stringify(looks)); assert.deepEqual(looks.levels.slice(0, 3), [0, 2.845, 5.277], 'the levels of the HABS sections'); assert(looks.levels[3] > 6, 'the guest house up the hill: ' + looks.levels[3]);
     // Project data › Site lists each body of water; its card sets it

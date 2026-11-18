@@ -844,7 +844,7 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 
 
 <script type="importmap">
-{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "three/addons/exporters/OBJExporter.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/OBJExporter.js", "fflate": "./furniture/fflate.js", "pc/models.js": "./furniture/models.js?v=entourage-20261102-1", "pc/geom.js": "./furniture/geom.js?v=entourage-20261102-1", "pc/": "./furniture/", "pc-base/": "./furniture/", "pc-doors/": "./doors/", "pc-stairs/": "./stairs/" } }
+{ "imports": { "three": "./furniture/three.module.min.js", "three/addons/": "./furniture/addons/", "three/addons/exporters/OBJExporter.js": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/OBJExporter.js", "fflate": "./furniture/fflate.js", "pc/models.js": "./furniture/models.js?v=entourage-20261102-1", "pc/geom.js": "./furniture/geom.js?v=speed-20261118-1", "pc/": "./furniture/", "pc-base/": "./furniture/", "pc-doors/": "./doors/", "pc-stairs/": "./stairs/" } }
 </script>
 <script src="studio-geometry.js?v=20261021-drawing1"></script>
 <script type="module">
@@ -2340,8 +2340,11 @@ function afterLoad(refit) { if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !sel
 
 // ---------- rebuild and analyze ----------
 let aT = 0;
+// speed (2026-11-18): M3REV counts model changes; LAST3D is the one the 3D view was built from, so a new selection alone only
+// redraws the red outlines instead of rebuilding the scene
+let M3REV = 0, LAST3D = -1;
 function changed(live, keepProps) {
-  cycleClear();
+  M3REV++; cycleClear();
   S = STC.build(M); clearTimeout(aT); aT = setTimeout(analyse, live ? 140 : 30); miniSoon();
   draw(); levelsUI(); layersUI(); if (!keepProps) propsUI(); $('#undo').disabled = !UNDO.length; $('#redo').disabled = !REDO.length;
   const nw = lvWalls().length; $('#empty').hidden = nw > 0 || CAM === '3d' || !!M.site;
@@ -3147,7 +3150,7 @@ $$('[data-ovl]').forEach((c) => c.addEventListener('change', () => { LAY[c.datas
 addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveProject(); } });
 $('#ghost').addEventListener('change', draw);
 function stripTo() { const cp = $('#chartp'), c = $({ air: '#cAir', day: '#cDay', view: '#cView' }[SHOW]); if (!cp || !c) return; const grp = c.closest('.cpg') || c; const left = SHOW === 'air' ? 0 : grp.offsetLeft - 18; if (cp.scrollWidth > cp.clientWidth + 4) cp.scrollTo({ left, behavior: 'smooth' }); }
-function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, imports: (M.imports || []).filter((o) => impOn(o, '3d')), lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit }); }
+function upd3D(fit) { if (!window.S3 || !S3.on || !S) return; LAST3D = M3REV; S3.update(previewModel(),S,{siteOpacity:siteOpacity(), site: M.site && LAY.site !== false && layerOn('ref.site.bld', '3d') ? SITEC.contextMasses(M.site, M.north || 0) : null, terrain: M.site && M.site.terrain && layerOn('ref.site.ground', '3d') ? SITEC.terrainForPlan(M.site, M.north || 0) : null, masses: layerOn('mass', '3d') ? massList(M) : null, imports: (M.imports || []).filter((o) => impOn(o, '3d')), lv: LV, colOf: (r) => roomCol(r.gi), res: null, furn: VIS.Furniture, walls: VIS.Wall, floors: VIS.Floor, flows: false, opW: OP.w, opF: OP.f, sel: SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null, fit }); }
 
 // ---------- levels ----------
 const lvShort = (l) => `${lvSorted().findIndex((q) => q.id === l.id) + 1}F`;
@@ -3204,7 +3207,9 @@ $('#clear').addEventListener('click', () => { const n = LAYER === 'Wall' ? lvWal
 $('#undo').addEventListener('click', undo); $('#redo').addEventListener('click', redo);
 
 // ---------- properties of the selection ----------
-function changedSel() { propsUI(); draw(); if (window.S3 && S3.on) upd3D(); }
+const sel3 = () => (SEL ? { k: SEL.k === 'end' ? 'wall' : SEL.k === 'ctx' ? 'site' : SEL.k, id: SEL.id } : null);
+function reselect3D() { if (!window.S3 || !S3.on) return; if (LAST3D === M3REV && S3.reselect && S3.reselect(sel3())) return; upd3D(); }
+function changedSel() { propsUI(); draw(); reselect3D(); }
 function genPropsHTML(o) {   // the generator's own parameters, in the Properties panel
   const m = genModel(o.gen.id), v = {...REG[o.gen.id].defaults(m),...o.gen.vals}, F = [], isOp = isOpGen(o), HID = isOp ? ['wall', 'wallL', 'T'] : [];
   F.push(`<div class="cell full sz">${isOp ? `${Math.round(o.w * 1000)} × ${Math.round((o.head - o.sill) * 1000)} mm, sill ${Math.round(o.sill * 1000)}` : `${Math.round(o.w * 1000)} × ${Math.round(o.d * 1000)} × ${Math.round(o.h * 1000)} mm`}</div>`);
@@ -6411,8 +6416,9 @@ window.S3 = (() => {
     waterAnim(); return G; }
   // the ripples move about 15 times a second while the 3D view shows water; Settings: localStorage pc-water-anim = 'off' stops them
   const waterAnimOn = () => { try { return localStorage.getItem('pc-water-anim') !== 'off'; } catch (e) { return true; } };
-  function waterAnim() { if (WAT.raf || !WAT.list.length || !waterAnimOn()) return; WAT.last = performance.now();
-    const tick = (t) => { WAT.raf = 0; if (!WAT.list.length || !waterAnimOn()) return; if (document.hidden || !api.on) { WAT.raf = requestAnimationFrame(tick); return; } const dt = (t - WAT.last) / 1000; if (dt < 0.066) { WAT.raf = requestAnimationFrame(tick); return; } WAT.last = t;
+  // still water (2026-11-18): the ripples no longer move; the 3D view is drawn only when something changes, which keeps it fast
+  function waterAnim() { return; if (WAT.raf || !WAT.list.length || !waterAnimOn()) return; WAT.last = performance.now();
+    const tick = (t) => { WAT.raf = 0; if (!WAT.list.length || !waterAnimOn()) return; if (document.hidden || !api.on || window.__pcHidden) { WAT.raf = requestAnimationFrame(tick); return; } const dt = (t - WAT.last) / 1000; if (dt < 0.12) {   /* about 8 a second, and not while this view is hidden in the Workspace (2026-11-18) */ WAT.raf = requestAnimationFrame(tick); return; } WAT.last = t;
       const d = Math.min(0.2, dt); for (const w of WAT.list) { if (w.spin) w.tex.rotation += w.spin * d; else { w.tex.offset.x += w.du * d; w.tex.offset.y += w.dv * d; } } render(); WAT.raf = requestAnimationFrame(tick); };
     WAT.raf = requestAnimationFrame(tick); }
   api.waterAnim = (on) => { try { localStorage.setItem('pc-water-anim', on ? 'on' : 'off'); } catch (e) { } if (on) waterAnim(); else { cancelAnimationFrame(WAT.raf); WAT.raf = 0; } };
@@ -6800,6 +6806,9 @@ window.S3 = (() => {
   function highlight(G, sel) { if (!SELM.front) { SELM.front = new T.LineBasicMaterial({ color: 0xe03a2a }); SELM.back = new T.LineBasicMaterial({ color: 0xe03a2a, transparent: true, opacity: 0.28, depthTest: false }); }
     const list = []; G.traverse((m) => { if (!m.isMesh || m.userData.__outline) return; const ud = tagOf(m); if (ud && ud.k === (sel.k==='ctx'?'site':sel.k) && ud.id === sel.id && m.material) list.push(m); });
     for (const m of list) { m.userData.__selected = true; const eg = new T.EdgesGeometry(m.geometry, 25), a = new T.LineSegments(eg, SELM.front), b = new T.LineSegments(eg, SELM.back); a.renderOrder = 10; b.renderOrder = 9; for (const l of [a, b]) { l.raycast = () => {}; l.userData.__outline = 1; l.userData.__disp = 1; m.add(l); } } }
+  api.reselect = (sel) => { if (!grp || !R) return false; const old = []; grp.traverse((m) => { if (m.userData && m.userData.__outline) old.push(m); if (m.userData && m.userData.__selected) delete m.userData.__selected; });
+    const geos = new Set(); for (const l of old) { if (l.parent) l.parent.remove(l); if (l.geometry) geos.add(l.geometry); } for (const g of geos) g.dispose();
+    const selected = window.__wsSelections || [sel].filter(Boolean); for (const x of selected) highlight(grp, x); render(); return true; };
   api.selectionPolygons=()=>{const out=new Map();if(!grp||!cam)return out;grp.updateMatrixWorld(true);const r=canvas.getBoundingClientRect(),v=new T.Vector3();grp.traverse(m=>{if(!m.isMesh||m.name==='beam')return;for(let a=m;a;a=a.parent)if(!a.visible)return;const tag=tagOf(m);if(!tag)return;const key=tag.k+':'+tag.id,polys=out.get(key)||[];out.set(key,polys);const p=m.geometry.attributes.position,ix=m.geometry.index,n=ix?ix.count:p.count;for(let i=0;i+2<n;i+=3){const tri=[];for(let j=0;j<3;j++){v.fromBufferAttribute(p,ix?ix.getX(i+j):i+j).applyMatrix4(m.matrixWorld).project(cam);tri.push([r.left+(v.x+1)*r.width/2,r.top+(1-v.y)*r.height/2]);}polys.push(tri);}});return out;};
   api.png = () => { render(); return R.domElement.toDataURL('image/png'); };
   // the whole building as OBJ: every level, roof on, no arrows
@@ -7549,7 +7558,7 @@ if (window.__WSROLE) {
     if(s.k==='floor'||s.k==='void')pts=floorPoints(o);else if(f)pts=frameCorners(f);else if(o.points)pts=o.points;else if(o.a&&o.b)pts=[o.a,o.b];else return null;
     return[pts.map(screen)];
   }
-  WS.selectMany=items=>{multi=items;window.__wsSelections=items;draw();if(CAM==='3d'){upd3D();gizmoSync();}};
+  WS.selectMany=items=>{const same=JSON.stringify(items)===JSON.stringify(multi);multi=items;window.__wsSelections=items;if(same)return;draw();if(CAM==='3d'){reselect3D();gizmoSync();}};
   WS.selectAll=()=>{const projected=CAM==='3d'?S3.selectionPolygons():null,items=WS.objects().filter(s=>editableSelection(s)&&selectionPolygons(s,projected));hub()?.box(WS.role,items,{});say(`${items.length} objects selected. Hidden and locked objects are excluded.`);return items.length;};
   addEventListener('keydown',e=>{if(e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;const key=e.key.toLowerCase();if((e.ctrlKey||e.metaKey)&&key==='a'){e.preventDefault();e.stopImmediatePropagation();WS.selectAll();}else if((e.key==='Delete'||e.key==='Backspace')&&multi.length){e.preventDefault();e.stopImmediatePropagation();hub()?.command('delete');}else if((e.ctrlKey||e.metaKey)&&['z','y'].includes(key)){e.preventDefault();e.stopImmediatePropagation();if(key==='y'||e.shiftKey)hub()?.redo();else hub()?.undo();}},true);
 
@@ -8077,9 +8086,11 @@ if (window.__WSROLE) {
   // the ground studied: the building and 40 m round it, or the site square when there is no building yet
   // the study area (2026-10-31): the building and 40 m round it, scaled up round its centre (3× by default, so the surroundings
   // that shade or channel wind are in it), at most 600 m a side; set from the study card (Change area). Cells up to 5 m.
-  let STUDY_SCALE = 3, STUDY_CELL = 0, SURF_CELL = 0;   // SURF_CELL: the building surface grid in metres (0: automatic)   // STUDY_CELL: the project's analysis grid in metres (0: automatic)
-  function studyBox(pr, pad = 40) { const b = studyBox0(pr, pad), sc = STUDY_SCALE; if (sc === 1 || !pr.length) return cellFix(b);   // with no building the site square is studied as it is
-    const w = Math.min(600, b.nx * b.cell * sc), h = Math.min(600, b.ny * b.cell * sc), cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, cell = STUDY_CELL ? Math.max(STUDY_CELL, Math.sqrt(w * h / 600000)) : Math.max(2, Math.min(5, Math.sqrt(w * h / 9000)));   /* a set grid, at most 600,000 cells */
+  let STUDY_SCALE = 2.5, STUDY_CELL = 0, SURF_CELL = 0;   // SURF_CELL: the building surface grid in metres (0: automatic)   // STUDY_CELL: the project's analysis grid in metres (0: automatic)
+  // the studied area (2026-11-18): the building's own size times the chosen multiple (2.5× by default), centred on it, at least 30 m
+  // and at most 600 m a side; with no building the site square is studied as it is
+  function studyBox(pr, pad = 40) { if (!pr.length) return cellFix(studyBox0(pr, pad)); const b = studyBox0(pr, 0), sc = Math.max(1, STUDY_SCALE || 2.5);
+    const w = Math.min(600, Math.max(30, b.nx * b.cell * sc)), h = Math.min(600, Math.max(30, b.ny * b.cell * sc)), cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, cell = STUDY_CELL ? Math.max(STUDY_CELL, Math.sqrt(w * h / 600000)) : Math.max(2, Math.min(5, Math.sqrt(w * h / 9000)));   /* a set grid, at most 600,000 cells */
     return { X0: cx - w / 2, Y0: cy - h / 2, cell, nx: Math.max(1, Math.round(w / cell)), ny: Math.max(1, Math.round(h / cell)) }; }
   const cellFix = (b) => { if (!STUDY_CELL || !b) return b; const w = b.nx * b.cell, h = b.ny * b.cell, cell = Math.max(STUDY_CELL, Math.sqrt(w * h / 600000)); return { ...b, cell, nx: Math.max(1, Math.round(w / cell)), ny: Math.max(1, Math.round(h / cell)) }; };
   function studyBox0(pr, pad) { const sq = (() => { const r = Math.min(250, (M.site.boundary && M.site.boundary.r) || 150), c = SITEC.siteToPlan(M.site, [0, 0], M.north || 0); return [[c[0] - r, c[1] - r], [c[0] + r, c[1] - r], [c[0] + r, c[1] + r], [c[0] - r, c[1] + r]]; })();
