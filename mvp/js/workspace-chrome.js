@@ -9,6 +9,8 @@
 // The sun is the one addition: Plan Studio's 3D key light set from the site, the date and solar time, with shadows (display only).
 import * as S from './store.js';
 import * as SL from './structure-layout.js?v=struct-20261117-1';
+import * as SF from './structure-frame.js?v=frame-20261118-2';
+import * as SFU from './structure-frame-ui.js?v=frameui-20261118-1';
 import * as SG from './study-groups.js?v=groups-20261117-1';
 import {plannedStudy} from './planned-simulations.js';
 import { climateFile, ensureProjectClimate } from './project-climate.js';
@@ -21,7 +23,9 @@ import * as WTRL from '../../emb/lib/water.js?v=water-20261106-1';
 import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261114-1';
-import * as WAY from './interior/wayfinding.js?v=way-20261031-2';
+import * as WAY from './interior/wayfinding.js?v=way-20261118-1';
+import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261118-6';
+import * as WUI from './wayfinding-ui.js?v=wfui-20261118-4';
 import * as SSX from './interior/spacesyntax.js?v=ss-20261114-1';
 import * as ISO from './interior/isovist.js?v=iso-20261114-1';
 import * as VWS from './interior/views.js?v=vw-20261101-1';
@@ -85,8 +89,8 @@ export function mountChrome(app, api) {
 
   // ---- top left: project name (switch projects) and the level pill
   const tl = el('div', 'sp-tl');
-  tl.innerHTML = `<div class="sp-card sp-proj sp-menuwrap"><button type="button" class="sp-pname" aria-haspopup="menu" aria-expanded="false"><span class="sp-pn">${esc(p.name)}</span><small id="spSub"></small>${I(P.chevron, 14)}</button>
-    <div class="w2-menu sp-pmenu" role="menu" hidden>${S.projects().filter((x) => !x.archived).slice(0, 12).map((x) => `<a role="menuitem" href="#/workspace/${x.id}" ${x.id === p.id ? 'aria-current="page"' : ''}>${esc(x.name)}</a>`).join('')}<hr><button type="button" role="menuitem" data-sp="terrain">Site &amp; terrain</button><a role="menuitem" href="#/home">All projects</a><a role="menuitem" href="#/new-project">New project</a></div></div>`;
+  // the project's name only (2026-11-18): no switching projects from here; click the name to rename it (Enter keeps it, Esc cancels)
+  tl.innerHTML = `<div class="sp-card sp-proj"><button type="button" class="sp-pname" title="Rename the project"><span class="sp-pn">${esc(p.name)}</span><small id="spSub"></small></button></div>`;
   const cap = $('#cap'); cap.classList.add('sp-card', 'sp-level'); tl.append(cap);
   root.append(tl);
   // the project workflow (2026-11-12, P1b): five steps, each marked done from the project's data (onboarding.js workflowState); this one
@@ -94,8 +98,12 @@ export function mountChrome(app, api) {
   const flow = el('nav', 'sp-card sp-flow'); flow.setAttribute('aria-label', 'Project workflow'); tl.append(flow);
   const drawFlow = () => { if (!flow.isConnected && flow.parentNode) return; flow.innerHTML = workflowState(p).map((w) => `<a href="${w.href}" data-flow="${w.id}" ${w.id === 'plan' ? 'aria-current="step"' : ''} data-done="${w.done}" title="${esc(w.t)}${w.done ? ' · done' : ''}"><i>${w.done ? '✓' : w.n}</i>${esc(w.t)}</a>`).join('<span class="sp-flowsep" aria-hidden="true">›</span>'); };
   drawFlow(); S.onSave(() => { if (flow.isConnected) drawFlow(); });
-  const pbtn = $('.sp-pname', tl), pmenu = $('.sp-pmenu', tl);
-  pbtn.onclick = (e) => { e.stopPropagation(); pmenu.hidden = !pmenu.hidden; pbtn.setAttribute('aria-expanded', String(!pmenu.hidden)); };
+  const pbtn = $('.sp-pname', tl);
+  pbtn.onclick = (e) => { e.stopPropagation(); const pn = $('.sp-pn', pbtn); if (pbtn.querySelector('input')) return;
+    const inp = document.createElement('input'); inp.className = 'sp-pnin'; inp.value = p.name; inp.maxLength = 120; inp.setAttribute('aria-label', 'Project name'); pn.replaceWith(inp); inp.focus(); inp.select();
+    let done = false; const end = (keep) => { if (done) return; done = true; const v = inp.value.trim(); if (keep && v && v !== p.name) S.renameProject(p, v); const sp = document.createElement('span'); sp.className = 'sp-pn'; sp.textContent = p.name; inp.replaceWith(sp); };
+    inp.onkeydown = (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') { ev.preventDefault(); end(true); } else if (ev.key === 'Escape') { ev.preventDefault(); end(false); } };
+    inp.onblur = () => end(true); inp.onclick = (ev) => ev.stopPropagation(); };
 
   // ---- top right: saved state, undo / redo, export, import, Send to Simulation
   const tr = el('div', 'sp-card sp-tr');
@@ -160,7 +168,7 @@ export function mountChrome(app, api) {
   const status = $('.w2-status'); pops.snap.innerHTML = '<h3>Snapping</h3>'; pops.snap.append(status);
 
   // the panels card and a study panel share the left side: the card covers the study panel while it is open
-  function openCard(on) { root.classList.toggle('sp-card-open', on); if (on) { closePops(); if (!cmp.hidden) openSheet(false); if (!assetsCard.hidden) openAssets(false); } const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
+  function openCard(on) { if (on) solo('card'); root.classList.toggle('sp-card-open', on); if (on) { closePops(); if (!cmp.hidden) openSheet(false); if (!assetsCard.hidden) openAssets(false); } const sc = app.querySelector('.sp-studycard'); if (sc) sc.hidden = on || !ST.id; }
   let lastTab = UI.tab;
   tabList.addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (!t) return;
     if (t.dataset.tab === 'properties' && !UI.sels.length) { e.stopImmediatePropagation(); openData(dat.hidden); return; }   // Project data
@@ -171,9 +179,16 @@ export function mountChrome(app, api) {
   // a selection switches the card to Properties (Workspace): show it
   new MutationObserver(() => { if (UI.tab !== lastTab) { lastTab = UI.tab; if (UI.tab === 'properties' && UI.sels.length) openCard(true); else if (!['layers', 'versions', 'properties'].includes(UI.tab)) openCard(true); } }).observe(tabList, { childList: true });
 
+  // one panel at a time (2026-11-18): opening any panel of the Workspace closes the others (popovers, the panels card, Compare
+  // sketches, Project data, Assets, Project props, the tool palette, the simulations menu). keep: the one being opened
+  function solo(keep) { const X = { card: () => root.classList.contains('sp-card-open') && openCard(false), sheet: () => !cmp.hidden && openSheet(false), data: () => !dat.hidden && openData(false),
+      assets: () => !assetsCard.hidden && openAssets(false), props: () => !propsCard.hidden && openProps(false), pal: () => root.classList.contains('sp-pal-open') && palOpen(false),
+      sim: () => { const m = document.querySelector('.w2-simmenu'); if (m && !m.hidden) { m.hidden = true; document.getElementById('addSimBtn')?.setAttribute('aria-expanded', 'false'); } } };
+    if (SOLO.busy) return; SOLO.busy = true; try { for (const [k, f] of Object.entries(X)) if (k !== keep) { try { f(); } catch { } } closePops(String(keep || '').startsWith('pop:') ? keep.slice(4) : undefined); } finally { SOLO.busy = false; } }
+  const SOLO = { busy: false };
   function closePops(except) { for (const [k, c] of Object.entries(pops)) if (k !== except) { c.hidden = true; app.querySelector(`[data-sp="${k}"]`)?.setAttribute('aria-pressed', 'false'); } }
   function togglePop(k, anchor) {
-    const c = pops[k], on = c.hidden; closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
+    const c = pops[k], on = c.hidden; if (on) solo('pop:' + k); else closePops(k); c.hidden = !on; anchor.setAttribute('aria-pressed', String(on)); if (!on) return;
     if (k === 'stats') drawStats(); if (k === 'spaces') drawSpaces(); if (k === 'sun') drawSun(); if (k === 'vis') drawVis(); if (k === 'sec') { closePops(); secEditor(true); return; } if (k === 'q') drawQ(); if (k === 'xl') drawXL();
     if (k === 'q' || k === 'xl') { const sc = app.querySelector('.sp-studycard'); c.style.left = sc && !sc.hidden ? `${Math.round(sc.getBoundingClientRect().right - root.getBoundingClientRect().left + 8)}px` : '60px'; }   // beside an open study, not over it
     if (['stats', 'spaces'].includes(k)) { openCard(false); if (!dat.hidden) openData(false); if (!cmp.hidden) openSheet(false); }
@@ -181,7 +196,7 @@ export function mountChrome(app, api) {
   }
 
   // ---- the palette (tools from the bottom bar, the Project panel from the bottom left): open and closed from its own button
-  const palOpen = (on, project = false) => { root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); if (on && typeof cmp !== 'undefined' && cmp && !cmp.hidden) openSheet(false); if (on && typeof dat !== 'undefined' && dat && !dat.hidden) openData(false); };
+  const palOpen = (on, project = false) => { if (on) solo('pal'); root.classList.toggle('sp-pal-open', on); root.classList.toggle('sp-pal-project', on && project); if (on && typeof cmp !== 'undefined' && cmp && !cmp.hidden) openSheet(false); if (on && typeof dat !== 'undefined' && dat && !dat.hidden) openData(false); };
   palOpen(false);
   app.addEventListener('click', (e) => {
     const b = e.target.closest('[data-panel]'); if (!b) return;
@@ -199,15 +214,15 @@ export function mountChrome(app, api) {
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
-    else if (k === 'terrain') { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); openProject('site'); }
+    else if (k === 'terrain') openProject('site');
     else if (k === 'dim') goView(UI.view === 'plan' ? 'persp' : 'plan');
     else if (k === 'props') openProps(propsCard.hidden);
     else if (k === 'assets') openAssets(assetsCard.hidden);
     else if (k === 'zoomSel') doc()?.getElementById('fitSelectedBtn')?.click();
-    else if (k === 'sec') { e.stopPropagation(); closePops(); if (SE.el) secEditor(false); else secEditor(true); }
+    else if (k === 'sec') { e.stopPropagation(); if (SE.el) secEditor(false); else { solo(); secEditor(true); } }
     else if (pops[k]) { e.stopPropagation(); togglePop(k, b); }
   });
-  const away = (e) => { const inPop = e.composedPath().some((n) => n.nodeType === 1 && (n.matches?.('.sp-pop,[data-sp]')));   /* the path as the click went: a popover that redrew under it still holds it */ if (!inPop && !e.target.closest('.sp-pop,[data-sp]')) closePops(); if (!e.target.closest('.sp-proj')) { pmenu.hidden = true; pbtn.setAttribute('aria-expanded', 'false'); } };
+  const away = (e) => { const inPop = e.composedPath().some((n) => n.nodeType === 1 && (n.matches?.('.sp-pop,[data-sp]')));   /* the path as the click went: a popover that redrew under it still holds it */ if (!inPop && !e.target.closest('.sp-pop,[data-sp]')) closePops(); };
   document.addEventListener('click', away);
 
   // ---- drop a model anywhere (2026-11-09, as a whiteboard takes a file): drag a file over the Workspace, plan or 3D, and a card
@@ -298,10 +313,17 @@ export function mountChrome(app, api) {
       <p class="sp-note">${esc(q.note)} Interior studies: ${esc(q.lv === 'fine' ? 'Fine' : q.lv === 'standard' ? 'Standard' : 'Draft')} detail.</p>
       ${i > 0 ? `<p class="sp-note sp-warn">Takes longer than Draft${est && est[0] && est[i] ? `: ${esc(nm)} ${dur(est[i].ms)} instead of ${dur(est[0].ms)}` : `: about ${i === 1 ? '2' : '4'} times the grid points`}. Once it starts, the time left and when it will finish show at the top, so you can leave it running.</p>` : ''}
       ${times}
+      <h4>Study area, for every simulation</h4>
+      <div class="sp-chips sp-qarea" role="group" aria-label="Study area">${AREAS.map(([k, n]) => `<button type="button" data-qarea="${k}" aria-pressed="${ST.area === k}">${esc(n)}</button>`).join('')}</div>
+      <label class="sp-field sp-qareain">Or your own multiple of the building's size<input class="sp-in" type="number" min="1.5" max="10" step="0.5" value="${ST.area}" data-qarea-in aria-label="Study area, times the building's size"></label>
+      <p class="sp-note">The ground studied round the building, as a multiple of its size (5× unless you set another). Larger takes longer; interior studies and Structure do not use it.</p>
       <h4>Grids (Project props › Default)</h4>
       ${sel('grid', ['Auto', '0.25', '0.5', '1', '2', '4'], 'Ground grid')}${sel('surfGrid', ['Auto', '0.25', '0.5', '1', '2'], 'Building surface grid')}${sel('flowDetail', ['Standard', 'Fine', 'Very fine'], 'Wind, snow and water detail')}
       <p class="sp-note">A grid set here is used at every quality; Auto lets the quality set it.${gridSet() || surfSet() ? ' <b>Custom grids are set.</b>' : ''}</p>`;
     pops.q.querySelectorAll('[data-qset]').forEach((x) => x.onchange = () => { if (x.dataset.qset === 'quality') setQual(QUAL[+x.value].k); else setDefault(x.dataset.qset, x.value); });
+    const areaSet = (v) => { ST.area = v; if (ST.id && !ST.res) showArea(); drawQ(); if (ST.id) drawStudy(); };
+    pops.q.querySelectorAll('[data-qarea]').forEach((x) => x.onclick = () => areaSet(+x.dataset.qarea));
+    const ai = pops.q.querySelector('[data-qarea-in]'); if (ai) ai.onchange = () => areaSet(+ai.value);
     pops.q.querySelector('[data-qset=quality]').oninput = (e) => { const j = +e.target.value; e.target.closest('label').querySelector('b').textContent = QUAL[j].name; }; }
 
   // ---- the run at the top (2026-11-09): while a study runs, its time left and the clock time it should finish, from the estimate
@@ -338,7 +360,7 @@ export function mountChrome(app, api) {
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261109-5'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261118-3'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
@@ -350,7 +372,7 @@ export function mountChrome(app, api) {
     catch (e) { XL.busy = 'The export could not finish: ' + (e.message || e); } drawXL(); setTimeout(() => { if (XL.busy.startsWith('The export')) { XL.busy = ''; } }, 6000); }
   // ---- Generate pictures (2026-11-09): tick the simulations, choose a view or a series for each, see each one's time and the
   // total, then generate: they run one after another at the quality set above Add simulation, and each picture joins the list
-  const GENK = 'pc-ws-gen:' + p.id, GEN_IDS = ['sunhours', 'radiation', 'skyview', 'utci', 'wind', 'daylight', 'vent', 'acoustics', 'spacesyntax', 'fire-evacuation'];
+  const GENK = 'pc-ws-gen:' + p.id, GEN_IDS = ['sunhours', 'radiation', 'skyview', 'shadebenefit', 'solarenvelope', 'utci', 'wind', 'snow', 'stormwater', 'watersound', 'daylight', 'vent', 'acoustics', 'views', 'spacesyntax', 'movementdepth', 'isovist', 'wayfinding', 'privacy', 'evac', 'cameras', 'fire-evacuation', 'structure'];   // every study the Workspace runs (2026-11-18)
   // the figures each study is usually issued with (2026-11-13): ticked ones by default (on), the others to add. A map figure is one
   // view of a run (switching views needs no new run); a mode needs its own run; interior studies go floor by floor (every level with
   // rooms); a chart is the study card's chart as a picture; months and seasons are a series on one colour scale
@@ -365,9 +387,12 @@ export function mountChrome(app, api) {
     acoustics: [['ratio', 'Against target', { on: 1 }], ['rt', 'Reverberation', { on: 1 }], ['sti', 'Speech clarity', { on: 1 }], ['chart', 'Room chart', { on: 1, kind: 'chart' }]],
     spacesyntax: [['integ', 'Integration', { on: 1 }], ['conn', 'Connectivity', { on: 1 }], ['flowdepth', 'Movement + depth', { on: 1 }], ['r3', 'Integration R3', {}], ['gate', 'Agents', {}]],
     'fire-evacuation': [['routes', 'Escape routes', { on: 1, mode: 'all' }], ['density', 'Peak crowding', { on: 1, mode: 'all' }], ['time', 'Time out', { on: 1, mode: 'all' }], ['chart', 'Chart', { on: 1, kind: 'chart', mode: 'all' }], ['trails', 'Footprints', { mode: 'all' }], ['travel', 'Code check: travel distance', { mode: 'code' }]],
+    structure: [['M', 'Moment M', { on: 1 }], ['disp', 'Displacement', { on: 1 }], ['util', 'Capacity used', { on: 1 }], ['N', 'Axial N', {}], ['V', 'Shear V', {}], ['sys', 'System and supports', {}], ['load', 'Column load (layout)', {}], ['chart', 'Chart', { kind: 'chart' }]],
     section: [['section', 'Section', { on: 1, kind: 'section' }]] };
-  const PER_LEVEL = new Set(['daylight', 'acoustics', 'spacesyntax']);
-  const figsAll = (id) => (FIGSETS[id] || [['view', 'View', { on: 1 }]]).map(([k, label, o]) => ({ k, label, kind: o.kind || 'view', view: o.kind ? null : k, mode: o.mode || null, on: !!o.on }));
+  const PER_LEVEL = new Set(['daylight', 'acoustics', 'spacesyntax', 'movementdepth', 'views', 'isovist', 'wayfinding', 'privacy', 'evac', 'cameras']);
+  // a study without its own set: each of its map views (the first two ticked) and its chart
+  const figsFallback = (id) => { const v = viewsOf(id); return v.length ? [...v.map(([k, n], i) => [k, n, i < 2 ? { on: 1 } : {}]), ['chart', 'Chart', { kind: 'chart' }]] : [['view', 'View', { on: 1 }]]; };
+  const figsAll = (id) => (FIGSETS[id] || figsFallback(id)).map(([k, label, o]) => ({ k, label, kind: o.kind || 'view', view: o.kind ? null : k, mode: o.mode || null, on: !!o.on }));
   const figDefault = (id) => figsAll(id).filter((x) => x.on).map((x) => x.k);
   // the picks: { figs: [...] } per study; the old single choice ('view', 'months', 'seasons') read as the default set or that series
   const migratePick = (id, v) => (v && typeof v === 'object' && Array.isArray(v.figs) ? v : v === 'months' || v === 'seasons' ? { figs: [v] } : { figs: figDefault(id) });
@@ -612,11 +637,15 @@ export function mountChrome(app, api) {
   const studyCard = el('section', 'sp-card sp-studycard'); studyCard.hidden = true; studyCard.setAttribute('aria-label', 'Simulation settings');
   const resCard = el('section', 'sp-card sp-studyres'); resCard.hidden = true; resCard.setAttribute('aria-label', 'Simulation results');
   const legend = el('div', 'sp-card sp-legend'); legend.hidden = true; root.append(studyCard, resCard, legend);
-  const ST = { dlLevel: 'draft', dlTau: 0.6, dlRf: 0.2, dlRw: 0.5, dlRc: 0.8, dlHead: 2.4, camMode: 'budget', camN: 4, camWant: '0.95', camLevel: 'recognise', camH: 2.7, camTgt: '1', camTypes: { dome: true, bullet: true, fish: true }, vwLevel: 'draft', vwEye: '1.07', vwHead: 2.4, vwFar: 7.5, vwNature: false, vwMotion: true, isoEye: '1.0', isoTgt: '0.6', isoView: null, isoPick: false, ssLevel: 'standard', ssVh: '1.6', ssGlass: true, id: null, day: '03-21', sunH0: 0, sunH1: 24, sunStep: 15, period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', snowCm: '30', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, priv: { sides: ['top', 'bottom'], dS: 4, eye: 1.6, dO: 15, hO: 9, doors: false }, wayEye: '1.6', wayStart: '', wayFurn: true, wsLoud: 'typical', egStrat: 'all', dlWhere: 'plan', egUse: 'office', egDetect: '60', egRatio: '4', egMix: 'typical', egClin: '120', advOpen: {}, unfold: (() => { try { return localStorage.getItem('pc-unfold') === '1'; } catch { return false; } })(), egRuns: 50, egSeed: 1, egFire: null, egPick: false, egSpeed: 30, egPlay: true, egT: 0, area: 2.5, view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
+  const ST = { dlLevel: 'draft', dlTau: 0.6, dlRf: 0.2, dlRw: 0.5, dlRc: 0.8, dlHead: 2.4, camMode: 'budget', camN: 4, camWant: '0.95', camLevel: 'recognise', camH: 2.7, camTgt: '1', camTypes: { dome: true, bullet: true, fish: true }, vwLevel: 'draft', vwEye: '1.07', vwHead: 2.4, vwFar: 7.5, vwNature: false, vwMotion: true, isoEye: '1.0', isoTgt: '0.6', isoView: null, isoPick: false, ssLevel: 'standard', ssVh: '1.6', ssGlass: true, id: null, day: '03-21', sunH0: 0, sunH1: 24, sunStep: 15, period: 'year', envelope: 'equinox', utciHours: 'sun', windMode: 'yearly', windDir: null, windSpeed: null, storm: '50', cover: 'mixed', snowCm: '30', system: null, span: '7.5', bearing: '150', circW: 'use', circUse: {}, priv: { sides: ['top', 'bottom'], dS: 4, eye: 1.6, dO: 15, hO: 9, doors: false }, wayEye: '1.6', wayStart: '', wayFurn: true, wsLoud: 'typical', egStrat: 'all', dlWhere: 'plan', egUse: 'office', egDetect: '60', egRatio: '4', egMix: 'typical', egClin: '120', advOpen: {}, unfold: (() => { try { return localStorage.getItem('pc-unfold') === '1'; } catch { return false; } })(), egRuns: 50, egSeed: 1, egFire: null, egPick: false, egSpeed: 30, egPlay: true, egT: 0,  view: {}, res: null, key: '', sig: '', at: null, busy: false, cancel: false, err: '', saved: '', exp: false, areaOpen: false, rose: null, roseErr: '' };
   // the project's analysis grid (Project props › Default): 0 = automatic
   // simulation quality (2026-11-09): one setting above Add simulation for every study, from Draft (quick results while designing:
   // the automatic grids, as before) to Refined (finer grids, slower: results to present). A grid set in Project props › Default
   // is kept as set (Custom). Kept with the project's conditions, so each result records the quality it ran at.
+  // the study area (2026-11-18): one setting for every study, in Simulation quality: the building's size times this (5× unless the
+  // person sets another), kept with the project's defaults like the grids
+  const AREA_DEF = 5, areaOf = () => { const v = +(S.conditionsOf(p).defaults || {}).area; return v >= 1.5 && v <= 10 ? v : AREA_DEF; };
+  Object.defineProperty(ST, 'area', { get: areaOf, set: (v) => { const x = Math.max(1.5, Math.min(10, +v || AREA_DEF)); if (x !== areaOf()) setDefault('area', x); }, enumerable: true });
   const QUAL = [
     { k: 'draft', name: 'Draft', f: 1, flow: 160, lv: 'draft', sun: 15, dome: 1, note: 'Quick results while you design: the automatic grids; Sun hours every 15 min (Ladybug timestep 4), Sky view on 145 sky patches (Ladybug resolution 1).' },
     { k: 'standard', name: 'Standard', f: 1.5, flow: 260, lv: 'standard', sun: 10, dome: 2, note: 'Grids 1.5 times finer than Draft; Sun hours every 10 min (timestep 6), Sky view on 577 patches (resolution 2).' },
@@ -659,7 +688,7 @@ export function mountChrome(app, api) {
   const estLine = (e) => e && !e.interior ? `<p class="sp-note sp-est"><b>${esc(qualOf().name)} · estimated time: ${dur(e.ms)}</b> · ${e.flow ? `flow grid ${fmt(e.flowCells)} cells at ${fmt(e.flowCell, 1)} m` : `ground ${fmt(e.cells)} cells at ${fmt(e.cell, 2)} m`}${e.samples ? ` · building ${fmt(e.samples)} squares at ${fmt(e.surfCell, 2)} m` : ''}. Quality: set above Add simulation${gridSet() || surfSet() ? ' (a grid set in Project props › Default is kept)' : ''}.${e.ms > 120000 ? ' <span class="sp-warn">Long: Draft or a smaller area is quicker.</span>' : ''}</p>` : '';
   const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   // the studied area: a multiple of the building's own size (2026-11-18)
-  const AREAS = [[2, '2× the building'], [2.5, '2.5× the building · the default'], [3, '3×'], [3.5, '3.5×'], [4, '4×'], [5, '5×']];
+  const AREAS = [[2, '2×'], [3, '3×'], [4, '4×'], [5, '5× · default'], [6, '6×'], [8, '8×']];
   // every building study has the same card (2026-10-31): a mode where the study has one, the study area on the site before Start,
   // Start / Stop and Change area, map views (chips) that switch without running again, and the study's own input at the foot
   const SPEC = {
@@ -674,7 +703,7 @@ export function mountChrome(app, api) {
   };
   SPEC.watersound = { mode: ['wsLoud', [['gentle', 'Gentle falls'], ['typical', 'Typical'], ['loud', 'Loud falls']]], views: [['level', 'Sound level'], ['quiet', '55 dB(A) or more']], input: 'watersound', building: true, about: 'How loud the site’s falls and streams are on the ground, on the facades and at each room’s windows, and inside with the windows open or shut.' };
   SPEC.stormwater = { views: [['map', 'Drainage'], ['flow', 'Flow paths'], ['pond', 'Ponding'], ['runoff', 'Runoff']], input: 'storm', about: 'Where the rain of one design storm runs over the ground and where it can collect, on the terrain.' };
-  SPEC.structure = { views: [['load', 'Column load'], ['size', 'Column size'], ['pressure', 'Foundation'], ['depth', 'Floor depth']], input: 'structure', noArea: true, about: 'A first column grid in every mass: loads down to the ground, column sizes, floor depth and the pressure on the ground, by rules of thumb for early design.' };
+  SPEC.structure = { views: () => (ST.res && !ST.res.frame ? SFU.LAYOUT_VIEWS : [...SFU.FVIEWS, ...SFU.LAYOUT_VIEWS]), input: 'structure', noArea: true, about: 'A first column grid in every mass: loads down to the ground, column sizes, floor depth and the pressure on the ground, by rules of thumb for early design.' };
   // structural systems for early sizing: floor dead load (kPa, with finishes and partitions), floor depth from the span, and the
   // column's design strength in compression (MPa, with slenderness and reinforcement folded in)
   const SYSTEMS = [['concrete', 'Concrete flat plate', (sp) => 24 * Math.max(0.2, sp / 30) + 1.5, (sp) => Math.max(0.2, sp / 30), 20, 'concrete flat plate (slab span/30, f′c 35 MPa columns with 2 % steel)'],
@@ -688,7 +717,7 @@ export function mountChrome(app, api) {
     about: 'Where people walk between the rooms they use on this level: the shortest routes and an ant colony’s walks, which settle on the good routes and build up as dark bands.' };
   SPEC.privacy = { views: [['exp', 'Seen from outside'], ['need', 'Privacy need']], input: 'privacy', noArea: true, interior: true,
     about: 'How much of each room can be seen from the street and from a building opposite, through the windows of this level.' };
-  SPEC.wayfinding = { mode: ['wayEye', [['1.6', 'Standing 1.6 m'], ['1.2', 'Wheelchair 1.2 m']]], views: [['depth', 'Visual depth'], ['routes', 'Routes']], input: 'wayfinding', noArea: true, interior: true,
+  SPEC.wayfinding = { mode: ['wayEye', [['1.6', 'Standing 1.6 m'], ['1.2', 'Wheelchair 1.2 m']]], views: WUI.VIEWS, input: 'wayfinding', noArea: true, interior: true,
     about: 'How easily each room is found from the start: the walk to its door, the decision points on the way, where a sign helps, and how many look-arounds each spot needs.' };
   // Space syntax and Movement depth (2026-11-01): the visibility graph of this level, as the study page computed it; the page's
   // detail levels, analysis heights and colours
@@ -753,7 +782,7 @@ export function mountChrome(app, api) {
   const SNOWS = [['10', '10 cm'], ['30', '30 cm'], ['60', '60 cm']];
   const STORMS = [['25', '25 mm'], ['50', '50 mm'], ['100', '100 mm']], COVERS = [['lawn', 'Mostly planted', 0.25], ['mixed', 'Mixed', 0.5], ['paved', 'Mostly paved', 0.85]];
   const viewsOf = (id) => { const v = SPEC[id]?.views; return typeof v === 'function' ? v() : v || []; };
-  const sigOf = (id) => JSON.stringify([id, qualOf().k, ST.area, gridOf(), surfOf(), flowOf(), ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], isovist: [ST.isoEye, ST.isoTgt, ST.isoView], daylight: [ST.dlLevel, ST.dlTau, ST.dlRf, ST.dlRw, ST.dlRc, ST.dlHead], cameras: [ST.camMode, ST.camN, ST.camWant, ST.camLevel, ST.camH, ST.camTgt, JSON.stringify(ST.camTypes)], views: [ST.vwLevel, ST.vwEye, ST.vwHead, ST.vwFar, ST.vwNature, ST.vwMotion], spacesyntax: [ST.ssLevel, ST.ssVh, ST.ssGlass], movementdepth: [ST.ssLevel, ST.ssVh, ST.ssGlass], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : ''], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], watersound: [ST.wsLoud, INST.persp.ready ? JSON.stringify(INST.persp.ws.waters?.() || []) : ''], 'fire-evacuation': [ST.egStrat, ST.egRatio, ST.egMix, ST.egUse, ST.egDetect, ST.egRuns, ST.egSeed, JSON.stringify(ST.egFire), JSON.stringify(ST.egCounts || null), ST.cdOcc, ST.cdSpr, ST.cdPub, ST.cdLow, ST.cdDoors, ST.egAsetMode, ST.egAset, ST.egFds && ST.egFds.file, ST.egFdsCol, ST.egFdsDir, ST.egFdsThr, ST.egDrill && ST.egDrill.file + ST.egDrill.times.length, ST.egBlock, ST.egSmoke, ST.egAsm, ST.egStrobe, ST.egCmpBlock, ST.egCmpSmoke, ST.egScenShow, ST.egClin], structure: [ST.system, ST.span, ST.bearing, JSON.stringify(ST.stRoles || {})], vent: [ST.vnMode, ST.vnTout, ST.vnTin, ST.vnWin, ST.vnDoors, ST.vnTarget, ST.vnLo, ST.vnHi, ST.vnMode === 'one' ? ST.windDir : '', ST.vnMode === 'one' ? ST.windSpeed : ''], acoustics: [ST.acFormula, ST.acTarget, ST.acPeople, ST.acTemp, ST.acRh, INST.persp.ready ? INST.persp.ws.level?.() : ''], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
+  const sigOf = (id) => JSON.stringify([id, qualOf().k, ST.area, gridOf(), surfOf(), flowOf(), ...({ sunhours: [ST.day, ST.sunH0, ST.sunH1, ST.sunStep, gridOf()], radiation: [ST.period], solarenvelope: [ST.envelope], utci: [ST.period, ST.utciHours], stormwater: [ST.storm, ST.cover], isovist: [ST.isoEye, ST.isoTgt, ST.isoView], daylight: [ST.dlLevel, ST.dlTau, ST.dlRf, ST.dlRw, ST.dlRc, ST.dlHead], cameras: [ST.camMode, ST.camN, ST.camWant, ST.camLevel, ST.camH, ST.camTgt, JSON.stringify(ST.camTypes)], views: [ST.vwLevel, ST.vwEye, ST.vwHead, ST.vwFar, ST.vwNature, ST.vwMotion], spacesyntax: [ST.ssLevel, ST.ssVh, ST.ssGlass], movementdepth: [ST.ssLevel, ST.ssVh, ST.ssGlass], snow: [ST.snowCm], wayfinding: [ST.wayEye, ST.wayStart, ST.wayFurn, INST.persp.ready ? INST.persp.ws.level?.() : '', JSON.stringify([ST.wayDest, ST.wayAccess, ST.wayGroupsSet, ST.wayAcc, ST.wayManual, ST.waySigns, ST.wayW, ST.wayThr])], privacy: [JSON.stringify(ST.priv), ST.privNeedV || 0, INST.persp.ready ? INST.persp.ws.level?.() : ''], evac: [ST.circW, JSON.stringify(ST.circUse), INST.persp.ready ? INST.persp.ws.level?.() : ''], watersound: [ST.wsLoud, INST.persp.ready ? JSON.stringify(INST.persp.ws.waters?.() || []) : ''], 'fire-evacuation': [ST.egStrat, ST.egRatio, ST.egMix, ST.egUse, ST.egDetect, ST.egRuns, ST.egSeed, JSON.stringify(ST.egFire), JSON.stringify(ST.egCounts || null), ST.cdOcc, ST.cdSpr, ST.cdPub, ST.cdLow, ST.cdDoors, ST.egAsetMode, ST.egAset, ST.egFds && ST.egFds.file, ST.egFdsCol, ST.egFdsDir, ST.egFdsThr, ST.egDrill && ST.egDrill.file + ST.egDrill.times.length, ST.egBlock, ST.egSmoke, ST.egAsm, ST.egStrobe, ST.egCmpBlock, ST.egCmpSmoke, ST.egScenShow, ST.egClin], structure: [ST.system, ST.span, ST.bearing, JSON.stringify(ST.stRoles || {}), ST.stWind ?? '0.6', JSON.stringify(ST.stBraces || [])], vent: [ST.vnMode, ST.vnTout, ST.vnTin, ST.vnWin, ST.vnDoors, ST.vnTarget, ST.vnLo, ST.vnHi, ST.vnMode === 'one' ? ST.windDir : '', ST.vnMode === 'one' ? ST.windSpeed : ''], acoustics: [ST.acFormula, ST.acTarget, ST.acPeople, ST.acTemp, ST.acRh, INST.persp.ready ? INST.persp.ws.level?.() : ''], wind: [ST.windMode, ...(ST.windMode === 'single' ? [ST.windDir, ST.windSpeed] : [])] }[id] || [])]);
   // the map views of a result: the study's own, or made here from its values
   function addViews(id, r) {
     if (!r.views) { const base = { vals: r.vals, svals: r.svals, slo: r.slo, shi: r.shi, unit: r.unit, ramp: r.ramp, lo: r.lo, hi: r.hi, dec: r.dec, avg: r.avg, title: r.title, legendLabels: r.legendLabels }, bin = (f, title, labels, ramp = 'risk') => { const vals = r.vals.map((v) => (Number.isFinite(v) ? (f(v) ? 1 : 0) : NaN)); return { vals, unit: 'share', ramp, lo: 0, hi: 1, dec: 0, avg: statsOf(vals).avg * 100, title, legendLabels: labels }; };
@@ -833,6 +862,7 @@ export function mountChrome(app, api) {
 
   const simMenu = document.querySelector('.w2-simmenu');
   if (simMenu) { simMenu.querySelectorAll('[data-addsim]').forEach((b) => { void b; });
+    new MutationObserver(() => { if (!simMenu.hidden) solo('sim'); }).observe(simMenu, { attributes: true, attributeFilter: ['hidden'] });
     simMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-addsim]'); if (!b) return; e.stopImmediatePropagation(); simMenu.hidden = true; $('#addSimBtn')?.setAttribute('aria-expanded', 'false'); $('#addSimInt')?.setAttribute('aria-expanded', 'false'); openStudy(b.dataset.addsim); }, true); }
   const simName = (id) => (api.sims.find((x) => x.id === id) || { name: id }).name;
   // ---- every study in this page (2026-10-30): a study that does not run in the Workspace panel itself mounts its own study page
@@ -1338,37 +1368,14 @@ export function mountChrome(app, api) {
         results: { onTarget: out.ok, judged: out.judged, meanRT: +out.mean.toFixed(2), longest: out.longest ? { room: out.longest.r.name, rt: +out.longest.mid.toFixed(2) } : null, lowestSTI: out.low ? +out.low.sti.toFixed(2) : null, rooms: R.map((x) => ({ room: x.r.name, use: x.grp, rt: +x.mid.toFixed(2), target: x.tgt != null ? +x.tgt.toFixed(2) : null, status: x.status, sti: +x.sti.toFixed(2) })) },
         settings: { formula: ST.acFormula, target: ST.acTarget, people: +ST.acPeople, tC: +ST.acTemp, rh: +ST.acRh, level: sc.source?.level, label: `${FN}, ${ST.acTarget === 'auto' ? 'targets by room name' : ACU.TARGET_SHORT[ST.acTarget]}, ${sc.name?.split(' · ').pop() || 'level'} (Workspace)` } }; }
     if (id === 'wayfinding') {
-      const sc = w.planScene('wayfinding'); if (!sc.walls.length || !(sc.rooms || []).length) throw Error('No rooms on this level: draw the rooms first, or pick another level in the Level menu.');
-      const out = await WAY.run(sc, { start: ST.wayStart, furn: ST.wayFurn, eye: +ST.wayEye }, (f) => { ST.progress = `looking around ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; });
-      const { RES, F, SC: S2 } = out, R = RES.R, o = S2.origin || [0, 0], X0 = o[0] + R.x0, Y0 = o[1] + R.y0, toP = (p) => [p[0] + o[0], p[1] + o[1]];
-      const box = { x0: X0, y0: Y0, x1: X0 + R.W * R.c, y1: Y0 + R.H * R.c }, vis = RES.rooms.filter((x) => !x.skip);
-      const dots = [{ p: toP(RES.start.p), col: '#111', r: 0.45, label: 'S', ring: true }, ...(RES.startHidden.length ? [{ p: toP([RES.start.p[0] + 0.7, RES.start.p[1] + 0.7]), col: '#d8402a', r: 0.3, square: true, label: 'i', al: 1 }] : []),
-        ...RES.decisions.flatMap((d, i) => [{ p: toP(d.p), col: '#f39c12', r: 0.4, label: String(i + 1), ink: '#111', ring: true, al: 1 }, ...(d.hidden.length ? [{ p: toP([d.p[0] + 0.65, d.p[1] + 0.65]), col: '#d8402a', r: 0.28, square: true, label: 'i', al: 1 }] : [])]),
-        ...vis.filter((x) => x.door).map((x) => ({ p: toP(x.door), col: '#3b6fb6', r: 0.16, al: 1 }))];
-      const show = (r, fit) => views2().forEach((w2) => { w2.clearStudy?.(); w2.walkShow?.({ walks: [], T: 0, box, lv: w2.level?.(), z: S2.settings?.floorZ || 0, view: r.view, fit: !!fit, fit2: !!fit, solid: false,
-        paths: vis.filter((x) => x.pts).map((x) => ({ pts: x.pts.map(toP), col: r.view === 'routes' ? '#3b6fb6' : '#1e1e1e', w: r.view === 'routes' ? 0.1 : 0.06, al: r.view === 'routes' ? 0.85 : 0.45 })), dots,
-        density: { X0, Y0, cell: R.c, nx: R.W, ny: R.H, vals: r.view === 'depth' ? RES.depth : new Float32Array(R.W * R.H).fill(NaN), lo: 0, hi: 3 }, rampStops: stopsOf(WAY.DEPTH) }); });
-      const dtxt = (d) => (Number.isFinite(d) ? String(d) : '—');
-      // walking to each room in turn (2026-11-14): people walk the route from the start, the decision points on it light up
-      const routed = vis.filter((x) => x.pts && x.pts.length > 1), lenOf = (pts) => pts.reduce((t, q, n) => (n ? t + Math.hypot(q[0] - pts[n - 1][0], q[1] - pts[n - 1][1]) : 0), 0);
-      const onRoute = (d, pts) => pts.some((q) => Math.hypot(q[0] - d.p[0], q[1] - d.p[1]) < 0.9);
-      const timeline = routed.length ? { n: routed.length, ms: 3200, label: (i) => { const x = routed[i], nd = RES.decisions.filter((d) => onRoute(d, x.pts)).length; return `To ${x.r?.name || x.name || 'a room'} · ${fmt(x.len ?? lenOf(x.pts), 1)} m · ${x.turns ?? 0} turn${x.turns === 1 ? '' : 's'} · ${nd} decision point${nd === 1 ? '' : 's'}`; },
-        show: (i) => { const x = routed[i], P = x.pts.map(toP), dl = RES.decisions.map((d, k) => ({ p: toP(d.p), col: onRoute(d, x.pts) ? '#f97316' : '#d1d5db', r: onRoute(d, x.pts) ? 0.55 : 0.32, label: String(k + 1), ink: '#111', ring: true, al: 1 }));
-          views2().forEach((w2) => w2.walkShow?.({ walks: [], agents: [{ pts: P, len: lenOf(P) }], T: 0, box, lv: w2.level?.(), z: S2.settings?.floorZ || 0, view: 'routes', fit: false, fit2: false, solid: false,
-            paths: [...routed.map((y) => ({ pts: y.pts.map(toP), col: '#94a3b8', w: 0.05, al: 0.5 })), { pts: P, col: '#f97316', w: 0.16, al: 1 }], dots: [{ p: toP(RES.start.p), col: '#111', r: 0.45, label: 'S', ring: true }, ...dl],
-            density: { X0, Y0, cell: R.c, nx: R.W, ny: R.H, vals: new Float32Array(R.W * R.H).fill(NaN), lo: 0, hi: 3 }, rampStops: stopsOf(WAY.DEPTH) })); },
-        reset: () => { if (ST.res) paintRes(ST.res); } } : null;
-      return { X0, Y0, cell: R.c, nx: R.W, ny: R.H, cells: R.W * R.H, avg: F.md, timeline, chartNote: 'Share of the floor at each visual depth from the start; hover a bar for its value.', foot: `${vis.length} rooms routed from ${esc(RES.start.name)}, ${RES.decisions.length} decision points`,
-        views: { depth: { legendCols: stopsOf(WAY.DEPTH).map((x) => x[1]), vals: RES.depth, unit: 'look-arounds', ramp: 'heat', lo: 0, hi: 3, dec: 0, avg: F.md, title: 'Wayfinding · visual depth from the start', legendLabels: ['3 or more', '1 · 2', '0 · in sight'] },
-          routes: { legendCols: ['#3b6fb6', '#3b6fb6'], vals: RES.depth, unit: 'walk to each door', ramp: 'heat', lo: 0, hi: 3, dec: 0, avg: F.md, title: 'Wayfinding · routes to each room', legendLabels: ['Route to a door', '', 'Orange: decision point · red: sign'] } },
-        paint: (r, fit) => show(r, fit),
-        probe: (x, y) => { const i = Math.floor((x - X0) / R.c), j = Math.floor((y - Y0) / R.c); if (i < 0 || j < 0 || i >= R.W || j >= R.H) return null; const k = j * R.W + i, d = RES.depth[k], wk = RES.D[k];
-          return `<div class="sp-kv"><span>Visual depth</span><b>${Number.isFinite(d) ? d + (d === 0 ? ' · in sight of the start' : ' look-around' + (d === 1 ? '' : 's')) : '—'}</b></div>${Number.isFinite(wk) ? `<div class="sp-kv"><span>Walk from the start</span><b>${fmt(wk, 1)} m</b></div>` : ''}`; },
-        rows: [['Decision points', String(RES.decisions.length)], ['Signs suggested', String(F.signs)], ['Rooms seen from the start', `${F.seen} of ${F.vis.length}`], ['Mean visual depth', fmt(F.md, 1)], ['Longest route', F.longest ? `${esc(F.longest.r.name)}, ${fmt(F.longest.len, 1)} m` : '—'], ['Hard to find', F.hard.length ? esc(F.hard.map((x) => x.r.name).join(', ')) : 'none'],
-          ...vis.map((x) => [esc(x.r.name), x.unreached ? 'no way in' : `${fmt(x.len, 1)} m · ${x.turns} turns · depth ${dtxt(x.depth)}`]),
-          ...RES.decisions.map((d, i) => [`Decision point ${i + 1}`, `${d.ways} ways · ${d.hidden.length ? 'sign for ' + esc(d.hidden.join(', ')) : 'the way on is in sight'}`])],
-        method: `From ${esc(RES.start.name)}: the shortest walk to every room's door (${fmt(R.c, 2)} m grid, 8 directions, no cutting corners${ST.wayFurn ? ', furniture in the way' : ''}), pulled tight; where routes split, a decision point, and a sign wherever a room's door is not in sight from there (eye ${ST.wayEye} m; furniture taller than the eye blocks the view). Visual depth: 0 where the start sees, 1 where a spot seen from it sees, and so on. The method of the Wayfinding study, for early layout; signage design and lighting are not modelled.`,
-        results: { decisions: RES.decisions.length, signs: F.signs, depth: +F.md.toFixed(2), seen: F.seen }, settings: { start: RES.start.name, eye: +ST.wayEye, furniture: ST.wayFurn, label: `Wayfinding from ${esc(RES.start.name)} (Workspace)` } }; }
+      // Wayfinding for signs (2026-11-18): from the lift lobbies, stair landings and (ground floor) entrances; routes over real floor; the decision
+      // points and their Signage Priority Score (interior/wayfinding-signage.js); the visual depth map of the first start kept (interior/wayfinding.js)
+      const b = w.buildingScene(), lvId = w.level?.(), A = WFS.analyse(b, WUI.optsOf(ST, lvId, qualOf().k === 'refined'));
+      if (A.none) throw Error(A.none); if (!A.routes.some((x) => !x.noRoute)) throw Error(`No valid route from ${A.chosen.map((x) => x.name).join(', ')}: ${[...new Set(A.routes.map((x) => x.reason))].join('; ') || 'no destination rooms chosen'}.`);
+      let depth = null; const s0 = A.chosen[0], lv = b.levels.find((l) => l.id === A.level.id);
+      try { depth = await WAY.run(lv.sc, { point: s0.p, pointName: s0.name, furn: ST.wayFurn, eye: +ST.wayEye }, (f) => { ST.progress = `looking around ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; }); } catch (e) { console.warn(e); }
+      if (ST.waySel && !A.nodes.some((n) => n.no === ST.waySel)) ST.waySel = null;
+      return WUI.resultOf(A, depth, { esc, fmt, ST, views2, stopsOf, DEPTH: WAY.DEPTH, paintRes: (r) => paintRes(r) }); }
     if (id === 'daylight' && ST.dlWhere === 'section') return daylightSection();
     if (id === 'daylight') {
       const sc = w.planScene('daylight'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
@@ -1558,6 +1565,11 @@ export function mountChrome(app, api) {
         const lm = Object.fromEntries((api.layers?.() || []).map((l) => [l.name, l.material || ''])), matOf = (x) => x.mat || lm[x.sourceLayer] || lm[x.layer] || '';
         const L = SL.layoutStructure({ levels: SI.levels, walls: SI.walls, span, system: sys, loads: { dead: deadOf, roofDead: deadOf, live, snow: 1.0 }, fcol, depthOf, matOf, roles: ST.stRoles || {} });
         if (!L || !L.cols.length && !L.walls.length) throw Error('No structure could be laid out: draw the building’s outside walls first.');
+        // the frame analysis (2026-11-18): the laid-out structure as a 3D frame; every member's forces, the deformed shape, braces by hand
+        const wind = +(ST.stWind ?? 0.6); let A = null, aErr = ''; ST.stPick = null;
+        try { await import('../../emb/lib/structural-solver.js?v=frame-20261118-1'); A = SF.analyseFrame(L, { system: sys, span, depthOf, deadOf, live, snow: 1.0, wind: { q: wind }, braces: ST.stBraces || [] }, globalThis.PlotCloudStructuralSolver); }
+        catch (e) { aErr = e.message || String(e); console.warn(e); }
+        const fsize = Math.max(L.extent.u1 - L.extent.u0, L.extent.v1 - L.extent.v0, ...L.levels.map((l) => l.z + l.h)), bays = A ? SF.braceBays(L) : [];
         const g0 = L.levels[0], mm = (x) => Math.round(x * 1000), kgm = (A) => A * 7850, ideas = SL.structureIdeas(L, { bearing: qa, depthOf });
         const nodeSpan = (n) => Math.max(0, ...L.bays.filter((b) => (b.i === n.i || b.i === n.i - 1) && (b.j === n.j || b.j === n.j - 1)).map((b) => b.span));
         const cols = L.cols.map((c) => ({ ...c, depth: depthOf(nodeSpan(c.node) || span), ground: c.z0 <= g0.z + 0.01, label: sys === 'steel' ? `${Math.round(kgm(c.A))} kg/m` : `${mm(c.size)}×${mm(c.size)}` }));
@@ -1569,6 +1581,7 @@ export function mountChrome(app, api) {
           pressure: { vals: Float32Array.from(cols.map(() => pAvg)), unit: 'kPa (service)', ramp: 'ladybug', lo: 0, hi: Math.max(qa * 1.5, pAvg), dec: 0, title: `Structure · pressure on the ground vs ${qa} kPa` },
           depth: { vals: Float32Array.from(cols.map((c) => c.depth * 1000)), unit: 'mm floor depth', ramp: 'ladybug', lo: 0, hi: Math.max(400, ...cols.map((c) => c.depth * 1000)), dec: 0, title: 'Structure · floor depth' } };
         for (const k in views) views[k].avg = statsOf(views[k].vals).avg;
+        if (A) Object.assign(views, SFU.frameViews(A, ST.stCase));
         // the drawing: grid lines past the outline, dimension chains below and to the left, members with their sizes, flags
         const E = L.extent, ext = 2.0, G = (u, v) => L.glob([u, v]), grid = [...L.axes.u.map((a) => ({ a: G(a.c, E.v0 - ext - 3.5), b: G(a.c, E.v1 + ext), name: a.name, kind: a.kind })), ...L.axes.v.map((a) => ({ a: G(E.u0 - ext - 3.5, a.c), b: G(E.u1 + ext, a.c), name: a.name, kind: a.kind }))];
         const chain = (A, fix, alongU, total) => { const out = []; for (let i = 0; i < A.length - 1; i++) out.push({ a: alongU ? G(A[i].c, fix) : G(fix, A[i].c), b: alongU ? G(A[i + 1].c, fix) : G(fix, A[i + 1].c), text: String(mm(A[i + 1].c - A[i].c)) });
@@ -1577,16 +1590,33 @@ export function mountChrome(app, api) {
         const lvAt = (z) => (L.levels.find((l) => Math.abs(l.z + l.h - z) < 0.02) || {}).id;
         const beams = L.beams.map((b) => ({ ...b, lv: b.level, label: `${mm(b.w)}×${mm(b.h)}` })), bwalls = L.walls.map((x) => ({ a: x.a, b: x.b, t: x.t, lv: x.lv, ok: x.ok, label: `${mm(x.t)}${x.ok ? '' : ' · needs ' + mm(x.tReq)}` }));
         const flags = L.flags.map((f) => ({ at: f.at, lv: (L.levels.find((l) => l.name === f.level) || {}).id }));
-        const paint = (r, fit) => { cols.forEach((c, i) => { const v = r.vals[i]; c.color = rampHex('ladybug', (v - r.lo) / Math.max(1e-9, r.hi - r.lo)); });
+        const paintOld = (r, fit) => { cols.forEach((c, i) => { const v = r.vals[i]; c.color = rampHex('ladybug', (v - r.lo) / Math.max(1e-9, r.hi - r.lo)); });
           views2().forEach((w2) => { w2.clearStudy?.(); w2.structShow?.({ cols: cols.map((c) => ({ x: c.x, y: c.y, z0: c.z0, z1: c.z1, s: Math.max(0.3, sys === 'steel' ? 0.3 : c.size), color: c.color, label: c.label })), grid, dims, beams, walls: bwalls, flags, tint: null, fit }); }); };
+        // the frame views: tubes coloured along each member, the force flags, the deformed shape at the legend's scale; f < 1 is a frame
+        // of ▶ Play (the load rising); light: only the frame is redrawn (the deformation slider)
+        const onPick = (q) => setTimeout(() => { if (!ST.res || ST.res.frameA !== A || ST.busy) return;
+          if (q.what === 'bay') { const bay = bays[q.i]; if (!bay) return; const t = SFU.toggleBrace(ST.stBraces || [], bay, q.shift); ST.stPrevDrift = A.drift?.hOver; ST.stBraces = t.list; ST.stBraceSaid = t.said; runStudy(); return; }
+          ST.stPick = q.i; ST.advOpen['sf-forces'] = true; drawStudy(); studyCard.querySelector('.sp-sfpick')?.scrollIntoView({ block: 'nearest' }); }, 0);
+        const framePaint = (r, fit, f = 1, light = false) => { const V = r.views[r.view], cid = V.caseId || A.gov[ST.stCase] || A.gov.gravity, auto = SFU.autoScale(A, cid, fsize), sc = ST.stScale && ST.stScale !== 'auto' ? +ST.stScale : auto; r.stAuto = auto;
+          const D = SFU.frameDrawing(A, V, { view: r.view, caseId: cid, f, scale: sc, flags: ST.stFlags !== false, deformed: ST.stDeformed !== false, showModel: ST.stModel !== false, size: fsize, rampHex });
+          views2().forEach((w2) => { const is3 = w2 === INST.persp.ws, o = { ...D, bays: is3 && ST.stBraceMode ? bays : null };
+            if (!light && f >= 1) { w2.clearStudy?.(); const base = { grid, dims, beams: [], walls: [], flags, tint: null }; if (fit) w2.structShow?.({ ...base, cols: cols.map((c) => ({ x: c.x, y: c.y, z0: c.z0, z1: c.z1, s: 0.3, color: '#cbd5e1' })), fit: true }); w2.structShow?.({ ...base, cols: [], fit: false }); }
+            w2.structFrame?.(o); if (!light && f >= 1) w2.structFrameMode?.(is3 ? (ST.stBraceMode ? 'brace' : 'member') : null, is3 ? onPick : null, is3 ? (i) => SFU.braceKind(ST.stBraces || [], bays[i]) : null); }); };
+        const paint = (r, fit) => (A && r.views[r.view]?.frame ? framePaint(r, fit) : paintOld(r, fit));
+        paint.light = (r) => framePaint(r, false, 1, true);
         const nTop = L.levels.length, loadAt = (c, i) => (i <= 0 ? 0 : Math.min(c.N, c.N * i / nTop));
-        const timeline = { n: nTop + 1, ms: 900, label: (i) => (i === 0 ? 'No load yet' : i === 1 ? 'The roof (dead load and snow)' : `The roof and ${i - 1} floor${i === 2 ? '' : 's'}`) + ` · up to ${fmt(Math.max(0, ...cols.map((c) => loadAt(c, i))))} kN`,
+        const isF = () => !!(A && ST.res && ST.res.frameA === A && ST.res.views[ST.res.view]?.frame);
+        const timeline0 = { n: nTop + 1, ms: 900, label: (i) => (i === 0 ? 'No load yet' : i === 1 ? 'The roof (dead load and snow)' : `The roof and ${i - 1} floor${i === 2 ? '' : 's'}`) + ` · up to ${fmt(Math.max(0, ...cols.map((c) => loadAt(c, i))))} kN`,
           show: (i) => { views2().forEach((w2) => w2.structShow?.({ cols: cols.map((c) => ({ x: c.x, y: c.y, z0: c.z0, z1: c.z1, s: Math.max(0.3, sys === 'steel' ? 0.3 : c.size), color: rampHex('ladybug', loadAt(c, i) / Math.max(10, nMax)), label: c.label })), grid, dims, beams, walls: bwalls, flags, tint: null, fit: false })); },
           reset: () => { if (ST.res) paintRes(ST.res); } };
-        const csv = () => ['member,grid,level,x_m,y_m,span_or_length_m,width_mm,depth_mm,drawn_mm,load,unit,note',
+        // ▶ Play on a frame view: the load rises from 0 to 100 % of the shown case, on the colour scale of the full load (linear: forces and movements grow with it)
+        const timeline = { get n() { return isF() ? 21 : timeline0.n; }, get ms() { return isF() ? 160 : timeline0.ms; }, label: (i) => (isF() ? `Load ${i * 5} % · ${ST.res.views[ST.res.view].title.split(' · ').slice(1).join(' · ')}` : timeline0.label(i)),
+          show: (i) => (isF() ? framePaint(ST.res, false, i / 20) : timeline0.show(i)), reset: () => timeline0.reset() };
+        const csv0 = () => ['member,grid,level,x_m,y_m,span_or_length_m,width_mm,depth_mm,drawn_mm,load,unit,note',
           ...cols.map((c) => ['column', c.axis, (L.levels.find((l) => l.id === c.lv) || {}).name || '', c.x.toFixed(2), c.y.toFixed(2), (c.z1 - c.z0).toFixed(2), sys === 'steel' ? '' : mm(c.size), sys === 'steel' ? '' : mm(c.size), '', Math.round(c.N), 'kN factored', c.inWall ? 'in a wall' : 'in a room'].join(',')),
           ...L.beams.map((b) => ['beam', `"${b.axis}"`, (L.levels.find((l) => l.id === b.level) || {}).name || '', ((b.a[0] + b.b[0]) / 2).toFixed(2), ((b.a[1] + b.b[1]) / 2).toFixed(2), b.span.toFixed(2), mm(b.w), mm(b.h), '', '', '', ''].join(',')),
           ...L.walls.map((x) => ['bearing wall', x.id, x.level, ((x.a[0] + x.b[0]) / 2).toFixed(2), ((x.a[1] + x.b[1]) / 2).toFixed(2), x.length.toFixed(2), mm(x.tReq), '', mm(x.t), Math.round(x.q), 'kN/m factored', x.ok ? 'thick enough' : 'thinner than needed'].join(','))];
+        const csv = () => [...csv0(), ...(A ? SFU.frameCSV(A) : [])];
         const rng = (a) => (a.length ? `${fmt(Math.min(...a), 1)}–${fmt(Math.max(...a), 1)} m` : '—'), added = [...L.axes.u, ...L.axes.v].filter((a) => a.kind === 'added').length, thin = L.walls.filter((x) => !x.ok).length;
         const tW = L.flags.filter((f) => f.what === 'wall').length, tC = L.flags.filter((f) => f.what === 'column').length, bigBeam = L.beams.reduce((p2, b) => (!p2 || b.h > p2.h ? b : p2), null);
         const schedule = () => { const rowsC = cols.filter((c) => c.ground).sort((a, b) => b.N - a.N).slice(0, 6).map((c) => ['Column', c.axis, `${fmt(c.z1 - c.z0, 1)} m high`, c.label, `${fmt(c.N)} kN`]);
@@ -1595,9 +1625,13 @@ export function mountChrome(app, api) {
           const set = Object.keys(ST.stRoles || {}).length;
           return `<p class="sp-flabel">Members, the most loaded (all ${cols.length + L.beams.length + L.walls.length} in the CSV)</p><table class="sp-codesum sp-sched"><thead><tr><th>Member</th><th>Grid</th><th>Length</th><th>Size, mm</th><th>Load</th></tr></thead><tbody>${[...rowsC, ...rowsB, ...rowsW].map((r2) => `<tr>${r2.map((v) => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table>${set ? `<p class="sp-note">${set} wall${set > 1 ? 's' : ''} set by you · <button type="button" class="sp-link" data-st-role="reset">use the walls as drawn</button></p>` : ''}`; };
         const ideasHTML = () => (ideas.length ? `<p class="sp-flabel">Ideas to improve it</p><ol class="sp-ideas">${ideas.map((it, i) => `<li><b>${esc(it.title)}</b><span>${esc(it.text)}</span>${it.action ? `<button type="button" class="btn sm" data-st-idea="${i}">Try it: ${esc(Object.entries(it.action).map(([k, v]) => (k === 'system' ? SYSTEMS.find((x) => x[0] === v)[1] : k === 'span' ? v + ' m grid' : v)).join(', '))}</button>` : ''}</li>`).join('')}</ol><p class="sp-note">Trying an idea changes the settings and runs the study again; save this result first to compare the two in Results.</p>` : '');
-        return { cells: cols.length, prisms: L.levels.length, context: 0, terrain: false, views, paint, csv, avg: nMax, timeline, ideas, layout: L, chartNote: 'Share of the columns in each band; hover a bar for its value.',
-          chartHTML: () => chart(ST.res) + schedule() + ideasHTML(), foot: `${cols.length} columns, ${L.beams.length} beams and ${L.walls.length} bearing walls from ${SI.walls.length} walls on ${L.levels.length} levels`,
+        return { cells: cols.length, prisms: L.levels.length, context: 0, terrain: false, views, paint, csv, avg: nMax, timeline, ideas, layout: L, chartNote: A ? 'Share of the members (frame views) or columns (layout views) in each band; hover a bar for its value.' : 'Share of the columns in each band; hover a bar for its value.',
+          frame: !!A, frameA: A, probe: () => null,
+          chartHTML: () => chart(ST.res) + (A ? SFU.frameSections(A, { fmt, esc, ST, sys, sname, span, live, snow: 1.0, wind, qa, padSide: SL.padSide, prevDrift: ST.stPrevDrift, L }) : aErr ? `<p class="sp-note sp-errtext">The frame analysis could not run: ${esc(aErr)}</p>` : '') + (A ? '<p class="sp-sect">Layout</p>' : '') + schedule() + ideasHTML(), foot: `${cols.length} columns, ${L.beams.length} beams and ${L.walls.length} bearing walls from ${SI.walls.length} walls on ${L.levels.length} levels`,
           rows: [['Heaviest ground-floor column', ground.length ? fmt(Math.max(...ground.map((c) => c.N))) + ' kN (factored)' : 'none: the walls carry it'],
+            ...(A ? (() => { const sh = A.members.filter((m) => !m.hidden), uMax = Math.max(0, ...sh.map((m) => m.util)), mMax = Math.max(0, ...sh.map((m) => m.M)), over = sh.filter((m) => m.util > 1 || m.buckle > 1).length;
+              return [['Frame analysis', `${sh.length} members, ${fmt(A.counts.nodes)} nodes · ${A.eq.err < 1e-4 ? 'equilibrium ✓' : '<span class="sp-bad">equilibrium off</span>'}`], ['Largest bending moment', `${fmt(mMax)} kN·m (factored)`],
+                ['Wind sway, worst storey', A.drift ? `<span class="${A.drift.hOver < 400 ? 'sp-bad' : ''}">h/${fmt(A.drift.hOver)}</span> on ${esc(A.drift.level)} · limit h/400` : 'no wind case'], ['Capacity used, highest', `<span class="${uMax > 1 ? 'sp-bad' : ''}">${fmt(uMax * 100)} %</span>${over ? ` · ${over} member${over > 1 ? 's' : ''} over` : ''} (screening)`], ...((ST.stBraces || []).length ? [['Braces', `${ST.stBraces.length} bay${ST.stBraces.length > 1 ? 's' : ''}, added by hand`]] : [])]; })() : aErr ? [['Frame analysis', `<span class="sp-bad">could not run</span>: ${esc(aErr)}`]] : []),
             ['Grid', `${L.axes.u.length} × ${L.axes.v.length} lines · bays ${rng(L.spansU)} (${L.axes.u[0].name}–${L.axes.u.at(-1).name}), ${rng(L.spansV)} (${L.axes.v[0].name}–${L.axes.v.at(-1).name})${added ? ` · ${added} added where no wall is` : ''}`],
             ['Bearing walls', `${L.walls.length} of ${SI.walls.length} walls${thin ? ` · <span class="sp-bad">${thin} thinner than the load needs</span>` : ' · all thick enough'}`],
             ['Column size, largest', cols.length ? (sys === 'steel' ? `about ${fmt(Math.max(...cols.map((c) => kgm(c.A))))} kg/m of steel` : `${mm(big)} × ${mm(big)} mm`) : 'no columns'],
@@ -1606,9 +1640,10 @@ export function mountChrome(app, api) {
             ['Load with nothing below', tW || tC ? `<span class="sp-bad">${tW ? `${tW} wall${tW > 1 ? 's' : ''}` : ''}${tW && tC ? ', ' : ''}${tC ? `${tC} column${tC > 1 ? 's' : ''}` : ''}</span>: transfer or cantilever, marked ! on the plan` : 'none'],
             ['Pressure on the ground, average', `${fmt(pAvg)} kPa ${pAvg > qa ? `· above the assumed ${qa} kPa: a raft or piles likely` : `· within the assumed ${qa} kPa`}`],
             ['Ideas', `${ideas.length}, under the chart`]],
-          method: `${sname}: ${sdesc}. Laid out from the drawn walls: walls of stone, masonry or concrete 150 mm or thicker carry the floors (glass, gypsum, plaster and thinner walls are partitions; you can change any wall). Grid lines follow the bearing walls, then the partition walls that keep the bays within about ${span} m, then evenly added lines where no wall is; columns stand where grid lines cross and no bearing wall does. Floors: ${fmt(deadOf(span), 1)} kPa dead with finishes and partitions, ${live} kPa occupancy (NBC 2020 residential), roof snow 1.0 kPa; factored 1.25 D + 1.5 L. Beams span/${SL.BEAM[sys].ratio}; walls against an assumed ${SL.WALL_STRENGTH.stone[0]} MPa (stone, masonry) or ${SL.WALL_STRENGTH.concrete[0]} MPa (concrete), with their own weight. The soil bearing is assumed (${qa} kPa) until a geotechnical report. Rules of thumb for early design: no lateral (wind, earthquake) system, connections, deflection or code checks; an engineer designs the structure.`,
-          results: { colMax: Math.round(nMax), size: sys === 'steel' ? null : Math.round(big * 1000), depth: mm(depthOf(L.slabMax || span)), pressure: Math.round(pAvg), columns: cols.length, beams: L.beams.length, bearingWalls: L.walls.length, thinWalls: thin, transfers: tW + tC, ideas: ideas.length },
-          settings: { system: sys, span, bearing: qa, roles: ST.stRoles || {}, label: `${sname}, ${span} m grid from the walls (Workspace)` } }; }
+          method: `${sname}: ${sdesc}. Laid out from the drawn walls: walls of stone, masonry or concrete 150 mm or thicker carry the floors (glass, gypsum, plaster and thinner walls are partitions; you can change any wall). Grid lines follow the bearing walls, then the partition walls that keep the bays within about ${span} m, then evenly added lines where no wall is; columns stand where grid lines cross and no bearing wall does. Floors: ${fmt(deadOf(span), 1)} kPa dead with finishes and partitions, ${live} kPa occupancy (NBC 2020 residential), roof snow 1.0 kPa; factored 1.25 D + 1.5 L. Beams span/${SL.BEAM[sys].ratio}; walls against an assumed ${SL.WALL_STRENGTH.stone[0]} MPa (stone, masonry) or ${SL.WALL_STRENGTH.concrete[0]} MPa (concrete), with their own weight. The soil bearing is assumed (${qa} kPa) until a geotechnical report. ${A ? `Then analysed as a 3D frame (linear static, ${fmt(A.counts.unknowns)} unknowns): columns between the floors, ${sys === 'concrete' ? 'the flat plate as slab strips along the grid lines (equivalent frame)' : 'beams along the grid lines'}, braces pinned at both ends, floors as stiff diaphragms, column bases fixed and bearing walls as supports along their line; loads D, L, roof snow 1.0 kPa, wind ${fmt(wind, 1)} kPa on the building's width with 0.5 % of gravity, in the NBC 2020 combinations. Screening only: no earthquake, second-order (P-Δ), connection or code checks; an engineer designs the structure.` : 'Rules of thumb for early design: no lateral (wind, earthquake) system, connections, deflection or code checks; an engineer designs the structure.'}`,
+          results: { colMax: Math.round(nMax), size: sys === 'steel' ? null : Math.round(big * 1000), depth: mm(depthOf(L.slabMax || span)), pressure: Math.round(pAvg), columns: cols.length, beams: L.beams.length, bearingWalls: L.walls.length, thinWalls: thin, transfers: tW + tC, ideas: ideas.length,
+            ...(A ? { frameMembers: A.members.filter((m) => !m.hidden).length, momentMax: Math.round(Math.max(0, ...A.members.map((m) => m.M))), utilMax: +Math.max(0, ...A.members.filter((m) => !m.hidden).map((m) => m.util)).toFixed(2), driftHOver: A.drift ? A.drift.hOver : null, braces: (ST.stBraces || []).length } : {}) },
+          settings: { system: sys, span, bearing: qa, roles: ST.stRoles || {}, wind, braces: ST.stBraces || [], label: `${sname}, ${span} m grid from the walls (Workspace)` } }; }
       const sys = systemOf(), [, sname, deadOf, depthOf, fcol, sdesc] = SYSTEMS.find((x) => x[0] === sys), span = +ST.span, qa = +ST.bearing, ms = w.structGrid({ span });
       if (!ms.length) throw Error('Draw a mass or the building’s walls first: the column grid is laid out in its footprint.');
       const cols = [], rows = [], tint = {}; let nMax = 0, pMax = 0, worst = null, weight = 0;
@@ -1976,10 +2011,10 @@ export function mountChrome(app, api) {
     // a fold for the less common settings (2026-11-12, P1b): its state kept across redraws; a dot when it holds values changed from the defaults
     const adv = (key, title, html, dirty) => `<details class="sp-adv" data-adv="${key}" ${ST.unfold || ST.advOpen[key] ? 'open' : ''}><summary>${esc(title)}${dirty ? ' <i class="sp-dot" title="Changed from the defaults"></i><span class="sp-dotl">changed</span>' : ''}</summary>${html}</details>`;
     const seg = (attr, cur, list) => `<div class="sp-tabs" role="tablist">${list.map(([k, n]) => `<button type="button" role="tab" ${attr}="${k}" aria-selected="${cur === k}">${esc(n)}</button>`).join('')}</div>`;
-    const about = typeof sp.about === 'function' ? sp.about() : sp.about || '', views = viewsOf(id), cur = r ? r.view : ST.view[id] || views[0]?.[0], area = AREAS.find((a) => a[0] === ST.area) || AREAS[0];
+    const about = typeof sp.about === 'function' ? sp.about() : sp.about || '', views = viewsOf(id), cur = r ? r.view : ST.view[id] || views[0]?.[0];
     const stage = ST.busy ? `<div class="sp-stage run"><h3>Solving…</h3><p class="sp-note">${esc(ST.progress || 'Working on the ground grid')}</p><p class="sp-note sp-elapsed">${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}</p></div>`
       : ST.err ? `<div class="sp-stage"><h3>Could not run</h3><p class="sp-note sp-errtext">${esc(ST.err)}</p>${/needs monthly access/.test(ST.err) ? '<p class="sp-acts sp-acts1"><a class="btn sm primary" href="#/pricing">See monthly access</a></p>' : ''}</div>`
-      : !r ? `<div class="sp-stage"><h3>Click ▶ Start to begin</h3><p class="sp-note">${esc(about)}</p>${sp.noArea ? '' : `<p class="sp-note">Study area: ${esc(area[0] + '×')}${ST.areaInfo ? `, about ${fmt(ST.areaInfo.w)} × ${fmt(ST.areaInfo.h)} m (blue on the site)` : ''}. Change area makes it smaller or larger.</p>`}${sp.noArea ? '' : estLine(estFor())}</div>`
+      : !r ? `<div class="sp-stage"><h3>Click ▶ Start to begin</h3><p class="sp-note">${esc(about)}</p>${sp.noArea ? '' : `<p class="sp-note">Study area: ${esc(String(+(+ST.area).toFixed(1)) + '×')}${ST.areaInfo ? `, about ${fmt(ST.areaInfo.w)} × ${fmt(ST.areaInfo.h)} m (blue on the site)` : ''}. <button type="button" class="sp-link" data-st="qpop">Change it in Simulation quality</button>.</p>`}${sp.noArea ? '' : estLine(estFor())}</div>`
       : `<div class="sp-stage"><div class="sp-head"><span>${esc(r.rows[0][0])}</span><b>${r.rows[0][1]}</b></div>${r.chartHTML ? r.chartHTML() : chart(r)}${stale ? '<p class="sp-note sp-warn">The model changed after this result: Start again to update it.</p>' + estLine(estFor()) : changed ? '<p class="sp-note sp-warn">The settings changed: Start again to update the map.</p>' + estLine(estFor()) : ''}</div>`;
     const hh = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
     const inputs = { day: () => `<p class="sp-flabel">Day</p>${seg('data-st-set', 'day:' + ST.day, DAYS.map(([k, n]) => ['day:' + k, n]))}
@@ -2049,10 +2084,8 @@ export function mountChrome(app, api) {
           ${adv('egHosp', 'Advanced: runs, ASET, method notes', `${runsSeed}${asetHTML()}
           <p class="sp-note">Patients: one per bed in rooms named ward, patient room, bed bay, ICU or recovery (about one per 12 m² where no beds are placed); staff start at the nurse station. Smoke compartments: at doors 0.95 m or wider across a corridor. Stairs: the model's stairs between levels. Exit: an outside door on the lowest level with one.</p>
           <p class="sp-note">Context: the National Building Code of Canada 2020 (care and treatment occupancies) and CSA Z8000-18 plan for patients to be moved horizontally into the next zone on the same floor first, and down the stairs only if needed. Walking, door and stair flows from the SFPE Handbook; mobility shares, reaction times (median 90 s for patients, 30 s for staff) and staffing are assumptions. A screening of evacuation time: no fire or smoke is computed, and it is not a code compliance check.</p>`, egRS || !!egAset())}`; },
-      wayfinding: () => { let sc = null; try { sc = INST.persp.ws.planScene?.('wayfinding'); } catch { } const S0 = sc ? WAY.startsOf(sc) : [];
-        return `<p class="sp-flabel">Start (${esc(sc?.name?.split(' · ').pop() || 'this level')}, change the level in the Level menu)</p>${S0.length ? `<select class="sp-sel" data-way="start">${S0.map((x) => `<option value="${esc(x.id)}" ${x.id === ST.wayStart ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '<p class="sp-note">No rooms on this level yet.</p>'}
-          <label class="sp-check"><input type="checkbox" data-way="furn" ${ST.wayFurn ? 'checked' : ''}> Furniture is in the way when walking</label>
-          <p class="sp-note">Furniture taller than the eye blocks the view; lower pieces are seen over. Doors count as open passages. Corridors, halls, lobbies, landings and stairs are walked through, not destinations.</p>`; },
+      wayfinding: () => { let P = null; try { const w0 = INST.persp.ws, lvId = w0.level?.(), key = lvId + '|' + studyModel(w0).length + '|' + JSON.stringify([ST.wayAccess, ST.wayGroupsSet, ST.wayManual]);
+          if (ST._wfPrev?.key !== key) ST._wfPrev = { key, P: WUI.preview(w0.buildingScene(), lvId, ST) }; P = ST._wfPrev.P; } catch (e) { console.warn(e); } return WUI.settingsHTML(P, ST, esc); },
       privacy: () => { const P = ST.priv, side = (k, n) => `<button type="button" data-priv-side="${k}" aria-pressed="${P.sides.includes(k)}">${n}</button>`, num = (k, n, u, min, max, st) => `<label class="sp-field">${n}<span class="sp-num"><input type="number" data-priv="${k}" min="${min}" max="${max}" step="${st}" value="${P[k]}"> ${u}</span></label>`;
         let sc = null; try { sc = INST.persp.ws.planScene?.('privacy'); } catch { } const rooms = sc?.rooms || [], proj = sc?.source?.project || 'sample', nd = PKEEP.get('privacy:' + proj, {});
         return `<p class="sp-flabel">Street on these sides of the plan</p><div class="sp-chips sp-chips-in">${side('top', 'Top')}${side('right', 'Right')}${side('bottom', 'Bottom')}${side('left', 'Left')}</div>
@@ -2088,11 +2121,10 @@ export function mountChrome(app, api) {
     studyCard.innerHTML = `<header><b>${esc(name)}</b><span class="sp-pill" data-state="${status[0]}">${esc(status[1])}</span><span class="sp-hbtns"><button type="button" class="sp-ib" data-st="exp" aria-expanded="${ST.exp}" title="Export">⤓</button><button type="button" class="sp-x" data-st="close" aria-label="Close ${esc(name)}">×</button></span></header>${sibsHTML(id)}
       ${ST.exp ? `<div class="sp-exp"><button type="button" class="btn sm" data-st="csv" ${r ? '' : 'disabled'}>Ground values (CSV)</button><button type="button" class="btn sm" data-st="png" ${r ? '' : 'disabled'}>View (PNG)</button>${r ? `<p class="sp-flabel">Motion clip (8 s loop, ${clipFmt()?.name || 'video'})${ST.vidBusy ? ' · recording…' : ''}</p>${clipFmt()?.ext === 'webm' ? '<p class="sp-note sp-clipfmt">This browser records WebM; convert it to MP4 before posting to Instagram.</p>' : ''}${[['4:5', 'Post 4:5'], ['9:16', 'Story 9:16'], ['1:1', 'Square 1:1']].map(([v, n]) => `<button type="button" class="btn sm" data-st="vid" data-v="${v}" ${ST.vidBusy || ST.busy ? 'disabled' : ''}>${n}</button>`).join('')}` : ''}${r ? '' : '<p class="sp-note">Run the study first.</p>'}${SERIES[id] ? `<p class="sp-flabel">Series: one picture each, on one colour scale</p><button type="button" class="btn sm" data-st="ser-months" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].monthsNote)}">12 months</button><button type="button" class="btn sm" data-st="ser-seasons" ${ST.busy ? 'disabled' : ''} title="${esc(SERIES[id].seasonsNote)}">4 seasons</button><p class="sp-note">${esc(SERIES[id].monthsNote)}, or ${esc(SERIES[id].seasonsNote.toLowerCase())}; at ${esc(qualOf().name)} quality, about ${dur((estimate(id)?.ms || 0) * 12)} for 12. Then choose the view and export the sheet.</p>` : ''}</div>` : ''}
       ${sp.mode ? seg('data-st-mode', ST[sp.mode[0]], sp.mode[1]) : ''}${r ? `${stage}
-      ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}
+      ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `${id === 'structure' && views.length > 4 && (k === 'M' || k === 'load') ? `<span class="sp-chipsep">${k === 'M' ? 'Frame analysis' : 'Layout'}</span>` : ''}<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}
       ${r && id === 'fire-evacuation' ? '<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-eg="brief">Download the fire engineer’s brief</button></div>' : ''}${r && id === 'fire-evacuation' ? `<div class="sp-chips" role="group" aria-label="3D view of the building">${[['cut', '3D: cutaway at 1.4 m'], ['ghost', 'See-through']].map(([k, n]) => `<button type="button" data-eg="v3d" data-v="${k}" aria-pressed="${(ST.eg3d || 'cut') === k}">${n}</button>`).join('')}</div><label class="sp-check"><input type="checkbox" data-eg="auto" ${ST.egAuto !== false ? 'checked' : ''}> Run again when the model changes (exits, stairs and doors follow the model)</label>` : ''}${r && id === 'fire-evacuation' && ST.egStrat !== 'code' ? `<div class="sp-acts sp-acts1 sp-egplay"><button type="button" class="btn sm" data-eg="play">${ST.egPlay ? '❚❚ Pause' : '▶ Play'}</button><input type="range" data-eg="seek" min="0" max="${r.nFrames || 1}" step="1" value="${Math.round(ST.egT || 0)}" aria-label="Time in the run shown"><span class="sp-egt sp-note"></span></div><div class="sp-chips" role="group" aria-label="Playback speed">${[[10, '×10'], [30, '×30'], [60, '×60']].map(([v, n]) => `<button type="button" data-eg="speed" data-v="${v}" aria-pressed="${ST.egSpeed === v}">${n}</button>`).join('')}</div>` : ''}
       ${r && r.timeline ? tlHTML(r) : ''}${r && id === 'evac' && r.view === 'walks' ? `<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-st="anim">↺ Replay the walks</button></div>` : ''}${r && id === 'skyview' && r.dome ? `<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-st="skydome">${ST.domePick ? 'Click a spot on the ground…' : '◐ Sky dome at a spot'}</button></div>` : ''}${r && id === 'acoustics' && r.sound3d ? `<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-st="sound3d">${SND.on ? 'Close the sound particles' : '▶ Sound particles in 3D'}</button></div>` : ''}${r && id === 'stormwater' ? `<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-st="seq">${ST.seq ? '❚❚ Stop the sequence' : '▶ Play the sequence'}</button></div>` : ''}${r && id === 'spacesyntax' ? `<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-st="anim">${ST.agentsOff ? '▶ Release the agents' : '❚❚ Stop the agents'}</button></div>` : ''}${r && (r.anim || id === 'sunhours') ? `<div class="sp-acts sp-acts1">${r.anim ? `<button type="button" class="btn sm" data-st="anim">${animOn() ? '❚❚ Pause the flow' : '▶ Show the flow'}</button>${r.vslice ? `<button type="button" class="btn sm" data-st="vslice" aria-pressed="${!ST.vsliceOff}">${ST.vsliceOff ? 'Show the upright slice' : 'Hide the upright slice'}</button>` : ''}` : `<button type="button" class="btn sm" data-st="play">${PLAY.t ? '❚❚ Stop' : '▶ Play the day'} <span class="sp-playh"></span></button>`}</div>` : ''}` : ''}
-      ${r ? '' : `<p class="sp-sect">Settings</p>${SETTINGS}${stage}`}${r ? '' : `      ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}`}<div class="sp-acts">${ST.busy ? '<button type="button" class="btn sm" data-st="stop">Stop</button>' : `<button type="button" class="btn sm primary" data-st="run">▶ ${r ? 'Start again' : 'Start'}</button>`}${sp.noArea ? '' : `<button type="button" class="btn sm" data-st="area" aria-expanded="${ST.areaOpen}" ${ST.busy ? 'disabled' : ''}>Change area</button>`}</div>
-      ${ST.areaOpen ? `<div class="sp-optlist">${AREAS.map(([k, n]) => `<button type="button" data-st-area="${k}" aria-pressed="${ST.area === k}">${esc(n)}</button>`).join('')}</div>` : ''}
+      ${r ? '' : `<p class="sp-sect">Settings</p>${SETTINGS}${stage}`}${r ? '' : `      ${views.length > 1 ? `<div class="sp-chips" role="group" aria-label="Map shows">${views.map(([k, n]) => `<button type="button" data-st-view="${k}" aria-pressed="${cur === k}">${esc(n)}</button>`).join('')}</div>` : ''}`}<div class="sp-acts">${ST.busy ? '<button type="button" class="btn sm" data-st="stop">Stop</button>' : `<button type="button" class="btn sm primary" data-st="run">▶ ${r ? 'Start again' : 'Start'}</button>`}</div>
       ${r ? `<details class="sp-set sp-adv" data-adv="__set" ${ST.unfold || ST.advOpen.__set ? 'open' : ''}><summary>Settings${changed ? ' <i class="sp-dot"></i><span class="sp-dotl">changed: Start again to update</span>' : ''}</summary>${SETTINGS}</details>
       <div class="sp-acts sp-acts1 sp-expacts"><span class="sp-flabel">Export</span><button type="button" class="btn sm" data-st="xlview" ${ST.busy || stale || changed ? 'disabled' : ''} title="Add this view and its results to the Export list (PDF, slides)">Add to Export list</button><button type="button" class="btn sm" data-st="expopen">CSV · PNG…</button></div>` : ''}`;
     resCard.hidden = !r; legend.hidden = !r;
@@ -2106,6 +2138,8 @@ export function mountChrome(app, api) {
         legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-lbsteps">${Array.from({ length: n }, (_, i) => n - 1 - i).map((i) => `<i style="background:${at((i + 0.5) / n)}"></i>`).join('')}</div><div class="sp-lblabels">${Array.from({ length: n + 1 }, (_, i) => n - i).map((i) => `<span>${fmt(r.lo + (r.hi - r.lo) * i / n, r.dec)}</span>`).join('')}</div>`; } }
       delete legend.dataset.tl; TL.lg = null; if (r && TL.i >= 0) tlLegend();
       if (r && r.vslice && !ST.vsliceOff) { const v = r.vslice; legend.insertAdjacentHTML('beforeend', `<small class="sp-lbnote sp-lbslice">Upright slice · wind from ${esc(v.dn)}, m/s<span style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>${fmt(v.lo)}</span><i style="flex:1;height:8px;border-radius:2px;background:linear-gradient(to right,${v.stops.map((x) => x[1]).join(',')})"></i><span>${fmt(v.hi, 1)}</span></span></small>`); }
+      if (r && r.frameA && r.views[r.view]?.frame && r.view !== 'sys' && (r.view === 'disp' || ST.stDeformed !== false)) { const a = r.stAuto || 1, man = ST.stScale && ST.stScale !== 'auto', v = man ? +ST.stScale : a;
+        legend.insertAdjacentHTML('beforeend', `<label class="sp-lbdef"><span>Deformation <b class="sp-lbdefv">×${fmt(v)}</b><i class="sp-lbdefa">${man ? '' : ' auto'}</i></span><input type="range" data-sf="scale" min="1" max="${Math.max(500, a)}" step="1" value="${v}" aria-label="Deformation scale"><button type="button" class="sp-link" data-sf="scaleauto">Auto</button></label>`); }
       if (r && r.svals && r.slo !== undefined) legend.insertAdjacentHTML('beforeend', `<small class="sp-lbnote">On the building: ${fmt(r.slo)} to ${fmt(r.shi)} ${esc(r.unit)}, the same colours</small>`);
       if (r && !r._shown && !ST.busy) { r._shown = true; countUp([studyCard.querySelector('.sp-head b'), ...resCard.querySelectorAll('.sp-kv b')].filter(Boolean).slice(0, 8)); studyCard.querySelectorAll('svg.sp-hist').forEach((x) => x.classList.add('sp-grow')); }
   }
@@ -2124,8 +2158,44 @@ export function mountChrome(app, api) {
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st-idea], .sp-studycard [data-st-role]'); if (!b || ST.busy || ST.id !== 'structure') return; e.preventDefault();
     if (b.dataset.stIdea != null) { const it = ST.res?.ideas?.[+b.dataset.stIdea]; if (!it || !it.action) return; for (const [k, v] of Object.entries(it.action)) ST[k] = v; runStudy(); return; }
     const id = b.dataset.stRole; ST.stRoles = id === 'reset' ? {} : { ...(ST.stRoles || {}), [id]: 'partition' }; runStudy(); });
+  // the frame analysis (2026-11-18): the load case, what is drawn, the deformation scale, braces by hand, a member's values
+  const frameNow = () => (ST.id === 'structure' && ST.res && ST.res.frameA ? ST.res : null);
+  const frameRepaint = (light) => { const r = frameNow(); if (!r || !r.views[r.view]?.frame) return; if (TL.i >= 0 || TL.on) { tlStop(); TL.i = -1; } if (light) r.paint.light ? r.paint.light(r) : paintRes(r); else paintRes(r); };
+  root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-sf], .sp-legend [data-sf]'); if (!b || ST.busy || b.tagName === 'INPUT') return; const r = frameNow(); if (!r) return; const A = r.frameA, k = b.dataset.sf, v = b.dataset.v; e.preventDefault();
+    if (k === 'case') { ST.stCase = v || null; Object.assign(r.views, SFU.frameViews(A, ST.stCase)); applyView(r, r.view); frameRepaint(); }
+    else if (k === 'pick') { ST.stPick = +v; }
+    else if (k === 'scaleauto') { ST.stScale = 'auto'; frameRepaint(true); }
+    else if (k === 'brace') { ST.stBraceMode = !ST.stBraceMode; ST.stBraceSaid = ''; if (!r.views[r.view]?.frame) { ST.view.structure = 'M'; applyView(r, 'M'); } frameRepaint(); }
+    else if (k === 'nobraces') { ST.stPrevDrift = A.drift?.hOver; ST.stBraces = []; ST.stBraceSaid = 'All braces removed'; runStudy(); return; }
+    else if (k === 'sway') { const it = SFU.swayIdea(A, r.layout); if (!it) return; const have = ST.stBraces || [], key = (x) => [x.dir, x.line, x.bay, x.level].join('|'); ST.stPrevDrift = A.drift?.hOver; ST.stBraces = [...have.filter((x) => !it.braces.some((y) => key(y) === key(x))), ...it.braces]; ST.stBraceSaid = `${it.braces.length} X braces added in the bays that sway most`; runStudy(); return; }
+    drawStudy(); });
+  root.addEventListener('change', (e) => { const t = e.target, k = t.dataset && t.dataset.sf; if (!k || !frameNow() || ST.busy) return;
+    if (k === 'model') ST.stModel = t.checked; else if (k === 'flags') ST.stFlags = t.checked; else if (k === 'deformed') ST.stDeformed = t.checked; else return; frameRepaint(); drawStudy(); });
+  let sfRaf = 0; root.addEventListener('input', (e) => { const t = e.target; if (!t.dataset || t.dataset.sf !== 'scale' || !frameNow()) return; ST.stScale = +t.value; const lab = legend.querySelector('.sp-lbdefv'), au = legend.querySelector('.sp-lbdefa'); if (lab) lab.textContent = '×' + fmt(+t.value); if (au) au.textContent = '';
+    if (!sfRaf) sfRaf = requestAnimationFrame(() => { sfRaf = 0; frameRepaint(true); }); });
   studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.stNum || t.dataset.stSel; if (!k || ST.busy) return; ST[k] = t.dataset.stNum ? (Number.isFinite(+t.value) ? +t.value : ST[k]) : t.value; drawStudy(); });
-  studyCard.addEventListener('change', (e) => { const wk = e.target.dataset.way; if (wk) { if (wk === 'start') ST.wayStart = e.target.value; else ST.wayFurn = e.target.checked; drawStudy(); } });
+  // Wayfinding settings and results (2026-11-18)
+  const wfOrigin = () => { try { return INST.persp.ws.planScene('wayfinding').origin || [0, 0]; } catch { return [0, 0]; } };
+  studyCard.addEventListener('change', (e) => { const t = e.target, d = t.dataset; if (ST.id !== 'wayfinding' || ST.busy) return; WUI.settings(ST);
+    if (d.way === 'start') ST.wayStart = t.value; else if (d.way === 'furn') ST.wayFurn = t.checked; else if (d.way === 'acc') ST.wayAcc = t.checked; else if (d.way === 'other') ST.wayDest = { ...ST.wayDest, other: t.checked };
+    else if (d.way === 'room') { ST.wayRoom = t.value; drawStudy(); return; }
+    else if (d.wayGrp != null) { const g = new Set(ST.wayDest.groups); if (t.checked) g.add(d.wayGrp); else g.delete(d.wayGrp); ST.wayDest = { ...ST.wayDest, groups: [...g] }; }
+    else if (d.wayRoom != null) { const g = new Set(ST.wayDest.rooms); if (t.checked) g.add(d.wayRoom); else g.delete(d.wayRoom); ST.wayDest = { ...ST.wayDest, rooms: [...g] }; }
+    else if (d.wayAcc != null) ST.wayAccess = { ...ST.wayAccess, [d.wayAcc]: t.checked ? 'public' : 'staff' };
+    else if (d.wayW) ST.wayW = { ...ST.wayW, [d.wayW]: Math.max(0, +t.value || 0) };
+    else return; drawStudy(); });
+  studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-way-dmode], [data-way-sel], button[data-way]'); if (!b || ST.id !== 'wayfinding' || ST.busy) return; WUI.settings(ST); const d = b.dataset;
+    if (d.wayDmode) { ST.wayDest = { ...ST.wayDest, mode: d.wayDmode }; drawStudy(); return; }
+    if (d.waySel) { const n = ST.res?.wayA?.nodes.find((x) => x.no === +d.waySel); ST.waySel = ST.waySel === +d.waySel ? null : +d.waySel; if (ST.res) { if (n && ST.waySel) ST.res.wayFocus(n); else paintRes(ST.res); } drawStudy(); return; }
+    const pane = activePane(), lvId = INST.persp.ws.level?.();
+    if (d.way === 'pickstart') { ST.wayPick = ST.wayPick === 'start' ? null : 'start'; pane.ws.pickPoint?.(ST.wayPick ? (pt) => { const o = wfOrigin(); ST.wayManual = [...ST.wayManual, { p: [pt[0] - o[0], pt[1] - o[1]], lv: lvId }]; ST.wayPick = null; ST.wayStart = 'all'; drawStudy(); } : null); drawStudy(); return; }
+    if (d.way === 'nomanual') { ST.wayManual = ST.wayManual.filter((m) => m.lv !== lvId); drawStudy(); return; }
+    if (d.way === 'nosigns') { ST.waySigns = ST.waySigns.filter((g) => g.lv !== lvId); drawStudy(); return; }
+    if (d.way === 'addsign') { if (ST.wayPick) { ST.wayPick = null; pane.ws.pickPoint?.(null); drawStudy(); return; } ST.wayPick = 'sign'; let at = null;
+      const second = (pt) => { const o = wfOrigin(), q = [pt[0] - o[0], pt[1] - o[1]]; ST.waySigns = [...ST.waySigns, { p: at, face: Math.round(Math.atan2(q[1] - at[1], q[0] - at[0]) * 180 / Math.PI), lv: lvId }]; ST.wayPick = null; drawStudy(); };
+      pane.ws.pickPoint?.((pt) => { const o = wfOrigin(); at = [pt[0] - o[0], pt[1] - o[1]]; ST.wayPick = 'signface'; drawStudy(); setTimeout(() => pane.ws.pickPoint?.(second), 0); }); drawStudy(); return; }
+    if (d.way === 'entry') { const A = ST.res?.wayA, en = A && A.entrances.find((x) => x.room === ST.wayRoom); const w0 = INST.persp.ws; if (d.v === 'off' || !en) { w0.eyeView?.(null); return; } const o = A.F.SC.origin || [0, 0], P = (p) => [p[0] + o[0], p[1] + o[1]];
+      goView('persp'); setTimeout(() => w0.eyeView?.(d.v === 'out' ? { p: P(en.door), look: P(en.out), lv: lvId } : { p: P(en.cam), look: P(en.door), lv: lvId }), 50); return; } });
   studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.priv; if (k) { ST.priv = { ...ST.priv, [k]: k === 'doors' ? t.checked : +t.value }; drawStudy(); return; }
     if (t.dataset.privneed != null) { let sc = null; try { sc = INST.persp.ws.planScene('privacy'); } catch { } const key = 'privacy:' + (sc?.source?.project || 'sample'), m = PKEEP.get(key, {}); if (t.value) m[t.dataset.privneed] = t.value; else delete m[t.dataset.privneed]; PKEEP.set(key, m); ST.privNeedV = (ST.privNeedV || 0) + 1; drawStudy(); return; } });
   studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-iso="pick"]'); if (!b || ST.busy) return; const pane = activePane(); if (!pane.ready || !pane.ws.pickPoint) return;
@@ -2174,7 +2244,7 @@ export function mountChrome(app, api) {
   studyCard.addEventListener('change', (e) => { if (e.target.dataset.st === 'windSpeed') { ST.windSpeed = +e.target.value; drawStudy(); } });
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st], .sp-studyres [data-st], [data-st-l], [data-st-r]'); if (!b) return;
     if (b.dataset.stL) { ST.ltab = b.dataset.stL; drawStudy(); return; } if (b.dataset.stR) { ST.rtab = b.dataset.stR; drawStudy(); return; }
-    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } if (ST.id === 'spacesyntax' && ST.res) { ST.agentsOff = !ST.agentsOff; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'area') { ST.areaOpen = !ST.areaOpen; drawStudy(); return; } if (k === 'vid') { recordClip(b.dataset.v); return; } if (k === 'vslice') { ST.vsliceOff = !ST.vsliceOff; if (INST.persp.ready && ST.res) INST.persp.ws.vplane?.(ST.res.vslice && !ST.vsliceOff ? ST.res.vslice : null); drawStudy(); return; } if (k === 'skydome') { domePick(); return; } if (k === 'sound3d') { soundPanel(!SND.on); return; } if (k === 'seq') { playSeq(); return; } if (k === 'expopen') { ST.exp = true; drawStudy(); studyCard.scrollTop = 0; return; } if (k === 'xlview') { b.disabled = true; xlAddView().then((ok) => { b.textContent = ok ? 'Added to the Export list ✓' : 'Could not add'; toastXL(ok ? `${simName(ST.id)} added to the Export list` : 'Could not add'); }); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
+    if (b.tagName === 'A') e.preventDefault(); const k = b.dataset.st; if (k === 'anim') { if (ST.id === 'evac' && ST.res) { ST.res.played = false; ST.anim = true; paintRes(ST.res); drawStudy(); return; } if (ST.id === 'spacesyntax' && ST.res) { ST.agentsOff = !ST.agentsOff; paintRes(ST.res); drawStudy(); return; } ST.anim = !animOn(); animate(ST.res); drawStudy(); return; } if (k === 'play') { playDay(); return; } if (k === 'ser-months' || k === 'ser-seasons') { runSeries(k === 'ser-months' ? 'months' : 'seasons'); return; } if (k === 'stop') { ST.cancel = true; SSX.stop(); VWS.stop(); CAMS.stop(); DAY.stop(); ST.progress = 'Stopping after this step…'; drawStudy(); return; } if (k === 'qpop') { setTimeout(() => { if (pops.q.hidden) togglePop('q', qEl); }, 0); return; }   /* after this click, which would close it as a click away */ if (k === 'vid') { recordClip(b.dataset.v); return; } if (k === 'vslice') { ST.vsliceOff = !ST.vsliceOff; if (INST.persp.ready && ST.res) INST.persp.ws.vplane?.(ST.res.vslice && !ST.vsliceOff ? ST.res.vslice : null); drawStudy(); return; } if (k === 'skydome') { domePick(); return; } if (k === 'sound3d') { soundPanel(!SND.on); return; } if (k === 'seq') { playSeq(); return; } if (k === 'expopen') { ST.exp = true; drawStudy(); studyCard.scrollTop = 0; return; } if (k === 'xlview') { b.disabled = true; xlAddView().then((ok) => { b.textContent = ok ? 'Added to the Export list ✓' : 'Could not add'; toastXL(ok ? `${simName(ST.id)} added to the Export list` : 'Could not add'); }); return; } if (k === 'exp') { ST.exp = !ST.exp; drawStudy(); return; } if (k === 'windSpeed') return; if (k === 'save') saveStudy(); else if (k === 'close') closeStudy(); else if (k === 'run') runStudy(); else if (k === 'uniform-snow') { closeStudy(); location.hash = '#/simulations/snow?mode=vertical'; } else if (k === 'page') openPage(ST.id); else if (k === 'csv') exportCSV(); else if (k === 'png') exportPNG();
     else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false, autoKey = '', autoAt = 0, autoRan = '';
 
@@ -2270,7 +2340,7 @@ export function mountChrome(app, api) {
     if (INST.persp.ready && INST.persp.ws.thumb) { const key = cols.find((c) => c.current)?.id; if (key && !THUMB.has(key)) { try { const u = await INST.persp.ws.thumb(); if (u) { THUMB.set(key, u); const im = cmp.querySelector(`[data-sketch="${CSS.escape(key)}"] .sp-sk-pic`); if (im) im.innerHTML = `<img src="${u}" alt="">`; } } catch { } } }
   }
   function parkSave() { const sec = app.querySelector('section[data-tab="versions"]'), sv = $('#saveV'), note = $('#note'); if (sec && sv && note && !sec.contains(sv)) { sec.querySelector('#dirty')?.after(note, sv); sv.textContent = 'Save version'; } }
-  function openSheet(on) { if (on && !dat.hidden) openData(false); cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else parkSave(); }
+  function openSheet(on) { if (on) solo('sheet'); if (on && !dat.hidden) openData(false); cmp.hidden = !on; root.classList.toggle('sp-sheet-open', on); syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); drawCompare(); } else parkSave(); }
   cmp.addEventListener('click', async (e) => {
     const g = e.target.closest('[data-grp]'), pin = e.target.closest('[data-pin]'), sk = e.target.closest('[data-sketch]'), b = e.target.closest('[data-cmp]');
     if (g) { const x = shut(); x.has(g.dataset.grp) ? x.delete(g.dataset.grp) : x.add(g.dataset.grp); setShut(x); drawCompare(); return; }
@@ -2380,7 +2450,7 @@ export function mountChrome(app, api) {
         <p class="sp-note">Figures come from the model as it is now (heights from storeys × storey height). Simulation results are the last run of each study in this view; “Model changed since” means the model was edited after that run, so run it again before relying on it. Design checks, not compliance results.</p></div>
       <footer><span class="sp-sk-title">Project data</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-dat="csv" title="A CSV file that Excel opens">Export to Excel</button></span></footer>`;
   }
-  function openData(on) { if (on && !cmp.hidden) openSheet(false); dat.hidden = !on; syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); if (!assetsCard.hidden) openAssets(false); drawData(); } }
+  function openData(on) { if (on) solo('data'); if (on && !cmp.hidden) openSheet(false); dat.hidden = !on; syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); if (!assetsCard.hidden) openAssets(false); drawData(); } }
   dat.addEventListener('click', (e) => {
     const g = e.target.closest('[data-dt-grp]'), sel = e.target.closest('[data-dt-sel]'), sk = e.target.closest('[data-dt-study]'), b = e.target.closest('[data-dat]');
     if (g) { const x = dshut(); x.has(g.dataset.dtGrp) ? x.delete(g.dataset.dtGrp) : x.add(g.dataset.dtGrp); setDshut(x); drawData(); return; }
@@ -2452,7 +2522,7 @@ export function mountChrome(app, api) {
         : '<div class="sp-asempty"><b>No furniture of your own yet</b><p>Import a piece (OBJ, GLB, STL, 3DM); it is kept in your account for every project.</p></div>'}
         <button type="button" class="btn sm primary sp-asbtn" data-as="furn">+ Import furniture</button></section>`;
   }
-  function openAssets(on) { assetsCard.hidden = !on; $('[data-sp="assets"]', root)?.setAttribute('aria-pressed', String(on)); if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); drawAssets(); } }
+  function openAssets(on) { if (on) solo('assets'); assetsCard.hidden = !on; $('[data-sp="assets"]', root)?.setAttribute('aria-pressed', String(on)); if (on) { openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); drawAssets(); } }
   assetsCard.addEventListener('click', (e) => { const b = e.target.closest('[data-as],[data-as-sel]'); if (!b) return;
     if (b.dataset.asSel) { select(['ps:imp:' + b.dataset.asSel]); return; }
     const k = b.dataset.as; if (k === 'close') openAssets(false);
@@ -2464,7 +2534,7 @@ export function mountChrome(app, api) {
   let disposeProps = null;
   const propCounts = () => { const st = studio() || {}, o = INST.plan.ready ? INST.plan.ws.objects() : []; const c = (k) => o.filter((x) => x.k === k).length;
     return { plot: st.site?.parcel?.pts?.length > 2 ? 1 : 0, building: (st.masses || []).length + (st.imports || []).length, story: (st.levels || []).length, space: c('room'), aperture: c('op'), wall: c('wall'), floor: c('floor'), furniture: c('furn'), context: (st.site?.buildings || []).filter((b) => !b.excluded).length, street: (st.site?.roads || []).length }; };
-  function openProps(on) { propsCard.hidden = !on; $('[data-sp="props"]', root)?.setAttribute('aria-pressed', String(on)); disposeProps?.(); disposeProps = null;
+  function openProps(on) { if (on) solo('props'); propsCard.hidden = !on; $('[data-sp="props"]', root)?.setAttribute('aria-pressed', String(on)); disposeProps?.(); disposeProps = null;
     if (on) { document.querySelectorAll('dialog[open]').forEach((d) => d.close()); openCard(false); closePops(); palOpen(false); if (!cmp.hidden) openSheet(false); if (!dat.hidden) openData(false); studyCard.hidden = true; disposeProps = mountProps(propsCard, p, { counts: propCounts, onClose: () => openProps(false) }); } else if (ST.id) studyCard.hidden = false; }
   window.__wsProps = () => openProps(true);   // studies and the site review open these props while in the Workspace
   // links to the old project settings page (studies, the site review) open the props here instead

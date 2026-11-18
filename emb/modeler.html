@@ -4076,6 +4076,8 @@ function gzTurn(D, p, e) {
 }
 function nameDetected(src) { const ls = M.levels.filter((l) => l.det === src).sort((a, b) => a.z - b.z), st = ls.filter((l) => !l.roof), g = st.findIndex((l) => l.z > -0.3); const g0 = g < 0 ? st.length : g;
   const others = new Set(M.levels.filter((l) => l.det !== src).map((l) => l.name)); st.forEach((l, i) => { const n = i < g0 ? 'B' + (g0 - i) : i - g0 + 1 + 'F'; l.name = others.has(n) ? n + ' (' + src.replace(/\.[^.]+$/, '').slice(0, 20) + ')' : n; }); }   // all renamed at once: no clash with each other
+window.addEventListener('pointermove', (e) => { if (e.target !== cv || !SFM.mode || CAM !== '3d' || !window.S3 || !S3.structFramePick) return; if (SFM.mode !== 'brace') return; const i = S3.structFramePick(e.clientX, e.clientY, 'bay'); if (i === SFM.hover) return; SFM.hover = i; S3.structFramePreview(i == null ? null : SFM.bays[i], SFM.kindOf ? SFM.kindOf(i) : '/'); }, true);
+window.addEventListener('pointerdown', (e) => { if (e.target !== cv || !SFM.mode || CAM !== '3d' || !window.S3 || !S3.structFramePick || e.button !== 0) return; const what = SFM.mode === 'brace' ? 'bay' : 'member', i = S3.structFramePick(e.clientX, e.clientY, what); if (i == null) return; if (SFM.mode === 'brace') { e.stopImmediatePropagation(); e.preventDefault(); } try { SFM.cb && SFM.cb({ what, i, shift: e.shiftKey, cx: e.clientX, cy: e.clientY }); } catch (err) { console.warn(err); } }, true);
 function gzLift(D, e) {
   const Z = D.zs; if (!Z) return D.dz0 || 0; const ax = Z.t[0] - Z.o[0], ay = Z.t[1] - Z.o[1], px = Math.hypot(ax, ay); if (px < 4) return D.dz0 || 0;
   const along = ((e.clientX - D.c0[0]) * ax + (e.clientY - D.c0[1]) * ay) / px, raw = (D.dz0 || 0) + along / px * Z.len, base = D.z + raw;
@@ -5809,7 +5811,13 @@ function flowDraw() {
     for (let j = st / 2; j < o.ny; j += st) for (let i = st / 2; i < o.nx; i += st) { const c = (j | 0) * o.nx + (i | 0), u = o.ux[c], v = o.uy[c], sp = Math.hypot(u, v); if (!(sp > (o.min || 0.05))) continue; const X = o.X0 + (i + 0.5) * o.cell, Y = o.Y0 + (j + 0.5) * o.cell, L = st * o.cell * 0.22, dx = u / sp, dy = v / sp, a = W2S([X - dx * L, Y - dy * L]), q = W2S([X + dx * L, Y + dy * L]), h = 0.35 * Math.hypot(q[0] - a[0], q[1] - a[1]), ang = Math.atan2(q[1] - a[1], q[0] - a[0]);
       x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(q[0], q[1]); x.lineTo(q[0] - h * Math.cos(ang - 0.5), q[1] - h * Math.sin(ang - 0.5)); x.moveTo(q[0], q[1]); x.lineTo(q[0] - h * Math.cos(ang + 0.5), q[1] - h * Math.sin(ang + 0.5)); x.stroke(); } }
 }
-function drawStruct2() { const o = STR2; if (!o || CAM === '3d') return; g.save(); const d = VP.d, lz = (lvObj() || { z: 0 }).z, onLv = (c) => c.z0 === undefined || (c.z0 <= lz + 0.01 && c.z1 > lz + 0.01);
+// the analysed frame in plan (2026-11-18): every member on this level as a line in its colour (braces dashed), drawn under the labels
+let STF2 = null; const SFM = { mode: null, cb: null, hover: null, bays: null }; window.__SFM = SFM;   // read by the tests
+function drawFrame2() { const o = STF2; if (!o || CAM === '3d') return; const d = VP.d, lz = (lvObj() || { z: 0 }).z, lv = lvObj() || { h: 3 }; g.save();
+  for (const m of o.members) { const z0 = Math.min(m.st[0].p[2], m.st.at(-1).p[2]), z1 = Math.max(m.st[0].p[2], m.st.at(-1).p[2]); if (m.kind === 'column' || !(z1 > lz + 0.05 && z0 <= lz + lv.h + 0.05 && (z0 === z1 || z0 < lz + lv.h - 0.05))) continue;   /* this level's members: its ceiling's beams and the braces of this storey */
+    for (let k = 0; k + 1 < m.st.length; k++) { const a = W2S(m.st[k].p), b = W2S(m.st[k + 1].p); g.strokeStyle = m.st[k].c; g.lineWidth = Math.max(2 * d, (m.kind === 'strip' ? 0.25 : m.r * 2 || 0.1) * V.s); g.setLineDash(m.kind === 'brace' ? [6 * d, 4 * d] : []); g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); } }
+  g.setLineDash([]); g.restore(); }
+function drawStruct2() { drawFrame2(); const o = STR2; if (!o || CAM === '3d') return; g.save(); const d = VP.d, lz = (lvObj() || { z: 0 }).z, onLv = (c) => c.z0 === undefined || (c.z0 <= lz + 0.01 && c.z1 > lz + 0.01);
   // a label with a white ground, kept clear of the others (2026-11-17)
   const tag = (p, txt, col, ang = 0, size = 10, force = false) => { g.font = `600 ${size * d}px ${FM}`; const tw = g.measureText(txt).width, h = (size + 3) * d, ca = Math.abs(Math.cos(ang)), sa = Math.abs(Math.sin(ang)), bw = ca * (tw + 6 * d) + sa * h, bh = sa * (tw + 6 * d) + ca * h, box = { x: p[0] - bw / 2, y: p[1] - bh / 2, w: bw, h: bh };
     if (!force && lbHit(box)) return false; LB.push(box); g.save(); g.translate(p[0], p[1]); g.rotate(ang); g.fillStyle = 'rgba(255,255,255,.92)'; g.fillRect(-tw / 2 - 3 * d, -h / 2, tw + 6 * d, h); g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 0, 0.5 * d); g.restore(); return true; };
@@ -6715,6 +6723,52 @@ window.S3 = (() => {
     scene.add(G); SPATH.g = G; render(); };
   // ---- structure preview (2026-10-31): columns as boxes [{ x, y (plan), s (m), z0, z1, color }], and design masses tinted { id: color }
   const STRP = { g: null, tint: null };
+  // ---- the analysed frame (2026-11-18): members as tubes coloured along their length, force diagrams as translucent flags,
+  // the deformed shape as lines, supports, and (for the brace tool) the bays as invisible planes with a preview diagonal
+  const SFR = { g: null, tubes: null, faceMember: null, bays: null, preview: null, on: null };
+  const p3 = (p) => new T.Vector3(p[0], p[2], -p[1]);
+  function sfrClear() { if (!SFR.g) return; scene.remove(SFR.g); SFR.g.traverse((x) => { x.geometry && x.geometry.dispose(); if (x.material) (Array.isArray(x.material) ? x.material : [x.material]).forEach((m) => m.dispose()); }); SFR.g = null; SFR.tubes = null; SFR.bays = null; SFR.preview = null; }
+  api.structFrame = (o) => { if (!scene) return; sfrClear(); if (grp) grp.visible = !o || o.showModel !== false; if (!o) { render(); return; }
+    const G = new T.Group(); G.name = 'structframe'; const pos = [], nor = [], col = [], faceMember = [], up = new T.Vector3(0, 1, 0), cA = new T.Color(), cB = new T.Color();
+    // one merged geometry of every tube (8 sides), coloured by the value at each station
+    o.members.forEach((m, mi) => { const st = m.st; for (let k = 0; k + 1 < st.length; k++) { const A = p3(st[k].p), B = p3(st[k + 1].p), d = B.clone().sub(A), L = d.length(); if (L < 1e-6) continue; d.normalize();
+        const q = new T.Quaternion().setFromUnitVectors(up, d), r = m.r || 0.06; cA.set(st[k].c); cB.set(st[k + 1].c);
+        for (let a = 0; a < 8; a++) { const t0 = (a / 8) * Math.PI * 2, t1 = ((a + 1) / 8) * Math.PI * 2, n0 = new T.Vector3(Math.cos(t0), 0, Math.sin(t0)).applyQuaternion(q), n1 = new T.Vector3(Math.cos(t1), 0, Math.sin(t1)).applyQuaternion(q);
+          const v = [[A, n0, cA], [B, n0, cB], [B, n1, cB], [A, n0, cA], [B, n1, cB], [A, n1, cA]]; for (const [P, N, C] of v) { pos.push(P.x + N.x * r, P.y + N.y * r, P.z + N.z * r); nor.push(N.x, N.y, N.z); col.push(C.r, C.g, C.b); } faceMember.push(mi, mi); } } });
+    if (pos.length) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+      const me = new T.Mesh(g, new T.MeshLambertMaterial({ vertexColors: true })); me.name = 'sf-tubes'; G.add(me); SFR.tubes = me; SFR.faceMember = faceMember; }
+    // the force diagrams: a flag along each member, height ∝ value, on the side the moment bends to
+    if (o.flags) { const fp = [], fc = [], lp = []; for (const m of o.members) { const st = m.st; for (let k = 0; k + 1 < st.length; k++) { const a = st[k], b = st[k + 1]; if (!a.h && !b.h) continue;
+        const A = p3(a.p), B = p3(b.p), sa = p3(a.side).multiplyScalar(a.h), sb = p3(b.side).multiplyScalar(b.h), A2 = A.clone().add(sa), B2 = B.clone().add(sb); cA.set(a.c); cB.set(b.c);
+        for (const [P, C] of [[A, cA], [B, cB], [B2, cB], [A, cA], [B2, cB], [A2, cA]]) { fp.push(P.x, P.y, P.z); fc.push(C.r, C.g, C.b); } lp.push(A2.x, A2.y, A2.z, B2.x, B2.y, B2.z); } }
+      if (fp.length) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(fp, 3)); g.setAttribute('color', new T.Float32BufferAttribute(fc, 3)); const fm = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.34, side: T.DoubleSide, depthWrite: false })); fm.name = 'sf-flags'; fm.renderOrder = 5; G.add(fm);
+        const lg = new T.BufferGeometry(); lg.setAttribute('position', new T.Float32BufferAttribute(lp, 3)); const ln = new T.LineSegments(lg, new T.LineBasicMaterial({ color: 0x6b7280, transparent: true, opacity: 0.55 })); ln.name = 'sf-flag-edges'; G.add(ln); } }
+    // the deformed shape: each member through its displaced stations
+    if (o.deform) { const dp = [], dc = []; for (const m of o.members) { const st = m.st; for (let k = 0; k + 1 < st.length; k++) { const a = st[k], b = st[k + 1]; for (const [s0, C] of [[a, a.c], [b, b.c]]) { const P = p3([s0.p[0] + s0.d[0] * o.deform, s0.p[1] + s0.d[1] * o.deform, s0.p[2] + s0.d[2] * o.deform]); dp.push(P.x, P.y, P.z); cA.set(C); dc.push(cA.r, cA.g, cA.b); } } }
+      if (dp.length) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(dp, 3)); g.setAttribute('color', new T.Float32BufferAttribute(dc, 3)); const ln = new T.LineSegments(g, new T.LineBasicMaterial({ vertexColors: true })); ln.name = 'sf-deformed'; G.add(ln); } }
+    // supports: a plate (fixed), a cone (pinned), a short bar (wall)
+    for (const sp of o.supports || []) { const P = p3(sp.p); let me; if (sp.t === 'fixed') { me = new T.Mesh(new T.BoxGeometry(0.5, 0.06, 0.5), new T.MeshLambertMaterial({ color: 0x475569 })); me.position.set(P.x, P.y - 0.03, P.z); }
+      else if (sp.t === 'pinned') { me = new T.Mesh(new T.ConeGeometry(0.22, 0.3, 12), new T.MeshLambertMaterial({ color: 0x475569 })); me.position.set(P.x, P.y - 0.15, P.z); }
+      else { me = new T.Mesh(new T.BoxGeometry(0.16, 0.16, 0.16), new T.MeshLambertMaterial({ color: 0x16a34a })); me.position.copy(P); } me.name = 'sf-support'; G.add(me); }
+    // the brace tool: the bays as invisible planes
+    if (o.bays) { SFR.bays = []; o.bays.forEach((b, i) => { const A = p3(b.a), B = p3(b.b), w = Math.hypot(B.x - A.x, B.z - A.z), h = B.y - A.y; if (w < 0.2 || h < 0.2) return; const pl = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ visible: false, side: T.DoubleSide }));
+        pl.position.set((A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2); pl.rotation.y = -Math.atan2(B.z - A.z, B.x - A.x); pl.userData.bay = i; pl.updateMatrixWorld(true); G.add(pl); SFR.bays.push(pl); }); }
+    scene.add(G); SFR.g = G; SFR.on = o; render(); };
+  // what is under the pointer: a bay (brace tool) or a member (reading its values)
+  api.structFramePick = (cx, cy, what) => { if (!SFR.g) return null; SFR.g.updateMatrixWorld(true); if (what === 'bay') { if (!SFR.bays || !SFR.bays.length) return null; const h = ray(cx, cy).intersectObjects(SFR.bays, false); return h.length ? h[0].object.userData.bay : null; }
+    if (!SFR.tubes) return null; const h = ray(cx, cy).intersectObject(SFR.tubes, false); return h.length && h[0].faceIndex != null ? SFR.faceMember[h[0].faceIndex] ?? null : null; };
+  api.structFramePreview = (b, kind) => { if (!SFR.g) return; if (SFR.preview) { SFR.g.remove(SFR.preview); SFR.preview.geometry.dispose(); SFR.preview = null; } if (b) { const A = p3(b.a), B = p3(b.b), C = p3([b.b[0], b.b[1], b.a[2]]), D = p3([b.a[0], b.a[1], b.b[2]]), pts = kind === 'X' ? [A, B, C, D] : [A, B];
+      const g = new T.BufferGeometry().setFromPoints(pts); const ln = new T.LineSegments(g, new T.LineDashedMaterial({ color: 0xf59e0b, dashSize: 0.3, gapSize: 0.18, depthTest: false })); ln.computeLineDistances(); ln.renderOrder = 20; SFR.g.add(ln); SFR.preview = ln; } render(); };
+  // wayfinding signs in 3D (2026-11-18): a 0.6 × 0.3 m panel on a post, its face at 2.1 m, turned to face the people it serves, in its class colour
+  const SGN = { g: null };
+  api.signs = (list) => { if (!scene) return; if (SGN.g) { scene.remove(SGN.g); SGN.g.traverse((x) => { x.geometry && x.geometry.dispose(); x.material && x.material.dispose(); }); SGN.g = null; } if (!list || !list.length) { render(); return; }
+    const G = new T.Group(); G.name = 'wf-signs';
+    for (const s of list) { const z = s.z || 0, col = new T.Color(s.col || '#d8402a'), face = (s.face || 0) * Math.PI / 180, panel = new T.Mesh(new T.BoxGeometry(0.6, 0.3, 0.04), new T.MeshLambertMaterial({ color: col }));
+      panel.position.set(s.p[0], z + 2.1, -s.p[1]); panel.rotation.y = face - Math.PI / 2; panel.name = 'wf-sign'; G.add(panel);
+      const post = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 2.0, 8), new T.MeshLambertMaterial({ color: 0x4b5563 })); post.position.set(s.p[0], z + 1.0, -s.p[1]); post.name = 'wf-post'; G.add(post); }
+    scene.add(G); SGN.g = G; render(); };
+  api._signs = () => (SGN.g ? SGN.g.children.filter((x) => x.name === 'wf-sign').length : 0);
+  api._structFrame = () => { if (!SFR.g) return null; const n = {}; SFR.g.traverse((x) => { if (x.name && x.name.startsWith('sf-')) n[x.name] = (n[x.name] || 0) + 1; }); return { parts: n, tris: SFR.tubes ? SFR.tubes.geometry.attributes.position.count / 3 : 0, model: grp ? grp.visible : null, preview: SFR.preview ? SFR.preview.geometry.attributes.position.count / 2 : 0, bays: SFR.bays ? SFR.bays.length : 0, deform: SFR.on ? SFR.on.deform : 0 }; };
   function tintApply() { if (!grp) return; grp.traverse((m) => { if (!m.isMesh) return; const ud = m.userData; if (!ud || ud.k !== 'mass') return; if (!m.userData.__tint0) m.userData.__tint0 = m.material;
       const c = STRP.tint && STRP.tint[ud.id]; m.material = c ? new T.MeshLambertMaterial({ color: new T.Color(c), transparent: true, opacity: 0.38, depthWrite: false, side: T.DoubleSide }) : m.userData.__tint0; }); }
   api.structure = (o) => { if (!scene) return; if (STRP.g) { scene.remove(STRP.g); STRP.g.traverse((x) => { x.geometry && x.geometry.dispose(); x.material && x.material.dispose(); }); STRP.g = null; } STRP.tint = o ? o.tint : null; tintApply();
@@ -7908,6 +7962,15 @@ if (window.__WSROLE) {
       for (const o of M.imports || []) if (!src || o.src === src) delete o.lv;   // imports sit on the level their height falls in
       const ls = lvSorted(); LV = (ls.find((l) => Math.abs(l.z) < 0.3) || ls[0]).id; SEL = null;
       tidy(); commit(b); changed(); V.user = false; fitView(); if (window.S3 && S3.on) upd3D(true); return { replaced: empty, added, levels: M.levels.length }; },
+    // the analysed frame (2026-11-18), drawn in 3D and in plan; picking a member or a bay
+    structFrame(o) { STF2 = o || null; SFM.bays = o && o.bays || null; if (window.S3 && S3.on && S3.structFrame) S3.structFrame(o); if (CAM !== '3d') draw(); },
+    structFrameMode(mode, cb, kindOf) { SFM.mode = mode || null; SFM.cb = cb || null; SFM.kindOf = kindOf || null; SFM.hover = null; if (window.S3 && S3.structFramePreview) S3.structFramePreview(null); },
+    structFramePick(cx, cy, what) { return window.S3 && S3.structFramePick ? S3.structFramePick(cx, cy, what) : null; },
+    structFrameState() { return window.S3 && S3._structFrame ? S3._structFrame() : null; },
+    // wayfinding (2026-11-18): sign panels in 3D, and an eye-level view from a spot looking at another (the Room Entrance View)
+    signShow(list) { if (window.S3 && S3.signs) S3.signs(list); },
+    signCount() { return window.S3 && S3._signs ? S3._signs() : 0; },
+    async eyeView(o) { if (!o) { if (WALKING) walkExit(); return null; } const ang = Math.atan2(o.look[1] - o.p[1], o.look[0] - o.p[0]); poseSet({ x: +o.p[0].toFixed(3), y: +o.p[1].toFixed(3), angle: ang, lv: o.lv || LV }); if (WALKING) walkExit(); await walkGo(); if (o.eye && window.S3 && S3.walk) { S3.walk.place(o.p[0], o.p[1]); } return window.S3 && S3.walk ? S3.walk.state() : null; },
     // the walls and levels the structure is laid out from (2026-11-17)
     structInput() { const hid = new Set(M.hiddenIds || []); return { levels: M.levels.map((l) => ({ id: l.id, z: l.z, h: l.h, name: l.name })), walls: M.walls.filter((w) => !hid.has(w.id)).map((w) => ({ id: w.id, lv: w.lv, a: w.a.slice(), b: w.b.slice(), t: w.t, h: w.h, mat: w.mat || '', layer: w.layer || '', sourceLayer: w.sourceLayer || '', bulge: w.bulge || 0 })), masses: massList(M).length }; },
     structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = [...o.cols.map((c) => c.x), ...(o.grid || []).flatMap((L) => [L.a[0], L.b[0]])], ys = [...o.cols.map((c) => c.y), ...(o.grid || []).flatMap((L) => [L.a[1], L.b[1]])]; FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
@@ -7952,6 +8015,7 @@ if (window.__WSROLE) {
     studyCell(c) { STUDY_CELL = c > 0 ? Math.max(0.25, +c) : 0; return STUDY_CELL; },
     toScreen(p) { const q = W2S(p), c = ((CAM === '3d' && window.S3 && S3.on) ? cv3 : cv).getBoundingClientRect(); return [q[0] + c.left, q[1] + c.top]; },
     pickPoint(cb) { PICK1 = typeof cb === 'function' ? cb : null; stage.style.cursor = PICK1 ? 'crosshair' : ''; },
+    _pick(p) { if (!PICK1) return false; const f = PICK1; PICK1 = null; stage.style.cursor = ''; f([p[0], p[1]]); return true; },   // tests: a pick at a plan point, as the click gives
     // the section (2026-11-07): draw its line on the plan (two clicks; cb(true) once drawn, cb(false) on Esc), read it, change it, view it
     section() { const s = secOf(); return s ? { ...JSON.parse(JSON.stringify(M.section)), pts: s.pts, len: +s.len.toFixed(3), look: s.look, segs: s.segs.map((g) => ({ a: g.a, b: g.b, u: g.u, look: g.look, len: +g.len.toFixed(3), s0: +g.s0.toFixed(3) })) } : null; },
     // o: null removes it; { pts, flip, on, far, name } sets what is given (the line made where there is none)
@@ -7996,7 +8060,7 @@ if (window.__WSROLE) {
     surfacePaint(o) { const R = RAMPS_TOP[o && o.ramp] || RAMPS_TOP.ladybug; if (!o || !SURF.list || !SURF.list.length) { if (window.S3 && S3.surface) S3.surface(null); return; }
       const col = (v) => { if (!Number.isFinite(v)) return null; const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rampAtTop(R, (v - o.lo) / Math.max(1e-9, o.hi - o.lo))); return [m[1] / 255, m[2] / 255, m[3] / 255]; };
       if (window.S3 && S3.on && S3.surface) S3.surface({ list: SURF.list, cols: Array.from(o.vals, col) }); },   /* Array.from: a Float32Array's map would keep only numbers */
-    clearStudy() { flowStop(); if (window.S3 && S3.streaks) S3.streaks(null); if (window.S3 && S3.vplane) S3.vplane(null); if (SECF) { SECF = null; secSync(); } egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
+    clearStudy() { flowStop(); if (window.S3 && S3.streaks) S3.streaks(null); if (window.S3 && S3.vplane) S3.vplane(null); if (SECF) { SECF = null; secSync(); } egressShow(null); STM2 = null; if (window.S3 && S3.streams) S3.streams(null); if (window.S3 && S3.surface) S3.surface(null); walkShow(null); if (window.S3 && S3.overlay) S3.overlay(null); if (window.S3 && S3.on && S3.structure) S3.structure(null); STR2 = null; ANA2 = null; if (window.S3 && S3.structFrame) S3.structFrame(null); STF2 = null; SFM.mode = null; SFM.cb = null; if (window.S3 && S3.signs) S3.signs(null); if (CAM !== '3d') draw(); if (window.S3 && S3.sunPath) S3.sunPath(null); },
     // the study area before a run: the margin round the building (m) and a frame of it painted on the topographic site
     studyArea(scale, o = {}) { if (scale > 0) STUDY_SCALE = scale; if (!M.site || !M.site.origin) return null; let b; try { b = studyBox(studyPrisms()); } catch (e) { return null; }
       if (o.show) { const vals = new Float32Array(b.nx * b.ny).fill(0), t = Math.max(1, Math.round(4 / b.cell)); for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) if (i < t || j < t || i >= b.nx - t || j >= b.ny - t) vals[j * b.nx + i] = 1; this.paintGrid({ ...b, vals, lo: 0, hi: 1, ramp: 'frame', fade: false, alpha: 0.45 }); }
@@ -8098,7 +8162,7 @@ if (window.__WSROLE) {
   // colour ramps for results on the ground
   // Ladybug Tools' default legend colours (ladybug.color.Colorset 0), from blue through yellow to red
   const LB = ['#4b6ba9', '#7393ca', '#aac8f7', '#c1d5d0', '#f5ef67', '#fce64a', '#ef9c15', '#ea7b00', '#ea4a00', '#ea2600'].map((c, i, a) => [i / (a.length - 1), c]);
-  const RAMPS = RAMPS_TOP; Object.assign(RAMPS, { ladybug: LB, sun: [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']],
+  const RAMPS = RAMPS_TOP; Object.assign(RAMPS, { structure: [[0, '#2f5fd0'], [0.3, '#8fb8ea'], [0.5, '#f4f6f8'], [0.75, '#f2a24a'], [1, '#d8402a']], ladybug: LB, sun: [[0, '#26306b'], [0.2, '#2f6db3'], [0.4, '#3fa6a0'], [0.6, '#9ccf6b'], [0.8, '#f2d44a'], [1, '#f08a2c']],
     heat: [[0, '#1b1d4f'], [0.25, '#5b2a86'], [0.5, '#c2365f'], [0.75, '#f07f3c'], [1, '#fbe36a']],
     sky: [[0, '#1f2140'], [0.35, '#3a4f8a'], [0.7, '#4f8fd0'], [1, '#a9d4f2']],
     div: [[0, '#6a2c91'], [0.35, '#c39bd3'], [0.5, '#f1f1ee'], [0.65, '#8fd3c7'], [1, '#1a8a7a']],

@@ -733,3 +733,24 @@ select.xl-gk{height:24px;border:1px solid #e5e7eb;border-radius:6px;padding:0 4p
 /* clicks feel immediate (2026-11-18): every button answers on press, before the work behind it is done */
 .w2 button:active:not(:disabled),.w2 .btn:active:not(:disabled),.w2 [role=menuitem]:active{transform:translateY(1px);filter:brightness(.94);transition:none}
 .w2 button,.w2 .btn{touch-action:manipulation}
+/* the structure frame analysis (2026-11-18): chip groups, the card's folds, a member's values, the deformation slider in the legend */
+.w2.sp .sp-chips .sp-chipsep{flex-basis:100%;font:600 10px Inter,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#6b7280;margin-top:4px}
+.w2.sp .sp-sf{margin:8px 14px 0}
+.w2.sp .sp-sf .sp-sfbody{padding:4px 0 6px}
+.w2.sp .sp-sflist{margin:4px 0 6px;padding-left:18px;font-size:11px;line-height:1.45;color:var(--sp-ink)}
+.w2.sp .sp-sfpick{margin:6px 0;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc}
+.w2.sp .sp-sfpick>b{display:block;margin-bottom:4px}
+.w2.sp .sp-sfsaid{color:#b45309}
+.w2.sp .sp-legend .sp-lbdef{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;gap:2px 6px;align-items:center;margin-top:6px;max-width:170px;font-size:10px;color:#374151}
+.w2.sp .sp-legend .sp-lbdef span{grid-column:1/-1}
+.w2.sp .sp-legend .sp-lbdef input{width:100%;accent-color:#d8402a}
+.w2.sp .sp-legend .sp-lbdefa{font-style:normal;color:#6b7280}
+.w2.sp .sp-sf .sp-chips{margin:4px 0 0}
+/* the study area in Simulation quality (2026-11-18) and the export list's Clear */
+.w2.sp .sp-qarea{margin:4px 0 6px}
+.w2.sp .sp-qareain input{width:90px}
+.w2.sp .xl-clear{margin-left:auto;color:#b91c1c}
+/* the project's name, renamed in place (2026-11-18): no switcher */
+.w2.sp .sp-pname{grid-template-columns:auto;cursor:text}
+.w2.sp .sp-pname:hover .sp-pn{text-decoration:underline dotted #9ca3af;text-underline-offset:3px}
+.w2.sp .sp-pnin{font:600 14px Inter,system-ui,sans-serif;color:var(--sp-ink);border:1px solid #93c5fd;border-radius:6px;padding:2px 6px;width:100%;min-width:180px;outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.18)}

@@ -306,11 +306,12 @@ const SA = (() => {
     }
     // ----- combinations by superposition -----
     const combine = (f) => {
-      const U = new Float64Array(n * dpn), mres = M.members.map(() => ({ N: 0, Nmin: Infinity, Nmax: -Infinity, M: 0, V: 0, s: 0, Mend: 0, dmid: 0 }));
+      const U = new Float64Array(n * dpn), mres = M.members.map(() => ({ N: 0, Nmin: Infinity, Nmax: -Infinity, M: 0, V: 0, s: 0, Mend: 0, dmid: 0 })), pieces = opts.pieces ? new Array(elems.length) : null;   // pieces: each piece's local end forces, for diagrams (2026-11-18)
       for (const [c, k] of Object.entries(f)) if (CR[c]) { const u = CR[c].U; for (let i = 0; i < U.length; i++) U[i] += k * u[i]; }
       elems.forEach((e, ei) => {
         const ch = cache[ei], fl = new Float64Array(12), q = [0, 0, 0];
         for (const [c, k] of Object.entries(f)) { if (!CR[c]) continue; const a = CR[c].FL[ei]; for (let i = 0; i < 12; i++) fl[i] += k * a[i]; if (ch.ql[c]) for (let j = 0; j < 3; j++) q[j] += k * ch.ql[c][j]; }
+        if (pieces) pieces[ei] = { fl: Array.from(fl), q: q.slice(), R: ch.R.map((r) => Array.from(r)), L: ch.L };
         const L = ch.L, mY = e.truss ? 0 : (fl[4] - fl[10]) / 2 - q[2] * L * L / 8, mZ = e.truss ? 0 : (fl[11] - fl[5]) / 2 + q[1] * L * L / 8, mid = Math.hypot(mY, mZ);
         const r = mres[e.m], Nn = fl[6], Me = Math.max(Math.hypot(fl[4], fl[5]), Math.hypot(fl[10], fl[11])), Mm = Math.max(Me, mid), V = Math.max(Math.hypot(fl[1], fl[2]), Math.hypot(fl[7], fl[8]));
         const s = e.g.sec, st = (Math.abs(Nn) / s.A + (s.Wy ? Math.max(Math.abs(fl[4]), Math.abs(fl[10]), Math.abs(mY)) / s.Wy : 0) + (s.Wz ? Math.max(Math.abs(fl[5]), Math.abs(fl[11]), Math.abs(mZ)) / s.Wz : 0)) / 1000;
@@ -328,7 +329,7 @@ const SA = (() => {
       const disp = new Float64Array(3 * M.nodes.length); for (let i = 0; i < M.nodes.length; i++) for (let k = 0; k < 3; k++) disp[3 * i + k] = U[i * dpn + k];
       const dispAll = new Float64Array(3 * n); for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) dispAll[3 * i + k] = U[i * dpn + k];
       const Fs = [0, 0, 0]; for (const [c, k] of Object.entries(f)) if (CR[c]) for (let j = 0; j < 3; j++) Fs[j] += k * CR[c].Fsum[j];
-      return { disp, dispAll, members: mres, reac, F: Fs, Rsum: sumReac(reac) };
+      return { disp, dispAll, members: mres, reac, F: Fs, Rsum: sumReac(reac), ...(pieces ? { pieces } : {}) };
     };
     const list = combosFor(M), out = {};
     for (const cb of list) out[cb.id] = { ...combine(cb.f), name: cb.name, f: cb.f, kind: cb.kind, id: cb.id };
