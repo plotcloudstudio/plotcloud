@@ -2206,11 +2206,17 @@ function genify(N) {   // older models hold plain blocks, doors and windows: swa
 const mkFurn = (lv, type, x, y, rot = 0) => genModel(type) ? genFurn(lv, type, x, y, rot) : STC.fu(lv, type, x, y, rot);
 const libOf = (t) => { const m = genModel(t); if (m) { const r = genBuild({ id: t, vals: REG[t].defaults(m) }); return [t, m.en, r.dims.W / 1000, r.dims.D / 1000, r.dims.H / 1000]; } return STC.LIB.find((l) => l[0] === t); };
 // the model's parts as three.js meshes. 'plan': the generator's back sits against the wall (plan +y), like a placed piece; 'thumb': front towards the camera
+// a parametric piece's parts are made once per type and parameters (2026-11-18) and shared by every copy and every rebuild:
+// rebuilding the model after an edit no longer generates each chair and bed again. GENC: key → parts { geo (kept), col, glass }
+const GENC = new Map();
+function genParts(T, gen) { const key = gen.id + '|' + JSON.stringify(gen.vals); let c = GENC.get(key); if (c) { GENC.delete(key); GENC.set(key, c); return c; }
+  const r = genBuild(gen), vals = gen.vals; c = r.parts.map((p) => { const geo = gGeom(p); geo.__dispose = geo.dispose.bind(geo); geo.dispose = () => {}; return { geo, col: gColor(p.mat, vals), glass: p.mat === 'glass' || p.mat === 'clearglass' || p.mat === 'mirror' }; });
+  GENC.set(key, c); if (GENC.size > 400) { const [k0, old] = GENC.entries().next().value; GENC.delete(k0); for (const q of old) q.geo.__dispose(); } return c; }
 function genGroup(T, gen, mode, matFn) {
-  const r = genBuild(gen), vals = gen.vals, G = new T.Group(), inner = new T.Group(); inner.matrixAutoUpdate = false;
+  const G = new T.Group(), inner = new T.Group(); inner.matrixAutoUpdate = false;
   if (mode === 'plan') inner.matrix.set(-0.001, 0, 0, 0, 0, 0, 0.001, 0, 0, 0.001, 0, 0, 0, 0, 0, 1); else inner.matrix.set(0.001, 0, 0, 0, 0, 0, 0.001, 0, 0, -0.001, 0, 0, 0, 0, 0, 1);
-  for (const p of r.parts) { const col = gColor(p.mat, vals), glass = p.mat === 'glass' || p.mat === 'clearglass' || p.mat === 'mirror';
-    const m = matFn ? matFn(col, glass) : new T.MeshLambertMaterial({ color: col, transparent: glass, opacity: glass ? 0.5 : 1 }); inner.add(new T.Mesh(gGeom(p), m)); }
+  for (const { geo, col, glass } of genParts(T, gen)) {
+    const m = matFn ? matFn(col, glass) : new T.MeshLambertMaterial({ color: col, transparent: glass, opacity: glass ? 0.5 : 1 }); inner.add(new T.Mesh(geo, m)); }
   G.add(inner); return G;
 }
 const THUMBS = {};
@@ -7565,10 +7571,13 @@ window.S3 = (() => {
         let w = WSM.get(m.geometry); const c = mat.color || new T.Color(0xdddddd), ck = c.getHexString();
         if (!w || w.ck !== ck) { const P = m.geometry.attributes.position.array, q = new Float32Array(P.length), cl = new Float32Array(P.length); for (let i = 0; i < P.length; i += 3) { q[i] = P[i]; q[i + 1] = -P[i + 2]; q[i + 2] = P[i + 1]; cl[i] = c.r; cl[i + 1] = c.g; cl[i + 2] = c.b; } w = { ck, q, cl }; WSM.set(m.geometry, w); }
         e.typed.push(w); e.glass = e.glass || (mat.opacity ?? 1) < 0.9; return; }
-      const g = m.geometry, pos = g.attributes.position, idx = g.index, n = idx ? idx.count : pos.count, flip = m.matrixWorld.determinant() < 0, c = mat.color || new T.Color(0xdddddd), a = mat.opacity ?? 1;
-      for (let i = 0; i + 2 < n; i += 3) { const tri = [0, 1, 2].map((j) => idx ? idx.getX(i + j) : i + j); if (flip) tri.reverse();
-        for (const t of tri) { v.fromBufferAttribute(pos, t).applyMatrix4(m.matrixWorld); e.pos.push(v.x, -v.z, v.y); e.col.push(c.r, c.g, c.b); } }
-      e.glass = e.glass || a < 0.9; });
+      // straight into typed arrays (2026-11-18: was a push per number through a Vector3; this runs after every edit)
+      const g = m.geometry, pos = g.attributes.position, idx = g.index, n = (idx ? idx.count : pos.count) - (idx ? idx.count : pos.count) % 3, flip = m.matrixWorld.determinant() < 0, c = mat.color || new T.Color(0xdddddd), a = mat.opacity ?? 1;
+      const me = m.matrixWorld.elements, q = new Float32Array(n * 3), cl = new Float32Array(n * 3), P = pos.array, st = pos.itemSize || 3, ia = idx ? idx.array : null, inter = pos.isInterleavedBufferAttribute;
+      for (let i = 0; i < n; i += 3) for (let j = 0; j < 3; j++) { const k = i + (flip ? 2 - j : j), t = ia ? ia[k] : k; let x, y, z; if (inter) { x = pos.getX(t); y = pos.getY(t); z = pos.getZ(t); } else { x = P[t * st]; y = P[t * st + 1]; z = P[t * st + 2]; }
+        const o = (i + j) * 3, wx = me[0] * x + me[4] * y + me[8] * z + me[12], wy = me[1] * x + me[5] * y + me[9] * z + me[13], wz = me[2] * x + me[6] * y + me[10] * z + me[14];
+        q[o] = wx; q[o + 1] = -wz; q[o + 2] = wy; cl[o] = c.r; cl[o + 1] = c.g; cl[o + 2] = c.b; }
+      e.typed.push({ q, cl }); e.glass = e.glass || a < 0.9; });
     G.traverse((m) => { if (m.geometry) m.geometry.dispose(); });
     const cat = (a, parts) => { if (!parts.length) return new Float32Array(a); if (!a.length && parts.length === 1) return parts[0];   /* a kept import: the same array each time, so the Workspace can keep what it made from it */ const n = parts.reduce((t, x) => t + x.length, a.length), out = new Float32Array(n); out.set(a); let at = a.length; for (const x of parts) { out.set(x, at); at += x.length; } return out; };
     return [...by.values()].map((e) => ({ k: e.k, id: e.id, glass: !!e.glass, pos: cat(e.pos, e.typed.map((w) => w.q)), col: cat(e.col, e.typed.map((w) => w.cl)) }));
@@ -7860,7 +7869,7 @@ if (window.__WSROLE) {
       LTOOL = null; const b = document.querySelector(`[data-tool="${o.tool}"]${o.opm ? `[data-opm="${o.opm}"]` : ''}`); if (!b) return false; b.click(); return TOOL === o.tool; },
     hide(id, on) { return commands.execute(on ? new HideCommand(id) : new ShowCommand([id])); },
     del(s) { const o = selObj(s); if (!o) return false; if (o.locked) { say('This piece is locked. Unlock it in the toolbar to delete it.'); return false; } SEL = s; if (s.k === 'furn' || s.k === 'ceil' || s.k === 'note') return commands.execute(new DeleteCommand(s)); delSel(); return true; },
-    delMany(items){const before=snapM(),history=UNDO.slice();WS.rx=true;try{for(const s of items)WS.del(s);}finally{WS.rx=false;}UNDO.splice(0,UNDO.length,...history);if(before!==snapM())UNDO.push(before);if(UNDO.length>120)UNDO.shift();REDO.length=0;changed(false);histUI();},
+    delMany(items){const before=snapM(),history=UNDO.slice(),realChanged=changed,realCommit=commit,realTidy=tidy;WS.rx=true;changed=()=>{};commit=()=>{};tidy=()=>{};try{for(const s of items)WS.del(s);}finally{WS.rx=false;changed=realChanged;commit=realCommit;tidy=realTidy;}tidy();   /* one update for the whole selection (2026-11-18): each delete no longer redraws and re-checks the model */UNDO.splice(0,UNDO.length,...history);if(before!==snapM())UNDO.push(before);if(UNDO.length>120)UNDO.shift();REDO.length=0;changed(false);histUI();},
     dup(s) { if (!['wall', 'furn', 'floor', 'void', 'ceil', 'note', 'light'].includes(s.k)) return false; return commands.execute(new DuplicateCommand(s.k, s.id)); },
     objects() {   // every object, with the name the Workspace's layer tree shows
       const out = [], L = (id) => (lvObj(id) || {}).name || '';

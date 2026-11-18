@@ -741,7 +741,8 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   const ch = () => { persist(); drawShaded(false); layers(); selPane(); };
   // Plan Studio objects are deleted / duplicated by Plan Studio (so undo, wall openings and the other panes follow); the rest here
   const psDel = (ids) => { const w = INST.plan.ready ? INST.plan.ws : null;if(!w)return;const items=ids.map(psSel).filter(s=>s&&!['room','roof','stair','misc'].includes(s.k));if(w.delMany)w.delMany(items);else for(const s of items)w.del(s); };
-  function delIds(ids) { const ps = ids.filter((id) => PS.test(id)), nat = new Set(ids.filter((id) => !PS.test(id))); if (nat.size) { M().components = M().components.filter((x) => !nat.has(x.id)); persist(); drawShaded(false); } psDel(ps); setSel([]); }
+  function delIds(ids) { const ps = ids.filter((id) => PS.test(id)), nat = new Set(ids.filter((id) => !PS.test(id))); setSel([], { params: false });   // the selection cleared first, while the views are current: no second rebuild of the 3D for it (2026-11-18)
+    if (nat.size) { M().components = M().components.filter((x) => !nat.has(x.id)); persist(); drawShaded(false); } psDel(ps); setSel([]); }
   // several selected: what they share, move them to a layer, delete them
   function multi(host) {
     const list = UI.sels.map(comp).filter(Boolean), byL = {}; for (const c of list) byL[c.layer] = (byL[c.layer] || 0) + 1;
