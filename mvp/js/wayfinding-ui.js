@@ -2,7 +2,7 @@
 // weights), the drawing (routes with arrows, starts, decision points by sign priority with their facing, existing signs; sign panels
 // in 3D) and the results (points ranked by the Signage Priority Score, each with its reason and factors; routes with no valid way;
 // destination entrances and the Room Entrance View). The analysis is interior/wayfinding-signage.js; this module only presents it.
-import * as WS from './interior/wayfinding-signage.js?v=wfsign-20261118-5';
+import * as WS from './interior/wayfinding-signage.js?v=wfsign-20261118-6';
 
 export const VIEWS = [['signs', 'Sign priority'], ['routes', 'Routes'], ['depth', 'Visual depth']];
 const KIND = { lift: 'L', stair: 'S', entrance: 'E', manual: 'M' };
@@ -16,7 +16,7 @@ export function optsOf(ST, lvId, precise) { settings(ST); return { level: lvId, 
 /** what the settings need before a run: the starts on this floor, the groups and rooms (with their access) */
 export function preview(building, lvId, ST) { settings(ST); const lv = building.levels.find((l) => l.id === lvId) || building.levels[0]; if (!lv) return null;
   const lvs = building.levels.slice().sort((a, b) => a.z - b.z), ground = (lvs.filter((l) => l.z > -0.5).sort((a, b) => Math.abs(a.z) - Math.abs(b.z))[0] || lvs[0]).id;
-  const F = WS.prepare(lv.sc, { access: ST.wayAccess, groups: ST.wayGroupsSet, precise: false }), starts = WS.startsOf(F, { stairs: (building.stairs || []).filter((s) => s.lv === lv.id || s.top === lv.id), ground: lv.id === ground, manual: ST.wayManual.filter((m) => m.lv === lv.id) });
+  const F = WS.prepare(lv.sc, { access: ST.wayAccess, groups: ST.wayGroupsSet, precise: false }), starts = WS.startsOf(F, { stairs: WS.stairsOn(building, lv), ground: lv.id === ground, manual: ST.wayManual.filter((m) => m.lv === lv.id) });
   const rooms = F.rooms.filter((r) => !r.circ).map((r) => ({ name: r.name, group: r.group, staff: r.staff })), groups = {}; for (const r of rooms.filter((x) => !x.staff)) (groups[r.group] ||= []).push(r.name);
   return { lv, ground: lv.id === ground, starts, rooms, groups, origin: lv.sc.origin || [0, 0] }; }
 

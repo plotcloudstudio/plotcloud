@@ -66,6 +66,8 @@ function walk(F, s0, free) { const R = F.R, N = R.W * R.H, D = new Float64Array(
       const nd = d + w * R.c; if (nd < D[q]) { D[q] = nd; prev[q] = k; push([nd, q]); } } }
   return { D, prev }; }
 
+// the model's stairs that reach a floor (from it or arriving on it), moved from plan world coordinates to that floor's scene coordinates
+export function stairsOn(building, lv) { const o = (lv.sc && lv.sc.origin) || [0, 0]; return (building.stairs || []).filter((s) => s.lv === lv.id || s.top === lv.id).map((s) => ({ ...s, corners: s.corners.map((p) => [p[0] - o[0], p[1] - o[1]]) })); }
 // ---- the starts on a floor: lift lobbies, stair landings, the main entrances (ground floor only), points the person set
 export function startsOf(F, { stairs = [], ground = false, manual = [] } = {}) {
   const out = [], R = F.R, rooms = F.rooms, outside = (d, r) => { const s = d.rooms[0] === r._i ? -1 : 1; return [d.m[0] + d.n[0] * 0.8 * s, d.m[1] + d.n[1] * 0.8 * s]; };
@@ -85,8 +87,8 @@ export function startsOf(F, { stairs = [], ground = false, manual = [] } = {}) {
   const stairRooms = rooms.filter((r) => STAIR.test(r.name) && !LOBBY.test(r.name));
   for (const r of stairRooms) { const pos = cen(r), ds = publicDoors(r); for (const d of ds) keep({ kind: 'stair', name: named(`Stair landing · ${r.name}`, ds, d, r), p: outside(d, r), link: pos, room: r.name }); }
   for (const s of stairs) { const pos = s.corners.reduce((a, p) => [a[0] + p[0] / s.corners.length, a[1] + p[1] / s.corners.length], [0, 0]), k0 = cellOf(R, pos), inRoom = k0 >= 0 && F.roomAt[k0] >= 0 && STAIR.test(F.rooms[F.roomAt[k0]].name);
-    if (inRoom || out.some((x) => x.kind === 'stair' && dist(x.link, pos) < 6)) continue;   // a drawn stair inside a stair room: that room's landing is the start
-    let best = null, bd = Infinity; for (const p of s.corners) { const k = nearestFree(F, p, free, 2.5); if (k >= 0) { const q = centre(R, k), d2 = dist(q, p); if (d2 < bd) { bd = d2; best = q; } } } if (best) keep({ kind: 'stair', name: `Stair · ${s.name}`, p: best, link: pos }); }
+    const near = out.find((x) => x.kind === 'stair' && dist(x.link, pos) < 6); if (inRoom || near) { if (near) (near.sids = near.sids || []).push(s.id); continue; }   // a drawn stair inside a stair room, or beside another: that landing is the start (it keeps the stair's id to pair the floors)
+    let best = null, bd = Infinity; for (const p of s.corners) { const k = nearestFree(F, p, free, 2.5); if (k >= 0) { const q = centre(R, k), d2 = dist(q, p); if (d2 < bd) { bd = d2; best = q; } } } if (best) keep({ kind: 'stair', name: `Stair · ${s.name}`, p: best, link: pos, sids: [s.id] }); }
   if (ground) F.doors.filter((d) => d.ext).forEach((d, i) => { const r = d.rooms.find((x) => x >= 0); const s = r === d.rooms[0] ? 1 : -1; keep({ kind: 'entrance', name: `Entrance ${i + 1} (${d.w.toFixed(1)} m door)`, p: [d.m[0] + d.n[0] * 0.8 * s, d.m[1] + d.n[1] * 0.8 * s], link: d.m }); });
   manual.forEach((m, i) => keep({ kind: 'manual', name: m.name || `Start ${i + 1} (set by hand)`, p: m.p.slice(), link: m.p }));
   const seen = {}; for (const s of out) { seen[s.name] = (seen[s.name] || 0) + 1; if (seen[s.name] > 1) s.name += ` ${seen[s.name]}`; }   // two lifts of one name: Bed elevators, Bed elevators 2
@@ -174,7 +176,7 @@ export function analyse(building, o = {}) {
   const t0 = Date.now(), lvs = building.levels.slice().sort((a, b) => a.z - b.z), L = lvs.find((l) => l.id === o.level) || lvs[0]; if (!L) throw new Error('No floors in the model.');
   const groundId = (lvs.filter((l) => l.z > -0.5).sort((a, b) => Math.abs(a.z) - Math.abs(b.z))[0] || lvs[0]).id;
   const prepOpts = { eye: o.eye, furn: o.furn, precise: o.precise, access: o.access, groups: o.groups, accessible: o.accessible, minDoor: o.minDoor };
-  const cache = new Map(), floor = (lv) => { if (!cache.has(lv.id)) { const F = prepare(lv.sc, prepOpts); F.level = lv; F.starts = startsOf(F, { stairs: (building.stairs || []).filter((s) => s.lv === lv.id || s.top === lv.id), ground: lv.id === groundId, manual: lv.id === L.id ? o.manual || [] : [] }); cache.set(lv.id, F); } return cache.get(lv.id); };
+  const cache = new Map(), floor = (lv) => { if (!cache.has(lv.id)) { const F = prepare(lv.sc, prepOpts); F.level = lv; F.starts = startsOf(F, { stairs: stairsOn(building, lv), ground: lv.id === groundId, manual: lv.id === L.id ? o.manual || [] : [] }); cache.set(lv.id, F); } return cache.get(lv.id); };
   const F = floor(L); if (!F.rooms.length) throw new Error('No rooms on this floor: draw the rooms first, or pick another floor.');
   const allStarts = F.starts, chosen = o.starts === 'all' || !o.starts ? allStarts.filter((s) => s.kind !== 'manual' || (o.manual || []).length) : allStarts.filter((s) => o.starts.includes(s.id));
   if (!chosen.length) return { level: L, starts: allStarts, chosen: [], routes: [], nodes: [], none: allStarts.length ? 'Choose a start.' : 'No lift, stair or entrance was recognised on this floor: set a start by hand (click the plan).', cell: F.c, ms: Date.now() - t0 };
@@ -190,7 +192,7 @@ export function analyse(building, o = {}) {
   // destinations on other floors: by a lift or a stair paired between the floors (plan positions within 1.5 m); the walk here ends at it
   const legs = [];
   if (D0.otherFloors) for (const M of lvs) { if (M.id === L.id) continue; const G2 = floor(M), there = G2.rooms.filter((r) => !r.circ && !r.staff && (D0.mode === 'all' || (D0.mode === 'groups' && (D0.groups || []).includes(r.group)) || (D0.mode === 'rooms' && (D0.rooms || []).includes(r.name))));
-    if (!there.length) continue; const links = F.starts.filter((a) => (a.kind === 'lift' || (a.kind === 'stair' && !o.accessible))).map((a) => ({ a, b: G2.starts.find((b) => b.kind === a.kind && dist(b.link, a.link) < 1.5) })).filter((x) => x.b);
+    if (!there.length) continue; const links = F.starts.filter((a) => (a.kind === 'lift' || (a.kind === 'stair' && !o.accessible))).map((a) => ({ a, b: G2.starts.find((b) => b.kind === a.kind && (dist(b.link, a.link) < 1.5 || (a.sids || []).some((id) => (b.sids || []).includes(id)))) })).filter((x) => x.b);
     const levelsApart = Math.abs(lvs.indexOf(M) - lvs.indexOf(L)), vcost = (k) => (k === 'lift' ? 40 + 4 * levelsApart : 12 * levelsApart);   // a lift: about 30 s wait and ride, as 40 m of walking; a stair: 12 m a floor
     for (const r of there) for (const s of chosen) { const W = walks.get(s.id); let best = null;
       for (const { a, b } of links) { const k = nearestFree(F, a.p, free); if (k < 0 || !Number.isFinite(W.D[k])) continue; const W2 = walk(G2, nearestFree(G2, b.p, FREE(G2)), FREE(G2)), up = routeTo(G2, W2, r, b, () => 'unreachable on its floor'); if (up.noRoute) continue;
