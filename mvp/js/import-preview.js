@@ -37,9 +37,11 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
       try { current = transformImport(original, scale, up); } catch (e) { q('[data-ipv-msg]').textContent = e.message; return; }
       if (model) { scene.remove(model); model.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); }); }
       model = new THREE.Group(); let tris = 0; const mat = new THREE.MeshStandardMaterial({ color: '#d9d6d0', roughness: 0.9, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), edge = new THREE.LineBasicMaterial({ color: '#4b5059', transparent: true, opacity: 0.7 });
-      for (const c of current.components) { const m = c.mesh, pos = new Float32Array(m.length); for (let i = 0; i < m.length; i += 3) { pos[i] = m[i] + c.g.x; pos[i + 1] = m[i + 2] + c.g.z; pos[i + 2] = -(m[i + 1] + c.g.y); } tris += m.length / 9;
-        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.computeVertexNormals(); const me = new THREE.Mesh(geo, mat); model.add(me);
-        if (m.length / 9 < 40000) me.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edge)); }
+      // one mesh for the whole model (2026-11-18: one draw, not one per object); edge lines only while it is under 20,000 triangles
+      { const n = current.components.reduce((t, c) => t + c.mesh.length - c.mesh.length % 9, 0), pos = new Float32Array(n); let at = 0;
+        for (const c of current.components) { const m = c.mesh, L = m.length - m.length % 9; for (let i = 0; i < L; i += 3) { pos[at++] = m[i] + c.g.x; pos[at++] = m[i + 2] + c.g.z; pos[at++] = -(m[i + 1] + c.g.y); } }
+        tris = n / 9; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.computeVertexNormals(); const me = new THREE.Mesh(geo, mat); model.add(me);
+        if (tris < 20000) me.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edge)); }
       const b = importBounds(current), [W, D, H] = b.size, span = Math.max(W, D, H, 2);
       // ground grid and a person for scale beside the model
       const grid = new THREE.GridHelper(Math.ceil(span * 1.6 / 10) * 10 || 10, Math.min(80, Math.max(10, Math.round(span * 1.6))), 0xb8bec8, 0xd9dde3); grid.position.set(W / 2, 0, -D / 2); model.add(grid);

@@ -22,14 +22,14 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=water-20261118-1';
+import { mountChrome } from '../workspace-chrome.js?v=bigfile-20261118-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
-import { importModel } from '../viewport.js';
-import { previewImport } from '../import-preview.js?v=levels-20261117-1';
+import { importModel, IMPORT_LIMITS } from '../viewport.js?v=bigfile-20261118-1';
+import { previewImport } from '../import-preview.js?v=bigfile-20261118-1';
 import { detectFloors, withGround } from '../level-detect.js?v=levels-20261117-1';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
@@ -172,7 +172,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=water-20261118-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=bigfile-20261118-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -298,7 +298,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   function syncHiddenSoon(){clearTimeout(hiddenT);hiddenT=whenStill(()=>{hiddenT=0;syncHidden();},700);}
 
   // ---- derived components and the Shaded pane: one component per Plan Studio object (with its meshes in this page only)
-  let dT = 0, dRun = false, dAgain = null, dLive = true, pendSel = null;
+  let dT = 0, dRun = false, dAgain = null, dLive = true, pendSel = null; const DERIVED = new WeakMap();
   function derive(live) {
     if (live) return;   // speed (2026-11-18): every mesh is regenerated here; during a drag it waits for the release
     if (dRun) { dAgain = dAgain === null ? live : dAgain && live; return; }
@@ -312,21 +312,22 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     const lvZ = new Map(lvl.map((l) => [l.id, l])), by = new Map(ms.map((m) => [m.k + ':' + m.id, m])), out = [];
     MESH = new Map();
     const put = (id, base, m) => {   // a component from a Plan Studio object; its geometry (local to g) is kept here for the Shaded pane, never saved
-      let g = base.g;
-      if (m && m.pos.length) { let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity; const P = m.pos;
+      let g = base.g; const kept = m && m.pos.length ? DERIVED.get(m.pos) : null;
+      if (kept) { g = kept.g; MESH.set(id, { mesh: kept.loc, meshCol: m.col, glass: m.glass, sig: kept.sig }); }   // the same geometry as last time (a kept import, 2026-11-18)
+      else if (m && m.pos.length) { let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity; const P = m.pos;
         for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
         g = { x: +x0.toFixed(3), y: +y0.toFixed(3), z: +z0.toFixed(3), w: +Math.max(0.01, x1 - x0).toFixed(3), d: +Math.max(0.01, y1 - y0).toFixed(3), h: +Math.max(0.01, z1 - z0).toFixed(3) };
         const loc = new Float32Array(P.length); for (let i = 0; i < P.length; i += 3) { loc[i] = P[i] - g.x; loc[i + 1] = P[i + 1] - g.y; loc[i + 2] = P[i + 2] - g.z; }
         let h = P.length; for (let i = 0; i < P.length; i += 97) h = (h * 31 + Math.round(P[i] * 1000)) | 0;
-        MESH.set(id, { mesh: loc, meshCol: m.col, glass: m.glass, sig: h + ':' + P.length }); }
+        MESH.set(id, { mesh: loc, meshCol: m.col, glass: m.glass, sig: h + ':' + P.length }); DERIVED.set(P, { g, loc, sig: h + ':' + P.length }); }
       if (!g) return; out.push({ ...base, id, g, ps: 1 }); };
     for (const o of objs) {
       const L = lvZ.get(o.lv), k = o.k === 'furn' && o.stair ? 'stair' : o.k, m = by.get(o.k + ':' + o.id); by.delete(o.k + ':' + o.id);
       const base = { name: o.name, type: o.k === 'op' ? (o.kind === 'door' ? 'door' : 'window') : KTYPE[k] || 'furniture', layer: o.layer || KLAYER[k] || 'Imported', mat: o.mat || (o.k === 'op' ? (o.kind === 'door' ? 'Timber' : 'Glass') : KMAT[k] || 'Imported') };
       if (o.k === 'ctx') { base.g = { x: +o.bb[0].toFixed(3), y: +o.bb[1].toFixed(3), z: +(o.z0 || 0).toFixed(3), w: +Math.max(0.01, o.bb[2] - o.bb[0]).toFixed(3), d: +Math.max(0.01, o.bb[3] - o.bb[1]).toFixed(3), h: +(o.h || 9).toFixed(3) }; put(psId(o), base, null); continue; }
       if (o.k === 'room') { base.g = { x: +o.bb[0].toFixed(3), y: +o.bb[1].toFixed(3), z: +(o.z0 ?? (L ? L.z : 0)).toFixed(3), w: +(o.bb[2] - o.bb[0]).toFixed(3), d: +(o.bb[3] - o.bb[1]).toFixed(3), h: +(o.h || (L ? L.h : 2.7)).toFixed(3) }; base.room = { floor: 'Timber', ceiling: 'Gypsum' }; put(psId(o), base, null); continue; }
-      put(psId(o), base, HIDDEN.has(o.id) ? null : m);
-      if (!out.find((c) => c.id === psId(o)) && L) out.push({ ...base, id: psId(o), ps: 1, g: { x: 0, y: 0, z: L.z, w: 0.01, d: 0.01, h: 0.01 } });   // hidden: listed, not drawn
+      const n0 = out.length; put(psId(o), base, HIDDEN.has(o.id) ? null : m);
+      if (out.length === n0 && L) out.push({ ...base, id: psId(o), ps: 1, g: { x: 0, y: 0, z: L.z, w: 0.01, d: 0.01, h: 0.01 } });   // hidden: listed, not drawn
     }
     for (const [key, m] of by) { if (!m.pos.length) continue; const k = m.id === 'roof' ? 'roof' : m.id === 'stair' ? 'stair' : 'misc';   // Plan Studio parts with no object of their own (the roof, stair flights)
       put(`ps:${k}:${m.id}`, { name: m.id === 'roof' ? 'Roof' : m.id === 'stair' ? 'Stairs' : key, type: KTYPE[k] || 'imported', layer: KLAYER[k] || 'Structure', mat: KMAT[k] || 'Concrete' }, m); }
@@ -653,7 +654,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     <div class="pane w3-accp${UI.pacc === 'import' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="import" aria-expanded="${UI.pacc === 'import'}"><span>${UI.pacc === 'import' ? '▾' : '▸'} Import model</span></button></h2><div class="w3-accb">
       <select id="importMode" hidden><option value="add" selected>Add to current project</option></select><div class="drop" id="drop"><button class="btn sm" id="pick">Choose model to import</button><div style="margin-top:6px">or drop a file here · read locally</div></div>
       <input type="file" id="file" accept=".obj,.stl,.glb,.gltf,.3dm" hidden>
-      <input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note" id="importDestinationNote">The model opens in a preview first; Confirm import adds it to this project, Cancel leaves the project as it is.</p><p class="note">Maximum file size: 25 MiB. Maximum geometry: 80,000 triangles. OBJ, STL, GLB, glTF and Rhino 3DM are supported.</p><p><a href="examples/building-metres.obj" download="PlotCloud-example-10x8x6m.obj">Download example building · 10 × 8 × 6 m · Z up</a></p>
+      <input type="file" id="newModelFile" accept=".obj,.stl,.glb,.gltf,.3dm" hidden><p class="note" id="importDestinationNote">The model opens in a preview first; Confirm import adds it to this project, Cancel leaves the project as it is.</p><p class="note">Maximum file size: ${IMPORT_LIMITS.mib} MiB. Maximum geometry: ${IMPORT_LIMITS.tris.toLocaleString('en-CA')} triangles. OBJ, STL, GLB, glTF and Rhino 3DM are supported.</p><p><a href="examples/building-metres.obj" download="PlotCloud-example-10x8x6m.obj">Download example building · 10 × 8 × 6 m · Z up</a></p>
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="auto">Read file metadata / review scale</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status" aria-live="polite"></p><button type="button" class="btn sm" id="retryImport" hidden>Retry last import</button>
@@ -699,10 +700,20 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     const report=(message,error=false)=>{importState.message=message;importState.error=error;const msg=$('#impMsg',app);if(msg){msg.textContent=message;msg.title=message;msg.setAttribute('role',error?'alert':'status');}const retry=$('#retryImport',app);if(retry)retry.hidden=!error||!importState.file;};
     const modeUI=()=>{const add=mode.value==='add';pickButton.textContent=importState.busy?'Importing…':'Choose model to import';pickButton.disabled=importState.busy;pickButton.setAttribute('aria-busy',String(importState.busy));mode.disabled=importState.busy;for(const el of [$('#unit',host),$('#up',host)])if(el)el.disabled=importState.busy;void add;};
     mode.value=importState.asNew?'new':'add';mode.onchange=()=>{importState.asNew=mode.value==='new';modeUI();};report(importState.message,importState.error);modeUI();
+    // a large model (2026-11-18): reading shows its progress with Cancel; a model over the browser's limits is explained in a dialog
+    const impProgress=(name,cancel)=>{const el=document.createElement('div');el.className='w2-impprog';el.setAttribute('role','status');el.style.cssText='position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:60;background:#fff;border:1px solid #d9dde3;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.12);padding:12px 14px;display:flex;gap:12px;align-items:center;font:13px/1.3 inherit;min-width:340px';
+      el.innerHTML=`<div style="flex:1"><b style="display:block;margin-bottom:6px">Reading ${esc(name)}</b><div style="height:6px;background:#eef0f3;border-radius:3px;overflow:hidden"><i data-bar style="display:block;height:100%;width:0;background:#2f6fd8;transition:width .15s"></i></div><span data-pct style="display:block;margin-top:4px;color:#666">Starting…</span></div><button type="button" class="btn sm" data-cancel>Cancel</button>`;
+      el.querySelector('[data-cancel]').onclick=()=>{cancel();el.remove();};let shown=false;const t=setTimeout(()=>{shown=true;document.body.appendChild(el);},250);   // a small file never shows it
+      return{set(x){el.querySelector('[data-bar]').style.width=Math.round(x*100)+'%';el.querySelector('[data-pct]').textContent=Math.floor(x*100)+'% read'+(x>=1?' · preparing the preview…':'');},done(){clearTimeout(t);if(shown)el.remove();}};};
+    const impTooBig=(name,err)=>{const b=err.tooBig,bg=document.createElement('div');bg.className='w2-impbig';bg.style.cssText='position:fixed;inset:0;z-index:70;background:rgba(20,24,30,.35);display:flex;align-items:center;justify-content:center';
+      const what=b.kind==='mib'?`${b.mib.toLocaleString('en-CA')} MiB (limit ${b.limit} MiB)`:`${b.tris.toLocaleString('en-CA')} triangles (limit ${b.limit.toLocaleString('en-CA')})`;
+      bg.innerHTML=`<div role="alertdialog" aria-labelledby="impBigT" style="background:#fff;border-radius:12px;max-width:460px;padding:20px 22px;box-shadow:0 12px 40px rgba(0,0,0,.2);font:14px/1.45 inherit"><h3 id="impBigT" style="margin:0 0 8px;font-size:17px">This model is too large to open here</h3><p style="margin:0 0 10px"><b>${esc(name)}</b>: ${what}. Nothing was imported; the project is unchanged.</p><p style="margin:0 0 6px">To make it fit:</p><ul style="margin:0 0 14px;padding-left:18px"><li>Export only the layers or parts you need for this study (hide the rest before exporting).</li><li>Reduce the mesh before export: Rhino <i>Mesh › Reduce Mesh</i>, or a coarser mesh setting in SketchUp or Revit.</li><li>Leave out detailed furniture, plants and vehicles; the studies use walls, floors and masses.</li><li>For a big file, GLB is usually smaller than OBJ.</li></ul><div style="text-align:right"><button type="button" class="btn sm" data-ok>OK</button></div></div>`;
+      const close=()=>bg.remove();bg.onclick=(e)=>{if(e.target===bg)close();};bg.querySelector('[data-ok]').onclick=close;document.body.appendChild(bg);bg.querySelector('[data-ok]').focus();};
     const doImport=async(f,asNew=false)=>{   // into the current project, after the full-screen preview (2026-10-31)
       if(importState.busy){toast('An import is already in progress. Please wait for its status.');return;}
       importState.file=f;importState.asNew=asNew;importState.busy=true;importState.error=false;report('Reading '+f.name+'…');modeUI();retry.disabled=true;
-      try{const initial=await importModel(f,{unit:$('#unit',host)?.value||'auto',up:$('#up',host)?.value||'auto'});if(dead)return;report('Preview the model, then confirm or cancel the import.');const r=await previewImport(initial,{name:f.name,destination:'Into this project: '+p.name}),by={};if(!r){report('Import cancelled. The existing model is unchanged.');return;}if(dead)return;
+      const ac=new AbortController(),prog=impProgress(f.name,()=>ac.abort());
+      try{let initial;try{initial=await importModel(f,{unit:$('#unit',host)?.value||'auto',up:$('#up',host)?.value||'auto',signal:ac.signal,onProgress:(x)=>{prog.set(x);report('Reading '+f.name+'… '+Math.floor(x*100)+'%');}});}finally{prog.done();}if(dead)return;report('Preview the model, then confirm or cancel the import.');const r=await previewImport(initial,{name:f.name,destination:'Into this project: '+p.name}),by={};if(!r){report('Import cancelled. The existing model is unchanged.');return;}if(dead)return;
         report('Preparing '+r.components.length+' imported component'+(r.components.length===1?'':'s')+'…');
         if (!asNew&&!INST.plan.ready) throw Error('Wait a moment for the Plan pane to open, then import again.');
         const list = r.components.map(({ srcLayer, ...c }) => ({ id: S.uid('c'), ...classify(c),...(srcLayer?{layer:srcLayer}:{}), src: f.name }));
@@ -715,7 +726,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
         if(r.audit)p.draft.importAudit={...r.audit,triangles:r.triangles,fileName:f.name};
         UI.open = [...open]; saveUI(); persist(); refresh(true);
         report(`${f.name}: ${r.components.length} component${r.components.length > 1 ? 's' : ''}, ${r.triangles.toLocaleString('en-CA')} triangles. ${Object.entries(by).map(([l, n]) => `${n} on ${l}`).join(', ')}.${lvNote}${S.persistent() ? '' : ' Browser storage is unavailable; save will not persist.'}`); }
-      catch(error){const message='Import did not finish: '+(error.message||'Unknown reader error')+' Retry the import or choose the file again.';report(message,true);toast(message);}
+      catch(error){if(error.name==='AbortError'){report('Import cancelled. The existing model is unchanged.');return;}if(error.tooBig){report(error.message,true);impTooBig(f.name,error);return;}const message='Import did not finish: '+(error.message||'Unknown reader error')+' Retry the import or choose the file again.';report(message,true);toast(message);}
       finally{importState.busy=false;retry.disabled=false;if(!dead){const pick=$('#pick',app),mode=$('#importMode',app),again=$('#retryImport',app);if(pick){pick.disabled=false;pick.setAttribute('aria-busy','false');pick.textContent='Choose model to import';}for(const el of [mode,$('#unit',app),$('#up',app),again])if(el)el.disabled=false;}}
     };
     retry.onclick=()=>{if(importState.file)doImport(importState.file,importState.asNew);};

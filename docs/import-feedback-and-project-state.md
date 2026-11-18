@@ -2,7 +2,7 @@
 
 The import destination is an explicit choice: **New project** (default) or **Add to current project**. The button describes that choice before opening the file picker. Adding to the sample requires a separate destination acknowledgement in the scale review, in addition to the dimensions confirmation. Selecting or cancelling the file picker reports what happened. New-project import does not depend on the old project’s Plan pane being ready.
 
-Both Workspace and Simulation show the actual 25 MiB / 80,000 triangle reader limits and a downloadable 10 × 8 × 6 m, Z-up OBJ example. OBJ does not declare standard units: choose Metres and Z up in the review. Simulation import creates a separate project with a reviewed first version. This does not give arbitrary imported meshes room/wall semantics required by some studies.
+Both Workspace and Simulation show the actual 100 MiB / 500,000 triangle reader limits and a downloadable 10 × 8 × 6 m, Z-up OBJ example. OBJ does not declare standard units: choose Metres and Z up in the review. Simulation import creates a separate project with a reviewed first version. This does not give arbitrary imported meshes room/wall semantics required by some studies.
 
 Failures show an accessible error and Retry last import, retaining the File object for that session. Reader network-module failures use a fresh module URL on retry. Rhino script/WASM initialization rejection clears the cached rejected promise so retry can initialize again. File-size checks run before reading. These recovery paths are verified; they do not establish the cause of Muse’s specific first-upload failures. A failed attempt may still require choosing a file again if the browser session loses its file handle.
 
