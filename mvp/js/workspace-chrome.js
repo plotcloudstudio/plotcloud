@@ -26,7 +26,7 @@ import * as PRIV from './interior/privacy.js?v=priv-20261114-1';
 import * as WAY from './interior/wayfinding.js?v=way-20261118-1';
 import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261118-6';
 import * as WUI from './wayfinding-ui.js?v=wfui-20261118-4';
-import * as SA from './site-access-ui.js?v=sa-20261118-1';
+import * as SA from './site-access-ui.js?v=sa-20261118-2';
 import * as SSX from './interior/spacesyntax.js?v=ss-20261114-1';
 import * as ISO from './interior/isovist.js?v=iso-20261114-1';
 import * as VWS from './interior/views.js?v=vw-20261101-1';
@@ -114,7 +114,7 @@ export function mountChrome(app, api) {
   tr.querySelector('.sp-u').replaceWith(cmd('undo', P.undo, 'Undo (Ctrl+Z)'), cmd('redo', P.redo, 'Redo (Ctrl+Y)'));
   tr.querySelector('.sp-c').replaceWith(cmd('center', '<circle cx="12" cy="12" r="2.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', 'Center the imported building at the origin'));
   // back to the Dashboard (2026-11-01): the last button on the right; the project is kept as it is (unsaved changes stay in the draft)
-  tr.insertAdjacentHTML('beforeend', `<span class="sp-sep"></span><a class="sp-tlink" href="#/results/${esc(p.id)}" data-sp="results" title="Saved results of this project, by version">Results</a><a class="sp-tlink" href="#/project/${esc(p.id)}" data-sp="report" title="The project report">Report</a>`);
+  // Results and Report links removed from the top right (2026-11-18, as asked): the report is step 4 of the workflow bar
   tr.insertAdjacentHTML('beforeend', `<span class="sp-sep"></span><a class="sp-b sp-home" href="#/home" title="Dashboard: all projects" aria-label="Back to the Dashboard"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg></a>`);
   // Send to Simulation is gone from view (2026-10-30): studies open in this view from Add simulation. The button and its study
   // picker stay, hidden, because a study that does not run here yet opens its own page through them (the version handoff)
@@ -230,7 +230,7 @@ export function mountChrome(app, api) {
   // says to let go; it goes through the Project panel's own import (the preview first, then Confirm import), wherever it lands
   const DROPF = [['OBJ', '#2563eb', 'Wavefront OBJ'], ['STL', '#7c3aed', 'STL mesh'], ['GLB', '#059669', 'glTF binary'], ['glTF', '#0d9488', 'glTF'], ['3DM', '#dc2626', 'Rhino 3DM']], DROPX = /\.(obj|stl|glb|gltf|3dm)$/i;
   const dropEl = el('div', 'sp-drop'); dropEl.hidden = true; dropEl.setAttribute('role', 'dialog'); dropEl.setAttribute('aria-label', 'Drop a model');
-  dropEl.innerHTML = `<div class="sp-drop-card"><p class="sp-drop-t">Release to drop your model into the site</p><p class="sp-drop-s">It opens in a preview first: units, up axis and size to check before it joins ${esc(p.name)}.</p><hr><div class="sp-drop-pill"><span>Supported file types</span>${DROPF.map(([n, c, t]) => `<i style="--c:${c}" title="${t}">${n}</i>`).join('')}</div><p class="sp-drop-n">Up to 25 MiB and 80,000 triangles · read in this browser, not uploaded</p></div>`;
+  dropEl.innerHTML = `<div class="sp-drop-card"><p class="sp-drop-t">Release to drop your model into the site</p><p class="sp-drop-s">It opens in a preview first: units, up axis and size to check before it joins ${esc(p.name)}.</p><hr><div class="sp-drop-pill"><span>Supported file types</span>${DROPF.map(([n, c, t]) => `<i style="--c:${c}" title="${t}">${n}</i>`).join('')}</div><p class="sp-drop-n">Up to 100 MiB and 500,000 triangles · read in this browser, not uploaded</p></div>`;
   document.body.append(dropEl);
   const DROP = { t: 0, wins: new WeakSet() }, hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
   const dropShow = (on, msg) => { clearTimeout(DROP.t); dropEl.hidden = !on; dropEl.classList.toggle('bad', !!msg); const t = dropEl.querySelector('.sp-drop-t'), s2 = dropEl.querySelector('.sp-drop-s'); t.textContent = msg ? msg[0] : 'Release to drop your model into the site'; s2.textContent = msg ? msg[1] : `It opens in a preview first: units, up axis and size to check before it joins ${p.name}.`; if (msg) DROP.t = setTimeout(() => dropShow(false), 3200); };

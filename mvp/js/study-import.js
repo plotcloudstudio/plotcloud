@@ -1,11 +1,11 @@
 import * as S from './store.js';
-import {importModel} from './viewport.js';
+import {importModel} from './viewport.js?v=bigfile-20261118-1';
 import {reviewImport} from './import-review.js?v=import-feedback-20261027-1';
 import {toStudio} from './studio-convert.js';
 import {setCurrent,setCurrentVersion} from './app.js';
 export function mountStudyImport(host,study){
  const bar=document.createElement('div');bar.className='study-import';bar.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0';
- bar.innerHTML='<button type="button" class="btn sm" data-study-import>Import model as a new project</button><input type="file" data-study-file accept=".obj,.stl,.glb,.gltf,.3dm" hidden><button type="button" class="btn sm" data-study-retry hidden>Retry last import</button><span class="note" role="status" aria-live="polite">No model? Import here, or open Workspace to edit your model. Imports create a separate project and do not merge into the sample.</span><details><summary>Supported files and example</summary><p class="note">OBJ, STL, GLB, glTF and Rhino 3DM. Maximum file size: 25 MiB; maximum geometry: 80,000 triangles. Use a self-contained GLB when glTF has external resources.</p><a href="examples/building-metres.obj" download="PlotCloud-example-10x8x6m.obj">Download example building · 10 × 8 × 6 m · Z up</a></details>';
+ bar.innerHTML='<button type="button" class="btn sm" data-study-import>Import model as a new project</button><input type="file" data-study-file accept=".obj,.stl,.glb,.gltf,.3dm" hidden><button type="button" class="btn sm" data-study-retry hidden>Retry last import</button><span class="note" role="status" aria-live="polite">No model? Import here, or open Workspace to edit your model. Imports create a separate project and do not merge into the sample.</span><details><summary>Supported files and example</summary><p class="note">OBJ, STL, GLB, glTF and Rhino 3DM. Maximum file size: 100 MiB; maximum geometry: 500,000 triangles. Use a self-contained GLB when glTF has external resources.</p><a href="examples/building-metres.obj" download="PlotCloud-example-10x8x6m.obj">Download example building · 10 × 8 × 6 m · Z up</a></details>';
  host.append(bar);const input=bar.querySelector('input'),button=bar.querySelector('[data-study-import]'),retry=bar.querySelector('[data-study-retry]'),status=bar.querySelector('[role=status]');let busy=false,lastFile=null,alive=true;
  const report=(text,error=false)=>{status.textContent=text;status.title=text;status.setAttribute('role',error?'alert':'status');retry.hidden=!error||!lastFile;};
  button.onclick=()=>{report('Choose a model for a separate project. Cancel keeps your current project.');input.click();};

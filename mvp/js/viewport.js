@@ -115,13 +115,35 @@ export function createViewport(host, { onPick } = {}) {
 // Read an OBJ / STL / GLB file into components (one per mesh), positioned with their bounding box.
 const loaderFailures=new Map();
 async function modelLoader(path){const count=loaderFailures.get(path)||0;try{return await import(path+(count?'?retry='+count:''));}catch{loaderFailures.set(path,count+1);throw Error('The model reader could not load from the network. Retry the import or reload this page; this does not mean the model file is damaged.');}}
-export async function importModel(file, { unit = 'auto', up = 'auto' } = {}) {
+// Limits of a model read in the browser (2026-11-18: 500,000 triangles, 100 MiB; was 80,000 and 25 MiB). Over a limit the import
+// stops before anything changes, with an error that says by how much (err.tooBig: { tris | mb, limit }) and how to reduce the model.
+export const IMPORT_LIMITS = { tris: 500000, mib: 100 };
+const fmtN = (n) => Math.round(n).toLocaleString('en-CA');
+function tooBigError(kind, value) { const L = IMPORT_LIMITS, e = Error(kind === 'mib'
+  ? `This file is ${value.toFixed(1)} MiB; the limit in the browser is ${L.mib} MiB. Export only the parts you need, or a lighter format (GLB is usually smaller than OBJ).`
+  : `This model has ${fmtN(value)} triangles; the limit in the browser is ${fmtN(L.tris)}. Export only the layers you need, or reduce the mesh first (Rhino: Mesh › Reduce Mesh; SketchUp or Revit: a coarser export). Nothing was imported.`);
+  e.tooBig = kind === 'mib' ? { mib: +value.toFixed(1), limit: L.mib, kind } : { tris: Math.round(value), limit: L.tris, kind }; return e; }
+const abortErr = () => { const e = Error('Import cancelled.'); e.name = 'AbortError'; return e; };
+// OBJ and STL are read in a worker (import-worker.js): progress as it goes, Cancel stops it; the page stays responsive
+function readInWorker(buf, ext, { onProgress, signal } = {}) {
+  return new Promise((res, rej) => {
+    let w; try { w = new Worker(new URL('./import-worker.js', import.meta.url)); } catch (e) { rej(e); return; }
+    const stop = () => { w.terminate(); rej(abortErr()); }; if (signal) { if (signal.aborted) { stop(); return; } signal.addEventListener('abort', stop, { once: true }); }
+    w.onmessage = (e) => { const m = e.data; if (m.type === 'progress') { onProgress?.(m.f); return; } signal?.removeEventListener('abort', stop); w.terminate();
+      if (m.type === 'done') res(m); else rej(m.tooBig ? tooBigError('tris', m.tooBig.tris) : Error(m.message)); };
+    w.onerror = (e) => { signal?.removeEventListener('abort', stop); w.terminate(); rej(Error('The model reader stopped: ' + (e.message || 'unknown error'))); };
+    w.postMessage({ buf, ext, maxTris: IMPORT_LIMITS.tris }, [buf]);
+  });
+}
+export async function importModel(file, { unit = 'auto', up = 'auto', onProgress, signal } = {}) {
   const ext = file.name.toLowerCase().split('.').pop();
-  if (file.size > 25 * 1048576) throw Error('This file is over 25 MiB. Export a simplified model for the prototype.');
+  if (file.size > IMPORT_LIMITS.mib * 1048576) throw tooBigError('mib', file.size / 1048576);
   let buf;try{buf=await file.arrayBuffer();}catch{throw Error('This browser session could not read the selected file. Retry, or choose the file again.');}
+  if (signal?.aborted) throw abortErr();
   let obj, fileUp = 'y',audit=null,sourceUnit='Unknown (not declared)',detectedScale=null;const requestedUnit=unit;
-  if (ext === 'obj') { const { OBJLoader } = await modelLoader('three/addons/loaders/OBJLoader.js'); obj = new OBJLoader().parse(new TextDecoder().decode(buf)); }
-  else if (ext === 'stl') { const { STLLoader } = await modelLoader('three/addons/loaders/STLLoader.js'); obj = new THREE.Mesh(new STLLoader().parse(buf)); fileUp = 'z'; }
+  if (ext === 'obj' || ext === 'stl') { const r = await readInWorker(buf, ext, { onProgress, signal }); obj = new THREE.Group();
+    for (const part of r.parts) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(part.pos, 3)); const m = new THREE.Mesh(g); m.name = part.name; obj.add(m); }
+    if (ext === 'stl') fileUp = 'z'; }
   else if (ext === 'glb' || ext === 'gltf') { const { GLTFLoader } = await modelLoader('three/addons/loaders/GLTFLoader.js');try{obj = (await new GLTFLoader().parseAsync(buf, '')).scene;}catch(error){throw Error(ext==='gltf'?'The glTF reader could not load this file. If it uses external buffers or textures, export a self-contained GLB and retry.':('The GLB reader did not finish: '+error.message));}sourceUnit='Metres (glTF specification)';detectedScale=1; }
   else if (ext === '3dm') {   // Rhino: meshes, and the render meshes of surfaces, polysurfaces and extrusions; the file's units and layers are kept
     const rh = await loadRhino(), doc = rh.File3dm.fromByteArray(new Uint8Array(buf)); if (!doc) throw Error('This .3dm file could not be read.');
@@ -129,22 +151,25 @@ export async function importModel(file, { unit = 'auto', up = 'auto' } = {}) {
     detectedScale=k;sourceUnit=Object.entries({Millimetres:U.Millimeters,Centimetres:U.Centimeters,Metres:U.Meters,Inches:U.Inches,Feet:U.Feet,Kilometres:U.Kilometers}).find(([,value])=>value===us)?.[0]||'Unknown (not declared)';fileUp = 'z';try{const result=rhinoGeometry(doc,rh,THREE);obj=result.object;audit={...result.audit,unitScale:k,axis:'z-up'};}finally{doc.delete();}if(!obj.children.length)throw Error('No placed surface meshes in this .3dm file. Unplaced block definitions are not scene geometry.');
   }
   else throw Error('The prototype reads .obj, .stl, .glb and .3dm. SketchUp and IFC files open in the full tools.');
+  if (signal?.aborted) throw abortErr();
   unit=requestedUnit==='auto'?(detectedScale??1):Number(requestedUnit);if(!Number.isFinite(unit)||unit<=0)throw Error('Choose a valid source unit scale.');
   const sourceBox=new THREE.Box3().setFromObject(obj);
   audit={...audit,source:audit?.source||ext.toUpperCase(),fileName:file.name,sourceUnit,unitKnown:sourceUnit!=='Unknown (not declared)',detectedUnitScale:detectedScale,unitScale:unit,sourceUp:fileUp,importedUp:up==='auto'?fileUp:up,axis:'z-up',sourceBounds:{min:sourceBox.min.toArray(),max:sourceBox.max.toArray()},scaleConfirmed:false};
   const zUp = (up === 'auto' ? fileUp : up) === 'z';
   obj.updateMatrixWorld(true); const out = []; let tris = 0;
+  obj.traverse((o) => { if (o.isMesh && o.geometry?.attributes.position) tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; });
+  if (tris > IMPORT_LIMITS.tris) throw tooBigError('tris', tris); tris = 0;   // counted first: nothing is converted for a model over the limit
   obj.traverse((o) => {
     if (!o.isMesh || !o.geometry?.attributes.position) return;
     const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(o.matrixWorld), a = g.attributes.position;
-    tris += a.count / 3; if (tris > 80000) throw Error('Over 80,000 triangles. Simplify the model for the browser prototype.');
+    tris += a.count / 3;
     const pos = new Float32Array(a.count * 3);
     for (let i = 0; i < a.count; i++) { const x = a.getX(i) * unit, y = a.getY(i) * unit, z = a.getZ(i) * unit; pos[i * 3] = x; pos[i * 3 + 1] = zUp ? y : -z; pos[i * 3 + 2] = zUp ? z : y; }
     let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], pos[i + k]); mx[k] = Math.max(mx[k], pos[i + k]); }
     for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) pos[i + k] = pos[i + k] - mn[k];
     const rg = ext === '3dm' && o.parent && o.parent.userData.layer != null ? o.parent : null;   // a Rhino object: its name and layer
-    out.push({ name: (rg && rg.name) || o.name || `Mesh ${out.length + 1}`, srcLayer: rg ? rg.userData.layer : undefined, type: 'imported', layer: 'Imported', g: { x: mn[0], y: mn[1], z: mn[2], w: mx[0] - mn[0], d: mx[1] - mn[1], h: mx[2] - mn[2] }, mat: 'Imported', mesh: Array.from(pos) });
+    out.push({ name: (rg && rg.name) || o.name || `Mesh ${out.length + 1}`, srcLayer: rg ? rg.userData.layer : undefined, type: 'imported', layer: 'Imported', g: { x: mn[0], y: mn[1], z: mn[2], w: mx[0] - mn[0], d: mx[1] - mn[1], h: mx[2] - mn[2] }, mat: 'Imported', mesh: Array.from(pos, (v) => Math.round(v * 1e4) / 1e4) });   // to 0.1 mm: the saved project is about a third the size
     g.dispose();
   });
   if (!out.length) throw Error('No meshes found in this file.');

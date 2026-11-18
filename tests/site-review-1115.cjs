@@ -50,7 +50,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-hospital]'); await p.click('.ph-thumb[data-hospital]');
     await p.waitForFunction(() => location.hash.startsWith('#/workspace') && window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 400000 }); await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(1500);
     const tagsEx = await p.$$eval('.w2-simmenu [data-addsim]', (bs) => bs.filter((x) => /Monthly access/.test(x.textContent)).length); assert.equal(tagsEx, 0, 'no study locked on an example');
-    const t0 = Date.now(); await p.click('.sp-tr [data-sp=report]'); await p.waitForSelector('[aria-label="Project workflow"]', { timeout: 60000 }); const dt = Date.now() - t0;
+    const t0 = Date.now(); await p.click('.sp-flow [data-flow=report]'); await p.waitForSelector('[aria-label="Project workflow"]', { timeout: 60000 }); const dt = Date.now() - t0;
     console.log('PASS the example opens every study; Report & boards drew', dt, 'ms after leaving the Workspace');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }

@@ -20,7 +20,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const flow = () => p.$$eval('.sp-flow a', (as) => as.map((a) => [a.dataset.flow, a.dataset.done, a.getAttribute('aria-current') || '', a.getAttribute('href')]));
     let f = await flow(); assert.deepEqual(f.map((x) => x[0]), ['site', 'plan', 'sim', 'report']); assert.equal(f.find((x) => x[0] === 'plan')[2], 'step'); assert.equal(f.find((x) => x[0] === 'sim')[1], 'false');
     assert.equal(f.find((x) => x[0] === 'report')[3], `#/project/${pid}`);
-    assert.equal(await p.getAttribute('.sp-tr [data-sp=results]', 'href'), `#/results/${pid}`); assert.equal(await p.getAttribute('.sp-tr [data-sp=report]', 'href'), `#/project/${pid}`);
+    assert.equal(await p.locator('.sp-tr [data-sp=results], .sp-tr [data-sp=report]').count(), 0, 'no Results or Report link at the top right');
     await p.click('.sp-flow [data-flow=sim]'); await p.waitForSelector('.w2-simmenu:not([hidden])', { timeout: 5000 }); assert.match(await p.evaluate(() => location.hash), new RegExp(`^#/workspace/${pid}$`), 'stays in the Workspace');
     await p.keyboard.press('Escape'); await p.mouse.click(800, 880); await p.waitForTimeout(300);
     console.log('PASS the workflow in the Workspace:', JSON.stringify(f.map((x) => x.slice(0, 3))));
