@@ -22,14 +22,14 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=wf-20261119-1';
+import { mountChrome } from '../workspace-chrome.js?v=wf-20261119-2';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel, IMPORT_LIMITS } from '../viewport.js?v=bigfile-20261118-1';
-import { previewImport } from '../import-preview.js?v=bigfile-20261118-1';
+import { previewImport } from '../import-preview.js?v=simplify-20261119-1';
 import { detectFloors, withGround } from '../level-detect.js?v=levels-20261117-1';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
@@ -658,7 +658,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       <div class="grid g2"><label class="f">Units<select id="unit"><option value="auto">Read file metadata / review scale</option><option value="1">Metres</option><option value="0.001">Millimetres</option><option value="0.01">Centimetres</option><option value="0.3048">Feet</option></select></label>
         <label class="f">Up axis<select id="up"><option value="auto">File default</option><option value="z">Z up</option><option value="y">Y up</option></select></label></div>
       <p class="msg note" id="impMsg" role="status" aria-live="polite"></p><button type="button" class="btn sm" id="retryImport" hidden>Retry last import</button>
-      ${M().importAudit?`<p class="note">Last import: ${esc(M().importAudit.source||'Model')} · ${M().importAudit.meshObjects??M().studio.imports.length} surface object${(M().importAudit.meshObjects??M().studio.imports.length)===1?'':'s'} · ${Number(M().importAudit.triangles).toLocaleString('en-CA')} triangles · converted to metres.${M().importAudit.definitionObjects?' Unplaced block definitions are excluded.':''}</p>`:''}
+      ${M().importAudit?`<p class="note">Last import: ${esc(M().importAudit.source||'Model')} · ${M().importAudit.meshObjects??M().studio.imports.length} surface object${(M().importAudit.meshObjects??M().studio.imports.length)===1?'':'s'} · ${Number(M().importAudit.triangles).toLocaleString('en-CA')} triangles · converted to metres.${M().importAudit.definitionObjects?' Unplaced block definitions are excluded.':''}${M().importAudit.simplified?` <b>Simplified at import</b> from ${Number(M().importAudit.simplified.from).toLocaleString('en-CA')} triangles; the surface moved ${M().importAudit.simplified.maxChangeM<0.001?'under 1 mm':(M().importAudit.simplified.maxChangeM*100).toFixed(1)+' cm'} at most.`:''}</p>`:''}
       <p class="note">Meshes named like walls go to Walls, furniture to Furniture, windows to Glazing, slabs to Structure, roofs to Roof; the rest to Imported. Imported meshes become part of the model: an outline in Plan, the mesh in Perspective; drag one to move it.</p></div></div>
     <div class="pane w3-accp${UI.pacc === 'site' ? ' on' : ''}"><h2><button type="button" class="w3-acc" data-pacc="site" aria-expanded="${UI.pacc === 'site'}"><span>${UI.pacc === 'site' ? '▾' : '▸'} Site</span></button></h2><div class="w3-accb">
       <p class="note">${M().studio?.site ? `${esc((M().studio.site.origin.label || "").split(",")[0] || "Site")}: ${M().studio.site.buildings.filter((b) => !b.excluded).length} buildings, ${(M().studio.site.roads || []).length} roads${M().studio.site.terrain ? `, ground ${M().studio.site.terrain.relief} m` : ""} · ${esc(M().studio.site.sources?.[0]?.attribution || "")}` : "No site yet."}</p><a class="btn sm" id="siteBtn" href="#/new-site?project=${p.id}">${M().studio?.site ? "Choose another site on the map" : "Choose the site on the map"}</a>

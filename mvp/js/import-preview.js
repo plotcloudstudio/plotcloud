@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { transformImport, importBounds } from './import-review.js?v=import-feedback-20261027-1';
 import { detectFloors, withGround } from './level-detect.js?v=levels-20261117-1';
+import { simplifyComponents } from './mesh-simplify.js?v=simplify-20261119-1';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const UNITS = [['auto', 'From the file'], ['1', 'Metres'], ['0.001', 'Millimetres'], ['0.01', 'Centimetres'], ['0.3048', 'Feet'], ['0.0254', 'Inches']];
@@ -22,7 +23,11 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
         <label>Units<select data-ipv-unit>${UNITS.map(([v, n]) => `<option value="${v}">${n}${v === 'auto' && audit.sourceUnit ? ` (${esc(audit.sourceUnit)})` : ''}</option>`).join('')}</select></label>
         <label>Up axis<select data-ipv-up><option value="z">Z up</option><option value="y">Y up</option></select></label>
         <p data-ipv-msg>Check the size against the red figure, a person 1.8 m tall. Change the units if it is far off.</p>
-        <div class="ipv-floors" data-ipv-floors hidden><b>Floors</b><p data-ipv-fnote></p><label>Ground floor (1F)<select data-ipv-ground></select></label><ol data-ipv-flist></ol><label class="ipv-check"><input type="checkbox" data-ipv-uselv checked> Make these the project’s levels</label></div></section>
+        <div class="ipv-floors" data-ipv-floors hidden><b>Floors</b><p data-ipv-fnote></p><label>Ground floor (1F)<select data-ipv-ground></select></label><ol data-ipv-flist></ol><label class="ipv-check"><input type="checkbox" data-ipv-uselv checked> Make these the project’s levels</label></div>
+        <div class="ipv-simp" data-ipv-simpbox><b>Simplify (optional)</b><p>Fewer triangles draw and simulate faster. Simplifying changes the geometry: small or thin parts can lose detail. Off unless you turn it on; the import record notes it.</p>
+          <label class="ipv-check"><input type="checkbox" data-ipv-simp> Simplify to <input type="number" min="100" step="1000" data-ipv-target aria-label="Target number of triangles"> triangles</label>
+          <label>Largest change<select data-ipv-err><option value="0.01">1 cm</option><option value="0.02" selected>2 cm</option><option value="0.05">5 cm</option><option value="0.1">10 cm</option><option value="inf">No limit</option></select></label>
+          <p class="ipv-simpmsg" data-ipv-simpmsg role="status"></p></div></section>
       <p class="ipv-hint">Drag to orbit · right-drag to pan · scroll to zoom</p></div>`;
     document.body.append(root);
     const q = (s) => root.querySelector(s), cv = q('.ipv-cv'), up0 = audit.importedUp === 'y' ? 'y' : 'z'; q('[data-ipv-up]').value = up0;
@@ -30,11 +35,30 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
     const scene = new THREE.Scene(); scene.background = new THREE.Color('#eef0f3');
     const cam = new THREE.PerspectiveCamera(40, 1, 0.05, 1e6), ctl = new OrbitControls(cam, cv); ctl.enableDamping = true; ctl.dampingFactor = 0.12;
     scene.add(new THREE.HemisphereLight(0xffffff, 0xb9bec7, 1.15)); const sun = new THREE.DirectionalLight(0xffffff, 1.35); sun.position.set(0.6, 1, 0.4); scene.add(sun);
-    let model = null, current = null, raf = 0;
+    let model = null, current = null, raf = 0, base = null, simp = null, run = 0, tris0 = 0;
     const size = () => { const r = q('.ipv-win').getBoundingClientRect(), w = Math.max(10, r.width), h = Math.max(10, r.height); R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
     function build() {
       const choice = q('[data-ipv-unit]').value, scale = choice === 'auto' ? audit.unitScale : +choice, up = q('[data-ipv-up]').value;
-      try { current = transformImport(original, scale, up); } catch (e) { q('[data-ipv-msg]').textContent = e.message; return; }
+      try { base = transformImport(original, scale, up); } catch (e) { q('[data-ipv-msg]').textContent = e.message; return; }
+      tris0 = base.components.reduce((t, c) => t + Math.floor(c.mesh.length / 9), 0); const tg = q('[data-ipv-target]'); if (!tg.value) tg.value = String(Math.max(1000, Math.min(100000, Math.round(tris0 / 2 / 1000) * 1000)));
+      q('[data-ipv-simpbox]').hidden = tris0 < 2000; simplify(); }
+    // simplification (2026-11-19): only when it is turned on; a later change of units, axis, target or limit starts it again from the full model
+    async function simplify() {
+      const on = q('[data-ipv-simp]').checked && !q('[data-ipv-simpbox]').hidden, my = ++run, msg = q('[data-ipv-simpmsg]'), ok = q('[data-ipv="ok"]');
+      simp = null; if (!on) { msg.textContent = ''; show(base); return; }
+      const target = Math.round(+q('[data-ipv-target]').value), ev = q('[data-ipv-err]').value, lim = ev === 'inf' ? Infinity : +ev;
+      if (!(target >= 100)) { msg.textContent = 'Enter a number of triangles, at least 100.'; show(base); return; }
+      if (target >= tris0) { msg.textContent = `The model already has ${tris0.toLocaleString('en-CA')} triangles, no more than the target: nothing to simplify.`; show(base); return; }
+      ok.disabled = true; msg.textContent = 'Simplifying…';
+      try { const r = await simplifyComponents(base.components, { target, maxError: lim, onProgress: (x) => { if (my === run) msg.textContent = 'Simplifying… ' + Math.floor(x * 100) + '%'; } });
+        if (my !== run) return; simp = { from: r.before, to: Math.round(r.after), target, limitM: Number.isFinite(lim) ? lim : null, maxChangeM: +r.maxError.toFixed(4), objectsReduced: r.changed, objectsKept: r.kept, method: 'meshoptimizer 0.25 simplify (quadric edge collapse; vertices kept in place)' };
+        const reached = r.after <= target * 1.02, cm = r.maxError < 1e-4 ? 'less than 0.1 mm' : r.maxError < 0.01 ? (r.maxError * 1000).toFixed(1) + ' mm' : (r.maxError * 100).toFixed(1) + ' cm';
+        msg.textContent = `Simplified: ${r.before.toLocaleString('en-CA')} → ${simp.to.toLocaleString('en-CA')} triangles (${Math.round(100 * r.after / r.before)} %), ${r.changed.toLocaleString('en-CA')} of ${base.components.length.toLocaleString('en-CA')} objects reduced; the surface moved ${cm} at most (measured at the removed vertices).` + (reached ? '' : ` The target was not reached within the ${Number.isFinite(lim) ? (lim * 100) + ' cm' : ''} limit; allow a larger change to go further.`);
+        show({ ...base, components: r.components }); }
+      catch (e) { if (my !== run) return; msg.textContent = 'Simplification did not run: ' + (e.message || e) + ' The model is imported as it is unless you cancel.'; show(base); }
+      finally { if (my === run) ok.disabled = false; } }
+    function show(m) {
+      current = m;
       if (model) { scene.remove(model); model.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); }); }
       model = new THREE.Group(); let tris = 0; const mat = new THREE.MeshStandardMaterial({ color: '#d9d6d0', roughness: 0.9, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), edge = new THREE.LineBasicMaterial({ color: '#4b5059', transparent: true, opacity: 0.7 });
       // one mesh for the whole model (2026-11-18: one draw, not one per object); edge lines only while it is under 20,000 triangles
@@ -57,6 +81,7 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
       scene.add(model);
       q('[data-ipv-size]').innerHTML = `<b>${W.toFixed(2)} × ${D.toFixed(2)} × ${H.toFixed(2)} m</b><span>${current.components.length} object${current.components.length === 1 ? '' : 's'} · ${Math.round(tris).toLocaleString('en-CA')} triangles</span>`;
       const big = Math.max(W, D, H); q('[data-ipv-msg]').textContent = big > 3000 ? 'Over 3 km across: the units are probably wrong (try Millimetres).' : big < 0.5 ? 'Under half a metre across: the units are probably wrong (try Metres).' : 'Check the size against the red figure, a person 1.8 m tall. Change the units if it is far off.';
+      if (simp) q('[data-ipv-size]').innerHTML += `<span class="ipv-simplified">Simplified from ${simp.from.toLocaleString('en-CA')} triangles</span>`;
       floors();
       ctl.target.set(W / 2, H / 3, -D / 2); cam.position.set(W / 2 + span * 1.1, H / 2 + span * 0.8, -D / 2 + span * 1.3); cam.near = span / 2000; cam.far = span * 50; cam.updateProjectionMatrix(); ctl.update(); }
     // the floors (2026-11-17): found from the geometry; the person picks the ground floor, which goes to height 0 on import
@@ -71,11 +96,13 @@ export function previewImport(original, { name = original.audit?.fileName || 'Im
     const finish = (value) => { cancelAnimationFrame(raf); removeEventListener('resize', size); removeEventListener('keydown', key, true); removeEventListener('hashchange', cancel); if (model) model.traverse((o) => { o.geometry?.dispose(); }); R.dispose(); root.remove(); resolve(value); };
     const cancel = () => finish(null), key = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); } };
     q('[data-ipv="cancel"]').onclick = cancel;
-    q('[data-ipv="ok"]').onclick = () => { if (!current) return; current.audit = { ...current.audit, scaleConfirmed: true, destination: { label: destination }, reviewedAt: new Date().toISOString() };
+    q('[data-ipv="ok"]').onclick = () => { if (!current || q('[data-ipv="ok"]').disabled) return; current = { ...current, components: current.components.map((c) => ({ ...c, g: { ...c.g } })) }; current.audit = { ...current.audit, scaleConfirmed: true, destination: { label: destination }, reviewedAt: new Date().toISOString(), ...(simp ? { simplified: simp } : {}) };
+      if (simp) current.triangles = simp.to;
       // the chosen ground floor goes to height 0, and the floors go with the model when they are to become the project's levels
       if (det && det.floors.length && q('[data-ipv-uselv]').checked && !q('[data-ipv-floors]').hidden) { const g = withGround(det, +q('[data-ipv-ground]').value); for (const c of current.components) c.g.z = +(c.g.z + g.offset).toFixed(4); current.levels = { floors: g.floors, note: det.note, offset: g.offset }; current.audit.levels = { found: det.floors.length, ground: g.floors[g.ground]?.name, offset: g.offset }; }
       finish(current); };
     q('[data-ipv-unit]').onchange = build; q('[data-ipv-up]').onchange = build;
+    q('[data-ipv-simp]').onchange = simplify; q('[data-ipv-err]').onchange = simplify; q('[data-ipv-target]').onchange = () => { if (q('[data-ipv-simp]').checked) simplify(); };
     addEventListener('resize', size); addEventListener('keydown', key, true); addEventListener('hashchange', cancel, { once: true });
     size(); build(); loop(); q('[data-ipv="ok"]').focus();
   });
