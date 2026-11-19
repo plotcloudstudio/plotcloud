@@ -32,7 +32,8 @@ export async function init() {
   try { if (navigator.storage?.estimate) { const e = await navigator.storage.estimate(); if (e.quota) QUOTA = Math.min(e.quota, 4 * 1024 ** 3); } } catch (e) { }
   try { if (navigator.storage?.persisted) PERSISTED = await navigator.storage.persisted(); if (!PERSISTED && navigator.storage?.persist) PERSISTED = await navigator.storage.persist(); } catch (e) { }
   try { if (!localStorage.getItem(KEY) && localStorage.getItem(MODE) === 'idb') { const raw = await idbGet(KEY); if (raw) DB = JSON.parse(raw); } } catch (e) { idbOK = false; }
-  return load();
+  const D = load(); try { await resolveMeshes(D); } catch (e) { } setTimeout(sweepMeshes, 8000);   // imported meshes back in every model before the first page
+  return D;
 }
 const uid = (p) => p + Math.random().toString(36).slice(2, 9);
 const now = () => new Date().toISOString();
@@ -58,7 +59,7 @@ function seed() {
 let checked = null;
 export function load() {
   if (DB && checked === DB) return DB;
-  let fresh = false; if (!DB) { try { const raw = localStorage.getItem(KEY); fresh = !raw; DB = raw ? JSON.parse(raw) : seed(); } catch (e) { DB = seed(); memoryOnly = true; } }
+  let fresh = false; if (!DB) { try { const raw = localStorage.getItem(KEY); fresh = !raw; DB = raw ? JSON.parse(raw) : seed(); if (raw && resolveSync(DB).length) resolveMeshes(DB).catch(() => { }); } catch (e) { DB = seed(); memoryOnly = true; } }
   checked = DB;
   // Before the first schema-2 migration, keep the untouched data as a v1 backup in IndexedDB (preMigrationBackup below).
   if (!fresh && DB.projects?.some((p) => !(p.contract?.schema >= C.SCHEMA))) keepPreMigration(DB);
@@ -85,10 +86,64 @@ function pruneMedia(keep = 0) {
 const saveHooks = [];
 export const onSave = (fn) => { saveHooks.push(fn); };
 const saved = (ok) => { for (const f of saveHooks) try { f(); } catch (e) { } return ok; };
+// ---- imported meshes kept apart (Large files 5, 2026-11-19). A model's meshes ({ id: [x, y, z, …] }, the draft's and every
+// version's) can hold millions of numbers; written into the store's text on every save they made each save take about half a
+// second at 500,000 triangles. Each mesh is now kept once in its own IndexedDB record (keyed by its content, so a version that
+// copies the draft shares it) and the store's text holds only { $m: key } for it. In memory every model keeps its arrays as before,
+// so nothing that reads meshes changes. A mesh is written inline until its own record is confirmed stored, so a closed tab never
+// leaves a reference to a mesh that is not there. Without IndexedDB everything stays inline, as before.
+const MESH_DB = 'plotcloud-mesh', MESH_ST = 'm', MESH_MIN = 900;   // smaller meshes (under 100 triangles) stay in the text
+let mdbP = null; const MKEY = new WeakMap(), MCACHE = new Map(), STORED = new Set(), PENDING = new Set(); let meshBytes = 0, refill = 0;
+const mdb = () => mdbP || (mdbP = new Promise((res, rej) => { try { const r = indexedDB.open(MESH_DB, 1); r.onupgradeneeded = () => r.result.createObjectStore(MESH_ST); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }));
+const mdo = (mode, fn) => mdb().then((db) => new Promise((res, rej) => { const t = db.transaction(MESH_ST, mode), q = fn(t.objectStore(MESH_ST)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }));
+const isMesh = (a) => (Array.isArray(a) || ArrayBuffer.isView(a)) && a.length >= MESH_MIN;
+const isRef = (a) => a && typeof a === 'object' && !Array.isArray(a) && typeof a.$m === 'string';
+// the content key: length and two 32-bit hashes of the numbers' bytes (computed once per array)
+function meshKey(a) { let k = MKEY.get(a); if (k) return k; const f = a instanceof Float64Array ? a : Float64Array.from(a), u = new Uint32Array(f.buffer, f.byteOffset, f.length * 2); let h1 = 2166136261, h2 = 5381;
+  for (let i = 0; i < u.length; i++) { const v = u[i]; h1 = Math.imul(h1 ^ v, 16777619); h2 = (Math.imul(h2, 33) + v) | 0; }
+  k = 'm' + a.length.toString(36) + '-' + (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36); MKEY.set(a, k); if (!MCACHE.has(k)) MCACHE.set(k, a); return k; }
+const modelsOf = (D) => (D.projects || []).flatMap((p) => [p.draft, ...(p.versions || []).map((v) => v.model)]).filter((m) => m && m.meshes && typeof m.meshes === 'object');
+// new meshes are written together, a second after the last save that found one (an import saves several times on its way, with
+// in-between arrays), and only those a model still holds; one transaction for all of them
+const QUEUE = new Set(); let flushT = 0, flushBy = 0;
+function persistMesh(k) { if (PENDING.has(k) || STORED.has(k)) return; QUEUE.add(k); const now = Date.now(); if (!flushBy) flushBy = now + 5000;
+  clearTimeout(flushT); flushT = setTimeout(flushMeshes, Math.max(0, Math.min(1000, flushBy - now))); }
+function flushMeshes() { flushBy = 0; if (!DB) return; const live = new Map();
+  for (const m of modelsOf(DB)) for (const a of Object.values(m.meshes)) if (isMesh(a)) live.set(meshKey(a), a);
+  for (const k of MCACHE.keys()) if (!live.has(k)) MCACHE.delete(k);   // arrays no model holds any more are let go
+  const todo = [...QUEUE].filter((k) => live.has(k) && !STORED.has(k) && !PENDING.has(k)); QUEUE.clear(); if (!todo.length) return; todo.forEach((k) => PENDING.add(k)); const t = Date.now();
+  mdo('readwrite', (st) => { for (const k of todo) { const a = live.get(k); st.put({ a: a instanceof Float64Array ? a : Float64Array.from(a), t }, k); } return null; })
+    .then(() => { todo.forEach((k) => { STORED.add(k); PENDING.delete(k); }); clearTimeout(refill); refill = setTimeout(() => saveRaw(), 50); },   // write the store again, now with the references
+      () => { todo.forEach((k) => PENDING.delete(k)); }); }
+// the store's text with every stored mesh as a reference; the models in memory keep their arrays
+function storeText() {
+  const swaps = [], seen = new Set(); let bytes = 0;
+  if (idbOK && typeof indexedDB !== 'undefined') for (const m of modelsOf(DB)) { let out = null;
+    for (const [id, a] of Object.entries(m.meshes)) { let k = null;
+      if (isRef(a)) k = a.$m; else if (isMesh(a)) { k = meshKey(a); if (!STORED.has(k)) { persistMesh(k); k = null; } }
+      if (k) { (out ||= { ...m.meshes })[id] = { $m: k }; if (!seen.has(k)) { seen.add(k); bytes += (MCACHE.get(k)?.length || 0) * 8; } } }
+    if (out) { swaps.push([m, m.meshes]); m.meshes = out; } }
+  try { return { txt: JSON.stringify(DB), bytes }; } finally { for (const [m, keep] of swaps) m.meshes = keep; }
+}
+// references back to arrays: from this page's memory at once, else (first open, another tab's import) from IndexedDB
+function resolveSync(D) { const miss = []; for (const m of modelsOf(D)) for (const [id, a] of Object.entries(m.meshes)) if (isRef(a)) { const c = MCACHE.get(a.$m); if (c) m.meshes[id] = c; else miss.push([m, id, a.$m]); } return miss; }
+async function resolveMeshes(D) {
+  const miss = resolveSync(D); if (!miss.length) return 0; let lost = 0;
+  const got = await mdo('readonly', (st) => { const out = new Map(); for (const k of new Set(miss.map((x) => x[2]))) { const q = st.get(k); q.onsuccess = () => out.set(k, q.result); } return { get result() { return out; } }; }).catch(() => new Map());
+  for (const [m, id, k] of miss) { if (!isRef(m.meshes[id])) continue; const r = got.get(k);
+    if (r && r.a) { let a = MCACHE.get(k); if (!a) { a = Array.from(r.a); MKEY.set(a, k); MCACHE.set(k, a); } STORED.add(k); m.meshes[id] = a; }
+    else { delete m.meshes[id]; lost++; } }   // its record is gone (site data partly cleared): the piece shows as its box, as a mesh-less import does
+  if (lost) console.warn(`PlotCloud: ${lost} imported mesh record(s) were missing from this browser's storage.`);
+  return miss.length; }
+// records no model refers to any more (deleted imports, projects), kept a day in case another open tab still writes them
+async function sweepMeshes() { try { const live = new Set(); for (const m of modelsOf(DB)) for (const a of Object.values(m.meshes)) { if (isRef(a)) live.add(a.$m); else if (isMesh(a)) { const k = MKEY.get(a); if (k) live.add(k); } }
+  const old = Date.now() - 864e5; await mdo('readwrite', (st) => { const q = st.openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return; if (!live.has(c.key) && !(c.value?.t > old)) { c.delete(); STORED.delete(c.key); MCACHE.delete(c.key); } c.continue(); }; return null; }); } catch (e) { } }
+export const meshStore = { resolve: () => DB && resolveMeshes(DB), stored: () => STORED.size, has: (a) => STORED.has(meshKey(a)), info: () => ({ cache: MCACHE.size, stored: STORED.size, pending: PENDING.size, bytes: meshBytes, text: lastSize }), keyOf: meshKey, sweep: sweepMeshes };   // tests
+
 export function save() { return saved(saveRaw()); }
 function saveRaw() {
   if (memoryOnly) return false;
-  const txt = JSON.stringify(DB); lastSize = txt.length;
+  const { txt, bytes } = storeText(); lastSize = txt.length; meshBytes = bytes;
   if (idbOK) idbPut(KEY, txt).catch(() => { idbOK = false; });
   try { localStorage.setItem(KEY, txt); localStorage.setItem(MODE, 'mirror'); return true; }
   catch (e) {
@@ -190,7 +245,7 @@ export function archiveProject(p, on) { p.archived = !!on; p.updated = now(); sa
 export function deleteProject(p) { load().projects = load().projects.filter((x) => x !== p); save(); }
 export const dirtyDraft = (p) => !p.versions.length || JSON.stringify(p.versions.at(-1).model) !== JSON.stringify(p.draft);
 // bytes this prototype keeps in the browser (localStorage holds about 5 MB per site in most browsers)
-export function storageUse() { return lastSize || JSON.stringify(load()).length; }
+export function storageUse() { return lastSize ? lastSize + meshBytes : JSON.stringify(load()).length; }   // the store's text and the imported meshes kept apart
 export const storageMode = () => { try { return localStorage.getItem(MODE) === 'idb' ? 'idb' : 'mirror'; } catch (e) { return 'mirror'; } };
 // pictures and per-point fields of results that are not on a project's latest version (their figures stay)
 export function pruneOldMedia() {
