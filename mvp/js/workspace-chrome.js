@@ -128,6 +128,8 @@ export function mountChrome(app, api) {
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'), $('#addSimInt'));
   add.insertAdjacentHTML('beforeend', `<span class="sp-hr"></span><button type="button" class="sp-b sp-xlb" data-sp="xl" title="Export list: the views, series and sections for the report" aria-label="Export list" aria-pressed="false">${I(P.xlist)}<i class="sp-badge" hidden></i></button>`);
+  // Render (2026-11-19): presentation images of a 3D view with the person's own OpenAI key, its own window (render-panel.js)
+  add.insertAdjacentHTML('beforeend', `<button type="button" class="sp-b sp-rnb" data-sp="render" title="Render: a presentation image of the 3D view (OpenAI, your own key)" aria-label="Render">${I('<rect x="3.5" y="6" width="17" height="13" rx="2"/><path d="M8.5 6l1.5-2h4l1.5 2"/><circle cx="12" cy="12.5" r="3.4"/><path d="M18.5 2.8l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z"/>')}</button>`);
   root.append(left, add);
 
   // ---- bottom: Edit site | the model tools | select, text, delete, more
@@ -210,9 +212,15 @@ export function mountChrome(app, api) {
   // ---- buttons
   const doc = () => { const a = activePane(); try { return a.ready ? a.win.document : null; } catch { return null; } };
   const openProject = (section) => { UI.pacc = section; saveUI(); if (UI.panel === 'project' && root.classList.contains('sp-pal-open')) palOpen(false); projBtn.click(); };
+  async function openRenderWin() { solo(null); const RP = await import('./render-panel.js?v=render-20261119-1');
+    const ensure3D = async () => { if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); await new Promise((r) => setTimeout(r, 250)); } };
+    window.__wsRender = RP.openRender({ p, S, studio, toast: (t) => import('./app.js').then((m) => m.toast?.(t)).catch(() => {}),
+      capture: async (w, h) => { await ensure3D(); const win = INST.persp.win, a = win?.S3?.api || win?.S3; if (!a?.captureView) throw Error('Open the 3D view before capturing.'); return a.captureView(w, h); },
+      level: () => { const lv = INST.persp.ready ? INST.persp.ws.state().lv : null; return (studio()?.levels || []).find((l) => l.id === lv) || null; } }); }
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-sp]'); if (!b) return; const k = b.dataset.sp;
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
+    else if (k === 'render') openRenderWin();
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
     else if (k === 'terrain') openProject('site');
