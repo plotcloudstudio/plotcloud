@@ -5,3 +5,12 @@ verify_jwt = false
 [functions.quick-function]
 verify_jwt = false
 entrypoint = './functions/plotcloud-weather/index.ts'
+
+# Passwords (set on the hosted project 2026-11-19, the same rule as the sign-up form): at least 10 characters, letters and digits.
+# Leaked-password checking (HaveIBeenPwned) needs a Pro plan; the free plan refuses it.
+[auth]
+minimum_password_length = 10
+password_requirements = "letters_digits"
+
+[auth.email]
+enable_signup = true
