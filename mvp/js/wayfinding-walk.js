@@ -99,13 +99,36 @@ export function drawingSVG(A, plan, ev, { project = '', highOnly = false, north 
 /** the drawing as a PNG (from the SVG) */
 export async function drawingPNG(svg) { const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })); try { const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(Error('The drawing could not be drawn.')); i.src = url; });
   const c = document.createElement('canvas'); c.width = img.width * 1.5; c.height = img.height * 1.5; const x = c.getContext('2d'); x.scale(1.5, 1.5); x.drawImage(img, 0, 0); return c.toDataURL('image/png'); } finally { URL.revokeObjectURL(url); } }
-/** the drawing as a PDF: the drawing on an A3 landscape page, the schedule as a table after it */
+/** the drawing as a PDF: the drawing on an A3 landscape page, the schedule as a table after it.
+ *  The table is set in DejaVu Sans (2026-11-19: was the PDF's built-in Helvetica, which has no arrows, ≥ or letters outside Western
+ *  Europe). DejaVu has no Chinese, Japanese or Korean; a schedule with them is drawn by the browser, with its fonts, as pictures of the table. */
+let pdfFont = null;
+const loadFont = () => pdfFont || (pdfFont = (async () => { const r = await fetch(new URL('../vendor/DejaVuSans.ttf', import.meta.url)); if (!r.ok) throw Error('The PDF font could not load. Please retry.');
+  const b = new Uint8Array(await r.arrayBuffer()); let t = ''; for (let i = 0; i < b.length; i += 32768) t += String.fromCharCode(...b.subarray(i, i + 32768)); return btoa(t); })().catch((e) => { pdfFont = null; throw e; }));
+export const CJK = /[\u1100-\u11FF\u2E80-\u2FDF\u3000-\u30FF\u3100-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7AF\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFFEF]|[\uD840-\uD87F][\uDC00-\uDFFF]/;
+const PCOLS = [['id', 14], ['floor', 30], ['point', 14], ['where', 40], ['type', 34], ['mount', 26], ['faces', 38], ['says', 110], ['priority', 26], ['visibility', 18], ['status', 50]];
 export async function drawingPDF(png, rows, title) { await import('../vendor/jspdf-4.2.1.umd.min.js'); const PDF = globalThis.jspdf.jsPDF, pdf = new PDF({ unit: 'mm', format: 'a3', orientation: 'landscape', compress: true });
   const img = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = png; }), k = Math.min(400 / img.width, 277 / img.height); pdf.setProperties({ title, author: 'PlotCloud' }); pdf.addImage(png, 'PNG', 10, 10, img.width * k, img.height * k);
-  if (rows.length) { pdf.addPage('a3', 'landscape'); pdf.setFontSize(14); pdf.text('Signage schedule', 12, 16); pdf.setFontSize(7.5); let y = 26; const cs = [['id', 14], ['floor', 30], ['point', 14], ['where', 40], ['type', 34], ['mount', 26], ['faces', 38], ['says', 110], ['priority', 26], ['visibility', 18], ['status', 50]];
-    const line = (vals, b) => { let x = 12; pdf.setFont(undefined, b ? 'bold' : 'normal'); vals.forEach((v, i) => { pdf.text(pdf.splitTextToSize(String(v), cs[i][1] - 2)[0] || '', x, y); x += cs[i][1]; }); y += 6; if (y > 285) { pdf.addPage('a3', 'landscape'); y = 16; } };
-    line(cs.map(([k2]) => COLS.find((c) => c[0] === k2)[1]), true); for (const r of rows) line(cs.map(([k2]) => r[k2])); }
+  if (!rows.length) return pdf.output('blob');
+  const head = PCOLS.map(([k2]) => COLS.find((c) => c[0] === k2)[1]), body = rows.map((r) => PCOLS.map(([k2]) => String(r[k2] ?? '')));
+  if (body.some((r) => r.some((v) => CJK.test(v)))) { tablePictures(pdf, head, body); return pdf.output('blob'); }
+  pdf.addFileToVFS('DejaVuSans.ttf', await loadFont()); pdf.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); pdf.setFont('DejaVu', 'normal');
+  pdf.addPage('a3', 'landscape'); pdf.setFontSize(14); pdf.text('Signage schedule', 12, 16); pdf.setFontSize(7.5); let y = 26;
+  const line = (vals, b) => { let x = 12; vals.forEach((v, i) => { const t = pdf.splitTextToSize(v, PCOLS[i][1] - 2)[0] || ''; pdf.text(t, x, y); if (b) pdf.text(t, x + 0.12, y); x += PCOLS[i][1]; }); y += 6; if (y > 285) { pdf.addPage('a3', 'landscape'); y = 16; } };   // the header drawn twice, a little apart: DejaVu is here in one weight
+  line(head, true); for (const r of body) line(r);
   return pdf.output('blob'); }
+// the schedule drawn on a canvas, a page at a time, and placed as pictures (a schedule with Chinese, Japanese or Korean names)
+function tablePictures(pdf, head, body) {
+  const S = 6, W = 400, pageRows = 42, mm = (v) => v * S, ff = 'system-ui, "Noto Sans", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+  for (let at = 0, pg = 0; at < body.length || pg === 0; at += pageRows, pg++) {
+    const part = body.slice(at, at + pageRows), H = 26 + (part.length + 1) * 6, c = document.createElement('canvas'); c.width = mm(W); c.height = mm(H); const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#1d2433'; g.textBaseline = 'alphabetic';
+    if (pg === 0) { g.font = `600 ${mm(5)}px ${ff}`; g.fillText('Signage schedule', mm(2), mm(6)); }
+    let y = 16; const line = (vals, b) => { let x = 2; g.font = `${b ? 700 : 400} ${mm(2.65)}px ${ff}`; vals.forEach((v, i) => { const w = mm(PCOLS[i][1] - 2); let t = v; if (g.measureText(t).width > w) { while (t && g.measureText(t + '…').width > w) t = t.slice(0, -1); t += '…'; } g.fillText(t, mm(x), mm(y)); x += PCOLS[i][1]; }); y += 6; };
+    line(head, true); for (const r of part) line(r);
+    pdf.addPage('a3', 'landscape'); pdf.addImage(c.toDataURL('image/png'), 'PNG', 10, 10, W, H);
+    if (at + pageRows >= body.length) break; }
+}
 /** the drawing as DXF (metres): layers WALLS, ROOMS, ROUTES, POINTS, SIGNS, SIGN_FACING, TEXT */
 export function drawingDXF(A, plan, ev, { highOnly = false } = {}) { const { SC, ok, pts, signs } = parts(A, plan, ev, highOnly), E = [];
   const ln = (L, a, b) => E.push(`0\nLINE\n8\n${L}\n10\n${a[0]}\n20\n${a[1]}\n30\n0\n11\n${b[0]}\n21\n${b[1]}\n31\n0`), tx = (L, p, h, t) => E.push(`0\nTEXT\n8\n${L}\n10\n${p[0]}\n20\n${p[1]}\n30\n0\n40\n${h}\n1\n${String(t).replace(/\n/g, ' ')}`), ci = (L, p, r) => E.push(`0\nCIRCLE\n8\n${L}\n10\n${p[0]}\n20\n${p[1]}\n30\n0\n40\n${r}`);

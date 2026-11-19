@@ -22,7 +22,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=wf-20261119-2';
+import { mountChrome } from '../workspace-chrome.js?v=wf-20261119-3';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
@@ -172,7 +172,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=mesh-20261119-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=delfast-20261119-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -307,21 +307,21 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   async function deriveNow(live) {
     syncHidden(); const src = INST.persp.ready ? INST.persp.ws : any(); if (!src || dead) return;
-    const ms = await src.meshes(), objs = src.objects(), lvl = src.levels().list; if (dead) return;
-    OBJ = objs; HIDDEN = new Set(src.hidden()); CLR = src.clearances();
+    const objs = src.objects(), lvl = src.levels().list, hid = new Set(src.hidden()), clr = src.clearances(), ms = await src.meshes(); if (dead) return;   // the objects of the model the meshes were made from (the meshes come in slices, 2026-11-19)
+    OBJ = objs; HIDDEN = hid; CLR = clr;
     const lvZ = new Map(lvl.map((l) => [l.id, l])), by = new Map(ms.map((m) => [m.k + ':' + m.id, m])), out = [];
-    MESH = new Map();
+    const MESHn = new Map();   // filled in slices; in use once complete
     const put = (id, base, m) => {   // a component from a Plan Studio object; its geometry (local to g) is kept here for the Shaded pane, never saved
       let g = base.g; const kept = m && m.pos.length ? DERIVED.get(m.pos) : null;
-      if (kept) { g = kept.g; MESH.set(id, { mesh: kept.loc, meshCol: m.col, glass: m.glass, sig: kept.sig }); }   // the same geometry as last time (a kept import, 2026-11-18)
+      if (kept) { g = kept.g; MESHn.set(id, { mesh: kept.loc, meshCol: m.col, glass: m.glass, sig: kept.sig }); }   // the same geometry as last time (a kept import, 2026-11-18)
       else if (m && m.pos.length) { let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity; const P = m.pos;
         for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
         g = { x: +x0.toFixed(3), y: +y0.toFixed(3), z: +z0.toFixed(3), w: +Math.max(0.01, x1 - x0).toFixed(3), d: +Math.max(0.01, y1 - y0).toFixed(3), h: +Math.max(0.01, z1 - z0).toFixed(3) };
         const loc = new Float32Array(P.length); for (let i = 0; i < P.length; i += 3) { loc[i] = P[i] - g.x; loc[i + 1] = P[i + 1] - g.y; loc[i + 2] = P[i + 2] - g.z; }
         let h = P.length; for (let i = 0; i < P.length; i += 97) h = (h * 31 + Math.round(P[i] * 1000)) | 0;
-        MESH.set(id, { mesh: loc, meshCol: m.col, glass: m.glass, sig: h + ':' + P.length }); DERIVED.set(P, { g, loc, sig: h + ':' + P.length }); }
+        MESHn.set(id, { mesh: loc, meshCol: m.col, glass: m.glass, sig: h + ':' + P.length }); DERIVED.set(P, { g, loc, sig: h + ':' + P.length }); }
       if (!g) return; out.push({ ...base, id, g, ps: 1 }); };
-    for (const o of objs) {
+    let tY = performance.now(); for (const o of objs) { if (performance.now() - tY > 12) { await new Promise((r) => setTimeout(r)); if (dead) return; tY = performance.now(); }   // a frame every ~12 ms (2026-11-19)
       const L = lvZ.get(o.lv), k = o.k === 'furn' && o.stair ? 'stair' : o.k, m = by.get(o.k + ':' + o.id); by.delete(o.k + ':' + o.id);
       const base = { name: o.name, type: o.k === 'op' ? (o.kind === 'door' ? 'door' : 'window') : KTYPE[k] || 'furniture', layer: o.layer || KLAYER[k] || 'Imported', mat: o.mat || (o.k === 'op' ? (o.kind === 'door' ? 'Timber' : 'Glass') : KMAT[k] || 'Imported') };
       if (o.k === 'ctx') { base.g = { x: +o.bb[0].toFixed(3), y: +o.bb[1].toFixed(3), z: +(o.z0 || 0).toFixed(3), w: +Math.max(0.01, o.bb[2] - o.bb[0]).toFixed(3), d: +Math.max(0.01, o.bb[3] - o.bb[1]).toFixed(3), h: +(o.h || 9).toFixed(3) }; put(psId(o), base, null); continue; }
@@ -332,6 +332,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     for (const [key, m] of by) { if (!m.pos.length) continue; const k = m.id === 'roof' ? 'roof' : m.id === 'stair' ? 'stair' : 'misc';   // Plan Studio parts with no object of their own (the roof, stair flights)
       put(`ps:${k}:${m.id}`, { name: m.id === 'roof' ? 'Roof' : m.id === 'stair' ? 'Stairs' : key, type: KTYPE[k] || 'imported', layer: KLAYER[k] || 'Structure', mat: KMAT[k] || 'Concrete' }, m); }
     const native = M().components.filter((c) => !PS.test(c.id));
+    MESH = MESHn;
     M().components = [...native, ...out];
     for (const c of out) if (!M().layers.find((l) => l.name === c.layer)) M().layers.push({ name: c.layer, color: LAYER_COLORS[c.layer] || '#cfcac0', visible: true, locked: false });
     if (UI.sels.some((id) => !comp(id))) { UI.sels = UI.sels.filter((id) => comp(id)); saveUI(); }

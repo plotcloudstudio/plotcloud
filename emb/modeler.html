@@ -2348,7 +2348,7 @@ function tidy() {   // after edits: no zero walls, joined lines merged, openings
   M.fences=(M.fences||[]).filter(f=>M.levels.some(l=>l.id===f.lv)&&Array.isArray(f.points)&&f.points.length>=2);
   M.masses = (M.masses || []).filter((m) => Array.isArray(m.points) && m.points.length >= 3);
   M.imports = (M.imports || []).filter((o) => o && o.g && [o.g.x, o.g.y, o.g.z].every(Number.isFinite));
-  if(window.PCStudioGeometry)PCStudioGeometry.upsertAutoFloors(M,{thickness:newSlabThickness()});
+  if(window.PCStudioGeometry){PCStudioGeometry.upsertAutoFloors(M,{thickness:newSlabThickness()});try{markAutoFloorsCurrent();}catch(e){}}   // made for these walls: changed() does not make them again (2026-11-19)
   STC.tagAll(M);
 }
 
@@ -5219,7 +5219,7 @@ $('#siteContextOpacity').oninput=()=>{OP.site=+$('#siteContextOpacity').value/10
 const focusButton=document.createElement('button');focusButton.id='fitSelectedBtn';focusButton.type='button';focusButton.className='kb';focusButton.textContent='Zoom selected';focusButton.setAttribute('aria-label','Zoom selected');$('#fitBtn').insertAdjacentElement('afterend',focusButton);
 function focusSelected(){const o=selObj();if(!o){flash('Select an object to zoom to it.');return;}if(WALKING)walkExit();if(CAM==='3d'){if(!S3.focusObject({k:SEL.k==='end'?'wall':SEL.k,id:SEL.id}))flash('The selected object is hidden in this view.');return;}let pts;if(SEL.k==='wall'||SEL.k==='end')pts=[o.a,o.b];else if(SEL.k==='fence')pts=o.points;else if(SEL.k==='floor'||SEL.k==='void')pts=floorPoints(o);else{const F=frameOf(SEL.k,o);if(F)pts=frameCorners(F);else if(o.lx!=null)pts=[[o.lx-1,o.ly-1],[o.lx+1,o.ly+1]];}if(!pts?.length)return;const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;V.s=Math.min(400*VP.d,(VP.w-140*VP.d)/Math.max(1,Math.max(...xs)-Math.min(...xs)),(VP.h-160*VP.d)/Math.max(1,Math.max(...ys)-Math.min(...ys)));V.ox=VP.w/2-cx*V.s;V.oy=VP.h/2+cy*V.s;V.user=true;draw();}focusButton.onclick=focusSelected;
 const copyButton=document.createElement('button');copyButton.id='copyPreviousLayout';copyButton.type='button';copyButton.className='btn';copyButton.textContent='Copy previous level layout';$('#lvAdd').insertAdjacentElement('afterend',copyButton);copyButton.onclick=()=>{const below=lvBelow();if(!below){flash('There is no previous level to copy.');return;}if(lvWalls().length||M.floors.some(f=>f.lv===LV)){flash('Copy is available on an empty level. Existing geometry is preserved.');return;}const b=snapM();for(const w of lvWalls(below.id)){const nw={...JSON.parse(JSON.stringify(w)),id:STC.uid('w'),lv:LV};M.walls.push(nw);for(const o of M.ops.filter(q=>q.wall===w.id))M.ops.push({...JSON.parse(JSON.stringify(o)),id:STC.uid('o'),wall:nw.id});}for(const f of M.floors.filter(q=>q.lv===below.id&&!q.auto)){const nf={...JSON.parse(JSON.stringify(f)),id:STC.uid('fl'),lv:LV};M.floors.push(nf);}tidy();commit(b);};
-let drawingProject=null,autoFloorSignature=null;const originalDrawingChanged=changed;changed=function(){const signature=JSON.stringify([M.id,M.walls]);if(signature!==autoFloorSignature){autoFloorSignature=signature;PCStudioGeometry.upsertAutoFloors(M,{thickness:newSlabThickness()});}if(drawingProject!==M.id){drawingProject=M.id;OP.site=M.siteOpacity??1;}const r=originalDrawingChanged.apply(this,arguments);if(document.activeElement!==$('#slabThickness'))$('#slabThickness').value=Math.round(newSlabThickness()*1000);if(document.activeElement!==$('#siteContextOpacity'))$('#siteContextOpacity').value=Math.round(siteOpacity()*100);$('#siteOpacityValue').textContent=Math.round(siteOpacity()*100)+'%';return r;};
+let drawingProject=null,autoFloorSignature=null,autoFloorProject=null,autoFloorLevels=new Map();/* speed (2026-11-19): the floors are made again only on the levels whose walls changed (the whole building when the project changes) */function autoFloorLevelSigs(){const by=new Map();for(const w of M.walls||[]){const k=w&&w.lv;let l=by.get(k);if(!l)by.set(k,l=[]);l.push(w);}const out=new Map();for(const [k,l] of by)out.set(k,JSON.stringify(l));return out;}function markAutoFloorsCurrent(){autoFloorSignature=JSON.stringify([M.id,M.walls]);autoFloorProject=M.id;autoFloorLevels=autoFloorLevelSigs();}const originalDrawingChanged=changed;changed=function(){const signature=JSON.stringify([M.id,M.walls]);if(signature!==autoFloorSignature){autoFloorSignature=signature;const sigs=autoFloorLevelSigs(),opt={thickness:newSlabThickness()};if(autoFloorProject!==M.id||[...sigs.keys(),...autoFloorLevels.keys()].some(k=>k==null)){PCStudioGeometry.upsertAutoFloors(M,opt);}else{for(const k of new Set([...sigs.keys(),...autoFloorLevels.keys()]))if(sigs.get(k)!==autoFloorLevels.get(k))PCStudioGeometry.upsertAutoFloors(M,{...opt,levelId:k});}autoFloorProject=M.id;autoFloorLevels=sigs;}if(drawingProject!==M.id){drawingProject=M.id;OP.site=M.siteOpacity??1;}const r=originalDrawingChanged.apply(this,arguments);if(document.activeElement!==$('#slabThickness'))$('#slabThickness').value=Math.round(newSlabThickness()*1000);if(document.activeElement!==$('#siteContextOpacity'))$('#siteContextOpacity').value=Math.round(siteOpacity()*100);$('#siteOpacityValue').textContent=Math.round(siteOpacity()*100)+'%';return r;};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-type]');if(b&&['fence','balcony_rail'].includes(b.dataset.type)){FENCE_FAMILY=b.dataset.type;setTool('fence');}});
 const originalDrawingHit=hitTest;hitTest=function(p,opt={}){if(CAM!=='3d'&&VIS.Wall&&(!opt.only||LAYER==='Wall'))for(const f of M.fences||[]){if(f.lv!==LV||isHidden(f.id))continue;for(let i=1;i<f.points.length;i++){const a=f.points[i-1],b=f.points[i],dx=b[0]-a[0],dy=b[1]-a[1],t=STC.clamp(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1),0,1);if(Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)<7*VP.d/V.s)return {k:'fence',id:f.id};}}return originalDrawingHit(p,opt);};
 const originalFenceDelete=delSel;delSel=function(){if(SEL?.k!=='fence')return originalFenceDelete();const before=snapM();M.fences=M.fences.filter(f=>f.id!==SEL.id);SEL=null;commit(before);};
@@ -6402,6 +6402,7 @@ window.S3 = (() => {
   // and of the level below (holes), every level's height, the view options, the display mode, the illustration and the layer looks.
   // A kept level loses the outline of an old selection; anything hidden for a delete that did not happen shows again.
   const LVC = new Map();
+  const LVN = {};
   function lvSig(M, o, lv, lvs, isCut, top, below) { const up = lvs[lvs.indexOf(lv) + 1], ids = new Set([lv.id, up && up.id, below && below.id].filter(Boolean)), J = JSON.stringify, on = (a, f) => (a || []).filter(f);
     const W = on(M.walls, (w) => w.lv === lv.id), wid = new Set(W.map((w) => w.id)), F = on(M.furn, (f) => f.lv === lv.id);
     return [DISP, J(ILL), J(LOOK.spec), isCut, top, below ? below.id : '', J(lvs.map((l) => [l.id, l.z, l.h, l.slab])), J(W), J(on(M.ops, (q) => wid.has(q.wall))), J(on(M.floors, (f) => ids.has(f.lv))),
@@ -6418,11 +6419,12 @@ window.S3 = (() => {
     const G = new T.Group(), lvs = M.levels.slice().sort((a, b) => a.z - b.z), cur = lvs.find((l) => l.id === o.lv) || lvs[lvs.length - 1], show = o.only ? lvs.filter((l) => l.id === o.only) : o.all ? lvs : lvs.filter((l) => l.z <= cur.z + 1e-6);
     const opq = (v) => (v == null || v >= 1) ? {} : { transparent: true, opacity: v, depthWrite: v > 0.6 };
     const wallM = mat('#f4f1ea', opq(o.opW)), cutM = mat('#e2ddd3', opq(o.opW)), glassM = mat('#9cc3e6', { transparent: true, opacity: 0.38, depthWrite: false }), slabM = mat('#d9d4ca', opq(o.opF));
+    const LVN0 = o.lvCache ? { reused: [], built: [], all: !!o.all } : null; if (LVN0) { const h = LVN[o.lvCache] || (LVN[o.lvCache] = []); h.push(LVN0); if (h.length > 20) h.shift(); }   // test hook (2026-11-19): which levels the last builds kept and drew again
     for (const lv of show) {
       const isCut = !o.all && lv.id === cur.id, top = lvs.indexOf(lv) === lvs.length - 1, below = lvs[lvs.indexOf(lv) - 1];
       // a level whose inputs did not change is kept as it was drawn (2026-11-18, the main view only): an edit rebuilds its own level
       const LGk = o.lvCache ? lvSig(M, o, lv, lvs, isCut, top, below) : null, LGid = o.lvCache + ':' + lv.id, LGc = LGk && LVC.get(LGid);
-      if (LGc && LGc.sig === LGk) { lvReuse(LGc.g); G.add(LGc.g); continue; }
+      if (LGc && LGc.sig === LGk) { lvReuse(LGc.g); G.add(LGc.g); LVN0.reused.push(lv.id); continue; } if (LVN0) LVN0.built.push(lv.id);
       const LG = new T.Group(); LG.name = 'level'; G.add(LG); if (LGk) { LG.userData.__lvKeep = 1; const old = LVC.get(LGid); if (old && old.g !== LG) lvFree(old.g); LVC.set(LGid, { sig: LGk, g: LG }); }
       { const G = LG;
       // walls, split around windows and doors
@@ -7618,16 +7620,22 @@ window.S3 = (() => {
   api.display = (mode) => { const next = ['ghosted', 'wire', 'illus', 'rendered'].includes(mode) ? mode : 'shaded'; if (next === DISP) return; if (DISP === 'rendered') rendOff(); DISP = next; if (next === 'shaded') dispApply(null); if (window.upd3DNow) window.upd3DNow(); };
   api.illustration = (o) => { const was = JSON.stringify(ILL); Object.assign(ILL, o || {}); if (JSON.stringify(ILL) !== was && DISP === 'illus' && window.upd3DNow) window.upd3DNow(); return { ...ILL }; };
   api.displayMode = () => DISP;
+  api._lvStat = (k = 'main') => JSON.parse(JSON.stringify(LVN[k] || []));
   { const _u2 = api.update; api.update = (M, S, o) => { _u2(M, S, o); if (DISP !== 'shaded' && grp) { dispApply(grp); render(); } }; }
   // the model's meshes, grouped by object, in plan coordinates with z up (x, y, height): what the Workspace's Shaded pane draws
   const WSM = new WeakMap(); let I4 = null;
   // test hook: the imported meshes of the main view (batches, the pieces in them, pieces drawn alone, edge lines on them, outlines)
   api._impHit = (x, y, z) => { if (!cam || !grp) return []; grp.updateMatrixWorld(true); const v = new T.Vector3(x, z, -y).project(cam), r = canvas.getBoundingClientRect(); return api.hits(r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height).map((h) => h.ud.k + ':' + h.ud.id); };
   api._imp = () => { const r = { batches: 0, pieces: 0, single: 0, edges: 0, outlines: 0 }; if (grp) grp.traverse((m) => { if (m.userData && m.userData.__outline) r.outlines++; if (m.name !== 'import') return; if (m.userData.merged) { r.batches++; r.pieces += m.userData.ids.length; } else r.single++; for (const c of m.children) if (c.isLineSegments && !c.userData.__outline) r.edges++; }); return r; };
-  api.wsMeshes = async (M, S, o) => {
+  // in slices (2026-11-19): the work gives the page a frame every ~12 ms, so a view can be turned while it runs after an edit;
+  // one call at a time, as the kept levels (lvCache 'ws') are shared by the groups it builds
+  let WSQ = Promise.resolve();
+  api.wsMeshes = (M, S, o) => { const run = WSQ.then(() => wsMeshes1(M, S, o)); WSQ = run.catch(() => {}); return run; };
+  const wsMeshes1 = async (M, S, o) => {
     await lib(); const G = buildGroup(M, S, Object.assign({ all: true, furn: true, walls: true, floors: true, openings: true, flows: false, colOf: () => '#f0e5d2', ceil: { light: 1, panel: 1, vent: 1, smoke: 1 }, lights: true, lvCache: 'ws' }, o || {}));
-    G.updateMatrixWorld(true); const by = new Map(), v = new T.Vector3();
-    G.traverse((m) => { if (!m.isMesh || m.name === 'wallcut' || m.name === 'beam') return; let vis = true; for (let q = m; q; q = q.parent) if (q.visible === false) { vis = false; break; } if (!vis) return;
+    G.updateMatrixWorld(true); const by = new Map(), v = new T.Vector3(), LIST = []; G.traverse((m) => { if (m.isMesh) LIST.push(m); });
+    let tY = performance.now(); const breathe = async () => { if (performance.now() - tY > 12) { await new Promise((r) => setTimeout(r)); tY = performance.now(); } };
+    for (const m of LIST) { await breathe(); (() => { if (!m.isMesh || m.name === 'wallcut' || m.name === 'beam') return; let vis = true; for (let q = m; q; q = q.parent) if (q.visible === false) { vis = false; break; } if (!vis) return;
       const mat = Array.isArray(m.material) ? m.material[0] : m.material; if (!mat || (mat.opacity != null && mat.opacity < 0.05) || mat.colorWrite === false) return;
       const ud = tagOf(m), key = ud ? ud.k + ':' + ud.id : 'misc:' + (m.name || 'mesh'); let e = by.get(key);
       if (!e) { e = { k: ud ? ud.k : 'misc', id: ud ? String(ud.id) : (m.name || 'mesh'), pos: [], col: [], typed: [] }; by.set(key, e); }
@@ -7644,10 +7652,10 @@ window.S3 = (() => {
       for (let i = 0; i < n; i += 3) for (let j = 0; j < 3; j++) { const k = i + (flip ? 2 - j : j), t = ia ? ia[k] : k; let x, y, z; if (inter) { x = pos.getX(t); y = pos.getY(t); z = pos.getZ(t); } else { x = P[t * st]; y = P[t * st + 1]; z = P[t * st + 2]; }
         const o = (i + j) * 3, wx = me[0] * x + me[4] * y + me[8] * z + me[12], wy = me[1] * x + me[5] * y + me[9] * z + me[13], wz = me[2] * x + me[6] * y + me[10] * z + me[14];
         q[o] = wx; q[o + 1] = -wz; q[o + 2] = wy; cl[o] = c.r; cl[o + 1] = c.g; cl[o + 2] = c.b; }
-      const wq = { q, cl, ck: mat.uuid }; if (kept) WSM.set(m, wq); e.typed.push(wq); e.glass = e.glass || a < 0.9; });
+      const wq = { q, cl, ck: mat.uuid }; if (kept) WSM.set(m, wq); e.typed.push(wq); e.glass = e.glass || a < 0.9; })(); }
     for (const c of [...G.children]) if (c.userData.__lvKeep) G.remove(c); G.traverse((m) => { if (m.geometry) m.geometry.dispose(); });   /* kept levels stay for the next time */
     const cat = (a, parts) => { if (!parts.length) return new Float32Array(a); if (!a.length && parts.length === 1) return parts[0]; const memo = !a.length && WSM.get(parts[0]); if (memo && memo.parts.length === parts.length && memo.parts.every((x, i) => x === parts[i])) return memo.out;   /* a kept import: the same array each time, so the Workspace can keep what it made from it */ const n = parts.reduce((t, x) => t + x.length, a.length), out = new Float32Array(n); out.set(a); let at = a.length; for (const x of parts) { out.set(x, at); at += x.length; } if (!a.length) WSM.set(parts[0], { parts: parts.slice(), out }); return out; };   /* the same pieces: the same array, so the Workspace keeps what it made from it */
-    return [...by.values()].map((e) => ({ k: e.k, id: e.id, glass: !!e.glass, pos: cat(e.pos, e.typed.map((w) => w.q)), col: cat(e.col, e.typed.map((w) => w.cl)) }));
+    const res = []; for (const e of by.values()) { await breathe(); res.push({ k: e.k, id: e.id, glass: !!e.glass, pos: cat(e.pos, e.typed.map((w) => w.q)), col: cat(e.col, e.typed.map((w) => w.cl)) }); } return res;
   };
   return api;
 })();
@@ -7913,7 +7921,7 @@ if (window.__WSROLE) {
     },
     importMeshes(obj) { setImportMeshes(obj); }, impOff(names) { window.__imp.setOff(names); }, addImports(list) { return addImports(list); }, placeImport(spec) { return placeImport(spec); }, thumbMesh: (m) => thumbMesh(m),
     load(snap) { WS.rx = true; try { useModel(STC.migrate(JSON.parse(snap)), { saved: true }); } finally { WS.rx = false; } C2.m = null; guard(); WS.last = snapM(); WS.lv = LV; WS.sel = KEY(SEL); if (window.S3 && S3.on) { upd3D(true); aspectFit(); } histUI(); return WS.last; },
-    apply(snap, live) { if (snap === snapM()) { WS.last = snap; if (!live) { WS.rx = true; try { changed(false); } finally { WS.rx = false; } } return; } WS.rx = true; try { M = JSON.parse(snap); guard(); if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !selObj()) SEL = null; changed(!!live, !!live); if (!live) syncInputs(); if (window.S3 && S3.on) upd3D(); } finally { WS.rx = false; } WS.last = snapM(); WS.sel = KEY(SEL); },
+    apply(snap, live) { if (snap === snapM()) { WS.last = snap; if (!live) { WS.rx = true; try { changed(false); } finally { WS.rx = false; } } return; } WS.rx = true; try { M = JSON.parse(snap); guard(); markAutoFloorsCurrent();   /* speed (2026-11-19): the pane that sent it has made its floors from these walls already */ if (!lvObj()) LV = lvSorted()[0].id; if (SEL && !selObj()) SEL = null; changed(!!live, !!live); if (!live) syncInputs(); if (window.S3 && S3.on) upd3D(); } finally { WS.rx = false; } WS.last = snapM(); WS.sel = KEY(SEL); },
     select(s) { WS.rx = true; try { const o = s ? selObj(s) : null; if (o && o.lv && o.lv !== LV && M.levels.some((l) => l.id === o.lv)) { LV = o.lv; WS.lv = LV; changed(); } SEL = o ? s : null; WS.sel = KEY(SEL); if (SEL && LAYER_OF[SEL.k] && LAYER_OF[SEL.k] !== LAYER) setLayer(LAYER_OF[SEL.k], true); changedSel(); } finally { WS.rx = false; } },
     addLevel(direction='above'){if(!['above','below'].includes(direction))return false;addLevel(direction);return true;},
     renameLevel(name){name=String(name||'').trim();if(!name||name.length>80){flash('Use a level name between 1 and 80 characters.');return false;}if(M.levels.some(l=>l.id!==LV&&l.name.toLowerCase()===name.toLowerCase())){flash('A level with that name already exists.');return false;}const before=snapM();lvObj().name=name;commit(before);return true;},
