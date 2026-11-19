@@ -21,6 +21,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('.sp-studycard [data-way="gen"]'); await p.waitForSelector('.sp-studycard .sp-wfopt tbody tr');
     const opt = await p.$$eval('.sp-studycard .sp-wfopt tbody tr', (rs) => rs.map((r) => [...r.cells].slice(0, 7).map((c) => c.textContent.trim())));
     assert.equal(opt.length, 3); const n = opt.map((r) => +r[1]); assert(n[0] <= n[1] && n[1] <= n[2], 'A ≤ B ≤ C: ' + n); for (const r of opt) assert.match(r[2], /^\d+ % \(\d+\/\d+\)$/);
+    { const pc = (r) => r[2].match(/\((\d+)\/(\d+)\)/).slice(1).map(Number), [gC, eC] = pc(opt[2]), [gB] = pc(opt[1]); assert(gC / eC >= 0.95 && gC > gB, 'C guides nearly every decision (signs facing the other approaches): ' + opt[2]); }
     console.log('PASS three layouts: ' + opt.map((r) => `${r[0]}: ${r[1]} signs, ${r[2]} decisions guided, routes ${r[3]}, High ${r[4]}, left ${r[5]}, visibility ${r[6]}`).join(' · '));
     // use B
     await p.click('.sp-studycard [data-way="use"][data-v="B"]'); await p.waitForSelector('.sp-studycard .sp-wfsigns tbody tr');
@@ -28,6 +29,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert(saved.plan && saved.plan.opt === 'B' && saved.plan.signs.length === n[1], JSON.stringify(saved).slice(0, 300));
     const head = await p.locator('.sp-studycard .sp-flabel', { hasText: 'Signage layout' }).innerText(); assert.match(head, new RegExp(`option B · ${n[1]} signs`));
     const n3 = await p.evaluate(() => __ws2.inst.persp.ws.signCount?.()); assert.equal(n3, n[1], 'a 3D board for every sign');
+    { const why = await p.evaluate(() => { const d = document.querySelector('.sp-studycard .sp-wfwhy'); if (!d) return null; return { sum: d.querySelector('summary').textContent, n: [...d.querySelectorAll('li > b')].reduce((s, b) => s + +b.textContent, 0), text: d.textContent }; });
+      const kv = await p.evaluate(() => [...document.querySelectorAll('.sp-studycard .sp-kv')].map((e) => e.textContent).find((t) => /^Decisions guided/.test(t)) || ''), m = kv.match(/\((\d+) of (\d+)\)/);
+      if (m && +m[1] < +m[2]) { assert(why, 'the unguided decisions are explained'); assert.equal(why.n, +m[2] - +m[1], 'the causes add up: ' + why.sum); assert.match(why.sum, /Why \d+ decisions? (is|are) not guided/); console.log(`PASS with B, "${why.sum}": ${why.text.replace(why.sum, '').slice(0, 160)}…`); } }
     console.log(`PASS option B used: ${n[1]} signs saved with the project for this floor; ${n3} boards in 3D`);
     // edit a sign's wording
     const say = p.locator('.sp-studycard [data-way-say="0:0"]'); await say.fill('Imaging, Main Reception'); await say.press('Tab'); await p.waitForTimeout(400);

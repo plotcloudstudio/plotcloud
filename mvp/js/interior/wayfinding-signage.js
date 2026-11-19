@@ -216,23 +216,28 @@ export function analyse(building, o = {}) {
     if (!br.length) for (const q of passes) if (!br.some((b) => Math.abs(wrap(ang(b.dir) - ang(q.dep))) < 0.6)) br.push({ dir: q.dep, len: 20, to: null });
     for (const q of passes) { let bi = -1, bd = Infinity; br.forEach((b, i) => { const d = Math.abs(wrap(ang(b.dir) - ang(q.dep))); if (d < bd) { bd = d; bi = i; } }); q.taken = bd < 1.2 ? bi : -1;
       let ai = -1, ad = Infinity; if (q.arr) br.forEach((b, i) => { const d = Math.abs(wrap(ang(b.dir) - ang([-q.arr[0], -q.arr[1]]))); if (d < ad) { ad = d; ai = i; } }); q.from = ad < 1.2 ? ai : -1; }
+    // routes that leave along no corridor branch (into a door at the point) (2026-11-19): that way becomes one of the sign's ways, so the
+    // sign can name it; it is left out of the branch count, the angle check and the wrong-turn cost, which stay the corridor's
+    const nCorr = br.length; for (const q of passes) { if (q.taken >= 0) continue; let i = br.findIndex((b, j) => j >= nCorr && Math.abs(wrap(ang(b.dir) - ang(q.dep))) < 0.6); if (i < 0) { br.push({ dir: q.dep, len: 3, to: null, door: true }); i = br.length - 1; } q.taken = i; }
+    const brC = br.slice(0, nCorr);
     n.passes = passes; n.br = br;
-    const branches = Math.max(br.length, 1), close = br.some((b, i) => br.some((c2, j) => j > i && Math.abs(wrap(ang(b.dir) - ang(c2.dir))) < Math.PI / 4));
+    const branches = Math.max(brC.length, 1), close = brC.some((b, i) => brC.some((c2, j) => j > i && Math.abs(wrap(ang(b.dir) - ang(c2.dir))) < Math.PI / 4));
     const A = n.kind === 'turn' ? 0.33 : Math.min(1, (branches - 1) / 3 + (close ? 0.2 : 0));
     const wsum = passes.length;   // every destination weighs 1
     const hiddenP = passes.filter((q) => !(F.sight(q.p5, q.t3) || q.r.marks.some((m) => F.sight(q.p5, m)))), notSeen = hiddenP.length, C = wsum ? notSeen / wsum : 0, hidden = [...new Set(hiddenP.map((q) => q.r.room.name))];
-    const byBr = new Map(); for (const q of passes) { if (q.taken < 0) continue; if (!byBr.has(q.taken)) byBr.set(q.taken, new Set()); byBr.get(q.taken).add(q.r.room.name); }
+    const byAll = new Map(); for (const q of passes) { if (q.taken < 0) continue; if (!byAll.has(q.taken)) byAll.set(q.taken, new Set()); byAll.get(q.taken).add(q.r.room.name); }
+    const byBr = new Map([...byAll].filter(([i]) => i < nCorr));
     const tot = [...byBr.values()].reduce((a, s) => a + s.size, 0), maxShare = tot ? Math.max(...[...byBr.values()].map((s) => s.size)) / tot : 1;
     const grpBy = [...byBr.values()].map((s) => new Set([...s].map((nm) => (F.rooms.find((r) => r.name === nm) || {}).group))), sameGroup = grpBy.some((g, i) => grpBy.some((h, j) => j > i && [...g].some((x) => h.has(x))));
     const D = Math.min(1, (byBr.size >= 2 ? 1 - maxShare : 0) + (sameGroup ? 0.25 : 0));
-    let wrongSum = 0, wrongN = 0; for (const q of passes) br.forEach((b, i) => { if (i === q.taken || i === q.from) return; wrongSum += 2 * Math.min(b.len, 40); wrongN++; }); const wrongAvg = wrongN ? wrongSum / wrongN : 0, Fw = Math.min(1, wrongAvg / 40);
+    let wrongSum = 0, wrongN = 0; for (const q of passes) brC.forEach((b, i) => { if (i === q.taken || i === q.from) return; wrongSum += 2 * Math.min(b.len, 40); wrongN++; }); const wrongAvg = wrongN ? wrongSum / wrongN : 0, Fw = Math.min(1, wrongAvg / 40);
     // existing signs: in reach (8 m), in sight from the approach, facing the people arriving (within 60°)
     const ap = mainApproach(passes, true), apPt = ap ? ap.p : null; n.approach = ap;
     // seen on the approach: from any spot of the last 5 m before the point (metre by metre) on the main approach's route that still has the sign
     // at least 0.5 m ahead, with the sign facing that spot within 60°
     const cover = signs.filter((g) => dist(g.p, n.p) <= 8 && ap && ap.view.some((v) => (g.p[0] - v[0]) * ap.v[0] + (g.p[1] - v[1]) * ap.v[1] > 0.5 && F.sight(v, g.p) && Math.abs(wrap(g.face * Math.PI / 180 - ang([v[0] - g.p[0], v[1] - g.p[1]]))) <= Math.PI / 3));
     const E = cover.length ? 1 : 0;
-    n.f = { A, B: wsum, C, D, F: Fw, E }; n.meta = { branches, close, notSeen, hidden, wsum, byBr: [...byBr.entries()].map(([i, s]) => [i, [...s]]), sameGroup, wrongAvg, cover: cover.map((g) => g.name) };
+    n.f = { A, B: wsum, C, D, F: Fw, E }; n.meta = { branches, close, notSeen, hidden, wsum, byBr: [...byAll.entries()].map(([i, s]) => [i, [...s]]), sameGroup, wrongAvg, cover: cover.map((g) => g.name) };
   }
   const maxB = Math.max(1, ...cand.map((n) => n.f.B)); const wTot = W8.A + W8.B + W8.C + W8.D + W8.F || 1, thr = o.threshold ?? 35;
   for (const n of cand) { n.f.B = n.f.B / maxB; const raw = (W8.A * n.f.A + W8.B * n.f.B + W8.C * n.f.C + W8.D * n.f.D + W8.F * n.f.F) / wTot; n.score = Math.round(100 * raw * (1 - n.f.E)); n.cls = classOf(n.score)[1]; n.col = classOf(n.score)[2];
@@ -337,21 +342,33 @@ export function evaluate(A, signs) { const F = A.F, thr = A.threshold, byNode = 
     const n = g.node != null ? byNode.get(g.node) : A.nodes.slice().sort((a, b) => dist(a.p, g.p) - dist(b.p, g.p))[0]; const at = n && dist(n.p, g.p) <= 8 ? n : null;
     const seen = at ? at.passes.map((q) => seenBy(F, at, q, g) >= 2) : [], vis = seen.length ? seen.filter(Boolean).length / seen.length : 0;
     return { ...g, at: at ? at.no : null, vis: +vis.toFixed(3), issue: !at ? 'not at a decision point' : vis < 0.5 ? `Visibility issue: seen before the point by ${seen.filter(Boolean).length} of ${seen.length} routes` : null }; });
-  let events = 0, guided = 0; const routeOK = new Map(), unresolved = [], highs = A.nodes.filter((n) => n.cls === 'High'); let highCov = 0;
+  let events = 0, guided = 0; const routeOK = new Map(), unresolved = [], highs = A.nodes.filter((n) => n.cls === 'High'); let highCov = 0; const helps = new Map(out.map((g) => [g, new Set()]));
   for (const n of decide) { const here = out.filter((g) => g.at === n.no); let nodeGuided = 0;
-    n.passes.forEach((q, i) => { events++; const ok = here.some((g) => seenBy(F, n, q, g) >= 2 && lists(g, n, q)) || !!n.f.E; if (ok) { guided++; nodeGuided++; } if (!routeOK.has(q.r)) routeOK.set(q.r, true); if (!ok) routeOK.set(q.r, false); });
+    n.passes.forEach((q, i) => { events++; const by = here.filter((g) => seenBy(F, n, q, g) >= 2 && lists(g, n, q)); for (const g of by) helps.get(g).add(n.no + ':' + i); const ok = by.length > 0 || !!n.f.E; if (ok) { guided++; nodeGuided++; } if (!routeOK.has(q.r)) routeOK.set(q.r, true); if (!ok) routeOK.set(q.r, false); });
     const okNode = n.passes.length ? nodeGuided / n.passes.length >= 0.5 : true; if (n.cls === 'High' && okNode) highCov++; if (n.score >= thr && !okNode) unresolved.push(n.no); }
   for (const n of highs) if (!decide.includes(n)) highCov++;
-  const dup = []; out.forEach((g, i) => out.forEach((h, j) => { if (j <= i || dist(g.p, h.p) > 6) return; const a = new Set(g.ways.flatMap((w) => w.to)), b = h.ways.flatMap((w) => w.to); if (b.length && b.every((x) => a.has(x))) dup.push([g.id, h.id]); }));
+  const dup = []; out.forEach((g, i) => out.forEach((h, j) => { if (j <= i || dist(g.p, h.p) > 6) return; if (g.room || h.room) return; const G = helps.get(g), H = helps.get(h); if (![...G].every((x) => H.has(x)) && ![...H].every((x) => G.has(x))) return;   /* each guides walkers the other does not (2026-11-19): not a repeat */ const a = new Set(g.ways.flatMap((w) => w.to)), b = h.ways.flatMap((w) => w.to); if (b.length && b.every((x) => a.has(x))) dup.push([g.id, h.id]); }));
   const routes = A.routes.filter((r) => !r.noRoute && r.pts), routesOK = routes.filter((r) => routeOK.get(r) !== false).length;
   return { signs: out, total: out.length, byType: out.reduce((m, g) => ((m[g.type] = (m[g.type] || 0) + 1), m), {}), events, guided, clarity: events ? guided / events : 1,
     routeCoverage: routes.length ? routesOK / routes.length : 1, routesOK, routes: routes.length, high: highs.length, highCovered: highCov, unresolved, avgVis: out.length ? out.reduce((s, g) => s + g.vis, 0) / out.length : 0,
     issues: out.filter((g) => g.issue).map((g) => ({ id: g.id, issue: g.issue })), duplicates: dup }; }
+/** why each decision is or is not guided by a set of signs (2026-11-19): for every decision point and route through it, 'guided', or
+ *  'no sign' (none at the point), 'not seen' (a sign is there but this walker does not see it from 2 of the spots: `seen` is the best
+ *  count, `approach` how many metres of the walk before the point have the point in sight), or 'way not listed' (seen, but no sign
+ *  there names where this route goes; `leaves` false when the route leaves along no corridor branch) */
+export function explain(A, signs) { const F = A.F, ev = evaluate(A, signs), thr = A.threshold, decide = A.nodes.filter((n) => n.br.length >= 3 || n.exitOf || n.score >= thr), out = [];
+  for (const n of decide) { const here = ev.signs.filter((g) => g.at === n.no);
+    for (const q of n.passes) { const row = { node: n.no, room: q.r.room.name, start: q.r.start.name, s: +q.s.toFixed(1), arr: q.arr && q.arr.map((x) => +x.toFixed(2)), starting: !q.arr };
+      if (n.f.E) { out.push({ ...row, why: 'guided', by: 'existing' }); continue; }
+      const seen = here.map((g) => [g, seenBy(F, n, q, g)]), vis = seen.filter(([, k]) => k >= 2), good = vis.filter(([g]) => lists(g, n, q));
+      let approach = 0; if (q.arr) for (let d = 1; d <= AHEAD; d++) { if (F.sight(along(q.r.pts, Math.max(0, q.s - d)), n.p)) approach = d; else break; }
+      out.push({ ...row, approach, why: good.length ? 'guided' : !here.length ? 'no sign' : !vis.length ? 'not seen' : 'way not listed', by: good.map(([g]) => g.id), seen: Math.max(0, ...seen.map(([, k]) => k)), leaves: q.taken >= 0 }); } }
+  return out; }
 export const OPTIONS = [['A', 'Minimum signs'], ['B', 'Balanced'], ['C', 'Maximum coverage']];
 /** the three layouts, measured against what every candidate sign together achieves (the most this floor's points can guide):
  *  A Minimum: the fewest signs, highest priority first, that guide `target` (default 80 %) of that; B Balanced: every point at or above
  *  the threshold, leaving out a sign within 6 m of one saying the same, then more until 95 % of it; C Maximum: every candidate sign, a
- *  second sign where a wall sign's point has a second approach with a fifth or more of its routes, and
+ *  more signs facing the other approaches, added while each guides more decisions, less any sign the others make unnecessary, and
  *  an identification sign at each destination entrance that is hard to spot or among similar doors */
 export function layouts(A, o = {}) { const target = o.target ?? 0.8, cand = A.nodes.filter((n) => n.onRoute && !n.f.E).map((n) => ({ n, g: signAt(A, n) })).sort((a, b) => b.n.score - a.n.score), best = evaluate(A, cand.map((c) => c.g)).clarity;
   const grow = (picked, goal) => { const left = cand.filter((c) => !picked.includes(c)); let ev = evaluate(A, picked.map((c) => c.g)); while (ev.clarity < goal - 1e-9 && left.length) { picked.push(left.shift()); ev = evaluate(A, picked.map((c) => c.g)); } return picked; };
@@ -359,8 +376,16 @@ export function layouts(A, o = {}) { const target = o.target ?? 0.8, cand = A.no
   const b = []; for (const c of cand.filter((x) => x.n.score >= A.threshold)) if (!b.some((d) => dist(d.g.p, c.g.p) <= 6 && c.g.ways.flatMap((w) => w.to).every((t) => d.g.ways.some((w) => w.to.includes(t))))) b.push(c); grow(b, 0.95 * best);
   const ids = A.entrances.filter((e, i, L) => (e.seenFrom < 3 || e.similar >= 2) && L.findIndex((x) => x.room === e.room) === i).map((e, i) => ({ id: 'I' + (i + 1), node: null, p: e.spot.map((x) => +x.toFixed(3)), face: Math.round(((deg(ang([e.out[0] - e.door[0], e.out[1] - e.door[1]])) % 360) + 360) % 360), mount: 'wall', sides: 1, type: 'Identification', ways: [{ arrow: 'Here', angle: 0, to: [e.room] }], score: 0, cls: 'Low', z: 1.6, room: e.room }));
   const order = (L) => cand.filter((c) => L.includes(c)).map((c) => c.g);
-  const second = cand.flatMap((c) => { const bins = approaches(c.n), b2 = bins[1]; if (!b2 || b2.share < 0.2 || c.g.mount === 'hung') return []; const g2 = signAt(A, c.n, b2.v); return dist(g2.p, c.g.p) > 0.5 ? [g2] : []; });   // a wall sign faces one approach: the next largest gets its own   // by priority, so the sign numbers read the same in every option
-  return OPTIONS.map(([k, name]) => { const signs = k === 'A' ? order(a) : k === 'B' ? order(b) : [...cand.map((x) => x.g), ...second, ...ids]; return { key: k, name, signs, ev: evaluate(A, signs), best, goal: k === 'A' ? target * best : k === 'B' ? 0.95 * best : best }; }); }
+  // C (2026-11-19): a sign faces one approach, so people arriving from another way see it edge-on; for every other direction people
+  // arrive from (and, at a lift or stair exit, for the people walking past), a sign facing them is a candidate, and they are added one
+  // at a time, the one that guides the most decisions still unguided first, while one still adds any
+  const extra = cand.flatMap((c) => approaches(c.n).map((b) => signAt(A, c.n, b.v)).filter((g) => dist(g.p, c.g.p) > 0.3 || Math.abs(wrap((g.face - c.g.face) * Math.PI / 180)) > 0.35));
+  const second = [], base = [...cand.map((x) => x.g), ...ids]; { let cur = evaluate(A, base).guided, left = extra.slice();
+    while (left.length) { let bi = -1, bg = cur; left.forEach((g, i) => { const v = evaluate(A, [...base, ...second, g]).guided; if (v > bg) { bg = v; bi = i; } }); if (bi < 0) break; const g = left.splice(bi, 1)[0]; cur = bg;
+      const k = second.filter((x) => x.node === g.node).length; second.push({ ...g, id: 'S' + g.node + 'bcdefgh'[k] }); left = left.filter((x) => !(x.node === g.node && dist(x.p, g.p) < 0.3 && Math.abs(wrap((x.face - g.face) * Math.PI / 180)) < 0.35)); } }
+  // then any sign the others make unnecessary (it guides no decision they do not) comes out, lowest priority first
+  const cSigns = [...cand.map((x) => x.g), ...second]; { const full = evaluate(A, [...cSigns, ...ids]).guided; for (let i = cSigns.length - 1; i >= 0; i--) { const t = cSigns.filter((_, j) => j !== i); if (evaluate(A, [...t, ...ids]).guided >= full) cSigns.splice(i, 1); } }
+  return OPTIONS.map(([k, name]) => { const signs = k === 'A' ? order(a) : k === 'B' ? order(b) : [...cSigns, ...ids]; return { key: k, name, signs, ev: evaluate(A, signs), best, goal: k === 'A' ? target * best : k === 'B' ? 0.95 * best : best }; }); }
 /** Before and After, by the same counts as the layouts: without the proposal (the existing signs only, as in the model) and with it */
 export function beforeAfter(building, opts, proposed) { const A = analyse(building, opts), evB = evaluate(A, []), evA = evaluate(A, proposed);
   const row = (ev) => ({ recommended: ev.unresolved.length, high: ev.high - ev.highCovered, clarity: ev.clarity, routeCoverage: ev.routeCoverage, guided: ev.guided, events: ev.events });
