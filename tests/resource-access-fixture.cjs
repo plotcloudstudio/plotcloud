@@ -1,5 +1,5 @@
 // Browser-only mocked membership. No production entitlement or real account is created.
-const fs=require('node:fs'),crypto=require('node:crypto'),{execFileSync}=require('node:child_process');
+const fs=require('node:fs'),crypto=require('node:crypto'),os=require('node:os'),path=require('node:path'),{execFileSync}=require('node:child_process');
 async function resourceAccessFixture(context){
  const state={active:true,unavailable:false};
  await context.addInitScript(()=>{
@@ -18,7 +18,7 @@ async function resourceAccessFixture(context){
 }
 async function cacheCDN(context){
  await context.route('https://cdn.jsdelivr.net/**',async route=>{
-  const url=route.request().url(),file='/tmp/pc-cdn-'+crypto.createHash('sha256').update(url).digest('hex')+'.js';
+  const url=route.request().url(),file=path.join(os.tmpdir(),'pc-cdn-'+crypto.createHash('sha256').update(url).digest('hex')+'.js');
   try{
    if(!fs.existsSync(file))execFileSync('curl',['--fail','--silent','--show-error',url,'-o',file],{timeout:45000});
    await route.fulfill({path:file,contentType:url.split('?')[0].endsWith('.wasm')?'application/wasm':'text/javascript'});

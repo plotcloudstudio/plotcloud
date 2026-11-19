@@ -18,7 +18,7 @@ jobs:
           python-version: '3.12'
       - name: Install references and browser
         run: |
-          pip install numpy pandas pvlib pyradiance pythermalcomfort
+          pip install numpy pandas pvlib pyradiance pythermalcomfort ladybug-core
           npm install --no-save playwright
           npx playwright install --with-deps chromium
       - name: Serve the site and validate the engines

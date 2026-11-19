@@ -14,7 +14,27 @@ const sizes=[{width:1536,height:864},{width:1366,height:768},{width:1280,height:
  await p.setViewportSize({width:1920,height:1080});assert.equal(await p.locator('header.top').isVisible(),false,'the Workspace fills the window');await p.setViewportSize({width:390,height:844});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile horizontal layout retained');console.log('PASS Workbench five laptop sizes, perspective, menu, status/commands, immutable model, wide desktop and mobile');
  await p.setViewportSize(sizes[0]);await p.goto(base+'/mvp/#/simulations');await p.locator('#grid').waitFor();await p.evaluate(async()=>{const S=await import('./js/store.js'),C=await import('./js/project-climate.js'),lines=['LOCATION,Panel QA,BC,CAN,TEST,000,49.2827,-123.1207,-8,12',...Array(7).fill('TEST')];for(let i=0;i<8760;i++){const d=new Date(Date.UTC(2025,0,1,i)),row=Array(35).fill('0');Object.assign(row,{0:'2025',1:String(d.getUTCMonth()+1),2:String(d.getUTCDate()),3:String(d.getUTCHours()+1),4:'60',6:'15',7:'8',8:'60',9:'101000',12:'310',13:'200',14:'300',15:'100',20:'180',21:'3'});lines.push(row.join(','));}const climate=await C.saveClimate(new File([lines.join('\n')],'panel-qa.epw'));const p=S.projects()[0];S.updateConditions(p,{...S.conditionsOf(p).site,climate},S.conditionsOf(p).defaults);});const ids=process.env.LAPTOP_STUDIES?.split(',')||await p.evaluate(async()=>(await import('./js/data.js')).SIMS.map(s=>s.id));
  for(const id of ids){await p.goto(base+'/mvp/#/simulations/'+id,{waitUntil:'domcontentloaded'});
-  if(['climate','passive','skyview','shadebenefit','solarenvelope'].includes(id)){await p.locator('#env-run').waitFor();for(const size of sizes){await p.setViewportSize(size);await p.waitForTimeout(150);await shell();for(const s of ['#env-run','#env-save','.env-setup','.env-results'])await inside(s);}console.log('PASS '+id+' environmental study fits five laptop sizes');continue;}
+  await p.waitForFunction(()=>document.querySelector('#env-run,#ss-run,#eng,#retryReadiness')||(window.__ws2?.ready()&&window.__wsStudy?.state().id),null,{timeout:120000});
+  if(await p.locator('.w2.sp').count()){
+   const expected=id==='movementdepth'?'spacesyntax':id;
+   assert.equal(await p.evaluate(()=>__wsStudy.state().id),expected,id+' opens its current Workspace study');
+   const snapshot=await p.evaluate(()=>JSON.stringify(__ws2.model()));
+   for(const size of sizes){
+    await p.setViewportSize(size);
+    await p.waitForTimeout(150);
+    await shell();
+    for(const selector of ['.w2-stage','.sp-studycard'])await inside(selector);
+    await p.locator('.sp-studycard [data-st=run]').scrollIntoViewIfNeeded();
+    await inside('.sp-studycard [data-st=run]');
+    await shell();
+    assert.equal(await p.evaluate(()=>JSON.stringify(__ws2.model())),snapshot,'resizing '+id+' retains source geometry');
+   }
+   await p.screenshot({path:art+'/'+id+'-laptop.png'});
+   console.log('PASS '+id+' current Workspace study card and Start control fit five laptop sizes');
+   continue;
+  }
+
+  if(['climate','passive','skyview','shadebenefit','solarenvelope','snow'].includes(id)){await p.locator('#env-run').waitFor();for(const size of sizes){await p.setViewportSize(size);await p.waitForTimeout(150);await shell();for(const s of ['#env-run','#env-save','.env-setup','.env-results'])await inside(s);}console.log('PASS '+id+' environmental study fits five laptop sizes');continue;}
   if(id==='structure'){await p.locator('#ss-run').waitFor();for(const size of sizes){await p.setViewportSize(size);await p.waitForTimeout(150);await shell();await p.locator('[data-study-jump=export]').click();for(const s of ['#ss-run','#ss-json','.ss-body','.ss-view','.ss-results'])await inside(s);}console.log('PASS structure original-model setup/view/results fit laptop sizes');continue;}
   assert.equal(await p.locator('#retryReadiness').count(),0,id+' reaches the actual analysis page');
   await p.locator('#eng[data-pc-settings-ready=true][data-pc-visible-ready=true]').waitFor({timeout:90000});

@@ -79,6 +79,7 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const area = (pts) => Math.abs(pts.reduce((a, q, i) => { const r = pts[(i + 1) % pts.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0)) / 2;
 const fmt = (n, d = 0) => Number(n || 0).toLocaleString('en', { maximumFractionDigits: d, minimumFractionDigits: d });
 const DOY0 = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334], MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WORKSPACE_STUDY_RELEASE = 'workspace-study-20261119-1';
 
 export function mountChrome(app, api) {
   const { p, UI, saveUI, goView, activePane, dirty, baseline, select, studio, INST, sectionView } = api;
@@ -1171,6 +1172,30 @@ export function mountChrome(app, api) {
       rows: [['Daylight factor on the cut, mean', fmt(mDF, 1) + '%'], ['Share of the cut at 2 % or more', fmt(m2 * 100) + '%'], ...per.map((x) => [`${esc(x.L.name)}`, `mean ${fmt(x.df, 1)} % · ${fmt(x.two * 100)} % at 2 %+ · autonomy ${fmt(x.da * 100)} %`]), ['Grid', `${fmt(dsx, 2)} m along the cut × ${fmt(dz, 2)} m in height, ${fmt(all)} points, ${nb} sky bearings`]],
       method: `Daylight at points on Section ${esc(s.name || 'A')} through every level (${fmt(dsx, 2)} m along the cut and ${fmt(dz, 2)} m in height, from the floor to below the ceiling): each point is a horizontal sensor at its height, with the floor study's model of the sky in 145 patches (CIE overcast for the daylight factor; the project weather for the daylight autonomy, 300 lux over the occupied hours), the sun, the glass at its angle of incidence, reflections inside the room (split flux) and outside. Glass transmittance ${fmt(ST.dlTau, 2)}, reflectances floor ${ST.dlRf}, walls ${ST.dlRw}, ceiling ${ST.dlRc}. A screening, not a Radiance simulation or a compliance result.`,
       results: { df: +mDF.toFixed(2), df2: +(m2 * 100).toFixed(1), levels: per.length }, settings: { where: 'section', section: s.pts, label: `Daylight on Section ${s.name || 'A'} (Workspace)` } }; }
+  function ensureIsovistView(w) {
+    if (ST.isoView) return;
+    const origin = w.planScene('isovist').origin || [0, 0];
+    const centroid = (polygon) => {
+      if (!polygon || polygon.length < 3) return null;
+      let area = 0, x = 0, y = 0;
+      for (let i = 0; i < polygon.length; i++) {
+        const a = polygon[i], b = polygon[(i + 1) % polygon.length];
+        const cross = a[0] * b[1] - b[0] * a[1];
+        area += cross; x += (a[0] + b[0]) * cross; y += (a[1] + b[1]) * cross;
+      }
+      return Math.abs(area) > 1e-9 ? [x / (3 * area), y / (3 * area)] : null;
+    };
+    let rooms = [];
+    try { rooms = w.planScene('privacy').rooms || []; } catch {}
+    const room = rooms.map((r) => ({
+      r,
+      point: r.label || r.p || centroid(r.pts || r.poly),
+      area: (r.rects || []).reduce((total, rectangle) => total + rectangle[2] * rectangle[3], 0) || r.area || 0
+    })).filter(({r, point}) => point && !/corridor|hall|lobby|landing|stair/i.test(r.name || ''))
+      .sort((a, b) => b.area - a.area)[0];
+    if (!room) throw Error('Place the viewpoint: press Place the viewpoint, then click the floor.');
+    ST.isoView = [room.point[0] + origin[0], room.point[1] + origin[1]];
+  }
   async function compute(id) {
     const w = INST.persp.ws; try { w.wake3D?.(); } catch { }   // a hidden pane's 3D scene brought up to date before a study reads it (2026-11-18)
     if (id === SA.VEH || id === SA.PARK) return SA.compute(SAX);   // site access (2026-11-18): site-access-ui.js
@@ -1480,8 +1505,8 @@ export function mountChrome(app, api) {
         results: { quality: +(sm.q * 100).toFixed(1), los: +(sm.los * 100).toFixed(1), met: sm.met }, settings: { level: ST.vwLevel, eye: +ST.vwEye, head: H, far: ST.vwFar, nature: ST.vwNature, motion: ST.vwMotion, label: `${VWS.LEVELS[ST.vwLevel].name}, eye ${ST.vwEye} m (Workspace)` } }; }
     if (id === 'isovist') {
       const sc = w.planScene('isovist'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
-      const o = sc.origin || [0, 0], cen = (P) => { if (!P || P.length < 3) return null; let a = 0, x = 0, y = 0; for (let i = 0; i < P.length; i++) { const p0 = P[i], p1 = P[(i + 1) % P.length], k = p0[0] * p1[1] - p1[0] * p0[1]; a += k; x += (p0[0] + p1[0]) * k; y += (p0[1] + p1[1]) * k; } return Math.abs(a) > 1e-9 ? [x / (3 * a), y / (3 * a)] : null; };
-      if (!ST.isoView) { let rooms = []; try { rooms = w.planScene('privacy').rooms || []; } catch { } const r0 = rooms.map((r) => ({ r, p: r.label || r.p || cen(r.pts || r.poly), a: (r.rects || []).reduce((t, q) => t + q[2] * q[3], 0) || r.area || 0 })).filter((x) => x.p && !/corridor|hall|lobby|landing|stair/i.test(x.r.name || '')).sort((a, b) => b.a - a.a)[0];   /* the label point of the largest room (the scene with rooms) */ if (!r0) throw Error('Place the viewpoint: press Place the viewpoint, then click the floor.'); ST.isoView = [r0.p[0] + o[0], r0.p[1] + o[1]]; }
+      const o = sc.origin || [0, 0];
+      ensureIsovistView(w);
       const vp = [ST.isoView[0] - o[0], ST.isoView[1] - o[1]], haz = (sc.furn || []).filter((f) => /stair/i.test([f.name, f.type, f.kind, f.id].join(' '))).map((f) => ({ name: f.name || 'Stairs', x: f.x + (f.w || 0) / 2, y: f.y + (f.d || 0) / 2, h: 0 }));
       const { A, CMP } = ISO.run(sc, { view: vp, eye: +ST.isoEye, tgt: +ST.isoTgt, haz }), G = A.G, N = G.W * G.H, toP = (p) => [p[0] + o[0], p[1] + o[1]];
       const seen = new Float32Array(N).fill(NaN), eyes = new Float32Array(N).fill(NaN); for (let i = 0; i < N; i++) if (A.reg[i]) { seen[i] = A.vis[i] ? 1 : 0; eyes[i] = A.cat[i] || 0; }
@@ -1912,8 +1937,42 @@ export function mountChrome(app, api) {
     if (ST.busy) return; if (!canUse(ST.id, p)) { ST.err = paidNote(simName(ST.id)); drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
     const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; runBar('tick'); }, 1000);
     try { for (let i = 0; i < 80 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100));
-      ST.estAtRun = estimate(ST.id); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridFor(ST.id)); INST.persp.ws.surfaceCell?.(surfOf()); drawStudy(); await new Promise((r) => setTimeout(r, 30)); const t0 = performance.now(), id = ST.id, r = await compute(id), w = INST.persp.ws;
-      if (ST.cancel) throw Error('Stopped.');
+      ST.estAtRun = estimate(ST.id); INST.persp.ws.studyArea?.(ST.area); INST.persp.ws.studyCell?.(gridFor(ST.id)); INST.persp.ws.surfaceCell?.(surfOf()); drawStudy(); await new Promise((r) => setTimeout(r, 30));
+      const t0 = performance.now(), id = ST.id, w = INST.persp.ws;
+      if (id === 'isovist') ensureIsovistView(w);
+      const modelAtRun = studyModel(w), settingsAtRun = sigOf(id), conditionsAtRun = S.clone(S.conditionsOf(p));
+      const nativeModel = JSON.parse(modelAtRun), modelSite = nativeModel.site;
+      const sharedConditions = {
+        revision: conditionsAtRun.revision,
+        signature: S.conditionsSignature(p, id),
+        site: conditionsAtRun.site,
+        defaults: conditionsAtRun.defaults,
+        studyOnlyOverrides: false,
+        effective: {
+          lat: modelSite?.origin?.lat,
+          lon: modelSite?.origin?.lon,
+          north: nativeModel.north ?? 0,
+          tz: modelSite?.tz,
+          climate: nativeModel.climate
+        }
+      };
+      const r = await compute(id);
+      if (ST.cancel || ST.id !== id) throw Error('Stopped.');
+      if (studyModel(w) !== modelAtRun || sigOf(id) !== settingsAtRun || S.conditionsSignature(p, id) !== sharedConditions.signature) {
+        throw Error('The model or study inputs changed during calculation. Run the study again on the current inputs.');
+      }
+      r.settings = {
+        ...r.settings,
+        sharedConditions: r.settings?.sharedConditions || sharedConditions,
+        workspaceQuality: { level: ST.runQ.k, area: ST.area, grid: gridOf(), surfaceSpacing: surfOf(), flowSpacing: flowOf() },
+        provenance: {
+          engine: id,
+          engineRelease: WORKSPACE_STUDY_RELEASE,
+          ...r.settings?.provenance,
+          modelHash: hashOf(modelAtRun),
+          recordedAt: new Date().toISOString()
+        }
+      };
       addViews(id, r); applyView(r, ST.view[id]); hookProbe(); paintRes(r, true);
       r.ms = Math.round(performance.now() - t0); ST.res = r; ST.key = studyModel(w); ST.sig = sigOf(id); ST.saved = ''; ST.at = new Date(); logRun(id, r); learn(id, r.ms); if (id === SA.VEH || id === SA.PARK) (ST.saKeep ||= {})[id] = { res: r, key: ST.key, sig: ST.sig, at: ST.at }; }   /* site access: kept while the other is open (Check with a vehicle and back) */
     catch (e) { ST.res = null; ST.err = e.message === 'Stopped.' ? '' : e.message || String(e); ST.stopped = e.message === 'Stopped.'; }
@@ -1937,12 +1996,20 @@ export function mountChrome(app, api) {
     try { const cv = UI.view === 'persp' && INST.persp.ready ? INST.persp.ws.snapAt?.(640, 400, 1) : null; if (cv) out.thumb = cv.toDataURL('image/jpeg', 0.8); } catch { }
     out.kpis = (r.rows || []).slice(0, 12).map(([k, v]) => [plainOf(k), plainOf(v)]).filter(([k, v]) => k && v); return out; }
   async function saveStudy() {
-    if (!ST.res || ST.busy) return; ST.busy = true; drawStudy();
+    if (!ST.res || ST.busy) return;
+    if (studyModel(INST.persp.ws) !== ST.key || sigOf(ST.id) !== ST.sig || (ST.res.settings?.sharedConditions?.signature && S.conditionsSignature(p, ST.id) !== ST.res.settings.sharedConditions.signature)) {
+      ST.err = 'The model or study inputs changed after calculation. Run the study again before saving.';
+      drawStudy(); return;
+    }
+    ST.busy = true; ST.err = ''; drawStudy();
     try { if (dirty()) { const before = baseline()?.id; $('#saveV')?.click(); for (let i = 0; i < 100 && baseline()?.id === before; i++) await new Promise((r) => setTimeout(r, 100)); if (baseline()?.id === before) throw Error('The version could not be saved.'); }
       const v = baseline(), r = ST.res; if (!v) throw Error('Save a version first.');
+      if (studyModel(INST.persp.ws) !== ST.key || sigOf(ST.id) !== ST.sig || (r.settings?.sharedConditions?.signature && S.conditionsSignature(p, ST.id) !== r.settings.sharedConditions.signature)) {
+        throw Error('The model or study inputs changed while saving. Run the study again before saving its result.');
+      }
       // the project's shared conditions this result used (2026-11-01), so Results can say when they change afterwards
       const shc = S.clone(S.conditionsOf(p)), sharedConditions = r.settings?.sharedConditions || { revision: shc.revision, signature: S.conditionsSignature(p, ST.id), site: S.clone(shc.site || {}), defaults: S.clone(shc.defaults || {}), studyOnlyOverrides: false, effective: { lat: shc.site?.lat, lon: shc.site?.lon, north: shc.site?.north ?? 0, tz: shc.site?.tz } };
-      S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, inheritedFrom: 'Project shared conditions', method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString(), ...compareKit(r) }, 'workspace');
+      S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, provenance: { ...r.settings?.provenance, versionId: v.id }, inheritedFrom: 'Project shared conditions', method: r.settings?.method || 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString(), ...compareKit(r) }, 'workspace');
       ST.saved = 'v' + v.n; ST.key = studyModel(INST.persp.ws); logRun(ST.id, r, 'v' + v.n); }
     catch (e) { ST.err = e.message; }
     ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();

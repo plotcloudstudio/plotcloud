@@ -1,0 +1,51 @@
+name: Calculation and report delivery
+on:
+  push:
+    branches: [main, codex/paid-launch-readiness]
+    paths:
+      - 'mvp/js/**'
+      - 'mvp/css/study-unified.css'
+      - 'mvp/index.html'
+      - 'emb/**'
+      - 'tests/workspace-comparison.test.mjs'
+      - 'tests/workspace-report-workflow.cjs'
+      - 'tests/resource-access-fixture.cjs'
+      - '.github/workflows/delivery-readiness.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify result sources, history, comparisons and analytical cases
+        run: |
+          node --test tests/workspace-comparison.test.mjs tests/replan-contracts.mjs tests/snow-analysis.test.mjs tests/egress-engine.test.mjs tests/studio-tab.cjs
+          node tests/structure-frame.cjs
+          node tests/study-evidence.cjs
+          node tests/drift-wall-runtime.mjs
+      - name: Install browser
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Calculate two versions and download their actual reports
+        env:
+          TEST_BASE: http://127.0.0.1:8790
+          ARTIFACT_DIR: /tmp/plotcloud-delivery
+        run: |
+          python -m http.server 8790 --bind 127.0.0.1 > /tmp/plotcloud-delivery-http.log 2>&1 &
+          node tests/run-browser-check.cjs tests/workspace-report-workflow.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: calculation-and-report-evidence
+          path: /tmp/plotcloud-delivery
+          if-no-files-found: ignore

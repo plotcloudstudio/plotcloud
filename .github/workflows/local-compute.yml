@@ -11,6 +11,8 @@ on:
       - 'mvp/index.html'
       - 'tests/local-compute*'
       - '.github/workflows/local-compute.yml'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   verify:
@@ -49,6 +51,7 @@ jobs:
           python -m http.server 8790 --bind 127.0.0.1 > /tmp/local-compute-site.log 2>&1 &
           TEST_BASE=http://127.0.0.1:8790 ARTIFACT_DIR=/tmp/local-compute-source node tests/run-browser-check.cjs tests/local-compute-ui.cjs
       - name: Verify published website and downloadable runner
+        if: github.event_name != 'pull_request'
         run: |
           python - <<'PY'
           import time, urllib.request
