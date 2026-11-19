@@ -1684,7 +1684,8 @@ const STC = (() => {
       o.names = names; o.settings = { floorZ: lv.z, ceil: lv.h, north: M.north || 0 }; o.tool = tool;
       // Privacy (2026-11-19): the site's buildings (footprint, bottom and top in metres, on the terrain) and the terrain, in this scene's metres
       if (tool === 'privacy' && M.site) { try { o.ctx = SITEC.contextMasses(M.site, M.north || 0).filter((b) => b.outer && b.outer.length > 2 && b.h > 0).map((b) => ({ id: b.id, pts: b.outer.map(sh), base: +(b.base || 0).toFixed(2), h: +b.h.toFixed(2) }));
-        const T = SITEC.terrainForPlan(M.site, M.north || 0); if (T) o.terrain = { pts: T.pts.map((q) => [...sh(q), q[2]]) }; } catch (e) { o.ctx = []; } }
+        const T = SITEC.terrainForPlan(M.site, M.north || 0); if (T) o.terrain = { pts: T.pts.map((q) => [...sh(q), q[2]]) };
+        o.roads = (M.site.roads || []).filter((r) => r.pts && r.pts.length >= 2).map((r) => ({ id: r.id, name: r.name || '', cls: r.cls || 'road', width: r.width || null, pts: r.pts.map((q) => sh(SITEC.siteToPlan(M.site, q, M.north || 0))) })); } catch (e) { o.ctx = []; o.roads = []; } }
     }
     if (tool === 'acoustics') {   // every room of the level with its surfaces and their finishes (Indoor acoustics, 2026-10-25); walls, openings and rooms to draw, as the plan engines
       o.walls = []; o.open = [];

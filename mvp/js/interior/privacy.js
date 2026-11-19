@@ -20,7 +20,14 @@ function onlookers(o) {
   const B = wallBox(SC), z0 = SC.settings?.floorZ || 0, out = [];
   const line = (side, d) => { const m = 1.5; if (side === 'top' || side === 'bottom') { const y = side === 'top' ? B.y1 + d : B.y0 - d, pts = []; for (let x = B.x0 - d; x <= B.x1 + d + 1e-6; x += m) pts.push([x, y]); return pts; }
     const x = side === 'right' ? B.x1 + d : B.x0 - d, pts = []; for (let y = B.y0 - d; y <= B.y1 + d + 1e-6; y += m) pts.push([x, y]); return pts; };
-  for (const s of o.sides) { for (const p of line(s, o.dS)) out.push({ p, z: o.eye, kind: 'street', side: s });
+  const cx0 = (B.x0 + B.x1) / 2, cy0 = (B.y0 + B.y1) / 2;
+  if (useRoads(o)) {   // the site's roads and paths (2026-11-19): people on the pavements of each road (half its width + 1 m out, both sides) and along each path, every 2 m, within dR of the walls
+    const dR = o.dR || 60, gapB = (p) => Math.hypot(Math.max(B.x0 - p[0], 0, p[0] - B.x1), Math.max(B.y0 - p[1], 0, p[1] - B.y1)), inB = (p) => p[0] > B.x0 && p[0] < B.x1 && p[1] > B.y0 && p[1] < B.y1, rd = [];
+    for (const r of SC.roads) { const path = r.cls === 'path', w = r.width || (path ? 2 : 7), offs = path ? [0] : [-(w / 2 + 1), w / 2 + 1];
+      for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i], L = dist(a, b); if (L < 0.01) continue; const d = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], n = [-d[1], d[0]];
+        for (let t = 0; t < L; t += 2) for (const of of offs) { const q = [a[0] + d[0] * t + n[0] * of, a[1] + d[1] * t + n[1] * of]; if (inB(q) || gapB(q) > dR) continue; rd.push({ p: q, z: o.eye, kind: 'street', side: sideOf(q, cx0, cy0), rid: r.id, rname: r.name || (path ? 'a footpath' : 'a road') }); } } }
+    const k = Math.max(1, Math.ceil(rd.length / 800)); rd.forEach((x, i) => { if (i % k === 0) out.push(x); }); }
+  else for (const s of o.sides) { for (const p of line(s, o.dS)) out.push({ p, z: o.eye, kind: 'street', side: s });
     if (o.dO > o.dS && o.hO >= 1) for (let z = 1.5; z <= o.hO + 1e-6; z += 3) for (const p of line(s, o.dO)) out.push({ p, z, kind: 'opposite', side: s }); }
   // people in the site's buildings nearby (2026-11-19): on each storey (every 3 m from 1.5 m) of the faces turned towards this plan, a
   // point every 3 m, 0.3 m out from the face; buildings whose middle is inside this plan's walls are not neighbours
@@ -37,6 +44,8 @@ function onlookers(o) {
   if (TER) for (const ob of out) if (ob.kind !== 'nearby') ob.z += groundAt(ob.p);   // street and opposite: eye height above the ground under them
   void z0; return out;
 }
+// the site's roads are used when the setting says so (where: 'site', the default) and the site has any near the plan
+export const useRoads = (o) => (o.where || 'site') === 'site' && !!(SC && SC.roads && SC.roads.length);
 const sideOf = (p, cx, cy) => { const a = Math.atan2(p[1] - cy, p[0] - cx) * 180 / Math.PI; return a >= 45 && a < 135 ? 'top' : a >= -45 && a < 45 ? 'right' : a >= -135 && a < -45 ? 'bottom' : 'left'; };
 // the terrain (scene metres, z), for the ground under a point: the nearest of its grid points (2026-11-19)
 let TER = null;
@@ -69,7 +78,7 @@ function sees(ob, q, zq, o, z0) {
   return win;
 }
 async function analyse(ui) {
-  const o = opts(); if (!o.sides.length) throw new Error('Pick at least one side with a street.');
+  const o = opts(); if (!useRoads(o) && !o.sides.length) throw new Error('Pick at least one side with a street.');
   const B = sceneBounds(SC), area = SC.rooms.reduce((s, r) => s + r.rects.reduce((a, [, , w, d]) => a + w * d, 0), 0), c = clamp(Math.sqrt(area / 2500), 0.3, 0.75);
   const R = raster(B, c), N = R.W * R.H, room = new Int16Array(N).fill(-1);
   SC.rooms.forEach((r, ri) => { for (const [x, y, w, d] of r.rects) { const i0 = Math.max(0, Math.ceil((x - R.x0) / c - 0.5)), i1 = Math.min(R.W - 1, Math.floor((x + w - R.x0) / c - 0.5)), j0 = Math.max(0, Math.ceil((y - R.y0) / c - 0.5)), j1 = Math.min(R.H - 1, Math.floor((y + d - R.y0) / c - 0.5));
@@ -99,8 +108,8 @@ function figures() {
   return { floor: all ? 100 * seenAll / all : 0, priv: priv.length ? 100 * privSeen / priv.length : 0, hasPriv: priv.length > 0, toScreen, wins, worst };
 }
 
-export async function run(scene, o, prog) { SC = { ...scene, walls: scene.walls || [], open: scene.open || [], rooms: scene.rooms || [], furn: scene.furn || [], ctx: scene.ctx || [] }; OPTS = o; RES = null; TER = terrainOf(scene.terrain);
-  await analyse({ say() {}, prog: prog || (() => {}) }); if (!RES) throw Error('Stopped.'); return { SC, RES, F: figures(), winRoom, needOf, windows: RES.windows }; }
+export async function run(scene, o, prog) { SC = { ...scene, walls: scene.walls || [], open: scene.open || [], rooms: scene.rooms || [], furn: scene.furn || [], ctx: scene.ctx || [], roads: (scene.roads || []).filter((r) => r.pts && r.pts.length >= 2) }; OPTS = o; RES = null; TER = terrainOf(scene.terrain);
+  await analyse({ say() {}, prog: prog || (() => {}) }); if (!RES) throw Error('Stopped.'); return { SC, RES, F: figures(), winRoom, needOf, windows: RES.windows, where: useRoads(o) ? 'site' : 'sides', roads: useRoads(o) ? [...new Set(RES.obs.filter((x) => x.rid).map((x) => x.rname))] : [] }; }
 export { EXP, NEED, NEEDT, LIMIT };
 
 // ---- window risk (2026-11-19) -------------------------------------------------------------------------------------------------------
@@ -134,12 +143,12 @@ function windowRisk(RES) {
     const e = RES.WIN.get(op), zW = RES.z0 + ((op.sill || 0) + (op.head || 2.1)) / 2, dOf = (ob) => Math.hypot(ob.p[0] - m[0], ob.p[1] - m[1], ob.z - zW);
     let wAll = 0, wSeen = 0; const groups = new Map();
     RES.obs.forEach((ob, i) => { if ((ob.p[0] - m[0]) * n[0] + (ob.p[1] - m[1]) * n[1] <= 0) return; const d = dOf(ob), w = near(d); wAll += w; if (!e || !e.obs.has(i)) return; wSeen += w;
-      const key = ob.kind === 'nearby' ? 'nearby' : ob.kind + ':' + ob.side, g = groups.get(key) || { key, kind: ob.kind, side: ob.side, w: 0, n: 0, d0: Infinity, d1: 0 }; g.w += w; g.n++; g.d0 = Math.min(g.d0, d); g.d1 = Math.max(g.d1, d); groups.set(key, g); });
+      const key = ob.kind === 'nearby' ? 'nearby' : ob.rid ? 'road:' + ob.rid : ob.kind + ':' + ob.side, g = groups.get(key) || { key, kind: ob.kind, side: ob.side, rname: ob.rname || '', w: 0, n: 0, d0: Infinity, d1: 0 }; g.w += w; g.n++; g.d0 = Math.min(g.d0, d); g.d1 = Math.max(g.d1, d); groups.set(key, g); });
     const roomCells = ri >= 0 ? RES.cells.filter((k) => RES.room[k] === ri) : [], seenCells = e ? roomCells.filter((k) => e.spots.has(k)).length : 0;
     const seen = wAll ? wSeen / wAll : 0, floor = roomCells.length ? seenCells / roomCells.length : 0, score = Math.round(100 * NEEDW[need] * (W_SEEN * seen + W_FLOOR * floor));
     const top = [...groups.values()].sort((a, b) => b.w - a.w)[0], ang = Math.atan2(n[1], n[0]) * 180 / Math.PI, faces = ang >= 45 && ang < 135 ? 'top' : ang >= -45 && ang < 45 ? 'right' : ang >= -135 && ang < -45 ? 'bottom' : 'left';
     const from = top ? { kind: top.kind, side: top.side, share: wSeen ? top.w / wSeen : 0, n: top.n, d0: +top.d0.toFixed(1), d1: +top.d1.toFixed(1),
-      label: top.kind === 'street' ? `the street on the ${SIDE_NAME[top.side]} side` : top.kind === 'opposite' ? `the building opposite on the ${SIDE_NAME[top.side]} side` : 'the windows of nearby buildings' } : null;
+      label: top.rname ? top.rname : top.kind === 'street' ? `the street on the ${SIDE_NAME[top.side]} side` : top.kind === 'opposite' ? `the building opposite on the ${SIDE_NAME[top.side]} side` : 'the windows of nearby buildings' } : null;
     out.push({ ...base, score, risk: riskOf(score), need, room: rm ? rm.name : '', seen: +(100 * seen).toFixed(1), floor: +(100 * floor).toFixed(1), nSeen: e ? e.obs.size : 0, nFront: [...RES.obs].filter((ob) => (ob.p[0] - m[0]) * n[0] + (ob.p[1] - m[1]) * n[1] > 0).length,
       faces, bearing: Math.round((90 - ang + 360) % 360), from }); }
   return out;

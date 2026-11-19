@@ -13,7 +13,7 @@ const scene = ({ name = 'Bedroom', sill = 0.9, head = 2.1, ctx = [], inner = fal
   open: [{ id: 'W1', a: [12, 14], b: [14, 14], kind: 'win', ext: true, sill, head, w: 2 }, { id: 'W2', a: [12, 10], b: [14, 10], kind: 'win', ext: true, sill: 0.9, head: 2.1, w: 2 },
     ...(inner ? [{ id: 'W3', a: [16, 11], b: [16, 12], kind: 'win', ext: false, sill: 0.9, head: 2.1, w: 1 }] : [])],
   rooms: [{ id: 'r1', name, rects: [[10, 10, 6, 4]] }], furn: [], ctx, bounds: { w: 26, h: 24 }, settings: { floorZ: 0 }, source: { project: 'qa-' + Math.random() } });
-const opts = { sides: ['top'], dS: 4, eye: 1.6, dO: 0, hO: 0, doors: false, near: true };
+const opts = { sides: ['top'], dS: 4, eye: 1.6, dO: 0, hO: 0, doors: false, near: true, where: 'sides' };
 const run = async (o = {}, op = {}) => { const r = await P.run(scene(o), { ...opts, ...op }); return Object.fromEntries(r.windows.map((w) => [w.id, w])); };
 
 const bed = await run(), store = await run({ name: 'Store' });
@@ -50,3 +50,11 @@ assert.equal(inner.W3.risk, 'na'); assert.equal(inner.W3.score, null);
 for (const s of [0, P.RISK_AT.medium - 1, P.RISK_AT.medium, P.RISK_AT.high - 1, P.RISK_AT.high, 100]) assert.equal(P.riskOf(s), s >= P.RISK_AT.high ? 'high' : s >= P.RISK_AT.medium ? 'medium' : 'low');
 assert.equal(P.riskOf(null), 'na'); assert.deepEqual(Object.keys(P.RISK).sort(), ['high', 'low', 'medium', 'na']);
 console.log(`PASS a window in an inside wall is not analysed; the classes: High from ${P.RISK_AT.high}, Medium from ${P.RISK_AT.medium}, Low below, grey not analysed`);
+
+// the site's roads: a road 7 m wide along the top, 6 m from the wall; people on its pavements look in through the top window only
+const road = { roads: [{ id: 'r1', name: 'Main Street', cls: 'road', width: 7, pts: [[-10, 23.5], [36, 23.5]] }] };
+const onRoad = Object.fromEntries((await P.run({ ...scene(), ...road }, { ...opts, where: 'site' })).windows.map((w) => [w.id, w]));
+assert(onRoad.W1.score > 0 && onRoad.W1.from.label === 'Main Street', 'seen from Main Street: ' + JSON.stringify(onRoad.W1.from)); assert.equal(onRoad.W2.score, 0, 'the bottom window faces no road');
+const sidesAgain = Object.fromEntries((await P.run({ ...scene(), ...road }, { ...opts, where: 'sides', sides: ['bottom'] })).windows.map((w) => [w.id, w]));
+assert(sidesAgain.W2.score > 0 && sidesAgain.W1.score === 0, 'the chosen-sides setting still works with roads on the site');
+console.log(`PASS people on the site's road "Main Street" look in through the top window (${onRoad.W1.score}, ${onRoad.W1.from.d0}–${onRoad.W1.from.d1} m), not the bottom one; "streets I choose" still overrides it`);

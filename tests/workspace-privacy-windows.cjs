@@ -50,6 +50,10 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.deepEqual(Object.fromEntries(legend), cntNow, 'the legend counts the windows of each class: ' + JSON.stringify(legend));
     const hi = scored.slice().sort((a, b) => b.score - a.score)[0];
     console.log(`PASS ${scored.length} windows scored on ${lv1} (High ${scored.filter((x) => x.risk === 'high').length}, Medium ${scored.filter((x) => x.risk === 'medium').length}, Low ${scored.filter((x) => x.risk === 'low').length}); ${s.sheets.length} sheets on the glass of ${covered.size} windows in 3D, each on the glass's own geometry; the plan and 3D lists are the same and the plan draws each window in its colour; the legend counts ${JSON.stringify(cntNow)}`);
+    // ---- people on the site's roads (the example's Hospital Drive and service lane), not on assumed street sides
+    const meth = await p.evaluate(() => window.__wsStudy.state().res.method); assert(/pavements of the site’s roads \(.*Hospital Drive/.test(meth), 'onlookers on the site roads: ' + meth.slice(0, 200));
+    assert(scored.some((x) => x.from && x.from.label === 'Hospital Drive'), 'a window mainly seen from Hospital Drive');
+    console.log(`PASS people on the site's own roads: ${scored.filter((x) => x.from && x.from.label === 'Hospital Drive').length} windows mainly seen from Hospital Drive`);
     // ---- a window clicked (as the view reports a click): its risk, score and direction; both views mark it
     await p.evaluate((i) => __ws2.hub.select('persp', { k: 'op', id: i }), hi.id); await p.waitForTimeout(800);
     const det = await p.evaluate(() => { const d = document.querySelector('[data-priv-detail]'); return d && { id: d.dataset.privDetail, risk: d.dataset.risk, text: d.innerText }; });
@@ -90,6 +94,15 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.evaluate(() => { const r = document.querySelector('[data-privov=op]'); r.value = '0.8'; r.dispatchEvent(new Event('input', { bubbles: true })); }); await p.waitForTimeout(600);
     s = await st(); assert(s.sheets.length > 0 && s.plan.opacity === 0.8 && s.sheets.filter((x) => x.id !== s.persp.sel).every((x) => x.opacity === 0.8), 'opacity 0.8 on the sheets: ' + JSON.stringify(s.sheets.slice(0, 2)));
     console.log('PASS the overlay switches off and on; its opacity goes to the sheets (0.8)');
+    // ---- every level in one go: each level with walls gets its result; the level in view is run last and stays in view
+    const lvW = await p.evaluate(() => { const M = __ws2.model().studio; return M.levels.filter((l) => M.walls.some((w) => w.lv === l.id)).map((l) => l.id); });
+    await p.evaluate(() => document.querySelector('[data-priv-all]').click()); await p.waitForFunction(() => !!window.__wsStudy.state().privAllMsg, null, { timeout: 900000 }); await p.waitForTimeout(1000);
+    s = await st(); const store = await p.evaluate(() => window.__wsPriv().store), msg = await p.evaluate(() => window.__wsStudy.state().privAllMsg);
+    assert.deepEqual(Object.keys(store).sort(), lvW.slice().sort(), 'a result for every level with walls: ' + msg); assert.equal(s.lv, lv1, 'back on the level in view');
+    const notRun = Object.values(s.info).filter((x) => /not been run/.test(x.why)).length; assert.equal(notRun, 0, 'no window left on a level not run');
+    const rowsLv = await p.evaluate(() => document.querySelectorAll('[data-priv-levels] [data-privlv]').length); assert.equal(rowsLv, lvW.length, 'a row per level in the card');
+    const n2 = { high: 0, medium: 0, low: 0, na: 0 }; for (const v of Object.values(s.info)) n2[v.risk]++;
+    console.log(`PASS every level in one go (${msg}): windows High ${n2.high} · Medium ${n2.medium} · Low ${n2.low} · not analysed ${n2.na} (in inside walls); a row per level in the card`);
     // ---- another study: no overlay; the glass keeps its materials
     await p.evaluate(() => window.__wsStudy.open('views')); await p.waitForTimeout(1500); s = await st();
     assert(s.plan === null && s.persp === null && s.glass.sheets === 0, 'another study: no window overlay'); assert.deepEqual(s.glass.mats, glass0.mats, 'the glass keeps its own materials');
