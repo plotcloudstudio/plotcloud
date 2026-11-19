@@ -50,6 +50,24 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // reload: still there
     await open(); await p.waitForSelector('.sp-studycard .sp-wfsigns tbody tr'); const again = await p.locator('.sp-studycard .sp-wfsigns tbody tr').count(); assert.equal(again, n[1]);
     console.log(`PASS after a reload the floor's layout is back (${again} signs, option B, edited)`);
+    // Phase 4: walk a route at eye height; it stops before the first decision with what the walker sees; Next goes on; the 3D eye follows
+    await p.click('.sp-studycard [data-way="walkgo"]'); await p.waitForSelector('.sp-studycard [data-way-walkat]', { timeout: 60000 });
+    const at1 = await p.locator('.sp-studycard [data-way-walkat]').innerText(); assert.match(at1, /Point \d+ · (High|Medium|Low) · the way on is (Ahead|Left|Right|Back)/); assert.match(at1, /Signs seen/); assert.match(at1, /(Guided|Not guided):/);
+    const eye1 = await p.evaluate(() => { const w = __ws2.inst.persp.win, s = (w.S3.api || w.S3).walk.state(); return { on: s.on, x: s.x, y: s.y, eye: s.eye }; }); assert(eye1.on, 'the 3D view walks at eye height');
+    const st1 = await p.evaluate(() => window.__wsStudy.state().wayWalk.state); await p.click('.sp-studycard [data-way="walknext"]'); await p.waitForTimeout(500);
+    const eye2 = await p.evaluate(() => { const w = __ws2.inst.persp.win, s = (w.S3.api || w.S3).walk.state(); return { x: s.x, y: s.y }; }), st2 = await p.evaluate(() => window.__wsStudy.state().wayWalk.state);
+    assert(st2.i === st1.i + 1 && st2.s > st1.s && Math.hypot(eye2.x - eye1.x, eye2.y - eye1.y) > 0.2, 'Next moved on to the next decision: ' + JSON.stringify([st1.i, st1.s, st2.i, st2.s, eye1, eye2])); const nDec = await p.locator('.sp-studycard .sp-wfwalk li').count(); assert(nDec >= 2);
+    await p.click('.sp-studycard [data-way="walkplay"]'); await p.waitForTimeout(1200); const moving = await p.evaluate(() => window.__wsStudy.state().wayWalk?.state); assert(moving && (moving.playing || moving.at), 'playing, or stopped at the next decision');
+    await p.locator('.sp-studycard').screenshot({ path: shots + '/wayfinding-walk-card.png' }); await p.screenshot({ path: shots + '/wayfinding-walk.png' });
+    await p.click('.sp-studycard [data-way="walkstop"]'); await p.waitForTimeout(500);
+    console.log(`PASS the walk: stopped before point 1 ("${at1.split('\n')[0]}"), eye at ${eye1.eye} m; Next moved it ${Math.hypot(eye2.x - eye1.x, eye2.y - eye1.y).toFixed(1)} m on; ${nDec} decisions listed; Play walks on`);
+    // Phase 5: the schedule and the drawing
+    const fs = require('node:fs'), got = {};
+    for (const k of ['xcsv', 'xsvg', 'xdxf', 'xpng', 'xpdf']) { const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 60000 }), p.click(`.sp-studycard [data-way="${k}"]`)]); const f2 = await dl.path(); got[k] = { name: dl.suggestedFilename(), buf: fs.readFileSync(f2) }; }
+    fs.writeFileSync(shots + '/wayfinding-drawing-export.png', got.xpng.buf);
+    const csv = got.xcsv.buf.toString('utf8'); assert.match(got.xcsv.name, /-wayfinding-.*-schedule\.csv$/); assert.equal(csv.trim().split('\r\n').length, n[1] + 1); assert.match(csv, /Sign ID,Floor,/);
+    assert.match(got.xsvg.buf.toString(), /^<svg[\s\S]*Signage schedule[\s\S]*<\/svg>$/); assert.match(got.xdxf.buf.toString(), /\n8\nSIGNS\n[\s\S]*EOF\n$/); assert.equal(got.xpng.buf.readUInt32BE(0), 0x89504e47); assert.equal(got.xpdf.buf.slice(0, 5).toString(), '%PDF-');
+    console.log(`PASS exports: ${Object.values(got).map((g) => `${g.name} (${Math.round(g.buf.length / 1024)} kB)`).join(', ')}; the schedule has ${n[1]} signs`);
     assert.deepEqual(errs, [], 'page errors: ' + errs.join(' | '));
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });

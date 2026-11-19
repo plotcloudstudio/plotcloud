@@ -2,7 +2,8 @@
 // weights), the drawing (routes with arrows, starts, decision points by sign priority with their facing, existing signs; sign panels
 // in 3D) and the results (points ranked by the Signage Priority Score, each with its reason and factors; routes with no valid way;
 // destination entrances and the Room Entrance View). The analysis is interior/wayfinding-signage.js; this module only presents it.
-import * as WS from './interior/wayfinding-signage.js?v=wfsign-20261119-1';
+import * as WS from './interior/wayfinding-signage.js?v=wfsign-20261119-2';
+import { walkHTML } from './wayfinding-walk.js?v=wfwalk-20261119-1';
 
 export const VIEWS = [['signs', 'Sign priority'], ['routes', 'Routes'], ['depth', 'Visual depth']];
 const KIND = { lift: 'L', stair: 'S', entrance: 'E', manual: 'M' };
@@ -92,7 +93,7 @@ export function resultOf(A, depthRun, ctx) {
       <table class="sp-codesum sp-wffac"><thead><tr><th>Factor</th><th>Value</th><th>Weight</th></tr></thead><tbody>${[['A', 'Decision complexity'], ['B', 'Route importance'], ['C', 'Visibility (hidden share)'], ['D', 'Destination ambiguity'], ['F', 'Wrong-turn cost']].map(([k, nm]) => `<tr><td>${k} · ${nm}</td><td>${F[k].toFixed(2)}</td><td>${W[k]}</td></tr>`).join('')}<tr><td>E · Existing coverage</td><td>${F.E}</td><td>× (1 − E)</td></tr></tbody></table>
       <p class="sp-note">Score = 100 × Σ(weight × factor) / Σ weights × (1 − E). A: (ways − 1)/3, +0.2 if two ways are within 45°. B: routes here / the most at any point. C: share of routes whose way on (3 m past) and destination door are out of sight 5 m before. D: 1 − the largest way's share of the destinations, +0.25 if one kind of room lies down different ways. F: mean extra walk of a wrong turn (there and back, to the next point) / 40 m.</p></div>`; };
   const entr = A.entrances;
-  const sections = () => { const eSel = entr.find((e) => e.room === ST.wayRoom) || null; const { plan, ev, opts } = cur(); return `${layoutHTML(A, plan, ev, opts, ST, esc)}<p class="sp-flabel">Decision points by sign priority (${A.nodes.length}; shown from ${ST.wayThr})</p>
+  const sections = () => { const eSel = entr.find((e) => e.room === ST.wayRoom) || null; const { plan, ev, opts } = cur(); return `${layoutHTML(A, plan, ev, opts, ST, esc)}${walkHTML(A, ST, esc, ST.waySpeed)}${exportHTML(plan, ST)}<p class="sp-flabel">Decision points by sign priority (${A.nodes.length}; shown from ${ST.wayThr})</p>
       <table class="sp-codesum sp-sched sp-wftab"><thead><tr><th>#</th><th>Score</th><th>Where</th><th>Sign</th></tr></thead><tbody>${A.nodes.map(row).join('')}</tbody></table>${detail(A.nodes.find((n) => n.no === ST.waySel))}
     ${none.length ? `<p class="sp-flabel">No valid route (${none.length})</p><ul class="sp-sflist">${none.map((x) => `<li><b>${esc(x.room.name)}</b>${x.floor ? ` (${esc(x.floor)})` : ''} from ${esc(x.start.name)}: ${esc(x.reason)}</li>`).join('')}</ul>` : ''}
     ${entr.length ? `<p class="sp-flabel">Destination entrance</p><select class="sp-sel" data-way="room">${['', ...new Set(entr.map((e) => e.room))].map((nm) => `<option value="${esc(nm)}" ${nm === (ST.wayRoom || '') ? 'selected' : ''}>${nm ? esc(nm) : 'Choose a room…'}</option>`).join('')}</select>
@@ -139,3 +140,8 @@ function layoutHTML(A, plan, ev, opts, ST, esc) {
     ${ba ? `<table class="sp-codesum sp-wfba"><thead><tr><th></th><th>Without the proposal</th><th>With it</th></tr></thead><tbody><tr><td>Points needing a sign (score ≥ ${A.threshold})</td><td>${ba.before.recommended}</td><td>${ba.after.recommended}</td></tr><tr><td>High-priority points not guided</td><td>${ba.before.high}</td><td>${ba.after.high}</td></tr><tr><td>Decisions guided</td><td>${PCT(ba.before.clarity)}</td><td>${PCT(ba.after.clarity)}</td></tr><tr><td>Routes fully guided</td><td>${PCT(ba.before.routeCoverage)}</td><td>${PCT(ba.after.routeCoverage)}</td></tr></tbody></table>
       <p class="sp-note">Without: the existing signs only. With: the existing signs and this layout. Counted as in the layout table: a point needs a sign when it scores ${A.threshold} or more and is not guided.${ba.issues.length ? ` Still to fix: ${ba.issues.map((x) => x.id).join(', ')} (visibility).` : ''}</p>` : ''}
     ${opts ? optTable : ''}`; }
+
+// the exports of the floor's analysis and layout (Phase 5)
+function exportHTML(plan, ST) { return `<p class="sp-flabel">Export</p><label class="sp-check"><input type="checkbox" data-way="xhigh" ${ST.wayXHigh ? 'checked' : ''}> High priority only</label>
+  <div class="sp-acts">${plan ? '<button type="button" class="btn sm" data-way="xcsv">Signage schedule (CSV)</button>' : ''}<button type="button" class="btn sm" data-way="xpng">PNG</button><button type="button" class="btn sm" data-way="xpdf">PDF</button><button type="button" class="btn sm" data-way="xsvg">SVG</button><button type="button" class="btn sm" data-way="xdxf">DXF</button></div>
+  <p class="sp-note">The floor plan with the routes and their direction, the decision points by priority${plan ? ', the signs numbered with the way they face, the legend and the signage schedule' : ' and the legend; choose a layout to add the signs and their schedule'}.</p>`; }

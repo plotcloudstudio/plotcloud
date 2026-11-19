@@ -365,3 +365,26 @@ export function layouts(A, o = {}) { const target = o.target ?? 0.8, cand = A.no
 export function beforeAfter(building, opts, proposed) { const A = analyse(building, opts), evB = evaluate(A, []), evA = evaluate(A, proposed);
   const row = (ev) => ({ recommended: ev.unresolved.length, high: ev.high - ev.highCovered, clarity: ev.clarity, routeCoverage: ev.routeCoverage, guided: ev.guided, events: ev.events });
   return { before: row(evB), after: row(evA), still: evA.unresolved, issues: evA.issues, duplicates: evA.duplicates }; }
+
+// ================= Phase 4 (2026-11-19): a first-person walk along one route =================
+// The decisions on the route in order, and at each what this walker sees: the signs seen before the point (from how far), what they
+// say for the way this walker takes, and what is wrong when no sign guides them. The walker is not told the way: the check is only
+// whether a sign in sight names it. Uses the visibility rule of the layouts (seenBy).
+function seenFrom(F, n, q, g) { const f = g.face * Math.PI / 180, fv = [Math.cos(f), Math.sin(f)]; let far = 0;
+  for (let i = 1; i <= AHEAD; i++) { const v = q.arr ? along(q.r.pts, Math.max(0, q.s - i)) : along(q.r.pts, Math.min(q.s + (i - 1) / 4, plen(q.r.pts))), d = dist(v, g.p); if (d > VIS_MAX || d < 0.3) continue;
+    const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]), c = tv[0] * fv[0] + tv[1] * fv[1]; if (Math.acos(Math.max(-1, Math.min(1, g.sides === 2 ? Math.abs(c) : c))) > VIS_ANG) continue;
+    if (q.arr && (g.p[0] - v[0]) * q.arr[0] + (g.p[1] - v[1]) * q.arr[1] < 0) continue; if (F.sight(v, g.p)) far = Math.max(far, q.arr ? i : (i - 1) / 4); }
+  return far; }
+export function walkCheck(A, route, signs = []) { const F = A.F, ev = evaluate(A, signs), all = [...ev.signs, ...A.signs.map((g) => ({ ...g, existing: true, ways: [], type: 'Existing sign', sides: 1 }))], out = [];
+  for (const n of A.nodes) { const q = n.passes.find((x) => x.r === route); if (!q) continue; const decide = n.br.length >= 3 || n.exitOf || n.score >= A.threshold; if (!decide) continue;
+    const head = q.arr || q.dep, takenRel = q.taken >= 0 ? REL(wrap(ang(n.br[q.taken].dir) - ang(head))) : 'Ahead', seen = [];
+    for (const g of all) { if (dist(g.p, n.p) > VIS_MAX) continue; const far = seenFrom(F, n, q, g); if (!far) continue; const face = g.sides === 2 && (() => { const f = g.face * Math.PI / 180, v = along(q.r.pts, Math.max(0, q.s - 3)); return (v[0] - g.p[0]) * Math.cos(f) + (v[1] - g.p[1]) * Math.sin(f) < 0; })() ? g.waysB : g.ways;
+      const mine = (face || []).find((w) => w.to.includes(route.room.name) || w.to.includes(route.room.group) || w.to.some((t) => t.startsWith(route.room.group)));
+      seen.push({ id: g.id, type: g.type, from: far, says: face || [], mine: mine ? mine.arrow : null, existing: !!g.existing }); }
+    const start = !q.arr, guided = !!n.f.E || seen.some((x) => x.mine && (start || x.from >= 2));   // arriving: seen 2 m or more before the point; out of a lift or stair: seen at all as they come out
+    out.push({ no: n.no, s: +q.s.toFixed(2), p: n.p, start, kind: n.kind, cls: n.cls, score: n.score, take: takenRel, ways: n.ways.map((w) => ({ rel: REL(wrap(ang(w.dir) - ang(head))), to: w.to })), seen, guided,
+      note: guided ? `guided: ${seen.filter((x) => x.mine).map((x) => `${x.id} (${x.mine}, seen from ${x.from} m)`).join(', ') || 'an existing sign'}` : seen.length ? `signs in sight (${seen.map((x) => x.id).join(', ')}) but none names ${route.room.name}${!start && seen.every((x) => x.from < 2) ? ' early enough' : ''}` : 'no sign in sight before the turn' }); }
+  out.sort((a, b) => a.s - b.s); return { room: route.room.name, start: route.start.name, len: plen(route.pts), pts: route.pts, decisions: out, guided: out.filter((d) => d.guided).length }; }
+
+/** where a point is: the room it is in, or the corridor */
+export function whereIs(A, p) { const F = A.F, k = cellOf(F.R, p), i = k >= 0 ? F.roomAt[k] : -1; return i >= 0 ? F.rooms[i].name : 'corridor'; }

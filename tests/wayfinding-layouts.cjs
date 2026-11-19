@@ -34,4 +34,18 @@ const assert = require('node:assert/strict'), path = require('node:path'), floor
   const ids = c.signs.filter((s) => s.type === 'Identification'); assert(ids.length >= 1 && new Set(ids.map((s) => s.room)).size === ids.length);
   assert.equal(JSON.stringify(W.layouts(W.analyse(B(floor()), { level: 'L1' })).map((x) => x.signs)), JSON.stringify(L.map((x) => x.signs)));
   console.log(`PASS 6 Maximum adds ${ids.length} identification signs, one per room (${ids.slice(0, 3).map((s) => s.room).join(', ')}…); the same input gives the same layouts`);
+  // 7 (Phase 4) the walk from the lift to Reception: its decisions in order; without signs none guided, with layout B every one, each by a sign that names Reception
+  const WK = await import(path.join(__dirname, '../mvp/js/wayfinding-walk.js')), rR = A.routes.find((x) => x.room.name === 'Reception' && x.start.kind === 'lift');
+  const w0 = W.walkCheck(A, rR, []), w1 = W.walkCheck(A, rR, b.signs); assert(w0.decisions.length >= 2 && w0.guided === 0, JSON.stringify(w0.decisions.map((d) => d.note)));
+  assert.equal(w1.guided, w1.decisions.length); assert(w1.decisions.every((d) => d.seen.some((x) => x.mine))); assert.deepEqual(w1.decisions.map((d) => d.s), w1.decisions.map((d) => d.s).slice().sort((x, y) => x - y));
+  const X1 = w1.decisions.find((d) => d.no === X.no); assert.equal(X1.take, 'Left', 'heading east from the lift, Reception is up the north arm: Left'); assert.equal(X1.seen.find((x) => x.mine).mine, 'Left');
+  console.log(`PASS 7 the walk lift → Reception: ${w1.decisions.length} decisions; without signs ${w0.guided} guided ("${w0.decisions[0].note}"); with B all guided (${w1.decisions.map((d) => d.note).join('; ')})`);
+  // 8 (Phase 5) the schedule and the drawing
+  const evB = W.evaluate(A, b.signs), rows = WK.schedule(A, { opt: 'B' }, evB), csv = WK.scheduleCSV(rows), lines = csv.trim().split('\r\n');
+  assert.equal(lines.length, b.signs.length + 1); assert.match(lines[0], /Sign ID,Floor,x \(m\),y \(m\),Decision point,Location,Sign type,Mounting,Direction it faces,Destinations \(front\),Destinations \(back\),Priority,Seen by routes,Visibility status/);
+  assert(rows.every((r) => r.status === 'OK' && /°/.test(r.faces))); assert(rows.every((r) => /corridor/i.test(r.where)), rows.map((r) => r.where).join());
+  const svg = WK.drawingSVG(A, { opt: 'B' }, evB, { project: 'Test' }); for (const g of b.signs) assert(svg.includes(`>${g.id}</text>`), 'sign ' + g.id + ' on the drawing'); assert.match(svg, /Signage schedule \(\d+\)/); assert.match(svg, /Legend/);
+  const dxf = WK.drawingDXF(A, { opt: 'B' }, evB); for (const L of ['WALLS', 'ROUTES', 'POINTS', 'SIGNS', 'SIGN_FACING', 'TEXT']) assert(dxf.includes(`\n8\n${L}\n`), 'DXF layer ' + L); assert.match(dxf, /EOF\n$/);
+  const high = WK.schedule(A, { opt: 'C' }, W.evaluate(A, c.signs), { highOnly: true }); assert(high.length >= 1 && high.every((r) => /^High/.test(r.priority)));
+  console.log(`PASS 8 the schedule: ${rows.length} rows (${Object.keys(rows[0]).length} columns); the SVG draws every sign with its number, the legend and the schedule; DXF layers WALLS ROUTES POINTS SIGNS SIGN_FACING TEXT; High only: ${high.length} of ${c.signs.length}`);
 })().catch((e) => { console.error(e); process.exit(1); });
