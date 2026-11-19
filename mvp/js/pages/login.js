@@ -6,10 +6,10 @@ export function render(app, _, params) {
   let mode = params.get('signup') ? 'signup' : 'login'; const cloud = C.configured();
   // a password-reset link signed the person in: ask for the new password (2026-11-17)
   if (cloud && C.user() && params.get('set')) {
-    app.innerHTML = `<div class="auth"><form id="pw" class="card" style="flex:1 1 380px;max-width:440px;padding:28px;display:grid;gap:14px;margin:0 auto" aria-label="Set a new password"><h1 class="display md" style="font-size:34px">Set a new password.</h1><p class="note">For ${C.user().email}. ${C.PASSWORD_RULE}</p><label class="f">New password<input name="password" type="password" autocomplete="new-password" required minlength="10"></label><label class="f">Repeat it<input name="again" type="password" autocomplete="new-password" required minlength="10"></label><button class="btn accent lg" id="pwGo">Save the new password →</button><p class="msg" id="pwMsg" role="status" aria-live="polite"></p></form></div>`;
+    app.innerHTML = `<div class="auth"><form id="pw" class="card" style="flex:1 1 380px;max-width:440px;padding:28px;display:grid;gap:14px;margin:0 auto" aria-label="Set a new password"><h1 class="display md" style="font-size:34px">Set a new password.</h1><p class="note">For ${C.user().email}. ${C.PASSWORD_RULE} ${C.BREACH_NOTE}</p><label class="f">New password<input name="password" type="password" autocomplete="new-password" required minlength="10"></label><label class="f">Repeat it<input name="again" type="password" autocomplete="new-password" required minlength="10"></label><button class="btn accent lg" id="pwGo">Save the new password →</button><p class="msg" id="pwMsg" role="status" aria-live="polite"></p></form></div>`;
     const say = (t, warn) => { const m = $('#pwMsg', app); m.textContent = t; m.className = 'msg' + (warn ? ' warn' : ' ok'); };
     $('#pw', app).onsubmit = async (e) => { e.preventDefault(); const fd = new FormData(e.target), pw = String(fd.get('password')); if (pw !== String(fd.get('again'))) return say('The two passwords differ.', true); if (!C.passwordOk(pw)) return say(C.PASSWORD_RULE, true);
-      const go = $('#pwGo', app); go.disabled = true; try { await C.setPassword(pw); toast('Password changed'); location.hash = '#/home'; } catch (er) { say(er.message, true); go.disabled = false; } };
+      const go = $('#pwGo', app); go.disabled = true; const n = await C.breachCount(pw); if (n > 0) { say(C.breachMsg(n), true); go.disabled = false; return; } try { await C.setPassword(pw); toast('Password changed'); location.hash = '#/home'; } catch (er) { say(er.message, true); go.disabled = false; } };
     return;
   }
   if (cloud && C.user()) { location.hash = '#/' + (params.get('next') || 'home'); return; }
@@ -28,7 +28,7 @@ export function render(app, _, params) {
         <div class="seg" role="group" aria-label="Log in or create an account" style="display:grid;grid-template-columns:1fr 1fr"><button type="button" data-m="signup" aria-pressed="${up}">Create account</button><button type="button" data-m="login" aria-pressed="${!up}">Log in</button></div>
         ${up ? '<label class="f">Name<input name="name" autocomplete="name" required></label>' : ''}
         <label class="f">Email<input name="email" type="email" autocomplete="email" required placeholder="you@studio.com"></label>
-        <label class="f">Password<input name="password" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" ${cloud?'required minlength="10"':'disabled placeholder="Cloud registration is not connected"'}></label>${cloud&&up?`<p class="note" style="margin:-6px 0 0">${C.PASSWORD_RULE}</p>`:''}
+        <label class="f">Password<input name="password" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" ${cloud?'required minlength="10"':'disabled placeholder="Cloud registration is not connected"'}></label>${cloud&&up?`<p class="note" style="margin:-6px 0 0">${C.PASSWORD_RULE} ${C.BREACH_NOTE}</p>`:''}
         <button class="btn accent lg" id="go">${cloud?(up?'Create account →':'Log in →'):'Continue with local profile →'}</button>
         ${cloud ? `<button type="button" class="btn" id="link">Email me a sign-in link instead</button>${up ? '' : '<button type="button" class="btn ghost" id="forgot">Forgot your password?</button>'}` : ''}
         <p class="msg" id="authMsg" role="status" aria-live="polite"></p>
@@ -44,6 +44,7 @@ export function render(app, _, params) {
       e.preventDefault(); const fd = new FormData(e.target), email = String(fd.get('email')).trim();
       if (cloud) { const go = $('#go', app); go.disabled = true;
         if (up && !C.passwordOk(String(fd.get('password')))) { say(C.PASSWORD_RULE, true); go.disabled = false; return; }
+        if (up) { const n = await C.breachCount(String(fd.get('password'))); if (n > 0) { say(C.breachMsg(n), true); go.disabled = false; return; } }
         try { const r = up ? await C.signUp(email, String(fd.get('password')), String(fd.get('name') || '').trim()) : await C.signIn(email, String(fd.get('password')));
           if (r.confirm) { say(`Almost there: confirm your email with the link sent to ${email}, then come back.`); go.disabled = false; return; }
           refreshWho(); toast(up ? 'Account created · syncing your projects' : 'Signed in · syncing your projects'); location.hash = '#/' + next; }
