@@ -57,7 +57,7 @@ export async function signUp(email, password, name) {
 }
 export async function signIn(email, password) { const r = await call('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password }, auth: false }); setSession(r); begin(); return { ok: true }; }
 export async function emailLink(email) { await call('/auth/v1/otp?redirect_to=' + encodeURIComponent(back()), { method: 'POST', body: { email, create_user: true }, auth: false }); return { sent: true }; }
-// passwords (2026-11-17): at least 10 characters with letters and a number, as the project's Auth settings require
+// passwords (2026-11-17): at least 10 characters with letters and a number; the project's Auth settings require the same (set 2026-11-19), so a direct API sign-up cannot skip it
 export const PASSWORD_RULE = 'At least 10 characters, with letters and at least one number.';
 export const passwordOk = (pw) => typeof pw === 'string' && pw.length >= 10 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
 // a forgotten password: Supabase emails a link back to the site, which then asks for a new one (see captureRedirect)
