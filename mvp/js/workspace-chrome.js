@@ -24,8 +24,8 @@ import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261114-1';
 import * as WAY from './interior/wayfinding.js?v=way-20261118-1';
-import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261118-6';
-import * as WUI from './wayfinding-ui.js?v=wfui-20261118-4';
+import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261119-1';
+import * as WUI from './wayfinding-ui.js?v=wfui-20261119-1';
 import * as SA from './site-access-ui.js?v=sa-20261118-2';
 import * as SSX from './interior/spacesyntax.js?v=ss-20261114-1';
 import * as ISO from './interior/isovist.js?v=iso-20261114-1';
@@ -1400,7 +1400,7 @@ export function mountChrome(app, api) {
       let depth = null; const s0 = A.chosen[0], lv = b.levels.find((l) => l.id === A.level.id);
       try { depth = await WAY.run(lv.sc, { point: s0.p, pointName: s0.name, furn: ST.wayFurn, eye: +ST.wayEye }, (f) => { ST.progress = `looking around ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; }); } catch (e) { console.warn(e); }
       if (ST.waySel && !A.nodes.some((n) => n.no === ST.waySel)) ST.waySel = null;
-      return WUI.resultOf(A, depth, { esc, fmt, ST, views2, stopsOf, DEPTH: WAY.DEPTH, paintRes: (r) => paintRes(r) }); }
+      return WUI.resultOf(A, depth, { esc, fmt, ST, views2, stopsOf, DEPTH: WAY.DEPTH, paintRes: (r) => paintRes(r), plan: (lv) => (p.wayPlans || {})[lv] || null }); }
     if (id === 'daylight' && ST.dlWhere === 'section') return daylightSection();
     if (id === 'daylight') {
       const sc = w.planScene('daylight'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
@@ -2227,6 +2227,23 @@ export function mountChrome(app, api) {
       pane.ws.pickPoint?.((pt) => { const o = wfOrigin(); at = [pt[0] - o[0], pt[1] - o[1]]; ST.wayPick = 'signface'; drawStudy(); setTimeout(() => pane.ws.pickPoint?.(second), 0); }); drawStudy(); return; }
     if (d.way === 'entry') { const A = ST.res?.wayA, en = A && A.entrances.find((x) => x.room === ST.wayRoom); const w0 = INST.persp.ws; if (d.v === 'off' || !en) { w0.eyeView?.(null); return; } const o = A.F.SC.origin || [0, 0], P = (p) => [p[0] + o[0], p[1] + o[1]];
       goView('persp'); setTimeout(() => w0.eyeView?.(d.v === 'out' ? { p: P(en.door), look: P(en.out), lv: lvId } : { p: P(en.cam), look: P(en.door), lv: lvId }), 50); return; } });
+  // Wayfinding Phase 3 (2026-11-19): the signage layouts A/B/C, the layout chosen for the floor (saved with the project), its signs edited
+  const wfPlans = () => (p.wayPlans ||= {}), wfSave = () => { try { S.save(); } catch { } }, wfRedraw = () => { if (ST.res) paintRes(ST.res); drawStudy(); };
+  studyCard.addEventListener('click', (e) => { const b = e.target.closest('button[data-way]'); if (!b || ST.id !== 'wayfinding' || ST.busy) return; const d = b.dataset, A = ST.res?.wayA; if (!A) return; const lv = A.level.id, plan = wfPlans()[lv], o = A.F.SC.origin || [0, 0], pane = activePane();
+    const local = (pt) => [pt[0] - o[0], pt[1] - o[1]], edited = () => { plan.edited = true; plan.at = new Date().toISOString(); wfSave(); wfRedraw(); };
+    if (d.way === 'gen') { ST.wayOpts = { lv, rev: A.ms + ':' + A.nodes.length, list: WFS.layouts(A) }; wfRedraw(); return; }
+    if (d.way === 'use') { const L = ST.wayOpts?.list?.find((x) => x.key === d.v); if (!L) return; wfPlans()[lv] = { opt: d.v, signs: JSON.parse(JSON.stringify(L.signs)), at: new Date().toISOString(), level: A.level.name }; ST.wayBA = null; wfSave(); wfRedraw(); return; }
+    if (!plan) return;
+    if (d.way === 'planoff') { if (!confirm('Remove the signage layout of this floor?')) return; delete wfPlans()[lv]; ST.wayBA = null; wfSave(); wfRedraw(); return; }
+    if (d.way === 'signsel') { ST.waySign = ST.waySign === d.v ? null : d.v; const g = plan.signs.find((x) => x.id === d.v); if (g && ST.waySign) ST.res.wayFocus({ p: g.p }); drawStudy(); return; }
+    if (d.way === 'signdel') { plan.signs.splice(+d.v, 1); edited(); return; }
+    if (d.way === 'ba') { try { ST.wayBA = { lv, n: JSON.stringify(plan.signs).length, r: WFS.beforeAfter(INST.persp.ws.buildingScene(), WUI.optsOf(ST, lv, qualOf().k === 'refined'), plan.signs) }; } catch (er) { console.warn(er); } drawStudy(); return; }
+    const pick = (mode, fn) => { if (ST.wayPick === mode) { ST.wayPick = null; pane.ws.pickPoint?.(null); drawStudy(); return; } ST.wayPick = mode; pane.ws.pickPoint?.((pt) => { ST.wayPick = null; fn(local(pt)); }); drawStudy(); };
+    if (d.way === 'signmove') pick('move:' + d.v, (q) => { const g = plan.signs[+d.v]; if (g) { g.p = q.map((x) => +x.toFixed(3)); g.mount = 'hung'; g.sides = 2; edited(); } });
+    else if (d.way === 'signturn') pick('turn:' + d.v, (q) => { const g = plan.signs[+d.v]; if (g) { g.face = Math.round(((Math.atan2(q[1] - g.p[1], q[0] - g.p[0]) * 180 / Math.PI) % 360 + 360) % 360); edited(); } });
+    else if (d.way === 'signadd') pick('add', (q) => { const n = A.nodes.slice().sort((a, b2) => Math.hypot(a.p[0] - q[0], a.p[1] - q[1]) - Math.hypot(b2.p[0] - q[0], b2.p[1] - q[1]))[0]; if (!n) return; const g = WFS.signAt(A, n); let id = g.id, k = 2; while (plan.signs.some((x) => x.id === id)) id = g.id + '-' + k++; plan.signs.push({ ...g, id }); edited(); }); });
+  studyCard.addEventListener('change', (e) => { const t = e.target; if (t.dataset.waySay == null || ST.id !== 'wayfinding') return; const A = ST.res?.wayA, plan = A && wfPlans()[A.level.id]; if (!plan) return; const [i, j] = t.dataset.waySay.split(':').map(Number), w = plan.signs[i]?.ways[j]; if (!w) return;
+    w.to = t.value.split(',').map((x) => x.trim()).filter(Boolean); plan.edited = true; wfSave(); wfRedraw(); });
   studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.priv; if (k) { ST.priv = { ...ST.priv, [k]: k === 'doors' ? t.checked : +t.value }; drawStudy(); return; }
     if (t.dataset.privneed != null) { let sc = null; try { sc = INST.persp.ws.planScene('privacy'); } catch { } const key = 'privacy:' + (sc?.source?.project || 'sample'), m = PKEEP.get(key, {}); if (t.value) m[t.dataset.privneed] = t.value; else delete m[t.dataset.privneed]; PKEEP.set(key, m); ST.privNeedV = (ST.privNeedV || 0) + 1; drawStudy(); return; } });
   studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-iso="pick"]'); if (!b || ST.busy) return; const pane = activePane(); if (!pane.ready || !pane.ws.pickPoint) return;

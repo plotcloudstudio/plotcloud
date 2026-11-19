@@ -292,3 +292,76 @@ export function entranceOf(F, r, groups) { const d = r.door, P = r.pts, total = 
   const cam = along(P, Math.max(0, total - 4));
   return { room: r.room.name, group: r.room.group, door: d.m, seenFrom: +seenFrom.toFixed(1), flushFrom: +flushFrom.toFixed(1), similar, cam, look: d.m, out: [d.m[0] + nrm[0] * 3, d.m[1] + nrm[1] * 3], spot,
     verdict: seenFrom < 3 ? 'hard to spot: the door comes into sight only at the last moment' : similar >= 2 ? `easy to see, but ${similar} similar doors within 8 m: number or name it clearly` : flushFrom ? 'easy to see and a sign beside it can be read on the approach' : 'easy to see; a sign flat on the wall is read only close to: a projecting sign helps' }; }
+
+// ================= Phase 3 (2026-11-19): proposed signs, their layouts A/B/C, and how well they work =================
+// A proposed sign stands at a decision point: on the wall ahead of the people arriving when one is within 6 m (read square-on as
+// they walk up), otherwise hung over the corridor at the point. It faces the main approach and lists, for each way on, the
+// destinations down it with the arrow the walker sees (from the walker's own direction, never the screen's).
+// Its visibility, for each route through its point: seen from at least 2 of the 8 one-metre spots before the point (in sight,
+// within 15 m, ahead of the walker and within 60° of square-on). A decision is guided when a sign there is seen by that route and
+// lists the way the route takes. Every figure below is a count of these.
+const VIS_MAX = 15, VIS_ANG = Math.PI / 3, AHEAD = 8;
+const S_WALLS = 1;   // the sight raster's wall flag (S_OPQ)
+function wallAhead(F, p, v, max = 6) { const R = F.SR; for (let t = 0.3; t <= max; t += R.c / 2) { const q = [p[0] + v[0] * t, p[1] + v[1] * t], k = cellOf(R, q); if (k < 0) return null; if (R.a[k] & S_WALLS) return Math.max(0.2, t - 0.15); } return null; }
+const relOf = (t) => REL(t);
+/** the sign proposed for a decision point */
+// the directions people arrive at a point from, largest first (each with its share of the routes)
+export function approaches(n) { const bins = []; for (const q of n.passes.filter((x) => x.arr)) { const b = bins.find((x) => Math.abs(wrap(ang(x.v) - ang(q.arr))) < 0.5); if (b) { b.n++; b.sum = [b.sum[0] + q.arr[0], b.sum[1] + q.arr[1]]; b.v = unit(b.sum); } else bins.push({ v: q.arr, sum: q.arr.slice(), n: 1 }); }
+  return bins.sort((a, b) => b.n - a.n).map((b) => ({ v: b.v, share: b.n / n.passes.length })); }
+export function signAt(A, n, alt = null) { const F = A.F, starters = n.passes.filter((q) => !q.arr), ap = alt ? { v: alt } : n.exitOf && starters.length ? null : n.approach, dep = mainApproach((starters.length ? starters : n.passes).map((q) => ({ arr: q.dep })), false), head = ap ? ap.v : dep || [Math.cos(n.faceDeg * Math.PI / 180 + Math.PI), Math.sin(n.faceDeg * Math.PI / 180 + Math.PI)];
+  // arriving people read it on the wall ahead; people leaving a lift or a stair, on the wall in front of them or hung 2 m out
+  const t = wallAhead(F, n.p, head), p = t ? [n.p[0] + head[0] * t, n.p[1] + head[1] * t] : ap ? n.p.slice() : [n.p[0] + head[0] * 2, n.p[1] + head[1] * 2];
+  const ways = alt ? n.ways.map((w) => { const a = wrap(ang(w.dir) - ang(alt)); return { ...w, rel: REL(a), angle: Math.round(deg(a)) }; }) : n.ways;
+  return { id: 'S' + n.no + (alt ? 'b' : ''), node: n.no, p: p.map((x) => +x.toFixed(3)), face: Math.round(((deg(ang([-head[0], -head[1]])) % 360) + 360) % 360), mount: t ? 'wall' : 'hung', sides: t ? 1 : 2, type: n.signType,
+    ways: ways.map((w) => ({ arrow: w.rel, angle: w.angle, to: w.to.slice() })),
+    // a hung sign is read from both sides: the back face's arrows are those of a walker coming the other way
+    waysB: t ? null : ways.map((w) => { const a = wrap(w.angle * Math.PI / 180 + Math.PI); return { arrow: REL(a), angle: Math.round(deg(a)), to: w.to.slice() }; }), score: n.score, cls: n.cls, z: t ? 1.7 : 2.3 }; }
+// can the walker of pass q see sign g before the decision point? (the count of one-metre spots that see it)
+function seenBy(F, n, q, g) { const f = g.face * Math.PI / 180, fv = [Math.cos(f), Math.sin(f)], walkDir = q.arr || q.dep; let k = 0;
+  // the spots: the last 8 m before the point; for people starting here (out of a lift or a stair), their first 2 m, looking round as they come out
+  const spots = q.arr ? [...Array(AHEAD)].map((_, i) => along(q.r.pts, Math.max(0, q.s - (i + 1)))) : [0, 0.5, 1, 1.5, 2].map((d) => along(q.r.pts, Math.min(q.s + d, plen(q.r.pts))));
+  for (const v of spots) { const d = dist(v, g.p); if (d > VIS_MAX || d < 0.3) continue; const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]), c = tv[0] * fv[0] + tv[1] * fv[1];
+    if (Math.acos(Math.max(-1, Math.min(1, (g.sides === 2 ? Math.abs(c) : c)))) > VIS_ANG) continue; if (q.arr && (g.p[0] - v[0]) * walkDir[0] + (g.p[1] - v[1]) * walkDir[1] < 0) continue;   /* arriving: ahead of them; starting here: they look round before choosing */ if (F.sight(v, g.p)) k++; }
+  return q.arr ? k : Math.round(k * AHEAD / 5); }
+// a room's identification sign: seen from the last 8 m of the walk to its door
+function seenAtDoor(F, r, g) { const L = plen(r.pts), f = g.face * Math.PI / 180, fv = [Math.cos(f), Math.sin(f)]; let k = 0;
+  for (let i = 1; i <= AHEAD; i++) { const v = along(r.pts, Math.max(0, L - i)), d = dist(v, g.p); if (d > VIS_MAX || d < 0.3) continue; const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]); if (Math.acos(Math.max(-1, Math.min(1, tv[0] * fv[0] + tv[1] * fv[1]))) > Math.PI / 2.4) continue; if (F.sight(v, g.p)) k++; }
+  return k; }
+const lists = (g, n, q) => { if (q.taken < 0) return false; const w = n.br[q.taken], want = (n.ways.find((x) => Math.abs(wrap(ang(x.dir) - ang(w.dir))) < 0.3) || {}).to || [];
+  return want.length > 0 && g.ways.some((x) => x.to.some((t) => want.includes(t))); };
+/** how a set of signs works on the analysed routes: per sign (visibility, the points it guides) and in total */
+export function evaluate(A, signs) { const F = A.F, thr = A.threshold, byNode = new Map(A.nodes.map((n) => [n.no, n])), decide = A.nodes.filter((n) => n.br.length >= 3 || n.exitOf || n.score >= thr);
+  const ok = A.routes.filter((r) => !r.noRoute && r.pts && r.door);
+  const out = signs.map((g) => { if (g.room) { const rs = ok.filter((r) => r.room.name === g.room), seen = rs.map((r) => seenAtDoor(F, r, g) >= 2), vis = seen.length ? seen.filter(Boolean).length / seen.length : 0;
+      return { ...g, at: null, vis: +vis.toFixed(3), issue: !rs.length ? 'no route reaches this room' : vis < 0.5 ? `Visibility issue: seen on the way to the door by ${seen.filter(Boolean).length} of ${seen.length} routes` : null }; }
+    const n = g.node != null ? byNode.get(g.node) : A.nodes.slice().sort((a, b) => dist(a.p, g.p) - dist(b.p, g.p))[0]; const at = n && dist(n.p, g.p) <= 8 ? n : null;
+    const seen = at ? at.passes.map((q) => seenBy(F, at, q, g) >= 2) : [], vis = seen.length ? seen.filter(Boolean).length / seen.length : 0;
+    return { ...g, at: at ? at.no : null, vis: +vis.toFixed(3), issue: !at ? 'not at a decision point' : vis < 0.5 ? `Visibility issue: seen before the point by ${seen.filter(Boolean).length} of ${seen.length} routes` : null }; });
+  let events = 0, guided = 0; const routeOK = new Map(), unresolved = [], highs = A.nodes.filter((n) => n.cls === 'High'); let highCov = 0;
+  for (const n of decide) { const here = out.filter((g) => g.at === n.no); let nodeGuided = 0;
+    n.passes.forEach((q, i) => { events++; const ok = here.some((g) => seenBy(F, n, q, g) >= 2 && lists(g, n, q)) || !!n.f.E; if (ok) { guided++; nodeGuided++; } if (!routeOK.has(q.r)) routeOK.set(q.r, true); if (!ok) routeOK.set(q.r, false); });
+    const okNode = n.passes.length ? nodeGuided / n.passes.length >= 0.5 : true; if (n.cls === 'High' && okNode) highCov++; if (n.score >= thr && !okNode) unresolved.push(n.no); }
+  for (const n of highs) if (!decide.includes(n)) highCov++;
+  const dup = []; out.forEach((g, i) => out.forEach((h, j) => { if (j <= i || dist(g.p, h.p) > 6) return; const a = new Set(g.ways.flatMap((w) => w.to)), b = h.ways.flatMap((w) => w.to); if (b.length && b.every((x) => a.has(x))) dup.push([g.id, h.id]); }));
+  const routes = A.routes.filter((r) => !r.noRoute && r.pts), routesOK = routes.filter((r) => routeOK.get(r) !== false).length;
+  return { signs: out, total: out.length, byType: out.reduce((m, g) => ((m[g.type] = (m[g.type] || 0) + 1), m), {}), events, guided, clarity: events ? guided / events : 1,
+    routeCoverage: routes.length ? routesOK / routes.length : 1, routesOK, routes: routes.length, high: highs.length, highCovered: highCov, unresolved, avgVis: out.length ? out.reduce((s, g) => s + g.vis, 0) / out.length : 0,
+    issues: out.filter((g) => g.issue).map((g) => ({ id: g.id, issue: g.issue })), duplicates: dup }; }
+export const OPTIONS = [['A', 'Minimum signs'], ['B', 'Balanced'], ['C', 'Maximum coverage']];
+/** the three layouts, measured against what every candidate sign together achieves (the most this floor's points can guide):
+ *  A Minimum: the fewest signs, highest priority first, that guide `target` (default 80 %) of that; B Balanced: every point at or above
+ *  the threshold, leaving out a sign within 6 m of one saying the same, then more until 95 % of it; C Maximum: every candidate sign, a
+ *  second sign where a wall sign's point has a second approach with a fifth or more of its routes, and
+ *  an identification sign at each destination entrance that is hard to spot or among similar doors */
+export function layouts(A, o = {}) { const target = o.target ?? 0.8, cand = A.nodes.filter((n) => n.onRoute && !n.f.E).map((n) => ({ n, g: signAt(A, n) })).sort((a, b) => b.n.score - a.n.score), best = evaluate(A, cand.map((c) => c.g)).clarity;
+  const grow = (picked, goal) => { const left = cand.filter((c) => !picked.includes(c)); let ev = evaluate(A, picked.map((c) => c.g)); while (ev.clarity < goal - 1e-9 && left.length) { picked.push(left.shift()); ev = evaluate(A, picked.map((c) => c.g)); } return picked; };
+  const a = grow([], target * best);
+  const b = []; for (const c of cand.filter((x) => x.n.score >= A.threshold)) if (!b.some((d) => dist(d.g.p, c.g.p) <= 6 && c.g.ways.flatMap((w) => w.to).every((t) => d.g.ways.some((w) => w.to.includes(t))))) b.push(c); grow(b, 0.95 * best);
+  const ids = A.entrances.filter((e, i, L) => (e.seenFrom < 3 || e.similar >= 2) && L.findIndex((x) => x.room === e.room) === i).map((e, i) => ({ id: 'I' + (i + 1), node: null, p: e.spot.map((x) => +x.toFixed(3)), face: Math.round(((deg(ang([e.out[0] - e.door[0], e.out[1] - e.door[1]])) % 360) + 360) % 360), mount: 'wall', sides: 1, type: 'Identification', ways: [{ arrow: 'Here', angle: 0, to: [e.room] }], score: 0, cls: 'Low', z: 1.6, room: e.room }));
+  const order = (L) => cand.filter((c) => L.includes(c)).map((c) => c.g);
+  const second = cand.flatMap((c) => { const bins = approaches(c.n), b2 = bins[1]; if (!b2 || b2.share < 0.2 || c.g.mount === 'hung') return []; const g2 = signAt(A, c.n, b2.v); return dist(g2.p, c.g.p) > 0.5 ? [g2] : []; });   // a wall sign faces one approach: the next largest gets its own   // by priority, so the sign numbers read the same in every option
+  return OPTIONS.map(([k, name]) => { const signs = k === 'A' ? order(a) : k === 'B' ? order(b) : [...cand.map((x) => x.g), ...second, ...ids]; return { key: k, name, signs, ev: evaluate(A, signs), best, goal: k === 'A' ? target * best : k === 'B' ? 0.95 * best : best }; }); }
+/** Before and After, by the same counts as the layouts: without the proposal (the existing signs only, as in the model) and with it */
+export function beforeAfter(building, opts, proposed) { const A = analyse(building, opts), evB = evaluate(A, []), evA = evaluate(A, proposed);
+  const row = (ev) => ({ recommended: ev.unresolved.length, high: ev.high - ev.highCovered, clarity: ev.clarity, routeCoverage: ev.routeCoverage, guided: ev.guided, events: ev.events });
+  return { before: row(evB), after: row(evA), still: evA.unresolved, issues: evA.issues, duplicates: evA.duplicates }; }

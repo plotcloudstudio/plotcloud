@@ -6917,9 +6917,16 @@ window.S3 = (() => {
       const g = new T.BufferGeometry().setFromPoints(pts); const ln = new T.LineSegments(g, new T.LineDashedMaterial({ color: 0xf59e0b, dashSize: 0.3, gapSize: 0.18, depthTest: false })); ln.computeLineDistances(); ln.renderOrder = 20; SFR.g.add(ln); SFR.preview = ln; } render(); };
   // wayfinding signs in 3D (2026-11-18): a 0.6 × 0.3 m panel on a post, its face at 2.1 m, turned to face the people it serves, in its class colour
   const SGN = { g: null };
-  api.signs = (list) => { if (!scene) return; if (SGN.g) { scene.remove(SGN.g); SGN.g.traverse((x) => { x.geometry && x.geometry.dispose(); x.material && x.material.dispose(); }); SGN.g = null; } if (!list || !list.length) { render(); return; }
+  api.signs = (list) => { if (!scene) return; if (SGN.g) { scene.remove(SGN.g); SGN.g.traverse((x) => { x.geometry && x.geometry.dispose(); for (const m of [].concat(x.material || [])) { m.map && m.map.dispose(); m.dispose(); } }); SGN.g = null; } if (!list || !list.length) { render(); return; }
     const G = new T.Group(); G.name = 'wf-signs';
-    for (const s of list) { const z = s.z || 0, col = new T.Color(s.col || '#d8402a'), face = (s.face || 0) * Math.PI / 180, panel = new T.Mesh(new T.BoxGeometry(0.6, 0.3, 0.04), new T.MeshLambertMaterial({ color: col }));
+    // proposed signs (2026-11-19): a board with its arrows and destinations, on the wall at eye height or hung double-sided over the corridor
+    const face2 = (lines, col, w, h) => { const c = document.createElement('canvas'); c.width = Math.round(w * 400); c.height = Math.round(h * 400); const x = c.getContext('2d'); x.fillStyle = col; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#fff';
+      const n = Math.max(1, lines.length), fs = Math.min(c.height / (n + 0.6) * 0.62, 56); x.font = `600 ${fs}px Inter, Arial, sans-serif`; x.textBaseline = 'middle'; lines.forEach((t, i) => x.fillText(t, fs * 0.5, (i + 0.8) * c.height / (n + 0.6), c.width - fs)); const tx = new T.CanvasTexture(c); tx.colorSpace = T.SRGBColorSpace; return new T.MeshBasicMaterial({ map: tx }); };
+    for (const s of list) if (s.mount) { const z = s.z || 0, face = (s.face || 0) * Math.PI / 180, w = s.w || 0.9, h = s.h || 0.3, cy = z + (s.mount === 'wall' ? 1.7 : 2.3), edge = new T.MeshLambertMaterial({ color: new T.Color(s.col || '#1f3a68') });
+      const mats = [edge, edge, edge, edge, face2(s.text || [], s.col || '#1f3a68', w, h), s.textB ? face2(s.textB, s.col || '#1f3a68', w, h) : edge];
+      const panel = new T.Mesh(new T.BoxGeometry(w, h, 0.03), mats); panel.position.set(s.p[0], cy, -s.p[1]); panel.rotation.y = face + Math.PI / 2; panel.name = 'wf-sign'; panel.userData = { id: s.id };   /* the box's front (+z) turned to the plan direction the sign faces */ G.add(panel);
+      if (s.mount === 'hung') for (const k of [-1, 1]) { const rod = new T.Mesh(new T.CylinderGeometry(0.008, 0.008, 0.5, 6), new T.MeshLambertMaterial({ color: 0x6b7280 })); rod.position.set(s.p[0] + Math.sin(face) * k * w * 0.4, cy + h / 2 + 0.25, -s.p[1] + Math.cos(face) * k * w * 0.4); G.add(rod); } }
+    for (const s of list) if (!s.mount) { const z = s.z || 0, col = new T.Color(s.col || '#d8402a'), face = (s.face || 0) * Math.PI / 180, panel = new T.Mesh(new T.BoxGeometry(0.6, 0.3, 0.04), new T.MeshLambertMaterial({ color: col }));
       panel.position.set(s.p[0], z + 2.1, -s.p[1]); panel.rotation.y = face - Math.PI / 2; panel.name = 'wf-sign'; G.add(panel);
       const post = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 2.0, 8), new T.MeshLambertMaterial({ color: 0x4b5563 })); post.position.set(s.p[0], z + 1.0, -s.p[1]); post.name = 'wf-post'; G.add(post); }
     scene.add(G); SGN.g = G; render(); };
