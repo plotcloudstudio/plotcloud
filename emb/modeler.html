@@ -7735,10 +7735,15 @@ if (window.__WSROLE) {
   WS.guard = guard;
 
   // ---- sync with the Workspace: every change goes up, coalesced to one per frame (live while a drag is going on)
-  let nT = 0, nLive = true;
+  // A finished edit (not live) goes up as soon as the code that made it has run, not on the next frame (2026-11-19): a pane the
+  // Workspace keeps hidden (the plan, while the 3D view is shown; undo and redo run there) gets its frames late, so an undo in
+  // the 3D view waited 0.5–0.9 s for it. Live drag frames are still coalesced to one per frame.
+  let nT = 0, nQ = false, nLive = true;
+  const nSend = () => { const lv = nLive; nLive = true; const s = snapM(); if (s === WS.last && (lv || !WS.sentLive)) return; WS.last = s; WS.sentLive = lv; const h = hub(); if (h) h.change(WS.role, s, lv); };   // the release after a drag goes up even when the last live frame already had it
   function notify(live) {
-    if (WS.rx) return; nLive = nLive && !!live; if (nT) return;
-    nT = requestAnimationFrame(() => { nT = 0; const lv = nLive; nLive = true; const s = snapM(); if (s === WS.last && (lv || !WS.sentLive)) return; WS.last = s; WS.sentLive = lv; const h = hub(); if (h) h.change(WS.role, s, lv); });   // the release after a drag goes up even when the last live frame already had it
+    if (WS.rx) return; nLive = nLive && !!live;
+    if (!live) { if (nT) { cancelAnimationFrame(nT); nT = 0; } if (!nQ) { nQ = true; queueMicrotask(() => { nQ = false; nSend(); }); } return; }
+    if (nT || nQ) return; nT = requestAnimationFrame(() => { nT = 0; nSend(); });
   }
   { const _c = changed; changed = function (live, kp) { if (!WS.rx&&!WS.groupMoving) guard(); _c(live, kp);if(WS.projectName)WS.projectLabel(WS.projectName); if (!live) SAVEDSNAP = snapM(); histUI(); notify(live); }; }
   { const _u = upd3D; upd3D = function (fit) {
