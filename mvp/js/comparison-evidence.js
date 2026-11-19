@@ -4,6 +4,7 @@ export function stableValue(value){
  if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,stableValue(value[k])]));return value;
 }
 export const evidenceText=v=>v===undefined?'Not recorded':typeof v==='object'?JSON.stringify(stableValue(v)):String(v);
+export const isEngineRun=run=>['full-tool','batch','workspace'].includes(run?.source);
 function inputs(settings={}){
  const out={...settings};delete out.provenance;delete out.inheritedFrom;delete out.configurationName;delete out.handoff;
  if(settings.handoff)out.WorkbenchBaseline=settings.handoff.baselineSignature;
@@ -13,7 +14,7 @@ function inputs(settings={}){
 }
 export function compareEvidence(a,b){
  if(!a||!b)return{status:'missing',label:'A matching run is missing',differences:[]};
- if(!['full-tool','batch'].includes(a.source)||!['full-tool','batch'].includes(b.source))return{status:'unverified',label:'Stored previews are not engine evidence',differences:[]};
+ if(!isEngineRun(a)||!isEngineRun(b))return{status:'unverified',label:'Stored previews are not engine evidence',differences:[]};
  const left=inputs(a.settings),right=inputs(b.settings),differences=[...new Set([...Object.keys(left),...Object.keys(right)])].filter(k=>JSON.stringify(stableValue(left[k]))!==JSON.stringify(stableValue(right[k]))).map(key=>({key,a:left[key],b:right[key]}));
  if(differences.length)return{status:'different',label:'Recorded inputs differ — review before comparing',differences};
  if(!Object.keys(left).length)return{status:'unknown',label:'Input conditions were not recorded',differences:[]};

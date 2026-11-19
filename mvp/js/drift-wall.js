@@ -1,10 +1,10 @@
 // DriftWall: DOM adaptation of the React Bits source supplied by the user.
-// 2026-11-09: it moves as soon as the page opens (half speed when the system prefers reduced motion); Pause wall stops it.
+// The wall starts automatically unless the system requests reduced motion; Play explicitly enables it.
 // Copyright (c) 2026 David Haz. MIT + Commons Clause; see THIRD_PARTY_NOTICES.md.
 // Keeps the original alternating-column drift, velocity damping and pointer tilt.
 const factor=(index,variance)=>1+variance*(((index*.6180339887+.35)%1)*2-1);
 export function mountDriftWall(root,items,{onActive=()=>{},pauseButton,columns=5,speed=26,variance=.45,tilt=16,turn=-14,depth=120,parallax=.6}={}){
-  const mq=typeof matchMedia==='function'?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};let reduced=false,motionEnabled=true,paused=false,visible=true,dead=false,raf=0,last=null,cols=[],offsets=[],velocities=[],active=null,hovered=-1,pointer={x:0,y:0},damped={x:0,y:0},plane,layout='';
+  const mq=typeof matchMedia==='function'?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};let reduced=false,motionEnabled=false,paused=false,visible=true,dead=false,raf=0,last=null,cols=[],offsets=[],velocities=[],active=null,hovered=-1,pointer={x:0,y:0},damped={x:0,y:0},plane,layout='';
   root.classList.add('drift-wall');root.setAttribute('role','group');root.setAttribute('aria-label','Explore all simulation types');
   const setActive=tile=>{if(active===tile)return;active?.classList.remove('is-active');active=tile;tile?.classList.add('is-active');hovered=tile?Number(tile.dataset.col):-1;const item=tile?items.find(i=>i.id===tile.dataset.sim):null;root.dataset.activeSim=item?.id||'';onActive(item);};
   const updateControl=()=>{root.dataset.motion=reduced?'reduced':paused?'paused':'running';if(!pauseButton)return;pauseButton.disabled=false;pauseButton.textContent=reduced?'Play wall':paused?'Resume wall':'Pause wall';pauseButton.setAttribute('aria-pressed',String(paused||reduced));pauseButton.title=reduced?'Your system prefers reduced motion. Play the wall if you want to enable it.':'';};

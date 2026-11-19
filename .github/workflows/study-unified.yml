@@ -18,6 +18,8 @@ on:
       - 'mvp/index.html'
       - 'tests/study-unified-ui.cjs'
       - '.github/workflows/study-unified.yml'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   verify:
@@ -45,6 +47,7 @@ jobs:
           TEST_BASE=http://127.0.0.1:8790 node tests/run-browser-check.cjs tests/structural-study-ui.cjs
           TEST_BASE=http://127.0.0.1:8790 node tests/run-browser-check.cjs tests/local-compute-ui.cjs
       - name: Check actual published website
+        if: github.event_name != 'pull_request'
         run: |
           python - <<'PY'
           import time,urllib.request
@@ -52,7 +55,7 @@ jobs:
           for attempt in range(36):
               try:
                   with urllib.request.urlopen(url,timeout=20) as response: body=response.read().decode()
-                  if 'css/study-unified.css?v=study-unified-20261028-1' in body: break
+                  if 'css/study-unified.css?v=paid-launch-20261119-1' in body: break
               except Exception: pass
               time.sleep(5)
           else: raise SystemExit('The published study shell did not become available.')

@@ -3,10 +3,10 @@
 // tip deflection P·L³/3EI; a simply supported beam with a uniform load: w·L²/8 at mid-span); a laid-out two-storey building
 // analysed as a frame (equilibrium in every combination, members of every kind, wall supports), and bracing it cuts the drift
 // under wind by more than 70 %.
-const assert = require('node:assert/strict'), path = require('node:path');
+const assert = require('node:assert/strict');
 (async () => {
-  await import(path.join(__dirname, '../emb/lib/structural-solver.js')); const SA = globalThis.PlotCloudStructuralSolver;
-  const F = await import(path.join(__dirname, '../mvp/js/structure-frame.js')), SL = await import(path.join(__dirname, '../mvp/js/structure-layout.js'));
+  await import('../emb/lib/structural-solver.js'); const SA = globalThis.PlotCloudStructuralSolver;
+  const F = await import('../mvp/js/structure-frame.js'), SL = await import('../mvp/js/structure-layout.js');
   const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)), `${msg}: ${a} vs ${b}`);
   const sec = SA.secById('rhs150x150x8'), E = SA.MATERIALS.steel.E;
   // 1. a cantilever column, 3 m, fixed at the base, 10 kN sideways at the top (case Wx)

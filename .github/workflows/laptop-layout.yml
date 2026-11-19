@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths: ['ui/laptop-layout.*', 'mvp/index.html', 'mvp/js/workbench-shell.js', 'mvp/js/pages/workspace-v2.js', 'tests/laptop-layout.cjs', '.github/workflows/laptop-layout.yml']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   verify:
@@ -15,7 +17,7 @@ jobs:
           node-version: '22'
       - run: npm install --no-save playwright
       - run: npx playwright install --with-deps chromium
-      - name: Check Workbench and all 17 simulations
+      - name: Check Workbench and current simulation entry points
         env:
           TEST_BASE: http://127.0.0.1:8790
         run: |
@@ -23,6 +25,7 @@ jobs:
           node tests/laptop-layout.cjs
           node tests/structural-study-ui.cjs
       - name: Check the deployed laptop workspaces
+        if: github.event_name != 'pull_request'
         env:
           TEST_BASE: https://plotcloudstudio.github.io/plotcloud
           LAPTOP_STUDIES: sunhours,daylight,vent,acoustics,structure

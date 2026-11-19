@@ -58,7 +58,7 @@
 .study-shell .study-stage{--view:#e9ecef}
 .study-shell .study-modes{background:#fff!important;border:1px solid var(--line2,#d5d8dc);border-radius:8px!important;padding:3px!important;box-shadow:0 1px 2px rgba(0,0,0,.04);margin:6px}
 .study-shell .study-modes button[aria-pressed=true]{background:#e8effc!important;color:var(--blue,#2d6cdf)!important;box-shadow:none}
-.study-shell .study-nav-tools,.study-shell .study-orientation{display:none!important}
+.study-shell .study-nav-tools{display:flex;gap:3px;flex-wrap:wrap;margin:6px;padding:3px;background:var(--card);border:1px solid var(--line2);border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .study-shell .study-navigation-hint{left:12px!important;right:auto!important;bottom:12px!important;max-width:min(520px,60%);background:#fff!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 2px 8px rgba(0,0,0,.08);font:11px/1.4 var(--mono,ui-monospace,monospace)!important;padding:6px 10px!important}
 .study-shell :is(.env-legend,.ss-legend){left:auto!important;right:12px!important;bottom:12px!important;max-width:min(460px,45%);background:#fff!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 2px 8px rgba(0,0,0,.08);font:11px/1.4 var(--mono,ui-monospace,monospace)!important;padding:6px 10px!important}
 .study-shell .study-struct-tools{top:50px!important;left:6px!important;margin:6px;background:#fff;border:1px solid var(--line2,#d5d8dc);border-radius:8px;padding:3px!important;box-shadow:0 1px 2px rgba(0,0,0,.04)}

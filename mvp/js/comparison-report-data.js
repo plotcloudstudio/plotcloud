@@ -1,4 +1,4 @@
-import {compareEvidence} from './comparison-evidence.js';
+import {compareEvidence,isEngineRun} from './comparison-evidence.js';
 export const METHOD_NOTES={
  climate:'Actual EPW statistics in local standard time. Degree days use complete selected days; missing fields are reported. No building-response calculation.',
  passive:'Outdoor psychrometric opportunity screening. Thresholds are explicit and overlapping; no indoor comfort or energy savings are predicted.',
@@ -14,7 +14,7 @@ export const METHOD_NOTES={
 };
 function planEdges(model,level){const st=model?.studio;if(st){const lv=level||st.levels?.slice().sort((a,b)=>a.z-b.z)[0]?.id;return(st.walls||[]).filter(w=>!lv||w.lv===lv).map(w=>[w.a,w.b]).filter(pair=>pair.every(p=>Array.isArray(p)&&p.slice(0,2).every(Number.isFinite)));}return(model?.components||[]).filter(c=>c.type==='wall'&&c.g).flatMap(({g})=>[[[g.x,g.y],[g.x+g.w,g.y]],[[g.x+g.w,g.y],[g.x+g.w,g.y+g.d]],[[g.x+g.w,g.y+g.d],[g.x,g.y+g.d]],[[g.x,g.y+g.d],[g.x,g.y]]]).filter(pair=>pair.every(p=>p.every(Number.isFinite)));}
 export const numberText=(value,d=2)=>Number.isFinite(value)?value.toLocaleString('en-CA',{maximumFractionDigits:d}):'Not recorded';
-export function latestEngineRun(project,versionId,simId){return(project.runs||[]).map((r,i)=>({r,i})).filter(({r})=>r.versionId===versionId&&r.simId===simId&&['full-tool','batch'].includes(r.source)).sort((a,b)=>String(b.r.created).localeCompare(String(a.r.created))||b.i-a.i)[0]?.r||null;}
+export function latestEngineRun(project,versionId,simId){return(project.runs||[]).map((r,i)=>({r,i})).filter(({r})=>r.versionId===versionId&&r.simId===simId&&isEngineRun(r)).sort((a,b)=>String(b.r.created).localeCompare(String(a.r.created))||b.i-a.i)[0]?.r||null;}
 export function buildComparisonReport(project,a,b,studies,{simId=null,note='',generatedAt=new Date().toISOString()}={}){
  if(!a||!b||a.id===b.id)throw Error('Choose two different saved model versions.');
  const sections=studies.filter(s=>!simId||s.id===simId).map(sim=>{const ra=latestEngineRun(project,a.id,sim.id),rb=latestEngineRun(project,b.id,sim.id);if(!ra&&!rb)return null;

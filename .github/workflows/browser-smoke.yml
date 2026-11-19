@@ -16,7 +16,7 @@ jobs:
         include:
           - group: core
             scripts: >-
-              tests/ui-unification.cjs tests/acoustics.cjs tests/home-hero.cjs tests/sun-period.cjs
+              tests/ui-unification.cjs tests/acoustics.cjs tests/home-hero.cjs tests/sun-period.cjs tests/workspace-render.cjs
           - group: layout
             scripts: >-
               tests/simulation-fit.cjs tests/unified-simulation-audit.cjs tests/unified-results.cjs tests/selected-layouts.cjs
@@ -44,7 +44,9 @@ jobs:
       - name: Verify service and shared selection contracts
         run: |
           node tests/drift-wall-runtime.mjs
-          node --test server/render-api.test.mjs tests/studio-tab.cjs tests/replan-contracts.mjs
+          node --test tests/studio-tab.cjs tests/replan-contracts.mjs tests/workspace-comparison.test.mjs
+          node tests/structure-frame.cjs
+          node tests/study-evidence.cjs
       - name: Serve site and run browser smoke
         env:
           TEST_BASE: http://127.0.0.1:8765
