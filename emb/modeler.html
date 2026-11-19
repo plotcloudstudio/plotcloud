@@ -1274,7 +1274,12 @@ const STC = (() => {
 
   // ---------- rooms: a raster of each level, walls (and closed openings) as solid ----------
   const CELL = 0.1;
-  function rasterLevel(M, lv) {
+  // a level's raster is made again only when the model's extent or that level's walls changed (2026-11-18); the rooms are copies
+  const RASTER = new Map();
+  function rasterLevel(M, lv) { const B0 = bounds(M), key = JSON.stringify(B0) + '|' + JSON.stringify(M.walls.filter((w) => w.lv === lv).map((w) => [w.a, w.b, w.t])), c = RASTER.get(lv);
+    if (c && c.key === key) return { ...c.R, rooms: c.R.rooms.map((r) => ({ ...r })) };
+    const R = rasterLevel0(M, lv); RASTER.set(lv, { key, R: { ...R, rooms: R.rooms.map((r) => ({ ...r })) } }); if (RASTER.size > 200) RASTER.delete(RASTER.keys().next().value); return R; }
+  function rasterLevel0(M, lv) {
     const B = bounds(M), m = 1.0, x0 = B.x0 - m, y0 = B.y0 - m, W = Math.ceil((B.x1 - B.x0 + 2 * m) / CELL), H = Math.ceil((B.y1 - B.y0 + 2 * m) / CELL);
     const solid = new Uint8Array(W * H);
     for (const w of M.walls) {
@@ -6329,6 +6334,14 @@ window.S3 = (() => {
   function box(g, w, h, d, x, y, z, m, rotY = 0, name, ud) { const me = new T.Mesh(new T.BoxGeometry(Math.max(0.005, w), Math.max(0.005, h), Math.max(0.005, d)), m); me.position.set(x, y, z); me.rotation.y = rotY; if (name) me.name = name; if (ud) me.userData = ud; g.add(me); return me; }
   const FC = { bed: '#d9d2c4', bed1: '#d9d2c4', sofa: '#9aa3a8', arm: '#9aa3a8', table: '#b98f62', chair: '#b98f62', desk: '#c9a77c', coffee: '#b98f62', wardrobe: '#cbb79a', shelf: '#b98f62', kitchen: '#e4e0d8', island: '#e4e0d8', fridge: '#e8e8e8', wc: '#ffffff', basin: '#ffffff', bath: '#ffffff', tv: '#4b4b4b', plant: '#6f9a6a', stdesk: '#c9a77c', bench: '#b98f62' };
   // rectangles covering the cells of one room (greedy), so floors follow any room shape
+  // every room's rectangles in one scan (2026-11-18; was one scan of the whole level per room): the same rectangles as rects(R0, lab)
+  function rectsAll(R0, skip) { const W = R0.W, H = R0.H, used = new Uint8Array(W * H), sk = new Int8Array(W * H).fill(-1), out = new Map();
+    const skipAt = (i, j) => { const k = j * W + i; if (sk[k] < 0) sk[k] = skip && skip(i, j) ? 1 : 0; return sk[k] === 1; };
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const k0 = j * W + i, lab = R0.lab[k0]; if (lab < 0 || used[k0] || skipAt(i, j)) continue;
+      const ok = (a, b) => R0.lab[b * W + a] === lab && !used[b * W + a] && !skipAt(a, b);
+      let w = 1; while (i + w < W && ok(i + w, j)) w++; let h = 1; outer: while (j + h < H) { for (let k = 0; k < w; k++) if (!ok(i + k, j + h)) break outer; h++; }
+      for (let jj = j; jj < j + h; jj++) for (let k = 0; k < w; k++) used[jj * W + i + k] = 1; let L = out.get(lab); if (!L) out.set(lab, (L = [])); L.push([R0.x0 + i * 0.1, R0.y0 + j * 0.1, w * 0.1, h * 0.1]); }
+    return out; }
   function rects(R0, lab, skip) {
     const used = new Uint8Array(R0.W * R0.H), out = [], ok = (i, j) => R0.lab[j * R0.W + i] === lab && !used[j * R0.W + i] && !(skip && skip(i, j));
     for (let j = 0; j < R0.H; j++) for (let i = 0; i < R0.W; i++) { if (!ok(i, j)) continue; let w = 1; while (i + w < R0.W && ok(i + w, j)) w++; let h = 1; outer: while (j + h < R0.H) { for (let k = 0; k < w; k++) if (!ok(i + k, j + h)) break outer; h++; }
@@ -6369,6 +6382,21 @@ window.S3 = (() => {
     const stubs = new Map(), stub = (id) => { let x = stubs.get(id); if (!x) { x = Object.create(me); x.userData = { k: 'imp', id, clipZ: clip }; stubs.set(id, x); } return x; };
     me.raycast = function (rc, out) { const n0 = out.length; T.Mesh.prototype.raycast.call(this, rc, out); for (let i = n0; i < out.length; i++) if (out[i].faceIndex != null) out[i].object = stub(c.ids[c.face[out[i].faceIndex]]); };
     return me; }
+  // the kept levels of the main view (2026-11-18). A level is drawn again only when something it is drawn from changed: its walls,
+  // openings, slabs, fences, voids, furniture, ceiling items, lights and room names, the walls and slabs of the level above (its roof)
+  // and of the level below (holes), every level's height, the view options, the display mode, the illustration and the layer looks.
+  // A kept level loses the outline of an old selection; anything hidden for a delete that did not happen shows again.
+  const LVC = new Map();
+  function lvSig(M, o, lv, lvs, isCut, top, below) { const up = lvs[lvs.indexOf(lv) + 1], ids = new Set([lv.id, up && up.id, below && below.id].filter(Boolean)), J = JSON.stringify, on = (a, f) => (a || []).filter(f);
+    const W = on(M.walls, (w) => w.lv === lv.id), wid = new Set(W.map((w) => w.id)), F = on(M.furn, (f) => f.lv === lv.id);
+    return [DISP, J(ILL), J(LOOK.spec), isCut, top, below ? below.id : '', J(lvs.map((l) => [l.id, l.z, l.h, l.slab])), J(W), J(on(M.ops, (q) => wid.has(q.wall))), J(on(M.floors, (f) => ids.has(f.lv))),
+      J(on(M.fences, (f) => f.lv === lv.id)), J(on(M.voids, (v) => ids.has(v.lv))), J(F), o.furnOk ? F.map((f) => (o.furnOk(f) ? 1 : 0)).join('') : '', J(on(M.ceil, (c) => c.lv === lv.id)), J(on(M.lights, (l) => l.lv === lv.id)),
+      J(on(M.names, (n) => ids.has(n.lv))), up ? J(on(M.walls, (w) => w.lv === up.id)) : '', o.hidden ? [...o.hidden].sort().join(',') : '',
+      J({ w: o.walls, f: o.floors, fu: o.furn, op: o.openings, opW: o.opW, opF: o.opF, c: o.ceil, l: o.lights, b: o.beams, nr: o.noRoof, a: o.all, fl: !!(o.flows && o.res) })].join('\u0001'); }
+  function lvReuse(g) { const drop = []; g.traverse((m) => { const u = m.userData; if (!u) return; if (u.__outline) drop.push(m); delete u.__selected; if (u.__hidNow) { m.visible = true; delete u.__hidNow; } });
+    for (const l of drop) { l.parent && l.parent.remove(l); l.geometry && l.geometry.dispose(); } }
+  function lvFree(g) { if (g.parent) g.parent.remove(g); g.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); }
+  function lvDrop() { for (const [, c] of LVC) delete c.g.userData.__lvKeep; LVC.clear(); }   // every level drawn again next time (after a live drag moved meshes)
   // one piece of a batch, as its own geometry (for an outline): positions of its range
   function impPart(m, id) { const r = m.userData.ranges && m.userData.ranges.get(id); if (!r) return null; const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(m.geometry.attributes.position.array.slice(r[0] * 3, (r[0] + r[1]) * 3), 3)); return g; }
   function buildGroup(M, S, o) {
@@ -6377,6 +6405,11 @@ window.S3 = (() => {
     const wallM = mat('#f4f1ea', opq(o.opW)), cutM = mat('#e2ddd3', opq(o.opW)), glassM = mat('#9cc3e6', { transparent: true, opacity: 0.38, depthWrite: false }), slabM = mat('#d9d4ca', opq(o.opF));
     for (const lv of show) {
       const isCut = !o.all && lv.id === cur.id, top = lvs.indexOf(lv) === lvs.length - 1, below = lvs[lvs.indexOf(lv) - 1];
+      // a level whose inputs did not change is kept as it was drawn (2026-11-18, the main view only): an edit rebuilds its own level
+      const LGk = o.lvCache ? lvSig(M, o, lv, lvs, isCut, top, below) : null, LGid = o.lvCache + ':' + lv.id, LGc = LGk && LVC.get(LGid);
+      if (LGc && LGc.sig === LGk) { lvReuse(LGc.g); G.add(LGc.g); continue; }
+      const LG = new T.Group(); LG.name = 'level'; G.add(LG); if (LGk) { LG.userData.__lvKeep = 1; const old = LVC.get(LGid); if (old && old.g !== LG) lvFree(old.g); LVC.set(LGid, { sig: LGk, g: LG }); }
+      { const G = LG;
       // walls, split around windows and doors
       const JN = wallJoins(M, lv.id);
       for (const w of (o.walls === false ? [] : M.walls)) { if (w.lv !== lv.id || (o.hidden && o.hidden.has(w.id))) continue; const jn = JN.get(w.id) || { e0: 0, e1: 0, cover: [] };
@@ -6416,7 +6449,7 @@ window.S3 = (() => {
       const upL = lvs[lvs.indexOf(lv) + 1], upR = upL && S.L[upL.id], upF = upL ? (M.floors || []).filter((f) => f.lv === upL.id) : [];
       const covered = (x, y) => !!upL && ((upR && STC.roomAtR(upR, x, y) >= 0) || upF.some((f) => { const P = floorPoints(f); let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a2 = P[i], b2 = P[j]; if ((a2[1] > y) !== (b2[1] > y) && x < (b2[0] - a2[0]) * (y - a2[1]) / (b2[1] - a2[1]) + a2[0]) c = !c; } return c; }));
       if (!o.noRoof && (o.all || !isCut) && (top || upL)) { const roofs = M.voids.filter((v) => v.lv === lv.id); const sk = (i, j) => { const x = R0.x0 + (i + 0.5) * 0.1, y = R0.y0 + (j + 0.5) * 0.1; return roofs.some((v) => x > v.x && x < v.x + v.w && y > v.y && y < v.y + v.d) || covered(x, y); };
-        for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of rects(R0, r.id, sk)) box(G, w + (top ? 0.2 : 0), 0.25, d + (top ? 0.2 : 0), x + w / 2, lv.z + lv.h + 0.125, -(y + d / 2), slabM, 0, 'roof');
+        const RA = rectsAll(R0, sk); for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of RA.get(r.id) || []) box(G, w + (top ? 0.2 : 0), 0.25, d + (top ? 0.2 : 0), x + w / 2, lv.z + lv.h + 0.125, -(y + d / 2), slabM, 0, 'roof');
         for (const v of roofs) if (v.glazed) box(G, v.w, 0.03, v.d, v.x + v.w / 2, lv.z + lv.h + 0.2, -(v.y + v.d / 2), glassM, 0, 'rooflight'); }
       // stairs: a simple flight in the stair opening of the level below this one's ceiling
       for (const v of M.voids) if (v.lv === lv.id && v.kind === 'stair') { const up = lvs[lvs.indexOf(lv) + 1]; if (!up) continue; const rise = up.z - lv.z, n = Math.max(6, Math.round(rise / 0.18)), along = v.d >= v.w; for (let k = 0; k < n; k++) { const f = (k + 0.5) / n, h = rise * (k + 1) / n; if (along) box(G, v.w * 0.9, h, v.d / n, v.x + v.w / 2, lv.z + h / 2, -(v.y + v.d * f), mat('#cfc8bb'), 0, 'stair'); else box(G, v.w / n, h, v.d * 0.9, v.x + v.w * f, lv.z + h / 2, -(v.y + v.d / 2), mat('#cfc8bb'), 0, 'stair'); } }
@@ -6443,7 +6476,7 @@ window.S3 = (() => {
           const len = 0.7 + Math.min(1.6, Math.sqrt(q) / 10), dv = new T.Vector3(v[0], 0, -v[1]).normalize(), org = new T.Vector3(p[0] - v[0] * len / 2, z, -(p[1] - v[1] * len / 2)); G.add(fatArrow(dv, org, len, col, q)); }
         else if (L.vd) { const vd = L.vd; if (vd.v.lv !== lv.id) continue; const up = e.ab >= e.ba, c = [vd.v.x + vd.v.w / 2, vd.v.y + vd.v.d / 2], len = 0.9 + Math.min(1.8, Math.sqrt(q) / 10); col = vd.roof ? (up ? 0xD8402A : 0x2f6fa8) : 0x6b6760; const org = new T.Vector3(c[0], vd.z + (up ? -len / 2 : len / 2), -c[1]); G.add(fatArrow(new T.Vector3(0, up ? 1 : -1, 0), org, len, col, q)); }
       }
-    }
+      } }
     if (o.site && o.site.length) { const SG = new T.Group(); SG.name = 'site'; const alpha=o.siteOpacity??(M.siteOpacity??1),sm=mat('#f4f4f2',{transparent:alpha<1,opacity:alpha,depthWrite:alpha>=1}),em=new T.LineBasicMaterial({color:0x8d8f93,transparent:true,opacity:alpha*.8});
       for (const m of o.site) { const sh = new T.Shape(m.outer.map((p) => new T.Vector2(p[0], p[1]))); for (const hr of m.holes || []) sh.holes.push(new T.Path(hr.map((p) => new T.Vector2(p[0], p[1])))); const geo = new T.ExtrudeGeometry(sh, { depth: Math.max(0.1, m.h - m.base), bevelEnabled: false }); geo.rotateX(-Math.PI / 2); const me = new T.Mesh(geo, sm); me.position.y=m.base;me.userData={k:'site',id:m.id||'context',opacity:alpha};me.add(new T.LineSegments(new T.EdgesGeometry(geo, 25), em)); SG.add(me); }
       G.add(SG); }
@@ -6700,10 +6733,10 @@ window.S3 = (() => {
   const siteFree = (grp) => { const b = new T.Box3(); grp.children.forEach((c) => { if (c.name !== 'site') b.expandByObject(c); }); return b.isEmpty() ? new T.Box3().setFromObject(grp) : b; };
   let LASTUPD = null;
   api.update = (M, S, o) => {
-    if (!R) return; if (grp) { scene.remove(grp); grp.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); }
+    if (!R) return; if (grp) { scene.remove(grp); for (const c of [...grp.children]) if (c.userData.__lvKeep) grp.remove(c); grp.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); }   /* kept levels are not disposed */
     if (M && M.site) worldBuild(M.site);
     const selImp = new Set((window.__wsSelections || [o.sel]).filter((x) => x && x.k === 'imp').map((x) => x.id).concat(o.liveImp || []));   // selected imports stay out of the batches: the gumball moves them on their own
-    LASTUPD = [M, S, o]; grp = o.explode ? explodeGroup(M, S, o) : buildGroup(M, S, Object.assign({}, o, { mergeImp: true, mergeSkip: selImp }));
+    LASTUPD = [M, S, o]; grp = o.explode ? explodeGroup(M, S, o) : buildGroup(M, S, Object.assign({}, o, { mergeImp: true, mergeSkip: selImp, lvCache: o.liveImp ? null : 'main' }));
     WM.topo = grp.children.some(g => g.userData.k === 'site' && g.userData.id === 'terrain');
     const selected=window.__wsSelections||[o.sel].filter(Boolean);for(const s of selected)highlight(grp,s); scene.add(grp);
     if (o.fit || !fitted) { fitted = true; const b = siteFree(grp), c = b.getCenter(new T.Vector3()), sz = b.getSize(new T.Vector3()), r = Math.max(sz.x, sz.z, sz.y * 2, 6) * (document.documentElement.classList.contains('ws') ? 1.3 : 1) /* the Workspace's floating controls stay clear of the model */; ctl.target.copy(c); if (ISO.dir) { const rb = canvas.getBoundingClientRect(); isoPlace(ISO.dir, c, 2 * r * 1.51 * Math.tan(PERSP_FOV * Math.PI / 360) * rb.width / Math.max(1, rb.height)); } else { cam.position.set(c.x + r * 0.75, c.y + r * 0.85, c.z + r * 1.0); cam.near = 0.1; cam.far = r * 40; } cam.updateProjectionMatrix(); ctl.update(); d0 = cam.position.distanceTo(ctl.target); }
@@ -6986,7 +7019,7 @@ window.S3 = (() => {
   // a change shown at once (2026-11-18): the objects about to be deleted hidden in the drawn view and the frame drawn, before the
   // model is updated (that follows straight after and rebuilds the view as usual). items: [{ k, id }]
   api.hideNow = (items) => { if (!grp || !R) return 0; const keys = new Set(items.map((s) => s.k + ':' + s.id)); let n = 0;
-    grp.traverse((m) => { if (!m.isMesh && !m.isLine && !m.isLineSegments) return; if (m.userData && m.userData.__outline) { m.visible = false; return; } const u = tagOf(m); if (u && keys.has(u.k + ':' + u.id) && m.visible) { m.visible = false; n++; } });
+    grp.traverse((m) => { if (!m.isMesh && !m.isLine && !m.isLineSegments) return; if (m.userData && m.userData.__outline) { m.visible = false; return; } const u = tagOf(m); if (u && keys.has(u.k + ':' + u.id) && m.visible) { m.visible = false; m.userData.__hidNow = 1; n++; } });
     if (HV.g) HV.g.visible = false; render(); return n; };
   api.reselect = (sel) => { if (!grp || !R) return false; const old = []; grp.traverse((m) => { if (m.userData && m.userData.__outline) old.push(m); if (m.userData && m.userData.__selected) delete m.userData.__selected; });
     const geos = new Set(); for (const l of old) { if (l.parent) l.parent.remove(l); if (l.geometry) geos.add(l.geometry); } for (const g of geos) g.dispose();
@@ -7088,7 +7121,7 @@ window.S3 = (() => {
   function roofGroup(M, S, lv) {
     const G = new T.Group(), R0 = S.L[lv.id], slabM = mat('#d9d4ca'), glassM = mat('#9cc3e6', { transparent: true, opacity: 0.38, depthWrite: false }); if (!R0) return G;
     const roofs = M.voids.filter((v) => v.lv === lv.id), sk = roofs.length ? (i, j) => { const x = R0.x0 + (i + 0.5) * 0.1, y = R0.y0 + (j + 0.5) * 0.1; return roofs.some((v) => x > v.x && x < v.x + v.w && y > v.y && y < v.y + v.d); } : null, rt = WBP.ROOF_T;
-    for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of rects(R0, r.id, sk)) box(G, w + 0.2, rt, d + 0.2, x + w / 2, lv.z + lv.h + rt / 2, -(y + d / 2), slabM, 0, 'roof');
+    const RA = rectsAll(R0, sk); for (const r of S.rooms) if (r.lv === lv.id) for (const [x, y, w, d] of RA.get(r.id) || []) box(G, w + 0.2, rt, d + 0.2, x + w / 2, lv.z + lv.h + rt / 2, -(y + d / 2), slabM, 0, 'roof');
     for (const v of roofs) if (v.glazed) box(G, v.w, 0.03, v.d, v.x + v.w / 2, lv.z + lv.h + 0.2, -(v.y + v.d / 2), glassM, 0, 'rooflight');
     return G;
   }
@@ -7449,7 +7482,7 @@ window.S3 = (() => {
   // ---- live drag (2026-10-31, after SketchUp): while dragging, the picked objects (and the gumball) are moved on screen as they
   // are; the scene is rebuilt once, on release. keys: ['k:id'…]; liveSet takes plan metres and radians
   const LIVE = { list: null, gz: null };
-  api.liveBegin = (keys) => { if (!grp) return false; const want = new Set(keys);
+  api.liveBegin = (keys) => { if (!grp) return false; const want = new Set(keys); lvDrop();
     { const inBatch = []; grp.traverse((m) => { if (m.userData && m.userData.merged) for (const id of m.userData.ids) if (want.has('imp:' + id)) inBatch.push(id); });   // an import inside a batch: drawn on its own first
       if (inBatch.length && LASTUPD) { const [M0, S0, o0] = LASTUPD; api.update(M0, S0, Object.assign({}, o0, { liveImp: inBatch })); } } LIVE.list = []; grp.updateMatrixWorld(true); const seen = new Set();
     grp.traverse((o) => { const u = o.userData; if (!u || !u.k || seen.has(o.parent)) { if (seen.has(o.parent)) seen.add(o); return; } if (!want.has((u.k === 'site' ? 'ctx' : u.k) + ':' + u.id) && !want.has(u.k + ':' + u.id)) return; seen.add(o);
@@ -7570,7 +7603,7 @@ window.S3 = (() => {
   api._impHit = (x, y, z) => { if (!cam || !grp) return []; grp.updateMatrixWorld(true); const v = new T.Vector3(x, z, -y).project(cam), r = canvas.getBoundingClientRect(); return api.hits(r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height).map((h) => h.ud.k + ':' + h.ud.id); };
   api._imp = () => { const r = { batches: 0, pieces: 0, single: 0, edges: 0, outlines: 0 }; if (grp) grp.traverse((m) => { if (m.userData && m.userData.__outline) r.outlines++; if (m.name !== 'import') return; if (m.userData.merged) { r.batches++; r.pieces += m.userData.ids.length; } else r.single++; for (const c of m.children) if (c.isLineSegments && !c.userData.__outline) r.edges++; }); return r; };
   api.wsMeshes = async (M, S, o) => {
-    await lib(); const G = buildGroup(M, S, Object.assign({ all: true, furn: true, walls: true, floors: true, openings: true, flows: false, colOf: () => '#f0e5d2', ceil: { light: 1, panel: 1, vent: 1, smoke: 1 }, lights: true }, o || {}));
+    await lib(); const G = buildGroup(M, S, Object.assign({ all: true, furn: true, walls: true, floors: true, openings: true, flows: false, colOf: () => '#f0e5d2', ceil: { light: 1, panel: 1, vent: 1, smoke: 1 }, lights: true, lvCache: 'ws' }, o || {}));
     G.updateMatrixWorld(true); const by = new Map(), v = new T.Vector3();
     G.traverse((m) => { if (!m.isMesh || m.name === 'wallcut' || m.name === 'beam') return; let vis = true; for (let q = m; q; q = q.parent) if (q.visible === false) { vis = false; break; } if (!vis) return;
       const mat = Array.isArray(m.material) ? m.material[0] : m.material; if (!mat || (mat.opacity != null && mat.opacity < 0.05) || mat.colorWrite === false) return;
@@ -7580,15 +7613,18 @@ window.S3 = (() => {
         let w = WSM.get(m.geometry); const c = mat.color || new T.Color(0xdddddd), ck = c.getHexString();
         if (!w || w.ck !== ck) { const P = m.geometry.attributes.position.array, q = new Float32Array(P.length), cl = new Float32Array(P.length); for (let i = 0; i < P.length; i += 3) { q[i] = P[i]; q[i + 1] = -P[i + 2]; q[i + 2] = P[i + 1]; cl[i] = c.r; cl[i + 1] = c.g; cl[i + 2] = c.b; } w = { ck, q, cl }; WSM.set(m.geometry, w); }
         e.typed.push(w); e.glass = e.glass || (mat.opacity ?? 1) < 0.9; return; }
+      // a mesh of a kept level: converted once (its place and colour do not change while the level is kept)
+      let kept = false; for (let q = m.parent; q; q = q.parent) if (q.userData && q.userData.__lvKeep) { kept = true; break; }
+      if (kept) { const ck = mat.uuid, w0 = WSM.get(m); if (w0 && w0.ck === ck) { e.typed.push(w0); e.glass = e.glass || (mat.opacity ?? 1) < 0.9; return; } }
       // straight into typed arrays (2026-11-18: was a push per number through a Vector3; this runs after every edit)
       const g = m.geometry, pos = g.attributes.position, idx = g.index, n = (idx ? idx.count : pos.count) - (idx ? idx.count : pos.count) % 3, flip = m.matrixWorld.determinant() < 0, c = mat.color || new T.Color(0xdddddd), a = mat.opacity ?? 1;
       const me = m.matrixWorld.elements, q = new Float32Array(n * 3), cl = new Float32Array(n * 3), P = pos.array, st = pos.itemSize || 3, ia = idx ? idx.array : null, inter = pos.isInterleavedBufferAttribute;
       for (let i = 0; i < n; i += 3) for (let j = 0; j < 3; j++) { const k = i + (flip ? 2 - j : j), t = ia ? ia[k] : k; let x, y, z; if (inter) { x = pos.getX(t); y = pos.getY(t); z = pos.getZ(t); } else { x = P[t * st]; y = P[t * st + 1]; z = P[t * st + 2]; }
         const o = (i + j) * 3, wx = me[0] * x + me[4] * y + me[8] * z + me[12], wy = me[1] * x + me[5] * y + me[9] * z + me[13], wz = me[2] * x + me[6] * y + me[10] * z + me[14];
         q[o] = wx; q[o + 1] = -wz; q[o + 2] = wy; cl[o] = c.r; cl[o + 1] = c.g; cl[o + 2] = c.b; }
-      e.typed.push({ q, cl }); e.glass = e.glass || a < 0.9; });
-    G.traverse((m) => { if (m.geometry) m.geometry.dispose(); });
-    const cat = (a, parts) => { if (!parts.length) return new Float32Array(a); if (!a.length && parts.length === 1) return parts[0];   /* a kept import: the same array each time, so the Workspace can keep what it made from it */ const n = parts.reduce((t, x) => t + x.length, a.length), out = new Float32Array(n); out.set(a); let at = a.length; for (const x of parts) { out.set(x, at); at += x.length; } return out; };
+      const wq = { q, cl, ck: mat.uuid }; if (kept) WSM.set(m, wq); e.typed.push(wq); e.glass = e.glass || a < 0.9; });
+    for (const c of [...G.children]) if (c.userData.__lvKeep) G.remove(c); G.traverse((m) => { if (m.geometry) m.geometry.dispose(); });   /* kept levels stay for the next time */
+    const cat = (a, parts) => { if (!parts.length) return new Float32Array(a); if (!a.length && parts.length === 1) return parts[0]; const memo = !a.length && WSM.get(parts[0]); if (memo && memo.parts.length === parts.length && memo.parts.every((x, i) => x === parts[i])) return memo.out;   /* a kept import: the same array each time, so the Workspace can keep what it made from it */ const n = parts.reduce((t, x) => t + x.length, a.length), out = new Float32Array(n); out.set(a); let at = a.length; for (const x of parts) { out.set(x, at); at += x.length; } if (!a.length) WSM.set(parts[0], { parts: parts.slice(), out }); return out; };   /* the same pieces: the same array, so the Workspace keeps what it made from it */
     return [...by.values()].map((e) => ({ k: e.k, id: e.id, glass: !!e.glass, pos: cat(e.pos, e.typed.map((w) => w.q)), col: cat(e.col, e.typed.map((w) => w.cl)) }));
   };
   return api;

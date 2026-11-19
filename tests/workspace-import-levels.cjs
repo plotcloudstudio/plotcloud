@@ -37,12 +37,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     console.log('PASS import: 13 floors and a roof found, 1F proposed as ground (B2, B1 named); the model moved down 6.25 m (to the 1F slab top); levels B2 … 11F and Roof');
     // the Move panel for one import
     const sel = async (name) => { await p.evaluate((n) => { const o = __ws2.model().studio.imports.find((x) => x.name === n); __ws2.hub.select('test', { k: 'imp', id: o.id }); }, name); await p.waitForSelector('.w2-move:not([hidden])', { timeout: 10000 }); };
+    const until = async (fn, want) => { const t = Date.now(); while (Date.now() - t < 10000 && (await fn()) !== want) await p.waitForTimeout(50); };   // the edit reaches the model within a moment; wait for it, not a fixed time
     const zOf = (name) => p.evaluate((n) => +__ws2.model().studio.imports.find((x) => x.name === n).g.z.toFixed(4), name);
     await sel('3F_slab'); assert.match(await p.locator('.w2-move').innerText(), /imported object[\s\S]*base Z[\s\S]*on 3F/);
-    const z0 = await zOf('3F_slab'); await p.click('.w2-move [data-mv=down]'); await p.waitForTimeout(500); assert.equal(await zOf('3F_slab'), +(z0 - 3).toFixed(4), 'down one floor (3.0 m)');
-    await p.evaluate(() => __ws2.hub.undo()); await p.waitForTimeout(500); assert.equal(await zOf('3F_slab'), z0, 'undo');
-    await p.fill('.w2-move [data-mv-d=z]', '-250'); await p.press('.w2-move [data-mv-d=z]', 'Enter'); await p.waitForTimeout(500); assert.equal(await zOf('3F_slab'), +(z0 - 0.25).toFixed(4), 'typed ΔZ');
-    await p.fill('.w2-move [data-mv-d=z]', '0'); await p.fill('.w2-move [data-mv-d=x]', '1000'); await p.click('.w2-move [data-mv=go]'); await p.waitForTimeout(500);
+    const z0 = await zOf('3F_slab'); await p.click('.w2-move [data-mv=down]'); await until(() => zOf('3F_slab'), +(z0 - 3).toFixed(4)); assert.equal(await zOf('3F_slab'), +(z0 - 3).toFixed(4), 'down one floor (3.0 m)');
+    await p.evaluate(() => __ws2.hub.undo()); await until(() => zOf('3F_slab'), z0); assert.equal(await zOf('3F_slab'), z0, 'undo');
+    await p.fill('.w2-move [data-mv-d=z]', '-250'); await p.press('.w2-move [data-mv-d=z]', 'Enter'); await until(() => zOf('3F_slab'), +(z0 - 0.25).toFixed(4)); assert.equal(await zOf('3F_slab'), +(z0 - 0.25).toFixed(4), 'typed ΔZ');
+    await p.fill('.w2-move [data-mv-d=z]', '0'); await p.fill('.w2-move [data-mv-d=x]', '1000'); await p.click('.w2-move [data-mv=go]'); await until(() => p.evaluate(() => +__ws2.model().studio.imports.find((x) => x.name === '3F_slab').g.x.toFixed(3)), 1);
     assert.equal(await p.evaluate(() => +__ws2.model().studio.imports.find((x) => x.name === '3F_slab').g.x.toFixed(3)), 1, 'typed ΔX'); await p.evaluate(() => { __ws2.hub.undo(); __ws2.hub.undo(); }); await p.waitForTimeout(600);
     console.log('PASS Move panel: ↓ 1 floor moves 3.0 m down and undo puts it back; typed ΔZ and ΔX move by the amounts');
     // the whole model, its levels following: one floor up puts B1 at 0, renamed 1F
