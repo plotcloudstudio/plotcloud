@@ -24,8 +24,9 @@ import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
 import * as PRIV from './interior/privacy.js?v=priv-20261114-1';
 import * as WAY from './interior/wayfinding.js?v=way-20261118-1';
-import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261118-6';
-import * as WUI from './wayfinding-ui.js?v=wfui-20261118-4';
+import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261119-2';
+import * as WUI from './wayfinding-ui.js?v=wfui-20261119-2';
+import * as WK from './wayfinding-walk.js?v=wfwalk-20261119-1';
 import * as SA from './site-access-ui.js?v=sa-20261118-2';
 import * as SSX from './interior/spacesyntax.js?v=ss-20261114-1';
 import * as ISO from './interior/isovist.js?v=iso-20261114-1';
@@ -128,6 +129,8 @@ export function mountChrome(app, api) {
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'), $('#addSimInt'));
   add.insertAdjacentHTML('beforeend', `<span class="sp-hr"></span><button type="button" class="sp-b sp-xlb" data-sp="xl" title="Export list: the views, series and sections for the report" aria-label="Export list" aria-pressed="false">${I(P.xlist)}<i class="sp-badge" hidden></i></button>`);
+  // Render (2026-11-19): presentation images of a 3D view with the person's own OpenAI key, its own window (render-panel.js)
+  add.insertAdjacentHTML('beforeend', `<button type="button" class="sp-b sp-rnb" data-sp="render" title="Render: a presentation image of the 3D view (OpenAI, your own key)" aria-label="Render">${I('<rect x="3.5" y="6" width="17" height="13" rx="2"/><path d="M8.5 6l1.5-2h4l1.5 2"/><circle cx="12" cy="12.5" r="3.4"/><path d="M18.5 2.8l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z"/>')}</button>`);
   root.append(left, add);
 
   // ---- bottom: Edit site | the model tools | select, text, delete, more
@@ -210,9 +213,15 @@ export function mountChrome(app, api) {
   // ---- buttons
   const doc = () => { const a = activePane(); try { return a.ready ? a.win.document : null; } catch { return null; } };
   const openProject = (section) => { UI.pacc = section; saveUI(); if (UI.panel === 'project' && root.classList.contains('sp-pal-open')) palOpen(false); projBtn.click(); };
+  async function openRenderWin() { solo(null); const RP = await import('./render-panel.js?v=render-20261119-1');
+    const ensure3D = async () => { if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); await new Promise((r) => setTimeout(r, 250)); } };
+    window.__wsRender = RP.openRender({ p, S, studio, toast: (t) => import('./app.js').then((m) => m.toast?.(t)).catch(() => {}),
+      capture: async (w, h) => { await ensure3D(); const win = INST.persp.win, a = win?.S3?.api || win?.S3; if (!a?.captureView) throw Error('Open the 3D view before capturing.'); return a.captureView(w, h); },
+      level: () => { const lv = INST.persp.ready ? INST.persp.ws.state().lv : null; return (studio()?.levels || []).find((l) => l.id === lv) || null; } }); }
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-sp]'); if (!b) return; const k = b.dataset.sp;
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
+    else if (k === 'render') openRenderWin();
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
     else if (k === 'terrain') openProject('site');
@@ -1392,7 +1401,7 @@ export function mountChrome(app, api) {
       let depth = null; const s0 = A.chosen[0], lv = b.levels.find((l) => l.id === A.level.id);
       try { depth = await WAY.run(lv.sc, { point: s0.p, pointName: s0.name, furn: ST.wayFurn, eye: +ST.wayEye }, (f) => { ST.progress = `looking around ${Math.round(f * 100)}%`; const e = studyCard.querySelector('.sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; }); } catch (e) { console.warn(e); }
       if (ST.waySel && !A.nodes.some((n) => n.no === ST.waySel)) ST.waySel = null;
-      return WUI.resultOf(A, depth, { esc, fmt, ST, views2, stopsOf, DEPTH: WAY.DEPTH, paintRes: (r) => paintRes(r) }); }
+      return WUI.resultOf(A, depth, { esc, fmt, ST, views2, stopsOf, DEPTH: WAY.DEPTH, paintRes: (r) => paintRes(r), plan: (lv) => (p.wayPlans || {})[lv] || null }); }
     if (id === 'daylight' && ST.dlWhere === 'section') return daylightSection();
     if (id === 'daylight') {
       const sc = w.planScene('daylight'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
@@ -2219,6 +2228,43 @@ export function mountChrome(app, api) {
       pane.ws.pickPoint?.((pt) => { const o = wfOrigin(); at = [pt[0] - o[0], pt[1] - o[1]]; ST.wayPick = 'signface'; drawStudy(); setTimeout(() => pane.ws.pickPoint?.(second), 0); }); drawStudy(); return; }
     if (d.way === 'entry') { const A = ST.res?.wayA, en = A && A.entrances.find((x) => x.room === ST.wayRoom); const w0 = INST.persp.ws; if (d.v === 'off' || !en) { w0.eyeView?.(null); return; } const o = A.F.SC.origin || [0, 0], P = (p) => [p[0] + o[0], p[1] + o[1]];
       goView('persp'); setTimeout(() => w0.eyeView?.(d.v === 'out' ? { p: P(en.door), look: P(en.out), lv: lvId } : { p: P(en.cam), look: P(en.door), lv: lvId }), 50); return; } });
+  // Wayfinding Phase 3 (2026-11-19): the signage layouts A/B/C, the layout chosen for the floor (saved with the project), its signs edited
+  const wfPlans = () => (p.wayPlans ||= {}), wfSave = () => { try { S.save(); } catch { } }, wfRedraw = () => { if (ST.res) paintRes(ST.res); drawStudy(); };
+  studyCard.addEventListener('click', (e) => { const b = e.target.closest('button[data-way]'); if (!b || ST.id !== 'wayfinding' || ST.busy) return; const d = b.dataset, A = ST.res?.wayA; if (!A) return; const lv = A.level.id, plan = wfPlans()[lv], o = A.F.SC.origin || [0, 0], pane = activePane();
+    const local = (pt) => [pt[0] - o[0], pt[1] - o[1]], edited = () => { plan.edited = true; plan.at = new Date().toISOString(); wfSave(); wfRedraw(); };
+    if (d.way === 'gen') { ST.wayOpts = { lv, rev: A.ms + ':' + A.nodes.length, list: WFS.layouts(A) }; wfRedraw(); return; }
+    if (d.way === 'use') { const L = ST.wayOpts?.list?.find((x) => x.key === d.v); if (!L) return; wfPlans()[lv] = { opt: d.v, signs: JSON.parse(JSON.stringify(L.signs)), at: new Date().toISOString(), level: A.level.name }; ST.wayBA = null; wfSave(); wfRedraw(); return; }
+    if (!plan) return;
+    if (d.way === 'planoff') { if (!confirm('Remove the signage layout of this floor?')) return; delete wfPlans()[lv]; ST.wayBA = null; wfSave(); wfRedraw(); return; }
+    if (d.way === 'signsel') { ST.waySign = ST.waySign === d.v ? null : d.v; const g = plan.signs.find((x) => x.id === d.v); if (g && ST.waySign) ST.res.wayFocus({ p: g.p }); drawStudy(); return; }
+    if (d.way === 'signdel') { plan.signs.splice(+d.v, 1); edited(); return; }
+    if (d.way === 'ba') { try { ST.wayBA = { lv, n: JSON.stringify(plan.signs).length, r: WFS.beforeAfter(INST.persp.ws.buildingScene(), WUI.optsOf(ST, lv, qualOf().k === 'refined'), plan.signs) }; } catch (er) { console.warn(er); } drawStudy(); return; }
+    const pick = (mode, fn) => { if (ST.wayPick === mode) { ST.wayPick = null; pane.ws.pickPoint?.(null); drawStudy(); return; } ST.wayPick = mode; pane.ws.pickPoint?.((pt) => { ST.wayPick = null; fn(local(pt)); }); drawStudy(); };
+    if (d.way === 'signmove') pick('move:' + d.v, (q) => { const g = plan.signs[+d.v]; if (g) { g.p = q.map((x) => +x.toFixed(3)); g.mount = 'hung'; g.sides = 2; edited(); } });
+    else if (d.way === 'signturn') pick('turn:' + d.v, (q) => { const g = plan.signs[+d.v]; if (g) { g.face = Math.round(((Math.atan2(q[1] - g.p[1], q[0] - g.p[0]) * 180 / Math.PI) % 360 + 360) % 360); edited(); } });
+    else if (d.way === 'signadd') pick('add', (q) => { const n = A.nodes.slice().sort((a, b2) => Math.hypot(a.p[0] - q[0], a.p[1] - q[1]) - Math.hypot(b2.p[0] - q[0], b2.p[1] - q[1]))[0]; if (!n) return; const g = WFS.signAt(A, n); let id = g.id, k = 2; while (plan.signs.some((x) => x.id === id)) id = g.id + '-' + k++; plan.signs.push({ ...g, id }); edited(); }); });
+  // Wayfinding phases 4–5 (2026-11-19): the first-person walk along a route, and the schedule and drawing exports
+  const wfFile = (data, name, type) => { const url = typeof data === 'string' && data.startsWith('data:') ? data : URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type })); const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); if (!url.startsWith('data:')) setTimeout(() => URL.revokeObjectURL(url), 4000); };
+  const wfWalkEnd = () => { if (ST.wayWalk) { ST.wayWalk.ctl.stop(); ST.wayWalk = null; try { INST.persp.ws.eyeView?.(null); } catch { } } };
+  studyCard.addEventListener('click', async (e) => { const b = e.target.closest('button[data-way]'); if (!b || ST.id !== 'wayfinding' || ST.busy) return; const k = b.dataset.way, A = ST.res?.wayA; if (!A || !/^(walk|x)/.test(k)) return;
+    const lv = A.level.id, plan = wfPlans()[lv] || null, o = A.F.SC.origin || [0, 0], W = ST.wayWalk;
+    if (k === 'walkgo') { wfWalkEnd(); const ok = A.routes.filter((r) => !r.noRoute && r.pts && r.pts.length > 1), i = Math.min(ok.length - 1, Math.max(0, ST.wayWalkR || 0)), route = ok[i]; if (!route) return;
+      const check = WFS.walkCheck(A, route, plan ? plan.signs : []), w0 = INST.persp.ws; await goView('persp'); for (let j = 0; j < 40 && !INST.persp.ready; j++) await new Promise((r) => setTimeout(r, 100));
+      await w0.eyeView?.({ p: [route.pts[0][0] + o[0], route.pts[0][1] + o[1]], look: [route.pts[1][0] + o[0], route.pts[1][1] + o[1]], lv });
+      const S0 = { lv, r: i, check, state: null }; ST.wayWalk = S0;
+      S0.ctl = WK.walker({ check, speed: +ST.waySpeed || 1.2, place: (p, a) => w0.walkTo?.(p[0] + o[0], p[1] + o[1], a), onState: (st) => { if (ST.wayWalk !== S0) return; S0.state = st; if (st.quiet) { const el = studyCard.querySelector('[data-way-walkpos]'); if (el) el.firstChild.textContent = `${st.s.toFixed(1)} of ${st.len.toFixed(1)} m`; } else drawStudy(); } });
+      drawStudy(); return; }
+    if (W && k === 'walkplay') W.ctl.play(); else if (W && k === 'walkpause') W.ctl.pause(); else if (W && k === 'walknext') W.ctl.next(); else if (W && k === 'walkprev') W.ctl.prev(); else if (W && k === 'walkrestart') W.ctl.restart(); else if (k === 'walkstop') { wfWalkEnd(); drawStudy(); }
+    if (!/^x/.test(k) || k === 'xhigh') return; const ev = plan ? WFS.evaluate(A, plan.signs) : null, o2 = { project: p.name, highOnly: !!ST.wayXHigh }, base = `${String(p.name || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-wayfinding-${String(A.level.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}${ST.wayXHigh ? '-high' : ''}`;
+    try { if (k === 'xcsv' && ev) wfFile(WK.scheduleCSV(WK.schedule(A, plan, ev, o2)), base + '-schedule.csv', 'text/csv');
+      else if (k === 'xsvg') wfFile(WK.drawingSVG(A, plan, ev, o2), base + '.svg', 'image/svg+xml');
+      else if (k === 'xdxf') wfFile(WK.drawingDXF(A, plan, ev, o2), base + '.dxf', 'application/dxf');
+      else if (k === 'xpng') wfFile(await WK.drawingPNG(WK.drawingSVG(A, plan, ev, o2)), base + '.png');
+      else if (k === 'xpdf') { b.disabled = true; wfFile(await WK.drawingPDF(await WK.drawingPNG(WK.drawingSVG(A, plan, ev, o2)), ev ? WK.schedule(A, plan, ev, o2) : [], `Wayfinding signage · ${A.level.name}`), base + '.pdf', 'application/pdf'); b.disabled = false; } }
+    catch (er) { console.warn(er); b.disabled = false; } });
+  studyCard.addEventListener('change', (e) => { const t = e.target; if (ST.id !== 'wayfinding') return; if (t.dataset.way === 'walkroute') { wfWalkEnd(); ST.wayWalkR = +t.value; drawStudy(); } else if (t.dataset.way === 'xhigh') { ST.wayXHigh = t.checked; } });
+  studyCard.addEventListener('change', (e) => { const t = e.target; if (t.dataset.waySay == null || ST.id !== 'wayfinding') return; const A = ST.res?.wayA, plan = A && wfPlans()[A.level.id]; if (!plan) return; const [i, j] = t.dataset.waySay.split(':').map(Number), w = plan.signs[i]?.ways[j]; if (!w) return;
+    w.to = t.value.split(',').map((x) => x.trim()).filter(Boolean); plan.edited = true; wfSave(); wfRedraw(); });
   studyCard.addEventListener('change', (e) => { const t = e.target, k = t.dataset.priv; if (k) { ST.priv = { ...ST.priv, [k]: k === 'doors' ? t.checked : +t.value }; drawStudy(); return; }
     if (t.dataset.privneed != null) { let sc = null; try { sc = INST.persp.ws.planScene('privacy'); } catch { } const key = 'privacy:' + (sc?.source?.project || 'sample'), m = PKEEP.get(key, {}); if (t.value) m[t.dataset.privneed] = t.value; else delete m[t.dataset.privneed]; PKEEP.set(key, m); ST.privNeedV = (ST.privNeedV || 0) + 1; drawStudy(); return; } });
   studyCard.addEventListener('click', (e) => { const b = e.target.closest('[data-iso="pick"]'); if (!b || ST.busy) return; const pane = activePane(); if (!pane.ready || !pane.ws.pickPoint) return;

@@ -60,6 +60,18 @@ export async function emailLink(email) { await call('/auth/v1/otp?redirect_to=' 
 // passwords (2026-11-17): at least 10 characters with letters and a number; the project's Auth settings require the same (set 2026-11-19), so a direct API sign-up cannot skip it
 export const PASSWORD_RULE = 'At least 10 characters, with letters and at least one number.';
 export const passwordOk = (pw) => typeof pw === 'string' && pw.length >= 10 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
+// leaked passwords (2026-11-19): a new password is looked up in Have I Been Pwned's list of passwords from known breaches, by
+// k-anonymity: only the first 5 characters of its SHA-1 hash leave the browser (the reply is padded, so its size says nothing).
+// The count, 0 when it is not listed, or null when the check could not be made (offline, slow, blocked): then sign-up goes on.
+// It runs in the browser only; the free Supabase plan cannot check this on the server.
+export const BREACH_NOTE = 'Passwords found in known data breaches are refused (checked with Have I Been Pwned; your password is not sent).';
+export async function breachCount(pw, { timeout = 4000 } = {}) {
+  try { const d = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(pw)), h = [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), timeout);
+    const r = await fetch('https://api.pwnedpasswords.com/range/' + h.slice(0, 5), { headers: { 'Add-Padding': 'true' }, signal: ac.signal, credentials: 'omit', referrerPolicy: 'no-referrer' }); clearTimeout(t); if (!r.ok) return null;
+    const suf = h.slice(5); for (const line of (await r.text()).split('\n')) { const [a, n] = line.trim().split(':'); if (a === suf) return +n || 0; } return 0;
+  } catch (e) { return null; } }
+export const breachMsg = (n) => `This password has appeared in ${n.toLocaleString('en')} known data breach${n === 1 ? '' : 'es'}, so it is easy to guess. Choose another.`;
 // a forgotten password: Supabase emails a link back to the site, which then asks for a new one (see captureRedirect)
 export async function resetPassword(email) { await call('/auth/v1/recover?redirect_to=' + encodeURIComponent(back()), { method: 'POST', body: { email }, auth: false }); return { sent: true }; }
 export async function setPassword(password) { if (!passwordOk(password)) throw new Error(PASSWORD_RULE); await call('/auth/v1/user', { method: 'PUT', body: { password } }); return { ok: true }; }

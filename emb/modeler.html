@@ -6776,7 +6776,7 @@ window.S3 = (() => {
   function cutApply() { if (!R) return; R.localClippingEnabled = true;
     // restore what was cut, then cut the design again with its own copies of the materials (shared ones are left alone)
     if (grp) grp.traverse((o) => { if (o.userData.__precut) { const c = o.material; o.material = o.userData.__precut; delete o.userData.__precut; for (const m of Array.isArray(c) ? c : [c]) m.dispose?.(); } });
-    if (!FLR.cut || !FLR.plane || !grp) return;
+    if (!FLR.cut || !FLR.plane || !grp || WALK.on) return;   // walking at eye height (2026-11-19): the walls whole, not cut at 1.2 m for the plan
     grp.traverse((o) => { if (!(o.isMesh || o.isLine || o.isLineSegments) || !o.material || o.userData.__precut) return; const u = tagOf(o); if (u && ['site', 'ctx', 'world'].includes(u.k)) return;   /* untagged parts of the model (slabs, ceilings) are cut too */
       const cut = (m) => { const c = m.clone(); c.clippingPlanes = [FLR.plane]; return c; }; o.userData.__precut = o.material; o.material = Array.isArray(o.material) ? o.material.map(cut) : cut(o.material); }); }
   // people walking the routes (2026-11-01): simple scale figures (1.7 m) that fade in, walk and fade out
@@ -6917,9 +6917,16 @@ window.S3 = (() => {
       const g = new T.BufferGeometry().setFromPoints(pts); const ln = new T.LineSegments(g, new T.LineDashedMaterial({ color: 0xf59e0b, dashSize: 0.3, gapSize: 0.18, depthTest: false })); ln.computeLineDistances(); ln.renderOrder = 20; SFR.g.add(ln); SFR.preview = ln; } render(); };
   // wayfinding signs in 3D (2026-11-18): a 0.6 × 0.3 m panel on a post, its face at 2.1 m, turned to face the people it serves, in its class colour
   const SGN = { g: null };
-  api.signs = (list) => { if (!scene) return; if (SGN.g) { scene.remove(SGN.g); SGN.g.traverse((x) => { x.geometry && x.geometry.dispose(); x.material && x.material.dispose(); }); SGN.g = null; } if (!list || !list.length) { render(); return; }
+  api.signs = (list) => { if (!scene) return; if (SGN.g) { scene.remove(SGN.g); SGN.g.traverse((x) => { x.geometry && x.geometry.dispose(); for (const m of [].concat(x.material || [])) { m.map && m.map.dispose(); m.dispose(); } }); SGN.g = null; } if (!list || !list.length) { render(); return; }
     const G = new T.Group(); G.name = 'wf-signs';
-    for (const s of list) { const z = s.z || 0, col = new T.Color(s.col || '#d8402a'), face = (s.face || 0) * Math.PI / 180, panel = new T.Mesh(new T.BoxGeometry(0.6, 0.3, 0.04), new T.MeshLambertMaterial({ color: col }));
+    // proposed signs (2026-11-19): a board with its arrows and destinations, on the wall at eye height or hung double-sided over the corridor
+    const face2 = (lines, col, w, h) => { const c = document.createElement('canvas'); c.width = Math.round(w * 400); c.height = Math.round(h * 400); const x = c.getContext('2d'); x.fillStyle = col; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#fff';
+      const n = Math.max(1, lines.length), fs = Math.min(c.height / (n + 0.6) * 0.62, 56); x.font = `600 ${fs}px Inter, Arial, sans-serif`; x.textBaseline = 'middle'; lines.forEach((t, i) => x.fillText(t, fs * 0.5, (i + 0.8) * c.height / (n + 0.6), c.width - fs)); const tx = new T.CanvasTexture(c); tx.colorSpace = T.SRGBColorSpace; return new T.MeshBasicMaterial({ map: tx }); };
+    for (const s of list) if (s.mount) { const z = s.z || 0, face = (s.face || 0) * Math.PI / 180, w = s.w || 0.9, h = s.h || 0.3, cy = z + (s.mount === 'wall' ? 1.7 : 2.3), edge = new T.MeshLambertMaterial({ color: new T.Color(s.col || '#1f3a68') });
+      const mats = [edge, edge, edge, edge, face2(s.text || [], s.col || '#1f3a68', w, h), s.textB ? face2(s.textB, s.col || '#1f3a68', w, h) : edge];
+      const panel = new T.Mesh(new T.BoxGeometry(w, h, 0.03), mats); panel.position.set(s.p[0], cy, -s.p[1]); panel.rotation.y = face + Math.PI / 2; panel.name = 'wf-sign'; panel.userData = { id: s.id };   /* the box's front (+z) turned to the plan direction the sign faces */ G.add(panel);
+      if (s.mount === 'hung') for (const k of [-1, 1]) { const rod = new T.Mesh(new T.CylinderGeometry(0.008, 0.008, 0.5, 6), new T.MeshLambertMaterial({ color: 0x6b7280 })); rod.position.set(s.p[0] + Math.sin(face) * k * w * 0.4, cy + h / 2 + 0.25, -s.p[1] + Math.cos(face) * k * w * 0.4); G.add(rod); } }
+    for (const s of list) if (!s.mount) { const z = s.z || 0, col = new T.Color(s.col || '#d8402a'), face = (s.face || 0) * Math.PI / 180, panel = new T.Mesh(new T.BoxGeometry(0.6, 0.3, 0.04), new T.MeshLambertMaterial({ color: col }));
       panel.position.set(s.p[0], z + 2.1, -s.p[1]); panel.rotation.y = face - Math.PI / 2; panel.name = 'wf-sign'; G.add(panel);
       const post = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 2.0, 8), new T.MeshLambertMaterial({ color: 0x4b5563 })); post.position.set(s.p[0], z + 1.0, -s.p[1]); post.name = 'wf-post'; G.add(post); }
     scene.add(G); SGN.g = G; render(); };
@@ -7055,9 +7062,9 @@ window.S3 = (() => {
       // v131: the start marker's pose (plan x, y and the angle from +x) is the only input; the walk never writes it back
       if (o.pose) { WALK.x = o.pose.x; WALK.y = o.pose.y; WALK.yaw = o.pose.angle - Math.PI / 2; }
       if (!walkFree(WALK.x, WALK.y)) { outer: for (let r = 0.1; r <= 1.5; r += 0.1) for (let a = 0; a < 16; a++) { const x = WALK.x + r * Math.cos(a * Math.PI / 8), y = WALK.y + r * Math.sin(a * Math.PI / 8); if (walkFree(x, y)) { WALK.x = x; WALK.y = y; break outer; } } }
-      WALK.on = true; WALK.last = performance.now(); walkPose(); render(); WALK.raf = requestAnimationFrame(walkTick); return true;
+      WALK.on = true; if (FLR.cut) cutApply(); WALK.last = performance.now(); walkPose(); render(); WALK.raf = requestAnimationFrame(walkTick); return true;
     },
-    exit() { if (!WALK.on) return; WALK.on = false; cancelAnimationFrame(WALK.raf); WALK.keys.clear(); const s = WALK.saved; if (s) { cam.position.copy(s.pos); cam.quaternion.copy(s.quat); cam.zoom = s.zoom; cam.updateProjectionMatrix(); ctl.target.copy(s.target); } ctl.enabled = true; ctl.update(); render(); },
+    exit() { if (!WALK.on) return; WALK.on = false; if (FLR.cut) setTimeout(() => { cutApply(); render(); }, 0); cancelAnimationFrame(WALK.raf); WALK.keys.clear(); const s = WALK.saved; if (s) { cam.position.copy(s.pos); cam.quaternion.copy(s.quat); cam.zoom = s.zoom; cam.updateProjectionMatrix(); ctl.target.copy(s.target); } ctl.enabled = true; ctl.update(); render(); },
     look(dx, dy) { if (!WALK.on) return; WALK.yaw -= dx * 0.005; WALK.pitch = Math.max(-1.3, Math.min(1.3, WALK.pitch - dy * 0.005)); walkPose(); render(); },
     key(code, down) { if (down) WALK.keys.add(code); else WALK.keys.delete(code); },
     clearKeys() { WALK.keys.clear(); },
@@ -8169,6 +8176,8 @@ if (window.__WSROLE) {
     // wayfinding (2026-11-18): sign panels in 3D, and an eye-level view from a spot looking at another (the Room Entrance View)
     signShow(list) { if (window.S3 && S3.signs) S3.signs(list); },
     signCount() { return window.S3 && S3._signs ? S3._signs() : 0; },
+    // the first-person walk of the Wayfinding study (2026-11-19): the walking camera moved along a route each frame (plan x, y and plan angle)
+    walkTo(x, y, ang) { if (!(window.S3 && S3.walk && S3.walk.state().on)) return false; S3.walk.place(x, y, Math.atan2(-Math.cos(ang), Math.sin(ang))); return true; },
     async eyeView(o) { if (!o) { if (WALKING) walkExit(); return null; } const ang = Math.atan2(o.look[1] - o.p[1], o.look[0] - o.p[0]); poseSet({ x: +o.p[0].toFixed(3), y: +o.p[1].toFixed(3), angle: ang, lv: o.lv || LV }); if (WALKING) walkExit(); await walkGo(); if (o.eye && window.S3 && S3.walk) { S3.walk.place(o.p[0], o.p[1]); } return window.S3 && S3.walk ? S3.walk.state() : null; },
     // the walls and levels the structure is laid out from (2026-11-17)
     structInput() { const hid = new Set(M.hiddenIds || []); return { levels: M.levels.map((l) => ({ id: l.id, z: l.z, h: l.h, name: l.name })), walls: M.walls.filter((w) => !hid.has(w.id)).map((w) => ({ id: w.id, lv: w.lv, a: w.a.slice(), b: w.b.slice(), t: w.t, h: w.h, mat: w.mat || '', layer: w.layer || '', sourceLayer: w.sourceLayer || '', bulge: w.bulge || 0 })), masses: massList(M).length }; },
