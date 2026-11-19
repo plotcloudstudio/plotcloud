@@ -32,6 +32,6 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.evaluate(() => { __ws2.inst.plan.ws.undo(); }); await p.waitForTimeout(400); await p.evaluate(() => { __ws2.inst.plan.ws.undo(); }); await p.waitForTimeout(800);
     const s3 = await st(); assert.deepEqual(s3.pts, s0.pts, 'undo restores the water');
     // 4 · the 3D view has the same site
-    const p3 = await p.evaluate(() => JSON.parse(__ws2.inst.persp.ws.model()).site.areas.find((x) => x.id === 'runnel').pts); assert.deepEqual(p3, s0.pts, 'the 3D view follows');
+    const p3 = await p.evaluate(() => { __ws2.syncViews(); return JSON.parse(__ws2.inst.persp.ws.model()).site.areas.find((x) => x.id === 'runnel').pts; });   // as when the 3D view is shown: a hidden view is brought up to date then, or when the input is still assert.deepEqual(p3, s0.pts, 'the 3D view follows');
     console.log('PASS undo, and the 3D view follows'); assert.deepEqual(errs, []);
   } finally { await b.close(); } })().catch((e) => { console.error(e); process.exit(1); });
