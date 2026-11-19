@@ -6042,15 +6042,30 @@ function setImpAng(o, ang, cx, cy) { if (o.w0 == null) { const odd = ((o.rot || 
 const IMPP = new Map(); function impPath(o, m) { const sig = [o.g.x, o.g.y, o.g.w, o.g.d, impAng(o), o.w0, o.d0].join(','); let c = IMPP.get(o.id); if (c && c.m === m && c.sig === sig) return c.P;
   const P = new Path2D(); for (let i = 0; i + 8 < m.length; i += 9) { const A = impXY(o, m[i], m[i + 1]), B = impXY(o, m[i + 3], m[i + 4]), Cc = impXY(o, m[i + 6], m[i + 7]); P.moveTo(A[0], A[1]); P.lineTo(B[0], B[1]); P.lineTo(Cc[0], Cc[1]); P.closePath(); }
   IMPP.set(o.id, { m, sig, P }); if (IMPP.size > (M.imports || []).length + 64) { const live = new Set((M.imports || []).map((q) => q.id)); for (const k of IMPP.keys()) if (!live.has(k)) IMPP.delete(k); } return P; }
-function drawImports() { if (!(M.imports || []).length || CAM === '3d') return; const d = VP.d;
-  for (const o of M.imports) { if (!impOn(o) || !impLv(o)) continue; const a = W2S([o.g.x, o.g.y + o.g.d]), sel = wbSelected('imp',o.id), hov = HOV && HOV.k === 'imp' && HOV.id === o.id;
+function drawImportsTo(g, live) { const d = VP.d;
+  for (const o of M.imports) { if (!impOn(o) || !impLv(o)) continue; const a = W2S([o.g.x, o.g.y + o.g.d]), sel = wbSelected('imp',o.id), hov = live && HOV && HOV.k === 'imp' && HOV.id === o.id;
     g.save(); if(!sel){g.fillStyle = 'rgba(120,124,132,.10)'; g.fillRect(a[0], a[1], o.g.w * V.s, o.g.d * V.s); g.setLineDash([5 * d, 3 * d]); g.strokeStyle = hov ? C.ink : '#7b818a'; g.lineWidth = 1.2 * d; g.strokeRect(a[0], a[1], o.g.w * V.s, o.g.d * V.s); g.setLineDash([]);}
     const m = meshOf(o); if (m && m.length && !sel && o.g.w * o.g.d * V.s * V.s > 900 * d * d && m.length < 60000) { const P = impPath(o, m);   // its triangles as one path in plan metres, made once (2026-11-18)
       g.save(); g.translate(V.ox, V.oy); g.scale(V.s, -V.s); g.strokeStyle = 'rgba(80,84,92,.35)'; g.lineWidth = 0.6 * d / V.s; g.stroke(P); g.restore(); }
     else if (m && m.length && sel) { g.strokeStyle = sel?'#d8402a':'rgba(80,84,92,.35)';g.fillStyle='#d8402a'; g.lineWidth = 0.6 * d; g.beginPath();
       for (let i = 0; i + 8 < m.length; i += 9) { const p = (k) => W2S(impXY(o, m[i + k], m[i + k + 1])), A = p(0), B = p(3), Cc = p(6); if(sel)g.beginPath();g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.lineTo(Cc[0], Cc[1]); g.closePath();if(sel){g.fill();g.stroke();} }if(!sel)g.stroke(); }
-    if (o.g.w * V.s > 60 * d) { g.font = `${10.5 * d}px system-ui, sans-serif`; g.fillStyle = '#4b5058'; g.fillText(o.name, a[0] + 4 * d, a[1] + 13 * d); }
+    if (o.g.w * V.s > 60 * d) { g.font = `${10.5 * d}px system-ui, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillStyle = '#4b5058'; g.fillText(o.name, a[0] + 4 * d, a[1] + 13 * d); }   // inside the box's top left (it took the alignment left by what was drawn before)
     g.restore(); } }
+// Large files 6 (2026-11-19): with many imported pieces their layer of the plan is drawn once into a picture of its own and only drawn
+// again when something it shows changes (the view, the level, the pieces, their layers, what is hidden or selected); hovering,
+// drawing, and edits elsewhere put that picture back instead of drawing thousands of pieces. The hovered piece is drawn on top.
+const IMPC = { cv: null, key: '' }; window.__impCache = { drawn: () => IMPC.n || 0, draw: () => draw(), hover: (id) => { HOV = id ? { k: 'imp', id } : null; draw(); } };   // test hook: how often the layer was drawn
+function impKey() { let h = 0; const mix = (v) => { h = Math.imul(h ^ (typeof v === 'number' ? Math.round(v * 1e4) : String(v).length * 131 + (String(v).charCodeAt(0) || 0)), 16777619); };
+  for (const o of M.imports) { mix(o.g.x); mix(o.g.y); mix(o.g.z); mix(o.g.w); mix(o.g.d); mix(o.g.h || 0); mix(impAng(o)); mix(impOn(o) ? 1 : 0); mix(wbSelected('imp', o.id) ? 1 : 0); mix(o.id); mix(o.name || ''); mix(meshOf(o) ? meshOf(o).length : 0); }
+  for (const l of M.levels) { mix(l.z); mix(l.id); }
+  return [VP.w, VP.h, VP.d, V.s, V.ox, V.oy, LV, CAM, VIEW2D, M.imports.length, h].join(';'); }
+function drawImports() { if (!(M.imports || []).length || CAM === '3d') return;
+  if (M.imports.length < 200 || typeof OffscreenCanvas === 'undefined' || window.__impNoCache) return drawImportsTo(g, true);
+  const key = impKey(); if (!IMPC.cv || IMPC.cv.width !== VP.w || IMPC.cv.height !== VP.h) { IMPC.cv = new OffscreenCanvas(VP.w, VP.h); IMPC.key = ''; }
+  if (IMPC.key !== key) { const x = IMPC.cv.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, VP.w, VP.h); x.setTransform(g.getTransform()); drawImportsTo(x, false); IMPC.key = key; IMPC.n = (IMPC.n || 0) + 1; }
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(IMPC.cv, 0, 0); g.restore();
+  const o = HOV && HOV.k === 'imp' && M.imports.find((q) => q.id === HOV.id); if (o && impOn(o) && impLv(o) && !wbSelected('imp', o.id)) { const d = VP.d, a = W2S([o.g.x, o.g.y + o.g.d]);
+    g.save(); g.setLineDash([5 * d, 3 * d]); g.strokeStyle = C.ink; g.lineWidth = 1.2 * d; g.strokeRect(a[0], a[1], o.g.w * V.s, o.g.d * V.s); g.restore(); } }
 { const _dm = drawMasses; drawMasses = function () { _dm(); drawImports(); }; }
 { const _ht = hitTest; hitTest = function (p, opt = {}) { const h = _ht(p, opt); if (CAM === '3d' || VIEW2D !== 'plan') return h; if (h && !['room', 'ctx', 'floor', 'mass'].includes(h.k)) return h;   // an import sits above floors, rooms and masses
   for (const o of (M.imports || []).slice().reverse()) if (impOn(o) && impLv(o) && p[0] >= o.g.x && p[0] <= o.g.x + o.g.w && p[1] >= o.g.y && p[1] <= o.g.y + o.g.d) return { k: 'imp', id: o.id };
