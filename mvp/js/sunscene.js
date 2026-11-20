@@ -1,4 +1,4 @@
-// A project version as the PlotCloud scene the Sun Hours engine (emb/sunhours.html) reads: the same "plotcloud-scene"
+// A project version as the SimuSite scene the Sun Hours engine (emb/sunhours.html) reads: the same "plotcloud-scene"
 // Plan Studio sends — masses with roles, location and north, plan metres, Z up. Only the input is prepared here;
 // the analysis, the pictures and the exports are the engine's own.
 //   proposed: one storey block per level, the outer outline of its walls and slabs (as Plan Studio sends storey outlines), plus each roof

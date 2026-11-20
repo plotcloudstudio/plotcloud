@@ -10,7 +10,7 @@
 <script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 </head>
 <body>
-<title>PlotCloud Structural Analysis</title>
+<title>SimuSite Structural Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -164,7 +164,7 @@ select#comboList { font-size: 12.5px; }
 
 <div class="app">
   <aside class="panel" aria-label="Structural analysis settings">
-    <div class="brand"><b>PlotCloud <span>Structural Analysis</span></b><small>Explore a structure in Quick mode, or bring your own model to Advanced. Solved in this browser; your model is never uploaded.</small></div>
+    <div class="brand"><b>SimuSite <span>Structural Analysis</span></b><small>Explore a structure in Quick mode, or bring your own model to Advanced. Solved in this browser; your model is never uploaded.</small></div>
     <div class="modebar"><div class="seg" id="modeSeg" role="group" aria-label="Mode"><button type="button" data-mode="quick" aria-pressed="true">Quick analysis</button><button type="button" data-mode="adv" aria-pressed="false">Advanced</button></div>
       <p class="note" id="modeNote">Quick: describe the building and get a sized, solved frame. Advanced: the same model, every member, support and load editable.</p></div>
 
@@ -226,7 +226,7 @@ select#comboList { font-size: 12.5px; }
       <h2 id="h-model"><i>1</i>Model</h2>
       <div class="drop" id="drop">
         <div><button type="button" class="btn" id="pick">Choose a model file</button></div>
-        <p>Or drop it on the view. Accepts .3dm (Rhino lines and meshes), .ifc (beams, columns and members), .obj, .stl, .glb and saved PlotCloud .json projects</p>
+        <p>Or drop it on the view. Accepts .3dm (Rhino lines and meshes), .ifc (beams, columns and members), .obj, .stl, .glb and saved SimuSite .json projects</p>
         <input type="file" id="file" accept=".3dm,.ifc,.obj,.stl,.glb,.gltf,.json" hidden>
       </div>
       <div class="fileinfo" id="fileinfo"><b>—</b><span>—</span></div>
@@ -347,14 +347,14 @@ select#comboList { font-size: 12.5px; }
 
 <script src="lib/structural-solver.js?v=structural-study-20261028-1"></script>
 <script>
-// PlotCloud structural analysis core. Units: kN, m (E in kN/m², stresses reported in MPa).
+// SimuSite structural analysis core. Units: kN, m (E in kN/m², stresses reported in MPa).
 // - linear static 3D frame / truss (direct stiffness, Euler-Bernoulli beams), skyline LDLt with RCM ordering
 // - geometrically non-linear bar / cable solver (Newton-Raphson, tension-only cables, pretension)
 // - force-density form finding for cable nets (Schek 1974), with dead load if asked
 // Every result comes from these solvers; benchmarks() checks them against closed-form answers.
 
 
-// PlotCloud Structural Analysis — Quick Analysis. Turns a few building choices into an ordinary editable model (the same
+// SimuSite Structural Analysis — Quick Analysis. Turns a few building choices into an ordinary editable model (the same
 // data the Advanced workspace uses), with NBC loads, an iterative preliminary sizing loop and plain-language findings.
 // Every number carries a source or is marked as an assumption. Units: kN, m, kPa.
 const SAQ = ((SA) => {
@@ -1171,10 +1171,10 @@ for (const el of [stage, $('#drop')]) {
 // ---------- projects (.json) ----------
 function projectJSON() { const M = S.M; return JSON.stringify({ plotcloud: 'structural-analysis', version: 2, units: 'kN, m', name: M.name, nodes: M.nodes, members: M.members.map((m) => [m.a, m.b, m.g, m.N0 ?? null, m.w || null, m.rel ?? null, m.tag || null]), faces: M.faces, groups: M.groups.map(({ name, kind, matId, mat, secId, sec, T0, wD, wL, wS, rel, role, visible }) => ({ name, kind, matId, mat, secId, sec, T0, wD, wL, wS, rel, role, visible })), supports: [...M.supports.entries()], area: M.area, self: M.self, point: M.point, shift: M.shift || [0, 0, 0], quick: M.quick || null, edited: !!M.edited, notAnalysable: M.notAnalysable || null }); }
 function loadProject(j, file) {
-  if (j.plotcloud !== 'structural-analysis') throw new Error('This .json is not a PlotCloud structural analysis project.');
+  if (j.plotcloud !== 'structural-analysis') throw new Error('This .json is not a SimuSite structural analysis project.');
   const M = { nodes: j.nodes, members: j.members.map(([a, b, g, N0, w, rel, tag]) => { const m = { a, b, g }; if (N0 != null) m.N0 = N0; if (w) m.w = w; if (rel != null) m.rel = rel; if (tag) m.tag = tag; return m; }), faces: j.faces || [], groups: j.groups.map((g) => ({ ...g, visible: g.visible !== false })), supports: new Map(j.supports), area: j.area, self: j.self, point: j.point || [], shift: j.shift, name: j.name, check: { parts: 1 }, quick: j.quick || null, edited: !!j.edited, notAnalysable: j.notAnalysable || null };
   M.check.parts = SA.components(M).count; S.raw = null;
-  $('#fileinfo').innerHTML = `<b></b><span>PlotCloud project · meters</span>`; $('#fileinfo b').textContent = file ? file.name : j.name;
+  $('#fileinfo').innerHTML = `<b></b><span>SimuSite project · meters</span>`; $('#fileinfo b').textContent = file ? file.name : j.name;
   setModel(M); msg('#loadmsg', 'Project loaded with its members, supports and loads. Run the analysis to see results.', 'ok');
 }
 
@@ -1218,7 +1218,7 @@ function compose(src, title, subline) {
   x.fillStyle = '#9b978f'; x.fillRect(0, H, W, Math.max(1, k));
   const L = 40 * k, y0 = H + 44 * k;
   x.fillStyle = '#111'; x.font = `600 ${24 * k}px "Noto Sans", sans-serif`; x.fillText(title, L, y0);
-  x.font = `${15 * k}px "IBM Plex Mono", monospace`; x.fillStyle = '#5a5853'; x.fillText(subline, L, y0 + 30 * k); x.fillText('PlotCloud Structural Analysis · early-design estimate, not a code check', L, y0 + 56 * k);
+  x.font = `${15 * k}px "IBM Plex Mono", monospace`; x.fillStyle = '#5a5853'; x.fillText(subline, L, y0 + 30 * k); x.fillText('SimuSite Structural Analysis · early-design estimate, not a code check', L, y0 + 56 * k);
   const gw = Math.min(420 * k, W * 0.3), gx = W - L - gw, gy = y0 - 18 * k, gr = x.createLinearGradient(gx, 0, gx + gw, 0); RAMP.forEach(([p, c]) => gr.addColorStop(p, `rgb(${c.join(',')})`)); x.fillStyle = gr; x.fillRect(gx, gy, gw, 16 * k);
   x.fillStyle = '#111'; x.font = `${13 * k}px "IBM Plex Mono", monospace`;
   [0, 0.25, 0.5, 0.75, 1].forEach((p, i) => { const v = sc.lo + (sc.hi - sc.lo) * p; x.textAlign = i === 0 ? 'left' : i === 4 ? 'right' : 'center'; x.fillText(`${fmt(v, Math.abs(sc.hi - sc.lo) < 10 ? 1 : 0)}${i === 4 ? sc.unit : ''}`, gx + gw * p, gy + 38 * k); });
@@ -1243,7 +1243,7 @@ async function offer(name, data, statusSel, previewCanvas) {
 $('#export').addEventListener('click', async () => { const { w, h } = imgSize(), cv = compose(snapshot(w, h), titleNow(), subNow()); await offer(`structure-${S.show}-${S.combo}.png`, await toPNG(cv), '#expmsg', cv); });
 $('#csv').addEventListener('click', async () => {
   const M = S.M, r = S.res; if (!r) return; const q = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v), rows = [], sh = M.shift || [0, 0, 0];
-  rows.push(['PlotCloud Structural Analysis', M.name, r.method], []);
+  rows.push(['SimuSite Structural Analysis', M.name, r.method], []);
   rows.push(['Joint', 'x m', 'y m', 'z m', ...['D', 'SLS', 'ULS'].flatMap((c) => [`${c} ux mm`, `${c} uy mm`, `${c} uz mm`]), 'Support', ...['D', 'SLS', 'ULS'].flatMap((c) => [`${c} Rx kN`, `${c} Ry kN`, `${c} Rz kN`])]);
   M.nodes.forEach((p, i) => rows.push([i, ...p.map((v, k) => (v + sh[k]).toFixed(4)), ...['D', 'SLS', 'ULS'].flatMap((c) => [0, 1, 2].map((k) => (r.combos[c].disp[3 * i + k] * 1000).toFixed(3))), M.supports.has(i) ? (Array.isArray(M.supports.get(i)) ? 'custom' : M.supports.get(i)) : '', ...['D', 'SLS', 'ULS'].flatMap((c) => { const v = r.combos[c].reac.get(i); return v ? [0, 1, 2].map((k) => v[k].toFixed(3)) : ['', '', '']; })]));
   const ids = ['D', 'SLS', 'ULS', ...(r.list || []).map((c) => c.id).filter((id) => !['D', 'SLS', 'ULS'].includes(id))];
@@ -1259,9 +1259,9 @@ $('#runSet').addEventListener('click', async () => {
   try {
     const order = ['geometry', 'deformed', 'force', 'disp', 'reac'];
     for (let i = 0; i < order.length; i++) { S.show = order[i]; render(); await frame(); status(`Image ${i + 1} of ${order.length}`); const cv = compose(snapshot(w, h), titleNow(), subNow()); files[`${String(i + 1).padStart(2, '0')}_${order[i]}-${S.combo}.png`] = new Uint8Array(await (await toPNG(cv)).arrayBuffer()); thumbs.push(cv); }
-    if ($('#sheet').value === '1') { const tw = 640, th = Math.round(tw * thumbs[0].height / thumbs[0].width), gap = 16, pad = 32, head = 64, cols = 3, rows = 2, cv = document.createElement('canvas'); cv.width = pad * 2 + cols * tw + (cols - 1) * gap; cv.height = pad * 2 + head + rows * th + (rows - 1) * gap; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = '#111'; x.font = '600 26px "Noto Sans", sans-serif'; x.fillText(`${S.M.name || 'Structure'} · ${comboName()}`, pad, pad + 30); x.fillStyle = '#5a5853'; x.font = '15px "IBM Plex Mono", monospace'; x.fillText(`${S.res.method} · PlotCloud Structural Analysis`, pad, pad + 54); thumbs.forEach((f, i) => x.drawImage(f, pad + (i % cols) * (tw + gap), pad + head + Math.floor(i / cols) * (th + gap), tw, th)); files['00_contact-sheet.png'] = new Uint8Array(await (await toPNG(cv)).arrayBuffer()); }
+    if ($('#sheet').value === '1') { const tw = 640, th = Math.round(tw * thumbs[0].height / thumbs[0].width), gap = 16, pad = 32, head = 64, cols = 3, rows = 2, cv = document.createElement('canvas'); cv.width = pad * 2 + cols * tw + (cols - 1) * gap; cv.height = pad * 2 + head + rows * th + (rows - 1) * gap; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = '#111'; x.font = '600 26px "Noto Sans", sans-serif'; x.fillText(`${S.M.name || 'Structure'} · ${comboName()}`, pad, pad + 30); x.fillStyle = '#5a5853'; x.font = '15px "IBM Plex Mono", monospace'; x.fillText(`${S.res.method} · SimuSite Structural Analysis`, pad, pad + 54); thumbs.forEach((f, i) => x.drawImage(f, pad + (i % cols) * (tw + gap), pad + head + Math.floor(i / cols) * (th + gap), tw, th)); files['00_contact-sheet.png'] = new Uint8Array(await (await toPNG(cv)).arrayBuffer()); }
     status('Packing the zip…'); await frame();
-    const name = `plotcloud-structure-${S.combo}.zip`; if (await offer(name, zipSync(files, { level: 0 }), '#setmsg', null)) msg('#setmsg', `Saved ${name} · ${Object.keys(files).length} images.`, 'ok');
+    const name = `simusite-structure-${S.combo}.zip`; if (await offer(name, zipSync(files, { level: 0 }), '#setmsg', null)) msg('#setmsg', `Saved ${name} · ${Object.keys(files).length} images.`, 'ok');
   } catch (e) { msg('#setmsg', e.message || String(e), 'warn'); }
   finally { S.show = keep; render(); status(''); $('#runSet').disabled = false; }
 });
@@ -1404,13 +1404,13 @@ window.__sa = { S, loadFile, run, loadSample, setView, render, setMode, runQuick
 </script>
 
 <script>
-// ===== PlotCloud bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
+// ===== SimuSite bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
 (function () {
   if (window.__pcBridge || window.parent === window) return; window.__pcBridge = 1;
   const boot = () => setTimeout(start, 300); if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
   function start() {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const name = (document.title || 'tool').replace(/^PlotCloud\s+/i, '');
+  const name = (document.title || 'tool').replace(/^SimuSite\s+/i, '');
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
   const txt = (e) => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
 
@@ -1458,7 +1458,7 @@ window.__sa = { S, loadFile, run, loadSample, setView, render, setMode, runQuick
     if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
-    if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
+    if (d.t === 'upsell') note.innerHTML = 'Projects are part of SimuSite Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
     if (d.t === 'error') note.textContent = d.msg || 'Could not save to the project.';
   });
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-pcgo]'); if (a) { e.preventDefault(); post({ t: 'go', to: a.dataset.pcgo }); } });
@@ -1597,7 +1597,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 footer.fine { font: 11px var(--f-body); color: var(--faint); background: #fff; border-top: 1px solid var(--line); }
 #stage { background: #fff; }
 
-/* ===== PlotCloud layer: the site's own tokens and components ===== */
+/* ===== SimuSite layer: the site's own tokens and components ===== */
 :root { --ink: #1C1B1A; --muted: #6E6A60; --faint: #6E6A60; --line: rgba(28,27,26,.10); --line-strong: rgba(28,27,26,.22); --well: #FBFAF7; --paper: #FBFAF7; --sand: #EFEBE0; --fill: rgba(28,27,26,.07); --fill2: rgba(28,27,26,.045);
   --accent: #D8402A; --accent-dk: #B63422; --accent-soft: rgba(216,64,42,.09); --ok: #2F7A4F; --warn: #9a5b00; --green: #1C1B1A;
   --f-body: "Inter Tight", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1643,7 +1643,7 @@ details.more summary::before { content: "+"; font: 600 13px var(--f-mono); color
 details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { margin-bottom: 2px; }
 .col .colIn { display: flex !important; flex-direction: column; gap: 8px; } .col .colIn > .sec { flex: none; }
 .deskonly { background: var(--paper) !important; } .deskonly b { font: 800 30px var(--f-body) !important; letter-spacing: -.035em !important; text-transform: lowercase; color: var(--ink) !important; } .deskonly .lab2 { font: 500 11px var(--f-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
-/* ===== PlotCloud tool shell: the Natural ventilation template, shared by every analysis tool ===== */
+/* ===== SimuSite tool shell: the Natural ventilation template, shared by every analysis tool ===== */
 :root { --view: #ffffff; }
 .app.fitapp > #panelL { grid-column: 1; grid-row: 1; } .app.fitapp > #stage { grid-column: 2; grid-row: 1; } .app.fitapp > #panelR { grid-column: 3; grid-row: 1; }
 .app.fitapp #panelL { border-right: 1px solid var(--line); }
@@ -1768,13 +1768,13 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
 </style>
 <script>
-// ===== PlotCloud tool shell: turns a tool page into the Natural ventilation layout =====
+// ===== SimuSite tool shell: turns a tool page into the Natural ventilation layout =====
 // left: the input steps · middle: the drawing (plan over charts) · right: legend, report, layers & export
 (function () {
   const app = document.querySelector('.app'); if (!app || app.classList.contains('fitapp')) return;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const L = app.querySelector(':scope > aside.panel'), stage = $('#stage'); if (!L || !stage) return;
-  const name = (document.title || 'This tool').replace(/^PlotCloud\s+/i, '');
+  const name = (document.title || 'This tool').replace(/^SimuSite\s+/i, '');
   const txt = (e) => (e.textContent || '').replace(/\s+/g, ' ').trim();
 
   // ---- columns
@@ -1875,7 +1875,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
   // ---- phones: a plain note instead of the tool
   const dn = document.createElement('div'); dn.className = 'deskonly'; dn.setAttribute('role', 'note');
-  dn.innerHTML = `<span class="lab2">PlotCloud · tools</span><b>${name.toLowerCase()} works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p>`;
+  dn.innerHTML = `<span class="lab2">SimuSite · tools</span><b>${name.toLowerCase()} works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p>`;
   document.body.prepend(dn);
 
   // landmarks for screen readers: the tool is the page's main content, with its name as the heading
@@ -1889,13 +1889,13 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
 </script>
 <script>
-// ===== PlotCloud bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
+// ===== SimuSite bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
 (function () {
   if (window.__pcBridge || window.parent === window) return; window.__pcBridge = 1;
   const boot = () => setTimeout(start, 300); if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
   function start() {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const name = (document.title || 'tool').replace(/^PlotCloud\s+/i, '');
+  const name = (document.title || 'tool').replace(/^SimuSite\s+/i, '');
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
   const txt = (e) => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
 
@@ -1943,7 +1943,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
     if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
-    if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
+    if (d.t === 'upsell') note.innerHTML = 'Projects are part of SimuSite Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
     if (d.t === 'error') note.textContent = d.msg || 'Could not save to the project.';
   });
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-pcgo]'); if (a) { e.preventDefault(); post({ t: 'go', to: a.dataset.pcgo }); } });

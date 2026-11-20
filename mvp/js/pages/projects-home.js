@@ -27,7 +27,7 @@ const I = {
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>', restore: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
 };
 const svg = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
-// Real PlotCloud changes, newest first (shown under What's new; the first one also in the sidebar).
+// Real SimuSite changes, newest first (shown under What's new; the first one also in the sidebar).
 export const CHANGES = [
   ['2026-10-30', 'New project from the map', 'Pick a location, see which site data is available, and start with terrain and surrounding buildings.'],
   ['2026-10-30', 'One layout for every study', 'Every simulation now uses the Sun Hours layout: Settings | Export, Results | Charts and the same 3D view.'],
@@ -51,7 +51,7 @@ export function render(app, [section], params) {
   const all = () => S.projects(), live = () => all().filter((p) => !p.deletedAt);
   app.innerHTML = `<div class="ph">
     <nav class="ph-rail" aria-label="Workspaces"><a class="ph-ws" href="#/home" title="${esc(first)}’s workspace" aria-label="${esc(first)}’s workspace">${esc(initial)}</a><a class="ph-add" href="#/new-project" title="New project" aria-label="New project">+</a></nav>
-    <aside class="ph-side" aria-label="Projects navigation"><div class="ph-brand">PlotCloud</div>
+    <aside class="ph-side" aria-label="Projects navigation"><div class="ph-brand">SimuSite</div>
       <div class="ph-nav">
         <a href="#/home" ${where === 'mine' && !tag ? 'aria-current="page"' : ''}>${svg('folder')}My Projects<span class="ph-n">${live().length}</span></a>
         <a href="#/home/favorites" ${where === 'favorites' ? 'aria-current="page"' : ''}>${svg('star')}Favorites<span class="ph-n">${live().filter((p) => p.favorite).length || ''}</span></a>

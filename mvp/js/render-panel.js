@@ -46,7 +46,7 @@ export function openRender(ctx) {
         <div class="rn-row"><label style="margin:0;display:flex;gap:5px;align-items:center;color:inherit"><input type="checkbox" id="rnRem" ${RA.keyRemembered() ? 'checked' : ''}> Remember on this device</label><button type="button" class="btn sm" data-rn="connect">Connect</button></div>
         <label for="rnModel">Image model</label><select id="rnModel" disabled><option>Connect first</option></select>
         <p class="rn-msg" data-rn-kmsg role="status"></p>
-        <p class="rn-note">The key stays in this browser and is sent only to api.openai.com. The view, the reference pictures and your words go from this browser to OpenAI; each image is billed to your OpenAI account. PlotCloud's servers are not involved.</p></section>
+        <p class="rn-note">The key stays in this browser and is sent only to api.openai.com. The view, the reference pictures and your words go from this browser to OpenAI; each image is billed to your OpenAI account. SimuSite's servers are not involved.</p></section>
       <section><h3>2 · View <i data-rn-vinfo>not captured</i></h3>
         <label for="rnSize">Image size</label><select id="rnSize">${RA.SIZES.map(([v, t]) => `<option value="${v}">${t} · ${v.replace('x', ' × ')}</option>`).join('')}</select>
         <button type="button" class="btn sm rn-go" data-rn="capture">Capture the 3D view</button><p class="rn-note">Frame the room in the 3D view first (walk or orbit); the capture uses that camera.</p></section>
@@ -127,7 +127,7 @@ export function openRender(ctx) {
       S.save(); say('[data-rn-gmsg]', `Done: ${out.images.length} render${out.images.length === 1 ? '' : 's'} saved with this project, in this browser.`, 'ok'); R.mode = 'cmp'; R.cmp = ['view', R.cur]; await drawStrip(); drawStage(); toast?.('Render saved');
     } catch (e) { say('[data-rn-gmsg]', e.message, 'warn'); } finally { R.busy = false; R.ac = null; q('[data-rn="stop"]').hidden = true; ready(); } }
   async function download(r) { const rec = await RA.getImages(r.id); if (!rec?.result) return say('[data-rn-gmsg]', 'This image is not in this browser.', 'warn'); const i = p.renders.indexOf(r) + 1;
-    const url = await RA.captioned(rec.result, [`${p.name} · Render ${i} · ${r.level || 'view'} · ${r.at.slice(0, 16).replace('T', ' ')} · ${r.model}${r.rev !== revNow() ? ' · model changed since' : ''}`, 'Presentation image made with OpenAI from a PlotCloud model view. Not a daylight, comfort or other performance result.']);
+    const url = await RA.captioned(rec.result, [`${p.name} · Render ${i} · ${r.level || 'view'} · ${r.at.slice(0, 16).replace('T', ' ')} · ${r.model}${r.rev !== revNow() ? ' · model changed since' : ''}`, 'Presentation image made with OpenAI from a SimuSite model view. Not a daylight, comfort or other performance result.']);
     save(url, `${slug(p.name)}-render-${i}.png`); }
   const slug = (s) => String(s || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'project';
   const save = (url, name) => { const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); };

@@ -1,4 +1,4 @@
-# PlotCloud backend on Supabase
+# SimuSite backend on Supabase
 
 Accounts and a cloud copy of each person's projects. The website stays local-first: everything works in the browser as before, and
 once someone signs in, their projects (with saved versions, simulation results and pictures) and their Account site and defaults are

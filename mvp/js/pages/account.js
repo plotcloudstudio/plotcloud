@@ -50,7 +50,7 @@ export async function render(app, _, params = new URLSearchParams()) {
         <label class="f">Time zone of this computer<input disabled value="${esc(Intl.DateTimeFormat().resolvedOptions().timeZone || '—')}"></label>
         <div style="align-self:end"><button class="btn primary">Save profile</button></div>
       </form>
-      <p class="note" style="margin-top:10px">Member since ${A.user.since ? when(A.user.since) : 'today'}. ${A.user.cloud ? 'Signed in with your PlotCloud cloud account: your projects are kept in this browser and copied to your account (Backup &amp; data shows the sync).' : C.configured() ? 'This account lives in this browser only. Log out and log in with a cloud account to keep your projects on your other devices too.' : 'Cloud accounts are not connected. This profile is saved in this browser; no password is stored.'}</p>
+      <p class="note" style="margin-top:10px">Member since ${A.user.since ? when(A.user.since) : 'today'}. ${A.user.cloud ? 'Signed in with your SimuSite cloud account: your projects are kept in this browser and copied to your account (Backup &amp; data shows the sync).' : C.configured() ? 'This account lives in this browser only. Log out and log in with a cloud account to keep your projects on your other devices too.' : 'Cloud accounts are not connected. This profile is saved in this browser; no password is stored.'}</p>
       <div class="card" style="margin-top:36px;max-width:720px;border-color:var(--red)"><b>Delete account</b><p class="note" style="margin:6px 0 12px">Removes your account, every project, version and result, and your settings from this browser. Download a backup first if you may want them back.</p><button class="btn sm danger" id="delAcct">Delete my account…</button></div>
     </section>
 
@@ -103,7 +103,7 @@ export async function render(app, _, params = new URLSearchParams()) {
         <p class="note" style="margin:0 0 12px">Every project except the sample, with its versions, results and pictures, and your site and defaults, are copied to your account and brought back on your other devices. If the same project changed on two devices, both are kept (the other one as “… (from another device)”).</p><button class="btn" id="syncNow">Sync now</button></div>` : ''}
       <div class="grid g2" style="margin-top:24px;align-items:start">
         <div class="card"><b>Back up</b><p class="note" style="margin:6px 0 12px" id="lastB"></p><button class="btn primary" id="exp">Download backup (.json)</button></div>
-        <div class="card"><b>Restore</b><p class="note" style="margin:6px 0 12px">From a PlotCloud backup file.</p>
+        <div class="card"><b>Restore</b><p class="note" style="margin:6px 0 12px">From a SimuSite backup file.</p>
           <label class="f">What to do with it<select id="impMode"><option value="merge">Add its projects to mine (a project already here is kept; the restored one is added as a copy)</option><option value="merge-replace">Add its projects, replacing the same projects here</option><option value="replace">Replace everything here</option></select></label>
           <input type="file" id="impFile" accept=".json,application/json" hidden><button class="btn" id="imp" style="margin-top:10px">Choose a backup file…</button><p class="note" id="impMsg" role="status" style="margin-top:8px"></p></div>
         <div class="card"><b>Space</b><div class="db-meter" style="margin:10px 0 6px"><i id="useBar"></i></div><p class="note" id="useTxt"></p>

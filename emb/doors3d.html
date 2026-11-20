@@ -17,9 +17,9 @@
 <script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap">
 <link rel="stylesheet" href="../ui/resource-tools.css?v=resource-tools-20261031-1">
-<title>PlotCloud Door & Window Generator</title>
+<title>SimuSite Door & Window Generator</title>
 </head>
-<body><!--PCSKIN--><div class="pcdesk" role="note"><span>PlotCloud · tools</span><b>door & window generator works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
+<body><!--PCSKIN--><div class="pcdesk" role="note"><span>SimuSite · tools</span><b>door & window generator works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,7 +182,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 </style>
 <div class="app">
   <header class="top">
-    <div class="brand">PlotCloud<span>Door &amp; window generator</span></div>
+    <div class="brand">SimuSite<span>Door &amp; window generator</span></div>
     <div class="spacer"></div>
     <div class="hint" data-t>Drag to orbit · right-drag to pan · scroll to zoom</div>
   </header>
@@ -678,7 +678,7 @@ async function doExport(btn, status) {
     const rhino = state.formats.includes('3dm') ? await loadRhino() : null;
     const f3 = state.formats.filter((x) => x !== 'blocks');
     const { files: raw, report } = buildFiles({ model: m, parts, dims, values: state.values, formats: f3, rhino });
-    const base = `PlotCloud_${m.en.replace(/[^A-Za-z0-9]+/g, '_')}_${dims.W}x${dims.H}`;
+    const base = `SimuSite_${m.en.replace(/[^A-Za-z0-9]+/g, '_')}_${dims.W}x${dims.H}`;
     const files = {};
     for (const [k, val] of Object.entries(raw)) if (k !== 'README.txt') files[base + k.slice(k.lastIndexOf('.'))] = val;
     if (files[base + '.obj']) files[base + '.obj'] = files[base + '.obj'].replace(/mtllib .*\n/, `mtllib ${base}.mtl\n`);
@@ -724,7 +724,7 @@ async function doExport(btn, status) {
 function readmeDoors(m, dims, values, report, n2d, names) {
   const inf = m.info(values);
   return [
-    `PlotCloud door & window generator — ${m.en}`,
+    `SimuSite door & window generator — ${m.en}`,
     `Frame W x D x H: ${dims.W} x ${dims.D} x ${dims.H} mm`,
     'Units: millimeters. Origin: center of the frame at floor level, on the wall centerline. Front (exterior) is -Y.',
     `Parameters: ${Object.entries(values).map(([k, v]) => `${k}=${v}`).join(', ')}`,
@@ -743,7 +743,7 @@ function readmeDoors(m, dims, values, report, n2d, names) {
     '- .dxf: 3D faces for AutoCAD / Revit (Insert > Import CAD, millimetres).',
     '- .stl: 3D printing and model making.',
     '',
-    'Generated from parameters by PlotCloud. Free to use in coursework and portfolios. Code values: NBC 2020, CSA B651-18; confirm with the code that applies to your project.',
+    'Generated from parameters by SimuSite. Free to use in coursework and portfolios. Code values: NBC 2020, CSA B651-18; confirm with the code that applies to your project.',
   ].filter((x) => x !== '').join('\r\n');
 }
 

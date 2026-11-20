@@ -1,10 +1,10 @@
 ## Update, 6 November 2026
 
-Fire Evacuation in PlotCloud no longer runs the model described in this note. It now runs in the Workspace on the whole building: every level of the model on a 0.5 m grid, its stairs and smoke compartments, progressive horizontal relocation first and then, if chosen, down the stairs, over many seeded runs (see the study card for its method and assumptions). The network model, code and replicate results below belong to the retired study page; they are kept unchanged as a dated record and are not what the product computes today.
+Fire Evacuation in SimuSite no longer runs the model described in this note. It now runs in the Workspace on the whole building: every level of the model on a 0.5 m grid, its stairs and smoke compartments, progressive horizontal relocation first and then, if chosen, down the stairs, over many seeded runs (see the study card for its method and assumptions). The network model, code and replicate results below belong to the retired study page; they are kept unchanged as a dated record and are not what the product computes today.
 
 ## Research status and authorship
 
-PlotCloud technical research note, 5 November 2026. This is an openly inspectable methods and software-verification study, not a completed doctoral thesis, a peer-reviewed clinical study, or an empirically validated hospital evacuation model. Software and text were developed with AI assistance. No real patient records, hospital drills or clinical outcomes were collected for this release. The numerical results below were calculated by the published code, not invented as narrative examples. Human subject-matter review and independent empirical validation remain necessary before research conclusions about real hospitals can be defended.
+SimuSite technical research note, 5 November 2026. This is an openly inspectable methods and software-verification study, not a completed doctoral thesis, a peer-reviewed clinical study, or an empirically validated hospital evacuation model. Software and text were developed with AI assistance. No real patient records, hospital drills or clinical outcomes were collected for this release. The numerical results below were calculated by the published code, not invented as narrative examples. Human subject-matter review and independent empirical validation remain necessary before research conclusions about real hospitals can be defended.
 
 ## Abstract
 
@@ -93,7 +93,7 @@ Smoke, heat and toxic exposure are absent, so the tool cannot compare available 
 
 ## 10. Reproduction and review
 
-Run node --test tests/fire-evacuation.test.mjs for the automated checks, then node tests/hospital-research-experiment.mjs to regenerate the eight-condition data package. Compare the source hashes and scenario contents before comparing results. In PlotCloud, open Fire Evacuation, create the labelled synthetic example, inspect the input basis, run the experiment, select a replicate and replay it across floors. Save the result and export JSON together with the report; the report alone does not contain every trajectory.
+Run node --test tests/fire-evacuation.test.mjs for the automated checks, then node tests/hospital-research-experiment.mjs to regenerate the eight-condition data package. Compare the source hashes and scenario contents before comparing results. In SimuSite, open Fire Evacuation, create the labelled synthetic example, inspect the input basis, run the experiment, select a replicate and replay it across floors. Save the result and export JSON together with the report; the report alone does not contain every trajectory.
 
 This release supports a reproducible research workflow. Its evidence supports selected software behaviours and conditional synthetic sensitivity findings. A doctoral-level contribution will depend on the subsequent research design, empirical validation, critical interpretation and independent scholarly review—not on the length of this article or the polish of its three-dimensional view.
 

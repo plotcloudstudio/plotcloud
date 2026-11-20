@@ -1,4 +1,4 @@
-// The PlotCloud backend: a Supabase project (accounts, and a cloud copy of each signed-in person's projects).
+// The SimuSite backend: a Supabase project (accounts, and a cloud copy of each signed-in person's projects).
 // Public project configuration supplied by the owner. Publishable and legacy anon keys are supported.
 // Apply both account and membership migrations in SQL Editor (see supabase/README.md).
 // This key is meant to be public: Row Level Security lets each signed-in person reach only their own rows.

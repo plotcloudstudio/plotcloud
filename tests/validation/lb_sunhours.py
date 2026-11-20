@@ -1,15 +1,15 @@
-"""Sun hours and Sky view in PlotCloud (emb/modeler.html) against Ladybug (ladybug-core, the library behind the LB Grasshopper components).
+"""Sun hours and Sky view in SimuSite (emb/modeler.html) against Ladybug (ladybug-core, the library behind the LB Grasshopper components).
 
-1. Sun positions: PlotCloud's lbSun against ladybug.sunpath.Sunpath.calculate_sun_from_date_time, for 9 latitudes, 3
+1. Sun positions: SimuSite's lbSun against ladybug.sunpath.Sunpath.calculate_sun_from_date_time, for 9 latitudes, 3
    longitudes, every 5th day of the year and every 5 minutes. Pass: the same to 1e-9 degrees.
-2. Direct sun hours on the ground, the facades and the roofs: PlotCloud's sunGrid and surfaceHours (the code Sun hours runs) against LB Direct Sun Hours, step for step
+2. Direct sun hours on the ground, the facades and the roofs: SimuSite's sunGrid and surfaceHours (the code Sun hours runs) against LB Direct Sun Hours, step for step
    (ladybug_grasshopper/src/LB Direct Sun Hours.py). The test points are the cell centres moved 0.1 m along the ground's
    normal (_offset_dist_); on the facades and roofs a vector more than 90° from the normal counts 0 (geo_block_). The vectors are the Ladybug sun path's for the day at the timestep, kept while Sun.is_during_day.
    A ray is clear when it meets no triangle of the masses' meshes. The result is the clear count divided by the timestep.
    Rhino's MeshRay is not available here, so an exact ray-triangle test (Moller-Trumbore) stands in for it. The masses
    are placed off any grid line so that no ray grazes an edge. Pass: every point's hours are the same (to the 32-bit floats
-   PlotCloud stores them in, about 1e-7 h; a single sun step is at least 1/12 h).
-3. Sky view: PlotCloud's sky view on the same ground and squares against LB View Percent (Sky View) at resolution 1, 2 and 3.
+   SimuSite stores them in, about 1e-7 h; a single sun step is at least 1/12 h).
+3. Sky view: SimuSite's sky view on the same ground and squares against LB View Percent (Sky View) at resolution 1, 2 and 3.
    Pass: the same patches as view_sphere, and every point the same (ground to the 32-bit floats it is stored in).
 Needs: a python with ladybug-core and ladybug-geometry (pip install ladybug-core); node with playwright; the site
 served on 8765 (TEST_BASE to change it).
@@ -156,7 +156,7 @@ for sc, res in zip(SCENES, pc):
         pt, nrm = np.array(smp['p']), np.array(smp['n'])
         lb = sum(0 if (np.dot(nrm, d) < 0 or blocked(pt, d)) else 1 for d in rev) / timestep
         fworst = max(fworst, abs(lb - v)); fsum_pc += v; fsum_lb += lb
-    ok = worst < 1e-5 and fworst < 1e-9 and lb_minutes == res['minutes']   # PlotCloud keeps the hours as 32-bit floats (about 1e-7 h); one sun step is 1/12 h or more
+    ok = worst < 1e-5 and fworst < 1e-9 and lb_minutes == res['minutes']   # SimuSite keeps the hours as 32-bit floats (about 1e-7 h); one sun step is 1/12 h or more
     fail |= not ok
     print(json.dumps({'check': 'direct sun hours', 'scene': sc['name'], 'points': cells, 'sun_vectors': len(rev), 'same_instants': lb_minutes == res['minutes'],
                       'mean_hours_plotcloud': round(total_pc / cells, 4), 'mean_hours_ladybug': round(total_lb / cells, 4), 'worst_point_difference_h': worst,

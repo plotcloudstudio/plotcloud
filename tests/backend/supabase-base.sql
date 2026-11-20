@@ -1,4 +1,4 @@
--- For local tests only: the parts of a hosted Supabase database the PlotCloud migration relies on (roles, auth.users, auth.uid()).
+-- For local tests only: the parts of a hosted Supabase database the SimuSite migration relies on (roles, auth.users, auth.uid()).
 -- On Supabase these already exist; do not run this file there.
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin noinherit; end if;

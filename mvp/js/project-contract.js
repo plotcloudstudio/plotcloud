@@ -15,7 +15,7 @@ import * as P from './parameters.js';
 export const SCHEMA = 2;
 // The study defaults that already exist in store.js DEFAULTS, fixed as a versioned template. Concept presets, not a code,
 // regional or use-type template (those arrive with item 07).
-export const TEMPLATE = Object.freeze({ id: 'plotcloud-study-defaults', version: '2026-10-31.1', note: 'PlotCloud concept study presets carried over from the existing defaults; not a code, regional or occupancy template.',
+export const TEMPLATE = Object.freeze({ id: 'plotcloud-study-defaults', version: '2026-10-31.1', note: 'SimuSite concept study presets carried over from the existing defaults; not a code, regional or occupancy template.',
   values: Object.freeze({ 'study.grid': 'Auto', 'study.period': 'Equinox', 'study.plane': 0.8, 'study.occStart': 8, 'study.occEnd': 18, 'study.radius': 250, 'study.rain': 50, 'study.duration': 60, 'study.eye': 1.2, 'study.band': '500 Hz', 'study.code': 'NBC 2020', 'display.units': 'Metric' }) });
 export const UNRECORDED = 'unrecorded';
 const clone = (x) => (x === undefined ? undefined : JSON.parse(JSON.stringify(x)));

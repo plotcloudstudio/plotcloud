@@ -1,5 +1,5 @@
 // Verification and sensitivity experiments for the fire evacuation engine (mvp/js/interior/egress.js), for the research note
-// "How accurate is the fire evacuation simulation?" (PlotCloud blog, 2026-11-10). Writes mvp/research/egress-verification.json.
+// "How accurate is the fire evacuation simulation?" (SimuSite blog, 2026-11-10). Writes mvp/research/egress-verification.json.
 // The tests follow the structure of IMO MSC.1/Circ.1533 Annex 3 (component tests 1, 2, 4, 5, 6, 7, 10) and the verification
 // categories of NIST TN 1822 / ISO 20414: each compares the engine with an analytical (hand) result for a case simple enough to
 // have one. They verify that the model does what its equations say; they do not validate it against real evacuations.

@@ -39,9 +39,9 @@ export async function backupText(opts) { return JSON.stringify(await buildBackup
 // Check a parsed file without touching this browser. Returns the plan of what restore would do, or throws with every problem.
 export function checkBackup(o, { conflicts = 'copy' } = {}) {
   const problems = [];
-  if (!o || o.format !== FORMAT || !Array.isArray(o.projects)) throw Error('This is not a PlotCloud backup file.');
+  if (!o || o.format !== FORMAT || !Array.isArray(o.projects)) throw Error('This is not a SimuSite backup file.');
   if (o.v !== VERSION) throw Error(`Backup version ${o.v} is not supported here.`);
-  if (!(o.schema <= C.SCHEMA)) throw Error('This backup was made by a newer PlotCloud. Update the page and try again.');
+  if (!(o.schema <= C.SCHEMA)) throw Error('This backup was made by a newer SimuSite. Update the page and try again.');
   if (!o.integrity || o.integrity.algorithm !== 'sha-256' || bodyHash(o) !== o.integrity.hash) throw Error('This backup file is damaged or was edited: its integrity check failed. Nothing was changed.');
   const included = new Map(), listed = new Set();
   for (const a of o.assets || []) {
@@ -69,7 +69,7 @@ export function checkBackup(o, { conflicts = 'copy' } = {}) {
 // mode 'merge' adds projects (an ID already here is kept and the restored one becomes a copy, unless conflicts:'replace');
 // mode 'replace' replaces every project and the Account settings here (the signed-in user is kept).
 export async function restoreBackup(text, { mode = 'merge', conflicts = 'copy' } = {}) {
-  let o; try { o = JSON.parse(text); } catch (e) { throw Error('This is not a PlotCloud backup (not JSON).'); }
+  let o; try { o = JSON.parse(text); } catch (e) { throw Error('This is not a SimuSite backup (not JSON).'); }
   if (o?.format === FORMAT && o.v === 1) { const n = S.importAll(text, mode); return { legacy: true, restored: n, projects: [], assetsRestored: 0, missingAssets: [], note: 'Version-1 backup: weather files were not part of it. Upload the original EPW again under Project shared conditions.' }; }
   const { plan, assets, missingAssets } = checkBackup(o, { conflicts: mode === 'replace' ? 'replace' : conflicts });
   // Weather first: content-addressed, so a failure here leaves projects untouched (and extra copies are harmless).

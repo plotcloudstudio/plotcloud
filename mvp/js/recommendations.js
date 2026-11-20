@@ -40,7 +40,7 @@ export function undoPatch(patch) { return { ...patch, from: patch.to, to: patch.
 export function recommend(p, run, model) {
   if (!run || run.simId !== 'daylight') return { status: 'no-basis', text: 'Run Daylight on a saved version first.' };
   const target = P.resolve(p, { path: 'target.daylight.meanDF' });
-  if (target.status !== 'ok') return { status: 'needs-target', text: 'Set the project daylight target (mean daylight factor) to get a recommendation. PlotCloud does not assume one.' };
+  if (target.status !== 'ok') return { status: 'needs-target', text: 'Set the project daylight target (mean daylight factor) to get a recommendation. SimuSite does not assume one.' };
   const df = run.results?.df, field = run.results?.field;
   if (!C.revision(p, run.planRevisionId) || C.revision(p, run.planRevisionId).legacy) return { status: 'no-basis', text: 'This daylight result was saved before its conditions were recorded. Rerun Daylight to get a suggestion.' };
   if (!Number.isFinite(df)) return { status: 'no-basis', text: 'This daylight result has no average daylight factor.' };

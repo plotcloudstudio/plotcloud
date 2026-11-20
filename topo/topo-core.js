@@ -1,4 +1,4 @@
-// PlotCloud contour model maker — terrain → stacked laser-cut layers.
+// SimuSite contour model maker — terrain → stacked laser-cut layers.
 // Field heights in meters, grid spacing `cell` meters. Output geometry in model millimeters (y = north, up).
 
 // ---------- terrain ----------
@@ -290,7 +290,7 @@ export function sheetSVG(sheet, layers, bed, opts = {}) {
   const path = (pts, closed) => 'M' + pts.map(([x, y]) => `${fmt(x)} ${fmt(H - y)}`).join('L') + (closed ? 'Z' : '');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${bed.bedW}mm" height="${bed.bedH}mm" viewBox="0 0 ${bed.bedW} ${bed.bedH}">
-<!-- PlotCloud contour model. Red = cut, blue = engrave. Units: mm. -->
+<!-- SimuSite contour model. Red = cut, blue = engrave. Units: mm. -->
 <g id="engrave" fill="none" stroke="#0000ff" stroke-width="0.1">
 ${eng.map((e) => `<path d="${path(e.pts, e.closed)}"/>`).join('\n')}
 </g>

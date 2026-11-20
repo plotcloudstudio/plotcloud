@@ -22,7 +22,7 @@ function showFallback(error) {
   document.querySelector('.fallback-message').textContent = 'Architectural study · 3D preview unavailable';
   document.querySelector('.view-hint').textContent = 'Schematic Toronto maquette';
   document.querySelectorAll('button').forEach(button => {button.disabled = true;});
-  if (error) console.warn('PlotCloud hero: 3D preview unavailable.', error.message);
+  if (error) console.warn('SimuSite hero: 3D preview unavailable.', error.message);
 }
 function syncPause() {
   pauseButton.setAttribute('aria-pressed', String(paused));

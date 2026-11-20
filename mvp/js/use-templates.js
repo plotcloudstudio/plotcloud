@@ -1,6 +1,6 @@
 // Use-type templates (replan item 07, plan §6.3, AC09). Each template is a fixed, versioned set of values copied into a project;
 // later template versions never change a project silently (project-contract.upgradeProgram).
-// Source of every value: PlotCloud concept assumptions for early design comparison. They are NOT taken from a code, standard
+// Source of every value: SimuSite concept assumptions for early design comparison. They are NOT taken from a code, standard
 // or regional library and are not a compliance basis; replace them with project data or a reviewed library when available.
 // Schedules are fractions 0–1 per hour (hour 1 = 00:00–01:00 local standard time, the EPW convention).
 const H = (spec) => { const a = Array(24).fill(spec.base ?? 0); for (const [from, to, v] of spec.blocks || []) for (let h = from; h < to; h++) a[h] = v; return a; };
@@ -12,7 +12,7 @@ const homeLight = H({ base: 0.02, blocks: [[6, 8, 0.4], [17, 23, 0.7]] }), homeE
 const schoolOcc = { weekday: H({ base: 0, blocks: [[8, 12, 0.9], [12, 13, 0.6], [13, 15, 0.9], [15, 17, 0.2]] }), saturday: H({ base: 0 }), sunday: H({ base: 0 }) };
 const schoolLight = { weekday: H({ base: 0.05, blocks: [[7, 17, 0.85]] }), saturday: H({ base: 0.05 }), sunday: H({ base: 0.05 }) };
 const schoolEquip = { weekday: H({ base: 0.2, blocks: [[8, 16, 0.8]] }), saturday: H({ base: 0.2 }), sunday: H({ base: 0.2 }) };
-const SOURCE = 'PlotCloud concept assumption for early design comparison — not from a code, standard or regional library';
+const SOURCE = 'SimuSite concept assumption for early design comparison — not from a code, standard or regional library';
 
 export const USE_TEMPLATES = Object.freeze({
   office: { id: 'plotcloud-use-office', version: '2026-10-30.1', label: 'Office', source: SOURCE,

@@ -11,7 +11,7 @@
 <script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap">
 <link rel="stylesheet" href="../ui/resource-tools.css?v=resource-tools-20261031-1">
-<title>PlotCloud DetailLab</title>
+<title>SimuSite DetailLab</title>
 </head>
 <body>
 
@@ -139,7 +139,7 @@ textarea { resize: vertical; font-size: 12.5px; line-height: 1.4; }
 
 <div class="app">
   <aside class="panel" aria-label="DetailLab settings">
-    <div class="brand"><b>PlotCloud <span>DetailLab</span></b><small>Parametric construction details. Change a layer and the 2D detail, the 3D layers and the numbers update together.</small></div>
+    <div class="brand"><b>SimuSite <span>DetailLab</span></b><small>Parametric construction details. Change a layer and the 2D detail, the 3D layers and the numbers update together.</small></div>
 
     <section class="sec" aria-labelledby="h-det">
       <h2 id="h-det"><i>1</i>Detail</h2>
@@ -224,7 +224,7 @@ textarea { resize: vertical; font-size: 12.5px; line-height: 1.4; }
 </div>
 
 <script>
-// PlotCloud DetailLab core — parametric construction details. One data model drives the 2D drawing, the 3D model and the numbers.
+// SimuSite DetailLab core — parametric construction details. One data model drives the 2D drawing, the 3D model and the numbers.
 // Model space: millimeters, x to the right (exterior on the left, interior on the right), y up. Origin: exterior face of the
 // framing at the top of the foundation wall. Paper space: millimeters on the sheet, y down (SVG convention).
 (function (G) {
@@ -801,7 +801,7 @@ function sheetFrame(S, C, A, sc) {
   });
   A({ t: 'line', a: [colX, tb + 27], b: [W - m, tb + 27], w: 0.25, layer: 'A-ANNO-TTLB' });
   wrap('For study and concept design only — not for construction. Values from NBC 2020 / CSA tables as noted; confirm with the code that applies and a qualified professional.', 66).forEach((ln, i) => A({ t: 'text', p: [colX + 4, tb + 31 + i * 3], s: 1.75, text: ln, anchor: 'start', layer: 'A-ANNO-TTLB' }));
-  A({ t: 'text', p: [W - m - 4, H - m - 3], s: 2, text: 'PlotCloud DetailLab', anchor: 'end', weight: 700, layer: 'A-ANNO-TTLB' });
+  A({ t: 'text', p: [W - m - 4, H - m - 3], s: 2, text: 'SimuSite DetailLab', anchor: 'end', weight: 700, layer: 'A-ANNO-TTLB' });
 }
 function wrap(s, n) { const out = []; let cur = ''; for (const w of s.split(/\s+/)) { if ((cur + ' ' + w).trim().length > n) { out.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); } if (cur) out.push(cur); return out; }
 
@@ -1186,7 +1186,7 @@ const pdfSafe = (svg) => svg.replace(/≥/g, '>=').replace(/≤/g, '<=').replace
 function loadScript(src) { return new Promise((res, rej) => { if ([...document.scripts].some((s) => s.src === src)) return res(); const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s); }); }
 $('#xSVG').addEventListener('click', () => offer(baseName() + '.svg', new Blob([DL.toSVG(drawSheet())], { type: 'image/svg+xml' })));
 $('#xDXF').addEventListener('click', () => offer(baseName() + '.dxf', DL.toDXF(drawSheet())));
-$('#xJSON').addEventListener('click', () => offer(baseName() + '.json', JSON.stringify({ app: 'PlotCloud DetailLab', ...S }, null, 1)));
+$('#xJSON').addEventListener('click', () => offer(baseName() + '.json', JSON.stringify({ app: 'SimuSite DetailLab', ...S }, null, 1)));
 $('#oJSON').addEventListener('click', () => $('#fileJSON').click());
 $('#fileJSON').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -1209,7 +1209,7 @@ $('#xPDF').addEventListener('click', async () => {
     const holder = document.createElement('div'); holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:420px;height:297px';
     holder.innerHTML = pdfSafe(DL.toSVG(drawSheet())); document.body.appendChild(holder);
     const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3', compress: true });
-    doc.setProperties({ title: S.sheet.title, subject: 'PlotCloud DetailLab', creator: 'PlotCloud DetailLab' });
+    doc.setProperties({ title: S.sheet.title, subject: 'SimuSite DetailLab', creator: 'SimuSite DetailLab' });
     await doc.svg(holder.firstElementChild, { x: 0, y: 0, width: 420, height: 297 });
     holder.remove();
     await offer(baseName() + '.pdf', new Blob([doc.output('arraybuffer')], { type: 'application/pdf' }));
@@ -1218,7 +1218,7 @@ $('#xPDF').addEventListener('click', async () => {
 });
 $('#x3D').addEventListener('click', async () => {
   if (!meshes.length) build3D();
-  const out = ['# PlotCloud DetailLab 3D layers, millimetres, Y up', `# ${S.sheet.title}`], mtl = [];
+  const out = ['# SimuSite DetailLab 3D layers, millimetres, Y up', `# ${S.sheet.title}`], mtl = [];
   let off = 1; const seen = new Set();
   meshes.forEach((m, i) => {
     const g = m.geometry.clone(); g.translate(m.position.x, 0, 0);
@@ -1368,7 +1368,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 footer.fine { font: 11px var(--f-body); color: var(--faint); background: #fff; border-top: 1px solid var(--line); }
 #stage { background: #fff; }
 
-/* ===== PlotCloud layer: the site's own tokens and components ===== */
+/* ===== SimuSite layer: the site's own tokens and components ===== */
 :root { --ink: #1C1B1A; --muted: #6E6A60; --faint: #6E6A60; --line: rgba(28,27,26,.10); --line-strong: rgba(28,27,26,.22); --well: #FBFAF7; --paper: #FBFAF7; --sand: #EFEBE0; --fill: rgba(28,27,26,.07); --fill2: rgba(28,27,26,.045);
   --accent: #D8402A; --accent-dk: #B63422; --accent-soft: rgba(216,64,42,.09); --ok: #2F7A4F; --warn: #9a5b00; --green: #1C1B1A;
   --f-body: "Inter Tight", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1414,7 +1414,7 @@ details.more summary::before { content: "+"; font: 600 13px var(--f-mono); color
 details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { margin-bottom: 2px; }
 .col .colIn { display: flex !important; flex-direction: column; gap: 8px; } .col .colIn > .sec { flex: none; }
 .deskonly { background: var(--paper) !important; } .deskonly b { font: 800 30px var(--f-body) !important; letter-spacing: -.035em !important; text-transform: lowercase; color: var(--ink) !important; } .deskonly .lab2 { font: 500 11px var(--f-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
-/* ===== PlotCloud tool shell: the Natural ventilation template, shared by every analysis tool ===== */
+/* ===== SimuSite tool shell: the Natural ventilation template, shared by every analysis tool ===== */
 :root { --view: #ffffff; }
 .app.fitapp > #panelL { grid-column: 1; grid-row: 1; } .app.fitapp > #stage { grid-column: 2; grid-row: 1; } .app.fitapp > #panelR { grid-column: 3; grid-row: 1; }
 .app.fitapp #panelL { border-right: 1px solid var(--line); }
@@ -1539,13 +1539,13 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
 </style>
 <script>
-// ===== PlotCloud tool shell: turns a tool page into the Natural ventilation layout =====
+// ===== SimuSite tool shell: turns a tool page into the Natural ventilation layout =====
 // left: the input steps · middle: the drawing (plan over charts) · right: legend, report, layers & export
 (function () {
   const app = document.querySelector('.app'); if (!app || app.classList.contains('fitapp')) return;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const L = app.querySelector(':scope > aside.panel'), stage = $('#stage'); if (!L || !stage) return;
-  const name = (document.title || 'This tool').replace(/^PlotCloud\s+/i, '');
+  const name = (document.title || 'This tool').replace(/^SimuSite\s+/i, '');
   const txt = (e) => (e.textContent || '').replace(/\s+/g, ' ').trim();
 
   // ---- columns
@@ -1646,7 +1646,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
   // ---- phones: a plain note instead of the tool
   const dn = document.createElement('div'); dn.className = 'deskonly'; dn.setAttribute('role', 'note');
-  dn.innerHTML = `<span class="lab2">PlotCloud · tools</span><b>${name.toLowerCase()} works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p>`;
+  dn.innerHTML = `<span class="lab2">SimuSite · tools</span><b>${name.toLowerCase()} works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p>`;
   document.body.prepend(dn);
 
   // landmarks for screen readers: the tool is the page's main content, with its name as the heading
@@ -1660,13 +1660,13 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
 </script>
 <script>
-// ===== PlotCloud bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
+// ===== SimuSite bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
 (function () {
   if (window.__pcBridge || window.parent === window) return; window.__pcBridge = 1;
   const boot = () => setTimeout(start, 300); if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
   function start() {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const name = (document.title || 'tool').replace(/^PlotCloud\s+/i, '');
+  const name = (document.title || 'tool').replace(/^SimuSite\s+/i, '');
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
   const txt = (e) => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
 
@@ -1714,7 +1714,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
     if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
-    if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
+    if (d.t === 'upsell') note.innerHTML = 'Projects are part of SimuSite Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
     if (d.t === 'error') note.textContent = d.msg || 'Could not save to the project.';
   });
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-pcgo]'); if (a) { e.preventDefault(); post({ t: 'go', to: a.dataset.pcgo }); } });

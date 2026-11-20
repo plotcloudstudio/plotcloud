@@ -1,7 +1,7 @@
 // Capability registry (replan item 06, plan §4 and §4.6). Three top-level analysis types — building, interior, tables — with one
 // primary category per study; tables reuse saved runs and never solve again. Every entry states its method, inputs, outputs,
-// status and the test that exercises it. Status is what PlotCloud actually does today, not the target:
-//   'screening'  a PlotCloud browser engine runs it (design screening, not certification)
+// status and the test that exercises it. Status is what SimuSite actually does today, not the target:
+//   'screening'  a SimuSite browser engine runs it (design screening, not certification)
 //   'reference'  a reference engine runs on the user's own computer (local-compute/), with file exchange
 //   'data'       a view or calculation over saved runs and inputs (no solver)
 //   'not-connected'  target capability; the engine or inputs it needs are not connected — no result is ever shown
@@ -18,17 +18,17 @@ export const STUDIES = {
   'parking-layout': { category: 'building', covers: [], extension: 'Site access', method: 'Candidate stall and aisle layouts in a reviewed area; not a proven global optimum', test: 'tests/workspace-parking.cjs' },
   'fire-evacuation':{category:'interior',covers:[],extension:'Evacuation screening on the whole building: everyone out (any building), or hospital progressive horizontal evacuation',method:'Everyone out: occupants by room use (IBC 2021 occupant load factors), detection and alarm, lognormal pre-movement (after PD 7974-6), walking to the nearest exit with SFPE door and stair flows and queues; RSET by stage and each route as a trail. Hospital: Progressive horizontal relocation through smoke compartments, then down the stairs: a 0.5 m grid of every level, distance fields, SFPE walking speeds and door and stair flows, staff escorts as the scarce resource, many seeded runs with random fire start, mobility and reaction times; uncalibrated assumptions, no fire, smoke or tenability model',test:'tests/egress-engine.test.mjs'},
   snow: {category:'building',covers:[],extension:'Snow deposition and optional drift screening',method:'Uniform-event vertical first-hit deposition; optional existing project-weather wind drift screening. No structural capacity prediction',test:'tests/snow-analysis.test.mjs'},
-  sunhours: { category: 'building', covers: ['B02'], also: ['I06'], method: 'PlotCloud ray-cast direct sun hours (browser)', test: 'tests/sun-period.cjs' },
-  radiation: { category: 'building', covers: ['B03'], method: 'PlotCloud sky-patch incident radiation from EPW (browser, no reflections) — not HB-Radiance', test: 'tests/climate-studies.cjs' },
-  utci: { category: 'building', covers: ['B09'], method: 'UTCI polynomial with PlotCloud solar MRT estimate (browser)', test: 'tests/climate-studies.cjs' },
-  wind: { category: 'building', covers: ['B07', 'B08'], method: 'PlotCloud GPU lattice flow screening (browser) — not OpenFOAM CFD', test: 'tests/climate-studies.cjs' },
-  stormwater: { category: 'building', covers: [], extension: 'Site drainage screening', method: 'PlotCloud runoff screening with a design storm (not EPW)', test: 'tests/free-simulations.cjs' },
-  structure: { category: 'building', covers: [], extension: 'Structural screening', method: 'PlotCloud frame solver on confirmed members, supports and loads', test: 'tests/structural-workflow.cjs' },
+  sunhours: { category: 'building', covers: ['B02'], also: ['I06'], method: 'SimuSite ray-cast direct sun hours (browser)', test: 'tests/sun-period.cjs' },
+  radiation: { category: 'building', covers: ['B03'], method: 'SimuSite sky-patch incident radiation from EPW (browser, no reflections) — not HB-Radiance', test: 'tests/climate-studies.cjs' },
+  utci: { category: 'building', covers: ['B09'], method: 'UTCI polynomial with SimuSite solar MRT estimate (browser)', test: 'tests/climate-studies.cjs' },
+  wind: { category: 'building', covers: ['B07', 'B08'], method: 'SimuSite GPU lattice flow screening (browser) — not OpenFOAM CFD', test: 'tests/climate-studies.cjs' },
+  stormwater: { category: 'building', covers: [], extension: 'Site drainage screening', method: 'SimuSite runoff screening with a design storm (not EPW)', test: 'tests/free-simulations.cjs' },
+  structure: { category: 'building', covers: [], extension: 'Structural screening', method: 'SimuSite frame solver on confirmed members, supports and loads', test: 'tests/structural-workflow.cjs' },
   watersound: { category: 'building', covers: [], extension: 'Sound of the site’s falls and streams', method: 'Point sources at each fall (sound power from the falling water’s power and an assumed acoustic efficiency) and riffles along streams; spherical spreading over the ground, screening by buildings and terrain; window and indoor estimates', test: 'tests/workspace-water.cjs' },
   skyview: { category: 'building', covers: ['B04'], method: 'Sky view as LB View Percent (Ladybug dome patches; browser)', test: 'tests/validation/lb_sunhours.py' },
   shadebenefit: { category: 'building', covers: ['B05'], method: 'Temperature-weighted shade benefit (browser); not a load-based result', test: 'tests/environment-analysis.cjs' },
   solarenvelope: { category: 'building', covers: ['B06'], method: 'Solar envelope from protected periods (browser); not a planning approval', test: 'tests/environment-analysis.cjs' },
-  daylight: { category: 'interior', covers: ['I01', 'I02', 'I03', 'I04'], method: 'PlotCloud browser daylight screening (DF, sDA/ASE estimates) — not HB-Radiance annual simulation', test: 'tests/shared-conditions.cjs' },
+  daylight: { category: 'interior', covers: ['I01', 'I02', 'I03', 'I04'], method: 'SimuSite browser daylight screening (DF, sDA/ASE estimates) — not HB-Radiance annual simulation', test: 'tests/shared-conditions.cjs' },
   vent: { category: 'interior', covers: ['I10'], also: ['B12'], method: 'Airflow network estimate (browser) — not CFD', test: 'tests/mvp-new-sims.cjs' },
   acoustics: { category: 'interior', covers: [], extension: 'Room acoustics screening', method: 'Statistical reverberation (browser)', test: 'tests/acoustics.cjs' },
   spacesyntax: { category: 'interior', covers: [], extension: 'Spatial organisation', method: 'Visibility graph / connectivity', test: 'tests/mvp-new-sims.cjs' },
@@ -90,13 +90,13 @@ export const TARGETS = [
   T('I12', 'interior', 'Views and visibility', 'Observers, windows, obstructions', 'LB View Percent / Visibility'),
   T('T01', 'table', 'Climate data and wind rose', 'EPW', 'Ladybug data'),
   T('T02', 'table', 'Psychrometrics, degree days, passive strategies', 'EPW + strategy rules', 'Ladybug comfort charts'),
-  T('T03', 'table', 'Hourly / per-point result tables', 'Saved runs', 'PlotCloud tables'),
-  T('T04', 'table', 'Monthly / annual summaries', 'Saved runs, statistics definitions', 'PlotCloud tables'),
-  T('T05', 'table', 'A/B/C comparison', 'Comparable runs', 'PlotCloud compare'),
-  T('T06', 'table', 'Input differences and attribution', 'Plan revisions and runs', 'PlotCloud compare'),
+  T('T03', 'table', 'Hourly / per-point result tables', 'Saved runs', 'SimuSite tables'),
+  T('T04', 'table', 'Monthly / annual summaries', 'Saved runs, statistics definitions', 'SimuSite tables'),
+  T('T05', 'table', 'A/B/C comparison', 'Comparable runs', 'SimuSite compare'),
+  T('T06', 'table', 'Input differences and attribution', 'Plan revisions and runs', 'SimuSite compare'),
   T('T07', 'table', 'Parameter sweep and sensitivity', 'Base plan, ranges, budget', 'Hosted job queue'),
-  T('T08', 'table', 'Report charts and metric lists', 'Saved results', 'PlotCloud reports'),
-  T('T09', 'table', 'Data quality, assumptions and audit', 'Inputs, templates, provenance', 'PlotCloud provenance'),
+  T('T08', 'table', 'Report charts and metric lists', 'Saved results', 'SimuSite reports'),
+  T('T09', 'table', 'Data quality, assumptions and audit', 'Inputs, templates, provenance', 'SimuSite provenance'),
 ];
 // What is actually connected for each target ID (only what exists in this repository and runs).
 const LOCAL = { I04: 'Radiance CIE overcast daylight factor through local-compute/ (user-installed Radiance, file exchange)', B10: 'Reviewed epJSON + EPW through local-compute/ (user-installed EnergyPlus); no automatic thermal model from geometry' };
@@ -106,7 +106,7 @@ export function targetStatus(id) {
   if (studies.length) return { status: 'screening', via: studies, note: studies.map((k) => STUDIES[k].method).join(' · ') };
   if (DATA[id]) return { status: 'data', via: [], note: DATA[id] };
   if (LOCAL[id]) return { status: 'reference', via: ['local-compute'], note: LOCAL[id] };
-  return { status: 'not-connected', via: [], note: 'Not connected in PlotCloud. Needs: ' + TARGETS.find((t) => t.id === id).needs + '; engine: ' + TARGETS.find((t) => t.id === id).engine + '.' };
+  return { status: 'not-connected', via: [], note: 'Not connected in SimuSite. Needs: ' + TARGETS.find((t) => t.id === id).needs + '; engine: ' + TARGETS.find((t) => t.id === id).engine + '.' };
 }
 export const STATUS_LABEL = { screening: 'Runs · design screening', reference: 'Reference engine on your computer', data: 'Built from saved runs', 'not-connected': 'Not connected' };
 // One entry per existing study, for the catalogue and tests.

@@ -1,8 +1,8 @@
--- PlotCloud complete database setup: projects, accounts and month/year/permanent access.
+-- SimuSite complete database setup: projects, accounts and month/year/permanent access.
 -- Run as project owner in Supabase SQL Editor. No administrator is assigned automatically.
 -- After confirming plotcloudstudio@gmail.com, separately run appoint-admin.sql.
 
--- PlotCloud cloud accounts and projects (2026-10-25)
+-- SimuSite cloud accounts and projects (2026-10-25)
 -- Run once in your Supabase project: Dashboard › SQL Editor › New query › paste this file › Run.
 -- The website stays local-first: every project lives in the browser as before; when someone signs in, their projects, versions,
 -- results and Account settings are copied here and kept in step across their devices. Each row belongs to one user, and Row Level
@@ -361,7 +361,7 @@ revoke all on function public.pc_site_edit(text,text,text,jsonb,integer) from pu
 grant execute on function public.pc_site_edit(text,text,text,jsonb,integer) to authenticated;
 
 -- Preserve the existing public About copy and two published studio notes.
-insert into private.pc_site_content(id,kind,draft,published,published_revision) values('about','about',$pcseed${"headline":"Understand the building.\nImprove the next decision.","intro":"PlotCloud is a browser workspace for architects and architecture students exploring building performance in early design.","storyTitle":"Keep your existing workflow","story":"Use supported imports and exports alongside your CAD and modelling tools. PlotCloud supports design exploration; study methods and limitations remain part of the result.","teamIntro":"","team":[]}$pcseed$::jsonb,$pcseed${"headline":"Understand the building.\nImprove the next decision.","intro":"PlotCloud is a browser workspace for architects and architecture students exploring building performance in early design.","storyTitle":"Keep your existing workflow","story":"Use supported imports and exports alongside your CAD and modelling tools. PlotCloud supports design exploration; study methods and limitations remain part of the result.","teamIntro":"","team":[]}$pcseed$::jsonb,1) on conflict(id) do nothing;
+insert into private.pc_site_content(id,kind,draft,published,published_revision) values('about','about',$pcseed${"headline":"Understand the building.\nImprove the next decision.","intro":"SimuSite is a browser workspace for architects and architecture students exploring building performance in early design.","storyTitle":"Keep your existing workflow","story":"Use supported imports and exports alongside your CAD and modelling tools. SimuSite supports design exploration; study methods and limitations remain part of the result.","teamIntro":"","team":[]}$pcseed$::jsonb,$pcseed${"headline":"Understand the building.\nImprove the next decision.","intro":"SimuSite is a browser workspace for architects and architecture students exploring building performance in early design.","storyTitle":"Keep your existing workflow","story":"Use supported imports and exports alongside your CAD and modelling tools. SimuSite supports design exploration; study methods and limitations remain part of the result.","teamIntro":"","team":[]}$pcseed$::jsonb,1) on conflict(id) do nothing;
 commit;
 
 -- ---- resources and the richer About page (2026-11-17)

@@ -5,7 +5,7 @@ import {inspectStudy} from '../study-readiness.js';
 import {climateFile,ensureProjectClimate,cancelProjectClimate} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
 import {mountStudyImport} from '../study-import.js?v=import-feedback-20261027-1';
-// One simulation page for every PlotCloud engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
+// One simulation page for every SimuSite engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
 // One implementation: nothing here computes or draws a result. This page only
 //   hands the engine the version's model in the engine's own input format (the scene Plan Studio's Send to Simulation
 //   makes, the masses scene Sun hours and Wind read, the level as DXF, or the model as OBJ),

@@ -1,4 +1,4 @@
-// PlotCloud stair & ramp generator — parametric stairs and ramps on the furniture generator engine.
+// SimuSite stair & ramp generator — parametric stairs and ramps on the furniture generator engine.
 // Units mm, Z up, front faces -Y. Stairs climb toward +Y. Checks use typical NBC 2020 Part 9 values (BCBC / OBC are similar).
 import { makeBuilder, normalise, bounds, COLORS, FIXED_MATS, paramVisible, materialColor } from 'pc-base/models.js';
 export { COLORS, FIXED_MATS, paramVisible, materialColor, bounds };

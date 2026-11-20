@@ -1,4 +1,4 @@
-// Entry and the home page wall (2026-11-09). The site's root address goes straight to PlotCloud: no white page with a link first
+// Entry and the home page wall (2026-11-09). The site's root address goes straight to SimuSite: no white page with a link first
 // (the redirect runs before anything is drawn; an older bookmarked #/… address still lands on its new place). On the home page the
 // wall of simulations moves as soon as the page opens, with no click, also when the system prefers reduced motion (at half speed);
 // Pause wall stops it.

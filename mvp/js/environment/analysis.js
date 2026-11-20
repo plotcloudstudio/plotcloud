@@ -1,4 +1,4 @@
-// PlotCloud environmental screening, world metres / Z up. Pure functions; no DOM.
+// SimuSite environmental screening, world metres / Z up. Pure functions; no DOM.
 export const RELEASE='environment-20261028-1';
 const rad=Math.PI/180,finite=Number.isFinite,clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export const STUDIES=['climate','passive','skyview','shadebenefit','solarenvelope'];

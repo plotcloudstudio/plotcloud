@@ -1,6 +1,6 @@
 """Writes mvp/js/environment/lb-dome.js: Ladybug's sky dome patches (ladybug.viewsphere.view_sphere.dome_patches and
 dome_patch_weights) at resolution 1 (Tregenza, 145), 2 (Reinhart, 577) and 3 (1297), as LB View Percent uses them for Sky
-View. Each patch is [x, y, z, weight] with Python's own repr of every float, so PlotCloud uses the very numbers Ladybug does.
+View. Each patch is [x, y, z, weight] with Python's own repr of every float, so SimuSite uses the very numbers Ladybug does.
 Run with a python that has ladybug-core: python gen_lb_dome.py"""
 import pathlib, ladybug
 from ladybug.viewsphere import view_sphere as V

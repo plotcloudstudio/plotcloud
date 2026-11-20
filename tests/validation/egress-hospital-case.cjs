@@ -1,4 +1,4 @@
-// Case study for the research note: the PlotCloud example hospital (three storeys, 52 single patient rooms, two exit stairs, two
+// Case study for the research note: the SimuSite example hospital (three storeys, 52 single patient rooms, two exit stairs, two
 // smoke compartments per inpatient floor), run through the evacuation engine in the browser. Writes mvp/research/egress-hospital-case.json.
 // Needs the local server (python3 -m http.server 8765) and network access (the project weather).
 const { chromium } = require('playwright'), fs = require('node:fs');
@@ -16,6 +16,6 @@ const { chromium } = require('playwright'), fs = require('node:fs');
         const t0 = performance.now(), r = await EGX.run(bs, { strategy: 'all', runs: 50, seed: 1, ...o }), inc = r.runs.map((x) => x.incidents.length);
         out.everyone.push({ name, runs: r.runs.length, people: r.rep.n, p10: m(r.p10), p50: m(r.med), p90: m(r.p90), incidentsPerRun: Math.round(10 * inc.reduce((s, v) => s + v, 0) / inc.length) / 10, blockedRuns: r.runs.filter((x) => x.blocked).length, groups: Object.fromEntries(['occ', 'older', 'child', 'imp', 'wheel'].map((g) => [g, r.rep.people.filter((q) => q.kind === g).length])), wheelLast: m(Math.max(0, ...r.rep.people.filter((q) => q.kind === 'wheel').map((q) => q.tOut))), othersLast: m(Math.max(...r.rep.people.filter((q) => q.kind !== 'wheel').map((q) => q.tOut))), unfinished: r.runs.reduce((s, x) => s + x.unfinished, 0), seconds: Math.round((performance.now() - t0) / 100) / 10 }); }
       return out; });
-    res.generated = new Date().toISOString().slice(0, 10); res.model = 'PlotCloud example hospital (example-hospital-inpatient-v4)';
+    res.generated = new Date().toISOString().slice(0, 10); res.model = 'SimuSite example hospital (example-hospital-inpatient-v4)';
     fs.writeFileSync(__dirname + '/../../mvp/research/egress-hospital-case.json', JSON.stringify(res, null, 1)); console.log(JSON.stringify(res, null, 1));
   } finally { await b.close(); } })().catch((e) => { console.error(e); process.exit(1); });

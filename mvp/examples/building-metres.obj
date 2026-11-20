@@ -1,4 +1,4 @@
-# PlotCloud example building: 10 m wide, 8 m deep, 6 m high.
+# SimuSite example building: 10 m wide, 8 m deep, 6 m high.
 # OBJ has no standard unit metadata. In Import review choose Metres and Z up.
 o Example_building_10x8x6_metres
 v 0 0 0

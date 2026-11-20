@@ -1,6 +1,6 @@
 // Drop a model anywhere in the Workspace (2026-11-09). A file dragged over the Workspace, or over its plan or 3D pane, shows one
 // card for the whole window ("Release to drop your model into the site", the supported file types); letting go anywhere opens the
-// import preview, and Confirm import adds the model. A file PlotCloud does not read is turned away with a message; Plan Studio's
+// import preview, and Confirm import adds the model. A file SimuSite does not read is turned away with a message; Plan Studio's
 // own drop (a saved Plan Studio file in place of the model) never sees a dropped file. Needs network access (site data).
 const { chromium } = require('playwright'), assert = require('node:assert/strict'), fs = require('fs');
 (async () => {
@@ -44,9 +44,9 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.evaluate(() => document.querySelector('.sp-drop').dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: null })));
     console.log('PASS the card over the 3D pane');
 
-    // 4 · a file PlotCloud does not read: turned away, nothing imported
+    // 4 · a file SimuSite does not read: turned away, nothing imported
     const n1 = await imports(); await drag(null, 'dragenter', 'notes.txt', 'hello', '.sp-bottom'); await drag(null, 'drop', 'notes.txt', 'hello', '.sp-drop');
-    c = await card(); assert(c && c.bad && /notes\.txt is not a model PlotCloud reads/.test(c.text) && /OBJ, STL, GLB, glTF or Rhino 3DM/.test(c.text), JSON.stringify(c));
+    c = await card(); assert(c && c.bad && /notes\.txt is not a model SimuSite reads/.test(c.text) && /OBJ, STL, GLB, glTF or Rhino 3DM/.test(c.text), JSON.stringify(c));
     await p.waitForTimeout(500); assert.equal(await p.locator('.ipv').count(), 0); assert.equal(await imports(), n1);
     await p.waitForFunction(() => document.querySelector('.sp-drop').hidden, null, { timeout: 8000 });
     console.log('PASS an unsupported file is turned away');

@@ -1,5 +1,5 @@
 // Lightweight model viewport: shaded, wireframe (used for acoustics) and plan views, click to select.
-// Same visual language as the PlotCloud simulation tools: grey ground, off-white solids, soft light, z up.
+// Same visual language as the SimuSite simulation tools: grey ground, off-white solids, soft light, z up.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { loadRhino } from './export3d.js';

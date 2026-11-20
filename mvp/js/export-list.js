@@ -53,7 +53,7 @@ export function renderList(host, list, { project, modelKey, onChange, onExport, 
 // US Letter (8.5 × 11 in) portrait, dates written out; a cover with the project information, a summary of results, one
 // chapter per analysis (objective, method, references, inputs and boundary conditions, results, assumptions and limitations,
 // numbered figures) and a closing page on the limits. References are those the methods use, and are given as informative.
-const LIMITS = 'The analyses in this report were computed in PlotCloud from the model, inputs and settings stated in each chapter. They are design-stage screening analyses intended to inform design decisions. They are not a certification, a code-compliance demonstration, a LEED submission or an engineering sign-off. Each result applies only to the model version and the project conditions it states; when either changes, the analysis should be run again.';
+const LIMITS = 'The analyses in this report were computed in SimuSite from the model, inputs and settings stated in each chapter. They are design-stage screening analyses intended to inform design decisions. They are not a certification, a code-compliance demonstration, a LEED submission or an engineering sign-off. Each result applies only to the model version and the project conditions it states; when either changes, the analysis should be run again.';
 const DOC = {
   sunhours: { name: 'Direct Sunlight Hours', refs: ['Ladybug Tools, ladybug-core Sunpath and LB Direct Sun Hours (method followed: sun path, timestep, 0.1 m test-point offset, 90° cut-off)', 'NOAA Solar Calculator algorithm (solar position, as implemented in Ladybug)'], limit: 'Direct sun only: no diffuse skylight, reflected light or atmospheric attenuation. A screening of sun access, not a shadow study prepared to a municipal terms of reference.' },
   radiation: { name: 'Incident Solar Radiation', refs: ['Project weather file (EPW): direct normal and diffuse horizontal irradiance', 'NOAA Solar Calculator algorithm (solar position)'], limit: 'Ground-reflected radiation is not included; surroundings beyond the modeled context are taken as unobstructed.' },
@@ -119,7 +119,7 @@ export async function exportList(kind, list, ctx) {
 
 async function pdf(items, title, ctx) {
   const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true }); d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
-  d.setProperties({ title, subject: `${ctx.project}${ctx.site ? ' · ' + ctx.site : ''}`, author: ctx.author || '', creator: 'PlotCloud', keywords: 'building performance simulation, screening analysis' });
+  d.setProperties({ title, subject: `${ctx.project}${ctx.site ? ' · ' + ctx.site : ''}`, author: ctx.author || '', creator: 'SimuSite', keywords: 'building performance simulation, screening analysis' });
   const W = d.internal.pageSize.getWidth(), H = d.internal.pageSize.getHeight(), mg = 16, ink = [17, 24, 39], sub = [75, 85, 99], line = [209, 213, 219], issued = usDate(Date.now());
   // footers go on last (2026-11-18), once the number of pages is known: the summary and the closing notes can run over several pages
   const foot = (n, N) => { d.setDrawColor(...line); d.setLineWidth(0.2); d.line(mg, H - 12, W - mg, H - 12); d.setFontSize(8); d.setTextColor(...sub); d.text(`${ctx.project} · ${title} · Issued ${issued}`, mg, H - 7.5); d.text(`Page ${n} of ${N}`, W - mg, H - 7.5, { align: 'right' }); };
@@ -133,7 +133,7 @@ async function pdf(items, title, ctx) {
   if (items[0]?.pictures[0]) { const b0 = items[0].pictures[0].blob, im = await imgOf(b0), hh = Math.min(100, CW * im.height / im.width), w2 = hh * im.width / im.height, x0 = mg + (CW - w2) / 2;
     d.addImage(await dataURL(b0), 'JPEG', x0, y, w2, hh, undefined, 'FAST'); d.setFontSize(8); d.setTextColor(...sub); d.text(`${headOf(items[0])}${items[0].pictures.length > 1 ? ', ' + (items[0].pictures[0].label || '') : ''}`, x0, y + hh + 4.5); y += hh + 10; }
   y = head('Project information', mg, y + 2);
-  y = table([['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used by the analyses in this report'], ['Model', ctx.version], ['Project conditions', `Revision ${ctx.revision ?? '—'}`], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Software', 'PlotCloud, web-based building performance screening'], ['Report status', 'Design-stage screening analysis; not a compliance submission']], mg, y, CW, 0.3, 9);
+  y = table([['Project', ctx.project], ['Location', ctx.site || '—'], ['Coordinates', ctx.coords || '—'], ['Climate data', ctx.weather || 'Not used by the analyses in this report'], ['Model', ctx.version], ['Project conditions', `Revision ${ctx.revision ?? '—'}`], ['Prepared by', ctx.author || '—'], ['Date of issue', issued], ['Software', 'SimuSite, web-based building performance screening'], ['Report status', 'Design-stage screening analysis; not a compliance submission']], mg, y, CW, 0.3, 9);
   // summary of results, with the contents
   d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text('Summary of Results', mg, 20);
   y = wrap('Each analysis below is described in its own chapter: objective, method, references, inputs and boundary conditions, results, and assumptions and limitations.', W - 2 * mg, 9.5, mg, 30, sub) + 4;
@@ -193,7 +193,7 @@ async function pptx(items, title, ctx) {
     blocks.push({ type: 'text', x: sx, y: sy, w: sw, h: Math.max(0.6, H - sy - 0.6), paragraphs: [{ text: 'Method: ' + (methodText(it.method) || '—'), size: 8, color: '4B5563' }, ...(docOf(it).refs.length ? [{ text: 'References: ' + docOf(it).refs.join('; '), size: 8, color: '4B5563' }] : []), { text: 'Inputs: ' + inputsOf(it).map(([k, v]) => `${k} ${v}`).join(' · '), size: 8, color: '4B5563' }, ...(docOf(it).limit ? [{ text: 'Limitations: ' + docOf(it).limit, size: 8, color: '4B5563' }] : [])] });
     slides.push({ title: `${n}. ${headOf(it)}`, blocks }); }
   slides.push({ title: `${items.length + 1}. Assumptions, Limitations and Disclaimer`, blocks: [{ type: 'text', x: 0.5, y: 1.3, w: W - 1, h: H - 2, paragraphs: [{ text: LIMITS, size: 13 }, ...items.map((it, i) => ({ text: `${i + 1}. ${headOf(it)}: ${docOf(it).limit || ''} ${it.basis || ''}`, size: 10, color: '4B5563' })), { text: `Site and climate data: ${[ctx.site, ctx.coords, ctx.weather].filter(Boolean).join(' · ')}. Units: SI.`, size: 10, color: '4B5563' }] }] });
-  return buildPptx({ title, author: ctx.author || 'PlotCloud', footer: `${ctx.project} · ${title} · Issued ${issued}`, slides });
+  return buildPptx({ title, author: ctx.author || 'SimuSite', footer: `${ctx.project} · ${title} · Issued ${issued}`, slides });
 }
 
 let deps = null;

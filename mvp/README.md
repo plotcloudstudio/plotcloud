@@ -1,6 +1,6 @@
-# PlotCloud simulation-first MVP prototype
+# SimuSite simulation-first MVP prototype
 
-A runnable prototype of PlotCloud reorganised around simulations: **Home → Workspace → Simulations → Results**, with **Resources** as the free entry point.
+A runnable prototype of SimuSite reorganised around simulations: **Home → Workspace → Simulations → Results**, with **Resources** as the free entry point.
 The current public site lives in `/mvp/`. The root entry is only a compatibility redirect; the former public application and standalone Render/Boards pages have been removed. Open `mvp/index.html` through any static server at the repository root, then visit `/mvp/`. The historical prototype matrix below describes the original milestone, not current engine capability.
 
 ## User journey
@@ -25,9 +25,9 @@ Upload model → organise layers and components → save model version → selec
 | Day / night theme (saved per browser) | Header | Working |
 | Cloud storage, sharing, real accounts and billing | — | Not in the prototype |
 
-Labels used in the UI: `Mock` (prototype estimate), `Working tool` (opens the existing PlotCloud tool), `Planned`.
+Labels used in the UI: `Mock` (prototype estimate), `Working tool` (opens the existing SimuSite tool), `Planned`.
 
-## Inventory of what PlotCloud has today (preserved, linked, not modified)
+## Inventory of what SimuSite has today (preserved, linked, not modified)
 
 **Analysis (14)** — all open from Simulations via `../index.html#/tool/<id>`:
 sunhours (Sun hours), daylight, wind (Wind flow), vent (Natural ventilation), stormwater (Stormwater & waterlogging), acoustics (Indoor acoustics),

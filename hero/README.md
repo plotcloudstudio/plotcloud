@@ -1,6 +1,6 @@
 # Toronto architectural study
 
-Interactive Toronto visual for PlotCloud. The standalone demo remains independently usable; the current `/mvp/` homepage embeds the bundled file.
+Interactive Toronto visual for SimuSite. The standalone demo remains independently usable; the current `/mvp/` homepage embeds the bundled file.
 
 **For preview or download, use `toronto-standalone.html`.** It includes all CSS, the Three.js engine and the animation code in one file, and works offline when opened in a browser with WebGL and JavaScript enabled. Some chat preview containers may disable scripts or WebGL; download and open the file in Chrome or Edge in that case.
 

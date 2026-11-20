@@ -1,4 +1,4 @@
-/* PlotCloud UI v1. Semantic interface colors; simulation palettes remain owned by tools. */
+/* SimuSite UI v1. Semantic interface colors; simulation palettes remain owned by tools. */
 :root[data-pc-ui] {
   --pc-ui-font: Inter, 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --pc-ui-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;

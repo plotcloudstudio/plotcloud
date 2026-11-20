@@ -54,5 +54,5 @@ policy of the build machine blocked `opendata.vancouver.ca`, and each portal has
 * **Export .3dm** was already there (one named mesh per object, on its layer, in metres).
 * `tests/rhino-roundtrip.cjs`: the sample written to .3dm and read back — 18 of 18 objects, 1,524 of 1,524 triangles, every name
   and layer, positions within 0.5 mm (the import rounds to a millimetre); a 1,000 mm cube comes in as 1 m.
-* Not round-tripped: NURBS stay meshes on the way back to Rhino (PlotCloud's model is meshes and Plan Studio objects), and
+* Not round-tripped: NURBS stay meshes on the way back to Rhino (SimuSite's model is meshes and Plan Studio objects), and
   Plan Studio's own objects (walls, doors) go out as meshes, not as Rhino objects with parameters.

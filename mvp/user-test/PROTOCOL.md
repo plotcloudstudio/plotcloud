@@ -1,4 +1,4 @@
-# PlotCloud usability test: from a place on the map to a compared scheme
+# SimuSite usability test: from a place on the map to a compared scheme
 
 A moderated test with **5 people**, one at a time, 45–60 minutes each, in person or on a video call with screen sharing.
 It tests the path built on 2026-10-25: Dashboard › New project › From the map → site in Plan Studio → masses → sun preview →
@@ -29,7 +29,7 @@ SUS scores as indications.
 | P5 | Architecture student (final years) | First-time user, no habits |
 
 Screener (by email or call): role, years, tools used weekly, has done a site feasibility study in the last year (P1–P4 yes),
-comfortable thinking aloud in English. Exclude anyone who worked on PlotCloud. Offer the usual thank-you (e.g. a gift card).
+comfortable thinking aloud in English. Exclude anyone who worked on SimuSite. Offer the usual thank-you (e.g. a gift card).
 
 ## 3. Set-up (moderator, before each session)
 
@@ -101,6 +101,6 @@ Write the findings with the participant codes only. Delete recordings after the 
 
 ## 8. Consent (read aloud or sign)
 
-"I agree to take part in a usability test of PlotCloud. I understand that the screen and my voice will be recorded, that the
-recording will be seen only by the PlotCloud team and deleted after the analysis, that my name will not appear in any report, and
+"I agree to take part in a usability test of SimuSite. I understand that the screen and my voice will be recorded, that the
+recording will be seen only by the SimuSite team and deleted after the analysis, that my name will not appear in any report, and
 that I can stop at any time without giving a reason."  Name, date, signature.

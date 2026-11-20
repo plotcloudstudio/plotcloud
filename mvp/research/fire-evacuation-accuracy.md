@@ -1,8 +1,8 @@
 # How accurate is the fire evacuation simulation? Verification, sensitivity and a hospital case study of a grid-based evacuation model for early design
 
-PlotCloud Research Notes · Technical note · not peer reviewed · Published online 10 November 2026
+SimuSite Research Notes · Technical note · not peer reviewed · Published online 10 November 2026
 
-PlotCloud Studio. PlotCloud, building performance software for architects. Prepared with AI assistance; human review pending.
+SimuSite Studio. SimuSite, building performance software for architects. Prepared with AI assistance; human review pending.
 
 ## Highlights
 
@@ -14,7 +14,7 @@ PlotCloud Studio. PlotCloud, building performance software for architects. Prepa
 
 ## Abstract
 
-Fire Evacuation in PlotCloud estimates how long a building takes to clear, either with everyone leaving at once or by a hospital's progressive horizontal evacuation followed by descent. It is a grid-based stochastic model with hydraulic flow limits after the SFPE Handbook, pre-movement times after PD 7974-6, and five occupant groups (adults, older adults, children, walking-aid users and wheelchair users) whose speeds come from published measurements. This study asks whether the engine implements its equations correctly, how many runs give stable results, how sensitive results are to the grid, to random incidents, to occupant groups and to hospital staffing, and what accuracy can honestly be claimed. Eighteen verification tests after IMO MSC.1/Circ.1533 and the verification categories of NIST TN 1822 and ISO 20414 all pass: speeds, flows and pre-movement distributions agree with analytical values within 0–3 %, and a three-storey building agrees with an SFPE hand calculation within 5.6 %. The study found and fixed five defects. The 0.5 m grid keeps only 1 m of a 1.8 m clear corridor (0.25 m grid: 1.5 m). The mean settles within 1 % after about 20 runs and the 90th percentile needs about 50. Inputs about people dominate the uncertainty: in the example hospital, staffing and patient preparation move the median by 43 % and 20 %, occupant groups move the clinic's everyone-out median by 40 %, and a wheelchair user's wait for assisted descent sets the end of the evacuation when there are wheelchair users above the ground floor. The model suits the comparison of design options under stated assumptions; it is not a prediction of a real evacuation time and not a code-compliance check.
+Fire Evacuation in SimuSite estimates how long a building takes to clear, either with everyone leaving at once or by a hospital's progressive horizontal evacuation followed by descent. It is a grid-based stochastic model with hydraulic flow limits after the SFPE Handbook, pre-movement times after PD 7974-6, and five occupant groups (adults, older adults, children, walking-aid users and wheelchair users) whose speeds come from published measurements. This study asks whether the engine implements its equations correctly, how many runs give stable results, how sensitive results are to the grid, to random incidents, to occupant groups and to hospital staffing, and what accuracy can honestly be claimed. Eighteen verification tests after IMO MSC.1/Circ.1533 and the verification categories of NIST TN 1822 and ISO 20414 all pass: speeds, flows and pre-movement distributions agree with analytical values within 0–3 %, and a three-storey building agrees with an SFPE hand calculation within 5.6 %. The study found and fixed five defects. The 0.5 m grid keeps only 1 m of a 1.8 m clear corridor (0.25 m grid: 1.5 m). The mean settles within 1 % after about 20 runs and the 90th percentile needs about 50. Inputs about people dominate the uncertainty: in the example hospital, staffing and patient preparation move the median by 43 % and 20 %, occupant groups move the clinic's everyone-out median by 40 %, and a wheelchair user's wait for assisted descent sets the end of the evacuation when there are wheelchair users above the ground floor. The model suits the comparison of design options under stated assumptions; it is not a prediction of a real evacuation time and not a code-compliance check.
 
 Keywords: Evacuation modelling; Verification; Required safe escape time (RSET); Hospital evacuation; People with reduced mobility; Children; Monte Carlo convergence
 
@@ -22,7 +22,7 @@ Keywords: Evacuation modelling; Verification; Required safe escape time (RSET); 
 
 Architects meet evacuation questions early: where to put a second stair, how wide a corridor or a cross-corridor door must be, how many beds a smoke compartment can hold, whether a ward can be cleared with the night staff. Prescriptive codes answer with rules on travel distance, exit width and compartment size. Performance-based design asks instead whether the required safe escape time (RSET) stays below the available safe escape time (ASET) with a margin [1]. PD 7974-6 divides RSET into detection, alarm, pre-movement and travel [1], and recorded evacuations show that pre-movement is often the longest and most uncertain part [2].
 
-PlotCloud's Fire Evacuation is a design-stage screening tool inside the architect's model. Earlier versions showed routes and timings without a check against analytical answers, and with parameters chosen by judgement. This article documents the evidence behind each parameter, verifies the engine, measures how much each uncertain input matters, and reports the changes made to the software as a result.
+SimuSite's Fire Evacuation is a design-stage screening tool inside the architect's model. Earlier versions showed routes and timings without a check against analytical answers, and with parameters chosen by judgement. This article documents the evidence behind each parameter, verifies the engine, measures how much each uncertain input matters, and reports the changes made to the software as a result.
 
 Research questions:
 
@@ -107,7 +107,7 @@ These are assumptions to test sensitivity, not measured rates:
 
 ### 3.5. Experiments
 
-Verification (Section 4) uses small synthetic geometries with fixed inputs, each with an analytical answer. Convergence (Section 5) runs a three-storey block of waiting rooms 300 times. The sensitivity studies (Section 6) vary one input at a time. The case study (Section 7) runs the PlotCloud example hospital in the browser, 50 runs per variant. All runs are seeded and can be reproduced exactly.
+Verification (Section 4) uses small synthetic geometries with fixed inputs, each with an analytical answer. Convergence (Section 5) runs a three-storey block of waiting rooms 300 times. The sensitivity studies (Section 6) vary one input at a time. The case study (Section 7) runs the SimuSite example hospital in the browser, 50 runs per variant. All runs are seeded and can be reproduced exactly.
 
 ## 4. Verification
 
@@ -214,7 +214,7 @@ Table 8. Hospital mode on a three-storey ward block, horizontal then down, 50 ru
 
 Night staffing adds 69 % to the median, and the preparation times, left out of earlier versions, add 18 %.
 
-## 7. Case study: the PlotCloud example hospital
+## 7. Case study: the SimuSite example hospital
 
 The example is a generic three-storey inpatient building of about 61 × 27 m, with an entrance and clinics on the ground floor and two inpatient units above (52 single patient rooms). Each inpatient floor has two smoke compartments separated by cross-corridor doors, and two exit stairs with 1.65 m flights serve every floor, entered at the ends of both corridors. Its means of egress meets every check of the software's Ontario Building Code screening (Section 10). Before that screening, the stairs had 1.4 m flights and were entered 8 m in from the corridors' ends, leaving dead-end corridors; both were corrected. In each run the fire starts in a random compartment with patients (hospital mode) or a random occupied room (everyone out).
 
@@ -292,11 +292,11 @@ The engine reproduces the hydraulic values it is built on and passes component t
 
 ## CRediT authorship contribution statement
 
-PlotCloud Studio: Conceptualization, Methodology, Software, Validation, Formal analysis, Writing – original draft. The software and this text were developed with AI assistance (Claude, Anthropic). Human subject-matter review is pending.
+SimuSite Studio: Conceptualization, Methodology, Software, Validation, Formal analysis, Writing – original draft. The software and this text were developed with AI assistance (Claude, Anthropic). Human subject-matter review is pending.
 
 ## Declaration of competing interest
 
-The authors develop PlotCloud, the software evaluated in this article. No external funding was received.
+The authors develop SimuSite, the software evaluated in this article. No external funding was received.
 
 ## Data availability
 

@@ -22,7 +22,7 @@ export function notesOf(m, n) {
     where: [m.project, m.site && m.site !== m.project ? m.site : '', Number.isFinite(m.lat) ? `${num(Math.abs(m.lat), 4)}° ${m.lat >= 0 ? 'N' : 'S'}, ${num(Math.abs(m.lon), 4)}° ${m.lon >= 0 ? 'E' : 'W'}` : ''].filter(Boolean).join(' · '),
     basis: `Quality ${m.quality} · grid ${m.grid} · model ${m.version} · conditions revision ${m.revision ?? '–'}${m.station ? ` · weather ${m.station}` : ''}`,
     scale: `One color scale for every figure: ${num(m.lo, m.dec)} to ${num(m.hi, m.dec)} ${m.unit}`,
-    made: `Generated ${stamp(m.at)} with PlotCloud`,
+    made: `Generated ${stamp(m.at)} with SimuSite`,
   };
 }
 
@@ -109,7 +109,7 @@ export function openSeriesPreview(app, o) {
   // A3 landscape, millimetres: title block, the pictures in the grid with their captions, the legend drawn as bands, the notes
   async function pdf(frames) {
     const { PDF, font } = await pdfDeps(), d = new PDF({ orientation: 'landscape', unit: 'mm', format: 'tabloid', compress: true }) /* 11 × 17 in (ANSI B), as North American offices print */; d.addFileToVFS('DejaVuSans.ttf', font); d.addFont('DejaVuSans.ttf', 'DejaVu', 'normal'); d.setFont('DejaVu');
-    d.setProperties({ title: `${N.head} · ${m.project}`, subject: N.sub, creator: 'PlotCloud', keywords: `${m.study}, ${m.quality}` });
+    d.setProperties({ title: `${N.head} · ${m.project}`, subject: N.sub, creator: 'SimuSite', keywords: `${m.study}, ${m.quality}` });
     const W = d.internal.pageSize.getWidth(), H = d.internal.pageSize.getHeight(), mg = 14, gap = 4, bottom = 30, ar = frames[0].height / frames[0].width, cw = (W - 2 * mg - (cols - 1) * gap) / cols, chMax = (H - 34 - bottom - mg - (rows - 1) * gap) / rows - 6, fw = Math.min(cw, chMax / ar), fh = fw * ar, x0 = (W - (cols * fw + (cols - 1) * gap)) / 2, block = rows * (fh + 6) + (rows - 1) * gap + 30, top = Math.max(34, 34 + (H - mg - 34 - block) / 2);   // the pictures, legend and notes centred on the page under the title
     d.setTextColor(17, 24, 39); d.setFontSize(18); d.text(N.head, mg, mg + 6); d.setFontSize(9); d.setTextColor(55, 65, 81); d.text(N.sub, mg, mg + 12.5); d.text(N.where, mg, mg + 17.5); d.text(N.made, W - mg, mg + 6, { align: 'right' });
     d.setDrawColor(209, 213, 219); d.setLineWidth(0.2); d.line(mg, mg + 21, W - mg, mg + 21);
