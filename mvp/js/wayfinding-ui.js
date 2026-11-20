@@ -3,7 +3,7 @@
 // in 3D) and the results (points ranked by the Signage Priority Score, each with its reason and factors; routes with no valid way;
 // destination entrances and the Room Entrance View). The analysis is interior/wayfinding-signage.js; this module only presents it.
 import * as WS from './interior/wayfinding-signage.js?v=wfsign-20261119-3';
-import { walkHTML } from './wayfinding-walk.js?v=wfwalk-20261119-2';
+import { walkHTML } from './wayfinding-walk.js?v=wfwalk-20261119-3';
 
 export const VIEWS = [['signs', 'Sign priority'], ['routes', 'Routes'], ['depth', 'Visual depth']];
 const KIND = { lift: 'L', stair: 'S', entrance: 'E', manual: 'M' };
