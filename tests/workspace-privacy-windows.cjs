@@ -15,7 +15,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const id = await p.evaluate(async () => (await import('./js/hospital-example.js')).openHospital().id), url = base + '/mvp/#/workspace/' + id;
     const boot = async () => { await p.goto(url); await p.waitForFunction(() => window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready && window.__wsStudy, null, { timeout: 400000 }); await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(2500); };
     await boot();
-    const R = await p.evaluate(async () => { const m = await import('./js/interior/privacy.js?v=priv-20261119-1'); return { RISK: m.RISK, AT: m.RISK_AT }; });
+    const R = await p.evaluate(async () => { const m = await import('./js/interior/privacy.js?v=priv-20261120-1'); return { RISK: m.RISK, AT: m.RISK_AT }; });
     const riskOf = (s) => (s == null ? 'na' : s >= R.AT.high ? 'high' : s >= R.AT.medium ? 'medium' : 'low');
     const idle = () => p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const run = async () => { await p.evaluate(() => document.querySelector('.sp-studycard [data-st=run]').click()); await p.waitForTimeout(300); await idle(); await p.waitForTimeout(800); const e = await p.evaluate(() => window.__wsStudy.state().err); assert(!e, 'study error: ' + e); };
@@ -64,7 +64,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.equal(await p.evaluate(() => __ws2.sels().at(-1)), 'ps:op:' + other.id, 'the list row selects its window');
     console.log(`PASS a window clicked: ${det.text.replace(/\s+/g, ' ').slice(0, 220)}; a row of the list selects its window in the model`);
     // ---- the sill raised to 2.0 m: grey until the rerun, then a lower score
-    await edit(`const o = M.ops.find((q) => q.id === '${hi.id}'); o.sill = 2.0; o.head = Math.max(o.head || 2.1, 2.4);`); await p.waitForTimeout(1500);
+    await edit(`const o = M.ops.find((q) => q.id === '${hi.id}'); o.sill = 2.0; o.head = Math.max(o.head || 2.1, 2.4);`);
+    await p.waitForFunction((i) => { const P = window.__wsPriv(), w = __ws2.inst.plan.ws.winRiskState(); return P.cols?.info[i]?.risk === 'na' && w && w.cols[i] === P.cols.cols[i]; }, hi.id, { timeout: 30000 });
     s = await st(); assert.equal(s.info[hi.id].risk, 'na', 'changed since the run: not analysed'); assert.equal(s.plan.cols[hi.id], R.RISK.na.col); assert.equal(s.persp.cols[hi.id], R.RISK.na.col);
     await run(); s = await st(); const hi2 = s.rec.list.find((x) => x.id === hi.id);
     assert(hi2 && hi2.score < hi.score && s.plan.cols[hi.id] === R.RISK[hi2.risk].col && s.persp.cols[hi.id] === R.RISK[hi2.risk].col, `sill 2.0 m: ${hi.score} → ${hi2 && hi2.score}`);

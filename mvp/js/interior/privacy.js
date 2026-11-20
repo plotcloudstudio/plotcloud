@@ -60,12 +60,22 @@ function blockedOutside(ob, q, zA) {
   for (const b of SC.ctx || []) { if (b.id === ob.bid) continue; const P = b.pts; for (let i = 0; i < P.length; i++) { const t = segCross(ob.p, q, P[i], P[(i + 1) % P.length]); if (t < 0) continue; const z = ob.z + (zA - ob.z) * t; if (z >= (b.base || 0) - 0.01 && z <= b.h) return true; } }
   if (TER) { const L = dist(ob.p, q), n = Math.ceil(L / (TER.st / 2)); for (let i = 1; i < n; i++) { /* samples at half the terrain spacing */ const t = i / n, x = [ob.p[0] + (q[0] - ob.p[0]) * t, ob.p[1] + (q[1] - ob.p[1]) * t]; if (groundAt(x) > ob.z + (zA - ob.z) * t + 0.1) return true; } }
   return false; }
+// for each wall, the openings that could be where a sight line crosses it: those whose segment comes within the wall's thickness
+// + 5 cm of the wall's segment (a superset of what the test can match), in the order of SC.open, with their length and direction
+let OPN = new WeakMap();
+const segPt = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) : 0; return Math.hypot(p[0] - a[0] - dx * t, p[1] - a[1] - dy * t); };
+const segSeg = (a, b, c, d) => (segCross(a, b, c, d) >= 0 ? 0 : Math.min(segPt(a, c, d), segPt(b, c, d), segPt(c, a, b), segPt(d, a, b)));
+function opsNear(w) { let l = OPN.get(w); if (l) return l; const lim = (w.t || 0.2) + 0.05 + 1e-6; l = [];
+  for (const op of SC.open) { if (segSeg(w.a, w.b, op.a, op.b) > lim) continue; const L = dist(op.a, op.b) || 1; l.push({ op, ax: op.a[0], ay: op.a[1], dx: op.b[0] - op.a[0], dy: op.b[1] - op.a[1], L, L2: L * L }); }
+  OPN.set(w, l); return l; }
 // can the onlooker see the spot q (at z above the level's floor)? the window it looks through, or null
 function sees(ob, q, zq, o, z0) {
   let win = null; const walls = SC.walls;
   for (const w of walls) { const t = segCross(ob.p, q, w.a, w.b); if (t < 0) continue;
     const X = [ob.p[0] + (q[0] - ob.p[0]) * t, ob.p[1] + (q[1] - ob.p[1]) * t], zX = ob.z + (z0 + zq - ob.z) * t - z0;   // height above this floor where the line meets the wall
-    const op = SC.open.find((op) => { const L = dist(op.a, op.b) || 1, u = ((X[0] - op.a[0]) * (op.b[0] - op.a[0]) + (X[1] - op.a[1]) * (op.b[1] - op.a[1])) / (L * L), off = Math.abs((X[0] - op.a[0]) * (op.b[1] - op.a[1]) - (X[1] - op.a[1]) * (op.b[0] - op.a[0])) / L; return u >= 0 && u <= 1 && off < (w.t || 0.2) + 0.05; });
+    // the openings that can be where it crosses (2026-11-19: those near this wall, worked out once a run; the same test as before, in the same order)
+    let op = null; const lim = (w.t || 0.2) + 0.05;
+    for (const c of opsNear(w)) { const ex = X[0] - c.ax, ey = X[1] - c.ay, u = (ex * c.dx + ey * c.dy) / c.L2, off = Math.abs(ex * c.dy - ey * c.dx) / c.L; if (u >= 0 && u <= 1 && off < lim) { op = c.op; break; } }
     if (!op) return null;
     if (op.kind === 'door' && (op.ext || !o.doors)) return null;
     if (op.kind === 'win') { if (zX < op.sill || zX > op.head) return null; if (op.ext && !win) win = op; } }
@@ -108,7 +118,7 @@ function figures() {
   return { floor: all ? 100 * seenAll / all : 0, priv: priv.length ? 100 * privSeen / priv.length : 0, hasPriv: priv.length > 0, toScreen, wins, worst };
 }
 
-export async function run(scene, o, prog) { SC = { ...scene, walls: scene.walls || [], open: scene.open || [], rooms: scene.rooms || [], furn: scene.furn || [], ctx: scene.ctx || [], roads: (scene.roads || []).filter((r) => r.pts && r.pts.length >= 2) }; OPTS = o; RES = null; TER = terrainOf(scene.terrain);
+export async function run(scene, o, prog) { SC = { ...scene, walls: scene.walls || [], open: scene.open || [], rooms: scene.rooms || [], furn: scene.furn || [], ctx: scene.ctx || [], roads: (scene.roads || []).filter((r) => r.pts && r.pts.length >= 2) }; OPTS = o; RES = null; TER = terrainOf(scene.terrain); OPN = new WeakMap();
   await analyse({ say() {}, prog: prog || (() => {}) }); if (!RES) throw Error('Stopped.'); return { SC, RES, F: figures(), winRoom, needOf, windows: RES.windows, where: useRoads(o) ? 'site' : 'sides', roads: useRoads(o) ? [...new Set(RES.obs.filter((x) => x.rid).map((x) => x.rname))] : [] }; }
 export { EXP, NEED, NEEDT, LIMIT };
 

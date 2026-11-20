@@ -22,7 +22,7 @@ import { stormwater } from './stormwater-grid.js?v=water-20261106-1';
 import * as WTRL from '../../emb/lib/water.js?v=water-20261118-1';
 import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
-import * as PRIV from './interior/privacy.js?v=priv-20261119-1';
+import * as PRIV from './interior/privacy.js?v=priv-20261120-1';
 import * as WAY from './interior/wayfinding.js?v=way-20261118-1';
 import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261119-3';
 import * as WUI from './wayfinding-ui.js?v=wfui-20261119-4';

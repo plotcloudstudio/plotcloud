@@ -6806,12 +6806,13 @@ window.S3 = (() => {
   const FLR = { m: null, y: 0, plane: null };
   // the cutaway of an interior study (2026-11-01): only the design is cut 1.2 m above the floor; the site, the terrain and the
   // surrounding buildings stay whole (a cut over the whole scene took the neighbours away). Re-applied after each rebuild.
+  const CUTM = new WeakMap();   // a material → its copy cut at the floor plane
   function cutApply() { if (!R) return; R.localClippingEnabled = true;
     // restore what was cut, then cut the design again with its own copies of the materials (shared ones are left alone)
-    if (grp) grp.traverse((o) => { if (o.userData.__precut) { const c = o.material; o.material = o.userData.__precut; delete o.userData.__precut; for (const m of Array.isArray(c) ? c : [c]) m.dispose?.(); } });
+    if (grp) grp.traverse((o) => { if (o.userData.__precut) { o.material = o.userData.__precut; delete o.userData.__precut; } });   // the cut copies are kept (CUTM, 2026-11-20): disposing them threw away their compiled shaders, built again on every result
     if (!FLR.cut || !FLR.plane || !grp || WALK.on) return;   // walking at eye height (2026-11-19): the walls whole, not cut at 1.2 m for the plan
     grp.traverse((o) => { if (!(o.isMesh || o.isLine || o.isLineSegments) || !o.material || o.userData.__precut) return; const u = tagOf(o); if (u && ['site', 'ctx', 'world'].includes(u.k)) return;   /* untagged parts of the model (slabs, ceilings) are cut too */
-      const cut = (m) => { const c = m.clone(); c.clippingPlanes = [FLR.plane]; return c; }; o.userData.__precut = o.material; o.material = Array.isArray(o.material) ? o.material.map(cut) : cut(o.material); }); }
+      const cut = (m) => { let c = CUTM.get(m); if (c) c.copy(m); else { c = m.clone(); CUTM.set(m, c); } c.clippingPlanes = [FLR.plane]; return c; }; o.userData.__precut = o.material; o.material = Array.isArray(o.material) ? o.material.map(cut) : cut(o.material); }); }
   // people walking the routes (2026-11-01): simple scale figures (1.7 m) that fade in, walk and fade out
   const PPL = { scene: null, list: [], geo: null };
   function personMesh() { if (!PPL.geo) PPL.geo = { body: new T.CapsuleGeometry(0.17, 0.95, 4, 12), head: new T.SphereGeometry(0.115, 16, 12) };
@@ -6886,9 +6887,9 @@ window.S3 = (() => {
   api._cut = () => { let design = 0, site = 0; if (grp) grp.traverse((o) => { if (!o.material) return; const cp = (Array.isArray(o.material) ? o.material : [o.material]).some((m) => m.clippingPlanes && m.clippingPlanes.length); if (!cp) return; const u = tagOf(o); if (u && ['site', 'ctx', 'world'].includes(u.k)) site++; else design++; }); return { global: R ? R.clippingPlanes.length : -1, design, site }; };   // read-only, for the browser checks
   api._floorTop = () => { let t = -Infinity; if (grp) grp.traverse((m) => { if (!m.isMesh) return; const u = tagOf(m); if (u && u.k === 'floor') { const b = new T.Box3().setFromObject(m); if (b.max.y < 2) t = Math.max(t, b.max.y); } }); return t; };   // read-only, for the browser checks
   api._people = () => ({ n: PPL.list.filter((m) => m.visible).length, y: PPL.list.find((m) => m.visible)?.position.y ?? null, floor: (() => { try { return api.storeys().map((x) => [x.id, x.y]); } catch (e) { return null; } })() });   // read-only, for the browser checks   // read-only, for the browser checks
-  api.floorSheet = (o) => { if (!scene) return; if (!o) { if (FLR.cut && R) { FLR.cut = false; FLR.plane = null; cutApply(); render(); } if (FLR.m) { scene.remove(FLR.m); FLR.m.geometry.dispose(); FLR.m.material.map?.dispose(); FLR.m.material.dispose(); FLR.m = null; render(); } return; }
+  api.floorSheet = (o) => { if (!scene) return; if (!o) { if (FLR.cut && R) { FLR.cut = false; FLR.plane = null; cutApply(); render(); } if (FLR.m) { scene.remove(FLR.m); FLR.m.geometry.dispose(); FLR.m.material.map?.dispose(); FLR.m.material.map = null; FLR.mat = FLR.m.material; FLR.m = null; render(); } return; }   /* the material is kept for the next sheet (2026-11-20): disposing it threw away its compiled shader, built again on every result */
     if (!FLR.m || FLR.m.userData.cv !== o.canvas) { api.floorSheet(null); const tex = new T.CanvasTexture(o.canvas); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
-      const mt = new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: T.DoubleSide }), U = revealMat(mt, 0, [o.w / 2, o.h / 2]);
+      let mt = FLR.mat, U; if (mt) { mt.map = tex; U = mt.userData.rev; U.uHalf.value.set(o.w / 2, o.h / 2); U.uRev.value = 0; } else { mt = new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: T.DoubleSide }); U = revealMat(mt, 0, [o.w / 2, o.h / 2]); } FLR.mat = null;
       const m = new T.Mesh(new T.PlaneGeometry(o.w, o.h), mt); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; m.name = 'floorsheet'; m.userData.cv = o.canvas; scene.add(m); FLR.m = m; tween(850, (e) => { U.uRev.value = e * 1.5; }, null, 'floor'); }
     let y = o.z, onStorey = false; try { const st = api.storeys().find((x) => x.id === o.lv && !x.roof); if (st) { y = st.y; onStorey = true; } } catch (e) { }
     // on the floor's top (2026-11-01): the highest floor slab within 0.6 m of the level, under the sheet's middle; furniture,
