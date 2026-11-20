@@ -1,5 +1,6 @@
 // Two user-approved fixed masters: white urban massing and white apartment cutaway.
-// Only the analysis overlay varies; these are illustrative previews, never project results.
+// Most previews vary only the overlay; Water sound uses an existing example-study capture.
+// None of these previews is a result for the current project.
 // Home, Workspace, catalog and legacy thumbnail helpers share this asset source.
 const INTENTS={
   snow:['Where does a given snowfall land?','Estimate snow volume on the topmost roof and ground surfaces, with an explicit depth and density.','snow'],
@@ -29,5 +30,6 @@ const INTENTS={
 };
 export function simulationPresentation(sim){
  const [question,description]=INTENTS[sim.id]||[sim.question||'What does this study help you decide?',sim.blurb];
- return {...sim,title:sim.name,question,description,image:sim.image||`img/home/${sim.id}.webp?v=master-models-snow-20261031-3`,href:`#/simulations/${sim.id}`};
+ const image = sim.image || (sim.id === 'watersound' ? 'img/research/fallingwater/watersound.jpg' : `img/home/${sim.id}.webp?v=master-models-snow-20261031-3`);
+ return {...sim,title:sim.name,question,description,image,href:`#/simulations/${sim.id}`};
 }
