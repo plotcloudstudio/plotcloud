@@ -14,3 +14,7 @@ password_requirements = "letters_digits"
 
 [auth.email]
 enable_signup = true
+
+# Stripe billing (2026-11-20): checkout and portal check the person's own token inside the function; the webhook checks Stripe's signature
+[functions.stripe-billing]
+verify_jwt = false
