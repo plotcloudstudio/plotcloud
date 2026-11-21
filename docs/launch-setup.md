@@ -6,29 +6,14 @@
 
 ---
 
-## 第 1 步：把域名交给 Cloudflare 管理（先做，生效需要几分钟到 24 小时）
+## 已完成（2026-11-21）
 
-1. 打开 dash.cloudflare.com，注册并登录。
-2. 首页点 **Add a domain**（或 “Onboard a domain”），输入 `simusites.com`，选 **Free** 套餐，一路 Continue。
-3. Cloudflare 会显示**两个 nameserver**（形如 `xxx.ns.cloudflare.com`），先留着这个页面。
-4. 另开 GoDaddy：右上角 **My Products** → 找到 simusites.com → **DNS** → **Nameservers** → **Change Nameservers**
-   → 选 **I'll use my own nameservers** → 填入 Cloudflare 的那两个 → **Save**。
-   - 如果 GoDaddy 提示 DNSSEC 已开启，先在 GoDaddy 关闭 DNSSEC。
-5. 回到 Cloudflare 点 **Check nameservers**。生效后 Cloudflare 会发邮件告诉你 “simusites.com is now active”。
-
-域名以后仍在 GoDaddy 续费；Cloudflare 只负责 DNS 和 HTTPS，免费。
-
-## 第 2 步：用 Cloudflare Pages 托管网站
-
-1. Cloudflare 左侧 **Workers & Pages** → **Create** → 选 **Pages** → **Connect to Git**。
-2. 授权 GitHub，选仓库 `plotcloudstudio/plotcloud`。
-3. 设置：
-   - Production branch：`main`
-   - Framework preset：**None**
-   - Build command：留空
-   - Build output directory：`/`
-4. **Save and Deploy**。完成后会得到一个 `xxx.pages.dev` 地址，先发给我，我用它做测试。
-5. 等第 1 步生效后，在这个 Pages 项目里 → **Custom domains** → **Set up a custom domain**，分别添加 `simusites.com` 和 `www.simusites.com`。
+- **第 1 步 域名交给 Cloudflare**：simusites.com 的 nameserver 已指向 Cloudflare。
+- **第 2 步 网站托管**：Cloudflare Pages 连接 GitHub 一直失败，改为沿用 GitHub Pages（main 分支根目录，合并即自动更新）。
+  - Cloudflare DNS：`simusites.com` 4 条 A 记录指向 `185.199.108.153`、`.109`、`.110`、`.111`；`www` CNAME 指向 `plotcloudstudio.github.io`；全部 **DNS only**（灰色云）。
+  - GitHub 仓库 Settings → Pages：Custom domain 为 `simusites.com`，已打开 Enforce HTTPS（GitHub 自动在 main 加了 `CNAME` 文件）。
+  - 网站地址 `https://simusites.com/mvp/`；旧的 github.io 地址自动跳转到新域名。
+- **第 5 步 登录链接**：Supabase Site URL 已改为 `https://simusites.com/mvp/`，Redirect URLs 已加 `https://simusites.com/mvp/` 和 `https://simusites.com/mvp/**`，旧地址的两条暂时保留。
 
 ## 第 3 步：Stripe 收款
 
@@ -38,7 +23,7 @@
    - 国家选加拿大；
    - 填个人或公司信息、身份验证、收款的银行账户。
 2. **Product catalog** → **Add product**：
-   - 名称 `PlotCloud Monthly`
+   - 名称 `SimuSite Monthly`
    - Pricing：**Recurring**，**Monthly**，**CAD 16.99**
    - 保存后，复制价格的 ID（`price_` 开头）发给我。
 3. **Settings → Billing → Customer portal**：
@@ -76,14 +61,7 @@ Supabase 自带的发件服务每小时只能发几封，正式注册必须换�
    | Username | `resend` |
    | Password | 刚才的 API key |
    | Sender email | `no-reply@simusites.com` |
-   | Sender name | `PlotCloud` |
-
-## 第 5 步：登录链接指向新域名
-
-Supabase → **Authentication → URL Configuration**：
-- **Site URL** 改为 `https://simusites.com/mvp/`
-- **Redirect URLs** 添加 `https://simusites.com/mvp/**`
-- 暂时保留旧的 `https://plotcloudstudio.github.io/plotcloud/mvp/`，迁移完成后再删。
+   | Sender name | `SimuSite` |
 
 ## 可选：用域名邮箱收信（免费）
 
