@@ -4,7 +4,7 @@ import {installStudyWorkflow} from '../simulation-workflow.js?v=import-feedback-
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile,ensureProjectClimate,cancelProjectClimate} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
-import {mountStudyImport} from '../study-import.js?v=import-feedback-20261027-1';
+import {mountStudyImport} from '../study-import.js?v=sims-20261121-1';
 // One simulation page for every SimuSite engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
 // One implementation: nothing here computes or draws a result. This page only
 //   hands the engine the version's model in the engine's own input format (the scene Plan Studio's Send to Simulation
@@ -17,7 +17,7 @@ import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
-import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=import-feedback-20261027-1';
+import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=sims-20261121-1';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
@@ -127,8 +127,8 @@ export const IN_WORKSPACE = ['vehicle-swept-path', 'parking-layout', 'watersound
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
-  if(sim.family==='environment')return(await import('./environment-study.js?v=run-20261101-1')).render(app,sim,params,context);
-  if(sim.id==='structure')return(await import('./structure-study.js?v=run-20261031-1')).render(app,sim,params,context);
+  if(sim.family==='environment')return(await import('./environment-study.js?v=sims-20261121-1')).render(app,sim,params,context);
+  if(sim.id==='structure')return(await import('./structure-study.js?v=sims-20261121-1')).render(app,sim,params,context);
   // studies that run in the Workspace now (2026-11-01; their study pages are retired): an old link opens the project's Workspace
   // with the study's card; a batch run says where it runs
   if (IN_WORKSPACE.includes(sim.id) && !(['daylight', 'vent', 'acoustics'].includes(sim.id) && params.get('batch')) && !(sim.id === 'vent' && params.get('detail'))) {   // a Daylight batch runs here, without a page (below); Ventilation and Acoustics batches and the detailed ventilation page (air speed inside one level) still use their pages
@@ -175,7 +175,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   // the shared conditions and the batch panel's changes, and is recorded as the page recorded it
   if (sim.id === 'daylight' && batch) {
     app.innerHTML = `<div class="wrap"><p role="status">Daylight · running…</p></div>`; tell({ stage: 'running' });
-    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=day-20261114-1'), DAYM = await import('../interior/daylight.js?v=day-20261114-1');
+    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=sims-20261121-1'), DAYM = await import('../interior/daylight.js?v=sims-20261121-1');
       const r = await studioScene(v, site, p.name, 'daylight', level?.id); if (!r.ok) throw Error(r.why || 'The model could not be read.'); const sc = JSON.parse(r.scene);
       const { shared: sh, inputs } = await DR.daylightInputs(p, OVd), out = await DAYM.run(sc, { level: 'draft', ...inputs });
       const rec = DR.daylightRecord(p, v, sh, out, { level: level?.id, origin: sc.origin, settings: { batchOverrides: OVd } }); tell({ ok: true, settings: rec.settings, results: rec.results });

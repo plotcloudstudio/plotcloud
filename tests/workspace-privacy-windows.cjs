@@ -15,7 +15,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const id = await p.evaluate(async () => (await import('./js/hospital-example.js')).openHospital().id), url = base + '/mvp/#/workspace/' + id;
     const boot = async () => { await p.goto(url); await p.waitForFunction(() => window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready && window.__wsStudy, null, { timeout: 400000 }); await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(2500); };
     await boot();
-    const R = await p.evaluate(async () => { const m = await import('./js/interior/privacy.js?v=priv-20261120-1'); return { RISK: m.RISK, AT: m.RISK_AT }; });
+    const R = await p.evaluate(async () => { const m = await import('./js/interior/privacy.js?v=sims-20261121-1'); return { RISK: m.RISK, AT: m.RISK_AT }; });
     const riskOf = (s) => (s == null ? 'na' : s >= R.AT.high ? 'high' : s >= R.AT.medium ? 'medium' : 'low');
     const idle = () => p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const run = async () => { await p.evaluate(() => document.querySelector('.sp-studycard [data-st=run]').click()); await p.waitForTimeout(300); await idle(); await p.waitForTimeout(800); const e = await p.evaluate(() => window.__wsStudy.state().err); assert(!e, 'study error: ' + e); };

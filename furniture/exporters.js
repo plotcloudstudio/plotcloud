@@ -1,6 +1,6 @@
 // Exporters. All geometry is in millimeters, Z up, origin at the bottom center.
 import { partGeometry, triangles, isNurbsable } from './geom.js?v=speed-20261118-1';
-import { materialColor } from './models.js?v=entourage-20261102-1';
+import { materialColor } from './models.js?v=sims-20261121-1';
 import { LANG } from './i18n.js';
 
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));

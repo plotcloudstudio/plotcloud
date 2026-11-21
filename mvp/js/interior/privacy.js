@@ -4,7 +4,7 @@
 // 2026-11-19: the site's buildings (and terrain) block sight lines and, within 40 m, look in from their own storeys; every window in
 // an outside wall gets a risk score from the sight lines that pass through it (see windowRisk). A geometric screening: straight sight
 // lines only; curtains, frosting, planting, reflections, glare and how people behave are not modelled.
-import { clamp, r1, raster, centre, sliced, keep, ROOM_SKIP, sceneBounds, wallBox, segCross, dist } from '../../../emb/lib/plansim.js?v=1';
+import { clamp, r1, raster, centre, sliced, keep, ROOM_SKIP, sceneBounds, wallBox, segCross, dist } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 let SC = null, RES = null, OPTS = null, IMG = null;   // IMG: the study page's picture cache, unused here
  const opts = () => OPTS, setKey = () => '';
 const EXP = [[0, [255, 255, 255]], [0.02, [255, 238, 170]], [0.3, [250, 170, 70]], [0.65, [220, 70, 50]], [1, [140, 20, 40]]];

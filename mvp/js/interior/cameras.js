@@ -2,7 +2,7 @@
 // unchanged, for the Workspace: DORI pixel densities (IEC 62676-4) give each camera type a range at the chosen level; sight lines
 // from the camera height to the watched height; candidate positions on the walls (dome, bullet: 16 directions) and the ceiling
 // (fisheye); greedy picks plus swaps find the cameras that cover the most floor, for a number of cameras or a coverage target.
-import { clamp } from '../../../emb/lib/plansim.js?v=1';
+import { clamp } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 const SC = { bounds: { w: 16, h: 12 }, walls: [], furn: [], cams: [], hm: null };
 const window = { __isoCmin: 0, __isoCells: 350000 };   // the page's tuning hooks, at their defaults
 let STOP = false;

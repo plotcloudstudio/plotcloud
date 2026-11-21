@@ -9,7 +9,7 @@
 //   it was changed here since, then sent again); gone here but synced before → deleted here (removed there).
 // The sample project is not sent. A project over 24 MB is not sent (reported in the status).
 import * as S from './store.js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './backend-config.js?v=cloud-connect-20261027-1';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './backend-config.js?v=sims-20261121-1';
 import { probeBackend } from './backend-status.js?v=cloud-connect-20261027-1';
 
 const SK = 'pc-cloud-session', STK = 'pc-cloud-state', LIMIT = 24e6;

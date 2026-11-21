@@ -2,7 +2,7 @@
 // Members as tubes coloured on the structure ramp (blue → white → orange → red) along their length, force diagrams as translucent
 // flags, the deformed shape over the original at a chosen scale, supports, braces added by hand (a preview, then a real member).
 // No DOM here beyond HTML strings; the Workspace passes its helpers (fmt, esc, rampHex) in.
-import { braceBays } from './structure-frame.js?v=frame-20261118-2';
+import { braceBays } from './structure-frame.js?v=sims-20261121-1';
 
 export const FVIEWS = [['M', 'Moment M'], ['N', 'Axial N'], ['V', 'Shear V'], ['T', 'Torsion T'], ['disp', 'Displacement'], ['sigma', 'Normal stress'], ['vm', 'von Mises'], ['util', 'Capacity used'], ['sys', 'System and supports']];
 export const LAYOUT_VIEWS = [['load', 'Column load'], ['size', 'Column size'], ['pressure', 'Foundation'], ['depth', 'Floor depth']];

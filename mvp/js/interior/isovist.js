@@ -1,7 +1,7 @@
 // Isovist safety (2026-11-01): the analysis of the Isovist safety study (the former emb/isovist.html, retired 2026-11-01), unchanged,
 // for the Workspace: from a viewpoint at an eye height, which floor (or a child at 0.6 or 1.0 m) is seen and which is a blind spot,
 // within the room around the viewpoint; the same for a child (1.0 m), a wheelchair user (1.2 m) and an adult (1.6 m); hazards seen.
-import { clamp } from '../../../emb/lib/plansim.js?v=1';
+import { clamp } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 let SC = null, EYE = 1.0, TGT = 0.6;
 const window = { __isoCmin: 0, __isoCells: 350000 };   // the page's tuning hooks, at their defaults
 // ================= analysis =================

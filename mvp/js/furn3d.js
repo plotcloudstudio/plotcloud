@@ -2,7 +2,7 @@
 // the mesh is rebuilt from furniture/models.js + furniture/geom.js (the same code Plan Studio uses), so nothing heavy is saved.
 import './pc-en.js';
 import * as THREE from 'three';
-import { MODELS, defaults, buildModel, paramVisible, materialColor } from '../../furniture/models.js?v=entourage-20261102-1';
+import { MODELS, defaults, buildModel, paramVisible, materialColor } from '../../furniture/models.js?v=sims-20261121-1';
 import { partGeometry } from '../../furniture/geom.js?v=speed-20261118-1';
 import { t } from '../../furniture/i18n.js';
 

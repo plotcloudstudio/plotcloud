@@ -1,7 +1,7 @@
 // View analysis (2026-11-01): the analysis of the View analysis study (the former emb/views.html, retired 2026-11-01), unchanged, for
 // the Workspace: LEED v4.1 Quality Views screening. From spots over the occupied floor, horizontal sight lines through vision
 // glazing to the outdoors: line of sight out, the four quality criteria, view factor and distance to the window.
-import { clamp } from '../../../emb/lib/plansim.js?v=1';
+import { clamp } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 let SC = null, EYE = 1.07, TGT = 0, HEAD = 2.4, FAR = 7.5, NATURE = false, MOTION = false, EXCL = [];
 const window = { __isoCmin: 0, __isoCells: 350000 };   // the page's tuning hooks, at their defaults
 // ================= geometry (shared with Isovist Safety) =================

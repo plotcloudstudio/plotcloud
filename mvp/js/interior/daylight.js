@@ -2,7 +2,7 @@
 // Workspace: climate-based daylight on the work plane over a year of hours (project weather, or a generic year), sky in 145
 // patches, the sun, reflections inside and outside; spatial daylight autonomy sDA300/50%, annual sun exposure ASE1000/250 h,
 // daylight factor and the LEED v4.1 option 2 illuminance check (9:00 and 15:00 at the equinox).
-import { clamp } from '../../../emb/lib/plansim.js?v=1';
+import { clamp } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 let SC = null, TGT = 0, EYE = 1.07, HEAD = 2.4, CEIL = 2.7, WP = 0.8, TAU = 0.6, RF = 0.2, RW = 0.5, RC = 0.8, NORTH = 0, OCC = [8, 18], EXCL = [];
 const window = { __isoCmin: 0, __isoCells: 350000 };   // the page's tuning hooks, at their defaults
 // ================= geometry (shared with Isovist Safety) =================

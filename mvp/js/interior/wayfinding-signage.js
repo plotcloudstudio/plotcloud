@@ -9,7 +9,7 @@
 // · a Signage Priority Score (0–100) for each point from six factors with written formulas, the sign it calls for, its facing
 //   and the destinations each way, from the walker's own direction (never the screen's left and right)
 // Pure functions over plan scenes (planScene(…, 'wayfinding')): no DOM, so the Node tests run the same code.
-import { raster, paintSeg, paintRect, cellOf, centre, los, wallPieces, ROOM_SKIP, sceneBounds } from '../../../emb/lib/plansim.js?v=1';
+import { raster, paintSeg, paintRect, cellOf, centre, los, wallPieces, ROOM_SKIP, sceneBounds } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 
 export const LIFT = /elevator|\blifts?\b|电梯/i, STAIR = /stair|楼梯/i, LOBBY = /lobby|vestibule|foyer|landing|\bhall\b|厅/i;
 export const STAFF_ONLY = /\bstaff\b|clean (?:utility|linen|supply)|soiled|dirty utility|\butility\b|mechanical|electrical|\bplant\b|server|housekeeping|janitor|\bstores?\b|storage|nourishment|\bmail\b|linen/i;
