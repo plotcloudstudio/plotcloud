@@ -10,7 +10,7 @@ summary: The Solar envelope study computes, at each cell, the greatest height a 
 image: img/home/solarenvelope.webp
 imageAlt: Solar envelope heights over a site, lower near neighbours to the north and higher away from them
 code: mvp/js/workspace-chrome.js, mvp/js/environment/analysis.js
-tests: tests/environment-analysis.cjs
+tests: tests/environment-analysis.cjs, tests/sun-solar-time.test.mjs
 keywords:
 - Solar envelope
 - Solar rights
@@ -21,12 +21,12 @@ highlights:
 - For each cell the envelope height is the lowest height at which a vertical line would start to shade a protected neighbour.
 - Protected periods: equinoxes 9:00–15:00, winter solstice 10:00–14:00 or summer solstice 8:00–17:00, every 30 minutes.
 - The method follows Knowles's solar envelope; heights are capped at 100 m.
-- Solar time is approximated as clock time at the longitude meridian, which can shift the sun by up to about 16 minutes.
+- Protected hours are apparent solar time: local mean time at the site's meridian corrected by the equation of time (added after the audit).
 - The envelope is a geometric constraint, not a planning approval.
 ---
 # Abstract
 
-The solar envelope, introduced by Ralph Knowles, is the largest volume that can be built on a site without casting shadow on neighbouring properties during specified hours [1, 2]. It turns the qualitative goal of solar access into a three-dimensional zoning constraint. SimuSite's Solar envelope study computes, on a grid over the site, the greatest height at each cell such that a building there would not shade any surrounding building for a set of sun positions in a protected period. This report describes the computation, the three preset protected periods, and the parameters, and identifies one approximation for correction: protected hours are taken at local mean solar time without the equation of time, which shifts the sun positions by up to about 16 minutes depending on the date. The envelope is a geometric constraint for comparison and massing studies and does not represent any jurisdiction's solar-access rules.
+The solar envelope, introduced by Ralph Knowles, is the largest volume that can be built on a site without casting shadow on neighbouring properties during specified hours [1, 2]. It turns the qualitative goal of solar access into a three-dimensional zoning constraint. SimuSite's Solar envelope study computes, on a grid over the site, the greatest height at each cell such that a building there would not shade any surrounding building for a set of sun positions in a protected period. This report describes the computation, the three preset protected periods, and the parameters, and records one approximation found in the audit and corrected on 21 November 2026: protected hours were taken at local mean solar time without the equation of time, which shifted the sun positions by about 7 minutes at the equinoxes. The envelope is a geometric constraint for comparison and massing studies and does not represent any jurisdiction's solar-access rules.
 
 # Body
 
@@ -38,7 +38,7 @@ Knowles and his students at the University of Southern California developed the 
 
 ### 2.1. Sun positions
 
-The study uses one of three protected periods: both equinoxes (20 March and 22 September) from 9:00 to 15:00; the winter solstice from 10:00 to 14:00; or the summer solstice from 8:00 to 17:00. Sun positions are taken every 30 minutes, keeping those above 1° altitude, with the same NOAA sun position as the other solar studies. Times are intended as solar time; the implementation sets the time zone to longitude/15, i.e. local mean time, without the equation of time.
+The study uses one of three protected periods: both equinoxes (20 March and 22 September) from 9:00 to 15:00; the winter solstice from 10:00 to 14:00; or the summer solstice from 8:00 to 17:00. Sun positions are taken every 30 minutes, keeping those above 1° altitude, with the same NOAA sun position as the other solar studies. Times are apparent solar time: the sun position routine is given local mean time at the site's own meridian (time zone = longitude/15), less the equation of time for the date, so that 12:00 is solar noon, when the sun crosses the meridian.
 
 ### 2.2. Envelope height
 
@@ -57,21 +57,21 @@ Table 1. Inputs of the Solar envelope study.
 | Concept | Solar envelope / shadow fences | Knowles [1, 2] | Sourced |
 | Protected periods | Equinoxes 9–15 h; winter solstice 10–14 h; summer solstice 8–17 h | Common practice in solar-access studies (e.g. Knowles's protected hours) [1, 2] | Sourced in principle; no jurisdiction's rule is implied |
 | Time step | 30 min | Engine design | Numerical setting |
-| Solar time | Longitude/15 h offset, no equation of time | Engine approximation | Flagged: up to ≈ 16 min error in sun position timing (≈ 4° of azimuth) |
+| Solar time | Apparent solar time (longitude/15 h offset less the equation of time) | Equation of time from the NOAA sun position routine | Corrected 21 November 2026; before, the equation of time was omitted |
 | Height cap | 100 m | Engine design | Numerical setting |
 | Receptors | Surrounding buildings from site data | OpenStreetMap or user geometry | Input data |
 
 ## 4. Verification
 
-`tests/environment-analysis.cjs`, re-run for this audit (all checks pass), verifies the environmental version's solar-rights height against an independent geometric answer (a sun at 45° over a 1 m receptor gives a height of 1 m two metres away, the cap behind the receptor and zero over it), and the collection envelope against exact triangle cases including overhead and behind-receiver obstacles. In the end-to-end audit of 20 November 2026, the audit site had no neighbouring buildings and the Workspace study stopped with a request to add context buildings, which is the intended behaviour, since the envelope protects neighbours' receptors.The Workspace version computes the same quantity in the modeler with its own ray code and has no separate reference test; it ran without error in the end-to-end audit of 20 November 2026. On the first audit site, which had no surrounding buildings, the study correctly refused to run ("there are no surrounding buildings on this site to protect"); the run with a neighbouring building is reported in the audit summary.
+`tests/environment-analysis.cjs`, re-run for this audit (all checks pass), verifies the environmental version's solar-rights height against an independent geometric answer (a sun at 45° over a 1 m receptor gives a height of 1 m two metres away, the cap behind the receptor and zero over it), and the collection envelope against exact triangle cases including overhead and behind-receiver obstacles. In the end-to-end audit of 20 November 2026, the audit site had no neighbouring buildings and the Workspace study stopped with a request to add context buildings, which is the intended behaviour, since the envelope protects neighbours' receptors. The Workspace version computes the same quantity in the modeler with its own ray code and has no separate reference test. A unit test added with the solar-time correction, `tests/sun-solar-time.test.mjs`, checks that at 12:00 apparent solar time the sun is due south on five dates through the year, within 0.05°, and that the equation of time stays between about −14.6 and +16.5 minutes.
 
 ## 5. Discussion
 
-The envelope is only as meaningful as its receptors and period. Real solar-access regulations protect specific surfaces (windows, gardens, solar collectors) and periods that vary by jurisdiction; the presets here are generic. The missing equation of time is a small but avoidable error: the equation of time ranges from about −14 to +16 minutes over the year, so near the equinoxes and solstices the protected window is shifted by up to that amount, and its ends (where the sun is lowest and the envelope most restrictive) are affected most. The recommended correction is to compute solar time with the equation of time already available in the sun-position routine. Like Sun hours, the method treats all geometry as opaque.
+The envelope is only as meaningful as its receptors and period. Real solar-access regulations protect specific surfaces (windows, gardens, solar collectors) and periods that vary by jurisdiction; the presets here are generic. At the time of the audit the equation of time was omitted. It ranges from about −14 to +16 minutes over the year; on the preset dates it is about −7 minutes on 20 March, +7 minutes on 22 September and 2 minutes or less at the solstices, so the protected window was off centre around solar noon by that much, with the ends (where the sun is lowest and the envelope most restrictive) affected most. The study now uses the equation of time already computed in the sun-position routine. Like Sun hours, the method treats all geometry as opaque.
 
 ## 6. Conclusion
 
-The Solar envelope study implements Knowles's concept directly and is useful for comparing massing options against neighbours' solar access. Its protected periods are generic and its solar time omits the equation of time, which should be corrected before results are used to argue compliance with any rule.
+The Solar envelope study implements Knowles's concept directly and is useful for comparing massing options against neighbours' solar access. Its protected periods are generic and should be replaced by the rule of the jurisdiction before results are used to argue compliance.
 
 # References
 

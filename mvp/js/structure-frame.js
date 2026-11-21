@@ -110,7 +110,10 @@ export function analyseFrame(L, o, SA) {
   const govGrav = ul.filter((c) => !Object.keys(c.f).some((k) => k[0] === 'W')).sort((a, b) => mx(b, (r) => r.M) - mx(a, (r) => r.M))[0] || ul[0];
   const drift = (c) => { let worst = { r: 0 }; for (let k = 0; k < levels.length; k++) { const lv = levels[k]; M.nodes.forEach((p, n) => { if (Math.abs(p[2] - (lv.z + lv.h)) > 1e-6) return; const d = C[c.id].disp, dx = Math.hypot(d[3 * n], d[3 * n + 1]); const below = M.nodes.findIndex((q, m) => m !== n && Math.abs(q[0] - p[0]) < 1e-6 && Math.abs(q[1] - p[1]) < 1e-6 && Math.abs(q[2] - lv.z) < 1e-6); const db = below >= 0 ? Math.hypot(d[3 * below], d[3 * below + 1]) : 0, r = Math.abs(dx - db) / lv.h; if (r > worst.r) worst = { r, level: lv.name, mm: Math.abs(dx - db) * 1000, h: lv.h, n }; }); } return worst; };
   const govWindU = ul.filter((c) => Object.keys(c.f).some((k) => k[0] === 'W')).sort((a, b) => mx(b, (r) => r.M) - mx(a, (r) => r.M))[0] || null;
-  const windSls = sl.filter((c) => Object.keys(c.f).some((k) => k[0] === 'W')), driftW = windSls.map((c) => ({ c, ...drift(c) })).sort((a, b) => b.r - a.r)[0] || null;
+  // (2026-11-21) a bearing wall under a floor is a rigid support sideways too, so once any floor rests on one the stiff floor
+  // cannot sway and the drift says nothing (h/2,700,000 and the like): it is not reported, and the card says the walls hold it
+  const wallHeld = M.supports.some(([n, t]) => Array.isArray(t) && M.nodes[n][2] > levels[0].z + 1e-6);
+  const windSls = sl.filter((c) => Object.keys(c.f).some((k) => k[0] === 'W')), driftW = wallHeld ? null : windSls.map((c) => ({ c, ...drift(c) })).sort((a, b) => b.r - a.r)[0] || null;
   const showC = [govGrav, govWindU, sl.find((c) => c.id === 'S1') || sl[0], driftW?.c].filter(Boolean).filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i);
   const env = C.ULS || C[govGrav.id];
   const members = M.members.map((m, i) => { const g = M.groups[m.g], r = env.members[i], s = g.sec, mat = g.mat, f = mat.fy || 30, A = s.A, Lm = len3(sub(M.nodes[m.b], M.nodes[m.a]));
@@ -121,7 +124,7 @@ export function analyseFrame(L, o, SA) {
   const reacOf = (c) => [...C[c.id].reac.entries()].map(([n, v]) => ({ p: M.nodes[n], F: v.slice(0, 3), Mo: v.slice(3, 6) })), reac = reacOf(govGrav), reacW = govWindU ? reacOf(govWindU) : null;
   const sumL = C[govGrav.id].F, sumR = C[govGrav.id].Rsum, eqErr = Math.hypot(sumL[0] + sumR[0], sumL[1] + sumR[1], sumL[2] + sumR[2]) / Math.max(1, Math.abs(sumL[2]));
   return { members, combos: showC.map((c) => ({ id: c.id, name: c.name })), gov: { gravity: govGrav.id, wind: govWindU?.id || null, sls: (sl.find((c) => c.id === 'S1') || sl[0]).id, drift: driftW?.c.id || null },
-    drift: driftW ? { ratio: driftW.r, hOver: driftW.r > 0 ? Math.round(1 / driftW.r) : Infinity, level: driftW.level, mm: driftW.mm } : null,
+    wallHeld, drift: driftW ? { ratio: driftW.r, hOver: driftW.r > 0 ? Math.round(1 / driftW.r) : Infinity, level: driftW.level, mm: driftW.mm } : null,
     reac, reacW, eq: { loads: sumL, reactions: sumR, err: eqErr }, counts: { nodes: M.nodes.length, members: M.members.length, unknowns: res.unknowns, columns: meta.filter((m) => m.kind === 'column').length, beams: meta.filter((m) => m.kind === 'beam' || m.kind === 'strip').length, braces: meta.filter((m) => m.kind === 'brace').length, diaphragm: meta.filter((m) => m.kind === 'diaphragm').length },
     supports: M.supports.map(([n, t]) => ({ p: M.nodes[n], t: Array.isArray(t) ? 'wall' : t })), assumed, method: res.method, ms: Date.now() - t0 };
 }

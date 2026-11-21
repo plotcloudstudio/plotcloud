@@ -1340,8 +1340,10 @@ const STC = (() => {
   }
 
   // ---------- wind pressure on a wall: low-rise building, by the angle between the wind and the wall's outward normal ----------
-  const CPT = [[0, 0.6], [45, 0.4], [90, -0.3], [135, -0.45], [180, -0.35]];
-  function cpWall(theta) { theta = Math.abs(((theta + 540) % 360) - 180); for (let k = 1; k < CPT.length; k++) if (theta <= CPT[k][0]) { const [a, ca] = CPT[k - 1], [b, cb] = CPT[k]; return ca + (cb - ca) * (theta - a) / (b - a); } return -0.35; }
+  // (2026-11-21) the AIVC low-rise table the method cites, as on the ventilation page (emb/vent.html): the shelter class follows the
+  // terrain (open: exposed, suburban: surrounded by buildings half as tall, city: by buildings as tall)
+  const CPT = { open: [[0, 0.7], [45, 0.35], [90, -0.5], [135, -0.4], [180, -0.2]], suburban: [[0, 0.4], [45, 0.1], [90, -0.3], [135, -0.35], [180, -0.2]], city: [[0, 0.2], [45, 0.05], [90, -0.25], [135, -0.3], [180, -0.25]] };
+  function cpWall(theta, terr) { const T = CPT[terr] || CPT.suburban; theta = Math.abs(((theta + 540) % 360) - 180); for (let k = 1; k < T.length; k++) if (theta <= T[k][0]) { const [a, ca] = T[k - 1], [b, cb] = T[k]; return ca + (cb - ca) * (theta - a) / (b - a); } return T[T.length - 1][1]; }
   const ALPHA = { open: 0.14, suburban: 0.22, city: 0.33 };
   // compass bearing a plan direction faces: plan +Y is north turned by M.north degrees clockwise
   const bearing = (v, north) => ((Math.atan2(v[0], v[1]) * 180 / Math.PI) + (north || 0) + 360) % 360;
@@ -1351,13 +1353,13 @@ const STC = (() => {
   function airflow(M, S) {
     const C = M.climate || {}, Tout = C.Tout ?? 20, Tin = C.Tin ?? 24, U10 = C.U10 ?? 3.5, from = C.from ?? 225, terr = C.terrain || 'suburban';
     const rho0 = rhoOf(Tout), rhoI = rhoOf(Tin), N = S.rooms.length; if (!N) return null;
-    const topZ = Math.max(...M.levels.map((l) => l.z + l.h)), Href = Math.max(3, topZ), Uref = U10 * Math.pow(Href / 10, ALPHA[terr] || 0.22), pdyn = 0.5 * rho0 * Uref * Uref;
+    const topZ = Math.max(...M.levels.map((l) => l.z + l.h)), Href = Math.max(3, topZ), Uref = U10 * Math.pow(270 / 10, 0.14) * Math.pow(Href / ({ open: 270, suburban: 370, city: 460 }[terr] || 370), ALPHA[terr] || 0.22), pdyn = 0.5 * rho0 * Uref * Uref;
     const Cd = 0.6, NS = 6;
     // links: [a, b, area, z, cpOut] ; a or b = -1 for outside
     const links = [];
     for (const op of S.ops) {
       if (!(op.A > 1e-4)) continue; const ns = op.o.kind === 'door' ? 4 : NS, ht = (op.zh - op.zs) / ns;
-      const cp = op.ext ? cpWall(bearing(op.outN, M.north) - from) : 0;
+      const cp = op.ext ? cpWall(bearing(op.outN, M.north) - from, terr) : 0;
       for (let k = 0; k < ns; k++) { const z = op.zs + (k + 0.5) * ht; if (op.ext) links.push({ a: op.inR, b: -1, A: op.A / ns, z, cp, op }); else links.push({ a: op.ra, b: op.rb, A: op.A / ns, z, cp: 0, op }); }
     }
     for (const v of S.voids) { if (v.glazed && v.roof) continue; if (v.roof) links.push({ a: v.below, b: -1, A: v.A, z: v.z, cp: -0.5, vd: v }); else if (v.above >= 0) links.push({ a: v.below, b: v.above, A: v.A, z: v.z, cp: 0, vd: v }); }
@@ -1387,8 +1389,11 @@ const STC = (() => {
     const f = new Float64Array(N); for (let it = 0; it < 400; it++) { let ch = 0; for (let r = 0; r < N; r++) { if (inflow[r] < 1e-9) continue; let s = fromOut[r]; for (const [k, q] of ins[r]) s += f[k] * q; const nf = clamp(s / inflow[r], 0, 1); ch = Math.max(ch, Math.abs(nf - f[r])); f[r] = nf; } if (ch < 1e-7) break; }
     const rooms = S.rooms.map((r, i) => ({ inflow: inflow[i] * 1000, direct: fromOut[i] * 1000, via: inflow[i] > 1e-9 ? 1 - fromOut[i] / inflow[i] : 0, ach: inflow[i] * 3600 / r.vol, P: P[i] }));
     const total = S.rooms.reduce((s, r, i) => s + fromOut[i], 0) * 1000, vol = S.rooms.reduce((s, r) => s + r.vol, 0);
-    // neutral level: with no wind, the height where inside and outside pressure match (stack only)
-    let zn = null; const drho = rho0 - rhoI; if (Math.abs(drho) > 1e-4) { let s = 0, n = 0; for (let r = 0; r < N; r++) { s += -P[r] / (drho * G0) * S.rooms[r].vol; n += S.rooms[r].vol; } zn = s / n; }
+    // neutral level: with no wind, the height where inside and outside pressure match (stack only).
+    // (2026-11-21) the room pressures above include the wind, so with wind blowing the level is taken from a second, windless solve
+    let zn = null; const drho = rho0 - rhoI;
+    if (U10 > 0) { const still = airflow({ ...M, climate: { ...C, U10: 0 } }, S); zn = still ? still.zn ?? null : null; }
+    else if (Math.abs(drho) > 1e-4) { let s = 0, n = 0; for (let r = 0; r < N; r++) { s += -P[r] / (drho * G0) * S.rooms[r].vol; n += S.rooms[r].vol; } zn = s / n; }
     return { links, per: [...per.values()].map((e) => ({ key: e.key, ab: e.ab * 1000, ba: e.ba * 1000, link: e.link })), rooms, total, ach: total * 3.6 / vol, vol, Uref, pdyn, zn, Tin, Tout };
   }
 
@@ -8262,13 +8267,13 @@ if (window.__WSROLE) {
       const cell = SURF_CELL ? Math.max(0.2, SURF_CELL) : STUDY_CELL ? Math.max(0.25, STUDY_CELL) : Math.max(0.5, Math.sqrt(area / (o.max || 20000))), list = [], solids = F.solids;
       const inside = (q, z, self) => solids.some((P) => P.id !== self && z > P.b && z < P.h && q[0] >= P.bb[0] && q[0] <= P.bb[2] && q[1] >= P.bb[1] && q[1] <= P.bb[3] && inPoly(q, P.outer));
       // one triangle split into k² pieces about the sample size; the pieces keep their corners, the value point sits 0.1 m out
-      const addTri = (A, B, C, extra, self) => { const e1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], e2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]; let nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const ar = Math.hypot(...nn) / 2; if (ar < 1e-4) return; nn = nn.map((v) => v / (2 * ar)); if (nn[2] < -0.5) return;   /* undersides left out */
+      const addTri = (A, B, C, extra, self) => { const e1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], e2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]; let nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const ar = Math.hypot(...nn) / 2; if (ar < 1e-4) return; nn = nn.map((v) => v / (2 * ar)); if (nn[2] < -0.5) return;   /* undersides left out */ if (nn[2] > 0.7 && extra.ledge) return;   /* sills and covered wall tops: neither roof nor facade (2026-11-21) */
         const k = Math.max(1, Math.min(160, Math.round(Math.sqrt(ar) / cell))), roof = nn[2] > 0.7, at = (a, b) => [A[0] + e1[0] * a + e2[0] * b, A[1] + e1[1] * a + e2[1] * b, A[2] + e1[2] * a + e2[2] * b];
         for (let i = 0; i < k; i++) for (let j = 0; j < k - i; j++) for (const up of [0, 1]) { if (up && j === k - i - 1) continue; if (list.length >= 150000) return;
           const c = up ? [[i + 1, j], [i + 1, j + 1], [i, j + 1]] : [[i, j], [i + 1, j], [i, j + 1]], V = c.map(([a, b]) => at(a / k, b / k)), g = [(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][1] + V[1][1] + V[2][1]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3], p = [g[0] + nn[0] * 0.1, g[1] + nn[1] * 0.1, g[2] + nn[2] * 0.1];
           if (self != null && inside(p, p[2], self)) continue;   /* a face against another solid: hidden, left out */
           list.push({ p, n: nn, tri: [...V[0], ...V[1], ...V[2]], roof, ...extra }); } };
-      for (const t of F.tris) { if (list.length >= 150000) break; addTri(t.A, t.B, t.C, t.glass ? { glass: true } : {}, t.self); }
+      for (const t of F.tris) { if (list.length >= 150000) break; addTri(t.A, t.B, t.C, { ...(t.glass ? { glass: true } : {}), ...(t.ledge ? { ledge: true } : {}) }, t.self); }
       if (T) { const P = T.P; for (let t = 0; t < T.n && list.length < 150000; t++) { const b = t * 9; addTri([P[b], P[b + 1], P[b + 2]], [P[b + 3], P[b + 4], P[b + 5]], [P[b + 6], P[b + 7], P[b + 8]], { imp: true }, null); } }
       SURF.list = list; SURF.cell = cell; return { cell, n: list.length, roofs: list.filter((x) => x.roof).length };
     },
@@ -8368,8 +8373,11 @@ if (window.__WSROLE) {
         // the outline of the stretch s0..s1 of the wall, between offsets k0 and k1 across it
         const band = (s0, s1, k0, k1) => { if (A) { const n = Math.max(1, Math.ceil(Math.abs(A.sweep) * (s1 - s0) / A.len / 0.1)), out = []; for (let i = 0; i <= n; i++) out.push(STC.arcAt(w, s0 + (s1 - s0) * i / n, k0)); for (let i = n; i >= 0; i--) out.push(STC.arcAt(w, s0 + (s1 - s0) * i / n, k1)); return out; }
           const nx = -dir[1], ny = dir[0], P0 = (s, k) => [w.a[0] + dir[0] * s + nx * k, w.a[1] + dir[1] * s + ny * k]; return [P0(s0, k0), P0(s1, k0), P0(s1, k1), P0(s0, k1)]; };
-        const piece = (s0, s1, z0, z1, glass) => { if (s1 - s0 < 0.005 || z1 - z0 < 0.005) return; const O = band(s0, s1, glass ? -0.01 : -t / 2, glass ? 0.01 : t / 2);
-          if (A) { for (let i = 0; i + 1 < O.length / 2; i++) { const n2 = O.length, q = [O[i], O[i + 1], O[n2 - 2 - i], O[n2 - 1 - i]]; prism(q, z + z0, z + z1, glass ? { glass: true } : {}); } } else prism(O, z + z0, z + z1, glass ? { glass: true } : {}); };
+        // (2026-11-21) the top of a piece is a roof only where it is the wall's own top on the highest level: window sills, the glass and
+        // the tops of walls under another level are ledges (they were counted as roofs and pulled the roof means down)
+        const topLv = !M.levels.some((l) => (l.z || 0) > (lv.z || 0) + 0.01);
+        const piece = (s0, s1, z0, z1, glass) => { if (s1 - s0 < 0.005 || z1 - z0 < 0.005) return; const O = band(s0, s1, glass ? -0.01 : -t / 2, glass ? 0.01 : t / 2), ex = { ...(glass ? { glass: true } : {}), ...(glass || z1 < H - 1e-6 || !topLv ? { ledge: true } : {}) };
+          if (A) { for (let i = 0; i + 1 < O.length / 2; i++) { const n2 = O.length, q = [O[i], O[i + 1], O[n2 - 2 - i], O[n2 - 1 - i]]; prism(q, z + z0, z + z1, ex); } } else prism(O, z + z0, z + z1, ex); };
         let s = 0; for (const [a, b, q] of os) { if (a > s) piece(s, a, 0, H); piece(a, b, 0, Math.min(q.sill || 0, H)); if (q.head < H) piece(a, b, q.head, H); if (q.kind === 'win') piece(a, b, q.sill || 0, Math.min(q.head, H), true); else if ((q.open ?? 1) < 0.05) piece(a, b, 0, Math.min(q.head, H)); s = Math.max(s, b); }
         if (L > s) piece(s, L, 0, H); } }
     for (const t of tris) t.ar = area3(t.A, t.B, t.C);

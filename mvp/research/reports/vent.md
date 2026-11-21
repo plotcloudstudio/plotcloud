@@ -6,7 +6,7 @@ publishedText: 20 November 2026
 auditText: 20 November 2026
 title: Whole-building natural ventilation with a multizone pressure network: wind, stack and single-sided flow
 type: Method and data report
-summary: How the Natural ventilation study estimates the outdoor air each room receives from wind and buoyancy, with a multizone orifice network solved by Newton–Raphson and the single-sided correlation of de Gids and Phaff. The report gives the sources of the discharge coefficient, wind pressure coefficients and wind profile, and flags two places where the Workspace engine departs from its cited sources.
+summary: How the Natural ventilation study estimates the outdoor air each room receives from wind and buoyancy, with a multizone orifice network solved by Newton–Raphson and the single-sided correlation of de Gids and Phaff. The report gives the sources of the discharge coefficient, wind pressure coefficients and wind profile, and records two departures from the cited sources found in the audit and corrected on 21 November 2026.
 image: img/home/vent.webp
 imageAlt: Air change rate per room with arrows showing the airflow through windows and doors
 code: emb/modeler.html, emb/vent.html, mvp/js/workspace-chrome.js
@@ -19,14 +19,13 @@ keywords:
 - Single-sided ventilation
 highlights:
 - Each room is a well-mixed zone; windows and doors are orifices with Cd = 0.6 split into vertical strips so stack flow can reverse with height.
-- Wind pressure uses facade pressure coefficients and a power-law wind profile to roof height; buoyancy uses the ideal-gas density of indoor and outdoor air.
+- Wind pressure uses the AIVC low-rise pressure coefficients for the chosen terrain and the ASHRAE conversion of the weather-station wind to roof height on the site; buoyancy uses the ideal-gas density of indoor and outdoor air.
 - Rooms ventilated from one facade also get the de Gids and Phaff (1982) single-sided flow when it is larger.
-- The Workspace pressure-coefficient table differs from the AIVC values the method text cites; this is flagged for correction.
-- The reported "neutral plane (stack alone)" is computed from the combined wind-and-stack solution, so it is not a stack-only value.
+- The audit found that the Workspace pressure-coefficient table differed from the AIVC table the method cites, and that the "neutral plane (stack alone)" was taken from the combined wind-and-stack solution; both are corrected.
 ---
 # Abstract
 
-Natural ventilation supplies outdoor air through windows, doors and vents driven by wind pressure on the facades and by the buoyancy of warm indoor air [1–3]. Design guides such as CIBSE AM10 and the AIVC guide describe two levels of calculation: simple correlations for single rooms, and multizone airflow networks in which each room is a node and each opening a nonlinear flow resistance [1, 2, 4]. SimuSite's Natural ventilation study builds such a network for the whole building model, with every floor, stair and void, and solves it for one wind speed, wind direction and pair of indoor and outdoor temperatures. It reports the outdoor-air flow and air change rate of each room, the share of air that arrives second-hand through other rooms, and the direction of flow through every opening. This report documents the equations, the constants and their sources. The orifice equation, the discharge coefficient, the buoyancy terms and the de Gids and Phaff single-sided correlation are correctly sourced. Two departures from the cited sources were found in the audit: the facade pressure-coefficient table in the Workspace engine is not the AIVC table that the method text and the stand-alone ventilation page use, and the "neutral plane (stack alone)" value is taken from the combined wind-and-stack pressures. Both are reported for correction; neither invalidates the network method.
+Natural ventilation supplies outdoor air through windows, doors and vents driven by wind pressure on the facades and by the buoyancy of warm indoor air [1–3]. Design guides such as CIBSE AM10 and the AIVC guide describe two levels of calculation: simple correlations for single rooms, and multizone airflow networks in which each room is a node and each opening a nonlinear flow resistance [1, 2, 4]. SimuSite's Natural ventilation study builds such a network for the whole building model, with every floor, stair and void, and solves it for one wind speed, wind direction and pair of indoor and outdoor temperatures. It reports the outdoor-air flow and air change rate of each room, the share of air that arrives second-hand through other rooms, and the direction of flow through every opening. This report documents the equations, the constants and their sources. The orifice equation, the discharge coefficient, the buoyancy terms and the de Gids and Phaff single-sided correlation are correctly sourced. Three departures from the cited sources were found in the audit: the facade pressure-coefficient table in the Workspace engine was not the AIVC table that the method text and the stand-alone ventilation page use, the station wind was applied to the site without the terrain conversion, and the "neutral plane (stack alone)" value was taken from the combined wind-and-stack pressures. All three were corrected on 21 November 2026; none invalidated the network method.
 
 # Body
 
@@ -42,9 +41,9 @@ Rooms are taken from the building model on every level. Each exterior window or 
 
 ### 2.2. Pressures
 
-Indoor pressure in room r at height z is P_r − ρ_i g z, where P_r is the unknown room pressure at z = 0 and ρ_i the indoor air density. Outdoor pressure at an opening is C_p ½ ρ_o U_H² − ρ_o g z, with C_p the wind pressure coefficient for the facade, U_H the wind speed at roof height H and ρ_o the outdoor density [2, 7]. Densities follow the ideal-gas law at the given temperatures. The wind speed at roof height is U_H = U_10 (H / 10)^α with H = max(3 m, top of the building) and α = 0.14, 0.22 or 0.33 for open, suburban and urban terrain, the exponents of ASHRAE Fundamentals [7].
+Indoor pressure in room r at height z is P_r − ρ_i g z, where P_r is the unknown room pressure at z = 0 and ρ_i the indoor air density. Outdoor pressure at an opening is C_p ½ ρ_o U_H² − ρ_o g z, with C_p the wind pressure coefficient for the facade, U_H the wind speed at roof height H and ρ_o the outdoor density [2, 7]. Densities follow the ideal-gas law at the given temperatures. The weather file's wind U_met is measured at 10 m at a station in open terrain. Following ASHRAE Fundamentals, it is carried up to the gradient height of open terrain and back down to roof height in the site's terrain: U_H = U_met (270 / 10)^0.14 (H / δ)^α, with H = max(3 m, top of the building), and δ = 270, 370 or 460 m and α = 0.14, 0.22 or 0.33 for open, suburban and urban terrain [7].
 
-C_p depends on the angle between the wind and the facade's outward normal, interpolated in a five-point table at 0°, 45°, 90°, 135° and 180°. Roof openings of voids use C_p = −0.5.
+C_p depends on the angle between the wind and the facade's outward normal, interpolated in the AIVC low-rise table at 0°, 45°, 90°, 135° and 180° [2]. The shelter row follows the terrain: open terrain uses the exposed row, suburban the row for neighbours half as tall, and urban the row for neighbours as tall. Roof openings of voids use C_p = −0.5.
 
 ### 2.3. Flow equation and solution
 
@@ -56,7 +55,7 @@ The network cannot represent the turbulent pumping that ventilates a room with o
 
 ### 2.5. Outputs
 
-The study reports for each room the outdoor-air flow in L/s, the air change rate (flow × 3.6 / volume), the outdoor-air fraction, and the building total. It also reports a neutral plane height, z_n = Σ V_r (−P_r / (Δρ g)) / Σ V_r. The legend compares air change rates with a user-set target; the ASHRAE 62.1 natural ventilation procedure governs opening size, not a fixed rate [8].
+The study reports for each room the outdoor-air flow in L/s, the air change rate (flow × 3.6 / volume), the outdoor-air fraction, and the building total. It also reports a stack-only neutral plane height, z_n = Σ V_r (−P_r / (Δρ g)) / Σ V_r, from a second solve of the same network with no wind. The legend compares air change rates with a user-set target; the ASHRAE 62.1 natural ventilation procedure governs opening size, not a fixed rate [8].
 
 A "Through the year" mode takes the window-open hours of the project weather file (hours with outdoor temperature in a user-set range), groups them by 16 wind directions, 5 speed bands and 3 temperature bands, solves the network once per group, and reports for each room the share of window-open hours at or above the target and the median air change rate. Indoor temperature in each group is the set value or 1 K above outdoor, whichever is higher.
 
@@ -70,10 +69,10 @@ Table 1. Inputs and constants of the Natural ventilation study.
 | Flow exponent | 0.5 | Orifice equation [1, 4] | Sourced |
 | Strips per window / door | 6 / 4 | Engine choice | Numerical setting |
 | Linearisation threshold | 0.02 Pa | Engine choice | Numerical setting |
-| Wind profile exponent α | 0.14 / 0.22 / 0.33 | ASHRAE Fundamentals ch. 24 [7] | Sourced, but see §5: no met-station conversion |
+| Wind profile α, gradient height δ | 0.14 / 0.22 / 0.33; 270 / 370 / 460 m | ASHRAE Fundamentals ch. 24 [7] | Sourced; station-to-site conversion added 21 November 2026 |
 | Reference height | max(3 m, roof) | Engine choice | Reasonable for low-rise tables [2] |
-| Facade C_p (Workspace) | 0.6, 0.4, −0.3, −0.45, −0.35 at 0–180° | Not traced | Flagged: differs from the cited AIVC table |
-| Facade C_p (Ventilation page) | Exposed 0.7, 0.35, −0.5, −0.4, −0.2; half-height neighbours 0.4, 0.1, −0.3, −0.35, −0.2; equal-height neighbours 0.2, 0.05, −0.25, −0.3, −0.25 | AIVC guide, low-rise tables [2] | Sourced |
+| Facade C_p (Workspace before 21 November 2026) | 0.6, 0.4, −0.3, −0.45, −0.35 at 0–180° | Not traced | Replaced by the AIVC table |
+| Facade C_p (Workspace and Ventilation page) | Exposed 0.7, 0.35, −0.5, −0.4, −0.2; half-height neighbours 0.4, 0.1, −0.3, −0.35, −0.2; equal-height neighbours 0.2, 0.05, −0.25, −0.3, −0.25 | AIVC guide, low-rise tables [2] | Sourced |
 | Roof void C_p | −0.5 | Engine choice | Assumption, consistent in sign with flat-roof suction [2, 7] |
 | Single-sided C₁, C₂, C₃ | 0.001, 0.0035, 0.01 | de Gids and Phaff [5]; CIBSE AM10 [1] | Sourced |
 | Defaults | U_10 3.5 m/s, from 225°, T_o 20 °C, T_i 24 °C | Engine choice | Editable inputs |
@@ -83,21 +82,21 @@ Table 1. Inputs and constants of the Natural ventilation study.
 
 The Workspace test `tests/workspace-vent-acoustics.cjs` checks that the network covers rooms on both levels, that ajar windows let in less air than open ones, that stack alone still gives a positive flow, that air enters on one side and leaves on the other, and that the through-the-year mode returns more than 500 window-open hours. These are qualitative checks. There is no comparison against measured airflows or against CONTAM. A useful next step would be the analytical two-opening stack case, Q = C_d A* √(2 g h ΔT / T), and the cross-ventilation case Q = C_d A* U √ΔC_p, which have closed-form solutions [1, 3], followed by a CONTAM comparison for a multi-storey case [6].
 
-In the end-to-end audit of 20 November 2026 on a two-storey, twenty-room block with a Chicago TMY3 file (wind from the south at 4.9 m/s), the study reported 13,485 L/s of outdoor air, 32.4 air changes per hour for the whole building and at least 5 air changes per hour in every room, and a neutral plane at −1.0 m. The high rate is plausible for a small building with all windows fully open in a 4.9 m/s wind; the negative neutral plane is discussed below.
+In the end-to-end audit of 20 November 2026 on a two-storey, twenty-room block with a Chicago TMY3 file (wind from the south at 4.9 m/s), the study reported 13,485 L/s of outdoor air, 32.4 air changes per hour for the whole building and at least 5 air changes per hour in every room, and a neutral plane at −1.0 m. After the corrections of 21 November 2026 (AIVC table, suburban terrain, station-to-site wind, stack-only neutral plane) the same case gives 7,829 L/s, 18.8 air changes per hour, every room still at 5 or more, and a stack-only neutral plane 3.0 m above level 0, inside the two-storey building as expected. The lower flow comes mainly from the suburban wind at roof height, which is about 0.6 times the open-terrain wind at 10 m, and from the smaller sheltered pressure coefficients.
 
 ## 5. Discussion
 
-**Pressure coefficients.** Generic C_p tables are the largest source of uncertainty in network models, often ±50 % or more on the flow [2, 4]. The stand-alone ventilation page uses the AIVC low-rise table with three shelter classes, which the method text cites [2]. The Workspace engine uses a different single table (0.6, 0.4, −0.3, −0.45, −0.35) with no shelter class and no source in the code. Its values are of plausible magnitude, but the leeward and side values differ from the AIVC exposed row by up to 0.2, which changes cross-ventilation flows by roughly 10–20 %. The Workspace should use the AIVC table and offer the shelter class, or cite the source of its values. Better still, the Swami and Chandra correlations give C_p as a function of facade position and aspect ratio for low-rise buildings [9].
+**Pressure coefficients.** Generic C_p tables are the largest source of uncertainty in network models, often ±50 % or more on the flow [2, 4]. The stand-alone ventilation page uses the AIVC low-rise table with three shelter classes, which the method text cites [2]. At the time of the audit the Workspace engine used a different single table (0.6, 0.4, −0.3, −0.45, −0.35) with no shelter class and no source in the code; its leeward and side values differed from the AIVC exposed row by up to 0.2. It now uses the AIVC table, with the shelter class taken from the project's terrain. A further improvement would be the Swami and Chandra correlations, which give C_p as a function of facade position and aspect ratio for low-rise buildings [9].
 
-**Wind profile.** ASHRAE converts the meteorological-station wind to the site by passing through the gradient height: U_H = U_met (δ_met / H_met)^α_met (H / δ)^α [7]. The engine applies the site exponent directly to the station speed at 10 m, which assumes the station is in the same terrain as the site. For an airport station (open terrain) and an urban site, this overstates the wind at roof height by about 20–40 %.
+**Wind profile.** ASHRAE converts the meteorological-station wind to the site by passing through the gradient height: U_H = U_met (δ_met / H_met)^α_met (H / δ)^α [7]. At the time of the audit the engine applied the site exponent directly to the station speed at 10 m, which assumes the station is in the same terrain as the site and, for an airport station and an urban site, overstates the wind at roof height by about 20–40 %. The engine now applies the full conversion, assuming the station is in open terrain, as airport stations usually are.
 
-**Neutral plane.** The comment in the code describes the neutral plane as the height where inside and outside pressure match with no wind, but the value is computed from room pressures solved with wind included. In a strong wind the room pressures are set mainly by the facade pressures, and the computed height can fall below the floor, as the audit's −1.0 m shows. A stack-only neutral plane requires a second solve with U = 0. Until then, the label should be read as "pressure-balance height for these conditions".
+**Neutral plane.** The code describes the neutral plane as the height where inside and outside pressure match with no wind, but at the time of the audit the value was computed from room pressures solved with wind included. In a strong wind the room pressures are set mainly by the facade pressures, and the computed height fell below the floor, as the audit's −1.0 m showed. The engine now solves the network a second time with no wind and takes the neutral plane from that solution.
 
 **Model limits.** Well-mixed zones cannot show air speed or the distribution of fresh air within a room, and the orifice model does not apply to large openings with bidirectional turbulent exchange [1, 3]. Each solve is a single steady condition. The through-the-year mode averages steady solutions over binned hours; it does not model thermal mass, the indoor temperature response, or occupants closing windows.
 
 ## 6. Conclusion
 
-The network method, discharge coefficient, buoyancy terms and single-sided correlation of the Natural ventilation study are correctly sourced and implemented. The Workspace pressure-coefficient table and the neutral-plane label need correction, and the wind profile should include the station-to-site conversion. Results are suitable for comparing opening strategies in early design, not for demonstrating compliance.
+The network method, discharge coefficient, buoyancy terms and single-sided correlation of the Natural ventilation study are correctly sourced and implemented. The pressure-coefficient table, the station-to-site wind conversion and the stack-only neutral plane were corrected after the audit. Results are suitable for comparing opening strategies in early design, not for demonstrating compliance.
 
 # References
 

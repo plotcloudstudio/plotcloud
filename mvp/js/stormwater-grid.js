@@ -30,11 +30,13 @@ export function stormwater(g, C, rain) {
   const runoff = new Float64Array(N), acc = new Float64Array(N); let rainV = 0, runV = 0;
   for (let c = 0; c < N; c++) { rainV += P * a; runoff[c] = P * C[c] * a; runV += runoff[c]; acc[c] = runoff[c]; }
   for (let n = order.length - 1; n >= 0; n--) { const c = order[n]; if (to[c] >= 0) acc[to[c]] += acc[c]; }
-  // hollows: connected ground cells below their spill level; each fills with the water that reaches it, up to the spill level
+  // hollows: connected ground cells below their spill level; each fills with the water that reaches it, up to the spill level.
+  // The water that reaches a hollow is what leaves its cells (2026-11-21): the filled flat drains through several branches, so the
+  // sum of the accumulation of every cell whose flow leaves the hollow, not the largest single branch
   const pond = new Float32Array(N), lab = new Int32Array(N).fill(-1), hollows = [];
   for (let c0 = 0; c0 < N; c0++) { if (lab[c0] >= 0 || solid[c0] || (out && out[c0]) || F[c0] - z[c0] < 0.01) continue; const cells = [c0], id = hollows.length; lab[c0] = id;
     for (let q = 0; q < cells.length; q++) { const c = cells[q], i = c % nx, j = (c / nx) | 0; for (const [di, dj] of D8) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue; const d = jj * nx + ii; if (lab[d] < 0 && !solid[d] && !(out && out[d]) && F[d] - z[d] >= 0.01) { lab[d] = id; cells.push(d); } } }
-    let inflow = 0, cap = 0, spill = -Infinity, low = Infinity; for (const c of cells) { inflow = Math.max(inflow, acc[c]); cap += (F[c] - z[c]) * a; spill = Math.max(spill, F[c]); low = Math.min(low, z[c]); }
+    let inflow = 0, cap = 0, spill = -Infinity, low = Infinity; for (const c of cells) { if (to[c] < 0 || lab[to[c]] !== id) inflow += acc[c]; cap += (F[c] - z[c]) * a; spill = Math.max(spill, F[c]); low = Math.min(low, z[c]); }
     let level = spill; if (inflow < cap) { let lo = low, hi = spill; for (let it = 0; it < 40; it++) { const L = (lo + hi) / 2; let v = 0; for (const c of cells) v += Math.max(0, L - z[c]) * a; if (v > inflow) hi = L; else lo = L; } level = lo; }
     let vol = 0; for (const c of cells) { pond[c] = Math.max(0, level - z[c]); vol += pond[c] * a; } hollows.push({ cells: cells.length, cap, inflow, vol, full: inflow >= cap }); }
   for (let c = 0; c < N; c++) if (solid[c]) { pond[c] = NaN; }

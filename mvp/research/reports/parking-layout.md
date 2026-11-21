@@ -10,7 +10,7 @@ summary: How the Parking layout study fills a drawn area with double-loaded rows
 image: img/home/parking-layout.jpg
 imageAlt: A parking area filled with rows of stalls and aisles, with accessible stalls near the entrance
 code: mvp/js/parking.js, mvp/js/workspace-chrome.js
-tests: tests/parking.cjs, tests/workspace-parking.cjs
+tests: tests/parking.cjs, tests/workspace-parking.cjs, tests/parking-ada.test.mjs
 keywords:
 - Parking design
 - Layout generation
@@ -21,7 +21,7 @@ highlights:
 - Default stalls are 2.5 × 5.0 m with a 6.0 m aisle at 90°; compact 2.3 × 4.6 m and large 2.7 × 5.5 m are optional; angled stalls use 4.8 m (60°) or 4.0 m (45°) one-way aisles.
 - Row directions come from the area's longest edges and the structural grid; offsets are searched with a fixed seed, so a layout repeats exactly.
 - Stall types are assigned exactly per row by count, priority or dynamic programming to target shares; every stall is checked again at the end.
-- The accessible access aisle of 1.5 m is 2.4 cm narrower than the 60 in (1,525 mm) of the 2010 ADA Standards; the number of accessible stalls is user-set, not derived from ADA Table 208.2.
+- The accessible access aisle is 1.525 m, the 60 in of the 2010 ADA Standards (it was 1.5 m at the time of the audit), and each option notes when it has fewer accessible or van-accessible stalls than ADA Table 208.2 asks for its total.
 - Tests match hand counts exactly (86 stalls in a 60 × 40 m lot at 90°, 38 at 60°, 30 at 45°).
 ---
 # Abstract
@@ -59,9 +59,9 @@ Table 1. Dimensions of the Parking layout study (all editable).
 | Large / SUV | 2.7 × 5.5 m | US standard stall sizes [1] | Assumption |
 | Aisle at 90°, two-way | 6.0 m | European guidance about 6.0–6.5 m [4]; US about 7.0–7.3 m [1] | Assumption, at the narrow end |
 | One-way aisle at 60° / 45° | 4.8 m / 4.0 m | Of the order given in design manuals [1, 4] | Assumption |
-| Accessible stall and aisle | 2.5 m + 1.5 m | ADA 2010: 2,440 mm stall + 1,525 mm aisle [3] | Flagged: aisle 25 mm narrower than ADA |
+| Accessible stall and aisle | 2.5 m + 1.525 m | ADA 2010: 2,440 mm stall + 1,525 mm aisle [3] | Meets ADA dimensions (aisle corrected from 1.5 m on 21 November 2026) |
 | Van-accessible stall and aisle | 2.5 m + 2.5 m | ADA 2010: 2,440 mm stall + 2,440 mm aisle (or 3,350 + 1,525) [3] | Meets ADA dimensions |
-| Accessible count | 2 by default | ADA Table 208.2 scales with total [3] | Flagged: not derived from the total |
+| Accessible count | 2 by default; ADA Table 208.2 and 208.2.4 count checked on each option | ADA Table 208.2 scales with total [3] | User-set; a note shows any shortfall against Table 208.2 |
 | Search | Seeded, several offsets per direction | Engine choice | "The best found, not a proven optimum" |
 
 ## 4. Verification and validation status
@@ -80,13 +80,13 @@ Table 1. Dimensions of the Parking layout study (all editable).
 
 **Dimensions are local.** Stall and aisle sizes vary between countries, cities and operators; North American practice uses larger stalls and wider aisles than European practice [1, 4]. The defaults give more stalls than a typical US bylaw would allow and should be set to local requirements before counts are reported.
 
-**Accessible parking.** The 1.5 m access aisle should be 1.525 m or more to meet the 2010 ADA Standards; rounding to 1.6 m would be a simple fix. The number of accessible stalls should be computed from the total by ADA Table 208.2 (or the local equivalent), with one in six of them van-accessible [3]. The study places accessible stalls nearest an entrance, which follows the location requirement in spirit; it does not check slopes or the accessible route.
+**Accessible parking.** At the time of the audit the access aisle was 1.5 m, 25 mm short of the 2010 ADA Standards; it is now 1.525 m. The number of accessible stalls stays a user setting, because local rules differ, but each option now compares it with ADA Table 208.2 for the option's total, and with 208.2.4, which asks for one in six of them, and at least one, to be van-accessible [3]; a shortfall is listed in the option's notes. A unit test, `tests/parking-ada.test.mjs`, checks the aisle and the table's steps (1 space up to 25, 2 up to 50, ..., 2 % from 501 to 1,000, 20 plus one per 100 above 1,000). The two parking test files above pass after the change. The study places accessible stalls nearest an entrance, which follows the location requirement in spirit; it does not check slopes or the accessible route.
 
 **Optimality.** A seeded search over directions and offsets finds good layouts but not proven optima; exact assignment within each row means the remaining loss is in the choice of rows. The study says so in its results.
 
 ## 6. Conclusion
 
-The Parking layout study's geometry and stall assignment are verified exactly against hand layouts. Its dimensions are editable assumptions consistent with European practice; for US projects, the stall, aisle and accessible-parking values should be set to the bylaw and the ADA Standards, including a 1.525 m access aisle and an accessible count from Table 208.2.
+The Parking layout study's geometry and stall assignment are verified exactly against hand layouts. Its dimensions are editable assumptions consistent with European practice; for US projects, the stall and aisle values should be set to the bylaw, and the accessible count raised to what the option's notes ask for under ADA Table 208.2.
 
 # References
 

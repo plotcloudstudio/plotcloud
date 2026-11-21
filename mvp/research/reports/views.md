@@ -6,7 +6,7 @@ publishedText: 21 November 2026
 auditText: 20 November 2026
 title: Screening quality views to the outdoors against the LEED v4.1 criteria with horizontal sight lines
 type: Method and data report
-summary: How the Quality views study checks, for spots over the occupied floor, whether there is a line of sight to the outdoors through vision glazing and which of the four LEED v4.1 view criteria are met. The report gives the sources of each criterion and the seated eye height, and flags the view-factor thresholds and the default "movement" assumption as needing confirmation.
+summary: How the Quality views study checks, for spots over the occupied floor, whether there is a line of sight to the outdoors through vision glazing and which of the four LEED v4.1 view criteria are met. The report gives the sources of each criterion and the seated eye height, and flags the view-factor thresholds as needing confirmation. The audit also found that movement outside was assumed by default; this was changed so that the user declares it.
 image: img/home/views.webp
 imageAlt: Floor plan coloured where occupants have quality views to the outdoors
 code: mvp/js/interior/views.js, mvp/js/workspace-chrome.js
@@ -22,7 +22,7 @@ highlights:
 - Criteria follow LEED v4.1 Quality Views: line of sight for 75 % of the floor, and 2 of 4 view qualities for 75 %.
 - Distant objects count from 7.5 m past the glass (LEED's 25 ft); near views are within 3 × the window head height.
 - The view-factor thresholds (0.07, 0.2, 0.4, 0.75 of a 90° cone) are SimuSite's proxy for the Heschong Mahone scale and have not been checked against it.
-- "Movement" is assumed visible by default, which makes criterion 2 easier to meet; the user should confirm it.
+- "Movement" outside counts only when the user declares it (until 21 November 2026 it was assumed by default, which made criterion 2 nearly always met).
 ---
 # Abstract
 
@@ -48,7 +48,7 @@ From each spot, horizontal rays at the eye height (1.07 m seated by default, or 
 
 - **Line of sight**: at least one ray reaches the outdoors.
 - **Criterion 1**: views out in at least two directions 90° or more apart.
-- **Criterion 2**: at least two of: sky or nature (sky seen, or nature declared present by the user), movement (assumed present by default), and objects at least 7.5 m beyond the glass (a ray runs at least that far outside).
+- **Criterion 2**: at least two of: sky or nature (sky seen, or nature declared present by the user), movement (counted only when the user declares a street or path with people in view), and objects at least 7.5 m beyond the glass (a ray runs at least that far outside).
 - **Criterion 3**: a view through glazing no farther than three times the window head height (2.4 m by default, so 7.2 m).
 - **Criterion 4**: a view factor of 3 or more. For each ray through glass, the vertical angle subtended by the window from sill to head as seen from the spot, each part capped at 45°, is divided by 90°. The best 90° horizontal sector is found, and its mean fraction F is mapped to a view factor of 1 to 5 with thresholds 0.07, 0.2, 0.4 and 0.75.
 
@@ -69,18 +69,18 @@ Table 1. Settings of the Quality views study.
 | Blocking walls | ≥ 2 m | Engine choice | Assumption; LEED counts partitions at their height |
 | View factor proxy | Vertical window angle in the best 90° sector | Engine choice | Flagged: proxy, not the HMG procedure |
 | View factor thresholds | 0.07, 0.2, 0.4, 0.75 | Engine choice | Flagged: not checked against HMG 2003 [2] |
-| Movement | Assumed present | Engine choice | Flagged: should be confirmed per site |
+| Movement | Off unless declared | Engine choice | Changed 21 November 2026 from assumed present |
 | Nature | Off unless declared; sky detected | Engine choice | Reasonable |
 
 ## 4. Verification and validation status
 
 The Workspace interior tests check that the study runs, reports the criteria and switches between its views. The criteria logic was checked against the LEED v4.1 credit text for this report [4]. The view-factor proxy has not been compared with view factors assessed with the Heschong Mahone method on real rooms.
 
-In the end-to-end audit of 20 November 2026 on level 1 of the audit block (237 m² of occupied floor, spots every 50 cm, 360 rays each), 86 % of the floor had a line of sight out and 84 % had quality views, so the credit thresholds were met. By criterion: directions 90° apart 25 %, two view types 86 %, within three head heights 84 %, view factor 3 or more 15 %. Criterion 2 equals the line-of-sight share because movement is assumed and every view out of this block reaches beyond 7.5 m or shows the sky.
+In the end-to-end audit of 20 November 2026 on level 1 of the audit block (237 m² of occupied floor, spots every 50 cm, 360 rays each), 86 % of the floor had a line of sight out and 84 % had quality views, so the credit thresholds were met. By criterion: directions 90° apart 25 %, two view types 86 %, within three head heights 84 %, view factor 3 or more 15 %. Criterion 2 equalled the line-of-sight share because movement was assumed and every view out of this block reaches beyond 7.5 m or shows the sky. With movement off by default, the same case gives 2 % for criterion 2 (sky and a far view seldom fall in the same view at seated eye height on this site), 31 % of the floor with quality views, and the credit not met; the other three criteria are unchanged. Declaring movement brings back the earlier figures. The difference shows how much this one declaration decides the result.
 
 ## 5. Discussion
 
-**Movement default.** With movement assumed, any view that runs beyond 7.5 m or shows the sky meets criterion 2. Most views out of a building do, so criterion 2 is nearly always met. Where a window faces a blank wall or a quiet courtyard, the user should switch movement off. A conservative default would be off.
+**Movement default.** With movement assumed, any view that runs beyond 7.5 m or shows the sky meets criterion 2. Most views out of a building do, so criterion 2 was nearly always met. The default is now off, the conservative choice: the user declares movement where a street or path with people is actually in view, and the method text states it as an assumption.
 
 **View factor.** Heschong Mahone's view factor combines the size of the view, judged from the angular extent of the window and what is seen through it, with its content [2]. The proxy measures only angular size through the window, with thresholds that are SimuSite's choice. It is a reasonable indicator of how much window a spot sees but should not be reported as an HMG view factor without calibration.
 
@@ -88,7 +88,7 @@ In the end-to-end audit of 20 November 2026 on level 1 of the audit block (237 m
 
 ## 6. Conclusion
 
-The Quality views study follows the LEED v4.1 criteria, distances and eye height. Two elements need attention before results are used in a submission: the view-factor proxy and its thresholds, and the default assumption that movement is visible. As a screening of how plan depth, partition layout and window placement affect view access, the study is appropriate.
+The Quality views study follows the LEED v4.1 criteria, distances and eye height. Two elements need attention before results are used in a submission: the view-factor proxy and its thresholds, and the user's declarations of nature and movement outside, which the geometry cannot check. As a screening of how plan depth, partition layout and window placement affect view access, the study is appropriate.
 
 # References
 
