@@ -18,11 +18,19 @@ export const CATEGORIES = [
   { id: 'standard', name: 'Standard', w: 2.5, l: 5.0, enabled: true, share: null },
   { id: 'compact', name: 'Compact', w: 2.3, l: 4.6, enabled: false, share: null },
   { id: 'large', name: 'Large / SUV', w: 2.7, l: 5.5, enabled: false, share: null },
-  { id: 'accessible', name: 'Accessible', w: 2.5, l: 5.0, accessAisle: 1.5, accessible: true, enabled: true, count: 2 },
+  { id: 'accessible', name: 'Accessible', w: 2.5, l: 5.0, accessAisle: 1.525, accessible: true, enabled: true, count: 2 },
   { id: 'ev', name: 'EV charging', w: 2.5, l: 5.0, enabled: false, share: null },
   { id: 'van', name: 'Van accessible', w: 2.5, l: 5.0, accessAisle: 2.5, accessible: true, enabled: false, count: 0 },
 ];
 /** the usual aisle width for a stall angle (two-way at 90°, one-way when angled); editable */
+/** 2010 ADA Standards 208.2: accessible spaces required for a lot of `total` spaces, and 208.2.4: one in six of them van
+ *  accessible (at least one). The access aisle is 60 in (1.525 m) beside a car space, 502.3.1. */
+export function adaRequired(total) {
+  const n = Math.max(0, Math.floor(total || 0)); if (!n) return { accessible: 0, van: 0 };
+  const T = [[25, 1], [50, 2], [75, 3], [100, 4], [150, 5], [200, 6], [300, 7], [400, 8], [500, 9]], row = T.find(([m]) => n <= m);
+  const accessible = row ? row[1] : n <= 1000 ? Math.ceil(n * 0.02) : 20 + Math.ceil((n - 1000) / 100);
+  return { accessible, van: Math.max(1, Math.ceil(accessible / 6)) };
+}
 export const aisleFor = (angle, oneWay) => (angle >= 89 ? 6.0 : angle >= 59 ? (oneWay ? 4.8 : 6.0) : (oneWay ? 4.0 : 6.0));
 
 // ---- geometry helpers: interiors disjoint (touching allowed), a convex polygon inside a region ----
@@ -202,9 +210,12 @@ export function generate(o) {
   results.sort((x, y) => better(x, y) || x.cand.deg - y.cand.deg || x.cand.off - y.cand.off);
   const opts = []; for (const r of results) { if (opts.length >= (o.options || 3)) break; if (!r.total) continue; if (opts.some((x) => Math.abs(x.cand.deg - r.cand.deg) < 1 && x.total === r.total)) continue; opts.push(r); }
   if (!opts.length) return { ok: false, error: results.length && results.every((r) => !r.B.reach.size) ? 'No aisle is reached from an entrance: set an entrance at the area\'s edge next to where the cars come in' : 'No stalls fit in this area with these sizes and aisles', candidates: results.length };
+  // the 2010 ADA count for the lot's size (208.2), against the accessible stalls placed: a note, the person's counts stay as set
+  const adaNote = (r) => { const need = adaRequired(r.total), have = acc.reduce((q, c) => q + (r.by[c.id] || 0), 0), vans = acc.filter((c) => c.accessAisle >= 2.4).reduce((q, c) => q + (r.by[c.id] || 0), 0);
+    return [...(have < need.accessible ? [`The 2010 ADA Standards (208.2) ask for ${need.accessible} accessible space${need.accessible === 1 ? '' : 's'} in a lot of ${r.total}: ${have} placed`] : []), ...(vans < need.van ? [`${need.van} of them van accessible (208.2.4): ${vans} placed`] : [])]; };
   const out = opts.map((r, i) => ({ label: String.fromCharCode(65 + i), angle: r.cand.deg, offset: r.cand.off, total: r.total, byCat: r.by, invalid: r.invalid, gross, stallArea: r.stallArea, circArea: r.circArea, use: r.use, circShare: r.circShare,
     stalls: r.stalls.map(({ bb, row, ...s }) => ({ ...s, rowAt: [row.u0, row.u1] })), aisles: r.B.circ.map((x) => ({ poly: x.poly, kind: x.from != null ? 'cross' : x.to != null && x.u == null && x.k == null ? 'connector' : 'aisle', oneWay: !!o.oneWay })),
-    rows: r.asg.rows.map((x) => ({ len: x.len, counts: x.counts, u0: x.u0, u1: x.u1, side: x.side, piece: x.piece })), unreachedAisles: r.unreached, notes: [...r.asg.note, ...(r.asg.accShort ? [`${r.asg.accShort} accessible stall${r.asg.accShort === 1 ? '' : 's'} could not be placed`] : [])], targets: r.asg.targets }));
+    rows: r.asg.rows.map((x) => ({ len: x.len, counts: x.counts, u0: x.u0, u1: x.u1, side: x.side, piece: x.piece })), unreachedAisles: r.unreached, notes: [...r.asg.note, ...(r.asg.accShort ? [`${r.asg.accShort} accessible stall${r.asg.accShort === 1 ? '' : 's'} could not be placed`] : []), ...adaNote(r)], targets: r.asg.targets }));
   void firstLarge;
   return { ok: true, options: out, best: out[0], candidates: results.length, module: { depth: D, aisle: A, pitch: M }, angle: aDeg, mode, gross, quality: o.quality || 'standard',
     method: `Rows of stall | aisle | stall modules (${D.toFixed(2)} + ${A.toFixed(2)} + ${D.toFixed(2)} m) tried in ${results.length} positions (row directions and offsets, seed ${o.seed ?? 1}); the best found is shown, not a proven optimum.` };
