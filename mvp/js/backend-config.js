@@ -5,3 +5,6 @@
 // Never put the service_role key here. Left empty, the site works as before, with everything in the browser only.
 export const SUPABASE_URL = 'https://cgxszynizkbiblfiaowf.supabase.co';
 export const SUPABASE_ANON_KEY = 'sb_publishable_QoFbrCcwwUbFcj1xNbHFaQ_8VOnx_43';
+// Card subscriptions through Stripe (supabase/functions/stripe-billing). Turn on only after the Stripe keys are in the
+// function's secrets and a test-card run has passed; until then the pricing page offers e-transfer only.
+export const CARD_CHECKOUT = false;

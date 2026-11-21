@@ -212,6 +212,8 @@ export async function libraryLink(path){
   const j=await r.json(),u=j.signedURL||j.signedUrl;if(!u)throw new Error('The download link could not be made.');
   return c.url+'/storage/v1'+(u.startsWith('/')?u:'/'+u)+'&download='+encodeURIComponent(m[1].split('/').pop());
 }
+// Stripe card subscription: 'checkout' or 'portal' returns { url } of the Stripe page to open (supabase/functions/stripe-billing)
+export async function billing(route) { if (!['checkout','portal'].includes(route)) throw new Error('Unknown billing route'); return call('/functions/v1/stripe-billing/' + route, { method: 'POST', body: {} }); }
 export async function publicRpc(name){
   if(name!=='pc_public_site_content')throw new Error('Unknown public operation.');
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
