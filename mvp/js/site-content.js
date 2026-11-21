@@ -2,8 +2,10 @@ import * as Cloud from './cloud.js';
 import {hospitalResearchPost} from '../research/hospital-evacuation-article.js';
 import {fallingwaterModelPost} from '../research/fallingwater-model-article.js';
 import {evacuationAccuracyPost} from '../research/fire-evacuation-article.js';
+import {simulationReports} from '../research/simulation-reports.js';
 // the Blog holds research notes only (2026-11-17): the hospital methods note is superseded by the accuracy article and no longer listed
-export const researchPosts=[fallingwaterModelPost,evacuationAccuracyPost];
+// one method and data report per simulation (2026-11-21), built from mvp/research/reports/*.md by tools/build-simulation-reports.py
+export const researchPosts=[fallingwaterModelPost,evacuationAccuracyPost,...simulationReports];
 void hospitalResearchPost;
 
 // Blog posts (2026-11-17): research notes and offline events. New posts are a research note, an event (talk, workshop, exhibition)
