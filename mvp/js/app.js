@@ -20,7 +20,7 @@ export function refreshProjectContext(project=currentProject()){
 export const when = (iso) => new Date(iso).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 export function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
 export const MOCK = '<span class="tag mock" title="Illustrative estimate from model quantities; not a calculated simulation result.">Estimate</span>';
-export const LIVE = '<span class="tag live" title="Computed by the PlotCloud simulation engine">Engine</span>';
+export const LIVE = '<span class="tag live" title="Computed by the SimuSite simulation engine">Engine</span>';
 
 // Fixed light artwork; project data is independent of interface appearance.
 export const img = (name) => {

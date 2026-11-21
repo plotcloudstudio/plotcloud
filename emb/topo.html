@@ -17,9 +17,9 @@
 <script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap">
 <link rel="stylesheet" href="../ui/resource-tools.css?v=resource-tools-20261031-1">
-<title>PlotCloud Contour Model Maker</title>
+<title>SimuSite Contour Model Maker</title>
 </head>
-<body><!--PCSKIN--><div class="pcdesk" role="note"><span>PlotCloud · tools</span><b>contour model maker works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
+<body><!--PCSKIN--><div class="pcdesk" role="note"><span>SimuSite · tools</span><b>contour model maker works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div><!--/PCSKIN-->
 
 
 <style>
@@ -316,12 +316,12 @@ $('#exportBtn').addEventListener('click', async () => {
   const btn = $('#exportBtn'); btn.disabled = true; setStatus('Building files…');
   try {
     const bed = bedSize(), opts = { engraveNext: S.engNext, numbers: S.engNum };
-    const base = `PlotCloud_contours_1-${S.scale}_${S.th}mm`;
+    const base = `SimuSite_contours_1-${S.scale}_${S.th}mm`;
     const files = {};
     packed.sheets.forEach((sh, i) => { files[`${base}_sheet${String(i + 1).padStart(2, '0')}.svg`] = strToU8(sheetSVG(sh, result.layers, bed, opts)); });
     files[`${base}_all-sheets.dxf`] = strToU8(sheetsDXF(packed.sheets, result.layers, bed, opts));
     files['README.txt'] = strToU8([
-      'PlotCloud contour model maker',
+      'SimuSite contour model maker',
       `Scale 1:${S.scale} · board ${S.th} mm · vertical exaggeration ${S.ex}× · each layer = ${result.interval.toFixed(2)} m`,
       `Model ${result.size.w.toFixed(0)} × ${result.size.d.toFixed(0)} mm · ${result.layers.length} layers on ${packed.sheets.length} sheet(s) of ${bed.bedW} × ${bed.bedH} mm`,
       '', 'Colours: red = cut, blue = engrave (score). Units are millimeters; import at 1:1.',

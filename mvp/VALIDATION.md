@@ -5,7 +5,7 @@ Every number below is produced by the scripts in `tests/validation/` (run `tests
 `engine-validation.yml` runs them when an engine changes and keeps the result files). The engines are tested as they ship:
 the scripts either pull the engine's own functions out of the page or drive the engine page in a real browser.
 
-## References (none of them is PlotCloud code)
+## References (none of them is SimuSite code)
 
 | What | Reference | Why it can be trusted |
 |---|---|---|

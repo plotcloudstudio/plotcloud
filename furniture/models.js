@@ -1,5 +1,5 @@
 import {standingFigure,wheelchairFigure,landscapeTree} from './site-assets.js?v=entourage-20261102-1';
-// PlotCloud furniture configurator — parametric base models.
+// SimuSite furniture configurator — parametric base models.
 // Units: millimetres. Axes: Z up, X = width, Y = depth, front faces -Y.
 // After building, every model is moved so the origin sits at the bottom centre of its footprint.
 import { refineFurniture, DETAIL_FAMILIES, STORAGE_FAMILIES } from './furniture-details.js?v=entourage-20261102-1';

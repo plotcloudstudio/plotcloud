@@ -1,4 +1,4 @@
-// PlotCloud door & window generator — parametric doors and windows on the furniture generator engine.
+// SimuSite door & window generator — parametric doors and windows on the furniture generator engine.
 // Units mm, Z up. X runs along the wall, Y across it: the FRONT side is -Y (exterior for exterior doors and windows).
 // Origin: center of the frame, at floor level, on the wall centerline. Elevations are seen from the front.
 // Code values: NBC 2020 (Part 3 exits, 3.8 accessibility, Part 9 doors and windows), CSA B651-18 clause 5.2,

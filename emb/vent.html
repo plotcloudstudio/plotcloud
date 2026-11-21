@@ -10,7 +10,7 @@
 <script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 </head>
 <body>
-<title>PlotCloud Natural Ventilation</title>
+<title>SimuSite Natural Ventilation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -260,7 +260,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 footer.fine { font: 11px var(--f-body); color: var(--faint); background: #fff; border-top: 1px solid var(--line); }
 #stage { background: #fff; }
 
-/* ===== PlotCloud layer: the site's own tokens and components ===== */
+/* ===== SimuSite layer: the site's own tokens and components ===== */
 :root { --ink: #1C1B1A; --muted: #6E6A60; --faint: #6E6A60; --line: rgba(28,27,26,.10); --line-strong: rgba(28,27,26,.22); --well: #FBFAF7; --paper: #FBFAF7; --sand: #EFEBE0; --fill: rgba(28,27,26,.07); --fill2: rgba(28,27,26,.045);
   --accent: #D8402A; --accent-dk: #B63422; --accent-soft: rgba(216,64,42,.09); --ok: #2F7A4F; --warn: #9a5b00; --green: #1C1B1A;
   --f-body: "Inter Tight", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -312,7 +312,7 @@ details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { m
 .deskonly { background: var(--paper) !important; } .deskonly b { font: 800 30px var(--f-body) !important; letter-spacing: -.035em !important; text-transform: lowercase; color: var(--ink) !important; } .deskonly .lab2 { font: 500 11px var(--f-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
 </style>
 
-<div class="deskonly" role="note"><span class="lab2">PlotCloud · tools</span><b>natural ventilation works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div>
+<div class="deskonly" role="note"><span class="lab2">SimuSite · tools</span><b>natural ventilation works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p></div>
 <div class="app fitapp">
   <aside class="panel col" id="panelL" aria-label="Natural ventilation settings">
     <nav class="rail" aria-label="Settings"><button type="button" class="rbtn open" data-rail="0" title="Show the settings" aria-label="Show the settings"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
@@ -413,7 +413,7 @@ details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { m
 </div>
 
 <script>
-// PlotCloud CAD I/O (shared by the L-system planting plan and the evacuation tool).
+// SimuSite CAD I/O (shared by the L-system planting plan and the evacuation tool).
 // Reads DXF in the browser with dxf-parser (MIT), expands blocks, converts to meters,
 // and writes simple 2D DXF (R12, metres). No server needed.
 const CADIO = (() => {
@@ -559,7 +559,7 @@ const CADIO = (() => {
 
 </script>
 <script id="ventcore">
-// PlotCloud natural ventilation core: plan raster and rooms, an airflow network (wind + stack) for the flow through each
+// SimuSite natural ventilation core: plan raster and rooms, an airflow network (wind + stack) for the flow through each
 // opening, and a 2D lattice-Boltzmann field for how the air moves inside, driven by the network's opening flows.
 const VENT = (() => {
   const G0 = 9.81, Rair = 287.05;
@@ -1678,7 +1678,7 @@ async function loadFile(f) {
 window.__pcInputError=null;
   const ext = f.name.split('.').pop().toLowerCase(); msg('Reading ' + f.name + '…');
   try {
-    if (ext === 'json') { const o = JSON.parse(await f.text()); if (!o.bounds) throw new Error('not a PlotCloud ventilation scene'); pushHist(); MODEL = null; M3D = null; loadScene(o, { keepHist: true }); applySettings(o); $('#preset').value = ''; $('#mName').textContent = o.name || f.name; $('#mInfo').textContent = 'saved scene'; msg(`${f.name}: scene loaded.`, 'ok'); return; }
+    if (ext === 'json') { const o = JSON.parse(await f.text()); if (!o.bounds) throw new Error('not a SimuSite ventilation scene'); pushHist(); MODEL = null; M3D = null; loadScene(o, { keepHist: true }); applySettings(o); $('#preset').value = ''; $('#mName').textContent = o.name || f.name; $('#mInfo').textContent = 'saved scene'; msg(`${f.name}: scene loaded.`, 'ok'); return; }
     if (ext === 'dxf') { MODEL = null; M3D = null; await importDXF(f); return; }
     let r;
     if (ext === 'ifc') r = await importIFC(f); else if (ext === '3dm') r = await import3DM(f); else if (['obj', 'stl', 'glb', 'gltf', 'dae'].includes(ext)) r = await threeModel(f, ext); else throw new Error('use .3dm, .ifc, .obj, .stl, .glb, .dae, .dxf or a saved .json scene');
@@ -1745,7 +1745,7 @@ function board() {   // the exported sheet: header with the headline numbers, th
   ty += 90; x.textAlign = 'left'; x.fillStyle = INK; x.font = F(600, 30); x.fillText('Openings', M, ty); ty += 56;
   ty = table(ty, ['Opening', 'Facade', 'Cp', 'Open m²', 'In L/s', 'Out L/s'], ops.map((o) => { const pp = flowOf(o.k); return [opName(o.k) + (o.ext ? '' : `  ${G.rooms[o.ra].name} – ${G.rooms[o.rb].name}`), o.ext ? cname(o.bearing) : 'inside', o.ext ? o.Cp.toFixed(2) : '', (o.A || 0).toFixed(2), pp ? Math.round((o.ext ? pp.ba : pp.ab) * 1000) : 0, pp ? Math.round((o.ext ? pp.ab : pp.ba) * 1000) : 0]; }), [M, 1000, 1350, 1700, 2050, 2400, Wd - M], ['left', 'right', 'right', 'right', 'right', 'right']);
   x.fillStyle = MUT; x.font = F(400, 22); x.textAlign = 'left'; x.fillText(`Early-design estimate: airflow network with AIVC wind pressure coefficients (Liddament), discharge coefficient 0.6, and a 2D flow at ${S.slice} m. Not a CFD study.`, M, ty + 80);
-  x.textAlign = 'right'; x.fillText(`PlotCloud · ${new Date().toISOString().slice(0, 10)}`, Wd - M, ty + 80);
+  x.textAlign = 'right'; x.fillText(`SimuSite · ${new Date().toISOString().slice(0, 10)}`, Wd - M, ty + 80);
   return c;
 }
 function resultsCSV() {
@@ -1759,11 +1759,11 @@ function resultsCSV() {
 }
 $$('[data-ex]').forEach((b) => b.addEventListener('click', () => {
   const k = b.dataset.ex; if (!G) return;
-  if (k === 'png') return save(T3.on ? 'PlotCloud_natural_ventilation_3D.png' : 'PlotCloud_natural_ventilation.png', T3.on ? (update3D(), toPNG($('#cv3'))) : toPNG(board()));
-  if (k === 'json') return save('PlotCloud_ventilation_scene.json', sceneJSON());
-  if (k === 'csv') return save('PlotCloud_ventilation.csv', resultsCSV());
+  if (k === 'png') return save(T3.on ? 'SimuSite_natural_ventilation_3D.png' : 'SimuSite_natural_ventilation.png', T3.on ? (update3D(), toPNG($('#cv3'))) : toPNG(board()));
+  if (k === 'json') return save('SimuSite_ventilation_scene.json', sceneJSON());
+  if (k === 'csv') return save('SimuSite_ventilation.csv', resultsCSV());
 }));
-$('#saveJ').addEventListener('click', () => save('PlotCloud_ventilation_scene.json', sceneJSON()));
+$('#saveJ').addEventListener('click', () => save('SimuSite_ventilation_scene.json', sceneJSON()));
 $('#emOpen').addEventListener('click', () => $('#pick').click());
 $('#wxMore summary').addEventListener('click', () => { $('#wxMore').dataset.user = '1'; setTimeout(fitCols, 0); });
 new MutationObserver(() => { const m = $('#impMsg'); m.title = m.textContent; $('#unitRow').hidden = !(SC.raw && SC.raw.length) && !MODEL; }).observe($('#impMsg'), { childList: true, characterData: true, subtree: true });
@@ -1796,13 +1796,13 @@ addEventListener('load',()=>{if(typeof draw==='function')requestAnimationFrame((
 </script>
 
 <script>
-// ===== PlotCloud bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
+// ===== SimuSite bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
 (function () {
   if (window.__pcBridge || window.parent === window) return; window.__pcBridge = 1;
   const boot = () => setTimeout(start, 300); if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
   function start() {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const name = (/^PlotCloud Studio$/i.test(document.title) ? document.title : (document.title || 'tool').replace(/^PlotCloud\s+/i, ''));
+  const name = (/^SimuSite Studio$/i.test(document.title) ? document.title : (document.title || 'tool').replace(/^SimuSite\s+/i, ''));
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
   const txt = (e) => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
 
@@ -1850,7 +1850,7 @@ addEventListener('load',()=>{if(typeof draw==='function')requestAnimationFrame((
     if (d.t === 'project' && d.scene && canScene) { window.__pcRequestedSource=d.source;window.__pcModelLoadedSource=null;if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
-    if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
+    if (d.t === 'upsell') note.innerHTML = 'Projects are part of SimuSite Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
     if (d.t === 'error') note.textContent = d.msg || 'Could not save to the project.';
   });
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-pcgo]'); if (a) { e.preventDefault(); post({ t: 'go', to: a.dataset.pcgo }); } });
@@ -1858,7 +1858,7 @@ addEventListener('load',()=>{if(typeof draw==='function')requestAnimationFrame((
   let calm = 0, tries = 0; const idle = () => { const pr = $('#prog'), sp = $('#runPill'), stop = $('#stopRun');
     return (!pr || pr.hidden || pr.offsetParent === null) && (!sp || sp.hidden) && (!stop || stop.hidden) && !$$('#panelL .go, aside.panel .go').some((b) => b.disabled); };
   const wait = () => { tries++; calm = idle() ? calm + 1 : 0; if (calm >= 3 || tries > 60) post({ t: 'hello', tool: name, scene: canScene }); else setTimeout(wait, 400); };
-  // a model handed over from PlotCloud Studio is waiting for this tool: ask for it at once instead of after the first analysis
+  // a model handed over from SimuSite Studio is waiting for this tool: ask for it at once instead of after the first analysis
   const hoPending = (() => { try { const h = window.parent.__pcHO, fe = window.frameElement; return !!(h && fe && fe.dataset.emb === h.tool); } catch (e) { return false; } })();
   if (hoPending && canScene) setTimeout(() => post({ t: 'hello', tool: name, scene: canScene }), 150); else setTimeout(wait, 600);
   }
@@ -1887,13 +1887,13 @@ addEventListener('load',()=>{if(typeof draw==='function')requestAnimationFrame((
 })();
 </script>
 <script>
-// ===== PlotCloud v131: a simulation tool sends furniture moves back to Plan Studio =====
+// ===== SimuSite v131: a simulation tool sends furniture moves back to Plan Studio =====
 // Only for a model that came from Plan Studio (its furniture carries Plan Studio ids). Only moves go back: [{ id, position: [x, y], rotation }] in Plan Studio meters.
 (function () {
   if (window.parent === window || window.__pcReturn) return; window.__pcReturn = 1;
   const $ = (s, r = document) => r.querySelector(s);
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
-  const toolName = (document.title || 'Simulation').replace(/^PlotCloud\s+/i, '').replace(/\s*[·|–-].*$/, '').trim() || 'Simulation';
+  const toolName = (document.title || 'Simulation').replace(/^SimuSite\s+/i, '').replace(/\s*[·|–-].*$/, '').trim() || 'Simulation';
   let ORIG = null, SRC = null, btn = null, toastEl = null, tT = 0;
   const scene = () => { try { return typeof window.__pcSceneJSON === 'function' ? JSON.parse(window.__pcSceneJSON()) : null; } catch (e) { return null; } };
   const centre = (f, o) => [+(f.x + f.w / 2 + o[0]).toFixed(4), +(f.y + f.d / 2 + o[1]).toFixed(4)];

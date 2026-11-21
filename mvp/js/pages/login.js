@@ -17,7 +17,7 @@ export function render(app, _, params) {
   const draw = () => {
     const up = mode === 'signup';
     const nav=app.closest('.lp-public')?.querySelector('.lp-nav');if(nav){nav.querySelectorAll('.lp-login,.lp-btn').forEach(a=>a.removeAttribute('aria-current'));nav.querySelector(up?'.lp-btn':'.lp-login')?.setAttribute('aria-current','page');}
-    document.title='PlotCloud — '+(up?'Get started':'Log in');
+    document.title='SimuSite — '+(up?'Get started':'Log in');
     app.innerHTML = `<div class="auth">
       <div style="flex:1 1 420px;max-width:520px">
         <h1 class="display md">${up ? 'Start free.' : 'Welcome back.'}<br><span>${up ? 'Keep it together.' : 'Pick up where you left off.'}</span></h1>
@@ -32,7 +32,7 @@ export function render(app, _, params) {
         <button class="btn accent lg" id="go">${cloud?(up?'Create account →':'Log in →'):'Continue with local profile →'}</button>
         ${cloud ? `<button type="button" class="btn" id="link">Email me a sign-in link instead</button>${up ? '' : '<button type="button" class="btn ghost" id="forgot">Forgot your password?</button>'}` : ''}
         <p class="msg" id="authMsg" role="status" aria-live="polite"></p>
-        <p class="note" style="text-align:center">${cloud ? 'Your projects stay in this browser and, once you are signed in, are copied to your PlotCloud account so they follow you to your other devices. The sample project stays in the browser.' : 'Cloud accounts are not switched on for this site yet: your details stay in this browser and no password is stored.'}</p>
+        <p class="note" style="text-align:center">${cloud ? 'Your projects stay in this browser and, once you are signed in, are copied to your SimuSite account so they follow you to your other devices. The sample project stays in the browser.' : 'Cloud accounts are not switched on for this site yet: your details stay in this browser and no password is stored.'}</p>
       </form></div>`;
     $$('[data-m]', app).forEach((b) => b.onclick = () => { mode = b.dataset.m; draw(); });
     const say = (t, warn) => { const m = $('#authMsg', app); m.textContent = t; m.className = 'msg' + (warn ? ' warn' : ' ok'); };

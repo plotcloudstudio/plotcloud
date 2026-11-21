@@ -141,7 +141,7 @@ On a local server, from a clean browser profile:
 ## Global interface rules (patch)
 
 - **One entry point per simulation.** "All tools" and every "Open full tool" link are gone from the formal site. Each simulation has one route, `#/simulations/<id>`, reached from the Workspace ("Choose a simulation", or "Simulate" on a version row, then Enter) or from a Simulations card (Enter). Both arrive at the same page in the same state. The project and version come from what was chosen, not from the address; older links that carry `?project=&version=` are cleaned to the same route. "← Back" returns to the page the simulation was entered from. Resources entries never open a simulation.
-- **Every simulation runs its PlotCloud engine** (the same `emb/<tool>.html` file the classic tool runs) in one page shell, `js/pages/sim-engine.js`. Nothing on the page computes or draws a result.
+- **Every simulation runs its SimuSite engine** (the same `emb/<tool>.html` file the classic tool runs) in one page shell, `js/pages/sim-engine.js`. Nothing on the page computes or draws a result.
   - **Model:** the model is edited only in the Workspace. Each engine gets the version's model in its own input format:
     - Plan tools (Daylight, Natural ventilation, Space syntax, Movement & spatial depth, Isovist, Views, Cameras) get the scene Plan Studio's Send to Simulation makes. Plan Studio runs hidden (`js/studio-bridge.js`), opens the version converted to its model format (`js/studio-convert.js`), and returns `STC.planScene` for the tool and level. It opens the model as saved, so no draft is kept, and its "last project" is put back.
     - Sun hours and Wind get the masses scene (`js/sunscene.js`).

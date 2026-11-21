@@ -71,7 +71,7 @@ export function load() {
     if(!p.sharedConditions){p.sharedConditions={schema:1,revision:1,updated:now(),site:clone(p.siteLinked===false?p.site:DB.account.site),defaults:clone(DB.account.defaults)};migrated=true;}
     if (C.migrateProject(p)) migrated = true;
   }
-  // estimates from the old prototype preview are retired: every result now comes from a PlotCloud engine
+  // estimates from the old prototype preview are retired: every result now comes from a SimuSite engine
   for (const p of DB.projects) p.runs = p.runs.filter((r) => r.source !== 'prototype-mock');
   if (fresh||migrated) save();   // every page and batch frame sees the same frozen project defaults
   return DB;
@@ -133,7 +133,7 @@ async function resolveMeshes(D) {
   for (const [m, id, k] of miss) { if (!isRef(m.meshes[id])) continue; const r = got.get(k);
     if (r && r.a) { let a = MCACHE.get(k); if (!a) { a = Array.from(r.a); MKEY.set(a, k); MCACHE.set(k, a); } STORED.add(k); m.meshes[id] = a; }
     else { delete m.meshes[id]; lost++; } }   // its record is gone (site data partly cleared): the piece shows as its box, as a mesh-less import does
-  if (lost) console.warn(`PlotCloud: ${lost} imported mesh record(s) were missing from this browser's storage.`);
+  if (lost) console.warn(`SimuSite: ${lost} imported mesh record(s) were missing from this browser's storage.`);
   return miss.length; }
 // records no model refers to any more (deleted imports, projects), kept a day in case another open tab still writes them
 async function sweepMeshes() { try { const live = new Set(); for (const m of modelsOf(DB)) for (const a of Object.values(m.meshes)) { if (isRef(a)) live.add(a.$m); else if (isMesh(a)) { const k = MKEY.get(a); if (k) live.add(k); } }
@@ -256,15 +256,15 @@ export function pruneOldMedia() {
 const PRE = KEY + ':before-schema-2';
 function keepPreMigration(D) {
   if (!idbOK) { D.migrationBackup = 'unavailable: IndexedDB is not available in this browser'; return; }
-  const text = JSON.stringify({ format: 'plotcloud-backup', v: 1, exported: now(), reason: 'automatic copy before PlotCloud data schema 2', account: D.account, projects: D.projects });
+  const text = JSON.stringify({ format: 'plotcloud-backup', v: 1, exported: now(), reason: 'automatic copy before SimuSite data schema 2', account: D.account, projects: D.projects });
   D.migrationBackup = PRE; idbGet(PRE).then((had) => had || idbPut(PRE, text)).catch(() => { });
 }
 export const preMigrationBackup = () => (idbOK ? idbGet(PRE).catch(() => null) : Promise.resolve(null));
 export function exportAll() { const D = load(); D.account.lastBackup = now(); save(); return JSON.stringify({ format: 'plotcloud-backup', v: 1, exported: now(), account: D.account, projects: D.projects }, null, 1); }
 // a backup file back in: 'merge' adds its projects (a project already here with the same id is replaced), 'replace' takes the whole file
 export function importAll(text, mode = 'merge') {
-  let o; try { o = JSON.parse(text); } catch (e) { throw new Error('This is not a PlotCloud backup (not JSON).'); }
-  if (o?.format !== 'plotcloud-backup' || !Array.isArray(o.projects)) throw new Error('This is not a PlotCloud backup file.');
+  let o; try { o = JSON.parse(text); } catch (e) { throw new Error('This is not a SimuSite backup (not JSON).'); }
+  if (o?.format !== 'plotcloud-backup' || !Array.isArray(o.projects)) throw new Error('This is not a SimuSite backup file.');
   for (const p of o.projects) if (!p.id || !Array.isArray(p.versions) || !Array.isArray(p.runs)) throw new Error('A project in this file is incomplete.');
   const D = load();
   if (mode === 'replace') { DB = { projects: o.projects, account: { ...o.account, user: D.account.user } }; }

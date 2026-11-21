@@ -1,4 +1,4 @@
-# PlotCloud public weather download function
+# SimuSite public weather download function
 
 This is a narrowly scoped download bridge for public EPW ZIP archives. Climate.OneBuilding does not send browser CORS headers, so a static GitHub Pages page cannot download its archives directly. This function fetches from the two allowlisted publishers and returns CORS headers. It reads no user data or database tables and needs no service-role key.
 

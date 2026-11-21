@@ -3,7 +3,7 @@
 <head><script>if(location.pathname.endsWith('/emb/modeler.html')){const base=document.createElement('base');base.href=new URL('../',location.href).href;document.head.appendChild(base);}</script><script>try{var P=window.parent;if(!window.claude&&P&&P!==window&&P.claude){var fx=function(d){if(d instanceof Blob)return new P.Blob([d]);if(d instanceof ArrayBuffer)return new P.Uint8Array(d.slice(0));if(ArrayBuffer.isView(d))return new P.Uint8Array(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength));return d};window.claude={use:function(n){return P.claude.use(n).then(function(ns){if(!ns||n!=="downloads")return ns;return{save:function(r){var q=new P.Object();for(var k in r)q[k]=r[k];q.data=fx(r.data);return ns.save(q)}}})}}}}catch(e){};window.PC_EMBED={lang:"en"};</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script>/* Workspace mode (2026-10-24): ?ws=plan|persp|props puts this Plan Studio in a pane of the PlotCloud Workspace. It keeps no drafts,
+<script>/* Workspace mode (2026-10-24): ?ws=plan|persp|props puts this Plan Studio in a pane of the SimuSite Workspace. It keeps no drafts,
    does not become "the last project" and shows no first-run guide in this browser; the Workspace keeps the model. */
 (function(){var r=new URLSearchParams(location.search).get('ws');if(!/^(plan|persp|props)$/.test(r||''))return;window.__WSROLE=r;document.documentElement.classList.add('ws','ws-'+r);
 try{var g=Storage.prototype.getItem,st=Storage.prototype.setItem;Storage.prototype.getItem=function(k){if(this===localStorage){if(k==='pc-studio-last')return null;if(k==='pc-wb-tour')return '1';}return g.call(this,k);};
@@ -652,13 +652,13 @@ table.exs{width:100%;border-collapse:collapse;font:12px var(--f-body)}table.exs 
 <div class="deskonly" role="note"><b>Plan Studio works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard. Open this page on a laptop or desktop computer.</p></div>
 <div class="kj" role="main">
   <header class="kj-top">
-    <div class="kj-brand" aria-label="Plan Studio"><span class="kj-logo" aria-hidden="true">P</span><span class="kj-title"><b>Plan Studio</b><span>PlotCloud</span></span></div>
+    <div class="kj-brand" aria-label="Plan Studio"><span class="kj-logo" aria-hidden="true">P</span><span class="kj-title"><b>Plan Studio</b><span>SimuSite</span></span></div>
     <span class="kj-sep"></span>
     <div class="kj-grp" role="group" aria-label="File">
       <div class="kj-menu">
         <button type="button" class="btn" id="openBtn" aria-haspopup="true" aria-expanded="false" title="Open a Plan Studio model file"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M1.8 4.2h4l1.4 1.6h7v6.9H1.8z"/></svg>Open model</button>
         <div class="kj-pop" id="openPop" hidden>
-          <button type="button" class="kj-mi one" id="pick" title="Open a Plan Studio model or a plan from another PlotCloud tool (.json)"><span>Open a file…</span></button>
+          <button type="button" class="kj-mi one" id="pick" title="Open a Plan Studio model or a plan from another SimuSite tool (.json)"><span>Open a file…</span></button>
           <details class="plist" id="plist" hidden><summary>Saved models on this device</summary><div id="plistIn"></div></details>
         </div>
       </div>
@@ -857,7 +857,7 @@ import { partGeometry as gGeom } from 'pc/geom.js';
 import { MODELS as DM, defaults as dDefaults, buildModel as dBuild, buildBlocks as dBlocks, LAYERS2D as DL2 } from 'pc-doors/models.js';
 import { MODELS as SM, defaults as sDefaults, buildModel as sBuild } from 'pc-stairs/models.js';
 // ===== site context core (shared with Site Context and Sun hours) =====
-// ===== PlotCloud site context core =====
+// ===== SimuSite site context core =====
 // Real-world site → validated, editable context model shared by Site Context, Plan Studio and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
 // Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
@@ -1221,7 +1221,7 @@ const SITEC = (() => {
 })();
 
 
-window.__SITEC = SITEC;   // the PlotCloud site page builds sites with it (one owner of the site format)
+window.__SITEC = SITEC;   // the SimuSite site page builds sites with it (one owner of the site format)
 // Plan Studio core: a multi-level building model (walls, windows and doors in walls, floor openings, furniture),
 // rooms found from the walls, and three early-design analyses on it — airflow (wind + stack, across floors),
 // daylight factor (CIE overcast sky) and views out. Pure functions, no DOM; also runs under Node for tests.
@@ -1606,7 +1606,7 @@ const STC = (() => {
     sunhours:    { name: 'Sun hours', needs: [], note: 'The whole building as masses (outer walls and roofs, every level), with the site context casting shadows. Location, time zone and north come from the site.' },
     cameras:     { name: 'Camera coverage', needs: ['walls'], note: 'Walls, windows (as glazing) and furniture heights carry over. Place the cameras in the tool.' },
   };
-  // tools of the PlotCloud simulations page only (not in Send to tool): they read the plan with its openings and rooms
+  // tools of the SimuSite simulations page only (not in Send to tool): they read the plan with its openings and rooms
   const XTOOLS = {
     wayfinding: { name: 'Wayfinding', needs: ['rooms', 'doors'] },
     privacy:    { name: 'Privacy', needs: ['rooms', 'windows'] },
@@ -2012,7 +2012,7 @@ const WBP = (() => {
   const f3 = (v) => { const r = Math.round(v * 1000) / 1000; return (Object.is(r, -0) ? 0 : r).toFixed(3); };
   // OBJ from triangle meshes already placed in the world (three.js frame: meters, Y up). Written in millimeters.
   function obj(meshes, opts = {}) {
-    const L = [`# PlotCloud Plan Studio — ${opts.name || 'model'}`, '# units: millimeters; Y up; north is -Z', `# ${meshes.length} objects`], k = 1000; let base = 1, tris = 0;
+    const L = [`# SimuSite Plan Studio — ${opts.name || 'model'}`, '# units: millimeters; Y up; north is -Z', `# ${meshes.length} objects`], k = 1000; let base = 1, tris = 0;
     for (const m of meshes) { const nm = String(m.name || 'mesh').replace(/[^\w\-.]+/g, '_'); L.push(`o ${nm}`);
       const vs = m.verts; for (let i = 0; i < vs.length; i += 3) L.push(`v ${f3(vs[i] * k)} ${f3(vs[i + 1] * k)} ${f3(vs[i + 2] * k)}`);
       const id = m.idx; for (let i = 0; i < id.length; i += 3) { L.push(`f ${id[i] + base} ${id[i + 1] + base} ${id[i + 2] + base}`); tris++; }
@@ -2034,7 +2034,7 @@ const WBP = (() => {
     const E = (s) => { n++; lines.push(`#${n}=${s};`); return `#${n}`; };
     const P3 = (x, y, z) => E(`IFCCARTESIANPOINT((${f3(x)},${f3(y)},${f3(z)}))`), P2 = (x, y) => E(`IFCCARTESIANPOINT((${f3(x)},${f3(y)}))`), D3 = (x, y, z) => E(`IFCDIRECTION((${f3(x)},${f3(y)},${f3(z)}))`);
     const stamp = opts.stamp || M.savedAt || '2000-01-01T00:00:00.000Z', ts = Math.floor(Date.parse(stamp) / 1000) || 0, nm = M.name || 'Plan Studio model';
-    const per = E("IFCPERSON($,$,'',$,$,$,$,$)"), org = E("IFCORGANIZATION($,'PlotCloud',$,$,$)"), po = E(`IFCPERSONANDORGANIZATION(${per},${org},$)`), app = E(`IFCAPPLICATION(${org},'1.0','PlotCloud Plan Studio','Plan Studio')`);
+    const per = E("IFCPERSON($,$,'',$,$,$,$,$)"), org = E("IFCORGANIZATION($,'SimuSite',$,$,$)"), po = E(`IFCPERSONANDORGANIZATION(${per},${org},$)`), app = E(`IFCAPPLICATION(${org},'1.0','SimuSite Plan Studio','Plan Studio')`);
     const oh = E(`IFCOWNERHISTORY(${po},${app},$,.ADDED.,$,$,$,${ts})`);
     const u = [E('IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.)'), E('IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.)'), E('IFCSIUNIT(*,.VOLUMEUNIT.,$,.CUBIC_METRE.)'), E('IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.)')], ua = E(`IFCUNITASSIGNMENT((${u.join(',')}))`);
     const O = P3(0, 0, 0), Z = D3(0, 0, 1), XD = D3(1, 0, 0), wcs = E(`IFCAXIS2PLACEMENT3D(${O},${Z},${XD})`);
@@ -2077,7 +2077,7 @@ const WBP = (() => {
     }
     if (storeys.length) E(`IFCRELAGGREGATES(${G('agg-b')},${oh},$,$,${bld},(${storeys.join(',')}))`);
     const file = (opts.file || 'model') + '.ifc';
-    const head = ['ISO-10303-21;', 'HEADER;', "FILE_DESCRIPTION(('ViewDefinition [CoordinationView_V2.0]'),'2;1');", `FILE_NAME(${ifcStr(file)},'${stamp.slice(0, 19)}',(''),('PlotCloud'),'PlotCloud Plan Studio','PlotCloud Plan Studio','');`, "FILE_SCHEMA(('IFC2X3'));", 'ENDSEC;', 'DATA;'];
+    const head = ['ISO-10303-21;', 'HEADER;', "FILE_DESCRIPTION(('ViewDefinition [CoordinationView_V2.0]'),'2;1');", `FILE_NAME(${ifcStr(file)},'${stamp.slice(0, 19)}',(''),('SimuSite'),'SimuSite Plan Studio','SimuSite Plan Studio','');`, "FILE_SCHEMA(('IFC2X3'));", 'ENDSEC;', 'DATA;'];
     const text = head.concat(lines, ['ENDSEC;', 'END-ISO-10303-21;']).join('\n') + '\n';
     return { text, stats: { entities: n, ...counts } };
   }
@@ -3400,11 +3400,11 @@ function loadJSON(o, name) {   // returns the model; nothing changes if the file
   let N;
   if (o.studio && o.studio.levels) N = o.studio;
   else if (o.levels && o.walls && o.ops) N = o;
-  else if (Array.isArray(o.walls) && o.bounds) {   // a plan from another PlotCloud tool: walls (glass ones become windows) and furniture blocks
+  else if (Array.isArray(o.walls) && o.bounds) {   // a plan from another SimuSite tool: walls (glass ones become windows) and furniture blocks
     N = STC.blank(o.name || name || 'Imported plan'); N.v = 1; const h = Math.max(2.4, ...o.walls.map((w) => w.h || 0).filter((v) => v < 6)) || 2.7; N.levels[0].h = Math.min(4, h);
     for (const w of o.walls) { if (w.furnline || !(w.h > 1.2) && !w.glass) continue; const nw = { id: STC.uid('w'), lv: 'L1', a: w.a.slice(), b: w.b.slice(), t: 0.2, sourceLayer: w.layer }; N.walls.push(nw); if (w.glass) { const L = STC.wallLen(nw); N.ops.push({ id: STC.uid('o'), wall: nw.id, pos: L / 2, w: Math.max(0.3, L - 0.02), kind: 'win', sill: w.h > 0 && w.h < 2 ? w.h : 0.9, head: 2.2, open: 0.3, flip: 1 }); } }
     for (const f of o.furn || []) N.furn.push({ id: STC.uid('f'), lv: 'L1', type: 'box', x: f.x + f.w / 2, y: f.y + f.d / 2, w: f.w, d: f.d, h: f.h || 0.9, rot: 0, label: f.name });
-  } else throw new Error('This file is not a Plan Studio model or a PlotCloud plan.');
+  } else throw new Error('This file is not a Plan Studio model or a SimuSite plan.');
   N.names = N.names || []; N.voids = N.voids || []; N.furn = N.furn || []; N.targets = Object.assign({ ach: 5, df: 2, view: 0.75 }, N.targets || {}); N.climate = Object.assign({ from: 225, U10: 3.5, terrain: 'suburban', Tout: 18, Tin: 24 }, N.climate || {});
   STC.migrate(N); const V = STC.validate(N); if (V.errors.some((e) => ['units', 'levels'].includes(e.code))) throw new Error(V.errors[0].msg);
   return N;
@@ -3429,7 +3429,7 @@ $('#emCase').addEventListener('click', () => useModel(STC.migrate(STC.TEMPLATES.
 $('#mNameIn').addEventListener('change', (e) => { const v = e.target.value.trim().slice(0, 80); if (!v || v === M.name) { e.target.value = M.name; return; } const b = snapM(); M.name = v; commit(b); });
 
 // ---------- projects on this device: versions, an autosaved draft, reopening ----------
-// stored in this browser (IndexedDB). There is no PlotCloud account storage yet, so projects do not follow you to another computer.
+// stored in this browser (IndexedDB). There is no SimuSite account storage yet, so projects do not follow you to another computer.
 const DB = (() => { let p = null; const open = () => p || (p = new Promise((res, rej) => { let q; try { q = indexedDB.open('pc-studio'); } catch (e) { rej(e); return; } q.onupgradeneeded = () => { const d = q.result; for (const [n, k] of [['projects', 'id'], ['drafts', 'id'], ['versions', 'key']]) if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: k }); };   /* any version: a browser that used the old Studio has this store at version 2 */ q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }));
   const tx = async (st, mode, fn) => { const d = await open(); return new Promise((res, rej) => { const t = d.transaction(st, mode), r = fn(t.objectStore(st)); t.oncomplete = () => res(r ? r.result : undefined); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); };
   return { put: (st, v) => tx(st, 'readwrite', (s) => s.put(v)), get: (st, k) => tx(st, 'readonly', (s) => s.get(k)), del: (st, k) => tx(st, 'readwrite', (s) => s.delete(k)), all: (st) => tx(st, 'readonly', (s) => s.getAll()) };
@@ -3509,7 +3509,7 @@ function openSend() {
     if (V.warnings.length) h += `<ul class="vlist">${V.warnings.slice(0, 6).map((w) => `<li class="w">${esc(w.msg)}${show(w.ref)}</li>`).join('')}${V.warnings.length > 6 ? `<li class="w">…and ${V.warnings.length - 6} more.</li>` : ''}</ul>`;
     if (M.levels.length > 1) h += `<div class="lvpick"><label for="sendLv">These tools read one level at a time:</label><select id="sendLv">${lvSorted().map((l) => `<option value="${l.id}" ${l.id === SENDLV ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>`;
     h += `<div class="tlist">${Object.entries(STC.TOOLS).map(([k, T]) => { const c = STC.compat(M, V.S, SENDLV, k); return `<div class="trow${c.ok ? '' : ' no'}"><b>${T.name}</b>${c.ok ? `<button type="button" class="${SITE ? 'go' : 'btn'}" data-send="${k}">${SITE ? 'Open in ' + T.name : 'Download for ' + T.name}</button>` : '<span class="note">Not ready</span>'}<p>${c.ok ? esc(T.note) : `<span class="why">${esc(c.why.join(' '))}</span>`}</p></div>`; }).join('')}</div>`;
-    h += `<p class="later">Wind, Structure and Circulation do not read workbench models yet. Sun hours takes every level at once. Each send also keeps a version (Versions, right panel).${isDirty() ? ' Sending saves a new version first, so the tool’s results point to it.' : ''}${SITE ? '' : ' Open Plan Studio from the PlotCloud site to send a model straight into a tool; here you can download it for the tool.'}</p>`;
+    h += `<p class="later">Wind, Structure and Circulation do not read workbench models yet. Sun hours takes every level at once. Each send also keeps a version (Versions, right panel).${isDirty() ? ' Sending saves a new version first, so the tool’s results point to it.' : ''}${SITE ? '' : ' Open Plan Studio from the SimuSite site to send a model straight into a tool; here you can download it for the tool.'}</p>`;
   }
   body.innerHTML = h; dlg.hidden = false; setTimeout(() => { const f = body.querySelector('[data-send], [data-vref]') || $('#sendX'); f.focus(); }, 0);
   try { window.parent.postMessage({ pc: 1, t: 'evt', name: 'studio_validate', props: { errors: V.errors.length, warnings: V.warnings.length } }, '*'); } catch (e) {}
@@ -6693,7 +6693,7 @@ window.S3 = (() => {
       if (L && L.stops && L.stops.length) { const lw = W * 0.38, lh = W * 0.018, lx = pad, ly = Hh - pad - lh - W * 0.05; g.fillStyle = 'rgba(255,255,255,.88)'; g.fillRect(lx - 12, ly - W * 0.045, lw + 24, lh + W * 0.09);
         const lg = g.createLinearGradient(lx, 0, lx + lw, 0); L.stops.forEach((c, i) => lg.addColorStop(i / Math.max(1, L.stops.length - 1), c)); g.fillStyle = lg; g.fillRect(lx, ly, lw, lh);
         g.fillStyle = ink; g.font = `500 ${Math.round(W * 0.02)}px Inter, system-ui, sans-serif`; g.textBaseline = 'bottom'; g.fillText(L.unit || '', lx, ly - 6); g.textBaseline = 'top'; g.fillText(L.lo ?? '', lx, ly + lh + 6); g.textAlign = 'right'; g.fillText(L.hi ?? '', lx + lw, ly + lh + 6); g.textAlign = 'left'; }
-      g.fillStyle = 'rgba(17,24,39,.72)'; g.font = `500 ${Math.round(W * 0.019)}px Inter, system-ui, sans-serif`; g.textAlign = 'right'; g.textBaseline = 'bottom'; g.fillText(o.stamp || 'Computed in PlotCloud', W - pad, Hh - pad); g.restore(); };
+      g.fillStyle = 'rgba(17,24,39,.72)'; g.font = `500 ${Math.round(W * 0.019)}px Inter, system-ui, sans-serif`; g.textAlign = 'right'; g.textBaseline = 'bottom'; g.fillText(o.stamp || 'Computed in SimuSite', W - pad, Hh - pad); g.restore(); };
     const frame = (t) => { const k = Math.min(1, (t - t0) / ms), a = sw * Math.sin(2 * Math.PI * k);   // out and back: the last frame meets the first
       const off = off0.clone().applyAxisAngle(new T.Vector3(0, 1, 0), a); cam.position.copy(ctl.target).add(off); cam.lookAt(ctl.target); render();
       const sc = R.domElement, s = Math.max(W / sc.width, Hh / sc.height), dw = sc.width * s, dh = sc.height * s; g.fillStyle = '#f6f4ef'; g.fillRect(0, 0, W, Hh); g.drawImage(sc, (W - dw) / 2, (Hh - dh) / 2, dw, dh); overlay();
@@ -7269,7 +7269,7 @@ window.S3 = (() => {
       const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(CV.R2.domElement, 0, 0, W, H);
       if (CV.B && CV.mode === 'side') { x.fillStyle = '#c9cdd4'; x.fillRect(Math.floor(W / 2) - 1, 0, 2, H); } if (CV.B && CV.mode === 'slider') { x.fillStyle = '#ffffff'; x.fillRect(Math.round(W * CV.split) - 1, 0, 3, H); }
       const bh = 46; x.fillStyle = 'rgba(255,255,255,.9)'; x.fillRect(0, H - bh, W, bh); x.fillStyle = '#1d2129'; x.font = '600 20px "Inter Tight","Noto Sans",Arial,sans-serif'; x.textBaseline = 'middle'; x.fillText(wm, 20, H - bh / 2);
-      x.font = '500 16px "Inter Tight","Noto Sans",Arial,sans-serif'; x.fillStyle = '#6e6a60'; x.textAlign = 'right'; x.fillText('PlotCloud Plan Studio', W - 20, H - bh / 2); return c.toDataURL('image/png');
+      x.font = '500 16px "Inter Tight","Noto Sans",Arial,sans-serif'; x.fillStyle = '#6e6a60'; x.textAlign = 'right'; x.fillText('SimuSite Plan Studio', W - 20, H - bh / 2); return c.toDataURL('image/png');
     },
     close() { cmpFree(CV.A); cmpFree(CV.B); CV.A = CV.B = null; if (CV.ctl) { CV.ctl.dispose(); CV.ctl = null; } },
   };
@@ -7699,7 +7699,7 @@ function pcModelConditions(N,lv){return {schema:1,level:lv,north:N.north||0,clim
 // An independent copy of the open project (Option B); saved views travel with it, captured images stay with the original.
 async function pcDuplicate(){if(isDirty()&&!await saveProject())return null;const original={id:M.id,version:M.version},N=JSON.parse(snapM());N.id=STC.uid('p');N.name=(M.name+' · Option B').slice(0,80);N.version=0;delete N.savedAt;N.parentOption=original;useModel(N,{msg:'Independent option created. The original project is preserved.'});if(!await saveProject())return null;return N.id;}
 window.__pcWorkflow={getModel:()=>JSON.parse(snapM()),duplicate:pcDuplicate,conditions:()=>pcModelConditions(M,LV),open:async id=>{if(isDirty()&&!await saveProject())return false;const rec=await DB.get('projects',id);if(!rec)return false;useModel(STC.migrate(rec.model),{saved:true});return true;},save:saveProject,load:N=>useModel(STC.migrate(N))};
-// Read-only scene access for hosts that run a simulation engine on a model they hand in (the PlotCloud Workspace).
+// Read-only scene access for hosts that run a simulation engine on a model they hand in (the SimuSite Workspace).
 // Same scenes as Send to Simulation: STC.planScene for the chosen tool and level; nothing is computed differently.
 // use(N) opens a model as saved, so nothing is kept as a draft in this browser's Plan Studio.
 Object.assign(window.__pcWorkflow,{use:N=>useModel(STC.migrate(N),{saved:true}),levels:()=>lvSorted().map(l=>({id:l.id,name:l.name,z:l.z,h:l.h})),
@@ -7708,7 +7708,7 @@ Object.assign(window.__pcWorkflow,{use:N=>useModel(STC.migrate(N),{saved:true}),
  dxf:(lvId)=>{const V=STC.validate(M);return WBP.dxf(M,V.S,lvId||lvSorted()[0].id).text;}});
 
 
-// ---------- Workspace mode (2026-10-24): this Plan Studio is one pane of the PlotCloud Workspace ----------
+// ---------- Workspace mode (2026-10-24): this Plan Studio is one pane of the SimuSite Workspace ----------
 // ?ws=plan is the Plan pane (2D), ?ws=persp the Perspective pane (3D), ?ws=props the parameter panel on the Workspace's left.
 // All three are this same Plan Studio with its own tools, handles, gumball and toolbars. The Workspace page (the parent) holds the
 // one model: every change here goes to it (live while dragging, then on release), and it hands the change to the other panes.
@@ -8452,13 +8452,13 @@ if (window.__WSROLE) {
 }
 </script>
 <script>
-// ===== PlotCloud bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
+// ===== SimuSite bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
 (function () {
   if (window.__pcBridge || window.parent === window || window.__WSROLE) return; window.__pcBridge = 1;
   const boot = () => setTimeout(start, 300); if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
   function start() {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const name = (/^Workbench$/i.test(document.title) ? document.title : (document.title || 'tool').replace(/^PlotCloud\s+/i, ''));
+  const name = (/^Workbench$/i.test(document.title) ? document.title : (document.title || 'tool').replace(/^SimuSite\s+/i, ''));
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
   const txt = (e) => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
 
@@ -8506,7 +8506,7 @@ if (window.__WSROLE) {
     if (d.t === 'project' && d.scene && canScene && !window.__pcMainProject) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
-    if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
+    if (d.t === 'upsell') note.innerHTML = 'Projects are part of SimuSite Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
     if (d.t === 'error') note.textContent = d.msg || 'Could not save to the project.';
   });
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-pcgo]'); if (a) { e.preventDefault(); post({ t: 'go', to: a.dataset.pcgo }); } });

@@ -18,7 +18,7 @@ const CIRC = /corridor|hall|lobby|passage|circulation|走廊|过道|大厅/i;
 const NOT_PATIENT = /corridor|hall|lobby|passage|circulation|stair|lift|elevator|toilet|\bwc\b|bath|shower|ensuite|washroom|store|storage|utility|clean|dirty|soiled|plant|station|office|nurse|staff|reception|kitchen|ante|vestibule|lounge|consult|exam|procedure|chapel|multifaith|imaging|x-ray|control|lab|specimen|pharmacy|medication|change|locker|mechanical|electrical|server|receiving|security|registration|waiting|caf[eé]|gift|entrance|records|janitor|housekeeping|linen|equipment|nourishment|\bit\b|comms|data|meeting|seminar|training|workroom|break|switch|sluice|disposal|走廊|楼梯|卫生|储/i;
 const PATIENT = /ward|patient|bed|icu|recovery|room|病房|病室/i;
 const STAFFROOM = /nurse|station|staff|护士/i;
-// movement parameters (2026-11-10, from the PlotCloud evacuation research note): SFPE hydraulic values (Gwynne & Rosenbaum, SFPE
+// movement parameters (2026-11-10, from the SimuSite evacuation research note): SFPE hydraulic values (Gwynne & Rosenbaum, SFPE
 // Handbook 5th ed.): specific flow 1.32 p/s/m of effective width through doors, 1.01 on a 7/11 stair, a boundary layer of 0.15 m
 // each side; free speed 1.19 m/s level (k 1.40) and 0.92 m/s along a 7/11 stair (k 1.08); walking-aid users about 0.8 m/s
 // (Boyce, Shields & Silcock 1999); preparing a patient for an assistance device: 29 s evacuation chair, 31 s bed, 53 s rescue

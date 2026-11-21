@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Builds the research article "How accurate is the fire evacuation simulation?" (PlotCloud blog) in the layout of a journal article
+# Builds the research article "How accurate is the fire evacuation simulation?" (SimuSite blog) in the layout of a journal article
 # on ScienceDirect, from the experiment results: mvp/research/egress-verification.json (tests/validation/egress-verification.mjs)
 # and mvp/research/egress-hospital-case.json (tests/validation/egress-hospital-case.cjs). Every number in the tables, and the
 # figures quoted in the text, are read from those files. Citations are written {key} and numbered in order of first use.
@@ -55,7 +55,7 @@ grp = eMix['groups']
 def vt(i, what, unit_fmt=lambda t: f"{t['expected']} {t['unit']}"):
     t = T[i]; return f"| {i} | {what} | {t['expected']} {t['unit']} | {t['measured']} {t['unit']} | {('pass' if t['errorPct'] is None else str(t['errorPct']) + ' %')} |"
 
-ABSTRACT = (f"Fire Evacuation in PlotCloud estimates how long a building takes to clear, either with everyone leaving at once or by a hospital's progressive horizontal evacuation followed by descent. It is a grid-based stochastic model with hydraulic flow limits after the SFPE Handbook, pre-movement times after PD 7974-6, and five occupant groups (adults, older adults, children, walking-aid users and wheelchair users) whose speeds come from published measurements. This study asks whether the engine implements its equations correctly, how many runs give stable results, how sensitive results are to the grid, to random incidents, to occupant groups and to hospital staffing, and what accuracy can honestly be claimed. Eighteen verification tests after IMO MSC.1/Circ.1533 and the verification categories of NIST TN 1822 and ISO 20414 all pass: speeds, flows and pre-movement distributions agree with analytical values within 0–3 %, and a three-storey building agrees with an SFPE hand calculation within {T['V10']['errorPct']} %. The study found and fixed five defects. The 0.5 m grid keeps only {T['G1']['measured']} m of a 1.8 m clear corridor (0.25 m grid: {T['G1b']['measured']} m). The mean settles within 1 % after about {cv['runsMean1pct']} runs and the 90th percentile needs about 50. Inputs about people dominate the uncertainty: in the example hospital, staffing and patient preparation move the median by {pc(cNight['p50'], cDay['p50'])} % and {pc(cDay['p50'], cNoPrep['p50'])} %, occupant groups move the clinic's everyone-out median by {pc(eMix['p50'], eAd['p50'])} %, and a wheelchair user's wait for assisted descent sets the end of the evacuation when there are wheelchair users above the ground floor. The model suits the comparison of design options under stated assumptions; it is not a prediction of a real evacuation time and not a code-compliance check.")
+ABSTRACT = (f"Fire Evacuation in SimuSite estimates how long a building takes to clear, either with everyone leaving at once or by a hospital's progressive horizontal evacuation followed by descent. It is a grid-based stochastic model with hydraulic flow limits after the SFPE Handbook, pre-movement times after PD 7974-6, and five occupant groups (adults, older adults, children, walking-aid users and wheelchair users) whose speeds come from published measurements. This study asks whether the engine implements its equations correctly, how many runs give stable results, how sensitive results are to the grid, to random incidents, to occupant groups and to hospital staffing, and what accuracy can honestly be claimed. Eighteen verification tests after IMO MSC.1/Circ.1533 and the verification categories of NIST TN 1822 and ISO 20414 all pass: speeds, flows and pre-movement distributions agree with analytical values within 0–3 %, and a three-storey building agrees with an SFPE hand calculation within {T['V10']['errorPct']} %. The study found and fixed five defects. The 0.5 m grid keeps only {T['G1']['measured']} m of a 1.8 m clear corridor (0.25 m grid: {T['G1b']['measured']} m). The mean settles within 1 % after about {cv['runsMean1pct']} runs and the 90th percentile needs about 50. Inputs about people dominate the uncertainty: in the example hospital, staffing and patient preparation move the median by {pc(cNight['p50'], cDay['p50'])} % and {pc(cDay['p50'], cNoPrep['p50'])} %, occupant groups move the clinic's everyone-out median by {pc(eMix['p50'], eAd['p50'])} %, and a wheelchair user's wait for assisted descent sets the end of the evacuation when there are wheelchair users above the ground floor. The model suits the comparison of design options under stated assumptions; it is not a prediction of a real evacuation time and not a code-compliance check.")
 
 HIGHLIGHTS = [
  'A grid-based stochastic evacuation model for early design is verified.',
@@ -69,7 +69,7 @@ BODY = f"""## 1. Introduction
 
 Architects meet evacuation questions early: where to put a second stair, how wide a corridor or a cross-corridor door must be, how many beds a smoke compartment can hold, whether a ward can be cleared with the night staff. Prescriptive codes answer with rules on travel distance, exit width and compartment size. Performance-based design asks instead whether the required safe escape time (RSET) stays below the available safe escape time (ASET) with a margin {{bsi2019}}. PD 7974-6 divides RSET into detection, alarm, pre-movement and travel {{bsi2019}}, and recorded evacuations show that pre-movement is often the longest and most uncertain part {{purser2001}}.
 
-PlotCloud's Fire Evacuation is a design-stage screening tool inside the architect's model. Earlier versions showed routes and timings without a check against analytical answers, and with parameters chosen by judgement. This article documents the evidence behind each parameter, verifies the engine, measures how much each uncertain input matters, and reports the changes made to the software as a result.
+SimuSite's Fire Evacuation is a design-stage screening tool inside the architect's model. Earlier versions showed routes and timings without a check against analytical answers, and with parameters chosen by judgement. This article documents the evidence behind each parameter, verifies the engine, measures how much each uncertain input matters, and reports the changes made to the software as a result.
 
 Research questions:
 
@@ -154,7 +154,7 @@ These are assumptions to test sensitivity, not measured rates:
 
 ### 3.5. Experiments
 
-Verification (Section 4) uses small synthetic geometries with fixed inputs, each with an analytical answer. Convergence (Section 5) runs a three-storey block of waiting rooms 300 times. The sensitivity studies (Section 6) vary one input at a time. The case study (Section 7) runs the PlotCloud example hospital in the browser, 50 runs per variant. All runs are seeded and can be reproduced exactly.
+Verification (Section 4) uses small synthetic geometries with fixed inputs, each with an analytical answer. Convergence (Section 5) runs a three-storey block of waiting rooms 300 times. The sensitivity studies (Section 6) vary one input at a time. The case study (Section 7) runs the SimuSite example hospital in the browser, 50 runs per variant. All runs are seeded and can be reproduced exactly.
 
 ## 4. Verification
 
@@ -244,7 +244,7 @@ Table 8. Hospital mode on a three-storey ward block, horizontal then down, 50 ru
 
 Night staffing adds {pc(hNight['p50'], hDay['p50'])} % to the median, and the preparation times, left out of earlier versions, add {pc(hDay['p50'], hNo['p50'])} %.
 
-## 7. Case study: the PlotCloud example hospital
+## 7. Case study: the SimuSite example hospital
 
 The example is a generic three-storey inpatient building of about 61 × 27 m, with an entrance and clinics on the ground floor and two inpatient units above (52 single patient rooms). Each inpatient floor has two smoke compartments separated by cross-corridor doors, and two exit stairs with 1.65 m flights serve every floor, entered at the ends of both corridors. Its means of egress meets every check of the software's Ontario Building Code screening (Section 10). Before that screening, the stairs had 1.4 m flights and were entered 8 m in from the corridors' ends, leaving dead-end corridors; both were corrected. In each run the fire starts in a random compartment with patients (hospital mode) or a random occupied room (everyone out).
 
@@ -313,8 +313,8 @@ The following changes were made as a result of this study:
 The engine reproduces the hydraulic values it is built on and passes component tests after IMO MSC.1/Circ.1533. Its numerical error is small beside the uncertainty in the people it models. For architects, the practical lessons match the literature. In care buildings, evacuation time is set mostly by staff, patient dependency and assisted descent, and by detection and pre-movement, more than by exit width. The next step is validation against recorded drills, particularly hospital drills with timed patient movements."""
 
 BACK = [
- ('CRediT authorship contribution statement', 'PlotCloud Studio: Conceptualization, Methodology, Software, Validation, Formal analysis, Writing – original draft. The software and this text were developed with AI assistance (Claude, Anthropic). Human subject-matter review is pending.'),
- ('Declaration of competing interest', 'The authors develop PlotCloud, the software evaluated in this article. No external funding was received.'),
+ ('CRediT authorship contribution statement', 'SimuSite Studio: Conceptualization, Methodology, Software, Validation, Formal analysis, Writing – original draft. The software and this text were developed with AI assistance (Claude, Anthropic). Human subject-matter review is pending.'),
+ ('Declaration of competing interest', 'The authors develop SimuSite, the software evaluated in this article. No external funding was received.'),
  ('Data availability', 'The engine, test scripts and results are public: [engine source](https://github.com/plotcloudstudio/plotcloud/blob/main/mvp/js/interior/egress.js), [verification and sensitivity script](https://github.com/plotcloudstudio/plotcloud/blob/main/tests/validation/egress-verification.mjs), [hospital case script](https://github.com/plotcloudstudio/plotcloud/blob/main/tests/validation/egress-hospital-case.cjs), [verification results (JSON)](research/egress-verification.json), [hospital case results (JSON)](research/egress-hospital-case.json), [this article as text](research/fire-evacuation-accuracy.md). All runs are seeded and reproducible.'),
  ('Acknowledgements', 'None.'),
 ]
@@ -333,17 +333,17 @@ unused = [k for k in REFS if k not in order]; assert not unused, unused
 refs = [REFS[k] for k in order]
 
 post = {'id': 'fire-evacuation-accuracy', 'kind': 'blog', 'publishedAt': '2026-11-10T00:00:00-08:00', 'content': {
-  'format': 'article', 'journal': 'PlotCloud Research Notes', 'journalNote': 'Technical note · not peer reviewed', 'articleType': 'Research article',
+  'format': 'article', 'journal': 'SimuSite Research Notes', 'journalNote': 'Technical note · not peer reviewed', 'articleType': 'Research article',
   'title': 'How accurate is the fire evacuation simulation? Verification, sensitivity and a hospital case study of a grid-based evacuation model for early design',
-  'authors': [{'name': 'PlotCloud Studio', 'aff': 'a'}], 'affiliations': [{'key': 'a', 'text': 'PlotCloud, building performance software for architects. Prepared with AI assistance; human review pending.'}],
+  'authors': [{'name': 'SimuSite Studio', 'aff': 'a'}], 'affiliations': [{'key': 'a', 'text': 'SimuSite, building performance software for architects. Prepared with AI assistance; human review pending.'}],
   'history': ['Published online 10 November 2026', 'Version 2 (adds occupant groups)', 'Not submitted to a journal; not peer reviewed'],
   'keywords': ['Evacuation modelling', 'Verification', 'Required safe escape time (RSET)', 'Hospital evacuation', 'People with reduced mobility', 'Children', 'Monte Carlo convergence'],
   'highlights': HIGHLIGHTS, 'abstract': ABSTRACT, 'body': BODY, 'backmatter': [{'title': a, 'text': t} for a, t in BACK], 'references': refs,
   'category': 'studio', 'summary': 'A research article in journal form: the evidence behind every parameter, 18 verification tests after IMO MSC.1/Circ.1533 (all pass), run-count convergence, sensitivity to grid, incidents, occupant groups and hospital staffing, a hospital case study, and what the results can and cannot claim.',
-  'image': 'img/research/evacuation-routes.jpg?v=20261110-2', 'imageAlt': 'Fire evacuation routes in the PlotCloud example hospital, lighter for people out sooner, darker for those out later, with stairs and exits marked'}}
+  'image': 'img/research/evacuation-routes.jpg?v=20261110-2', 'imageAlt': 'Fire evacuation routes in the SimuSite example hospital, lighter for people out sooner, darker for those out later, with stairs and exits marked'}}
 c = post['content']
 open(os.path.join(ROOT, 'mvp/research/fire-evacuation-article.js'), 'w').write('// Generated by tests/validation/build-evacuation-article.py from the experiment results; edit the script, not this file\nexport const evacuationAccuracyPost=' + json.dumps(post, ensure_ascii=False) + ';\n')
-md = [f"# {c['title']}", '', f"{c['journal']} · {c['journalNote']} · {c['history'][0]}", '', 'PlotCloud Studio. ' + c['affiliations'][0]['text'], '', '## Highlights', '', *['- ' + h for h in HIGHLIGHTS], '', '## Abstract', '', ABSTRACT, '', 'Keywords: ' + '; '.join(c['keywords']), '', BODY, '']
+md = [f"# {c['title']}", '', f"{c['journal']} · {c['journalNote']} · {c['history'][0]}", '', 'SimuSite Studio. ' + c['affiliations'][0]['text'], '', '## Highlights', '', *['- ' + h for h in HIGHLIGHTS], '', '## Abstract', '', ABSTRACT, '', 'Keywords: ' + '; '.join(c['keywords']), '', BODY, '']
 for a, t in BACK: md += [f'## {a}', '', t, '']
 md += ['## References', ''] + [f'{i + 1}. {r}' for i, r in enumerate(refs)]
 open(os.path.join(ROOT, 'mvp/research/fire-evacuation-accuracy.md'), 'w').write('\n'.join(md) + '\n')

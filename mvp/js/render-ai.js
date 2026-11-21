@@ -1,6 +1,6 @@
 // Interior rendering with the person's own OpenAI key (2026-11-19). Everything runs in this browser: the key is kept here only
 // (this session, or this device when asked), the view and any reference pictures go from here straight to api.openai.com, and
-// the images come back here and are kept in this browser's IndexedDB. PlotCloud's servers see none of it.
+// the images come back here and are kept in this browser's IndexedDB. SimuSite's servers see none of it.
 // A render is a presentation image: it is not a daylight, comfort or any other performance result.
 
 const API = 'https://api.openai.com/v1';

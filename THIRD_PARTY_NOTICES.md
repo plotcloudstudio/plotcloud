@@ -2,7 +2,7 @@
 
 ## DriftWall / React Bits
 
-The DriftWall source supplied by the user was adapted to the site's existing DOM runtime in mvp/js/drift-wall.js. Source: https://github.com/DavidHDev/react-bits . The component is used as part of PlotCloud's website, not offered as a standalone component product.
+The DriftWall source supplied by the user was adapted to the site's existing DOM runtime in mvp/js/drift-wall.js. Source: https://github.com/DavidHDev/react-bits . The component is used as part of SimuSite's website, not offered as a standalone component product.
 
 MIT + Commons Clause License Condition v1.0
 

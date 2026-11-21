@@ -64,7 +64,7 @@ export function studioSolarScene(version,site,name,projectId){return withModel(v
  if(scene.loc)Object.assign(scene.loc,tzInfo(site));
  return{ok:true,scene:JSON.stringify(scene),info:`${scene.geometryAudit.objects} mesh object${scene.geometryAudit.objects===1?'':'s'} · ${scene.geometryAudit.triangles.toLocaleString('en-CA')} triangles · original geometry`};});}
 export async function studioOBJ(version,site,name){const {meshes}=await studioMeshes(version,site,name),off=new Set((version.model.layers||[]).filter(l=>l.visible===false).map(l=>l.name)),imports=new Map((version.model.studio?.imports||[]).map(o=>[String(o.id),o]));
- const lines=['# PlotCloud Workspace surface meshes, metres, Y up'];let base=1;
+ const lines=['# SimuSite Workspace surface meshes, metres, Y up'];let base=1;
  for(const m of meshes){const im=imports.get(String(m.id));if(im&&off.has(im.layer))continue;lines.push('o '+String(m.id).replace(/[^a-z0-9_-]/gi,'_'));for(let i=0;i<m.pos.length;i+=3)lines.push(`v ${m.pos[i]} ${m.pos[i+2]} ${-m.pos[i+1]}`);for(let i=0;i<m.pos.length/3;i+=3)lines.push(`f ${base+i} ${base+i+1} ${base+i+2}`);base+=m.pos.length/3;}
  return{text:lines.join('\n'),geometryAudit:{objects:lines.filter(l=>l.startsWith('o ')).length,triangles:(base-1)/3,units:'m',axis:'y-up',representation:'Workspace surface meshes'}};}
 

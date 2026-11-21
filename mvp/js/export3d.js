@@ -24,7 +24,7 @@ export function items(model) {
 const f = (v) => +v.toFixed(5);
 
 export function obj(model) {
-  const L = [`# PlotCloud Workspace export · metres · Y up`, `mtllib none`]; let base = 1;
+  const L = [`# SimuSite Workspace export · metres · Y up`, `mtllib none`]; let base = 1;
   for (const { c, pos } of items(model)) {
     L.push(`o ${safe(c.name)}`, `g ${safe(c.layer)}`);
     for (let i = 0; i < pos.length; i += 3) L.push(`v ${f(pos[i])} ${f(pos[i + 2])} ${f(-pos[i + 1])}`);
@@ -36,7 +36,7 @@ export function obj(model) {
 
 export function stl(model) {
   const all = items(model), n = all.reduce((s, x) => s + x.pos.length / 9, 0), buf = new ArrayBuffer(84 + n * 50), dv = new DataView(buf);
-  new TextEncoder().encode('PlotCloud Workspace export, metres, Z up').forEach((b, i) => dv.setUint8(i, b));
+  new TextEncoder().encode('SimuSite Workspace export, metres, Z up').forEach((b, i) => dv.setUint8(i, b));
   dv.setUint32(80, n, true); let o = 84; const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), nn = new THREE.Vector3();
   for (const { pos } of all) for (let i = 0; i < pos.length; i += 9) {
     a.fromArray(pos, i); b.fromArray(pos, i + 3); c.fromArray(pos, i + 6); nn.subVectors(c, b).cross(new THREE.Vector3().subVectors(a, b)).normalize();
@@ -77,7 +77,7 @@ export function dae(model) {   // Collada 1.4.1, Z up, metres: SketchUp, Rhino, 
   const geo = all.map(({ c, pos }, k) => { const n = pos.length / 3; return `<geometry id="g${k}" name="${x(c.name)}"><mesh><source id="g${k}p"><float_array id="g${k}a" count="${pos.length}">${Array.from(pos, f).join(' ')}</float_array><technique_common><accessor source="#g${k}a" count="${n}" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source><vertices id="g${k}v"><input semantic="POSITION" source="#g${k}p"/></vertices><triangles material="mat" count="${n / 3}"><input semantic="VERTEX" source="#g${k}v" offset="0"/><p>${Array.from({ length: n }, (_, i) => i).join(' ')}</p></triangles></mesh></geometry>`; }).join('');
   const nodes = all.map(({ c }, k) => `<node id="n${k}" name="${x(c.name)}"><instance_geometry url="#g${k}"><bind_material><technique_common><instance_material symbol="mat" target="#m${layers.indexOf(c.layer)}"/></technique_common></bind_material></instance_geometry></node>`).join('');
   const now = new Date().toISOString();
-  const s = `<?xml version="1.0" encoding="utf-8"?>\n<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1"><asset><contributor><authoring_tool>PlotCloud Workspace</authoring_tool></contributor><created>${now}</created><modified>${now}</modified><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis></asset><library_effects>${fx}</library_effects><library_materials>${mt}</library_materials><library_geometries>${geo}</library_geometries><library_visual_scenes><visual_scene id="scene">${nodes}</visual_scene></library_visual_scenes><scene><instance_visual_scene url="#scene"/></scene></COLLADA>\n`;
+  const s = `<?xml version="1.0" encoding="utf-8"?>\n<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1"><asset><contributor><authoring_tool>SimuSite Workspace</authoring_tool></contributor><created>${now}</created><modified>${now}</modified><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis></asset><library_effects>${fx}</library_effects><library_materials>${mt}</library_materials><library_geometries>${geo}</library_geometries><library_visual_scenes><visual_scene id="scene">${nodes}</visual_scene></library_visual_scenes><scene><instance_visual_scene url="#scene"/></scene></COLLADA>\n`;
   return new Blob([s], { type: 'model/vnd.collada+xml' });
 }
 
@@ -102,7 +102,7 @@ export async function rhino(model) {   // Rhino .3dm: one mesh per component, na
 }
 
 // IFC4 with tessellated bodies: walls, slabs, windows, furniture and rooms as their IFC classes, everything else as proxies
-export function ifc(model, name = 'PlotCloud model') {
+export function ifc(model, name = 'SimuSite model') {
   const A = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$';
   const gid = () => { let s = A[Math.floor(Math.random() * 4)]; for (let i = 0; i < 21; i++) s += A[Math.floor(Math.random() * 64)]; return `'${s}'`; };
   const str = (s) => `'${String(s).replace(/'/g, "''").replace(/[^\x20-\x7e]/g, '_')}'`;
@@ -127,7 +127,7 @@ export function ifc(model, name = 'PlotCloud model') {
   }
   if (contained.length) e(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${gid()},$,$,$,(${contained.join(',')}),${storey})`);
   if (spaces.length) e(`IFCRELAGGREGATES(${gid()},$,$,$,${storey},(${spaces.join(',')}))`);
-  const head = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView]'),'2;1');\nFILE_NAME(${str(name + '.ifc')},'${new Date().toISOString().slice(0, 19)}',(''),(''),'PlotCloud Workspace','PlotCloud Workspace','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n`;
+  const head = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView]'),'2;1');\nFILE_NAME(${str(name + '.ifc')},'${new Date().toISOString().slice(0, 19)}',(''),(''),'SimuSite Workspace','SimuSite Workspace','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n`;
   return new Blob([head + L.join('\n') + '\nENDSEC;\nEND-ISO-10303-21;\n'], { type: 'application/x-step' });
 }
 

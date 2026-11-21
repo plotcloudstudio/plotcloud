@@ -1,6 +1,6 @@
 // Shared by the plan simulations Wayfinding, Privacy and Outdoor noise (emb/wayfinding.html, emb/privacy.html, emb/noise.html):
 // the plan view (pan, zoom, y up, metres), colour ramps, a raster with line-of-sight walks, sliced loops that keep the page
-// responsive, and the bridge to the PlotCloud simulation page (the model comes in, the result goes back to the version).
+// responsive, and the bridge to the SimuSite simulation page (the model comes in, the result goes back to the version).
 // Each engine does its own analysis; nothing here knows what a result means.
 
 export const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -125,7 +125,7 @@ export function runUI(go) {
   return ui;
 }
 
-// ---- the PlotCloud simulation page: the model comes in ("project"), "Add to project" sends the figures and a picture back ("save")
+// ---- the SimuSite simulation page: the model comes in ("project"), "Add to project" sends the figures and a picture back ("save")
 export function bridge({ onScene, state, canvas }) {
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
   window.__pcSceneJSON = () => null;
@@ -135,7 +135,7 @@ export function bridge({ onScene, state, canvas }) {
     const st = state(); if (!st.ready) { if (note) note.textContent = 'Run the analysis on the current model and settings first.'; return; }
     const kpis = $$('.kpis > div').map((d) => [(d.querySelector('small')?.textContent || '').trim(), (d.querySelector('b')?.textContent || '').trim()]).filter(([k, v]) => k && v && v !== '—');
     let img = null; try { const cv = canvas(), w = 640, c2 = document.createElement('canvas'); c2.width = w; c2.height = Math.round(cv.height * w / cv.width); const x = c2.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, c2.height); x.drawImage(cv, 0, 0, w, c2.height); img = c2.toDataURL('image/jpeg', 0.8); } catch (e) { }
-    post({ t: 'save', tool: document.title.replace(/^PlotCloud\s+/i, ''), kpis, img, model: ($('#mName')?.textContent || '').trim(), source: Object.assign({}, SRC || {}, { analysis: st.conditions }) });
+    post({ t: 'save', tool: document.title.replace(/^SimuSite\s+/i, ''), kpis, img, model: ($('#mName')?.textContent || '').trim(), source: Object.assign({}, SRC || {}, { analysis: st.conditions }) });
     if (note) note.textContent = 'Saving…';
   });
   window.addEventListener('message', (e) => {

@@ -1,4 +1,4 @@
-// Accounts and the cloud copy of projects (2026-10-25), against a local stand-in for Supabase: real Postgres 16 with the PlotCloud
+// Accounts and the cloud copy of projects (2026-10-25), against a local stand-in for Supabase: real Postgres 16 with the SimuSite
 // migration and its Row Level Security, real PostgREST, and an auth gateway that issues Supabase-style tokens
 // (tests/backend/local-backend.sh start). Each browser context is one device.
 // Run: tests/backend/local-backend.sh start, a static server on 8765, then node tests/mvp-cloud.cjs.

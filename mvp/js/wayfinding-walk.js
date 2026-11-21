@@ -108,7 +108,7 @@ const loadFont = () => pdfFont || (pdfFont = (async () => { const r = await fetc
 export const CJK = /[\u1100-\u11FF\u2E80-\u2FDF\u3000-\u30FF\u3100-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7AF\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFFEF]|[\uD840-\uD87F][\uDC00-\uDFFF]/;
 const PCOLS = [['id', 14], ['floor', 30], ['point', 14], ['where', 40], ['type', 34], ['mount', 26], ['faces', 38], ['says', 110], ['priority', 26], ['visibility', 18], ['status', 50]];
 export async function drawingPDF(png, rows, title) { await import('../vendor/jspdf-4.2.1.umd.min.js'); const PDF = globalThis.jspdf.jsPDF, pdf = new PDF({ unit: 'mm', format: 'a3', orientation: 'landscape', compress: true });
-  const img = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = png; }), k = Math.min(400 / img.width, 277 / img.height); pdf.setProperties({ title, author: 'PlotCloud' }); pdf.addImage(png, 'PNG', 10, 10, img.width * k, img.height * k);
+  const img = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = png; }), k = Math.min(400 / img.width, 277 / img.height); pdf.setProperties({ title, author: 'SimuSite' }); pdf.addImage(png, 'PNG', 10, 10, img.width * k, img.height * k);
   if (!rows.length) return pdf.output('blob');
   const head = PCOLS.map(([k2]) => COLS.find((c) => c[0] === k2)[1]), body = rows.map((r) => PCOLS.map(([k2]) => String(r[k2] ?? '')));
   if (body.some((r) => r.some((v) => CJK.test(v)))) { tablePictures(pdf, head, body); return pdf.output('blob'); }

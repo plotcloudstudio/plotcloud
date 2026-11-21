@@ -1,4 +1,4 @@
-# PlotCloud shared interface
+# SimuSite shared interface
 
 `tokens.css` owns interface colors, typography and legacy variable mappings. `components.css` owns scoped public-site and tool-shell adapters; no canvas/geometry styles or simulation palettes are replaced. `runtime.js` applies the shared light palette, tracks viewport colors and prepares embedded tool layouts. Appearance is fixed; it does not read a theme preference or expose a mode switch.
 

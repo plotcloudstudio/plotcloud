@@ -1,6 +1,6 @@
-# What to record in an evacuation drill (to compare with PlotCloud)
+# What to record in an evacuation drill (to compare with SimuSite)
 
-PlotCloud technical note, 10 November 2026. A drill recorded this way can be loaded into Fire Evacuation (Everyone out › Compare with a drill) and compared with the simulation of the same building. Comparing simulations with measured evacuations is the validation step that the evacuation-model protocols ask for (NIST TN 1822; ISO 20414:2020). The simulation should be run before the drill and not adjusted afterwards (a blind prediction), or the comparison says little about its accuracy.
+SimuSite technical note, 10 November 2026. A drill recorded this way can be loaded into Fire Evacuation (Everyone out › Compare with a drill) and compared with the simulation of the same building. Comparing simulations with measured evacuations is the validation step that the evacuation-model protocols ask for (NIST TN 1822; ISO 20414:2020). The simulation should be run before the drill and not adjusted afterwards (a blind prediction), or the comparison says little about its accuracy.
 
 ## Before the drill
 
@@ -31,7 +31,7 @@ person,out_s,floor,start_room,group,exit
 
 If only door counts were recorded, give the cumulative count instead: columns `time_s,people_out`. Rows beginning with `#` are ignored. A template can be downloaded from the study card.
 
-## What PlotCloud compares
+## What SimuSite compares
 
 - The total time against the spread of the runs (the 10th to 90th percentile).
 - The times at which half and 90 % of the people were out.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local stand-in for a Supabase project, for tests: Postgres 16 with the PlotCloud migration, PostgREST, and the auth gateway
+# Local stand-in for a Supabase project, for tests: Postgres 16 with the SimuSite migration, PostgREST, and the auth gateway
 # (tests/backend/fake-supabase.mjs). Usage: tests/backend/local-backend.sh start | stop | reset
 # Needs: PostgreSQL 16 server binaries, node, and PostgREST (downloaded once into tests/backend/.bin, or POSTGREST_BIN).
 set -euo pipefail

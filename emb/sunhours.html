@@ -21,7 +21,7 @@
 <script src="../ui/runtime.js?v=light-only-20261028-1" data-surface="tool" defer></script>
 </head>
 <body>
-<title>PlotCloud Sun Hours</title>
+<title>SimuSite Sun Hours</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -141,7 +141,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
 <div class="app">
   <aside class="panel" aria-label="Analysis settings">
-    <div class="brand"><b>PlotCloud <span>Sun Hours</span></b><small>Drop in your model and map sunlight hours on the ground, roofs and facades. Your model is processed in this browser and never uploaded.</small></div>
+    <div class="brand"><b>SimuSite <span>Sun Hours</span></b><small>Drop in your model and map sunlight hours on the ground, roofs and facades. Your model is processed in this browser and never uploaded.</small></div>
 
     <section class="sec" aria-labelledby="h-model">
       <h2 id="h-model">Model</h2>
@@ -278,7 +278,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 </div>
 
 <script>
-// ===== PlotCloud site context core =====
+// ===== SimuSite site context core =====
 // Real-world site → validated, editable context model shared by Site Context, Plan Studio and Sun hours.
 // Pure functions only (no DOM, no network): runs in the browser and in Node for tests.
 // Coordinates: WGS84 lat/lon in, local meters out (x east, y north) on a transverse Mercator centered on the site origin.
@@ -903,10 +903,10 @@ function readableFileError(error, file) {
   }
   return detail || 'The file could not be read. Choose the file again, or use Reset to start over.';
 }
-// a PlotCloud scene from Plan Studio or Site Context: masses with roles, terrain, location and north (plan meters, Z up)
+// a SimuSite scene from Plan Studio or Site Context: masses with roles, terrain, location and north (plan meters, Z up)
 //   proposed: measured · context: casts shadows only · terrain: measured inside the analysis area, shadows elsewhere
 function readScene(j) {
-  if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a PlotCloud scene. Send the model from Plan Studio or Site Context, or open a 3D file.');
+  if (!j || j.format !== 'plotcloud-scene' || !Array.isArray(j.masses)) throw new Error('This JSON is not a SimuSite scene. Send the model from Plan Studio or Site Context, or open a 3D file.');
   const geoms = [], roles = [], refs = []; let skipped = 0;
   for(const m of j.meshes||[]){const p=m.positions;if(!Array.isArray(p)||!p.length||p.length%9||p.some(n=>!Number.isFinite(n)))throw Error('Invalid mesh triangles in '+(m.name||m.id));const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geoms.push(g);roles.push(m.role==='context'?'context':m.role==='terrain'?'terrain':'proposed');refs.push(m);}
   for (const m of j.masses) {
@@ -1471,7 +1471,7 @@ function snapshot(w, h) {
   restore(); renderer.setPixelRatio(pr); renderer.setSize(size.x, size.y, false); renderer.render(scene, camera);
   return { canvas: c, northAngle };
 }
-function compose(shot, { title, sub: subline, right, legendMax, legendMin = 0, unit = ' h', label = 'Sunlight hours', brand = 'PlotCloud Sun Hours' }) {
+function compose(shot, { title, sub: subline, right, legendMax, legendMin = 0, unit = ' h', label = 'Sunlight hours', brand = 'SimuSite Sun Hours' }) {
   const t = tokens(), src = shot.canvas, W = src.width, H = src.height, k = Math.max(W, H) / 1920, strip = Math.round(120 * k);
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H + strip;
   const x = cv.getContext('2d');
@@ -1506,7 +1506,7 @@ function sheetOf(frames, cols, title) {
   const cv = document.createElement('canvas'); cv.width = pad * 2 + cols * tw + (cols - 1) * gap; cv.height = pad * 2 + head + rows * th + (rows - 1) * gap;
   const x = cv.getContext('2d'); x.fillStyle = t.surface; x.fillRect(0, 0, cv.width, cv.height);
   x.fillStyle = t.ink; x.font = '600 26px "Noto Sans", sans-serif'; x.fillText(title, pad, pad + 30);
-  x.fillStyle = t.muted; x.font = '15px "IBM Plex Mono", monospace'; x.fillText(`${placeName()} · north ${S.north >= 0 ? '+' : ''}${S.north}° · PlotCloud Sun Hours`, pad, pad + 54);
+  x.fillStyle = t.muted; x.font = '15px "IBM Plex Mono", monospace'; x.fillText(`${placeName()} · north ${S.north >= 0 ? '+' : ''}${S.north}° · SimuSite Sun Hours`, pad, pad + 54);
   frames.forEach((f, i) => { const c = i % cols, r = Math.floor(i / cols); x.drawImage(f, pad + c * (tw + gap), pad + head + r * (th + gap), tw, th); });
   return cv;
 }
@@ -1534,7 +1534,7 @@ async function offer(name, data, statusSel, previewCanvas) {
 $('#export').addEventListener('click', async () => {
   if (!S.result) return;
   const { w, h } = imgSize(), R = S.result.R;
-  if (R.mode) { const cv = compose(snapshot(w, h), { title: `${climLegend(R)} · ${climLabel(R)}`, sub: `${CLIM.E ? CLIM.E.station + ' · ' : ''}${sub()}`, legendMax: S.result.max, legendMin: R.lo || 0, unit: ' ' + CLIM_UNIT[R.mode], label: climLegend(R), brand: R.mode === 'radiation' ? 'PlotCloud Solar Radiation' : 'PlotCloud Outdoor Comfort' });
+  if (R.mode) { const cv = compose(snapshot(w, h), { title: `${climLegend(R)} · ${climLabel(R)}`, sub: `${CLIM.E ? CLIM.E.station + ' · ' : ''}${sub()}`, legendMax: S.result.max, legendMin: R.lo || 0, unit: ' ' + CLIM_UNIT[R.mode], label: climLegend(R), brand: R.mode === 'radiation' ? 'SimuSite Solar Radiation' : 'SimuSite Outdoor Comfort' });
     await offer(`${R.mode === 'radiation' ? 'solar-radiation' : 'outdoor-comfort-' + S.utciShow}-${S.climPeriod}.png`, await toPNG(cv), '#expmsg', cv); return; }
   const cv = compose(snapshot(w, h), { title: `Sunlight hours · ${resultPeriod(R)}`, sub: `${fmt(R.t0)}–${fmt(R.t1)} · ${sub()}`, legendMax: S.result.max });
   await offer(`sun-hours-${R.ds}${R.period?'-to-'+R.period.end:''}.png`, await toPNG(cv), '#expmsg', cv);
@@ -1633,7 +1633,7 @@ $('#runSet').addEventListener('click', async () => {
     }
     busy.textContent = 'Packing the zip…'; await frame();
     const zip = zipSync(files, { level: 0 });
-    const name = `plotcloud-${setKey}-${setKey === 'hourly' ? keep.date : yr}.zip`;
+    const name = `simusite-${setKey}-${setKey === 'hourly' ? keep.date : yr}.zip`;
     busy.hidden = true;
     restoreAfterSet(keep);
     const n = Object.keys(files).length;
@@ -2058,7 +2058,7 @@ body { font-family: var(--f-body); color: var(--ink); -webkit-font-smoothing: an
 footer.fine { font: 11px var(--f-body); color: var(--faint); background: #fff; border-top: 1px solid var(--line); }
 #stage { background: #fff; }
 
-/* ===== PlotCloud layer: the site's own tokens and components ===== */
+/* ===== SimuSite layer: the site's own tokens and components ===== */
 :root { --ink: #1C1B1A; --muted: #6E6A60; --faint: #6E6A60; --line: rgba(28,27,26,.10); --line-strong: rgba(28,27,26,.22); --well: #FBFAF7; --paper: #FBFAF7; --sand: #EFEBE0; --fill: rgba(28,27,26,.07); --fill2: rgba(28,27,26,.045);
   --accent: #D8402A; --accent-dk: #B63422; --accent-soft: rgba(216,64,42,.09); --ok: #2F7A4F; --warn: #9a5b00; --green: #1C1B1A;
   --f-body: "Inter Tight", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -2104,7 +2104,7 @@ details.more summary::before { content: "+"; font: 600 13px var(--f-mono); color
 details.more[open] { display: grid; gap: 7px; } details.more[open] > summary { margin-bottom: 2px; }
 .col .colIn { display: flex !important; flex-direction: column; gap: 8px; } .col .colIn > .sec { flex: none; }
 .deskonly { background: var(--paper) !important; } .deskonly b { font: 800 30px var(--f-body) !important; letter-spacing: -.035em !important; text-transform: lowercase; color: var(--ink) !important; } .deskonly .lab2 { font: 500 11px var(--f-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
-/* ===== PlotCloud tool shell: the Natural ventilation template, shared by every analysis tool ===== */
+/* ===== SimuSite tool shell: the Natural ventilation template, shared by every analysis tool ===== */
 :root { --view: #ffffff; }
 .app.fitapp > #panelL { grid-column: 1; grid-row: 1; } .app.fitapp > #stage { grid-column: 2; grid-row: 1; } .app.fitapp > #panelR { grid-column: 3; grid-row: 1; }
 .app.fitapp #panelL { border-right: 1px solid var(--line); }
@@ -2229,13 +2229,13 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
 </style>
 <script>
-// ===== PlotCloud tool shell: turns a tool page into the Natural ventilation layout =====
+// ===== SimuSite tool shell: turns a tool page into the Natural ventilation layout =====
 // left: the input steps · middle: the drawing (plan over charts) · right: legend, report, layers & export
 (function () {
   const app = document.querySelector('.app'); if (!app || app.classList.contains('fitapp')) return;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const L = app.querySelector(':scope > aside.panel'), stage = $('#stage'); if (!L || !stage) return;
-  const name = (document.title || 'This tool').replace(/^PlotCloud\s+/i, '');
+  const name = (document.title || 'This tool').replace(/^SimuSite\s+/i, '');
   const txt = (e) => (e.textContent || '').replace(/\s+/g, ' ').trim();
 
   // ---- columns
@@ -2341,7 +2341,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 
   // ---- phones: a plain note instead of the tool
   const dn = document.createElement('div'); dn.className = 'deskonly'; dn.setAttribute('role', 'note');
-  dn.innerHTML = `<span class="lab2">PlotCloud · tools</span><b>${name.toLowerCase()} works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p>`;
+  dn.innerHTML = `<span class="lab2">SimuSite · tools</span><b>${name.toLowerCase()} works on a computer.</b><p>This tool needs a larger screen, a mouse and a keyboard, so it is not available on phones. Open this page on a laptop or desktop computer.</p>`;
   document.body.prepend(dn);
 
   // landmarks for screen readers: the tool is the page's main content, with its name as the heading
@@ -2356,13 +2356,13 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
 </script>
 <script>window.__pcSceneJSON = function () { return window.__sunScene ? JSON.stringify(window.__sunScene) : null; };</script>
 <script>
-// ===== PlotCloud bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
+// ===== SimuSite bridge: a tool talks to the site — usage events, "Add to project", and the project's model =====
 (function () {
   if (window.__pcBridge || window.parent === window) return; window.__pcBridge = 1;
   const boot = () => setTimeout(start, 300); if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
   function start() {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const name = (/^PlotCloud Studio$/i.test(document.title) ? document.title : (document.title || 'tool').replace(/^PlotCloud\s+/i, ''));
+  const name = (/^SimuSite Studio$/i.test(document.title) ? document.title : (document.title || 'tool').replace(/^SimuSite\s+/i, ''));
   const post = (m) => { try { window.parent.postMessage(Object.assign({ pc: 1 }, m), '*'); } catch (e) { } };
   const txt = (e) => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
 
@@ -2412,7 +2412,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
     if (d.t === 'project' && d.scene && canScene) { if (loadScene(d.scene, d.name)) { SRC = d.source || null; setTimeout(() => { const m = $('#impMsg') || $('#runMsg'), n = $('#mName'); if (n) n.textContent = d.name || 'Project model'; if (m) { m.textContent = d.source ? `Model from Plan Studio: ${d.name}. Open… to use another.` : `Model from your project. Open… to use another.`; m.className = 'msg ok'; } }, 700); } }
     if (!note) return;
     if (d.t === 'saved') note.innerHTML = `Added · ${d.count} result${d.count > 1 ? 's' : ''} in <a data-pcgo="project">your project</a>`;
-    if (d.t === 'upsell') note.innerHTML = 'Projects are part of PlotCloud Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
+    if (d.t === 'upsell') note.innerHTML = 'Projects are part of SimuSite Pro. <a data-pcgo="pricing">Try it free for 7 days</a>';
     if (d.t === 'error') note.textContent = d.msg || 'Could not save to the project.';
   });
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-pcgo]'); if (a) { e.preventDefault(); post({ t: 'go', to: a.dataset.pcgo }); } });
@@ -2420,7 +2420,7 @@ h1.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden
   let calm = 0, tries = 0; const idle = () => { const pr = $('#prog'), sp = $('#runPill'), stop = $('#stopRun');
     return (!pr || pr.hidden || pr.offsetParent === null) && (!sp || sp.hidden) && (!stop || stop.hidden) && !$$('#panelL .go, aside.panel .go').some((b) => b.disabled); };
   const wait = () => { tries++; calm = idle() ? calm + 1 : 0; if (calm >= 3 || tries > 60) post({ t: 'hello', tool: name, scene: canScene }); else setTimeout(wait, 400); };
-  // a model handed over from PlotCloud Studio is waiting for this tool: ask for it at once instead of after the first analysis
+  // a model handed over from SimuSite Studio is waiting for this tool: ask for it at once instead of after the first analysis
   const hoPending = (() => { try { const h = window.parent.__pcHO, fe = window.frameElement; return !!(h && fe && fe.dataset.emb === h.tool); } catch (e) { return false; } })();
   if (hoPending && canScene) setTimeout(() => post({ t: 'hello', tool: name, scene: canScene }), 150); else setTimeout(wait, 600);
   }

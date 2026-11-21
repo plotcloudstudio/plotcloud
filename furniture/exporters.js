@@ -25,12 +25,12 @@ function matList(items) {
 // ---------- OBJ + MTL (Y up, the convention 3ds Max / Blender / D5 / Twinmotion expect) ----------
 export function toOBJ(items, base) {
   const mats = matList(items);
-  let mtl = '# PlotCloud\n';
+  let mtl = '# SimuSite\n';
   for (const [k, c] of mats) {
     const [r, g, b] = hexRgb(c).map((v) => (v / 255).toFixed(4));
     mtl += `newmtl ${k}\nKd ${r} ${g} ${b}\nKa 0 0 0\nKs 0.05 0.05 0.05\nd 1\nillum 2\n\n`;
   }
-  const out = [`# PlotCloud furniture configurator\n# Units: millimeters. Y up. Origin: bottom center.\nmtllib ${base}.mtl\n`];
+  const out = [`# SimuSite furniture configurator\n# Units: millimeters. Y up. Origin: bottom center.\nmtllib ${base}.mtl\n`];
   let off = 1;
   for (const it of items) {
     out.push(`o ${it.name}\ng ${safe(it.p.layer)}\nusemtl ${it.p.mat}\n`);
@@ -65,7 +65,7 @@ export function toDAE(items, title) {
   }
   return `<?xml version="1.0" encoding="utf-8"?>
 <COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
-<asset><contributor><authoring_tool>PlotCloud configurator</authoring_tool></contributor><created>${now}</created><modified>${now}</modified><unit name="millimeter" meter="0.001"/><up_axis>Z_UP</up_axis></asset>
+<asset><contributor><authoring_tool>SimuSite configurator</authoring_tool></contributor><created>${now}</created><modified>${now}</modified><unit name="millimeter" meter="0.001"/><up_axis>Z_UP</up_axis></asset>
 <library_effects>
 ${effects}</library_effects>
 <library_materials>
@@ -108,7 +108,7 @@ export function toSTL(items) {
   let n = 0;
   for (const it of items) n += it.idx.length / 3;
   const buf = new ArrayBuffer(84 + n * 50), dv = new DataView(buf);
-  const head = 'PlotCloud configurator, units mm';
+  const head = 'SimuSite configurator, units mm';
   for (let i = 0; i < head.length; i++) dv.setUint8(i, head.charCodeAt(i));
   dv.setUint32(80, n, true);
   let o = 84;
@@ -213,7 +213,7 @@ export const FORMATS = [
 
 export function readme(model, dims, values, report) {
   if (LANG === 'en') return [
-    `PlotCloud furniture generator — ${model.en}`,
+    `SimuSite furniture generator — ${model.en}`,
     `Size W×D×H: ${dims.W} × ${dims.D} × ${dims.H} mm`,
     'Units: millimeters. Origin: bottom center.',
     `Parameters: ${Object.entries(values).map(([k, v]) => `${k}=${v}`).join(', ')}`,
@@ -230,10 +230,10 @@ export function readme(model, dims, values, report) {
     'These are closed formats a browser cannot write. A later version will convert them on the server with the official SDKs.',
     '',
     report ? `Rhino file: ${report.nurbs} NURBS solids, ${report.meshes} meshes.` : '',
-    'Generated from parameters by PlotCloud. Free to use in coursework and portfolios.',
+    'Generated from parameters by SimuSite. Free to use in coursework and portfolios.',
   ].join('\r\n');
   const lines = [
-    `PlotCloud 家具生成器 — ${model.name} ${model.en}`,
+    `SimuSite 家具生成器 — ${model.name} ${model.en}`,
     `尺寸 W×D×H: ${dims.W} × ${dims.D} × ${dims.H} mm`,
     `单位: 毫米。原点: 底面中心。`,
     `参数: ${Object.entries(values).map(([k, v]) => `${k}=${v}`).join(', ')}`,
@@ -250,14 +250,14 @@ export function readme(model, dims, values, report) {
     '这三种是私有格式，浏览器里无法写出。上线版本会在服务器上用官方 SDK 转换。',
     '',
     report ? `Rhino 文件: ${report.nurbs} 个 NURBS 实体, ${report.meshes} 个网格。` : '',
-    '模型由 PlotCloud 参数生成，可自由用于课程作业和作品集。',
+    '模型由 SimuSite 参数生成，可自由用于课程作业和作品集。',
   ];
   return lines.join('\r\n');
 }
 
 export function buildFiles({ model, parts, dims, values, formats, rhino }) {
   const items = prepared(parts, values);
-  const base = `PlotCloud_${safe(model.en)}_${dims.W}x${dims.D}x${dims.H}`;
+  const base = `SimuSite_${safe(model.en)}_${dims.W}x${dims.D}x${dims.H}`;
   const files = {};
   let report = null;
   if (formats.includes('3dm') && rhino) { report = to3dm(rhino, items, base); files[base + '.3dm'] = report.bytes; }

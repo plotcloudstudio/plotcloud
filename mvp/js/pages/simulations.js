@@ -20,7 +20,7 @@ export async function render(app, [simId], params, context={}) {
   const sim = SIMS.find((s) => s.id === simId);
   if(sim?.family==='environment')return(await import('./environment-study.js?v=run-20261031-2')).render(app,sim,params,context);
   if (sim?.id==='structure') return (await import('./structure-study.js?v=run-20261031-1')).render(app,sim,params,context);
-  if (sim) return (await import('./sim-engine.js')).render(app, sim, params,context);   // every simulation runs its PlotCloud engine
+  if (sim) return (await import('./sim-engine.js')).render(app, sim, params,context);   // every simulation runs its SimuSite engine
   return catalog(app, params, access);
 }
 
@@ -36,16 +36,16 @@ function catalog(app, params, access) {
   app.innerHTML = `<div class="wrap">
     <span class="eyebrow">Simulations</span>
     <div class="split" style="margin-top:16px"><h1 class="display">Choose a study.<br><span>Run it on a version.</span></h1>
-      <p class="lede">Sun hours and Daylight are free on every project, and every study runs free on the example projects; the other studies on your own projects need monthly access (<a href="#/pricing">Pricing</a>). Browse all ${SIMS.length} current analysis tools. Each runs its PlotCloud engine on a version of your model, using its recorded project conditions; save the result to that version, then compare it in Results.</p></div>
+      <p class="lede">Sun hours and Daylight are free on every project, and every study runs free on the example projects; the other studies on your own projects need monthly access (<a href="#/pricing">Pricing</a>). Browse all ${SIMS.length} current analysis tools. Each runs its SimuSite engine on a version of your model, using its recorded project conditions; save the result to that version, then compare it in Results.</p></div>
     ${p ? `<p class="badge-pill" style="margin-top:32px;text-transform:none;letter-spacing:0;font:500 14px var(--sans)">Running on&nbsp;<b>${esc(p.name)}</b>&nbsp;· ${v ? `v${v.n}` : 'no saved version yet'} · ${esc((S.siteOf(p)?.label || '').split(',')[0])}</p>` : ''}
     <div class="card" style="margin-top:24px"><h2>New to simulation?</h2><p>Start with an editable example or check your own project. Run a study, save the result, then compare one design change.</p><a class="btn accent" href="#/start-study">Start a guided study</a> <a class="btn" href="#/local-compute">Local reference engines</a><p class="note">Radiance daylight factor and reviewed EnergyPlus jobs run on your computer or a school workstation. Separate engine installation is required.</p></div>
     <div class="pills" role="group" aria-label="Filter" style="margin-top:36px" id="filters">${groups.map((x) => `<button type="button" data-g="${x}" aria-pressed="${x === g}">${x}</button>`).join('')}</div>
     <div class="simgrid" id="grid"></div>
     <details class="card" id="capabilityMap" style="margin-top:28px"><summary><b>Capability map</b> · what each analysis type covers today</summary>
-      <p class="note">Status is what PlotCloud runs now. “Not connected” items have no result and no run button; the plan lists what they need. Table views reuse saved runs and never run an engine again.</p>
+      <p class="note">Status is what SimuSite runs now. “Not connected” items have no result and no run button; the plan lists what they need. Table views reuse saved runs and never run an engine again.</p>
       ${CATEGORIES.map((c) => `<h3 style="margin-top:16px">${esc(c.label)}</h3><table class="pc-table" data-category="${c.id}"><thead><tr><th>ID</th><th>Capability</th><th>Status</th><th>How</th></tr></thead><tbody>${TARGETS.filter((t) => t.category === c.id).map((t) => { const st = targetStatus(t.id); return `<tr data-target="${t.id}" data-status="${st.status}"><td>${t.id}</td><td>${esc(t.name)}</td><td>${esc(STATUS_LABEL[st.status])}</td><td>${st.via.filter((v) => v !== 'local-compute').map((v) => `<a href="#/simulations/${v}">${esc(SIMS.find((x) => x.id === v)?.name || v)}</a>`).join(', ')}${st.via.length && st.via[0] !== 'local-compute' ? ' — ' : ''}${esc(st.note)}${t.category === 'table' && st.status === 'data' ? ' <a href="#/tables">Open tables</a>' : ''}</td></tr>`; }).join('')}</tbody></table>`).join('')}
     </details>
-    <p class="note" style="margin-top:28px">${LIVE} every study runs the PlotCloud simulation engine itself. Catalogue images are illustrative previews or example-study captures, not results for your current project. All studies are for design screening, not code compliance.</p>
+    <p class="note" style="margin-top:28px">${LIVE} every study runs the SimuSite simulation engine itself. Catalogue images are illustrative previews or example-study captures, not results for your current project. All studies are for design screening, not code compliance.</p>
   </div>`;
   // what each simulation needs from the open project (2026-10-25): a site or masses, or rooms
   const draftChanged=!!(p&&v&&p.draft&&JSON.stringify(p.draft)!==JSON.stringify(v.model));

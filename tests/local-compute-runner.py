@@ -92,7 +92,7 @@ class RunnerTests(unittest.TestCase):
             return urllib.request.urlopen(urllib.request.Request(base+path,data=data,headers=headers or {}),timeout=10)
         auth={'Authorization':'Bearer '+self.runner.token}
         try:
-            self.assertIn('PlotCloud local compute',req('/').read().decode())
+            self.assertIn('SimuSite local compute',req('/').read().decode())
             for path,headers in [('/api/health',{}),('/api/health',{**auth,'Origin':'https://untrusted.invalid'}),('/api/health',{**auth,'Host':'attacker.invalid'})]:
                 with self.assertRaises(urllib.error.HTTPError):req(path,headers)
             health=json.load(req('/api/health',auth));self.assertFalse(health['engines']['rtrace'])

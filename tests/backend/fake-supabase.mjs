@@ -1,5 +1,5 @@
 // A local stand-in for a hosted Supabase project, for tests only: /auth/v1 (sign up, password sign-in, refresh, magic link, user,
-// sign out) is implemented here; /rest/v1 is forwarded to a real PostgREST on a real Postgres with the PlotCloud migration and its
+// sign out) is implemented here; /rest/v1 is forwarded to a real PostgREST on a real Postgres with the SimuSite migration and its
 // Row Level Security. Tokens are HS256 JWTs with role "authenticated" and the user's id as "sub", as Supabase issues them, so the
 // database sees exactly what it would see on Supabase. Not for production: no rate limits, no email sending, no password rules
 // beyond length.

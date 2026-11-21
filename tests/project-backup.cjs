@@ -64,7 +64,7 @@ try{
  await b.goto(base+'/mvp/');await b.waitForFunction(()=>document.querySelector('#app h1'));
  assert.equal(await b.evaluate(async h=>{const P=await import('./js/project-climate.js');return !!(await P.climateFile(h));},backup.assets[0].hash),false,'profile B starts without the EPW');
  await b.evaluate(async()=>{const S=await import('./js/store.js');S.account().user={name:'Restore QA',email:'qa2@example.test'};S.save();});
- const restore=async(buf,mode='merge')=>{await b.goto(base+'/mvp/#/account?tab=data');await b.locator('#impMode').selectOption(mode);await b.locator('#impMsg').evaluate(e=>{e.textContent='';});await b.locator('#impFile').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:buf});await b.locator('#impMsg').filter({hasText:/Restored|not restored|not a PlotCloud|damaged/}).waitFor({timeout:30000});return b.locator('#impMsg').innerText();};
+ const restore=async(buf,mode='merge')=>{await b.goto(base+'/mvp/#/account?tab=data');await b.locator('#impMode').selectOption(mode);await b.locator('#impMsg').evaluate(e=>{e.textContent='';});await b.locator('#impFile').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:buf});await b.locator('#impMsg').filter({hasText:/Restored|not restored|not a SimuSite|damaged/}).waitFor({timeout:30000});return b.locator('#impMsg').innerText();};
  const bBefore=await storeState(b);
  // damaged: one result value edited → integrity fails, nothing changes
  const edited=JSON.parse(JSON.stringify(backup));edited.projects.find(x=>x.id===pid).runs.at(-1).results.kpis[0][1]='99 %';

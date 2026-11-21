@@ -2,7 +2,7 @@ import * as Cloud from './cloud.js';
 import { sampleModel } from './data.js';
 import {checkTestingAccess,allowsTestingStudy,mountTestingAccess} from './simulation-test-access.js?v=private-testing-20261027-1';
 // Manual beta entitlements. Only hashes and expiry dates are public; never trust a local plan/paid flag.
-export const BETA = Object.freeze({ name: 'PlotCloud', email: 'plotcloudstudio@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
+export const BETA = Object.freeze({ name: 'SimuSite', email: 'plotcloudstudio@gmail.com', amount: 16.99, currency: 'CAD', period: 'month' });
 // What is free (2026-11-15, as Pricing, Log in and the Terms say): Sun hours and Daylight on any project; every study on the
 // example projects (Fallingwater, the hospital, the courtyard sample), to try before paying; every Resources tool. The other
 // studies on a person's own projects need monthly access
@@ -94,12 +94,12 @@ export async function activateCode(value) {
 export function clearCode() { generation++; localStorage.removeItem(KEY); verified = { active: false, reason: 'code-required' }; checked = 0; dispatchEvent(new CustomEvent('pc-beta-access')); }
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const accessDate = value => new Date(value).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' });
-export function requestURL(subject = 'PlotCloud monthly access') {
-  const body = `Hello PlotCloud,\n\nMy registered PlotCloud email: [enter the email used to log in].\n\nI would like one month of access at CAD 16.99, plus applicable taxes. Before I send an e-transfer, please confirm the total, required seller details, included access, exact access dates, activation timing and refund terms.\n\nMy registration / access email is: ${Cloud.user()?.email || ''}\n`;
+export function requestURL(subject = 'SimuSite monthly access') {
+  const body = `Hello SimuSite,\n\nMy registered SimuSite email: [enter the email used to log in].\n\nI would like one month of access at CAD 16.99, plus applicable taxes. Before I send an e-transfer, please confirm the total, required seller details, included access, exact access dates, activation timing and refund terms.\n\nMy registration / access email is: ${Cloud.user()?.email || ''}\n`;
   return 'mailto:' + BETA.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 export function mountActivation(host, { onSuccess = () => location.reload() } = {}) {
-  if(Cloud.configured()){host.innerHTML=Cloud.user()?`<p>Registered email: <b>${esc(Cloud.user().email)}</b></p><p class="note">After verifying your payment, PlotCloud grants access directly to this account. No activation code is needed. Reload after confirmation.</p><a class="btn" href="#/account">View account access</a>`:'<p>Use your confirmed registration email for the order. Access is granted to that account after payment verification.</p><a class="btn accent" href="#/login?signup=1">Register or log in</a>';return;}
+  if(Cloud.configured()){host.innerHTML=Cloud.user()?`<p>Registered email: <b>${esc(Cloud.user().email)}</b></p><p class="note">After verifying your payment, SimuSite grants access directly to this account. No activation code is needed. Reload after confirmation.</p><a class="btn" href="#/account">View account access</a>`:'<p>Use your confirmed registration email for the order. Access is granted to that account after payment verification.</p><a class="btn accent" href="#/login?signup=1">Register or log in</a>';return;}
   host.innerHTML = `<form class="beta-code-form" style="display:grid;gap:14px"><label class="f">Activation code<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="PCBET-…"></label><button class="btn accent" type="submit">Activate monthly access</button><p class="note" role="status" aria-live="polite"></p></form>`;
   const form = host.querySelector('form'), message = form.querySelector('[role="status"]'), button = form.querySelector('button');
   form.onsubmit = async e => { e.preventDefault(); button.disabled = true; message.textContent = 'Verifying your code…'; try { const grant = await activateCode(new FormData(form).get('code')); message.textContent = 'Access active until ' + accessDate(grant.expiresAt); onSuccess(grant); } catch (error) { message.textContent = error.message; } finally { button.disabled = false; } };

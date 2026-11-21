@@ -51,8 +51,8 @@ export function t(s) { return LANG === 'en' ? (EN[s] ?? s) : s; }
 // Messages with values
 export const M = {
   noDownload: (kb) => LANG === 'en'
-    ? `Files built (${kb} KB), but the browser download service is unavailable. Reload PlotCloud and retry.`
-    : `文件已生成（${kb} KB），但浏览器下载服务不可用。请刷新 PlotCloud 后重试。`,
+    ? `Files built (${kb} KB), but the browser download service is unavailable. Reload SimuSite and retry.`
+    : `文件已生成（${kb} KB），但浏览器下载服务不可用。请刷新 SimuSite 后重试。`,
   saved: (name, kb, r) => LANG === 'en'
     ? `Saved ${name} (${kb} KB)${r ? `. Rhino file: ${r.nurbs} NURBS solids, ${r.meshes} meshes` : ''}.`
     : `已保存 ${name}（${kb} KB）${r ? `，Rhino 文件含 ${r.nurbs} 个 NURBS 实体、${r.meshes} 个网格` : ''}。`,
