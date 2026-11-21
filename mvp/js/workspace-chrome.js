@@ -1227,7 +1227,9 @@ export function mountChrome(app, api) {
         results: { value: +st.avg.toFixed(2), min: st.lo, max: st.hi }, settings: { lower, upper, label: 'Design shade on the ground (Workspace)' } }; }
     if (id === 'solarenvelope') {
       const site = S.conditionsOf(p).site, [, pname, days, h0, h1] = ENVELOPES.find((x) => x[0] === ST.envelope), dirs = [];
-      for (const [m, d] of days) for (let hr = h0; hr <= h1 + 1e-9; hr += 0.5) { const sp = sunPosition(2026, m, d, hr, site.lat, site.lon, site.lon / 15); if (sp.alt > 1) dirs.push(sp); }
+      // the hours are apparent (sundial) solar time, as in Knowles' envelopes: local mean time at the site's own meridian, less the
+      // equation of time (2026-11-21; before, the mean time alone left the window up to 16 minutes off centre around solar noon)
+      for (const [m, d] of days) for (let hr = h0; hr <= h1 + 1e-9; hr += 0.5) { const eot = sunPosition(2026, m, d, hr, site.lat, site.lon, site.lon / 15).eot || 0, sp = sunPosition(2026, m, d, hr - eot / 60, site.lat, site.lon, site.lon / 15); if (sp.alt > 1) dirs.push(sp); }
       const g = w.solarEnvelope(dirs, { cap: 100 }), vals = g.H, st = statsOf(vals);
       // on the building: the envelope height where each face stands; a square higher than that casts shade on a neighbour
       w.surfaceSamples?.(); const sl = w.surfaceList?.() || [], sv = sl.length ? fieldAt(g, sl, vals, { roofs: true, off: 0 }) : null, over = sv ? sl.filter((S0, i) => Number.isFinite(sv[i]) && S0.p[2] > sv[i] + 0.5).length : 0;
