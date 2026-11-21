@@ -1,5 +1,5 @@
 import {openCase} from '../fallingwater-dashboard.js';
-import {openHospital} from '../hospital-example.js?v=sec-20261117-1';
+import {openHospital} from '../hospital-example.js?v=sims-20261121-1';
 // Projects home after sign-in (#/home): a workspace rail, a sidebar (My Projects, Favorites, Deleted, Account settings,
 // Categories & Tags, Tutorials, What's new, latest change, signed-in user), and the project browser with a count, sort,
 // grid / list / map views, search and a large "Add new project" card that opens the map (#/new-project).

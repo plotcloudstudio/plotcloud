@@ -4,7 +4,7 @@
 // with what made it (view, level, model revision, references, region, wording, image model, time), can be compared with the
 // view or another result, used as the base for the next edit, and saved as a captioned PNG.
 // A render is a presentation image only; when the model changes after it, it is marked as showing an earlier model.
-import * as RA from './render-ai.js?v=render-20261119-1';
+import * as RA from './render-ai.js?v=sims-20261121-1';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const fileURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(f); });

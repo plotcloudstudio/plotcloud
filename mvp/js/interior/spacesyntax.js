@@ -2,7 +2,7 @@
 // Workspace (Turner's VGA as in DepthmapX): nodes on a grid over the floor, joined where they see each other at the analysis
 // height; integration [HH], integration R3 and connectivity, steps from a spot, and agents walking towards what they see
 // (gate counts), combined with integration as "Movement + depth". The scene is a level of the Workspace model (planScene).
-import { clamp } from '../../../emb/lib/plansim.js?v=1';
+import { clamp } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 let SC = null, GC = { key: '' }, TGT = 0, VH = 1.6, GLASS = true, STOP = false;
 const window = { __isoCmin: 0, __isoCells: 350000 };   // the page's tuning hooks, at their defaults
 // ================= geometry (shared with Isovist Safety) =================

@@ -1,7 +1,7 @@
 import * as S from '../store.js';
 import {setParameter} from '../parameters.js';
 import {esc,currentProject,currentVersion,setCurrent,setCurrentVersion} from '../app.js';
-import {studioSolarScene} from '../studio-bridge.js?v=import-feedback-20261027-1';
+import {studioSolarScene} from '../studio-bridge.js?v=sims-20261121-1';
 import {sourceMeshes,environmentViewport} from '../environment/scene.js?v=vertical-snow-20261031-1';
 import {fingerprint} from '../environment/analysis.js';
 import {mountStudyShell} from '../study-ui/shell.js?v=unified-modes-20261030-1';

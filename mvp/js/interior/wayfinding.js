@@ -2,7 +2,7 @@
 // (doorways walkable whatever the grid): from a start
 // (a door to outside or a room), the shortest walk to every room's door, the decision points where routes split, whether each door
 // is in sight there (else a sign), and the visual depth of the floor: 0 where the start sees, 1 one look-around on, and so on.
-import { clamp, r1, ramp, raster, paintSeg, paintRect, cellOf, centre, los, march, sliced, wallPieces, ROOM_SKIP, sceneBounds, dist } from '../../../emb/lib/plansim.js?v=1';
+import { clamp, r1, ramp, raster, paintSeg, paintRect, cellOf, centre, los, march, sliced, wallPieces, ROOM_SKIP, sceneBounds, dist } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
 let SC = null, RES = null, OPTS = { start: '', furn: false }, EYE = 1.6, IMG = null; const setKey = () => '';
 const F_WALL = 1, F_FURN = 2, F_IN = 4, F_OUT = 8, S_OPQ = 1, S_FURN = 2;
 const DEPTH = [[0, [46, 160, 90]], [0.34, [240, 205, 80]], [0.67, [240, 140, 60]], [1, [200, 50, 50]]];

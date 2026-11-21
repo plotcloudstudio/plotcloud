@@ -9,37 +9,37 @@
 // The sun is the one addition: Plan Studio's 3D key light set from the site, the date and solar time, with shadows (display only).
 import * as S from './store.js';
 import * as SL from './structure-layout.js?v=struct-20261117-1';
-import * as SF from './structure-frame.js?v=frame-20261118-2';
-import * as SFU from './structure-frame-ui.js?v=frameui-20261118-1';
+import * as SF from './structure-frame.js?v=sims-20261121-1';
+import * as SFU from './structure-frame-ui.js?v=sims-20261121-1';
 import * as SG from './study-groups.js?v=groups-20261118-1';
 import {plannedStudy} from './planned-simulations.js';
 import { climateFile, ensureProjectClimate } from './project-climate.js';
 import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected-20261027-3';
-import { sunPosition } from './environment/analysis.js?v=run-20261031-2';
+import { sunPosition } from './environment/analysis.js?v=sims-20261121-1';
 import * as CL from '../../emb/lib/climate.js';
 import { speedRatio } from './wind-lbm.js?v=wind-20261031-5';
-import { stormwater } from './stormwater-grid.js?v=water-20261106-1';
+import { stormwater } from './stormwater-grid.js?v=sims-20261121-1';
 import * as WTRL from '../../emb/lib/water.js?v=water-20261118-1';
 import { canUse, paidNote } from './beta-access.js';
 import * as CIRC from './circulation-engine.js?v=circ-20261031-1';
-import * as PRIV from './interior/privacy.js?v=priv-20261120-1';
-import * as WAY from './interior/wayfinding.js?v=way-20261118-1';
-import * as WFS from './interior/wayfinding-signage.js?v=wfsign-20261119-3';
-import * as WUI from './wayfinding-ui.js?v=wfui-20261119-4';
-import * as WK from './wayfinding-walk.js?v=wfwalk-20261119-3';
+import * as PRIV from './interior/privacy.js?v=sims-20261121-1';
+import * as WAY from './interior/wayfinding.js?v=sims-20261121-1';
+import * as WFS from './interior/wayfinding-signage.js?v=sims-20261121-1';
+import * as WUI from './wayfinding-ui.js?v=sims-20261121-1';
+import * as WK from './wayfinding-walk.js?v=sims-20261121-1';
 import * as SA from './site-access-ui.js?v=sa-20261118-2';
-import * as SSX from './interior/spacesyntax.js?v=ss-20261114-1';
-import * as ISO from './interior/isovist.js?v=iso-20261114-1';
-import * as VWS from './interior/views.js?v=vw-20261101-1';
-import * as CAMS from './interior/cameras.js?v=cam-20261115-2';
-import * as DAY from './interior/daylight.js?v=day-20261114-1';
-import { daylightInputs, daylightRecord } from './daylight-run.js?v=day-20261114-1';
-import * as EGX from './interior/egress.js?v=fw-20261116-1';
+import * as SSX from './interior/spacesyntax.js?v=sims-20261121-1';
+import * as ISO from './interior/isovist.js?v=sims-20261121-1';
+import * as VWS from './interior/views.js?v=sims-20261121-1';
+import * as CAMS from './interior/cameras.js?v=sims-20261121-1';
+import * as DAY from './interior/daylight.js?v=sims-20261121-1';
+import { daylightInputs, daylightRecord } from './daylight-run.js?v=sims-20261121-1';
+import * as EGX from './interior/egress.js?v=sims-20261121-1';
 import * as ECODE from './interior/egresscode.js?v=code-20261110-1';
 import { maturityOf } from './capabilities.js';
 import { workflowState } from './onboarding.js';
 import * as ACU from './interior/acoustics.js?v=acu-20261106-1';
-import { keep as PKEEP } from '../../emb/lib/plansim.js?v=1';
+import { keep as PKEEP } from '../../emb/lib/plansim.js?v=sims-20261121-1';
 import { mountProps } from './project-props.js?v=grids-20261101-1';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -213,7 +213,7 @@ export function mountChrome(app, api) {
   // ---- buttons
   const doc = () => { const a = activePane(); try { return a.ready ? a.win.document : null; } catch { return null; } };
   const openProject = (section) => { UI.pacc = section; saveUI(); if (UI.panel === 'project' && root.classList.contains('sp-pal-open')) palOpen(false); projBtn.click(); };
-  async function openRenderWin() { solo(null); const RP = await import('./render-panel.js?v=render-20261119-1');
+  async function openRenderWin() { solo(null); const RP = await import('./render-panel.js?v=sims-20261121-1');
     const ensure3D = async () => { if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); await new Promise((r) => setTimeout(r, 250)); } };
     window.__wsRender = RP.openRender({ p, S, studio, toast: (t) => import('./app.js').then((m) => m.toast?.(t)).catch(() => {}),
       capture: async (w, h) => { await ensure3D(); const win = INST.persp.win, a = win?.S3?.api || win?.S3; if (!a?.captureView) throw Error('Open the 3D view before capturing.'); return a.captureView(w, h); },
@@ -370,7 +370,7 @@ export function mountChrome(app, api) {
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=xlist-20261118-4'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=sims-20261121-1'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
@@ -898,7 +898,7 @@ export function mountChrome(app, api) {
     closeHost(); closeStudy(); openCard(false); closePops(); palOpen(false); openSheet(false);
     const token = ++HOST.token, el = el2('section', 'sp-host'); el.setAttribute('aria-label', simName(id)); HOST.el = el; HOST.id = id; root.append(el); root.classList.add('sp-hosting');
     el.addEventListener('click', (e) => { const a = e.target.closest('a[href]'); if (!a) return; const h = a.getAttribute('href') || ''; if (/^#\/workspace(\/|$)/.test(h) || (a.closest('.shbar') && /Back/.test(a.textContent))) { e.preventDefault(); closeHost(); } }, true);
-    try { const mod = await import('./pages/simulations.js?v=planned-20261104-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
+    try { const mod = await import('./pages/simulations.js?v=sims-20261121-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
     catch (e) { el.innerHTML = `<div class="sp-hosterr"><p>${esc(simName(id))} could not open here: ${esc(e.message || e)}.</p><a class="btn sm" href="#/simulations/${esc(id)}">Open it on its own page</a></div>`; }
   }
   function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }
@@ -1869,7 +1869,7 @@ export function mountChrome(app, api) {
       method: (r) => `The hourly direct sun and diffuse sky of the project weather over each period, with the same shading; each ${fmt(r.cell, 1)} m ground cell sums the sunlight that reaches it in kWh/m² (direct sun by its height, sky by the share each cell sees; no light reflected from the ground).`,
       months: MONTHN.map((n, i) => ({ v: `m${i + 1}`, label: n })), seasons: [['q-mam', 'March–May'], ['q-jja', 'June–August'], ['q-son', 'September–November'], ['q-djf', 'December–February']].map(([v, label]) => ({ v, label })),
       monthsNote: 'Each month', seasonsNote: 'Three-month seasons' } };
-  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=series-20261109-4'));
+  let SERMOD = null; const seriesUI = () => (SERMOD ||= import('./series-export.js?v=sims-20261121-1'));
   async function runSeries(kind, opts = {}) {
     const id = ST.id, def = SERIES[id]; if (!def || ST.busy) return; if (!canUse(id, p)) { ST.err = paidNote(simName(id)); drawStudy(); return; }
     if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); }

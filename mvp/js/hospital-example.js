@@ -3,7 +3,7 @@
 // stairs and out). Made to run every study in the Workspace, for demonstrations.
 import * as S from './store.js';
 import { fabricSig } from './beta-access.js';
-import { hospitalModel, title, site, CASE_ID } from './hospital-case.js?v=hosp-20261110-5';
+import { hospitalModel, title, site, CASE_ID } from './hospital-case.js?v=sims-20261121-1';
 export function openHospital(o = {}) {
   try { const key = 'pc-mvp-ws2', ui = JSON.parse(localStorage.getItem(key) || '{}'); localStorage.setItem(key, JSON.stringify({ ...ui, view: 'persp' })); } catch { }
   if (o.study === 'fire-evacuation') try { sessionStorage.setItem('pc-ws-open-study', 'fire-evacuation'); sessionStorage.setItem('pc-ws-study-set', JSON.stringify({ egStrat: 'down', egRatio: '4', egMix: 'typical' })); } catch { }

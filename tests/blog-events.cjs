@@ -16,7 +16,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const ids = () => p.$$eval('#cmsStories article[id]', (as) => as.map((a) => a.id));
     const all = await ids(); assert.equal(all[0], 'post-qa-talk', 'the upcoming event first: ' + all); assert(all.includes('fallingwater-model-sources') && all.includes('fire-evacuation-accuracy'));
     const card = await p.locator('#post-qa-talk').innerText(); assert.match(card, new RegExp(`Upcoming[\\s\\S]*Event[\\s\\S]*QA School of Architecture[\\s\\S]*Toronto[\\s\\S]*${ahead}`, "i"));
-    await p.click('[data-blog-category=research]'); assert.deepEqual((await ids()).sort(), ['fallingwater-model-sources', 'fire-evacuation-accuracy']);
+    await p.click('[data-blog-category=research]'); { const r = await ids(); assert(r.includes('fallingwater-model-sources') && r.includes('fire-evacuation-accuracy'), 'the research notes: ' + r); assert(r.filter((x) => x.startsWith('report-')).length >= 20, 'each simulation\'s method report is under Research: ' + r); assert(r.every((x) => x !== 'post-qa-talk'), 'no event under Research'); }
     await p.click('[data-blog-category=events]'); assert.deepEqual(await ids(), ['post-qa-talk']);
     await p.screenshot({ path: (process.env.SHOT_DIR || require('os').tmpdir()) + '/blog-events.png' });
     console.log('PASS the Blog: All / Research / Events; an upcoming event first, with its host, place and date; each filter lists its own posts');

@@ -22,18 +22,18 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=priv-20261120-1';
+import { mountChrome } from '../workspace-chrome.js?v=sims-20261121-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
 import { LAYER_COLORS,SIMS } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
-import { importModel, IMPORT_LIMITS } from '../viewport.js?v=bigfile-20261118-1';
+import { importModel, IMPORT_LIMITS } from '../viewport.js?v=sims-20261121-1';
 import { previewImport } from '../import-preview.js?v=simplify-20261119-1';
 import { detectFloors, withGround } from '../level-detect.js?v=levels-20261117-1';
 import { createViewport2,levelsOf } from '../viewport2.js';
 import { FORMATS, make as makeExport } from '../export3d.js';
-import { MODELS, GROUPS } from '../../../furniture/models.js?v=entourage-20261102-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
+import { MODELS, GROUPS } from '../../../furniture/models.js?v=sims-20261121-1';   // Plan Studio's parametric furniture: the same ids Plan Studio places
 import { TOOL_ICONS } from '../tool-icons.js?v=landscape-20261031-1';
 import { toStudio } from '../studio-convert.js';
 
@@ -172,7 +172,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=floors-20261120-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=sims-20261121-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
