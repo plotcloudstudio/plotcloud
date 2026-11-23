@@ -19,7 +19,7 @@ export function parseEPW(text, name = '') {
   const lines = String(text || '').split(/\r?\n/), head = (lines[0] || '').split(',');
   if (head[0] !== 'LOCATION') throw new Error('This is not an EPW weather file (no LOCATION line).');
   const N = 8760, num = (v, bad) => { const x = +v; return Number.isFinite(x) && !(x >= bad) ? x : NaN; };
-  const T = new Float32Array(N), Tdp = new Float32Array(N), RH = new Float32Array(N), IR = new Float32Array(N), GHR = new Float32Array(N), DNR = new Float32Array(N), DHR = new Float32Array(N), WD = new Float32Array(N), WS = new Float32Array(N);
+  const T = new Float32Array(N), Tdp = new Float32Array(N), RH = new Float32Array(N), IR = new Float32Array(N), GHR = new Float32Array(N), DNR = new Float32Array(N), DHR = new Float32Array(N), WD = new Float32Array(N), WS = new Float32Array(N), ALB = new Float32Array(N).fill(NaN);
   const seen = new Uint8Array(N); let n = 0, fixed = 0;
   for (let i = 8; i < lines.length; i++) {
     const c = lines[i].split(','); if (c.length < 22) continue;
@@ -28,7 +28,7 @@ export function parseEPW(text, name = '') {
     if (d > MDAYS[m - 1]) continue;
     const k = dayOfYear(m, d) * 24 + h - 1; if (seen[k]) continue; seen[k] = 1; n++;
     T[k] = num(c[6], 99.9); Tdp[k] = num(c[7], 99.9); RH[k] = num(c[8], 999); IR[k] = num(c[12], 9999);
-    GHR[k] = num(c[13], 9999); DNR[k] = num(c[14], 9999); DHR[k] = num(c[15], 9999); WD[k] = num(c[20], 999); WS[k] = num(c[21], 999);
+    GHR[k] = num(c[13], 9999); DNR[k] = num(c[14], 9999); DHR[k] = num(c[15], 9999); WD[k] = num(c[20], 999); WS[k] = num(c[21], 999); { const v = +c[32]; ALB[k] = Number.isFinite(v) && v >= 0 && v < 1 && c[32] !== undefined && c[32].trim() !== '' ? v : NaN; }   // EPW field 33, albedo (missing 999)
   }
   if (n < N) throw new Error(`Expected 8,760 hours, found ${n.toLocaleString('en-CA')}.`);
   // short gaps (missing codes) are filled from the hours either side; radiation at night is zero
@@ -36,7 +36,7 @@ export function parseEPW(text, name = '') {
   for (const A of [GHR, DNR, DHR]) for (let k = 0; k < N; k++) if (!(A[k] >= 0)) { A[k] = 0; fixed++; }
   for (let k = 0; k < N; k++) { if (RH[k] > 100) RH[k] = 100; if (RH[k] < 0) RH[k] = 0; if (WS[k] < 0) WS[k] = 0; }
   const lat = +head[6], lon = +head[7], tz = +head[8];
-  return { name: name || head[1] || 'Weather file', station: [head[1], head[2], head[3]].filter((s) => s && s !== '-').join(', ').replace(/_/g, ' '), lat, lon, tz, elev: +head[9] || 0, T, Tdp, RH, IR, GHR, DNR, DHR, WD, WS, filled: fixed };
+  return { name: name || head[1] || 'Weather file', station: [head[1], head[2], head[3]].filter((s) => s && s !== '-').join(', ').replace(/_/g, ' '), lat, lon, tz, elev: +head[9] || 0, T, Tdp, RH, IR, GHR, DNR, DHR, WD, WS, ALB, filled: fixed };
 }
 
 // sky temperature (°C) from the hour's downwelling long-wave radiation; without it, clear-sky emissivity from the dew point (Berdahl & Martin 1984)
@@ -514,4 +514,26 @@ export function lawsonClass(speeds) {
   const s = Float32Array.from(speeds).sort(), u95 = s[Math.min(n - 1, Math.floor(0.95 * n))];
   let over = 0; for (let i = n - 1; i >= 0 && s[i] > LAWSON_SAFE.speed; i--) over++;
   return { cls: LAWSON.findIndex(([t]) => u95 <= t), u95, unsafe: over / n };
+}
+
+// Ground albedo from the weather (2026-11-23): EPW field 33 is the hourly albedo (999 when missing) [EnergyPlus EPW data dictionary].
+// The ground-reflected term is ρ × GHI per hour, so over a period the GHI-weighted mean albedo gives exactly the same total. Used when
+// at least 90 % of the period's daylight GHI has an albedo; otherwise the fixed fallback.
+export function albedoEff(E, hours, fallback = 0.2) {
+  let w = 0, wa = 0, all = 0; for (const k of hours) { const g = E.GHR[k] > 0 ? E.GHR[k] : 0; all += g; const a = E.ALB ? E.ALB[k] : NaN; if (Number.isFinite(a)) { w += g; wa += g * a; } }
+  return all > 0 && w >= 0.9 * all ? { rho: wa / w, fromFile: true, cover: w / all } : { rho: fallback, fromFile: false, cover: all > 0 ? w / all : 0 };
+}
+// PVWatts V5 (Dobos 2014, NREL/TP-6A20-62641) for an unshaded module laid flat, hour by hour from the weather: DC power eq. (8)
+// P_dc = I/1000 · P_dc0 · (1 + γ (T_cell − 25)), γ by module type (table 3); system losses 14 % (table 6, eq. 9) on DC; the inverter's
+// part-load efficiency eq. (10) with η_nom 0.96, η_ref 0.9637 and clipping eq. (11) at DC/AC 1.1. The cell temperature uses the
+// steady-state NOCT relation T_cell = T_air + (INOCT − 20) · I / 800 with PVWatts' INOCT of 45 °C (open rack; 49 °C roof mount);
+// PVWatts itself integrates Fuentes' transient model, so this is an approximation of its thermal model. Cover (angle) losses are not
+// applied. Returns the AC energy per kW of modules and the performance ratio PR = AC energy / (plane irradiation / 1 kW/m²).
+export const PV_MODULES = { standard: { eta: 0.15, gamma: -0.0047, name: 'Standard (≈ 15 %, −0.47 %/°C)' }, premium: { eta: 0.19, gamma: -0.0035, name: 'Premium (≈ 19 %, −0.35 %/°C)' }, thin: { eta: 0.10, gamma: -0.0020, name: 'Thin film (≈ 10 %, −0.20 %/°C)' } };
+export function pvwattsFlat(E, hours, { module = 'standard', losses = 14, etaNom = 0.96, dcac = 1.1, inoct = 45 } = {}) {
+  const M = PV_MODULES[module] || PV_MODULES.standard, pdc0 = 1, pac0 = pdc0 / dcac, pdc0i = pac0 / etaNom, ETA_REF = 0.9637; let ac = 0, poa = 0;
+  for (const k of hours) { const I = E.GHR[k] > 0 ? E.GHR[k] : 0; if (!I) continue; poa += I; const tc = E.T[k] + (inoct - 20) * I / 800;
+    const pdc = Math.max(0, I / 1000 * pdc0 * (1 + M.gamma * (tc - 25))) * (1 - losses / 100); if (!(pdc > 0)) continue;
+    const z = pdc / pdc0i, eta = etaNom / ETA_REF * (-0.0162 * z - 0.0059 / z + 0.9858); ac += Math.min(pac0, Math.max(0, eta * pdc)); }
+  return { acPerKw: ac, poa: poa / 1000, pr: poa > 0 ? ac / (poa / 1000) : 0, module: M };   // kWh per kW of modules; kWh/m²; PR
 }
