@@ -263,13 +263,17 @@ export function mountChrome(app, api) {
     const w = INST.plan.ready ? INST.plan.ws : INST.persp.ready ? INST.persp.ws : null, objs = w ? w.objects() : [], st = studio() || {};
     const rooms = objs.filter((o) => o.k === 'room'), masses = st.masses || [], lv = w ? w.levels().list : [];
     const gfa = masses.reduce((a, m) => a + area(m.points || []) * (m.storeys || 1), 0), fp = masses.reduce((a, m) => a + area(m.points || []), 0);
-    const ctx = (st.site?.buildings || []).filter((b) => !b.excluded).length;
+    const ctxImp = (st.imports || []).filter((i) => /context|neighbou?r/i.test(`${i.layer || ''} ${i.name || ''}`)), ctx = (st.site?.buildings || []).filter((b) => !b.excluded).length + ctxImp.length;
+    // the Plan Studio building (2026-11-23): its floor slabs, level by level (a drawn building has no masses, so the massing rows alone read 0)
+    const slabA = (f) => (f.points && f.points.length > 2 ? area(f.points) : (+f.w || 0) * (+f.d || 0)), byLv = new Map(); for (const f of st.floors || []) byLv.set(f.lv, (byLv.get(f.lv) || 0) + slabA(f));
+    const lvs = (st.levels || []).slice().sort((a, b) => (a.z || 0) - (b.z || 0)), fpB = lvs.length ? (byLv.get(lvs[0].id) || 0) : 0, gfaB = [...byLv.values()].reduce((a, v) => a + v, 0);
     const row = (k, v) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`;
     pops.stats.innerHTML = `<h3>Statistics</h3>
-      <h4>Massing</h4>${row('Masses', masses.length)}${row('Footprint', fmt(fp) + ' m²')}${row('Gross floor area', fmt(gfa) + ' m²')}
+      <h4>Building (Plan Studio)</h4>${gfaB > 0 ? `${row('Footprint (ground-level slabs)', fmt(fpB, 1) + ' m²')}${row('Floor area (all slabs)', fmt(gfaB, 1) + ' m²')}` : row('Floor slabs', 'None drawn')}
+      <h4>Massing</h4>${row('Masses', masses.length)}${masses.length ? `${row('Footprint', fmt(fp) + ' m²')}${row('Gross floor area', fmt(gfa) + ' m²')}` : ''}
       <h4>Plan</h4>${row('Levels', lv.length)}${row('Rooms', rooms.length)}${row('Room area', fmt(rooms.reduce((a, r) => a + (r.area || 0), 0), 1) + ' m²')}${row('Walls', objs.filter((o) => o.k === 'wall').length)}${row('Doors and windows', objs.filter((o) => o.k === 'op').length)}${row('Furniture', objs.filter((o) => o.k === 'furn').length)}
       <h4>Site</h4>${row('Surrounding buildings', ctx)}${row('Terrain', st.site?.terrain ? `${st.site.terrain.res} m grid` : 'None')}
-      <p class="sp-note">Gross floor area is each mass outline × its storeys. Room area is inside the walls.</p>`;
+      <p class="sp-note">Building areas are the floor slabs' outlines, level by level (to the slab edge, so they include the walls). Massing areas are each mass outline × its storeys. Room area is inside the walls. Surrounding buildings include the site's mapped buildings and imported context blocks.</p>`;
   }
   // ---- spaces: the rooms Plan Studio finds (closed walls), by level; a click selects the room
   function drawSpaces() {
@@ -1968,10 +1972,11 @@ export function mountChrome(app, api) {
     catch (e) { ST.err = e.message; }
     ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();
   }
-  function download(name, href) { const a = document.createElement('a'); a.href = href; a.download = name; a.click(); }
-  function exportCSV() { const r = ST.res; if (!r) return; const lines = r.csv ? r.csv() : ['x_m,y_m,' + (r.unit === '%' ? 'value_percent' : 'value_' + r.unit.replace(/[^a-z0-9]+/gi, '_'))]; if (!r.csv) for (let j = 0; j < r.ny; j++) for (let i = 0; i < r.nx; i++) { const v = r.vals[j * r.nx + i]; if (Number.isFinite(v)) lines.push(`${(r.X0 + (i + 0.5) * r.cell).toFixed(2)},${(r.Y0 + (j + 0.5) * r.cell).toFixed(2)},${(+v).toFixed(3)}`); }
-    const u = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); download(`${p.name.replace(/[^\w-]+/g, '-')}-${ST.id}.csv`, u); setTimeout(() => URL.revokeObjectURL(u), 2000); }
-  function exportPNG() { const u = INST.persp.ready ? INST.persp.ws.viewPNG?.() : null; if (u) download(`${p.name.replace(/[^\w-]+/g, '-')}-${ST.id}.png`, u); }
+  function downloadHref(name, href) {   // (2026-11-23) was a second "download": the later download(name, text, type) replaced it, so the CSV and PNG files held only their link
+  const a = document.createElement('a'); a.href = href; a.download = name; a.click(); }
+  function exportCSV() { const r = ST.res; if (!r) return; const lines = r.csv ? r.csv() : ['x_m,y_m,"' + String((r.title || 'value') + ' (' + (r.unit || '') + ')').replace(/<[^>]+>/g, '').replace(/"/g, "'") + '"']; if (!r.csv) for (let j = 0; j < r.ny; j++) for (let i = 0; i < r.nx; i++) { const v = r.vals[j * r.nx + i]; if (Number.isFinite(v)) lines.push(`${(r.X0 + (i + 0.5) * r.cell).toFixed(2)},${(r.Y0 + (j + 0.5) * r.cell).toFixed(2)},${(+v).toFixed(3)}`); }
+    const u = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); downloadHref(`${p.name.replace(/[^\w-]+/g, '-')}-${ST.id}.csv`, u); setTimeout(() => URL.revokeObjectURL(u), 2000); }
+  function exportPNG() { const u = INST.persp.ready ? INST.persp.ws.viewPNG?.() : null; if (u) downloadHref(`${p.name.replace(/[^\w-]+/g, '-')}-${ST.id}.png`, u); }
   // the distribution of values on the ground, coloured with the legend's ramp
   function chart(r) { const n = 12, cnt = Array(n).fill(0), span = Math.max(1e-9, r.hi - r.lo); let tot = 0; for (const v of r.vals) if (Number.isFinite(v)) { cnt[Math.min(n - 1, Math.floor((v - r.lo) / span * n))]++; tot++; }
     const mx = Math.max(1, ...cnt), cols = (r.legendCols || INST.persp.ws?.rampColors?.(r.ramp)) || ['#999'], col = (i) => cols[Math.min(cols.length - 1, Math.round(i / (n - 1) * (cols.length - 1)))];

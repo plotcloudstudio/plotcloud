@@ -88,8 +88,11 @@ export function diff(a, b) {
     const what = objDiff(y.o, x.o); if (what.length) items.push({ id, change: 'modified', name: nameOf(x.k, x.o), layer: KLAYER[x.k], what }); }
   for (const [id, y] of A) if (!B.has(id)) items.push({ id, change: 'removed', name: nameOf(y.k, y.o), layer: KLAYER[y.k], what: [] });
   const NA = new Map(natives(a.model).map((c) => [c.id, c])), NB = new Map(natives(b.model).map((c) => [c.id, c]));
-  for (const [id, c] of NB) { const o = NA.get(id); if (!o) items.push({ id, change: 'added', name: c.name, layer: c.layer, what: [] }); else { const what = compDiff(o, c); if (what.length) items.push({ id, change: 'modified', name: c.name, layer: c.layer, what }); } }
-  for (const [id, c] of NA) if (!NB.has(id)) items.push({ id, change: 'removed', name: c.name, layer: c.layer, what: [] });
+  // (2026-11-23) the Workspace moves a sample's boxes (its ground and neighbouring blocks) into Plan Studio's imports under the same id:
+  // an object kept that way is neither removed nor added, only stored differently
+  const impIds = (st) => new Set(((st && st.imports) || []).map((o) => o.ref || o.id)), IA = impIds(a.studio), IB = impIds(b.studio);
+  for (const [id, c] of NB) { const o = NA.get(id); if (!o) { if (!IA.has(id)) items.push({ id, change: 'added', name: c.name, layer: c.layer, what: [] }); } else { const what = compDiff(o, c); if (what.length) items.push({ id, change: 'modified', name: c.name, layer: c.layer, what }); } }
+  for (const [id, c] of NA) if (!NB.has(id) && !IB.has(id)) items.push({ id, change: 'removed', name: c.name, layer: c.layer, what: [] });
   const order = { modified: 0, added: 1, removed: 2 }; items.sort((p, q) => order[p.change] - order[q.change] || p.name.localeCompare(q.name));
   return items;
 }
