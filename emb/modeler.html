@@ -6294,7 +6294,7 @@ window.__params = { MATLIB, GLAZING, MAT_DEFAULT, syncArrays, syncLinks, floorMa
 
 // for tests and the site
 window.__st = { get site() { return M.site || null; }, sunScene: () => STC.planScene(M, S, LV, 'sunhours'), get LAYER() { return LAYER; }, get VIS() { return VIS; }, get TOOL() { return TOOL; }, isDirty: () => isDirty(),  get M() { return M; }, get S() { return S; }, get RES() { return RES; }, get SEL() { return SEL; }, get LV() { return LV; }, toPx: (p) => { const q = W2S(p); return [q[0] / VP.d, q[1] / VP.d]; } };
-Object.assign(window.__st, { hit: (p) => hitTest(p), layerOn: (id) => layerOn(id), undo: () => undo(), select: (s) => { SEL = s; changedSel(); }, rooms: () => S.rooms.filter((r) => r.lv === LV).map((r) => ({ key: r.key, lx: r.lx, ly: r.ly })) });   // for the browser tests (2026-11-23)
+Object.assign(window.__st, { get drawing() { return drawing; }, get typed() { return typed; }, hit: (p) => hitTest(p), layerOn: (id) => layerOn(id), undo: () => undo(), select: (s) => { SEL = s; changedSel(); }, rooms: () => S.rooms.filter((r) => r.lv === LV).map((r) => ({ key: r.key, lx: r.lx, ly: r.ly })) });   // for the browser tests (2026-11-23)
 // ---------- start ----------
 S = STC.build(M); libUI(); opTiles(); syncInputs(); toolsUI(); layersUI(); legend(); zoomUI(); if(!HOST_MODEL)setTimeout(makeThumbs, 30);
 new ResizeObserver(() => resize()).observe(stage);
@@ -7861,6 +7861,8 @@ if (window.__WSROLE) {
   const LOCKK = { imp: 'Imported', mass: 'Masses', ctx: 'Site', wall: 'Walls', end: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting' };
   const TOOLK = { mass: 'Masses', massrect: 'Masses', ctxadd: 'Site', lsplant: 'Site', lswater: 'Site', lspave: 'Site', lswrect: 'Site', lswcirc: 'Site', lswell: 'Site', lswfree: 'Site', wall: 'Walls', room: 'Walls', arc: 'Walls', fence: 'Walls', door: 'Glazing', win: 'Glazing', hole: 'Glazing', floor: 'Structure', void: 'Structure', place: 'Furniture' };
   cv.addEventListener('pointerdown', () => { WS.down = true; setTimeout(() => { WS.down = false; }, 0); }, true);
+  // keys follow the pointer (2026-11-23): over a pane, Tab, the arrows and Esc reach it without a click first, unless someone is typing elsewhere
+  { const typing = (el) => !!el && (el.matches?.('input, textarea, select') || el.isContentEditable); cv.addEventListener('pointerenter', () => { try { if (typing(document.activeElement) || (window.parent !== window && typing(window.parent.document.activeElement))) return; if (document.activeElement !== cv) cv.focus({ preventScroll: true }); } catch { } }); }
   { const _h = hitTest; hitTest = function (p, opt = {}) { const h = _h(p, opt); const L = h && (h.k === 'imp' ? ((M.imports || []).find((o) => o.id === h.id) || {}).layer || 'Imported' : LOCKK[h.k]); if (L && WS.locks.has(L)) { if (WS.down) say(L !== 'Site' && !WS.locks.has('Site') ? 'Editing the site model: only the site changes. Press Done to edit the design.' : `The ${L} layer is locked. Unlock it in Layers to edit it.`); return null; } return h; }; }
   { const _t = setTool; setTool = function (t) { const L = TOOLK[t] || (t === 'place' && PICK && REG[PICK] && REG[PICK].kind === 'stair' ? 'Furniture' : null); if (L && WS.locks.has(L)) { say(`The ${L} layer is locked. Unlock it in Layers to draw on it.`); return; } return _t(t); }; }
   // Rhino Combo selection: window rightwards, crossing leftwards; Alt forces a box over geometry.
