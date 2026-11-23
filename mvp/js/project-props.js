@@ -29,7 +29,7 @@ export function mountProps(host, p, { counts = () => ({}), onClose = () => { } }
   const usedBy = (paths) => SIMS.filter((s) => studyInputs(s.id).some((x) => paths.includes(x) || (paths.includes('weather.epw') && x === 'weather.epw'))).map((s) => s.name);
   // the weather in use: matched from the project's address automatically; Advanced changes it
   function weatherLine() { const w = S.conditionsOf(p).site.climate; return w ? esc(`${w.station || w.name}${Number.isFinite(w.distanceKm) ? ` · ${w.distanceKm.toFixed(1)} km from the site` : ''} · ${w.automatic ? 'matched from the address' : 'your file'}`) + (w.representativenessWarning ? `<small>${esc(w.representativenessWarning)}</small>` : '') : 'Matched from the project address when a study needs it.'; }
-  function value([, , [k, n]]) { const c = S.conditionsOf(p); return c[k]?.[n]; }
+  function value([path, , [k, n]]) { const c = S.conditionsOf(p); return path === 'project.buildingType' ? S.buildingTypeOf(p) : c[k]?.[n]; }
   function draw() {
     disposeClimate?.(); disposeClimate = null;
     const [, fields, shared] = TABS.find(([t]) => t === tab), n = counts(), types = TAB_TYPES[tab];
