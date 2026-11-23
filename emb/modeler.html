@@ -1744,7 +1744,7 @@ const STC = (() => {
     return { ok: !why.length, why, multi: M.levels.length > 1 };
   }
   const X = (f) => (M, ...r) => f(expandArcs(M), ...r);   // what reads the model for a study or a check sees arc walls as short straight ones
-  return { arcOf, arcAt, arcTan, expandArcs, LAYERS, TYPE_LAYER, CAT, CATS, PARAMS, tag, tagAll, migrate, validate: X(validate), TOOLS, planScene: X(planScene), compat, roomRects, build: X(build), airflow: X(airflow), daylight: X(daylight), views: X(views), wallLen, wallDir, opPoint, bounds: X(bounds), roomAtR, rectRoom, mergeWalls, addOp, wallAt, fixOp, furnCorners, furnEdges, LIB, TEMPLATES, fu, uid, cpWall, bearing, blank, CELL, segX, clamp };
+  return { cpSwami, cpWall, arcOf, arcAt, arcTan, expandArcs, LAYERS, TYPE_LAYER, CAT, CATS, PARAMS, tag, tagAll, migrate, validate: X(validate), TOOLS, planScene: X(planScene), compat, roomRects, build: X(build), airflow: X(airflow), daylight: X(daylight), views: X(views), wallLen, wallDir, opPoint, bounds: X(bounds), roomAtR, rectRoom, mergeWalls, addOp, wallAt, fixOp, furnCorners, furnEdges, LIB, TEMPLATES, fu, uid, cpWall, bearing, blank, CELL, segX, clamp };
 })();
 if (typeof module !== 'undefined') module.exports = STC;
 

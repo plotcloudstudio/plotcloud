@@ -10,7 +10,7 @@ summary: How the Natural ventilation study estimates the outdoor air each room r
 image: img/home/vent.webp
 imageAlt: Air change rate per room with arrows showing the airflow through windows and doors
 code: emb/modeler.html, emb/vent.html, mvp/js/workspace-chrome.js
-tests: tests/workspace-vent-acoustics.cjs
+tests: tests/workspace-vent-acoustics.cjs, tests/vent-cp-swami.test.mjs
 keywords:
 - Natural ventilation
 - Airflow network
@@ -45,6 +45,12 @@ Indoor pressure in room r at height z is P_r − ρ_i g z, where P_r is the unkn
 
 C_p depends on the angle between the wind and the facade's outward normal, interpolated in the AIVC low-rise table at 0°, 45°, 90°, 135° and 180° [2]. The shelter row follows the terrain: open terrain uses the exposed row, suburban the row for neighbours half as tall, and urban the row for neighbours as tall. Roof openings of voids use C_p = −0.5.
 
+**Swami–Chandra option (added 23 November 2026).** As an alternative to the table, the Workspace can take facade C_p from the Swami and Chandra (1988) correlation for surface-averaged pressure coefficients on low-rise buildings [9], in the form given in the EnergyPlus Engineering Reference [10]:
+
+C_p = 0.6 ln[1.248 − 0.703 sin(α/2) − 1.175 sin²α + 0.131 sin³(2αG) + 0.769 cos(α/2) + 0.07 G² sin²(α/2) + 0.717 cos²(α/2)]
+
+Here α is the angle between the wind direction and the facade's outward normal, and G is the natural log of the ratio of the facade's width to the width of the adjacent wall. The study takes these widths from the plan's bounding box: a facade facing mostly along the plan's y axis spans its x extent. The correlation was fitted to surface-averaged data for rectangular, exposed low-rise buildings with sides up to 8:1 and has no shelter term [9], so the option is labelled "exposed" and the terrain's shelter class is not applied to it. At α = 0 it gives 0.603. For a square plan (G = 0) it gives −0.443 at 90° and −0.364 at 180°, against 0.7, −0.5 and −0.2 in the AIVC exposed row.
+
 ### 2.3. Flow equation and solution
 
 The mass flow through a link is the orifice equation ṁ = C_d A √(2 ρ |Δp|) sign(Δp), with C_d = 0.6 and ρ the density of the air upstream [1, 3]. Below |Δp| = 0.02 Pa the relation is linearised so that the Jacobian stays finite. The mass balance of every room is solved for the room pressures with Newton–Raphson, a damping factor of 0.8 and up to 120 iterations [4]. Flow rates are then converted to volume flows, and the outdoor-air fraction of each room is found by Gauss–Seidel iteration on f_r Q_in,r = Q_out→r + Σ f_s Q_s→r, so that air arriving through a corridor counts as partly used air.
@@ -73,6 +79,7 @@ Table 1. Inputs and constants of the Natural ventilation study.
 | Reference height | max(3 m, roof) | Engine choice | Reasonable for low-rise tables [2] |
 | Facade C_p (Workspace before 21 November 2026) | 0.6, 0.4, −0.3, −0.45, −0.35 at 0–180° | Not traced | Replaced by the AIVC table |
 | Facade C_p (Workspace and Ventilation page) | Exposed 0.7, 0.35, −0.5, −0.4, −0.2; half-height neighbours 0.4, 0.1, −0.3, −0.35, −0.2; equal-height neighbours 0.2, 0.05, −0.25, −0.3, −0.25 | AIVC guide, low-rise tables [2] | Sourced |
+| Facade C_p, Swami–Chandra option | 0.6 ln[…] by angle and side ratio G (formula in Section 2.2) | Swami and Chandra 1988 [9]; EnergyPlus Engineering Reference [10] | Sourced; exposed, rectangular plans only; G from the plan's bounding box (added 23 November 2026) |
 | Roof void C_p | −0.5 | Engine choice | Assumption, consistent in sign with flat-roof suction [2, 7] |
 | Single-sided C₁, C₂, C₃ | 0.001, 0.0035, 0.01 | de Gids and Phaff [5]; CIBSE AM10 [1] | Sourced |
 | Defaults | U_10 3.5 m/s, from 225°, T_o 20 °C, T_i 24 °C | Engine choice | Editable inputs |
@@ -84,9 +91,11 @@ The Workspace test `tests/workspace-vent-acoustics.cjs` checks that the network 
 
 In the end-to-end audit of 20 November 2026 on a two-storey, twenty-room block with a Chicago TMY3 file (wind from the south at 4.9 m/s), the study reported 13,485 L/s of outdoor air, 32.4 air changes per hour for the whole building and at least 5 air changes per hour in every room, and a neutral plane at −1.0 m. After the corrections of 21 November 2026 (AIVC table, suburban terrain, station-to-site wind, stack-only neutral plane) the same case gives 7,829 L/s, 18.8 air changes per hour, every room still at 5 or more, and a stack-only neutral plane 3.0 m above level 0, inside the two-storey building as expected. The lower flow comes mainly from the suburban wind at roof height, which is about 0.6 times the open-terrain wind at 10 m, and from the smaller sheltered pressure coefficients.
 
+**Swami–Chandra coefficients.** `tests/vent-cp-swami.test.mjs` runs the engine's function in Node and checks it against the printed formula. It gives 0.603 at 0°, −0.443 at 90° and −0.364 at 180° for a square plan, matches the formula at 25 combinations of angle (15–165°) and side-ratio log (−1 to ln 3), and treats ±α and α + 360° alike. For comparison with the AIVC exposed row at 0°, 45°, 90°, 135° and 180°, it gives 0.603, 0.323, −0.443, −0.535 and −0.364, against 0.7, 0.35, −0.5, −0.4 and −0.2. On the hospital example, with the wind from 225° and 20 °C outside and 22 °C inside, the network gave a mean of 2.54 air changes per hour at 2 m/s and 10.22 at 8 m/s with the AIVC suburban row, and 3.56 and 14.24 with Swami–Chandra. The difference is mostly the absence of shelter in the correlation. With the default AIVC option the Workspace result is unchanged from before (1.68 air changes per hour in the hospital example's default run).
+
 ## 5. Discussion
 
-**Pressure coefficients.** Generic C_p tables are the largest source of uncertainty in network models, often ±50 % or more on the flow [2, 4]. The stand-alone ventilation page uses the AIVC low-rise table with three shelter classes, which the method text cites [2]. At the time of the audit the Workspace engine used a different single table (0.6, 0.4, −0.3, −0.45, −0.35) with no shelter class and no source in the code; its leeward and side values differed from the AIVC exposed row by up to 0.2. It now uses the AIVC table, with the shelter class taken from the project's terrain. A further improvement would be the Swami and Chandra correlations, which give C_p as a function of facade position and aspect ratio for low-rise buildings [9].
+**Pressure coefficients.** Generic C_p tables are the largest source of uncertainty in network models, often ±50 % or more on the flow [2, 4]. The stand-alone ventilation page uses the AIVC low-rise table with three shelter classes, which the method text cites [2]. At the time of the audit the Workspace engine used a different single table (0.6, 0.4, −0.3, −0.45, −0.35) with no shelter class and no source in the code; its leeward and side values differed from the AIVC exposed row by up to 0.2. It now uses the AIVC table, with the shelter class taken from the project's terrain. The Swami and Chandra correlation [9], which gives C_p as a function of wind angle and side ratio, is now available as an option (Section 2.2). It suits exposed, rectangular buildings. In sheltered sites the AIVC rows remain the better default.
 
 **Wind profile.** ASHRAE converts the meteorological-station wind to the site by passing through the gradient height: U_H = U_met (δ_met / H_met)^α_met (H / δ)^α [7]. At the time of the audit the engine applied the site exponent directly to the station speed at 10 m, which assumes the station is in the same terrain as the site and, for an airport station and an urban site, overstates the wind at roof height by about 20–40 %. The engine now applies the full conversion, assuming the station is in open terrain, as airport stations usually are.
 
@@ -109,3 +118,4 @@ The network method, discharge coefficient, buoyancy terms and single-sided corre
 7. ASHRAE, ASHRAE Handbook—Fundamentals, chapter 24, Airflow around buildings, ASHRAE, Atlanta, 2021.
 8. ASHRAE, ANSI/ASHRAE Standard 62.1-2022, Ventilation and Acceptable Indoor Air Quality, ASHRAE, Atlanta, 2022.
 9. M.V. Swami, S. Chandra, Correlations for pressure distribution on buildings and calculation of natural-ventilation airflow, ASHRAE Transactions 94 (1) (1988) 243–266.
+10. U.S. Department of Energy, EnergyPlus Engineering Reference, version 9.6, AirflowNetwork model, wind pressure calculations (surface-average calculation for low-rise buildings after Swami and Chandra). [bigladdersoftware.com](https://bigladdersoftware.com/epx/docs/9-6/engineering-reference/airflownetwork-model.html)
