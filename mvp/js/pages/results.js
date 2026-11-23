@@ -11,7 +11,9 @@ import * as S from '../store.js';
 import { SIMS } from '../data.js';
 import { GROUPS as STUDY_GROUPS } from '../study-groups.js?v=groups-20261118-1';
 // (2026-11-23) the studies the Workspace offers, so Results names the same ones; another study shows only when this project has its result
-const MENU_IDS = new Set(STUDY_GROUPS.flatMap((g) => g.ids));
+const MENU_IDS = new Set(STUDY_GROUPS.flatMap((g) => g.ids)), MENU_ORDER = STUDY_GROUPS.flatMap((g) => g.ids);
+// the studies in the Workspace's order, then any other study this project has a saved result for
+const studiesFor = (p) => [...MENU_ORDER.map((id) => SIMS.find((s) => s.id === id)).filter(Boolean), ...SIMS.filter((s) => !MENU_IDS.has(s.id) && (p.runs || []).some((r) => r.simId === s.id))];
 import { $, $$, esc, fmt, when, toast, currentProject, setCurrent, MOCK, LIVE } from '../app.js';
 import { createViewport2, levelsOf } from '../viewport2.js';
 import { createBatch } from '../batch.js';
@@ -63,7 +65,7 @@ export async function render(app, [pid], params) {
     ${p.versions.length < 2 ? '<p class="note">Save at least two versions in the workspace to compare them.</p>' : `
     <div class="cw" id="cw">
       <div class="cw-bar">
-        <label class="f" id="simW">Simulation<select id="simSel">${SIMS.filter((s) => MENU_IDS.has(s.id) || (p.runs || []).some((r) => r.simId === s.id)).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label class="f" id="simW">Simulation<select id="simSel">${studiesFor(p).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
         <label class="f">Version A<select id="va"></select></label><label class="f">Version B<select id="vb"></select></label>
         <label class="f">Scope<select id="scope"><option value="model">Whole model</option><option value="level">One level</option><option value="sim">One simulation</option></select></label>
         <label class="f" id="lvW">Level<select id="lvSel"></select></label>
@@ -95,8 +97,8 @@ export async function render(app, [pid], params) {
     const v = runVersion(), sel = new Set(p.batch.sel), items = new Map(batch.items().filter((x) => x.versionId === v?.id || x.status === 'running' || x.status === 'queued').map((x) => [x.simId, x]));
     // the studies a batch runs, each on its row; the ones that run one at a time in the Workspace on one line of links (2026-11-15:
     // they were 17 of 24 rows, each saying it was not in batches)
-    const handOnes = SIMS.filter((s) => HANDS[s.id] && s.status !== 'planned');
-    $('#btList', app).innerHTML = SIMS.filter((s) => !HANDS[s.id]).map((s) => {
+    const handOnes = studiesFor(p).filter((s) => HANDS[s.id] && s.status !== 'planned');
+    $('#btList', app).innerHTML = studiesFor(p).filter((s) => !HANDS[s.id]).map((s) => {
       const paidLocked = !canUse(s.id, p), hand = HANDS[s.id], cfg = p.batch.cfg[s.id] || {}, it = items.get(s.id), info = v ? batchInfo(s.id, p, v) : null, o = open.has(s.id);
       const st = it ? `<span class="st st-${it.status}" data-st="${s.id}">${STATUS[it.status]}${it.status === 'running' ? ` <span class="spin"></span>` : ''}</span>${it.status === 'failed' ? `<button type="button" class="btn sm" data-retry="${esc(it.key)}">Retry</button>` : ''}` : (v && S.lastRun(p, v.id, s.id) ? `<span class="note">saved on v${v.n}</span>` : '');
       const fields = info ? `${info.perLevel && info.levels.length > 1 ? `<label class="f">Level<select data-lv="${s.id}">${info.levels.map((L) => `<option value="${L.id}" ${cfg.level === L.id ? 'selected' : ''}>${L.name}</option>`).join('')}</select></label>` : ''}
@@ -120,14 +122,14 @@ export async function render(app, [pid], params) {
   function batchUI() {
     const n = p.batch.sel.filter((id) => !HANDS[id] && canUse(id, p)).length, its = batch.items(), act = its.filter((x) => x.status === 'queued' || x.status === 'running');
     $('#btRun', app).textContent = `Run selected (${n})`; $('#btRun', app).disabled = !n || act.length > 0 || !last();
-    const eligible = SIMS.filter(s => !HANDS[s.id] && canUse(s.id, p)).length; $('#btAll', app).checked = n > 0 && n === eligible; $('#btAll', app).indeterminate = n > 0 && n < eligible;
+    const eligible = studiesFor(p).filter(s => !HANDS[s.id] && canUse(s.id, p)).length; $('#btAll', app).checked = n > 0 && n === eligible; $('#btAll', app).indeterminate = n > 0 && n < eligible;
     const v = runVersion(); $('#runOn', app).textContent = v ? `Runs on v${v.n}${dirty() ? ' — the Workspace has unsaved changes: they are saved as a new version first' : ' (latest saved)'}` : 'Save a version in the Workspace first';
     const doneN = its.filter((x) => x.status === 'done').length, failN = its.filter((x) => x.status === 'failed').length;
     $('#btProg', app).hidden = !its.length; if (its.length) { $('#btBar', app).style.width = ((doneN + failN) / its.length * 100) + '%';
       $('#btTxt', app).textContent = `${doneN + failN} of ${its.length} finished · ${doneN} done${failN ? ` · ${failN} failed` : ''}${act.length ? ` · running ${SIMS.find((s) => s.id === act.find((x) => x.status === 'running')?.simId)?.name || '…'}` : ''}`; }
     batchList();
   }
-  $('#btAll', app).onchange = (e) => { p.batch.sel = e.target.checked ? SIMS.filter((s) => !HANDS[s.id] && canUse(s.id, p)).map((s) => s.id) : []; S.save(); batchUI(); };
+  $('#btAll', app).onchange = (e) => { p.batch.sel = e.target.checked ? studiesFor(p).filter((s) => !HANDS[s.id] && canUse(s.id, p)).map((s) => s.id) : []; S.save(); batchUI(); };
   $('#btRun', app).onclick = () => {
     if (dirty() && p.draft) { const v = S.saveVersion(p, 'Saved before a batch run'); toast(`The Workspace's unsaved changes were saved as v${v.n}`); }
     const v = last(); if (!v) return; cardV = v; B = v; refreshVersions();
