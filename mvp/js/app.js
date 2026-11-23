@@ -103,7 +103,8 @@ export async function route() {
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
   document.body.classList.toggle('pc-public',publicRoute);
   who();
-  const app = $('#app'); app.innerHTML = '';
+  // (2026-11-23) a skeleton in place of a blank page while the page loads; the page's own content replaces it
+  const app = $('#app'); app.innerHTML = '<div class="wrap pc-skel" aria-busy="true" aria-label="Loading"><i style="width:28%"></i><i style="width:62%;height:34px"></i><i style="width:84%"></i><i style="width:76%"></i><i style="width:48%"></i></div>';
   const study = key === 'simulations' ? rest[0]?.split('?')[0] : key === 'batch-run' ? params.get('sim') : null;
   const resource = key === 'resources' && rest[0] === 'tool' ? rest[1]?.split('?')[0] : null;
   const resourceTools = ['furniture','facade','detaillab','topo','stairs3d','doors3d','palette','axon','ergo','scale','code-bc','code-on','access-bc','access-on','leed'];

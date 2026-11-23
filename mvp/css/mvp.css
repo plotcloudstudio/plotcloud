@@ -695,3 +695,9 @@ table.t td.n { font-family: var(--mono); text-align: right; white-space: nowrap;
 .study-workflow progress{width:100px;height:8px;accent-color:var(--accent)}
 .study-workflow progress[hidden]{display:none}
 .study-workflow #studyState[data-state="error"]{color:var(--accent)}
+
+/* loading skeleton (2026-11-23): shown by the router until a page draws itself */
+.pc-skel{padding-top:48px;display:grid;gap:14px}
+.pc-skel i{display:block;height:14px;border-radius:6px;background:linear-gradient(90deg,#eceae4 0%,#f6f4ef 50%,#eceae4 100%);background-size:200% 100%;animation:pcSkel 1.2s ease-in-out infinite}
+@keyframes pcSkel{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media (prefers-reduced-motion:reduce){.pc-skel i{animation:none}}
