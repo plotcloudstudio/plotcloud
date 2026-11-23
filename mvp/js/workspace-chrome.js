@@ -10,7 +10,7 @@
 import * as S from './store.js';
 import * as SL from './structure-layout.js?v=struct-20261117-1';
 import * as SF from './structure-frame.js?v=sims-20261121-1';
-import * as SFU from './structure-frame-ui.js?v=sims-20261121-1';
+import * as SFU from './structure-frame-ui.js?v=batch2-20261123-1';
 import * as SG from './study-groups.js?v=groups-20261118-1';
 import {plannedStudy} from './planned-simulations.js';
 import { climateFile, ensureProjectClimate } from './project-climate.js';
@@ -19,7 +19,7 @@ import { sunPosition, sunshineShare } from './environment/analysis.js?v=muse-202
 import * as CL from '../../emb/lib/climate.js?v=muse-20261123-1';
 import { speedRatio } from './wind-lbm.js?v=wind-20261031-5';
 import { stormwater } from './stormwater-grid.js?v=muse-20261123-1';
-import * as NBC from './nbc-loads.js?v=nbc-20261123-1';
+import * as NBC from './nbc-loads.js?v=batch2-20261123-1';
 import * as SWG from './stormwater-grid.js?v=muse-20261123-1';
 import * as WTRL from '../../emb/lib/water.js?v=water-20261118-1';
 import { canUse, paidNote } from './beta-access.js';
