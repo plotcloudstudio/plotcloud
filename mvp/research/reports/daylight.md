@@ -10,7 +10,7 @@ summary: How the Daylight study computes spatial daylight autonomy, annual sun e
 image: img/home/daylight.webp
 imageAlt: Daylight autonomy over a floor plan, brighter near windows
 code: mvp/js/interior/daylight.js, mvp/js/workspace-chrome.js
-tests: tests/validation/daylight_df.py, tests/validation/daylight_engine.cjs, tests/shared-conditions.cjs
+tests: tests/validation/daylight_df.py, tests/validation/daylight_engine.cjs, tests/daylight-blinds.test.mjs, tests/shared-conditions.cjs
 keywords:
 - Daylight
 - Spatial daylight autonomy
@@ -22,7 +22,7 @@ highlights:
 - Sky light is computed from 145 Tregenza patches with CIE clear and overcast luminance distributions blended by Perez sky clearness.
 - Inter-reflected light uses the BRE split-flux formula, so it is uniform within a room.
 - After adding angle-dependent glass transmission, the daylight factor agrees with Radiance within max(0.5 points, 25 %) at every test point.
-- sDA (300 lux, 50 % of occupied hours) and ASE (1,000 lux, 250 h) follow IES LM-83; blinds are not modelled.
+- sDA (300 lux, 50 % of occupied hours) and ASE (1,000 lux, 250 h) follow IES LM-83; since 23 November 2026 blinds close as LM-83-12 describes, and sDA is reported with and without them.
 - Without a weather file the study falls back to a synthetic year with random cloud, which should be labelled as such.
 ---
 # Abstract
@@ -57,6 +57,8 @@ Light reflected inside the room is estimated with the BRE split-flux formula [9,
 
 Over occupied hours (8:00–18:00 by default, as in LM-83 [3]) the study counts, per point, hours at or above 300 lux (sDA) and hours with direct sun at or above 1,000 lux (ASE), and reports the share of regularly occupied floor meeting sDA300/50 % and exceeding ASE1000/250. LEED option 2 checks 300–3,000 lux at 9:00 and 15:00 on the equinox [5].
 
+**Blinds (added 23 November 2026).** LM-83-12 computes sDA with operable blinds: in any analysis hour in which more than 2 % of the analysis points receive direct sunlight of 1,000 lux or more, the blinds close [3, 15]. When BSDF data are not available, LM-83-12 section 2.2.7 models closed white louvre blinds (reflectance above 80 %) as a 20 % diffuse transmittance for both sunlight and skylight, and a shade of unknown transmittance as 5 % diffuse with no specular transmission [3, 16]. The study implements the trigger exactly: for every occupied hour it counts the points whose direct-sun illuminance (the same quantity ASE uses) reaches 1,000 lux, and closes the blinds of the level in that hour if the count exceeds 2 % of the points. With the blinds closed, the illuminance at a point is taken as the blind transmittance times the hour's illuminance without the sun patch. This omits the sunlight the blind diffuses into the room, so the reported value is a lower bound; the sDA without blinds, which the study also reports, is an upper bound, and an LM-83 sDA lies between them. ASE is counted with the blinds open, because it measures the direct sun that triggers them. The blinds are operated as one group per level; LM-83 users often group them by facade or zone [15], which would shut fewer hours.
+
 ## 3. Parameters and their sources
 
 Table 1. Inputs and constants of the Daylight study.
@@ -75,7 +77,7 @@ Table 1. Inputs and constants of the Daylight study.
 | Work plane | 0.8 m | Common practice for desk height | Sourced default |
 | Occupied hours | 8:00–18:00 | IES LM-83 [3] | Sourced |
 | sDA / ASE thresholds | 300 lux, 50 %; 1,000 lux, 250 h | IES LM-83 [3]; LEED v4.1 [5] | Sourced |
-| Blinds | Not modelled | — | Flagged: LM-83 requires blind operation for sDA |
+| Blinds | Close when > 2 % of points get ≥ 1,000 lux direct sun; closed: 20 % (white louvres, default), 5 % (unknown shade) or none | IES LM-83-12, trigger and section 2.2.7 [3, 15, 16] | Sourced trigger and transmittances; closed-blind light omits diffused sunlight, so sDA with blinds is a lower bound (added 23 November 2026) |
 
 ## 4. Verification
 
@@ -94,13 +96,15 @@ Table 2. Daylight factor, engine against Radiance, open view (from `mvp/VALIDATI
 
 The two references agree with each other within 0.04 points. Before the angle-dependent glass was introduced, the engine over-predicted DF near the window by 20 % (open) and 26 % (obstructed), outside tolerance; it now passes at every point. With the obstruction, the sky component vanishes beyond 2.5 m in both engine and Radiance, and the remaining error is the inter-reflected component, which the engine spreads evenly (0.47–0.74 points) while Radiance falls to 0.18 points at the back. The climate-based metrics (sDA, ASE) have not yet been compared with Radiance's annual methods. In the end-to-end audit of 20 November 2026 with a Chicago TMY3 file, the study completed on a two-storey test block (sDA 36 %, ASE 7 %, mean DF 1.68 %).
 
+**Blinds.** `tests/daylight-blinds.test.mjs` runs the engine on a 6 × 8 m room with one 4 m window wall in Toronto's generic year, turned to four compass directions. It checks that without blinds no hour is shut and sDA equals the open-window value; that with blinds no point gains daylit hours, ASE is unchanged, and a 5 % shade lowers sDA at least as much as 20 % louvres; and that a window turned to the sun shuts the blinds in many hours while one turned away from it shuts them in far fewer. In that room the blinds closed in 2,874 of 3,532 occupied daylit hours with the window facing the equator, and in 73 hours facing the pole (low summer sun); sDA fell from 46.9 % without blinds to 9.4 % with louvres facing the equator, and was unchanged facing the pole. The large drop facing the equator shows how much the omitted diffused sunlight matters in a sunny room, and why both bounds are reported.
+
 ## 5. Discussion
 
-For the daylight factor, the engine is accurate where daylight is strong and biased high where it is weak, because the split-flux method distributes reflected light uniformly. At points whose sky component is below about 1 %, DF can be over-predicted by a factor of two in absolute terms of a few tenths of a point; claims that "the back of the room reaches 2 % DF" should be checked with a ray tracer. The sky blend is a reasonable interpolation between two standard skies, but it is not the Perez all-weather luminance model used by Radiance's gendaymtx; ASE and sDA may therefore differ from reference CBDM by more than DF does. LM-83 computes sDA with blinds closed in hours when more than 2 % of sensors receive more than 1,000 lux of direct sun [3]; the engine has no blinds, so its sDA is generally higher than an LM-83-compliant value would be, and should not be used for credit claims. Finally, the fallback synthetic year produces climate-like but fictitious results; the interface should state "no weather file" prominently whenever it is used.
+For the daylight factor, the engine is accurate where daylight is strong and biased high where it is weak, because the split-flux method distributes reflected light uniformly. At points whose sky component is below about 1 %, DF can be over-predicted by a factor of two in absolute terms of a few tenths of a point; claims that "the back of the room reaches 2 % DF" should be checked with a ray tracer. The sky blend is a reasonable interpolation between two standard skies, but it is not the Perez all-weather luminance model used by Radiance's gendaymtx; ASE and sDA may therefore differ from reference CBDM by more than DF does. LM-83 computes sDA with blinds closed in hours when more than 2 % of sensors receive more than 1,000 lux of direct sun [3]. The engine now applies that rule, but without the sunlight the blinds diffuse, so it reports a range (with blinds, a lower bound; without, an upper bound) rather than an LM-83 value, and neither should be used for credit claims. Finally, the fallback synthetic year produces climate-like but fictitious results; the interface should state "no weather file" prominently whenever it is used.
 
 ## 6. Conclusion
 
-Daylight in SimuSite combines standard sky models, a validated glass model and the BRE split-flux method. Its daylight factor agrees with Radiance within the stated tolerance; its sDA and ASE are screening estimates without blinds and should be confirmed with an annual Radiance simulation for certification.
+Daylight in SimuSite combines standard sky models, a validated glass model and the BRE split-flux method. Its daylight factor agrees with Radiance within the stated tolerance; its sDA (reported with LM-83 blinds as a lower bound and without blinds as an upper bound) and ASE are screening estimates and should be confirmed with an annual Radiance simulation for certification.
 
 # References
 
@@ -118,3 +122,5 @@ Daylight in SimuSite combines standard sky models, a validated glass model and t
 12. U.S. Department of Energy, EnergyPlus Auxiliary Programs: EnergyPlus Weather File (EPW) Data Dictionary, EnergyPlus documentation, 2023.
 13. Illuminating Engineering Society, The Lighting Handbook, 10th ed., chapter on daylighting, IES, New York, 2011.
 14. F. Kasten, A.T. Young, Revised optical air mass tables and approximation formula, Appl. Opt. 28 (1989) 4735–4738. [doi:10.1364/AO.28.004735](https://doi.org/10.1364/AO.28.004735)
+15. A. Aman, LM-83 simulation challenges, presentation at the 16th International Radiance Workshop, Portland, OR, 2017. [radiance-online.org](https://www.radiance-online.org/community/workshops/2017-portland-or/presentations/08_AMAN_LM83SimulationChallenges.pdf) (states the trigger: blinds engage if more than 2 % of the analysis area receives direct sunlight of 1,000 lux).
+16. M. Sadeghipour Roudsari and others, Blinds/shades operation in sDA calculation, Ladybug Tools forum, 2017–2018. [discourse.ladybug.tools](https://discourse.ladybug.tools/t/blinds-shades-operation-in-sda-calculation/2546) (quotes LM-83-12 section 2.2.7 on blind transmittances; a transcription, to be checked against the standard, whose 2023 revision may differ).
