@@ -19,6 +19,11 @@ export function sunPosition(y,m,d,hour,lat,lon,tz){
  const jd=Date.UTC(y,m-1,d)/86400000+2440587.5,T=(jd+(hour-tz)/24-2451545)/36525,L=(280.46646+T*(36000.76983+T*.0003032))%360,M=357.52911+T*(35999.05029-.0001537*T),e=.016708634-T*(.000042037+.0000001267*T),C=Math.sin(M*rad)*(1.914602-T*(.004817+.000014*T))+Math.sin(2*M*rad)*(.019993-.000101*T)+Math.sin(3*M*rad)*.000289,om=125.04-1934.136*T,lam=L+C-.00569-.00478*Math.sin(om*rad),eps=23+(26+(21.448-T*(46.815+T*(.00059-T*.001813)))/60)/60+.00256*Math.cos(om*rad),decl=Math.asin(Math.sin(eps*rad)*Math.sin(lam*rad)),v=Math.tan(eps*rad/2)**2,eot=4/rad*(v*Math.sin(2*L*rad)-2*e*Math.sin(M*rad)+4*e*v*Math.sin(M*rad)*Math.cos(2*L*rad)-.5*v*v*Math.sin(4*L*rad)-1.25*e*e*Math.sin(2*M*rad));
  let tst=(hour*60+eot+4*lon-60*tz)%1440;if(tst<0)tst+=1440;const ha=(tst/4-180)*rad,la=lat*rad,cz=clamp(Math.sin(la)*Math.sin(decl)+Math.cos(la)*Math.cos(decl)*Math.cos(ha),-1,1),alt=90-Math.acos(cz)/rad,az=(Math.atan2(Math.sin(ha),Math.cos(ha)*Math.sin(la)-Math.tan(decl)*Math.cos(la))/rad+540)%360;return{alt,az,eot};
 }
+// Sunshine (2026-11-23): the WMO defines sunshine duration as the time with direct (normal) solar irradiance of 120 W/m² or more
+// (WMO-No. 8, CIMO Guide, chapter on sunshine duration). From hourly EPW rows {m, d, h (1-24), dni}: the share of a month's hours
+// with the sun up (at mid-hour) whose direct normal irradiance reaches the threshold.
+export const WMO_SUNSHINE_WM2=120;
+export function sunshineShare(rows,month,lat,lon,tz,threshold=WMO_SUNSHINE_WM2){let n=0,k=0;for(const q of rows){if(q.m!==month)continue;if(sunPosition(2026,q.m,q.d,q.h-.5,lat,lon,tz).alt<=0)continue;n++;if(q.dni>=threshold)k++;}return n?{f:k/n,n,k}:null;}
 // Match Sun Hours: exported solar-scene north is minus project north. World XY is unchanged.
 export function sunVector(position,north=0){const az=(position.az-north)*rad,c=Math.cos(position.alt*rad);return[c*Math.sin(az),c*Math.cos(az),Math.sin(position.alt*rad)];}
 export function hoursFor(E,input){return E.rows.filter(r=>(input.month0<=input.month1?r.m>=input.month0&&r.m<=input.month1:r.m>=input.month0||r.m<=input.month1)&&r.hour>=input.hour0&&r.hour<input.hour1);}

@@ -3,7 +3,12 @@
 // patches, the sun, reflections inside and outside; spatial daylight autonomy sDA300/50%, annual sun exposure ASE1000/250 h,
 // daylight factor and the LEED v4.1 option 2 illuminance check (9:00 and 15:00 at the equinox).
 import { clamp } from '../../../emb/lib/plansim.js?v=sims-20261121-1';
-let SC = null, TGT = 0, EYE = 1.07, HEAD = 2.4, CEIL = 2.7, WP = 0.8, TAU = 0.6, RF = 0.2, RW = 0.5, RC = 0.8, NORTH = 0, OCC = [8, 18], EXCL = [];
+let SC = null, TGT = 0, EYE = 1.07, HEAD = 2.4, CEIL = 2.7, WP = 0.8, TAU = 0.6, RF = 0.2, RW = 0.5, RC = 0.8, NORTH = 0, OCC = [8, 18], EXCL = [], BLIND = 0.2;
+// Blinds for sDA (2026-11-23), IES LM-83-12: in an occupied hour where more than 2 % of the spots get direct sun of 1,000 lux or more,
+// the blinds close; closed blinds pass BLIND of the light (LM-83-12 section 2.2.7: 20 % diffuse for white louvre blinds, 5 % for a shade
+// of unknown transmission). The closed-blind light here is BLIND x (the hour's light less the sun patch): the sunlight the blind
+// diffuses into the room is not added, so sDA with blinds is on the low side. ASE is counted with the blinds open. 0 = no blinds.
+export const BLINDS = [[0.2, 'White louvre blinds (20 %)'], [0.05, 'Shade, transmission unknown (5 %)'], [0, 'No blinds (sDA without blinds)']];
 const window = { __isoCmin: 0, __isoCells: 350000 };   // the page's tuning hooks, at their defaults
 // ================= geometry (shared with Isovist Safety) =================
 const NR = 720, DA = 2 * Math.PI / NR;
@@ -219,7 +224,7 @@ function analyse() {
 }
 let wfWeatherRows=null,wfWeatherHash='';
 function weatherIdentity(){if(wfWeatherRows!==EPW.rows){wfWeatherRows=EPW.rows;const text=JSON.stringify(EPW.rows);let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}wfWeatherHash=(h>>>0).toString(16);}return wfWeatherHash;}
-const setKey = () => JSON.stringify([GC.key, LOC, EPW.name, weatherIdentity(), NORTH, TAU, RF, RW, RC, WP, HEAD, CEIL, OCC]);
+const setKey = () => JSON.stringify([GC.key, LOC, EPW.name, weatherIdentity(), NORTH, TAU, RF, RW, RC, WP, HEAD, CEIL, OCC, BLIND]);
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const occ = (h) => h >= OCC[0] && h < OCC[1];
 function hourLux(sk, irc, L, i) {   // illuminance on the work plane at hour i (lux): sky + sun + outside reflections + inside reflections
@@ -237,9 +242,10 @@ async function compute(spacing, nb, onProg) {
   const nOcc = 365 * (OCC[1] - OCC[0]), over = new Uint32Array(8760), ov = new Float32Array(NP); skyLum(45, 180, 0, 1, ov);   // overcast sky giving 1 lux on the ground
   const opt2 = [[3, 21, 9], [3, 21, 15], [9, 21, 9], [9, 21, 15]].map(([m, d, h]) => { const sp = sunPos(2026, m, d, h, LOC.lat, LOC.lon, LOC.tz), cs = sp.alt > 0.5 ? clearSky(sp.alt) : { Eb: 0, Ed: 0 }; return { alt: sp.alt, az: sp.az, Eb: cs.Eb, Ed: cs.Ed, L: skyLum(Math.max(sp.alt, 0.6), sp.az, cs.Eb, Math.max(cs.Ed, 1), new Float32Array(NP)) }; });
   const ev = new Array(pts.length); let t0 = performance.now();
+  const oh = hours.filter((i) => occ(i % 24)), nOh = oh.length, fl = new Uint8Array(pts.length * nOh), sunN = new Uint32Array(nOh);   // per spot and occupied hour: 1 lit open, 2 lit with blinds closed, 4 direct sun ≥ 1,000 lux
   for (let k = 0; k < pts.length; k++) {
-    const p = pts[k], sk = spotSky([p.x, p.y], nb, GC.S), rk = GC.R.room[p.ci], ir = rk >= 0 ? irc[rk] : 0; let lit = 0, sunH = 0, sum = 0;
-    for (const i of hours) { const [e, s] = hourLux(sk, ir, Lh[i], i), h = i % 24; if (e >= 300) over[i]++; if (occ(h)) { if (e >= 300) lit++; if (s >= 1000) sunH++; sum += e; } }
+    const p = pts[k], sk = spotSky([p.x, p.y], nb, GC.S), rk = GC.R.room[p.ci], ir = rk >= 0 ? irc[rk] : 0; let lit = 0, sunH = 0, sum = 0, q = 0, base = k * nOh;
+    for (const i of hours) { const [e, s] = hourLux(sk, ir, Lh[i], i), h = i % 24; if (e >= 300) over[i]++; if (occ(h)) { if (e >= 300) lit++; if (s >= 1000) sunH++; sum += e; fl[base + q] = (e >= 300 ? 1 : 0) | (BLIND * (e - s) >= 300 ? 2 : 0) | (s >= 1000 ? 4 : 0); if (s >= 1000) sunN[q]++; q++; } }
     let df = 0; for (let q = 0; q < sk.idx.length; q++) df += sk.val[q] * ov[sk.idx[q]]; df = 100 * (df + sk.erc * 0.15 / Math.PI + ir);
     const o2 = opt2.map((o) => { if (o.alt <= 0.5) return 0; let e = 0; for (let q = 0; q < sk.idx.length; q++) e += sk.val[q] * o.L[sk.idx[q]]; const Eo = o.Ed + o.Eb * Math.sin(o.alt * D2R); return e + (sunSeen(sk, o.alt, o.az) ? o.Eb * Math.sin(o.alt * D2R) * TAU * sunGlass(sk, o.alt, o.az) : 0) + sk.erc * 0.15 * Eo / Math.PI + ir * Eo; });
     const am = (o2[0] + o2[2]) / 2, pm = (o2[1] + o2[3]) / 2, inR = (v) => v >= 300 && v <= 3000;
@@ -247,16 +253,19 @@ async function compute(spacing, nb, onProg) {
     ev[k] = { da: lit / nOcc, ase: sunH, sda: lit / nOcc >= 0.5, aseOver: sunH > 250, df, mean: sum / nOcc, o2: [am, pm], o2ok: inR(am) && inR(pm), sk, ir };
     if (performance.now() - t0 > 60) { onProg((k + 1) / pts.length); await tick(); t0 = performance.now(); if (STOP) return null; }
   }
-  return { key: runInputKey, spacing, nb, PW, PH, pts, ev, over, irc, img: null };
+  // the blinds: closed in the occupied hours where more than 2 % of the spots get direct sun (LM-83-12); sDA counted again with them
+  const shut = new Uint8Array(nOh), lim = 0.02 * pts.length; let nShut = 0; if (BLIND > 0) for (let q = 0; q < nOh; q++) if (sunN[q] > lim) { shut[q] = 1; nShut++; }
+  for (let k = 0; k < pts.length; k++) { const e = ev[k]; e.daOpen = e.da; e.sdaOpen = e.sda; if (!(BLIND > 0)) continue; let lit = 0; const base = k * nOh; for (let q = 0; q < nOh; q++) if (fl[base + q] & (shut[q] ? 2 : 1)) lit++; e.da = lit / nOcc; e.sda = e.da >= 0.5; }
+  return { key: runInputKey, spacing, nb, PW, PH, pts, ev, over, irc, img: null, blinds: { t: BLIND, shutHours: nShut, occHours: nOh } };
 }
 function summary() {
   if (!RES) return null; const R = GC.R, nR = R.nRooms, rooms = Array.from({ length: nR }, (_, k) => ({ k, n: 0, sda: 0, ase: 0, o2: 0, df: 0, x: 0, y: 0, out: false }));
   const ex = new Set(EXCL.map((p) => roomAt(p)).filter((k) => k >= 0)); rooms.forEach((r) => (r.out = ex.has(r.k)));
-  const t = { n: 0, sda: 0, ase: 0, o2: 0, df: 0 };
-  RES.pts.forEach((p, k) => { const e = RES.ev[k], rk = R.room[p.ci], r = rk >= 0 ? rooms[rk] : null; if (r) { r.n++; r.x += p.x; r.y += p.y; r.sda += e.sda; r.ase += e.aseOver; r.o2 += e.o2ok; r.df += e.df; if (r.out) return; } t.n++; t.sda += e.sda; t.ase += e.aseOver; t.o2 += e.o2ok; t.df += e.df; });
+  const t = { n: 0, sda: 0, sdaOpen: 0, ase: 0, o2: 0, df: 0 };
+  RES.pts.forEach((p, k) => { const e = RES.ev[k], rk = R.room[p.ci], r = rk >= 0 ? rooms[rk] : null; if (r) { r.n++; r.x += p.x; r.y += p.y; r.sda += e.sda; r.ase += e.aseOver; r.o2 += e.o2ok; r.df += e.df; if (r.out) return; } t.n++; t.sda += e.sda; t.sdaOpen += e.sdaOpen ?? e.sda; t.ase += e.aseOver; t.o2 += e.o2ok; t.df += e.df; });
   rooms.forEach((r) => { if (r.n) { r.x /= r.n; r.y /= r.n; } r.area = r.n * RES.spacing * RES.spacing; });
   const f = (v) => (t.n ? v / t.n : 0), sda = f(t.sda), ase = f(t.ase), o2 = f(t.o2);
-  return { rooms: rooms.filter((r) => r.n), sda, ase, o2, df: f(t.df), area: t.n * RES.spacing * RES.spacing, pts1: sda >= 0.75 ? 3 : sda >= 0.55 ? 2 : 0, pts2: o2 >= 0.9 ? 2 : o2 >= 0.75 ? 1 : 0 };
+  return { rooms: rooms.filter((r) => r.n), sda, sdaOpen: f(t.sdaOpen), blinds: RES.blinds || null, ase, o2, df: f(t.df), area: t.n * RES.spacing * RES.spacing, pts1: sda >= 0.75 ? 3 : sda >= 0.55 ? 2 : 0, pts2: o2 >= 0.9 ? 2 : o2 >= 0.75 ? 1 : 0 };
 }
 function roomAt(p) { const G = GC.G, cx = Math.floor(p[0] / G.c), cy = Math.floor(p[1] / G.c); if (cx < 0 || cy < 0 || cx >= G.W || cy >= G.H) return -1; return GC.R.room[cy * G.W + cx]; }
 function luxAt(e, i) { if (!YEAR) buildYear(); if (YEAR.alt[i] <= 0.5) return 0; const L = Lof(i); return hourLux(e.sk, e.ir, L, i)[0]; }
@@ -275,7 +284,7 @@ export function epwRows(text) { const lines = String(text || '').split(/\r?\n/),
   for (let i = 8; i < lines.length; i++) { const c = lines[i].split(','); if (c.length < 19) continue; const dni = +c[17], dhi = +c[18], dnr = +c[14], dhr = +c[15]; rows.push({ dni: dni > 0 && dni < 999990 ? dni : dnr > 0 ? dnr * 93 : 0, dhi: dhi > 0 && dhi < 999990 ? dhi : dhr > 0 ? dhr * 120 : 0 }); }
   return rows.length >= 8760 ? rows.slice(0, 8760) : null; }
 function setup(sc, o = {}) { const k = JSON.stringify([sc.bounds, sc.walls?.length, sc.furn?.length]); if (!SC || SC.__k !== k) { SC = { bounds: { ...sc.bounds }, walls: (sc.walls || []).map((w) => ({ ...w })), furn: (sc.furn || []).map((f) => ({ ...f })), hm: null, __k: k }; GC = { key: '' }; }
-  for (const [key, set] of [['tau', (v) => (TAU = v)], ['rf', (v) => (RF = v)], ['rw', (v) => (RW = v)], ['rc', (v) => (RC = v)], ['head', (v) => (HEAD = v)], ['ceil', (v) => (CEIL = v)], ['wp', (v) => (WP = v)], ['north', (v) => (NORTH = v)]]) if (Number.isFinite(+o[key])) set(+o[key]);
+  for (const [key, set] of [['tau', (v) => (TAU = v)], ['rf', (v) => (RF = v)], ['rw', (v) => (RW = v)], ['rc', (v) => (RC = v)], ['head', (v) => (HEAD = v)], ['ceil', (v) => (CEIL = v)], ['wp', (v) => (WP = v)], ['north', (v) => (NORTH = v)], ['blind', (v) => (BLIND = Math.max(0, Math.min(1, v)))]]) if (Number.isFinite(+o[key])) set(+o[key]);
   if (o.occ) OCC = o.occ.slice(); if (o.loc) Object.assign(LOC, o.loc);
   if (o.epw !== undefined) { const rows = o.epw ? epwRows(o.epw) : null; if (rows !== EPW.rows || (!rows && EPW.rows)) { EPW.rows = rows; EPW.name = rows ? o.epwName || 'project weather' : ''; YEAR = null; } } }
 export function plan(sc, o) { setup(sc, o); analyse(); const A = GC.R.area || 1, nS = Math.max(8, GC.S.length), L = LEVELS[o.level] || LEVELS.draft, VR = rate(); let best = null;

@@ -43,3 +43,13 @@ export function stormwater(g, C, rain) {
   let toWater = 0; if (out) for (let c = 0; c < N; c++) if (out[c] && !solid[c]) { toWater += acc[c]; pond[c] = 0; }
   return { acc, pond, to, rainV, runV, hollows, pondV: hollows.reduce((s, h) => s + h.vol, 0), toWater };
 }
+
+// NRCS curve number runoff (2026-11-23), USDA NRCS TR-55 (2nd ed., 1986), chapter 2: Q = (P − 0.2S)² / (P + 0.8S) for P > 0.2S, else 0
+// (eq. 2-3, initial abstraction Ia = 0.2S), S = 1000/CN − 10 (eq. 2-4), in inches. Open space in good condition (grass > 75 %) by
+// hydrologic soil group, table 2-2a; impervious areas CN 98; a composite with connected impervious area as figure 2-3 draws it,
+// CN = CN_p + (impervious share)(98 − CN_p) (table 2-2a's footnote 2: pervious areas as open space in good condition).
+export const CN_OPEN_GOOD = { A: 39, B: 61, C: 74, D: 80 }, CN_IMPERVIOUS = 98;
+export const compositeCN = (cnPervious, impervious) => cnPervious + Math.max(0, Math.min(1, impervious)) * (CN_IMPERVIOUS - cnPervious);
+export function runoffCN(Pmm, CN) {   // runoff depth (mm) from rainfall depth (mm)
+  if (!(Pmm > 0) || !(CN > 0)) return 0; if (CN >= 100) return Pmm; const P = Pmm / 25.4, S = 1000 / CN - 10; return P <= 0.2 * S ? 0 : (P - 0.2 * S) ** 2 / (P + 0.8 * S) * 25.4; }
+export const coefCN = (Pmm, CN) => (Pmm > 0 ? runoffCN(Pmm, CN) / Pmm : 0);   // the share of the rain that runs off, for the grid's coefficient

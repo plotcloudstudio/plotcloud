@@ -10,7 +10,7 @@ summary: How the Stormwater study estimates where the rain of one design storm r
 image: img/home/stormwater.webp
 imageAlt: Flow paths and ponds on a sloping site after a design storm
 code: mvp/js/stormwater-grid.js, mvp/js/workspace-chrome.js
-tests: tests/stormwater-grid.test.mjs, tests/workspace-surfaces.cjs, tests/workspace-motion2.cjs
+tests: tests/stormwater-grid.test.mjs, tests/stormwater-cn.test.mjs, tests/workspace-surfaces.cjs, tests/workspace-motion2.cjs
 keywords:
 - Stormwater
 - Rational method
@@ -40,6 +40,15 @@ The rational method, introduced by Kuichling in 1889, estimates the peak flow fr
 
 The study samples the terrain, buildings and site cover on a regular grid (1.5 m in the audit). Building cells are raised 200 m so that roof water runs to the cells beside them. Each open cell receives the ground coefficient of the chosen site cover (mostly planted 0.25, mixed 0.5, mostly paved 0.85); cells with mapped or drawn cover use planting 0.25, paving 0.9 and water 1. Design roofs use 0.95, or 0.5 if a green-roof layer is present; surrounding buildings use 0.95. The rain depth P is 25, 50 or 100 mm, falling in 1 hour. Runoff per cell is P × C × cell area.
 
+**NRCS curve number (added 23 November 2026).** As an alternative to fixed coefficients, the study can compute runoff with the curve number method of USDA NRCS Technical Release 55 [12]. Runoff depth is Q = (P − 0.2S)²/(P + 0.8S) when P exceeds the initial abstraction I_a = 0.2S, and zero otherwise (eq. 2-3), with S = 1000/CN − 10 in inches (eq. 2-4). The user chooses the hydrologic soil group, A to D, from a soil survey. Cover is mapped onto table 2-2a:
+- Planted ground and drawn planting are open space in good condition (grass cover above 75 %): CN 39, 61, 74 and 80 for groups A to D.
+- Paving and roofs are impervious, CN 98.
+- The study's "mixed" and "mostly paved" ground are composites with 50 % and 85 % connected impervious area. These are computed as TR-55's figure 2-3 draws them, CN = CN_p + f_imp (98 − CN_p). At 85 % this reproduces the "commercial and business" row of table 2-2a.
+- Water bodies take all the rain they receive.
+- Green roofs, for which TR-55 gives no value, keep 0.5.
+
+Each cell then gets the coefficient Q/P for the chosen storm, so the routing and ponding below are unchanged. Unlike fixed coefficients, the share of rain that runs off now grows with the storm. With CN 98, 25 mm of rain gives 79 % runoff and 100 mm gives 94 %. With CN 61, a 25 mm storm gives none, because P is below I_a = 32 mm.
+
 ### 2.2. Depression filling and flow direction
 
 A priority-flood from the grid edge and from mapped water bodies computes the spill level F of every cell, with an increment of 10⁻⁵ m per step across flats so that they drain [6, 7]. Each cell sends its flow to the neighbour with the steepest descent of F among its eight neighbours (D8) [5]. Water bodies are outlets: what reaches them is counted and removed.
@@ -65,6 +74,8 @@ Table 1. Inputs and constants of the Stormwater study.
 | Green roof | 0.5 | FLL guideline values for extensive roofs vary with build-up and slope [9] | Plausible, not tied to a build-up |
 | Water | 1 | Definition | — |
 | Design storms | 25 / 50 / 100 mm in 1 h | User choice | Flagged: not linked to local IDF data such as NOAA Atlas 14 [10] |
+| Curve number method (option) | Q = (P − 0.2S)²/(P + 0.8S), S = 1000/CN − 10 (in) | TR-55 eqs. 2-3 and 2-4 [12] | Sourced; checked against TR-55 table 2-1 (added 23 November 2026) |
+| Curve numbers | Open space, good: 39 / 61 / 74 / 80 (A–D); impervious 98; composites at 0, 50, 85 % impervious | TR-55 table 2-2a and figure 2-3 [12] | Sourced; soil group chosen by the user; average antecedent runoff condition |
 | Flat increment | 10⁻⁵ m | Priority-flood with ε [7] | Sourced method |
 | Flow routing | D8 | O'Callaghan and Mark [5] | Sourced method |
 | Hollow threshold | 0.01 m | Engine choice | Numerical setting |
@@ -83,11 +94,13 @@ The cause is that the priority-flood seeds the flat from every rim cell, so the 
 
 In the end-to-end audit of 20 November 2026 on a flat site with a two-storey block, a 50 mm storm and mixed cover gave 186 m³ of runoff from 360 m³ of rain, no ponding (as expected on flat ground with drainage to the edges), 257 m² of roof and a roof peak flow of 3.4 L/s (0.95 × 50 mm/h × 257 m² / 3600, checked by hand).
 
+**Curve numbers.** `tests/stormwater-cn.test.mjs` compares the runoff equation with eleven entries of TR-55 table 2-1, from 1 to 10 inches of rain and CN 40 to 90, including cases below the initial abstraction; all agree within 0.006 inch, the table's rounding. It also reproduces the composite of TR-55's own worked example (pervious CN 61 with 20 % impervious area gives 68) and the table 2-2a rows for commercial districts (85 % impervious: 89, 92, 94, 95) and town houses (65 %: 77, 85, 90, 92).
+
 ## 5. Discussion
 
 **Storm depth.** A one-hour depth of 25 mm is a moderate storm in many temperate climates, while 100 mm in one hour is extreme almost everywhere outside the tropics. Designers should choose a depth from local intensity–duration–frequency data for the return period and duration of interest; in the United States these are published in NOAA Atlas 14 [10]. Linking the study to such data, or at least showing the return period of the chosen depth, would make the result easier to interpret.
 
-**Runoff coefficients.** The rational method's C values are lumped and depend on soil, slope, antecedent wetness and storm size; tables give ranges, not single values [2, 8]. The values used are reasonable defaults. Infiltration over time, which SWMM and the NRCS curve number method represent, is not modelled [3, 11].
+**Runoff coefficients.** The rational method's C values are lumped and depend on soil, slope, antecedent wetness and storm size; tables give ranges, not single values [2, 8]. The values used are reasonable defaults. With the default coefficients, infiltration over time, which SWMM and the NRCS curve number method represent, is not modelled [3, 11]. The curve number option accounts for the initial abstraction and the storm-dependent loss to the soil, for the average antecedent runoff condition of TR-55 [12]. It still has no timing: TR-55's peak-flow and hydrograph methods are not used.
 
 **Routing.** D8 concentrates flow into single lines, which suits channels but exaggerates concentration on planar slopes; multiple-flow-direction methods spread flow more realistically [5]. Without pipes, inlets, kerbs or flow over time, the study shows where water would go if the site had no drainage system, which is the right question for early grading but not a drainage design.
 
@@ -108,3 +121,4 @@ The Stormwater study's runoff coefficients are within published ranges, its mass
 9. FLL, Green Roof Guidelines: Guidelines for the Planning, Construction and Maintenance of Green Roofs, Forschungsgesellschaft Landschaftsentwicklung Landschaftsbau, Bonn, 2018.
 10. S. Perica, D. Martin, S. Pavlovic, I. Roy, M. St. Laurent, C. Trypaluk, D. Unruh, M. Yekta, G. Bonnin, NOAA Atlas 14: Precipitation-Frequency Atlas of the United States, Volume 8, Version 2.0: Midwestern States, NOAA National Weather Service, Silver Spring, 2013.
 11. USDA Natural Resources Conservation Service, National Engineering Handbook, Part 630 Hydrology, chapter 10, Estimation of direct runoff from storm rainfall, USDA NRCS, Washington, DC, 2004.
+12. USDA Natural Resources Conservation Service, Urban Hydrology for Small Watersheds, Technical Release 55 (TR-55), 2nd ed., 210-VI-TR-55, Washington, DC, June 1986, chapter 2 (equations 2-1 to 2-4, table 2-1, table 2-2a, figure 2-3).

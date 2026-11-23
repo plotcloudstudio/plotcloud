@@ -3,7 +3,7 @@
 // plane, occupied hours, the project weather) and records it as the study page did: the conditions snapshot, the effective
 // parameters, provenance and the figures (sDA, ASE, mean daylight factor). Used by the Workspace and by batch runs.
 import * as S from './store.js';
-import * as DAY from './interior/daylight.js?v=sims-20261121-1';
+import * as DAY from './interior/daylight.js?v=muse-20261123-1';
 import { climateFile } from './project-climate.js';
 
 const num = (v, d) => (Number.isFinite(+v) && v !== '' && v != null ? +v : d);

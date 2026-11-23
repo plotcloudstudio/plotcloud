@@ -1,4 +1,4 @@
-import {assumptionsHTML} from '../handoff.js?v=handoff-20261028-1';
+import {assumptionsHTML} from '../handoff.js?v=muse-20261123-1';
 import {compareEvidence,evidenceText} from '../comparison-evidence.js';
 import {checkAccess, canUse} from '../beta-access.js';
 // Projects & Results.
@@ -9,6 +9,9 @@ import {checkAccess, canUse} from '../beta-access.js';
 //   Everything shown in Compare comes from one diff (diff.js) by component id, and from the saved results of the two versions.
 import * as S from '../store.js';
 import { SIMS } from '../data.js';
+import { GROUPS as STUDY_GROUPS } from '../study-groups.js?v=groups-20261118-1';
+// (2026-11-23) the studies the Workspace offers, so Results names the same ones; another study shows only when this project has its result
+const MENU_IDS = new Set(STUDY_GROUPS.flatMap((g) => g.ids));
 import { $, $$, esc, fmt, when, toast, currentProject, setCurrent, MOCK, LIVE } from '../app.js';
 import { createViewport2, levelsOf } from '../viewport2.js';
 import { createBatch } from '../batch.js';
@@ -60,7 +63,7 @@ export async function render(app, [pid], params) {
     ${p.versions.length < 2 ? '<p class="note">Save at least two versions in the workspace to compare them.</p>' : `
     <div class="cw" id="cw">
       <div class="cw-bar">
-        <label class="f" id="simW">Simulation<select id="simSel">${SIMS.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label class="f" id="simW">Simulation<select id="simSel">${SIMS.filter((s) => MENU_IDS.has(s.id) || (p.runs || []).some((r) => r.simId === s.id)).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
         <label class="f">Version A<select id="va"></select></label><label class="f">Version B<select id="vb"></select></label>
         <label class="f">Scope<select id="scope"><option value="model">Whole model</option><option value="level">One level</option><option value="sim">One simulation</option></select></label>
         <label class="f" id="lvW">Level<select id="lvSel"></select></label>

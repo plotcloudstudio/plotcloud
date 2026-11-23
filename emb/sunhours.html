@@ -707,7 +707,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MeshBVH } from 'three-mesh-bvh';
 import { zipSync } from 'fflate';
-import * as CL from './lib/climate.js?v=1';
+import * as CL from './lib/climate.js?v=muse-20261123-1';
 
 const $ = (s) => document.querySelector(s);
 const D2R = Math.PI / 180;
@@ -1751,7 +1751,7 @@ const TERRAIN_NAME = { 0.14: 'open country', 0.22: 'suburban', 0.33: 'city centr
 const CLIM_PERIOD = { year: 'Whole year', summer: 'June to August', winter: 'December to February', dates: 'Chosen dates' };
 const METHOD = {
   hours: 'Test version. Sunlight hours count direct sun blocked only by geometry: no cloud, reflections or radiation intensity. Glass is treated as opaque. Times are local clock time. Frames use the current camera view.',
-  radiation: 'Screening estimate. Hourly beam and diffuse light from the climate file; diffuse sky by Perez (1990) in 145 patches, the sun grouped into positions 3° apart, one sightline each. Reflections from buildings are left out; light reflected by the ground is added at 20 % without shading. Glass is opaque. Checked against pvlib on open planes (mvp/VALIDATION.md §8). Not an energy or PV yield study.',
+  radiation: 'Screening estimate. Hourly beam and diffuse light from the climate file; diffuse sky by Perez (1990) in 145 patches, the sun grouped into positions 3° apart, one sightline each. Reflections from buildings are left out; light reflected by the ground is added without shading, at the weather file’s albedo (weighted by irradiance) or 20 % when the file has none. The rooftop PV figure uses PVWatts V5’s module, loss and inverter equations on the period’s hourly weather (cell temperature by the steady NOCT relation). Glass is opaque. Checked against pvlib on open planes (mvp/VALIDATION.md §8). Not an energy or PV yield study.',
   utci: 'Screening estimate. UTCI (Bröde et al. 2012) of a standing person 1.1 m above the ground: sun and sky from the climate file and the model\'s shading (SolarCal, ASHRAE 55); long-wave from the sky and from surroundings at air temperature, so hot paving is not included; wind from the climate file adjusted to the exposure, not the local speed-ups of Wind Flow. Checked against pythermalcomfort (mvp/VALIDATION.md §8). Not a thermal comfort certification.',
 };
 const niceStep = (x) => { if (!(x > 0)) return 1; const p = 10 ** Math.floor(Math.log10(x)), m = x / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; };
@@ -1819,7 +1819,7 @@ async function runClimate(opt = {}) {
 function climInfo(C, extra = {}) { return { file: CLIM.E.station, period: S.climPeriod === 'dates' ? `${S.date} to ${$('#dateEnd').value || S.date}` : CLIM_PERIOD[S.climPeriod], hoursN: C.hours.length, ghr: C.sky.ghr / 1000, groups: C.G.length, ...extra }; }
 async function radiationPass(prep, C, token, onProg) {
   S.runPhase='Tracing sun and sky radiation';
-  const { bvh } = S.model, N = prep.smpA.length, val = new Float32Array(N), G = C.G, P = CL.PATCH;
+  const { bvh } = S.model, N = prep.smpA.length, val = new Float32Array(N), G = C.G, P = CL.PATCH, ALBEDO = CL.albedoEff(CLIM.E, C.hours, 0.2);   // the weather's albedo when it has one (2026-11-23)
   const gd = G.map((g) => enuToModel(g.v)), pd = P.map((q) => enuToModel(q.v)), hz = P.map((q) => (q.alt === 6 ? [Math.sin(q.az * D2R), Math.cos(q.az * D2R)] : null));
   const visG = new Uint8Array(G.length), visP = new Uint8Array(P.length), ray = new THREE.Ray(), o = new THREE.Vector3(), sunVis = (b) => visG[b] === 1, skyVis = (p) => visP[p] === 1;
   let rays = 0, last = performance.now();
@@ -1827,14 +1827,16 @@ async function radiationPass(prep, C, token, onProg) {
     o.set(prep.smpP[k * 3], prep.smpP[k * 3 + 1], prep.smpP[k * 3 + 2]); const n = modelToEnu([prep.smpN[k * 3], prep.smpN[k * 3 + 1], prep.smpN[k * 3 + 2]]);
     for (let b = 0; b < G.length; b++) { const v = G[b].v; if (n[0] * v[0] + n[1] * v[1] + n[2] * v[2] <= 0) { visG[b] = 0; continue; } ray.set(o, gd[b]); rays++; visG[b] = bvh.raycastFirst(ray, THREE.DoubleSide) ? 0 : 1; }
     for (let p = 0; p < P.length; p++) { const v = P[p].v, h = hz[p]; if (n[0] * v[0] + n[1] * v[1] + n[2] * v[2] <= 0 && !(h && n[0] * h[0] + n[1] * h[1] > 0)) { visP[p] = 0; continue; } ray.set(o, pd[p]); rays++; visP[p] = bvh.raycastFirst(ray, THREE.DoubleSide) ? 0 : 1; }
-    val[k] = CL.irradiation(n, sunVis, skyVis, G, C.sky, 0.2) / 1000;
+    val[k] = CL.irradiation(n, sunVis, skyVis, G, C.sky, ALBEDO.rho) / 1000;
     if (performance.now() - last > 30) { onProg(k / N); await frame(); if (token !== runToken) return null; last = performance.now(); }
   }
   let mx = 0; for (let k = 0; k < N; k++) if (prep.smpK[k] !== 3 && val[k] > mx) mx = val[k];
   const R = { mode: 'radiation', hours: val, prep, win: Math.max(1, Math.ceil(mx / niceStep(mx / 10)) * niceStep(mx / 10)), rays, ds: S.date, t0: 0, t1: 0, litT: null, blk: null, clim: climInfo(C) };
   // roofs that receive at least 80 % of what open, level ground gets: where panels are worth a look
   let pvA = 0, pvE = 0; const lim = 0.8 * R.clim.ghr; for (let k = 0; k < N; k++) if (prep.smpK[k] === 1 && !prep.smpG[k] && val[k] >= lim) { pvA += prep.smpA[k]; pvE += prep.smpA[k] * val[k]; }
-  R.clim.pvArea = pvA; R.clim.pvMWh = pvE * 0.2 * 0.8 / 1000;   // 20 % modules, performance ratio 0.8, laid flat on all of that area
+  // PVWatts V5 (2026-11-23): standard modules (≈ 15 %), the period's hourly weather for an unshaded flat module gives the performance ratio
+  const PVW = CL.pvwattsFlat(CLIM.E, C.hours, { module: 'standard' });
+  R.clim.pvArea = pvA; R.clim.pvMWh = pvE * PVW.module.eta * PVW.pr / 1000; R.clim.pvPR = PVW.pr; R.clim.pvKw = pvA * PVW.module.eta; R.clim.albedo = ALBEDO;
   return R;
 }
 async function utciPass(prep, C, token, onProg) {
@@ -1905,7 +1907,7 @@ function showClimate(R) {
   const st = climStats(R), row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`, I = R.clim, f0 = (v) => Math.round(v).toLocaleString('en-CA');
   let h = row('Climate file', escH(I.file)) + row('Hours of the year', `${I.period} · ${f0(I.hoursN)} h`);
   if (R.mode === 'radiation') h += row('Ground, mean', st.text[0]) + row('Roofs, mean', st.text[1]) + row('Facades, mean', st.text[2]) + row('Open level ground', `${f0(I.ghr)} kWh/m²`)
-    + row('Roof area ≥ 80% of open ground', `${f0(I.pvArea)} m²`) + row('PV estimate', `${(I.pvMWh).toFixed(1)} MWh · flat panels on that roof area, 20% modules, PR 0.8`);
+    + row('Roof area ≥ 80% of open ground', `${f0(I.pvArea)} m²`) + row('PV estimate', `${(I.pvMWh).toFixed(1)} MWh · ${(I.pvKw || 0).toFixed(0)} kW of standard modules (≈ 15 %) laid flat on that roof area; PVWatts V5 losses, temperature and inverter: PR ${(I.pvPR || 0).toFixed(2)}`) + row('Ground albedo', I.albedo?.fromFile ? `${I.albedo.rho.toFixed(2)} from the weather file (irradiance-weighted)` : '0.20 (the weather file has none)');
   else h += row('Hours counted', `${f0(I.counted)} h · ${I.day ? 'sun up' : 'day and night'}`) + row('No thermal stress, mean', `${st.m.comfort.toFixed(1)}% of the hours`) + row('Heat stress, mean', `${st.m.heat.toFixed(1)}% of the hours`)
     + row('Cold stress, mean', `${st.m.cold.toFixed(1)}% of the hours`) + row('Ground comfortable half the time', `${st.half.toFixed(0)}% of ${f0(st.area)} m²`)
     + row('Wind', `climate file, ${TERRAIN_NAME[I.alpha] || 'exposure ' + I.alpha} · mean ${I.wind.toFixed(1)} m/s at 10 m`) + (I.outRange ? row('Outside UTCI range', `${f0(I.outRange)} h`) : '');

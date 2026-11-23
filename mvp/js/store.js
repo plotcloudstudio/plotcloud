@@ -190,6 +190,9 @@ export function addRun(p, versionId, simId, settings, results, source = 'full-to
 export function deleteRun(p, id) { p.runs = p.runs.filter((r) => r.id !== id); save(); }
 export const isSharedPilot = id => ['sunhours','radiation','utci','daylight','climate','passive','skyview','shadebenefit','solarenvelope'].includes(id);
 export const conditionsOf = p => p.sharedConditions;
+// the building type (2026-11-23): the one typed in Project props, or else the use template's name (Project → Use template), so the
+// Workspace, the Project page and Results say the same thing
+export const buildingTypeOf = (p) => p?.sharedConditions?.defaults?.buildingType || p?.contract?.config?.program?.label || '';
 export function conditionsSignature(p,id){
   const c=conditionsOf(p),s=c.site,d=c.defaults;
   if(['climate','passive','shadebenefit'].includes(id))return JSON.stringify({lat:s.lat,lon:s.lon,north:id==='shadebenefit'?(s.north||0):undefined,climate:s.climate?.hash});

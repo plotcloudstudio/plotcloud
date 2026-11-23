@@ -4,6 +4,7 @@
 // comparison, report revisions with PPTX/PDF/HTML/evidence and the offline review file, and feedback → Plan C.
 import { workflowState } from '../onboarding.js';
 import * as S from '../store.js';
+import { canUse } from '../beta-access.js';
 import * as C from '../project-contract.js';
 import * as P from '../parameters.js';
 import { SIMS } from '../data.js';
@@ -97,14 +98,16 @@ function overview(app, p) {
   for (const r of $$('[name=pjMode]', app)) r.onchange = () => { C.setUiMode(p, r.value); S.save(); toast(r.value === 'simple' ? 'Simple mode: nothing was changed or removed' : 'Advanced mode'); draw(); };
 
   function ready() {
-    queueMicrotask(() => { const l = packageStudies(); $('#pjPackageNote', app).textContent = l.length ? 'Ready: ' + l.map((x) => SIMS.find((s) => s.id === x)?.name || x).join(', ') + '. Runs in this page.' : 'No study in the default package is ready yet.'; });
+    queueMicrotask(() => { const l = packageStudies(); const lk = lockedInPackage(), nm = (x) => SIMS.find((s) => s.id === x)?.name || x; $('#pjPackageNote', app).textContent = (l.length ? 'Ready: ' + l.map(nm).join(', ') + '. Runs in this page.' : 'No study in the default package is ready yet.') + (lk.length ? ` Left out (they need monthly access on your own projects): ${lk.map(nm).join(', ')}.` : ''); });
     const v = p.versions.at(-1), c = S.conditionsOf(p), rows = [['climate', 'Climate (address + weather)'], ['sunhours', 'Building · sun and massing'], ['daylight', 'Interior · daylight'], ['structure', 'Structure']];
     $('#pjReadyList', app).innerHTML = rows.map(([sid, label]) => { const r = inspectStudy(p, v, sid, { site: c.site, defaults: c.defaults }); const e = r.errors[0], wv = r.warnings[0], state = e ? 'error' : wv ? 'warning' : 'ok';
       return `<div data-state="${state}" data-study="${sid}" data-ready="${r.ready}"><b>${esc(label)}</b><p class="note">${esc(e ? e.title + ' — ' + e.detail : wv ? wv.title : 'Inputs found · open the study to run')}</p>${e?.href ? `<a href="${esc(e.href)}">Fix</a>` : `<a href="#/simulations/${sid}">Open</a>`}</div>`; }).join('');
   }
   // default package by task (plan §6.7): only studies whose inputs are ready; never the whole catalogue
   const PACKAGE = ['sunhours', 'radiation', 'utci', 'daylight'];
-  function packageStudies() { const v = p.versions.at(-1), c = S.conditionsOf(p); return v ? PACKAGE.filter((sid) => inspectStudy(p, v, sid, { site: c.site, defaults: c.defaults }).ready) : []; }
+  // (2026-11-23) and only studies this project may run: on your own project without monthly access the locked ones are left out and named
+  const lockedInPackage = () => { const v = p.versions.at(-1); return v ? PACKAGE.filter((sid) => !canUse(sid, p, v.model)) : []; };
+  function packageStudies() { const v = p.versions.at(-1), c = S.conditionsOf(p); return v ? PACKAGE.filter((sid) => canUse(sid, p, v.model) && inspectStudy(p, v, sid, { site: c.site, defaults: c.defaults }).ready) : []; }
   $('#pjPackage', app).onclick = () => { const v = p.versions.at(-1), list = packageStudies(); if (!v || !list.length) { $('#pjPackageNote', app).textContent = 'Nothing in the default package is ready: see the items above.'; return; }
     const rev = C.freezePlan(p, v.id), g = { id: 'rg-pkg-' + Date.now().toString(36), planRevisionId: rev.id, baseRevisionId: null, recommendationId: null, versionId: v.id, created: new Date().toISOString(), state: 'queued', execution: 'browser-batch (page must stay open)', tasks: list.map((simId) => ({ simId, status: 'queued', runId: null, why: '' })), log: [{ at: new Date().toISOString(), event: 'default package' }] };
     p.runGroups.push(g); S.save(); start(g.id); groups(); };

@@ -10,7 +10,7 @@ summary: How SimuSite counts hours of direct sun, where every input comes from (
 image: img/home/sunhours.webp
 imageAlt: Sun hours on the ground around a building, warmer colours for more hours of direct sun
 code: emb/sunhours.html, emb/modeler.html
-tests: tests/validation/sun_position.py, tests/validation/sun_shadow.py, tests/validation/lb_sunhours.py, tests/sun-period.cjs
+tests: tests/workspace-deepen-1.cjs, tests/validation/sun_position.py, tests/validation/sun_shadow.py, tests/validation/lb_sunhours.py, tests/sun-period.cjs, tests/sunshine-share.test.mjs
 keywords:
 - Direct sun hours
 - Solar position
@@ -57,6 +57,8 @@ For each sample and each sun vector, a ray is cast towards the sun through a bou
 
 The study reports mean hours on the ground, the share of ground with at least two hours (the BRE amenity test [1]), and the corresponding figures for roofs and facades. A "range" mode accumulates hours over several days.
 
+**Sunshine from the weather (added 23 November 2026).** Sun hours assumes a clear sky. To show how often the sun is actually out, the study reads the project weather file for the month of the chosen day and counts the hours with the sun above the horizon at mid-hour, and among them the hours whose direct normal irradiance is at least 120 W/m². That is the World Meteorological Organization's threshold for sunshine: sunshine duration is the time during which direct solar irradiance exceeds 120 W/m² [7, 8]. The share of sunny hours is reported, and so are expected sun hours on the ground, the clear-sky hours multiplied by that share. The product assumes that sunshine is equally likely at every hour of the day, which is a simplification: in many climates mornings are cloudier than afternoons, or the reverse. The weather file gives hourly integrated irradiance (Wh/m² in each hour [9]), so an hour counts as sunny when its mean direct irradiance reaches the threshold; the WMO definition is instantaneous, so partly sunny hours are counted all or nothing.
+
 ## 3. Parameters and their sources
 
 Table 1. Inputs of the Sun hours study and the evidence behind each.
@@ -70,7 +72,8 @@ Table 1. Inputs of the Sun hours study and the evidence behind each.
 | Back-facing rule | Sun > 90° from normal counts 0 | Ladybug Direct Sun Hours [6] | Sourced |
 | "Two hours on 21 March" | Summary threshold | BRE 209 [1] | Sourced (a UK guideline, not a universal rule) |
 | Geometry | Model triangles, opaque | — | Modelling assumption |
-| Refraction | Not applied | Meeus discusses it [3] | Known simplification (≤ about 0.6° near the horizon) |
+| Refraction | Not applied | Meeus discusses it [3] | Known simplification (≤ about 0.6° near the horizon); kept off on 23 November 2026 so that results stay identical to Ladybug and the SPA comparison of Section 4 |
+| Sunshine threshold | Direct normal irradiance ≥ 120 W/m², hourly EPW values, month of the chosen day | WMO definition of sunshine duration [7, 8]; EPW fields [9] | Sourced threshold; hourly values approximate the instantaneous definition; the share is applied evenly through the day (added 23 November 2026) |
 
 No parameter of this study was found to be unsourced. The one modelling assumption with a practical effect is that all geometry is opaque.
 
@@ -84,9 +87,11 @@ Three independent checks are run by the scripts in `tests/validation/` and were 
 
 **Procedure against Ladybug.** `lb_sunhours.py` rebuilds the LB Direct Sun Hours component step for step with ladybug-core, using an exact Möller–Trumbore ray–triangle test in place of Rhino's mesh ray, on a box-and-L scene in four cases (Vancouver 21 March at 15 min; 21 December at 5 min; 21 June at 1 h with north rotated 20°; Sydney 21 June at 10 min, 8:00–16:00). On 2,461 ground points and 203 surface squares per case, the largest difference is 3 × 10⁻⁷ h, the precision of the 32-bit floats in which results are stored.
 
+**Sunshine share.** `tests/sunshine-share.test.mjs` builds a March of hourly rows at Toronto with direct normal irradiance of 119 W/m² on days 1–10, 120 W/m² on days 11–20 and 800 W/m² on days 21–31 in daylight, and 500 W/m² at night. The function counts exactly the daylit hours of days 11–31 as sunny (120 W/m² is sunshine, 119 is not), ignores the night hours and other months, and finds about twelve daylit hours a day, as expected at the equinox. In the Workspace, `tests/workspace-deepen-1.cjs` runs Sun hours on the hospital example for 21 March: the Toronto weather had sunshine in 222 of 362 daylit March hours (61 %), so the 10.2 clear-sky hours on the ground become 6.3 expected hours.
+
 ## 5. Discussion
 
-The checks establish that SimuSite computes what the metric defines, and computes it as Ladybug does. They do not make the metric itself a measure of solar access. Sun hours ignores cloud: a site in Vancouver and one in Phoenix with the same geometry get the same answer. It counts a minute of sun at 5° altitude as much as a minute at 60°, although the energy received differs by an order of magnitude; for energy, the Solar radiation study (a companion report) is the appropriate tool. Results depend on the time step: a step of Δt minutes can shift a point's hours by up to Δt at each transition between sun and shade, so a 15-minute step can put a point on either side of a two-hour threshold. Grid cells smaller than the features of interest are needed near building edges. Finally, the solar position does not include refraction, which raises the apparent sun by up to about half a degree at the horizon [3]; this mostly affects the first and last minutes of the day.
+The checks establish that SimuSite computes what the metric defines, and computes it as Ladybug does. They do not make the metric itself a measure of solar access. Sun hours ignores cloud: a site in Vancouver and one in Phoenix with the same geometry get the same answer. The sunshine share from the project weather now states how far the clear-sky hours overstate the sun a site actually gets in that month. It counts a minute of sun at 5° altitude as much as a minute at 60°, although the energy received differs by an order of magnitude; for energy, the Solar radiation study (a companion report) is the appropriate tool. Results depend on the time step: a step of Δt minutes can shift a point's hours by up to Δt at each transition between sun and shade, so a 15-minute step can put a point on either side of a two-hour threshold. Grid cells smaller than the features of interest are needed near building edges. Finally, the solar position does not include refraction, which raises the apparent sun by up to about half a degree at the horizon [3]; this mostly affects the first and last minutes of the day.
 
 ## 6. Conclusion
 
@@ -100,3 +105,6 @@ Sun hours in SimuSite is a direct, exact-geometry implementation of a well-defin
 4. NOAA Global Monitoring Laboratory, Solar calculation details (NOAA Solar Calculator), [gml.noaa.gov/grad/solcalc](https://gml.noaa.gov/grad/solcalc/calcdetails.html).
 5. I. Reda, A. Andreas, Solar position algorithm for solar radiation applications, Sol. Energy 76 (2004) 577–589. [doi:10.1016/j.solener.2003.12.003](https://doi.org/10.1016/j.solener.2003.12.003)
 6. M.S. Roudsari, M. Pak, Ladybug: a parametric environmental plugin for Grasshopper to help designers create an environmentally-conscious design, in: Proc. Building Simulation 2013, IBPSA, Chambéry, 2013, pp. 3128–3135.
+7. World Meteorological Organization, Guide to Instruments and Methods of Observation (WMO-No. 8), Volume I, chapter on the measurement of sunshine duration, WMO, Geneva (definition adopted in 2003: direct solar irradiance exceeding 120 W/m²).
+8. Japan Meteorological Agency, CP7 Sunshine (training material on the CIMO Guide chapter on sunshine duration). [jma.go.jp](https://www.jma.go.jp/jma/jma-eng/jma-center/ric/Our%20activities/International/CP7-Sunshine.pdf)
+9. U.S. Department of Energy, EnergyPlus Auxiliary Programs: EnergyPlus Weather File (EPW) Data Dictionary (field Direct Normal Radiation, Wh/m²), EnergyPlus documentation, 2023.

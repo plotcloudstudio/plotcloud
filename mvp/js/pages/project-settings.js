@@ -1,4 +1,4 @@
-import {baselineSignature,weatherLabel} from '../handoff.js?v=handoff-20261028-1';
+import {baselineSignature,weatherLabel} from '../handoff.js?v=muse-20261123-1';
 import {cancelProjectClimate} from '../project-climate.js';
 import {weatherDownloadAvailable} from '../automatic-climate.js?v=epw-connected-20261027-3';
 import * as S from '../store.js';

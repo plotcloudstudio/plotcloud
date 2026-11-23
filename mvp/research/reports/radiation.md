@@ -10,7 +10,7 @@ summary: How the Solar radiation study turns an EPW weather file into kWh/m² on
 image: img/home/radiation.webp
 imageAlt: Annual solar irradiation on the roofs and facades of a building, from blue for little to yellow for much
 code: emb/lib/climate.js, emb/sunhours.html
-tests: tests/validation/climate_lib.py, tests/climate-studies.cjs
+tests: tests/validation/climate_lib.py, tests/climate-studies.cjs, tests/pvwatts-albedo.test.mjs
 keywords:
 - Solar irradiation
 - Perez sky model
@@ -21,8 +21,8 @@ highlights:
 - Hourly direct and diffuse irradiance from an EPW file is distributed over 145 Tregenza sky patches.
 - The diffuse sky follows Perez et al. (1990): isotropic dome, circumsolar disc and horizon band.
 - On six open planes the engine agrees with pvlib's Perez model within 0.2 %.
-- Inter-building reflections are not modelled; ground reflection uses an albedo of 0.2.
-- The PV figure assumes 20 % module efficiency and a performance ratio of 0.8: an order-of-magnitude estimate.
+- Inter-building reflections are not modelled; ground reflection uses the weather file's hourly albedo, weighted by irradiance, and 0.2 when the file has none.
+- The PV figure uses PVWatts V5's module, loss and inverter equations on the hourly weather (standard modules, about 15 %), for modules laid flat: a screening estimate.
 ---
 # Abstract
 
@@ -54,7 +54,18 @@ For a sample with normal n, irradiation is the sum of (i) beam and circumsolar f
 
 ### 2.5. Rooftop PV estimate
 
-Roof samples that receive at least 80 % of what open level ground receives are summed as candidate PV area. Energy is estimated as area × irradiation × η × PR with η = 0.20 and PR = 0.80, i.e. modules laid flat on all of that area.
+Roof samples that receive at least 80 % of what open level ground receives are summed as candidate PV area. Energy is estimated as area × irradiation × η × PR, i.e. modules laid flat on all of that area.
+
+Until 23 November 2026, η was 0.20 and PR a fixed 0.80. Both now come from the PVWatts Version 5 manual [6]. η is 0.15, the nominal efficiency of its "standard" module type (Table 3: about 15 %, glass cover, temperature coefficient −0.47 %/°C). PR is computed for the site and period, hour by hour from the weather file, for an unshaded module laid flat:
+- DC power follows the manual's eq. (8), P_dc = (I/1000) P_dc0 [1 + γ (T_cell − 25)].
+- The default system losses of 14 % (Table 6, combined by eq. 9) are taken off the DC energy.
+- The inverter follows eq. (10): part-load efficiency η = (η_nom/η_ref)(−0.0162 ζ − 0.0059/ζ + 0.9858), with η_nom = 0.96 and η_ref = 0.9637. Output is clipped at the AC rating, eq. (11), with the default DC-to-AC ratio of 1.1.
+- PVWatts computes the cell temperature with Fuentes' transient heat-balance model and an installed nominal operating cell temperature (INOCT) of 45 °C for an open rack [6]. The study uses the steady-state relation T_cell = T_air + (INOCT − 20) · I/800 with that INOCT, the simplified form of the NOCT relation (Duffie and Beckman give it with an additional efficiency term [5]), which ignores wind and thermal lag.
+- The angle-of-incidence losses of the module cover are not applied.
+
+PR is then the period's AC energy divided by its irradiation on the plane in kWh/m², per kW of modules.
+
+**Ground albedo (added 23 November 2026).** EPW files carry an hourly albedo field [1]. In each hour the ground-reflected irradiance is proportional to ρ × GHI, so over a period the GHI-weighted mean albedo reproduces the hour-by-hour total exactly. The study uses it when at least 90 % of the period's GHI has an albedo value, and 0.2 otherwise. Snow-covered ground in winter months then reflects as the file records rather than at 0.2.
 
 ## 3. Parameters and their sources
 
@@ -66,13 +77,17 @@ Table 1. Inputs of the Solar radiation study.
 | Sky subdivision | 145 patches | Tregenza 1987 [3] | Sourced |
 | Diffuse sky distribution | Perez 1990, allsitescomposite1990 | Perez et al. [2]; as in pvlib [4] | Sourced and verified |
 | Sun grouping | ≈ 3° clusters, energy-conserving | Engine design | Verified (< 0.1 % effect) |
-| Ground albedo | 0.2 | Common default for unknown ground (pvlib, PVWatts [6]) | Sourced default; site-specific in reality (snow 0.6–0.9) |
+| Ground albedo | EPW hourly albedo, GHI-weighted; 0.2 when missing | EPW field Albedo [1]; 0.2 common default (pvlib, PVWatts [6]) | Measured / typical-year data where present (added 23 November 2026) |
 | Inter-reflection between buildings | Not modelled | — | Known simplification |
-| PV module efficiency | 20 % | Typical of current mono-Si modules | Assumption, flagged |
-| Performance ratio | 0.80 | Typical PR range 0.75–0.85 (IEC 61724-1 defines PR [7]) | Assumption, flagged |
+| PV module efficiency | 15 % (standard module) | PVWatts V5 Table 3 [6] | Sourced (replaced 20 % on 23 November 2026) |
+| Temperature coefficient | −0.47 %/°C | PVWatts V5 Table 3 [6] | Sourced |
+| Cell temperature | T_air + (45 − 20)·I/800 | INOCT 45 °C from PVWatts V5 [6]; simplified NOCT relation [5] | Sourced constants; steady-state approximation of PVWatts' Fuentes model |
+| System losses | 14 % | PVWatts V5 Table 6, eq. (9) [6] | Sourced default |
+| Inverter | η_nom 0.96, η_ref 0.9637, eq. (10); DC/AC 1.1, clipping eq. (11) | PVWatts V5 [6] | Sourced |
+| Performance ratio | Computed per site and period from the above | PVWatts V5 equations [6]; PR as defined in IEC 61724-1 [7] | Derived (replaced the fixed 0.80 on 23 November 2026) |
 | "Worth a look" threshold | ≥ 80 % of open-ground irradiation | Engine heuristic | Assumption, flagged |
 
-The audit found no fabricated constants. The three PV-related values are reasonable engineering defaults, but they are assumptions; the report and the interface should not present the PV figure as a yield prediction.
+The audit found no fabricated constants. The PV efficiency and performance ratio, which were assumptions at the audit, now follow PVWatts V5; the "worth a look" threshold remains an assumption; the report and the interface should not present the PV figure as a yield prediction.
 
 ## 4. Verification
 
@@ -91,11 +106,16 @@ Table 2. Annual irradiation on open planes, engine against pvlib.
 
 Every plane is within the 2 % tolerance fixed before the test. The isotropic column shows why the sky model matters: an even sky places 7–11 % less energy on sunlit facades and 9 % more on north facades. The cost of grouping the sun is at most 0.08 % (north facade). Shading by buildings uses the same ray test as Sun hours, which is verified against an exact solution and against Ladybug in the companion report.
 
+**Albedo and PVWatts.** `tests/pvwatts-albedo.test.mjs` checks the new functions by hand:
+- **Albedo:** two hours at 100 and 300 W/m² with albedos 0.2 and 0.8 give a weighted albedo of 0.65; a file with too little albedo data falls back to 0.2.
+- **PVWatts at standard conditions:** with the cell at 25 °C (air at −6.25 °C under 1,000 W/m²) and 14 % losses, the AC output matches eq. (10) computed independently, with an inverter efficiency of 0.961. Without losses, the same hour clips at the AC rating of 1/1.1 kW per kW of modules.
+- **PVWatts with a hot cell:** at 800 W/m² and 20 °C air the cell reaches 45 °C, the DC power is 0.8 × (1 − 0.0047 × 20) × 0.86 kW, and thin film, with its smaller temperature coefficient, yields more.
+
 ## 5. Discussion
 
 The engine reproduces the reference transposition model on unobstructed planes, so its errors on real buildings come from what it leaves out rather than from its arithmetic. Light reflected from neighbouring facades is not modelled; in dense streets this under-predicts irradiation on lower facades, typically by a few per cent for dark facades and more for light or glazed ones [5]. The ground is taken as unobstructed for reflected light and has a fixed albedo of 0.2, which under-predicts reflection over snow. Results are only as representative as the weather file: a typical meteorological year represents long-term average conditions, not any particular year.
 
-The PV estimate multiplies flat-plate irradiation by fixed efficiency and performance ratio. It neglects module tilt and row spacing, temperature losses beyond those implied in PR, inverter clipping and roof obstructions. It is useful to compare options and to judge order of magnitude; a yield estimate should use a dedicated tool such as PVWatts [6].
+The PV estimate multiplies flat-plate irradiation by a PVWatts-derived efficiency and performance ratio. It now accounts for temperature, system losses and the inverter as PVWatts V5 does, with a steady-state cell temperature in place of PVWatts' transient model, but it still neglects module tilt and row spacing, cover reflection losses and the shading pattern on each module. It is useful to compare options and to judge order of magnitude; a yield estimate should use a dedicated tool such as PVWatts [6].
 
 ## 6. Conclusion
 

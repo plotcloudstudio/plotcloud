@@ -1344,6 +1344,13 @@ const STC = (() => {
   // terrain (open: exposed, suburban: surrounded by buildings half as tall, city: by buildings as tall)
   const CPT = { open: [[0, 0.7], [45, 0.35], [90, -0.5], [135, -0.4], [180, -0.2]], suburban: [[0, 0.4], [45, 0.1], [90, -0.3], [135, -0.35], [180, -0.2]], city: [[0, 0.2], [45, 0.05], [90, -0.25], [135, -0.3], [180, -0.25]] };
   function cpWall(theta, terr) { const T = CPT[terr] || CPT.suburban; theta = Math.abs(((theta + 540) % 360) - 180); for (let k = 1; k < T.length; k++) if (theta <= T[k][0]) { const [a, ca] = T[k - 1], [b, cb] = T[k]; return ca + (cb - ca) * (theta - a) / (b - a); } return T[T.length - 1][1]; }
+  // (2026-11-23) or the Swami and Chandra (1988) surface-average correlation for low-rise buildings, as the EnergyPlus Engineering
+  // Reference prints it: Cp = 0.6 ln[1.248 − 0.703 sin(α/2) − 1.175 sin²α + 0.131 sin³(2αG) + 0.769 cos(α/2) + 0.07 G² sin²(α/2)
+  // + 0.717 cos²(α/2)], α the angle between the wind and the wall's outward normal, G = ln(width of this wall / width of the adjacent
+  // wall); a rectangular plan in open exposure (no shelter term)
+  function cpSwami(theta, G) { const a = Math.abs(((theta + 540) % 360) - 180) * Math.PI / 180, s2 = Math.sin(a / 2), c2 = Math.cos(a / 2);
+    const x = 1.248 - 0.703 * s2 - 1.175 * Math.sin(a) ** 2 + 0.131 * Math.sin(2 * a * G) ** 3 + 0.769 * c2 + 0.07 * G * G * s2 * s2 + 0.717 * c2 * c2; return 0.6 * Math.log(Math.max(1e-6, x)); }
+  if (typeof window !== 'undefined') window.__cpSwami = cpSwami;
   const ALPHA = { open: 0.14, suburban: 0.22, city: 0.33 };
   // compass bearing a plan direction faces: plan +Y is north turned by M.north degrees clockwise
   const bearing = (v, north) => ((Math.atan2(v[0], v[1]) * 180 / Math.PI) + (north || 0) + 360) % 360;
@@ -1354,12 +1361,12 @@ const STC = (() => {
     const C = M.climate || {}, Tout = C.Tout ?? 20, Tin = C.Tin ?? 24, U10 = C.U10 ?? 3.5, from = C.from ?? 225, terr = C.terrain || 'suburban';
     const rho0 = rhoOf(Tout), rhoI = rhoOf(Tin), N = S.rooms.length; if (!N) return null;
     const topZ = Math.max(...M.levels.map((l) => l.z + l.h)), Href = Math.max(3, topZ), Uref = U10 * Math.pow(270 / 10, 0.14) * Math.pow(Href / ({ open: 270, suburban: 370, city: 460 }[terr] || 370), ALPHA[terr] || 0.22), pdyn = 0.5 * rho0 * Uref * Uref;
-    const Cd = 0.6, NS = 6;
+    const Cd = 0.6, NS = 6, swami = C.cp === 'swami', Bx = S.B ? S.B.x1 - S.B.x0 : 0, By = S.B ? S.B.y1 - S.B.y0 : 0, Gx = Bx > 0 && By > 0 ? Math.log(Bx / By) : 0;   // a wall facing ±y spans the plan's x extent
     // links: [a, b, area, z, cpOut] ; a or b = -1 for outside
     const links = [];
     for (const op of S.ops) {
       if (!(op.A > 1e-4)) continue; const ns = op.o.kind === 'door' ? 4 : NS, ht = (op.zh - op.zs) / ns;
-      const cp = op.ext ? cpWall(bearing(op.outN, M.north) - from, terr) : 0;
+      const cp = op.ext ? (swami ? cpSwami(bearing(op.outN, M.north) - from, Math.abs(op.outN[1]) >= Math.abs(op.outN[0]) ? Gx : -Gx) : cpWall(bearing(op.outN, M.north) - from, terr)) : 0;
       for (let k = 0; k < ns; k++) { const z = op.zs + (k + 0.5) * ht; if (op.ext) links.push({ a: op.inR, b: -1, A: op.A / ns, z, cp, op }); else links.push({ a: op.ra, b: op.rb, A: op.A / ns, z, cp: 0, op }); }
     }
     for (const v of S.voids) { if (v.glazed && v.roof) continue; if (v.roof) links.push({ a: v.below, b: -1, A: v.A, z: v.z, cp: -0.5, vd: v }); else if (v.above >= 0) links.push({ a: v.below, b: v.above, A: v.A, z: v.z, cp: 0, vd: v }); }
@@ -2912,6 +2919,8 @@ cv.addEventListener('pointerdown', (e) => {
   if (CAM === 'section') { if (INSET && sx >= INSET.x && sx <= INSET.x + INSET.w && sy >= INSET.y && sy <= INSET.y + INSET.h) { drag = { k: 'cut' }; cutAt(sy); cv.setPointerCapture(e.pointerId); } return; }
   if (e.button === 1 || e.button === 2 || SPACE) { drag = { k: 'pan', sx, sy, ox: V.ox, oy: V.oy }; cv.setPointerCapture(e.pointerId); cv.classList.add('grab'); return; }
   if (e.button !== 0) return;
+  // (2026-11-23) a click without dragging sets the first corner: move and click the second, or type the size (6000,4000) and press Enter
+  if (RECT.has(TOOL) && drawing && drawing.click && RECT.has(drawing.kind)) { drawing.b = snapPt(p); if (!typed) finishRect(); return; }
   if (RECT.has(TOOL)) { const a = snapPt(p); drawing = { kind: TOOL, a, b: a }; typed = ''; if(e.isTrusted)cv.setPointerCapture(e.pointerId); draw(); return; }
   if (TOOL === 'place') { if (!PICK) { flash('Pick a piece in the Library first.'); return; } addFurniture(PICK, p, !e.altKey); return; }
   if (TOOL === 'arc') { const q = !drawing ? snapPt(p, null, e.shiftKey) : (drawing.b ? [sg(p[0]), sg(p[1])] : snapPt(p, drawing.a, e.shiftKey)); if (!drawing) drawing = { kind: 'arc', a: q, b: null, cur: q }; else if (!drawing.b) { if (!near(q, drawing.a, 0.1)) drawing.b = q; } else { finishArc(q); return; } draw(); return; }
@@ -2979,7 +2988,7 @@ cv.addEventListener('pointermove', (e) => {
 cv.addEventListener('pointerup', (e) => {
   cv.classList.remove('grab'); SNAPI = null;
   if (drag) { const D = drag; drag = null; if (D.k === 'pan') { if (D.click) draw(); return; } if (D.k === 'cut') return; tipOff(); if (D.moved) { tidy(); commit(D.b); } return; }
-  if (drawing && RECT.has(drawing.kind)) { if (typed) return; finishRect(); }
+  if (drawing && RECT.has(drawing.kind)) { if (typed) return; if (!drawing.click && Math.abs(drawing.b[0] - drawing.a[0]) < 0.05 && Math.abs(drawing.b[1] - drawing.a[1]) < 0.05) { drawing.click = true; flash?.('First corner set: click the opposite corner, or type the size (for example 6000,4000) and press Enter.'); draw(); return; } finishRect(); }
 });
 cv.addEventListener('dblclick', () => { if (drawing && drawing.kind === 'wall') finishWall(); });
 cv.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -8073,6 +8082,12 @@ if (window.__WSROLE) {
       const nd = g.mins.length, until = h * 60, A = new Float32Array(g.H.length); let sum = 0, n = 0;
       for (let k = 0; k < A.length; k++) { if (Number.isNaN(g.H[k])) { A[k] = NaN; continue; } let v = 0; const b = k * nd; for (let di = 0; di < nd && g.mins[di] <= until; di++) if (g.lit[b + di]) v += g.ws[di]; A[k] = v; sum += v; n++; }
       return S3.overlayVals(A) ? { avg: n ? sum / n : 0 } : null; },
+    // the project's location as the site (2026-11-23): a model with no site of its own (a sample, or a building drawn before a site was
+    // picked) runs the site studies at the latitude, longitude and time zone the project settings show; a site with no surroundings,
+    // kept off the saved model (not enumerable), replaced as soon as a real site is set
+    useLocation(loc) { if (M.site && M.site.origin) return false; const la = +loc?.lat, lo = +loc?.lon; if (!Number.isFinite(la) || !Number.isFinite(lo)) return false;
+      const fb = SITEC.newSite({ lat: la, lon: lo, label: loc.label || '' }, { kind: 'radius', r: 300 }, { tz: Number.isFinite(+loc.tz) ? +loc.tz : undefined }); fb.locationOnly = true;
+      Object.defineProperty(M, 'site', { configurable: true, enumerable: false, get() { return fb; }, set(v) { Object.defineProperty(M, 'site', { value: v, writable: true, enumerable: true, configurable: true }); } }); return true; },
     sunStudy(o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
       const day = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(o.day || '') ? o.day : '03-21', pr = studyPrisms(), MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], dayName = SUN_DAYS[day] || `${+day.slice(3)} ${MON[+day.slice(0, 2) - 1]}`;
@@ -8115,7 +8130,7 @@ if (window.__WSROLE) {
     ventNet(o = {}) { const SB = S || STC.build(M); if (!SB.rooms.length) return null; const k = Number.isFinite(o.win) ? o.win : 1, dm = o.doors || 'inside';
       const ops = SB.ops.map((op) => { const door = op.o.kind === 'door' || op.o.object_type === 'door', full = op.o.w * Math.max(0, op.o.head - op.o.sill);
         let A = door ? ((dm === 'shut' || (dm === 'inside' && op.ext)) ? op.o.w * 0.01 : full) : Math.min(full, op.A * k); if (op.o.hole) A = full; return { ...op, A }; });
-      const SV = { ...SB, ops }, MC = { ...M, climate: { ...(M.climate || {}), U10: o.U10 ?? 3.5, from: o.from ?? 225, Tout: o.Tout ?? 20, Tin: o.Tin ?? 24, terrain: o.terrain || 'suburban' } };
+      const SV = { ...SB, ops }, MC = { ...M, climate: { ...(M.climate || {}), U10: o.U10 ?? 3.5, from: o.from ?? 225, Tout: o.Tout ?? 20, Tin: o.Tin ?? 24, terrain: o.terrain || 'suburban', cp: o.cp || 'aivc' } };
       const af = STC.airflow(MC, SV); if (!af) return null;
       const dT = Math.abs((o.Tin ?? 24) - (o.Tout ?? 20)), U = o.U10 ?? 3.5;
       const rooms = SB.rooms.map((r, i) => { const ext = ops.filter((q) => q.ext && q.inR === r.gi && q.A > 0.005), faces = new Set(ext.map((q) => Math.round(Math.atan2(q.outN[1], q.outN[0]) / (Math.PI / 4)) & 7)), a = af.closed ? { inflow: 0, direct: 0, via: 0, ach: 0 } : af.rooms[i];

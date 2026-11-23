@@ -1,2 +1,2 @@
-import{readWeather,weatherAnalysis,spatialAnalysis}from'./analysis.js?v=sims-20261121-1';
+import{readWeather,weatherAnalysis,spatialAnalysis}from'./analysis.js?v=muse-20261123-1';
 self.onmessage=event=>{const{kind,meshes,input,weather,site}=event.data;try{const E=weather?readWeather(weather):null;let last=0;const progress=p=>{if(performance.now()-last>80||p.completed===p.total){last=performance.now();self.postMessage({type:'progress',...p});}};const result=['climate','passive'].includes(kind)?weatherAnalysis(E,input,kind==='passive'):spatialAnalysis(kind,meshes,input,E,site,progress);self.postMessage({type:'done',result});}catch(e){self.postMessage({type:'error',message:e.message||'Environmental analysis failed.'});}};

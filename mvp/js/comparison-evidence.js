@@ -13,7 +13,7 @@ function inputs(settings={}){
 }
 export function compareEvidence(a,b){
  if(!a||!b)return{status:'missing',label:'A matching run is missing',differences:[]};
- if(!['full-tool','batch'].includes(a.source)||!['full-tool','batch'].includes(b.source))return{status:'unverified',label:'Stored previews are not engine evidence',differences:[]};
+ if(!['full-tool','batch','workspace'].includes(a.source)||!['full-tool','batch','workspace'].includes(b.source))return{status:'unverified',label:'Stored previews are not engine evidence',differences:[]};
  const left=inputs(a.settings),right=inputs(b.settings),differences=[...new Set([...Object.keys(left),...Object.keys(right)])].filter(k=>JSON.stringify(stableValue(left[k]))!==JSON.stringify(stableValue(right[k]))).map(key=>({key,a:left[key],b:right[key]}));
  if(differences.length)return{status:'different',label:'Recorded inputs differ — review before comparing',differences};
  if(!Object.keys(left).length)return{status:'unknown',label:'Input conditions were not recorded',differences:[]};
