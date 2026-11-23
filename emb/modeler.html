@@ -2919,6 +2919,8 @@ cv.addEventListener('pointerdown', (e) => {
   if (CAM === 'section') { if (INSET && sx >= INSET.x && sx <= INSET.x + INSET.w && sy >= INSET.y && sy <= INSET.y + INSET.h) { drag = { k: 'cut' }; cutAt(sy); cv.setPointerCapture(e.pointerId); } return; }
   if (e.button === 1 || e.button === 2 || SPACE) { drag = { k: 'pan', sx, sy, ox: V.ox, oy: V.oy }; cv.setPointerCapture(e.pointerId); cv.classList.add('grab'); return; }
   if (e.button !== 0) return;
+  // (2026-11-23) a click without dragging sets the first corner: move and click the second, or type the size (6000,4000) and press Enter
+  if (RECT.has(TOOL) && drawing && drawing.click && RECT.has(drawing.kind)) { drawing.b = snapPt(p); if (!typed) finishRect(); return; }
   if (RECT.has(TOOL)) { const a = snapPt(p); drawing = { kind: TOOL, a, b: a }; typed = ''; if(e.isTrusted)cv.setPointerCapture(e.pointerId); draw(); return; }
   if (TOOL === 'place') { if (!PICK) { flash('Pick a piece in the Library first.'); return; } addFurniture(PICK, p, !e.altKey); return; }
   if (TOOL === 'arc') { const q = !drawing ? snapPt(p, null, e.shiftKey) : (drawing.b ? [sg(p[0]), sg(p[1])] : snapPt(p, drawing.a, e.shiftKey)); if (!drawing) drawing = { kind: 'arc', a: q, b: null, cur: q }; else if (!drawing.b) { if (!near(q, drawing.a, 0.1)) drawing.b = q; } else { finishArc(q); return; } draw(); return; }
@@ -2986,7 +2988,7 @@ cv.addEventListener('pointermove', (e) => {
 cv.addEventListener('pointerup', (e) => {
   cv.classList.remove('grab'); SNAPI = null;
   if (drag) { const D = drag; drag = null; if (D.k === 'pan') { if (D.click) draw(); return; } if (D.k === 'cut') return; tipOff(); if (D.moved) { tidy(); commit(D.b); } return; }
-  if (drawing && RECT.has(drawing.kind)) { if (typed) return; finishRect(); }
+  if (drawing && RECT.has(drawing.kind)) { if (typed) return; if (!drawing.click && Math.abs(drawing.b[0] - drawing.a[0]) < 0.05 && Math.abs(drawing.b[1] - drawing.a[1]) < 0.05) { drawing.click = true; flash?.('First corner set: click the opposite corner, or type the size (for example 6000,4000) and press Enter.'); draw(); return; } finishRect(); }
 });
 cv.addEventListener('dblclick', () => { if (drawing && drawing.kind === 'wall') finishWall(); });
 cv.addEventListener('contextmenu', (e) => e.preventDefault());
