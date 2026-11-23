@@ -15,8 +15,8 @@ import * as SG from './study-groups.js?v=groups-20261118-1';
 import {plannedStudy} from './planned-simulations.js';
 import { climateFile, ensureProjectClimate } from './project-climate.js';
 import { weatherDownloadAvailable } from './automatic-climate.js?v=epw-connected-20261027-3';
-import { sunPosition, sunshineShare } from './environment/analysis.js?v=sims-20261121-1';
-import * as CL from '../../emb/lib/climate.js';
+import { sunPosition, sunshineShare } from './environment/analysis.js?v=deep-20261123-1';
+import * as CL from '../../emb/lib/climate.js?v=deep-20261123-1';
 import { speedRatio } from './wind-lbm.js?v=wind-20261031-5';
 import { stormwater } from './stormwater-grid.js?v=sims-20261121-1';
 import * as WTRL from '../../emb/lib/water.js?v=water-20261118-1';
@@ -32,8 +32,8 @@ import * as SSX from './interior/spacesyntax.js?v=sims-20261121-1';
 import * as ISO from './interior/isovist.js?v=sims-20261121-1';
 import * as VWS from './interior/views.js?v=sims-20261121-1';
 import * as CAMS from './interior/cameras.js?v=sims-20261121-1';
-import * as DAY from './interior/daylight.js?v=sims-20261121-1';
-import { daylightInputs, daylightRecord } from './daylight-run.js?v=sims-20261121-1';
+import * as DAY from './interior/daylight.js?v=deep-20261123-1';
+import { daylightInputs, daylightRecord } from './daylight-run.js?v=deep-20261123-1';
 import * as EGX from './interior/egress.js?v=sims-20261121-1';
 import * as ECODE from './interior/egresscode.js?v=code-20261110-1';
 import { maturityOf } from './capabilities.js';
@@ -898,7 +898,7 @@ export function mountChrome(app, api) {
     closeHost(); closeStudy(); openCard(false); closePops(); palOpen(false); openSheet(false);
     const token = ++HOST.token, el = el2('section', 'sp-host'); el.setAttribute('aria-label', simName(id)); HOST.el = el; HOST.id = id; root.append(el); root.classList.add('sp-hosting');
     el.addEventListener('click', (e) => { const a = e.target.closest('a[href]'); if (!a) return; const h = a.getAttribute('href') || ''; if (/^#\/workspace(\/|$)/.test(h) || (a.closest('.shbar') && /Back/.test(a.textContent))) { e.preventDefault(); closeHost(); } }, true);
-    try { const mod = await import('./pages/simulations.js?v=sims-20261121-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
+    try { const mod = await import('./pages/simulations.js?v=deep-20261123-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
     catch (e) { el.innerHTML = `<div class="sp-hosterr"><p>${esc(simName(id))} could not open here: ${esc(e.message || e)}.</p><a class="btn sm" href="#/simulations/${esc(id)}">Open it on its own page</a></div>`; }
   }
   function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }

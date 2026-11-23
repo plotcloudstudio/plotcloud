@@ -18,7 +18,7 @@ export async function render(app, [simId], params, context={}) {
   if(['sunhours','radiation','skyview','shadebenefit','solarenvelope','utci','wind','stormwater','snow'].includes(simId)&&params.get('autorun')!=='workspace'&&currentProject()){try{sessionStorage.setItem('pc-ws-open-study',simId);}catch(e){}location.hash='#/workspace';return;}
   const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
-  if(sim?.family==='environment')return(await import('./environment-study.js?v=sims-20261121-1')).render(app,sim,params,context);
+  if(sim?.family==='environment')return(await import('./environment-study.js?v=deep-20261123-1')).render(app,sim,params,context);
   if (sim?.id==='structure') return (await import('./structure-study.js?v=sims-20261121-1')).render(app,sim,params,context);
   if (sim) return (await import('./sim-engine.js')).render(app, sim, params,context);   // every simulation runs its SimuSite engine
   return catalog(app, params, access);

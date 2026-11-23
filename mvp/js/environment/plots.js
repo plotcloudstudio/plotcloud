@@ -1,4 +1,4 @@
-import{humidityRatio}from'./analysis.js?v=sims-20261121-1';
+import{humidityRatio}from'./analysis.js?v=deep-20261123-1';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const number=x=>Number.isFinite(x)?x.toLocaleString('en-CA',{maximumFractionDigits:2}):'Not available';
 export const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

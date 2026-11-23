@@ -5,9 +5,9 @@ import{$,esc,currentProject,currentVersion,setCurrent,setCurrentVersion,toast,ro
 import{climateFile,saveClimate,ensureProjectClimate}from'../project-climate.js';
 import{studioSolarScene}from'../studio-bridge.js?v=sims-20261121-1';
 import{tzInfo}from'../sunscene.js';
-import{RELEASE,defaults,validateInput,readWeather,fingerprint,effectiveInput}from'../environment/analysis.js?v=sims-20261121-1';
+import{RELEASE,defaults,validateInput,readWeather,fingerprint,effectiveInput}from'../environment/analysis.js?v=deep-20261123-1';
 import{sourceMeshes,environmentViewport}from'../environment/scene.js?v=unified-modes-20261030-2';
-import{weatherHTML,passiveHTML,drawPlots,table,maskSVG,number,csv,months}from'../environment/plots.js?v=sims-20261121-1';
+import{weatherHTML,passiveHTML,drawPlots,table,maskSVG,number,csv,months}from'../environment/plots.js?v=deep-20261123-1';
 const WEATHER=new Set(['climate','passive','shadebenefit']),SPATIAL=new Set(['skyview','shadebenefit','solarenvelope']);
 const UNIT={skyview:'%',shadebenefit:'K·h',solarenvelope:'m'};
 const download=(name,body,type)=>{const u=URL.createObjectURL(new Blob([body],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};

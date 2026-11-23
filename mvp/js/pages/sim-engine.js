@@ -127,7 +127,7 @@ export const IN_WORKSPACE = ['vehicle-swept-path', 'parking-layout', 'watersound
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
-  if(sim.family==='environment')return(await import('./environment-study.js?v=sims-20261121-1')).render(app,sim,params,context);
+  if(sim.family==='environment')return(await import('./environment-study.js?v=deep-20261123-1')).render(app,sim,params,context);
   if(sim.id==='structure')return(await import('./structure-study.js?v=sims-20261121-1')).render(app,sim,params,context);
   // studies that run in the Workspace now (2026-11-01; their study pages are retired): an old link opens the project's Workspace
   // with the study's card; a batch run says where it runs
@@ -175,7 +175,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   // the shared conditions and the batch panel's changes, and is recorded as the page recorded it
   if (sim.id === 'daylight' && batch) {
     app.innerHTML = `<div class="wrap"><p role="status">Daylight · running…</p></div>`; tell({ stage: 'running' });
-    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=sims-20261121-1'), DAYM = await import('../interior/daylight.js?v=sims-20261121-1');
+    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=deep-20261123-1'), DAYM = await import('../interior/daylight.js?v=deep-20261123-1');
       const r = await studioScene(v, site, p.name, 'daylight', level?.id); if (!r.ok) throw Error(r.why || 'The model could not be read.'); const sc = JSON.parse(r.scene);
       const { shared: sh, inputs } = await DR.daylightInputs(p, OVd), out = await DAYM.run(sc, { level: 'draft', ...inputs });
       const rec = DR.daylightRecord(p, v, sh, out, { level: level?.id, origin: sc.origin, settings: { batchOverrides: OVd } }); tell({ ok: true, settings: rec.settings, results: rec.results });
