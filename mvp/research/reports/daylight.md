@@ -10,7 +10,7 @@ summary: How the Daylight study computes spatial daylight autonomy, annual sun e
 image: img/home/daylight.webp
 imageAlt: Daylight autonomy over a floor plan, brighter near windows
 code: mvp/js/interior/daylight.js, mvp/js/workspace-chrome.js
-tests: tests/validation/daylight_df.py, tests/validation/daylight_engine.cjs, tests/daylight-blinds.test.mjs, tests/shared-conditions.cjs
+tests: tests/workspace-deepen-1.cjs, tests/validation/daylight_df.py, tests/validation/daylight_engine.cjs, tests/daylight-blinds.test.mjs, tests/shared-conditions.cjs
 keywords:
 - Daylight
 - Spatial daylight autonomy
@@ -96,7 +96,7 @@ Table 2. Daylight factor, engine against Radiance, open view (from `mvp/VALIDATI
 
 The two references agree with each other within 0.04 points. Before the angle-dependent glass was introduced, the engine over-predicted DF near the window by 20 % (open) and 26 % (obstructed), outside tolerance; it now passes at every point. With the obstruction, the sky component vanishes beyond 2.5 m in both engine and Radiance, and the remaining error is the inter-reflected component, which the engine spreads evenly (0.47–0.74 points) while Radiance falls to 0.18 points at the back. The climate-based metrics (sDA, ASE) have not yet been compared with Radiance's annual methods. In the end-to-end audit of 20 November 2026 with a Chicago TMY3 file, the study completed on a two-storey test block (sDA 36 %, ASE 7 %, mean DF 1.68 %).
 
-**Blinds.** `tests/daylight-blinds.test.mjs` runs the engine on a 6 × 8 m room with one 4 m window wall in Toronto's generic year, turned to four compass directions. It checks that without blinds no hour is shut and sDA equals the open-window value; that with blinds no point gains daylit hours, ASE is unchanged, and a 5 % shade lowers sDA at least as much as 20 % louvres; and that a window turned to the sun shuts the blinds in many hours while one turned away from it shuts them in far fewer. In that room the blinds closed in 2,874 of 3,532 occupied daylit hours with the window facing the equator, and in 73 hours facing the pole (low summer sun); sDA fell from 46.9 % without blinds to 9.4 % with louvres facing the equator, and was unchanged facing the pole. The large drop facing the equator shows how much the omitted diffused sunlight matters in a sunny room, and why both bounds are reported.
+**Blinds.** `tests/daylight-blinds.test.mjs` runs the engine on a 6 × 8 m room with one 4 m window wall in Toronto's generic year, turned to four compass directions. It checks that without blinds no hour is shut and sDA equals the open-window value; that with blinds no point gains daylit hours, ASE is unchanged, and a 5 % shade lowers sDA at least as much as 20 % louvres; and that a window turned to the sun shuts the blinds in many hours while one turned away from it shuts them in far fewer. In that room the blinds closed in 2,874 of 3,532 occupied daylit hours with the window facing the equator, and in 73 hours facing the pole (low summer sun); sDA fell from 46.9 % without blinds to 9.4 % with louvres facing the equator, and was unchanged facing the pole. The large drop facing the equator shows how much the omitted diffused sunlight matters in a sunny room, and why both bounds are reported. On the hospital example's ground floor in the Workspace (`tests/workspace-deepen-1.cjs`), sDA was 19 % without blinds and 6 % with louvres.
 
 ## 5. Discussion
 

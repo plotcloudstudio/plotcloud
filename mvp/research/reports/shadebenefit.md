@@ -10,7 +10,7 @@ summary: The Shade benefit study weighs each hour of shade a design casts by how
 image: img/home/shadebenefit.webp
 imageAlt: Shade benefit on the ground, blue where the design's shade helps in hot hours and red where it takes sun in cold hours
 code: mvp/js/workspace-chrome.js, mvp/js/environment/analysis.js
-tests: tests/environment-analysis.cjs
+tests: tests/environment-analysis.cjs, tests/workspace-deepen-1.cjs
 keywords:
 - Shade benefit
 - Degree-hours
@@ -38,6 +38,8 @@ Shading devices and the shade of buildings themselves are designed by intuition 
 
 For each hour of the EPW with direct normal irradiance above zero and the sun above the horizon, the sun position is computed (the same NOAA/Ladybug sun path as Sun hours). Hours are grouped by sun direction into 15° azimuth by 10° altitude bins, and each bin keeps two sums: Σ max(0, T − T_upper) and Σ max(0, T_lower − T), where T is the hour's dry-bulb temperature. For each ground sample, a ray is cast towards each bin's direction twice, once through the existing context alone and once through the design; if the context already blocks the sun, the hour is not counted; if only the design blocks it, the bin's benefit sum is added as help and its harm sum as harm. The map shows help − harm in degree-hours. On facade and roof squares, the study reports the sun received in hot hours minus that in cold hours, in the same units, to show where shade on that face would help.
 
+**UTCI criterion (added 23 November 2026).** Air temperature alone does not say whether a person in the sun wants shade. The Workspace study can now score hours by the Universal Thermal Climate Index instead. For each hour with the sun up and direct normal irradiance above zero, UTCI is computed for a person standing in open sun: sky view factor 1, the station's 10 m wind (the height at which UTCI takes its wind input [8]), and the mean radiant temperature of the Outdoor thermal comfort study, whose short-wave part is the SolarCal model of ASHRAE Standard 55 Appendix C [6, 7]. The scoring band becomes the "no thermal stress" category of the UTCI assessment scale, 9 to 26 °C [5, 8]. An hour of shade counts for each degree of UTCI at or above 26 °C (moderate heat stress and above) and against for each degree below 9 °C (slight cold stress and below). The sun-direction bins and the comparison with and without the design are unchanged.
+
 In the environmental version of the study, the candidate shade is any set of model objects the user selects; the same scoring compares the model with and without them on a sample grid of up to 512 points.
 
 ## 3. Parameters and their sources
@@ -48,6 +50,7 @@ Table 1. Inputs of the Shade benefit study.
 |---|---|---|---|
 | Weather | Project EPW, hourly dry-bulb and DNI | EPW data dictionary [4] | Measured / typical-year data |
 | Lower and upper temperature | 18 °C and 26 °C (fixed in the Workspace; editable in the environmental version) | Engine default | Assumption, flagged: no standard is cited; 26 °C coincides with the upper bound of "no thermal stress" on the UTCI scale [5] but is applied here to air temperature |
+| UTCI criterion (Workspace option) | Shade wanted at UTCI ≥ 26 °C, unwanted below 9 °C, for a person in open sun | UTCI assessment scale [5, 8]; UTCI and its mean radiant temperature as in the Outdoor thermal comfort report [6, 7, 8] | Sourced band; radiant surfaces at air temperature, so heat stress near hot paving is underestimated (added 23 November 2026) |
 | Sun direction bins | 15° × 10° | Engine design | Numerical setting |
 | Scoring | Degree-hours above / below the band | Ladybug thermal shade benefit [2]; after SHADERADE [1] | Sourced method |
 | Sun position | NOAA / Ladybug sun path | See the Sun hours report | Verified |
@@ -56,9 +59,11 @@ Table 1. Inputs of the Shade benefit study.
 
 `tests/environment-analysis.cjs`, re-run for this audit (all checks pass), verifies the environmental version's degree-hour scoring on a roof over a sample in a constant 30 °C month (benefit 31 days × 6 h × 4 K) and that hours already shaded by the context are not counted twice. The Workspace version uses the same scoring with sun-direction bins. There is no external reference implementation that uses exactly these bins and band, so the study is classed as a screening estimate. It ran without error in the end-to-end audit of 20 November 2026 with a Chicago TMY3 file.
 
+The UTCI criterion reuses the UTCI polynomial and mean radiant temperature that the Outdoor thermal comfort report verifies against pythermalcomfort. `tests/workspace-deepen-1.cjs` runs both criteria in the Workspace on the hospital example with its Toronto weather and checks that the method text and settings state the criterion. With air temperature the mean net benefit on the ground was −1 K·h; with UTCI in the sun it was −785 K·h. In Toronto a person standing in the sun is below 9 °C UTCI in many sunny hours, so shading the ground costs more warmth than it saves heat once radiation and wind are counted.
+
 ## 5. Discussion
 
-The method answers a narrow question well: given the climate, in which hours is shade wanted, and does this design provide it there? Its simplicity is also its limit. Air temperature alone does not determine whether shade is wanted: at 24 °C with strong sun and still air a person may prefer shade, while at 28 °C with wind and low sun they may not. A radiation-aware criterion, for instance the UTCI difference between sun and shade computed by the Outdoor thermal comfort study, would be more defensible for outdoor space. For buildings, the energy consequence of shading depends on glazing, internal gains and HVAC, which the SHADERADE energy-based method captures and this one does not [1]. The fixed band should be visible in the interface and editable; the report recommends exposing it in the Workspace as it is in the environmental version.
+The method answers a narrow question well: given the climate, in which hours is shade wanted, and does this design provide it there? Its simplicity is also its limit. Air temperature alone does not determine whether shade is wanted: at 24 °C with strong sun and still air a person may prefer shade, while at 28 °C with wind and low sun they may not. A radiation-aware criterion is more defensible for outdoor space; the Workspace now offers one, based on UTCI in the sun (Section 2). For buildings, the energy consequence of shading depends on glazing, internal gains and HVAC, which the SHADERADE energy-based method captures and this one does not [1]. The fixed band should be visible in the interface and editable; the report recommends exposing it in the Workspace as it is in the environmental version.
 
 ## 6. Conclusion
 
@@ -71,3 +76,6 @@ Shade benefit is a transparent temperature-weighted screening of where a design'
 3. V. Olgyay, Design with Climate: Bioclimatic Approach to Architectural Regionalism, Princeton University Press, Princeton, NJ, 1963.
 4. U.S. Department of Energy, EnergyPlus Auxiliary Programs: EnergyPlus Weather File (EPW) Data Dictionary, EnergyPlus documentation, 2023.
 5. K. Błażejczyk, G. Jendritzky, P. Bröde, D. Fiala, G. Havenith, Y. Epstein, A. Psikuta, B. Kampmann, An introduction to the Universal Thermal Climate Index (UTCI), Geogr. Pol. 86 (2013) 5–10. [doi:10.7163/GPol.2013.1](https://doi.org/10.7163/GPol.2013.1)
+6. ANSI/ASHRAE Standard 55-2020, Thermal Environmental Conditions for Human Occupancy, Appendix C (SolarCal), ASHRAE, Atlanta, 2020.
+7. E. Arens, T. Hoyt, X. Zhou, L. Huang, H. Zhang, S. Schiavon, Modeling the comfort effects of short-wave solar radiation indoors, Build. Environ. 88 (2015) 3–9. [doi:10.1016/j.buildenv.2014.09.004](https://doi.org/10.1016/j.buildenv.2014.09.004)
+8. P. Bröde, D. Fiala, K. Błażejczyk, I. Holmér, G. Jendritzky, B. Kampmann, B. Tinz, G. Havenith, Deriving the operational procedure for the Universal Thermal Climate Index (UTCI), Int. J. Biometeorol. 56 (2012) 481–494. [doi:10.1007/s00484-011-0454-1](https://doi.org/10.1007/s00484-011-0454-1)

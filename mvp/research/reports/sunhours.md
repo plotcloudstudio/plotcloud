@@ -10,7 +10,7 @@ summary: How SimuSite counts hours of direct sun, where every input comes from (
 image: img/home/sunhours.webp
 imageAlt: Sun hours on the ground around a building, warmer colours for more hours of direct sun
 code: emb/sunhours.html, emb/modeler.html
-tests: tests/validation/sun_position.py, tests/validation/sun_shadow.py, tests/validation/lb_sunhours.py, tests/sun-period.cjs, tests/sunshine-share.test.mjs
+tests: tests/workspace-deepen-1.cjs, tests/validation/sun_position.py, tests/validation/sun_shadow.py, tests/validation/lb_sunhours.py, tests/sun-period.cjs, tests/sunshine-share.test.mjs
 keywords:
 - Direct sun hours
 - Solar position
@@ -87,7 +87,7 @@ Three independent checks are run by the scripts in `tests/validation/` and were 
 
 **Procedure against Ladybug.** `lb_sunhours.py` rebuilds the LB Direct Sun Hours component step for step with ladybug-core, using an exact Möller–Trumbore ray–triangle test in place of Rhino's mesh ray, on a box-and-L scene in four cases (Vancouver 21 March at 15 min; 21 December at 5 min; 21 June at 1 h with north rotated 20°; Sydney 21 June at 10 min, 8:00–16:00). On 2,461 ground points and 203 surface squares per case, the largest difference is 3 × 10⁻⁷ h, the precision of the 32-bit floats in which results are stored.
 
-**Sunshine share.** `tests/sunshine-share.test.mjs` builds a March of hourly rows at Toronto with direct normal irradiance of 119 W/m² on days 1–10, 120 W/m² on days 11–20 and 800 W/m² on days 21–31 in daylight, and 500 W/m² at night. The function counts exactly the daylit hours of days 11–31 as sunny (120 W/m² is sunshine, 119 is not), ignores the night hours and other months, and finds about twelve daylit hours a day, as expected at the equinox.
+**Sunshine share.** `tests/sunshine-share.test.mjs` builds a March of hourly rows at Toronto with direct normal irradiance of 119 W/m² on days 1–10, 120 W/m² on days 11–20 and 800 W/m² on days 21–31 in daylight, and 500 W/m² at night. The function counts exactly the daylit hours of days 11–31 as sunny (120 W/m² is sunshine, 119 is not), ignores the night hours and other months, and finds about twelve daylit hours a day, as expected at the equinox. In the Workspace, `tests/workspace-deepen-1.cjs` runs Sun hours on the hospital example for 21 March: the Toronto weather had sunshine in 222 of 362 daylit March hours (61 %), so the 10.2 clear-sky hours on the ground become 6.3 expected hours.
 
 ## 5. Discussion
 
