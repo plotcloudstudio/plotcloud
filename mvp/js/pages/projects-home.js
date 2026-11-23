@@ -6,6 +6,7 @@ import {openHospital} from '../hospital-example.js?v=sims-20261121-1';
 // Everything here is real project data in this browser (or synced to the cloud account when signed in). The earlier
 // dashboard's Activity & storage page was removed (2026-11-16); #/activity opens this page.
 import * as S from '../store.js';
+import { isTryProject } from '../beta-access.js';
 import * as C from '../cloud.js';
 import { $, $$, esc, toast, setCurrent, refreshWho } from '../app.js';
 import { suggest, resolve } from '../address-suggest.js';
@@ -104,7 +105,9 @@ export function render(app, [section], params) {
   }
   function card(p) {
     const t = thumbOf(p), del = !!p.deletedAt;
-    return `<article class="ph-card${sel.has(p.id) ? ' is-picked' : ''}" data-id="${esc(p.id)}">${pick(p.id, p.name)}<a class="ph-thumb" href="${del ? '#' : '#/workspace/' + esc(p.id)}" data-open="${esc(p.id)}" aria-label="Open ${esc(p.name)}">${t ? `<img src="${t}" alt="">` : svg('folder').replace('<svg', '<svg class="ph-folder"')}</a>
+    // the courtyard sample (2026-11-23): an example like Fallingwater and the hospital while its building is as shipped
+    const ex = p.sample && !p.copyOf ? (isTryProject(p) ? 'Example' : 'Example · edited') : '';
+    return `<article class="ph-card${ex ? ' ph-example' : ''}${sel.has(p.id) ? ' is-picked' : ''}" data-id="${esc(p.id)}">${pick(p.id, p.name)}<a class="ph-thumb" href="${del ? '#' : '#/workspace/' + esc(p.id)}" data-open="${esc(p.id)}" aria-label="Open ${esc(p.name)}"${ex === 'Example · edited' ? ' title="Its building has been changed, so studies other than Sun hours and Daylight need monthly access on it"' : ''}>${t ? `<img src="${t}" alt="">` : svg('folder').replace('<svg', '<svg class="ph-folder"')}${ex ? `<span>${ex}</span>` : ''}</a>
       <div class="ph-actions">${del ? `<button type="button" data-restore="${esc(p.id)}" title="Restore" aria-label="Restore ${esc(p.name)}">${svg('restore')}</button><button type="button" data-purge="${esc(p.id)}" title="Delete permanently" aria-label="Delete ${esc(p.name)} permanently">${svg('trash')}</button>`
         : `<button type="button" data-fav="${esc(p.id)}" aria-pressed="${!!p.favorite}" title="Favorite" aria-label="Favorite ${esc(p.name)}">${svg('star')}</button><button type="button" data-tags="${esc(p.id)}" title="Tags" aria-label="Tags for ${esc(p.name)}">${svg('tag')}</button><button type="button" data-rename="${esc(p.id)}" title="Rename" aria-label="Rename ${esc(p.name)}">${svg('edit')}</button><button type="button" data-dup="${esc(p.id)}" title="Duplicate" aria-label="Duplicate ${esc(p.name)}">${svg('copy')}</button><button type="button" data-del="${esc(p.id)}" title="Delete" aria-label="Delete ${esc(p.name)}">${svg('trash')}</button>`}</div>
       <div class="ph-meta"><b title="${esc(p.name)}">${esc(p.name)}</b><span class="ph-stats"><span title="Saved results">${svg('chart')}${p.runs.length}</span><span title="Saved versions">${svg('layers')}${p.versions.length}</span></span></div>

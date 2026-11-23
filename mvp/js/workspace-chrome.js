@@ -1939,7 +1939,10 @@ export function mountChrome(app, api) {
     const fr = app.querySelector('#fPersp')?.getBoundingClientRect() || { width: 1200, height: 800 }, sc = 1400 / (Math.max(400, fr.width) * (devicePixelRatio || 1)), pics = [];
     try { for (let i = 0; i < frames.length; i++) { P.paint(i); const c = INST.persp.ws.snapAt?.(fr.width, fr.height, sc); if (c) pics.push({ label: frames[i].label, blob: await X.canvasBlob(c) }); await new Promise((r) => setTimeout(r, 0)); } } finally { P.restore(); }
     if (pics.length === frames.length) await xlAdd(P.item(pics)); return pics.length === frames.length; }
-  async function runStudy() {
+  // a run never fails silently (2026-11-23): an error before the run starts (reading the levels, the estimate, the model) used to escape
+  // the click and leave the card as it was; now the card says what went wrong and the button is ready again
+  async function runStudy() { try { await runStudyCore(); } catch (e) { console.error(e); ST.busy = false; ST.progress = ''; ST.res = null; ST.err = 'Could not run: ' + (e && e.message || String(e)); try { runBar('error'); } catch { } drawStudy(); } }
+  async function runStudyCore() {
     api.syncViews?.();   // both views on the latest model before a study reads it (2026-11-18)
     if (ST.busy) return; if (!canUse(ST.id, p)) { ST.err = paidNote(simName(ST.id)); drawStudy(); return; } syncLevels(); ST.busy = true; ST.cancel = false; ST.err = ''; ST.progress = ''; ST.t0 = Date.now(); ST.areaOpen = false; ST.runQ = qualOf(); ST.estAtRun = INST.persp.ready ? estimate(ST.id) : null; drawStudy(); runBar('start');
     const tick = setInterval(() => { const e = studyCard.querySelector('.sp-elapsed'); if (e) e.textContent = `${Math.round((Date.now() - ST.t0) / 1000)} s elapsed${ST.estAtRun ? ` of ${dur(ST.estAtRun.ms)}` : ''}`; runBar('tick'); }, 1000);
