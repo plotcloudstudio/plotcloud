@@ -1,5 +1,5 @@
 import * as S from './store.js';
-import {baselineSignature,baselineRows,weatherLabel} from './handoff.js?v=handoff-20261028-1';
+import {baselineSignature,baselineRows,weatherLabel} from './handoff.js?v=muse-20261123-1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const shared=new Set(['city','lat','lon','tz','dst','north','northR','wp','occ0','occ1','epwF','epwB','preset','file','mfile']);
 export function mountStudyContract(root,p,v,id,{document:studyDoc=()=>root.ownerDocument,prepared=()=>true}={}){

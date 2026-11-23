@@ -1350,7 +1350,7 @@ const STC = (() => {
   // wall); a rectangular plan in open exposure (no shelter term)
   function cpSwami(theta, G) { const a = Math.abs(((theta + 540) % 360) - 180) * Math.PI / 180, s2 = Math.sin(a / 2), c2 = Math.cos(a / 2);
     const x = 1.248 - 0.703 * s2 - 1.175 * Math.sin(a) ** 2 + 0.131 * Math.sin(2 * a * G) ** 3 + 0.769 * c2 + 0.07 * G * G * s2 * s2 + 0.717 * c2 * c2; return 0.6 * Math.log(Math.max(1e-6, x)); }
-  window.__cpSwami = cpSwami;
+  if (typeof window !== 'undefined') window.__cpSwami = cpSwami;
   const ALPHA = { open: 0.14, suburban: 0.22, city: 0.33 };
   // compass bearing a plan direction faces: plan +Y is north turned by M.north degrees clockwise
   const bearing = (v, north) => ((Math.atan2(v[0], v[1]) * 180 / Math.PI) + (north || 0) + 360) % 360;

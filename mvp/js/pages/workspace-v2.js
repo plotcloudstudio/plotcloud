@@ -2,7 +2,7 @@ import {PLANNED_SIMS,plannedStudy} from '../planned-simulations.js';
 import {mountSimulationPreview} from '../simulation-picker-preview.js';
 import { mountPicker } from '../color-picker.js?v=ill-20261031-1';
 import {inspectStudy} from '../study-readiness.js';
-import {mountHandoff,createHandoff,baselineSignature} from '../handoff.js?v=handoff-20261028-1';
+import {mountHandoff,createHandoff,baselineSignature} from '../handoff.js?v=muse-20261123-1';
 import {editStructuralProperties,structuralSummary} from '../structural-properties.js?v=structural-study-20261028-1';
 // The Workspace (#/workspace): Plan Studio in one view (chosen at the top left), with the Workspace's own tools, Rhino-style panels on the
 // right (Properties, Layers, Versions; additional views under View tools) and the status bar.
@@ -22,7 +22,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=deep-20261123-1';
+import { mountChrome } from '../workspace-chrome.js?v=muse-20261123-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
@@ -177,7 +177,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=sims-20261121-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=muse-20261123-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}

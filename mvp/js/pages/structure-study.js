@@ -1,4 +1,4 @@
-import {mountStudyContract} from '../study-contract.js?v=handoff-20261028-1';
+import {mountStudyContract} from '../study-contract.js?v=muse-20261123-1';
 import{mountStudyShell}from'../study-ui/shell.js?v=unified-modes-20261030-1';
 import * as S from '../store.js';
 import {$,esc,currentProject,currentVersion,setCurrent,setCurrentVersion,toast,route} from '../app.js';

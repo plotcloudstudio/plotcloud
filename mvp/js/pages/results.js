@@ -1,4 +1,4 @@
-import {assumptionsHTML} from '../handoff.js?v=handoff-20261028-1';
+import {assumptionsHTML} from '../handoff.js?v=muse-20261123-1';
 import {compareEvidence,evidenceText} from '../comparison-evidence.js';
 import {checkAccess, canUse} from '../beta-access.js';
 // Projects & Results.
