@@ -1172,8 +1172,12 @@ export function mountChrome(app, api) {
       rows: [['Daylight factor on the cut, mean', fmt(mDF, 1) + '%'], ['Share of the cut at 2 % or more', fmt(m2 * 100) + '%'], ...per.map((x) => [`${esc(x.L.name)}`, `mean ${fmt(x.df, 1)} % · ${fmt(x.two * 100)} % at 2 %+ · autonomy ${fmt(x.da * 100)} %`]), ['Grid', `${fmt(dsx, 2)} m along the cut × ${fmt(dz, 2)} m in height, ${fmt(all)} points, ${nb} sky bearings`]],
       method: `Daylight at points on Section ${esc(s.name || 'A')} through every level (${fmt(dsx, 2)} m along the cut and ${fmt(dz, 2)} m in height, from the floor to below the ceiling): each point is a horizontal sensor at its height, with the floor study's model of the sky in 145 patches (CIE overcast for the daylight factor; the project weather for the daylight autonomy, 300 lux over the occupied hours), the sun, the glass at its angle of incidence, reflections inside the room (split flux) and outside. Glass transmittance ${fmt(ST.dlTau, 2)}, reflectances floor ${ST.dlRf}, walls ${ST.dlRw}, ceiling ${ST.dlRc}. A screening, not a Radiance simulation or a compliance result.`,
       results: { df: +mDF.toFixed(2), df2: +(m2 * 100).toFixed(1), levels: per.length }, settings: { where: 'section', section: s.pts, label: `Daylight on Section ${s.name || 'A'} (Workspace)` } }; }
+  // the project's location for a model with no site of its own (2026-11-23): the latitude, longitude and time zone of Project
+  // settings, the zone as its standard-time offset in hours (the studies use local standard time)
+  const stdOffset = (tz) => { if (Number.isFinite(+tz)) return +tz; try { const off = (m) => { const d = new Date(Date.UTC(2026, m, 15, 12)), f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d), g = (t) => +f.find((x) => x.type === t).value, loc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')); return (loc - d.getTime()) / 3600000; }; return Math.min(off(0), off(6)); } catch { return undefined; } };
+  const projectLoc = () => { const st = S.conditionsOf(p).site || p.site || {}; return Number.isFinite(+st.lat) && Number.isFinite(+st.lon) ? { lat: +st.lat, lon: +st.lon, tz: stdOffset(st.tz), label: st.label || '' } : null; };
   async function compute(id) {
-    const w = INST.persp.ws; try { w.wake3D?.(); } catch { }   // a hidden pane's 3D scene brought up to date before a study reads it (2026-11-18)
+    const w = INST.persp.ws; try { w.wake3D?.(); } catch { } try { const L = projectLoc(); if (L) w.useLocation?.(L); } catch { }   // a hidden pane's 3D scene brought up to date before a study reads it (2026-11-18)
     if (id === SA.VEH || id === SA.PARK) return SA.compute(SAX);   // site access (2026-11-18): site-access-ui.js
     if (id === 'sunhours') { const tw = { step: ST.sunStep, h0: ST.sunH0, h1: ST.sunH1 }, r = w.sunStudy({ day: ST.day, ...tw });
       // the weather (2026-11-23): Sun hours counts clear-sky sun; the project weather says how often the sun was out in that month,
@@ -2053,7 +2057,15 @@ export function mountChrome(app, api) {
       if (blob) { const u = URL.createObjectURL(blob), el = document.createElement('a'); el.href = u; el.download = `${simName(id).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${aspect.replace(':', 'x')}.${/mp4/.test(blob.type) ? 'mp4' : 'webm'}`; document.body.append(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); ST.lastClip = { size: blob.size, type: blob.type, aspect, w: W, h: H, file: el.download }; }
       else ST.lastClip = { err: 'This browser cannot record video here.' }; }
     finally { ST.vidBusy = false; drawStudy(); } }
-  function drawStudy() { syncLevels();
+  // a click is never lost (2026-11-23): a setting typed in a field is applied when the field loses focus, which happens on the press
+  // of the Start or Save button; redrawing the card then replaced the button under the pointer and the click went nowhere, so it took
+  // a second click. While the pointer is down on the card, a redraw waits until the click has happened
+  let PTR_DOWN = false, PTR_PENDING = false;
+  document.addEventListener('pointerdown', (e) => { if (studyCard && studyCard.contains(e.target)) PTR_DOWN = true; }, true);
+  const ptrUp = () => { if (!PTR_DOWN) return; setTimeout(() => { PTR_DOWN = false; if (PTR_PENDING) { PTR_PENDING = false; drawStudyNow(); } }, 0); };
+  window.addEventListener('pointerup', ptrUp, true); window.addEventListener('pointercancel', ptrUp, true);
+  function drawStudy() { if (PTR_DOWN) { PTR_PENDING = true; return; } drawStudyNow(); }
+  function drawStudyNow() { syncLevels();
     if (!ST.id) return; if (ST.res && TL.r !== ST.res) { const r0 = ST.res; tlStop(); TL.r = r0; TL.i = -1; if (r0.timeline && r0.timeline.auto && !motionOff()) setTimeout(() => { if (ST.res === r0 && TL.i < 0) tlPlay(true); }, 1200); }   /* a new result: its own playback from the start */
     const id = ST.id, name = simName(id), r = ST.res, sp = SPEC[id] || {}, stale = r && INST.persp.ready && studyModel(INST.persp.ws) !== ST.key, changed = r && ST.sig !== sigOf(id);
     const status = ST.busy ? ['run', 'Solving'] : ST.err ? ['err', 'Could not run'] : ST.stopped && !r ? ['idle', 'Stopped'] : !r ? ['idle', 'Not run yet'] : stale ? ['stale', 'Model changed'] : changed ? ['stale', 'Settings changed'] : ['ok', `Up to date ${ST.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`];

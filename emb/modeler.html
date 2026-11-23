@@ -8080,6 +8080,12 @@ if (window.__WSROLE) {
       const nd = g.mins.length, until = h * 60, A = new Float32Array(g.H.length); let sum = 0, n = 0;
       for (let k = 0; k < A.length; k++) { if (Number.isNaN(g.H[k])) { A[k] = NaN; continue; } let v = 0; const b = k * nd; for (let di = 0; di < nd && g.mins[di] <= until; di++) if (g.lit[b + di]) v += g.ws[di]; A[k] = v; sum += v; n++; }
       return S3.overlayVals(A) ? { avg: n ? sum / n : 0 } : null; },
+    // the project's location as the site (2026-11-23): a model with no site of its own (a sample, or a building drawn before a site was
+    // picked) runs the site studies at the latitude, longitude and time zone the project settings show; a site with no surroundings,
+    // kept off the saved model (not enumerable), replaced as soon as a real site is set
+    useLocation(loc) { if (M.site && M.site.origin) return false; const la = +loc?.lat, lo = +loc?.lon; if (!Number.isFinite(la) || !Number.isFinite(lo)) return false;
+      const fb = SITEC.newSite({ lat: la, lon: lo, label: loc.label || '' }, { kind: 'radius', r: 300 }, { tz: Number.isFinite(+loc.tz) ? +loc.tz : undefined }); fb.locationOnly = true;
+      Object.defineProperty(M, 'site', { configurable: true, enumerable: false, get() { return fb; }, set(v) { Object.defineProperty(M, 'site', { value: v, writable: true, enumerable: true, configurable: true }); } }); return true; },
     sunStudy(o = {}) {
       if (!M.site || !M.site.origin) throw Error('This project has no site location. Pick the site first (New project or Project settings).');
       const day = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(o.day || '') ? o.day : '03-21', pr = studyPrisms(), MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], dayName = SUN_DAYS[day] || `${+day.slice(3)} ${MON[+day.slice(0, 2) - 1]}`;

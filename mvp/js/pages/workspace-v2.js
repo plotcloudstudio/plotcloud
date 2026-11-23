@@ -15,7 +15,7 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
-import { canUse } from '../beta-access.js';
+import { canUse, isTryProject, fabricSig } from '../beta-access.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
 import { ensureProjectClimate } from '../project-climate.js';
@@ -109,10 +109,14 @@ function readUI() {
 // a draft made before the panes (Workspace boxes) becomes a Plan Studio model once; imported meshes and the site stay as they are
 function ensureStudio(p) {
   const d = p.draft; if (d.studio && d.studio.v === 2 && Array.isArray(d.studio.walls)) return false;
+  // an example still as it shipped stays an example once converted (2026-11-23): its fingerprint is taken again from the Plan Studio
+  // model, so the conversion itself does not make it 'your own project' (the courtyard sample is stored as blocks)
+  const wasTry = (p.sample || p.caseStudy) && !p.copyOf && isTryProject(p);
   const src = { ...d, layers: d.layers.map((l) => ({ ...l, visible: true })), components: d.components.filter((c) => !c.mesh && !PS.test(c.id)) };
   d.studio = toStudio(src, S.siteOf(p), { name: p.name, id: 'ws-' + p.id });
   const CONV = new Set(['wall', 'window', 'slab', 'room', 'furniture', 'roof']);   // Plan Studio makes its own roof over the top level
   d.components = d.components.filter((c) => c.mesh || !CONV.has(c.type));
+  if (wasTry) p.trySigFresh = true;   // the fingerprint is taken once the blocks have become imports (render, below)
   return true;
 }
 
@@ -134,6 +138,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       m.components = m.components.filter((c) => !own(c)); return true; };
     const lv = p.versions.at(-1), clean = lv && JSON.stringify(lv.model) === JSON.stringify(p.draft); if (toImp(p.draft) && clean) toImp(lv.model);
     if (p.draft.meshes && p.draft.studio) { const keep = new Set((p.draft.studio.imports || []).map((o) => o.ref || o.id)); for (const k of Object.keys(p.draft.meshes)) if (!keep.has(k)) delete p.draft.meshes[k]; } }
+  if (p.trySigFresh) { p.trySig = fabricSig(p.draft); delete p.trySigFresh; S.save(); }   // once: a later edit makes it your own project
   const M = () => p.draft, comp = (id) => M().components.find((c) => c.id === id);
   const layerOf = (c) => M().layers.find((l) => l.name === c?.layer);
   // A Studio projection is a disposable view cache, not a model edit.
