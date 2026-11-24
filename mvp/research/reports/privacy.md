@@ -84,6 +84,8 @@ In the end-to-end audit of 20 November 2026 on the two-storey audit block with o
 
 **Geometry versus perception.** Being in a line of sight is necessary for being seen but not sufficient: at distance, through reflective glass in daylight, or with the room dark, little may be seen. At night with lights on, much more is seen. The distance weighting is a rough stand-in for the loss of detail with distance [4]; a more principled approach would use the visual angle subtended by a person.
 
+**Distance thresholds from the literature.** Jan Gehl's viewing distances, about 100 m to see people and about 25 m to read facial expressions, are often cited as a basis for distance weighting (24 November 2026). They come from *Life Between Buildings* and *Cities for People*, but the book text and page numbers could not be checked through a legitimate free copy. The weighting is therefore unchanged and remains an engine choice.
+
 **Heuristic thresholds.** No standard defines how much of a bedroom may be seen from the street. The 10 % and 25 % limits and the score classes encode a reasonable design stance and make results comparable between options; they are exposed so that a designer can state and adjust them.
 
 **Names.** Need classes from names fail for generic names ("Room 1"), as in the audit model, where most rooms were classed as low need; the user should check them.

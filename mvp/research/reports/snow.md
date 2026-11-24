@@ -40,6 +40,15 @@ Snow is transported by the wind once the friction velocity exceeds a threshold t
 
 The study reads the project's EnergyPlus Weather (EPW) file and selects the hours with dry-bulb temperature at or below 0 °C and wind speed of at least 0.5 m/s [8]. If fewer than 24 such hours exist, it stops and reports that drifting does not apply. Of the selected hours, those at or above the 90th percentile of wind speed are binned into 16 directions; the most frequent direction and the mean speed of its hours define a single drifting wind. The 10 m speed is brought to 1.5 m with the ASHRAE power-law profile for the site's terrain class (α = 0.14, 0.22 or 0.33) [9].
 
+An option (added 24 November 2026), *Snowfall in the weather file*, selects instead the hours when snow falls. These are the hours at or below 0 °C with liquid-equivalent precipitation above zero, or with the snow depth higher than in the hour before. The fields come from the EPW Data Dictionary [8]:
+
+- liquid precipitation depth (mm): field N33, the file's 34th column, missing value 999;
+- snow depth (cm): field N30, the 31st column, missing value 999.
+
+The N numbers skip the data-source text field, so N30 is the 31st column. This was checked on a TMYx file.
+
+The combination of these two tests is an engine choice. A file that records neither field falls back to the hours below freezing, and the result says so. If fewer than 24 snowfall hours are found, the study stops and recommends the default.
+
 ### 2.2. Flow field
 
 The same D2Q9 lattice-Boltzmann solver used by the Wind flow study computes the ratio r of local to free-stream speed on a horizontal grid at about 1.5 m, with the design and the surrounding context buildings as solid cells [10]. Its limits (two-dimensional, laminar at a lattice Reynolds number of order 10–100, unvalidated) are documented in the Wind flow report.
@@ -62,7 +71,8 @@ Table 1. Inputs and constants of the Snow study.
 
 | Parameter | Value | Source | Audit status |
 |---|---|---|---|
-| Below-freezing hours | T ≤ 0 °C, U ≥ 0.5 m/s | EPW data [8] | Measured / typical-year data; precipitation is not checked |
+| Below-freezing hours (default) | T ≤ 0 °C, U ≥ 0.5 m/s | EPW data [8] | Measured / typical-year data; precipitation is not checked |
+| Snowfall hours (option) | T ≤ 0 °C and precipitation > 0 (EPW N33, column 34), or snow depth rising (N30, column 31); missing 999 | EPW Data Dictionary [8]; the criterion is an engine choice | Sourced fields; criterion not from a standard |
 | Drifting wind | Top 10 % of speeds; modal direction of 16; mean speed | Engine choice | Reasonable statistic, not from a standard |
 | Wind profile | α 0.14 / 0.22 / 0.33 | ASHRAE Fundamentals ch. 24 [9] | Sourced |
 | Transport threshold | ≈ 4 m/s at 1.5 m (ramp 1.9–4.2 m/s) | Code comment | Consistent with low thresholds for fresh dry snow [7]; Li and Pomeroy report about 4–11 m/s at 10 m, dry snow averaging 7.7 m/s [7] |
@@ -76,6 +86,22 @@ Table 1. Inputs and constants of the Snow study.
 
 `tests/snow-analysis.test.mjs` checks the uniform snowfall tool exactly: areas, volume (3.2 m³), mass (320 kg at 100 kg/m³), water equivalent and the handling of sloped surfaces, gaps and invalid inputs. The Workspace drifting study is exercised by the Workspace tests for completion and output format only. The drift pattern has not been compared with field or wind-tunnel data; candidate benchmarks are the snowdrift measurements around a cube by Beyers and Waechter and the cases collected in Tominaga's review [3, 12].
 
+Two tests cover the snowfall-hours option (24 November 2026):
+
+- `tests/epw-snow.test.mjs` checks the EPW reader on a synthetic year:
+  - snow depth, days since last snowfall and precipitation are read from columns 31, 32 and 34;
+  - the missing codes 999 and 99, blank fields and short lines all read as missing;
+  - albedo is still read from column 33.
+- The same column positions were checked by hand on the Toronto City Airport TMYx 2007–2021 file from climate.onebuilding.org:
+  - snow depth is above zero in 1,976 hours and precipitation in 1,806;
+  - 393 hours are at or below 0 °C with precipitation, and 488 hours are snowfall hours by the combined test.
+- `tests/batch3-options.cjs` runs the Fallingwater case:
+
+| Hours used | Number of hours | Drifting wind |
+|---|---|---|
+| Default (below 0 °C with wind) | 1,499 | from W, 7.6 m/s at 10 m |
+| Snowfall hours | 394 | from W, 8.7 m/s at 10 m |
+
 In the end-to-end audit of 20 November 2026 (two-storey block, Chicago O'Hare TMY3 file, 30 cm fall), the study found 1,862 hours at or below 0 °C, a drifting wind from the north-north-west at 9.0 m/s at 10 m, 0.44 kPa on open ground (30 cm × 150 kg/m³ × g, checked by hand), 0.35 kPa on a flat roof, 837 m² drifted at least 30 % deeper, 1,656 m² scoured, a deepest drift of 49 cm and a mean of 43 cm against the facades.
 
 ## 5. Discussion
@@ -86,7 +112,7 @@ In the end-to-end audit of 20 November 2026 (two-storey block, Chicago O'Hare TM
 
 **Loads.** Code ground snow loads are statistical values (for example the 1-in-50-year load) that include accumulation over a season and rain on snow [4, 5]. A single fall of user-chosen depth at a fixed density is not equivalent. The study's loads are a way to visualise the consequence of a given fall, and the method text says it is not a snow load calculation.
 
-**Precipitation.** The weather selection uses temperature and wind only; it does not check whether snow fell or lay on the ground in those hours. EPW files carry snow depth and liquid precipitation fields, but these are often missing in typical-year files [8].
+**Precipitation.** By default the weather selection uses temperature and wind only; it does not check whether snow fell in those hours. The *Snowfall in the weather file* option uses the EPW precipitation and snow-depth fields [8]. These fields are often missing or synthetic in typical-year files, and an hourly precipitation total says nothing about how much of it was snow or how wet it was. The option therefore refines the choice of hours but does not measure snowfall.
 
 ## 6. Conclusion
 
@@ -101,7 +127,7 @@ The drifting-wind statistic, terrain profile, density and flat-roof factor of th
 5. ASCE, Minimum Design Loads and Associated Criteria for Buildings and Other Structures, ASCE/SEI 7-22, chapter 7, Snow loads, ASCE, Reston, 2022.
 6. M.J. O'Rourke, W. Tobiasson, E. Wood, Proposed code provisions for drifted snow loads, J. Struct. Eng. 112 (9) (1986) 2080–2092. [doi:10.1061/(ASCE)0733-9445(1986)112:9(2080)](https://doi.org/10.1061/(ASCE)0733-9445(1986)112:9(2080))
 7. L. Li, J.W. Pomeroy, Estimates of threshold wind speeds for snow transport using meteorological data, J. Appl. Meteorol. 36 (1997) 205–213. [doi:10.1175/1520-0450(1997)036<0205:EOTWSF>2.0.CO;2](https://doi.org/10.1175/1520-0450(1997)036%3C0205:EOTWSF%3E2.0.CO;2)
-8. U.S. Department of Energy, EnergyPlus Auxiliary Programs: EnergyPlus Weather File (EPW) Data Dictionary, EnergyPlus documentation, 2023.
+8. U.S. Department of Energy, EnergyPlus Auxiliary Programs: EnergyPlus Weather File (EPW) Data Dictionary (fields N30 Snow Depth, N31 Days Since Last Snowfall, N33 Liquid Precipitation Depth), EnergyPlus 9.6 documentation. [bigladdersoftware.com](https://bigladdersoftware.com/epx/docs/9-6/auxiliary-programs/energyplus-weather-file-epw-data-dictionary.html)
 9. ASHRAE, ASHRAE Handbook—Fundamentals, chapter 24, Airflow around buildings, ASHRAE, Atlanta, 2021.
 10. S. Chen, G.D. Doolen, Lattice Boltzmann method for fluid flows, Annu. Rev. Fluid Mech. 30 (1998) 329–364. [doi:10.1146/annurev.fluid.30.1.329](https://doi.org/10.1146/annurev.fluid.30.1.329)
 11. A. Judson, N. Doesken, Density of freshly fallen snow in the central Rocky Mountains, Bull. Am. Meteorol. Soc. 81 (7) (2000) 1577–1587. [doi:10.1175/1520-0477(2000)081<1577:DOFFSI>2.3.CO;2](https://doi.org/10.1175/1520-0477(2000)081%3C1577:DOFFSI%3E2.3.CO;2)
