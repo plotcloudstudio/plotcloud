@@ -100,11 +100,13 @@ export async function route() {
   $$('[data-nav]').forEach((a) => { if (a.dataset.nav === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
   document.querySelector('.pc-ui-context')?.remove();
-  if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
+  if (cleanup) { try { cleanup(); } catch (e) { console.error('Page clean-up failed:', e); } cleanup = null; }
   document.body.classList.toggle('pc-public',publicRoute);
   who();
   // (2026-11-23) a skeleton in place of a blank page while the page loads; the page's own content replaces it
-  const app = $('#app'); app.innerHTML = '<div class="wrap pc-skel" aria-busy="true" aria-label="Loading"><i style="width:28%"></i><i style="width:62%;height:34px"></i><i style="width:84%"></i><i style="width:76%"></i><i style="width:48%"></i></div>';
+  // (2026-11-24) a fresh #app for each route: a page still finishing its own loading after the person moved on writes into the old,
+  // detached element and can no longer draw over the new page (Results did that over the Workspace)
+  const app0 = $('#app'), app = app0.cloneNode(false); app0.replaceWith(app); app.innerHTML = '<div class="wrap pc-skel" aria-busy="true" aria-label="Loading"><i style="width:28%"></i><i style="width:62%;height:34px"></i><i style="width:84%"></i><i style="width:76%"></i><i style="width:48%"></i></div>';
   const study = key === 'simulations' ? rest[0]?.split('?')[0] : key === 'batch-run' ? params.get('sim') : null;
   const resource = key === 'resources' && rest[0] === 'tool' ? rest[1]?.split('?')[0] : null;
   const resourceTools = ['furniture','facade','detaillab','topo','stairs3d','doors3d','palette','axon','ergo','scale','code-bc','code-on','access-bc','access-on','leed'];
