@@ -382,7 +382,7 @@ export function mountChrome(app, api) {
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=sims-20261121-1'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=round2-20261124-1'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }

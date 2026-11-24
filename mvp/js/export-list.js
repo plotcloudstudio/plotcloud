@@ -167,7 +167,7 @@ async function pdf(items, title, ctx) {
       d.setDrawColor(107, 114, 128); d.rect(c3, y3, lw, lh); d.setFontSize(7.4); d.setTextColor(...ink); for (const t of [0, 0.5, 1]) d.text(num(L.lo + (L.hi - L.lo) * t, L.dec), c3 + lw * t, y3 + lh + 3.4, { align: t === 0 ? 'left' : t === 1 ? 'right' : 'center' }); d.text(d.splitTextToSize(L.unit, 28), c3 + lw + 2, y3 + lh - 0.4); y3 += lh + 8; }
     if (it.rows && it.rows.length) { y3 = head('Results', c3, y3); y3 = table(it.rows.slice(0, 12), c3, y3, colW, 0.52, 7.6, H - 60) + 3; }
     y3 = head('Inputs and Boundary Conditions', c3, y3); y3 = table(inputsOf(it), c3, y3, colW, 0.4, 7.4, H - 50) + 3;
-    const lim = [D.limit, ...(it.notes || []).map(usage)].filter(Boolean); if (lim.length) { y3 = head('Assumptions and Limitations', c3, y3); for (const t of lim) { if (y3 > H - 26) break; y3 = wrap(t, colW, 7.2, c3, y3, sub) + 1; } }
+    const lim = [...(it.notes || []).map(usage), D.limit].filter(Boolean);   // this result's own notes first (2026-11-24): a full column cuts the general limit text, not them if (lim.length) { y3 = head('Assumptions and Limitations', c3, y3); for (const t of lim) { if (y3 > H - 26) break; y3 = wrap(t, colW, 7.2, c3, y3, sub) + 1; } }
   }
   // assumptions, limitations and disclaimer
   d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Assumptions, Limitations and Disclaimer`, mg, 20);
