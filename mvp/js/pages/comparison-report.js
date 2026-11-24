@@ -2,8 +2,8 @@ import * as S from '../store.js';
 import {SIMS} from '../data.js';
 import {GROUPS as STUDY_GROUPS} from '../study-groups.js?v=groups-20261118-1';
 import {$,esc,currentProject,setCurrent} from '../app.js';
-import {buildComparisonReport} from '../comparison-report-data.js';
-import {reportHTML,downloadReportData,exportComparisonPDF} from '../comparison-report.js';
+import {buildComparisonReport} from '../comparison-report-data.js?v=round2-20261124-1';
+import {reportHTML,downloadReportData,exportComparisonPDF} from '../comparison-report.js?v=round2-20261124-1';
 export function render(app,[pid],params){
  const p=(pid&&S.project(pid))||currentProject();if(!p){app.innerHTML='<div class="wrap"><h1 class="display md">Choose a project first.</h1><a href="#/start-study">Start a guided study</a></div>';return;}setCurrent(p);
  if(p.versions.length<2){app.innerHTML=`<div class="wrap"><h1 class="display md">Save two design versions.</h1><p>A comparison report needs a baseline and a changed design. Keep the same study inputs to make differences easier to interpret.</p><a class="btn accent" href="#/workspace/${esc(p.id)}">Open Workspace</a> <a class="btn" href="#/results/${esc(p.id)}">View saved results</a></div>`;return;}

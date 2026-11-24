@@ -35,14 +35,14 @@ import * as ISO from './interior/isovist.js?v=sims-20261121-1';
 import * as VWS from './interior/views.js?v=sims-20261121-1';
 import * as CAMS from './interior/cameras.js?v=sims-20261121-1';
 import * as DAY from './interior/daylight.js?v=muse-20261123-1';
-import { daylightInputs, daylightRecord } from './daylight-run.js?v=muse-20261123-1';
+import { daylightInputs, daylightRecord } from './daylight-run.js?v=round2-20261124-1';
 import * as EGX from './interior/egress.js?v=sims-20261121-1';
 import * as ECODE from './interior/egresscode.js?v=code-20261110-1';
 import { maturityOf } from './capabilities.js';
 import { workflowState } from './onboarding.js';
 import * as ACU from './interior/acoustics.js?v=acu-20261106-1';
 import { keep as PKEEP } from '../../emb/lib/plansim.js?v=sims-20261121-1';
-import { mountProps } from './project-props.js?v=muse-20261123-1';
+import { mountProps } from './project-props.js?v=round2-20261124-1';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const P = {

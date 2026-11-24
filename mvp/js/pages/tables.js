@@ -4,7 +4,7 @@ import * as S from '../store.js';
 import * as C from '../project-contract.js';
 import { SIMS } from '../data.js';
 import { categoryOf } from '../capabilities.js';
-import { downloadFile } from '../comparison-report.js';
+import { downloadFile } from '../comparison-report.js?v=round2-20261124-1';
 import { $, $$, esc, currentProject, setCurrent } from '../app.js';
 
 const finite = Number.isFinite;

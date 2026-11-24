@@ -38,7 +38,7 @@ export async function render(app, [pid], params) {
   if (!p.batch) p.batch = { sel: [], cfg: {} };
   let A = p.versions.at(-2) || p.versions[0], B = p.versions.at(-1), cardV = B;
   if (params.get('sim')) { C.scope = 'sim'; C.sim = params.get('sim'); }
-  const { batchInfo } = await import('./sim-engine.js');
+  const { batchInfo } = await import('./sim-engine.js?v=round2-20261124-1');
   let dead = false;
 
   app.innerHTML = `<div class="wrap">

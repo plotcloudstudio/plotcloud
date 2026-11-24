@@ -175,7 +175,7 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   // the shared conditions and the batch panel's changes, and is recorded as the page recorded it
   if (sim.id === 'daylight' && batch) {
     app.innerHTML = `<div class="wrap"><p role="status">Daylight · running…</p></div>`; tell({ stage: 'running' });
-    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=muse-20261123-1'), DAYM = await import('../interior/daylight.js?v=muse-20261123-1');
+    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=round2-20261124-1'), DAYM = await import('../interior/daylight.js?v=muse-20261123-1');
       const r = await studioScene(v, site, p.name, 'daylight', level?.id); if (!r.ok) throw Error(r.why || 'The model could not be read.'); const sc = JSON.parse(r.scene);
       const { shared: sh, inputs } = await DR.daylightInputs(p, OVd), nOv = (k, d) => (Number.isFinite(+OVd[k]) && OVd[k] !== '' && OVd[k] != null ? +OVd[k] : d), out = await DAYM.run(sc, { level: 'draft', tau: nOv('tau', 0.6), blind: nOv('blind', 0.2), ...inputs });   // the Workspace's defaults unless the batch panel changes them (2026-11-23)
       const rec = DR.daylightRecord(p, v, sh, out, { level: level?.id, origin: sc.origin, settings: { batchOverrides: OVd, tau: nOv('tau', 0.6), blind: nOv('blind', 0.2) } }); tell({ ok: true, settings: rec.settings, results: rec.results });
