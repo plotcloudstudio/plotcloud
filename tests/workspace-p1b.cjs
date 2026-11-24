@@ -44,7 +44,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.selectOption('.sp-studycard [data-eg=detect]', '60'); await p.waitForTimeout(400); assert.match(await p.locator('.sp-studycard .sp-pill').innerText(), /Up to date/);
     await p.screenshot({ path: `${out}/p1b-after.png` }); console.log('PASS after a run: results first, settings folded, changes flagged');
     // save the result: Simulation done
-    await p.click('.sp-studyres [data-st=save]'); await p.waitForFunction(() => document.querySelector('.sp-flow [data-flow=sim]')?.dataset.done === 'true', null, { timeout: 30000 });
+    await p.click('.sp-studyres [data-st=save]'); await p.waitForTimeout(300); if (await p.evaluate(() => /Save as version v\d+\?/.test(document.querySelector('.sp-studyres')?.innerText || ''))) await p.click('.sp-studyres [data-st=save]');   /* Save asks first when the model has unsaved changes (2026-11-23) */ await p.waitForFunction(() => document.querySelector('.sp-flow [data-flow=sim]')?.dataset.done === 'true', null, { timeout: 30000 });
     // add to the Export list and export a PDF: "Export a report" ticked
     await p.click('.sp-studycard [data-st=xlview]'); await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent >= 1, null, { timeout: 120000 });
     let st = await steps(); assert.equal(st.steps.report, false); assert.equal(st.steps.study, true);

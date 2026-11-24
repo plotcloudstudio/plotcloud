@@ -34,7 +34,7 @@ try{
   if(id==='daylight'){await p.click('[data-st-set="dlLevel:draft"]');assert.match(await p.locator('.sp-studycard').innerText(),/Occupied 9:00 to 17:00[\s\S]*Work plane 1 m/);}
   await p.click('[data-st=run]');await p.waitForFunction(()=>{const s=window.__wsStudy.state();return !s.busy&&(s.res||s.err);},null,{timeout:300000});
   assert.equal(await p.evaluate(()=>window.__wsStudy.state().err),'',id);
-  await p.click('[data-st=save]');await p.waitForFunction(()=>window.__wsStudy.state().saved||window.__wsStudy.state().err,null,{timeout:60000});
+  await p.click('[data-st=save]'); await p.waitForTimeout(300); if (await p.evaluate(() => /Save as version v\d+\?/.test(document.querySelector('.sp-studyres')?.innerText || ''))) await p.click('[data-st=save]');   /* Save asks first when the model has unsaved changes (2026-11-23) */await p.waitForFunction(()=>window.__wsStudy.state().saved||window.__wsStudy.state().err,null,{timeout:60000});
   const run=await p.evaluate(async({pid,id})=>{const S=await import('./js/store.js');return S.project(pid).runs.filter(r=>r.simId===id).at(-1);},{pid:state.id,id}),sc=run?.settings?.sharedConditions;
   assert(sc&&sc.site.north===15&&sc.signature,id+' '+JSON.stringify(sc));
   if(id==='daylight'){assert(sc.effective.parameters[3]===15&&sc.effective.parameters[8]===1&&JSON.stringify(sc.effective.parameters[11])==='[9,17]',JSON.stringify(sc.effective));assert(run.results.kpis.some(([k,v])=>/^sDA/.test(k)&&/\d/.test(v))&&run.results.field?.pts?.length>10);}

@@ -70,7 +70,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('[data-sp=dim]'); await p.waitForTimeout(1200); const frp = p.frames().find((f) => f.url().includes('ws=plan'));
     const s2 = await frp.evaluate(() => window.__ws.egressState()); assert(s2 && s2.n > 50, '2D plays the same run: ' + JSON.stringify(s2));
     // Save to results; the old page now opens the Workspace
-    await p.click('[data-st=save]'); await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 30000 });
+    await p.click('[data-st=save]'); await p.waitForTimeout(300); if (await p.evaluate(() => /Save as version v\d+\?/.test(document.querySelector('.sp-studyres')?.innerText || ''))) await p.click('[data-st=save]');   /* Save asks first when the model has unsaved changes (2026-11-23) */ await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 30000 });
     console.log('PASS 2D playback and Save to results');
     await p.goto(base + '/mvp/#/simulations/fire-evacuation'); await p.waitForFunction(() => location.hash.startsWith('#/workspace'), null, { timeout: 30000 });
     console.log('PASS the old Fire Evacuation page opens the Workspace');

@@ -53,7 +53,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // 2D shows the current level's sheet with arrows
     await p.click('[data-sp=dim]'); await p.waitForTimeout(1200); const frp = p.frames().find((f) => f.url().includes('ws=plan'));
     assert(await frp.evaluate(() => !!window.__ws.egressState()), '2D shows the result');
-    await p.click('[data-st=save]'); await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 30000 });
+    await p.click('[data-st=save]'); await p.waitForTimeout(300); if (await p.evaluate(() => /Save as version v\d+\?/.test(document.querySelector('.sp-studyres')?.innerText || ''))) await p.click('[data-st=save]');   /* Save asks first when the model has unsaved changes (2026-11-23) */ await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 30000 });
     console.log('PASS 2D and Save to results');
     // Indoor acoustics on level 1
     await p.click('.sp-studycard [data-st=close]').catch(() => {}); await p.waitForTimeout(500);
