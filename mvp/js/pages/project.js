@@ -12,7 +12,7 @@ import { inspectStudy } from '../study-readiness.js';
 import { USE_TEMPLATES, GENERIC, templateFor, occupiedHours } from '../use-templates.js';
 import { recommend, adopt, updateGroup, cancelGroup, pendingTasks, feedbackRecommendation } from '../recommendations.js';
 import { comparability, fieldDiff, metricRows, describe, fmt } from '../compare-metrics.js';
-import { buildSpec, saveRevision, pptxFromSpec, evidenceJSON, reviewHTML, addFeedback, setFeedbackStatus, importReview } from '../report-spec.js?v=round2-20261124-1';
+import { buildSpec, saveRevision, pptxFromSpec, evidenceJSON, reviewHTML, addFeedback, setFeedbackStatus, importReview } from '../report-spec.js?v=review-20261124-2';
 import { reportHTML, exportComparisonPDF, downloadFile } from '../comparison-report.js?v=round2-20261124-1';
 import { createBatch } from '../batch.js';
 import { geocode, enrich } from '../site.js';
