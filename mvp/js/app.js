@@ -73,6 +73,8 @@ const PAGES = {
 };
 const TITLES = { founder:'Founder workspace', 'comparison-report':'Simulation comparison report', about:'About', blog:'Blog', project:'Project', tables:'Tables', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
+// Render removed (2026-11-24): forget the OpenAI key and model the Render panel kept in this browser; its saved pictures (IndexedDB plotcloud-renders) are left as they are
+try{for(const k of ['pc-openai-key','pc-render-model']){localStorage.removeItem(k);sessionStorage.removeItem(k);}}catch(e){}
 export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab
   const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;

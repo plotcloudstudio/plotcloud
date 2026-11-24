@@ -91,7 +91,7 @@ export const MODEL_TOOLS = [
 // Resource discovery is public; resource tools retain their access requirements.
 export const RESOURCES = {
   utilities: [
-    { name: 'Color palettes', tool: 'palette', blurb: 'Palettes for boards, renders and materials.' },
+    { name: 'Color palettes', tool: 'palette', blurb: 'Palettes for drawings, figures and materials.' },
     { name: 'Exploded site axon', tool: 'axon', blurb: 'Layered site axonometric diagrams.' },
     { name: 'Physical model', tool: 'topo', blurb: 'Contour models ready for laser cutting.' },
   ],

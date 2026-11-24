@@ -24,7 +24,7 @@ export function render(app) {
       </div>
       <div class="lp-drift-stage"><div id="lpDriftWall"></div></div>
     </div>
-    <ol class="lp-flow" aria-label="The workflow">${[['Site analysis', 'Site, terrain and context'], ['Plan Studio', 'Draw or import the building'], ['Simulation', 'Run studies on a version'], ['Report', 'Figures and the report to export']].map(([t, d], i) => `<li><span>0${i + 1}</span><b>${t}</b><small>${d}</small></li>`).join('')}</ol>
+    <ol class="lp-flow" aria-label="The workflow">${[['Site analysis', 'Site, terrain and context'], ['Plan Studio', 'Draw or import the building'], ['Simulation', 'Run studies on a version'], ['Reports', 'Figures and the report to export']].map(([t, d], i) => `<li><span>0${i + 1}</span><b>${t}</b><small>${d}</small></li>`).join('')}</ol>
   </header>
 
   ${featureMarkup}
