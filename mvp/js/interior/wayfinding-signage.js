@@ -176,7 +176,7 @@ export function analyse(building, o = {}) {
   const t0 = Date.now(), lvs = building.levels.slice().sort((a, b) => a.z - b.z), L = lvs.find((l) => l.id === o.level) || lvs[0]; if (!L) throw new Error('No floors in the model.');
   const groundId = (lvs.filter((l) => l.z > -0.5).sort((a, b) => Math.abs(a.z) - Math.abs(b.z))[0] || lvs[0]).id;
   const prepOpts = { eye: o.eye, furn: o.furn, precise: o.precise, access: o.access, groups: o.groups, accessible: o.accessible, minDoor: o.minDoor };
-  const cache = new Map(), floor = (lv) => { if (!cache.has(lv.id)) { const F = prepare(lv.sc, prepOpts); F.level = lv; F.starts = startsOf(F, { stairs: stairsOn(building, lv), ground: lv.id === groundId, manual: lv.id === L.id ? o.manual || [] : [] }); cache.set(lv.id, F); } return cache.get(lv.id); };
+  const cache = new Map(), floor = (lv) => { if (!cache.has(lv.id)) { const F = prepare(lv.sc, prepOpts); F.level = lv; if (o.signRead?.mode === 'ada') { const ch = +o.signRead.charMm || 75; F.visFor = (g) => adaMaxDistance(ch, SIGN_BASE_MM[g.mount] || SIGN_BASE_MM.wall); F.signRead = { mode: 'ada', charMm: ch }; } F.starts = startsOf(F, { stairs: stairsOn(building, lv), ground: lv.id === groundId, manual: lv.id === L.id ? o.manual || [] : [] }); cache.set(lv.id, F); } return cache.get(lv.id); };
   const F = floor(L); if (!F.rooms.length) throw new Error('No rooms on this floor: draw the rooms first, or pick another floor.');
   const allStarts = F.starts, chosen = o.starts === 'all' || !o.starts ? allStarts.filter((s) => s.kind !== 'manual' || (o.manual || []).length) : allStarts.filter((s) => o.starts.includes(s.id));
   if (!chosen.length) return { level: L, starts: allStarts, chosen: [], routes: [], nodes: [], none: allStarts.length ? 'Choose a start.' : 'No lift, stair or entrance was recognised on this floor: set a start by hand (click the plan).', cell: F.c, ms: Date.now() - t0 };
@@ -306,6 +306,18 @@ export function entranceOf(F, r, groups) { const d = r.door, P = r.pts, total = 
 // within 15 m, ahead of the walker and within 60° of square-on). A decision is guided when a sign there is seen by that route and
 // lists the way the route takes. Every figure below is a count of these.
 const VIS_MAX = 15, VIS_ANG = Math.PI / 3, AHEAD = 8;
+// Reading distance from letter height (2026-11-24), 2010 ADA Standards for Accessible Design, 703.5.5 and Table 703.5.5 (visual
+// characters; height measured on the uppercase I; viewing distance horizontal, from the characters to where approach stops), with
+// 703.5.6 (visual characters 40 in = 1015 mm minimum above the floor). For the height of the characters' baseline above the floor:
+//   1015–1780 mm: 16 mm below 1830 mm viewing distance;  1780–3050 mm: 51 mm below 4570 mm;  above 3050 mm: 75 mm below 6400 mm;
+//   beyond those distances, plus 3.2 mm per 305 mm. Turned round: the farthest horizontal distance (m) at which letters of this
+// height meet the table, which is a minimum for compliance, not a measured legibility limit; 0 below the 703.5.6 height or the
+// tier's minimum letter height.
+export const ADA_TIERS = [[1780, 1830, 16], [3050, 4570, 51], [Infinity, 6400, 75]];
+export function adaMaxDistance(charMm, baseMm) { if (!(baseMm >= 1015) || !(charMm > 0)) return 0; const [, d0, h0] = ADA_TIERS.find((t) => baseMm <= t[0]); if (charMm < h0) return 0; return (d0 + (charMm - h0) / 3.2 * 305) / 1000; }
+// the baseline height of a proposed sign's characters: on a wall about 1.5 m (the lower tier), hung over a corridor about 2.3 m
+export const SIGN_BASE_MM = { wall: 1500, hung: 2300 };
+const visOf = (F, g) => (F.visFor ? F.visFor(g) : VIS_MAX);
 const S_WALLS = 1;   // the sight raster's wall flag (S_OPQ)
 function wallAhead(F, p, v, max = 6) { const R = F.SR; for (let t = 0.3; t <= max; t += R.c / 2) { const q = [p[0] + v[0] * t, p[1] + v[1] * t], k = cellOf(R, q); if (k < 0) return null; if (R.a[k] & S_WALLS) return Math.max(0.2, t - 0.15); } return null; }
 const relOf = (t) => REL(t);
@@ -325,12 +337,12 @@ export function signAt(A, n, alt = null) { const F = A.F, starters = n.passes.fi
 function seenBy(F, n, q, g) { const f = g.face * Math.PI / 180, fv = [Math.cos(f), Math.sin(f)], walkDir = q.arr || q.dep; let k = 0;
   // the spots: the last 8 m before the point; for people starting here (out of a lift or a stair), their first 2 m, looking round as they come out
   const spots = q.arr ? [...Array(AHEAD)].map((_, i) => along(q.r.pts, Math.max(0, q.s - (i + 1)))) : [0, 0.5, 1, 1.5, 2].map((d) => along(q.r.pts, Math.min(q.s + d, plen(q.r.pts))));
-  for (const v of spots) { const d = dist(v, g.p); if (d > VIS_MAX || d < 0.3) continue; const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]), c = tv[0] * fv[0] + tv[1] * fv[1];
+  for (const v of spots) { const d = dist(v, g.p); if (d > visOf(F, g) || d < 0.3) continue; const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]), c = tv[0] * fv[0] + tv[1] * fv[1];
     if (Math.acos(Math.max(-1, Math.min(1, (g.sides === 2 ? Math.abs(c) : c)))) > VIS_ANG) continue; if (q.arr && (g.p[0] - v[0]) * walkDir[0] + (g.p[1] - v[1]) * walkDir[1] < 0) continue;   /* arriving: ahead of them; starting here: they look round before choosing */ if (F.sight(v, g.p)) k++; }
   return q.arr ? k : Math.round(k * AHEAD / 5); }
 // a room's identification sign: seen from the last 8 m of the walk to its door
 function seenAtDoor(F, r, g) { const L = plen(r.pts), f = g.face * Math.PI / 180, fv = [Math.cos(f), Math.sin(f)]; let k = 0;
-  for (let i = 1; i <= AHEAD; i++) { const v = along(r.pts, Math.max(0, L - i)), d = dist(v, g.p); if (d > VIS_MAX || d < 0.3) continue; const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]); if (Math.acos(Math.max(-1, Math.min(1, tv[0] * fv[0] + tv[1] * fv[1]))) > Math.PI / 2.4) continue; if (F.sight(v, g.p)) k++; }
+  for (let i = 1; i <= AHEAD; i++) { const v = along(r.pts, Math.max(0, L - i)), d = dist(v, g.p); if (d > visOf(F, g) || d < 0.3) continue; const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]); if (Math.acos(Math.max(-1, Math.min(1, tv[0] * fv[0] + tv[1] * fv[1]))) > Math.PI / 2.4) continue; if (F.sight(v, g.p)) k++; }
   return k; }
 const lists = (g, n, q) => { if (q.taken < 0) return false; const w = n.br[q.taken], want = (n.ways.find((x) => Math.abs(wrap(ang(x.dir) - ang(w.dir))) < 0.3) || {}).to || [];
   return want.length > 0 && g.ways.some((x) => x.to.some((t) => want.includes(t))); };
@@ -396,14 +408,14 @@ export function beforeAfter(building, opts, proposed) { const A = analyse(buildi
 // say for the way this walker takes, and what is wrong when no sign guides them. The walker is not told the way: the check is only
 // whether a sign in sight names it. Uses the visibility rule of the layouts (seenBy).
 function seenFrom(F, n, q, g) { const f = g.face * Math.PI / 180, fv = [Math.cos(f), Math.sin(f)]; let far = 0;
-  for (let i = 1; i <= AHEAD; i++) { const v = q.arr ? along(q.r.pts, Math.max(0, q.s - i)) : along(q.r.pts, Math.min(q.s + (i - 1) / 4, plen(q.r.pts))), d = dist(v, g.p); if (d > VIS_MAX || d < 0.3) continue;
+  for (let i = 1; i <= AHEAD; i++) { const v = q.arr ? along(q.r.pts, Math.max(0, q.s - i)) : along(q.r.pts, Math.min(q.s + (i - 1) / 4, plen(q.r.pts))), d = dist(v, g.p); if (d > visOf(F, g) || d < 0.3) continue;
     const tv = unit([v[0] - g.p[0], v[1] - g.p[1]]), c = tv[0] * fv[0] + tv[1] * fv[1]; if (Math.acos(Math.max(-1, Math.min(1, g.sides === 2 ? Math.abs(c) : c))) > VIS_ANG) continue;
     if (q.arr && (g.p[0] - v[0]) * q.arr[0] + (g.p[1] - v[1]) * q.arr[1] < 0) continue; if (F.sight(v, g.p)) far = Math.max(far, q.arr ? i : (i - 1) / 4); }
   return far; }
 export function walkCheck(A, route, signs = []) { const F = A.F, ev = evaluate(A, signs), all = [...ev.signs, ...A.signs.map((g) => ({ ...g, existing: true, ways: [], type: 'Existing sign', sides: 1 }))], out = [];
   for (const n of A.nodes) { const q = n.passes.find((x) => x.r === route); if (!q) continue; const decide = n.br.length >= 3 || n.exitOf || n.score >= A.threshold; if (!decide) continue;
     const head = q.arr || q.dep, takenRel = q.taken >= 0 ? REL(wrap(ang(n.br[q.taken].dir) - ang(head))) : 'Ahead', seen = [];
-    for (const g of all) { if (dist(g.p, n.p) > VIS_MAX) continue; const far = seenFrom(F, n, q, g); if (!far) continue; const face = g.sides === 2 && (() => { const f = g.face * Math.PI / 180, v = along(q.r.pts, Math.max(0, q.s - 3)); return (v[0] - g.p[0]) * Math.cos(f) + (v[1] - g.p[1]) * Math.sin(f) < 0; })() ? g.waysB : g.ways;
+    for (const g of all) { if (dist(g.p, n.p) > visOf(F, g)) continue; const far = seenFrom(F, n, q, g); if (!far) continue; const face = g.sides === 2 && (() => { const f = g.face * Math.PI / 180, v = along(q.r.pts, Math.max(0, q.s - 3)); return (v[0] - g.p[0]) * Math.cos(f) + (v[1] - g.p[1]) * Math.sin(f) < 0; })() ? g.waysB : g.ways;
       const mine = (face || []).find((w) => w.to.includes(route.room.name) || w.to.includes(route.room.group) || w.to.some((t) => t.startsWith(route.room.group)));
       seen.push({ id: g.id, type: g.type, from: far, says: face || [], mine: mine ? mine.arrow : null, existing: !!g.existing }); }
     const start = !q.arr, guided = !!n.f.E || seen.some((x) => x.mine && (start || x.from >= 2));   // arriving: seen 2 m or more before the point; out of a lift or stair: seen at all as they come out

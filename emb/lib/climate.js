@@ -19,7 +19,7 @@ export function parseEPW(text, name = '') {
   const lines = String(text || '').split(/\r?\n/), head = (lines[0] || '').split(',');
   if (head[0] !== 'LOCATION') throw new Error('This is not an EPW weather file (no LOCATION line).');
   const N = 8760, num = (v, bad) => { const x = +v; return Number.isFinite(x) && !(x >= bad) ? x : NaN; };
-  const T = new Float32Array(N), Tdp = new Float32Array(N), RH = new Float32Array(N), IR = new Float32Array(N), GHR = new Float32Array(N), DNR = new Float32Array(N), DHR = new Float32Array(N), WD = new Float32Array(N), WS = new Float32Array(N), ALB = new Float32Array(N).fill(NaN);
+  const T = new Float32Array(N), Tdp = new Float32Array(N), RH = new Float32Array(N), IR = new Float32Array(N), GHR = new Float32Array(N), DNR = new Float32Array(N), DHR = new Float32Array(N), WD = new Float32Array(N), WS = new Float32Array(N), ALB = new Float32Array(N).fill(NaN), SND = new Float32Array(N).fill(NaN), DSS = new Float32Array(N).fill(NaN), PRC = new Float32Array(N).fill(NaN);
   const seen = new Uint8Array(N); let n = 0, fixed = 0;
   for (let i = 8; i < lines.length; i++) {
     const c = lines[i].split(','); if (c.length < 22) continue;
@@ -28,7 +28,11 @@ export function parseEPW(text, name = '') {
     if (d > MDAYS[m - 1]) continue;
     const k = dayOfYear(m, d) * 24 + h - 1; if (seen[k]) continue; seen[k] = 1; n++;
     T[k] = num(c[6], 99.9); Tdp[k] = num(c[7], 99.9); RH[k] = num(c[8], 999); IR[k] = num(c[12], 9999);
-    GHR[k] = num(c[13], 9999); DNR[k] = num(c[14], 9999); DHR[k] = num(c[15], 9999); WD[k] = num(c[20], 999); WS[k] = num(c[21], 999); { const v = +c[32]; ALB[k] = Number.isFinite(v) && v >= 0 && v < 1 && c[32] !== undefined && c[32].trim() !== '' ? v : NaN; }   // EPW field 33, albedo (missing 999)
+    GHR[k] = num(c[13], 9999); DNR[k] = num(c[14], 9999); DHR[k] = num(c[15], 9999); WD[k] = num(c[20], 999); WS[k] = num(c[21], 999); { const v = +c[32]; ALB[k] = Number.isFinite(v) && v >= 0 && v < 1 && c[32] !== undefined && c[32].trim() !== '' ? v : NaN; }
+    // (2026-11-24) snow and precipitation, EnergyPlus EPW Data Dictionary (9.6): N30 snow depth cm (missing 999) = column 31,
+    // N31 days since last snowfall (missing 99) = column 32, N33 liquid precipitation depth mm (missing 999) = column 34
+    // (the N numbers skip the data-source text field, so N30 is the 31st column); a blank or absent column is missing
+    { const f = (j, bad) => { const t = c[j]; if (t === undefined || t.trim() === '') return NaN; const v = +t; return Number.isFinite(v) && v >= 0 && v < bad ? v : NaN; }; SND[k] = f(30, 999); DSS[k] = f(31, 99); PRC[k] = f(33, 999); }   // EPW field 33, albedo (missing 999)
   }
   if (n < N) throw new Error(`Expected 8,760 hours, found ${n.toLocaleString('en-CA')}.`);
   // short gaps (missing codes) are filled from the hours either side; radiation at night is zero
@@ -36,7 +40,7 @@ export function parseEPW(text, name = '') {
   for (const A of [GHR, DNR, DHR]) for (let k = 0; k < N; k++) if (!(A[k] >= 0)) { A[k] = 0; fixed++; }
   for (let k = 0; k < N; k++) { if (RH[k] > 100) RH[k] = 100; if (RH[k] < 0) RH[k] = 0; if (WS[k] < 0) WS[k] = 0; }
   const lat = +head[6], lon = +head[7], tz = +head[8];
-  return { name: name || head[1] || 'Weather file', station: [head[1], head[2], head[3]].filter((s) => s && s !== '-').join(', ').replace(/_/g, ' '), lat, lon, tz, elev: +head[9] || 0, T, Tdp, RH, IR, GHR, DNR, DHR, WD, WS, ALB, filled: fixed };
+  return { name: name || head[1] || 'Weather file', station: [head[1], head[2], head[3]].filter((s) => s && s !== '-').join(', ').replace(/_/g, ' '), lat, lon, tz, elev: +head[9] || 0, T, Tdp, RH, IR, GHR, DNR, DHR, WD, WS, ALB, SND, DSS, PRC, filled: fixed };
 }
 
 // sky temperature (°C) from the hour's downwelling long-wave radiation; without it, clear-sky emissivity from the dew point (Berdahl & Martin 1984)

@@ -17,6 +17,14 @@ export const PRESETS = [
   { id: 'bus', name: 'Bus', kind: 'rigid', length: 12.2, width: 2.55, wheelbase: 7.6, frontOverhang: 2.7, rearOverhang: 1.9, track: 2.1, steer: 42, lockTime: 6, speed: 8, clearance: 0.3 },
   { id: 'semi', name: 'Semi-trailer (WB-20 type)', kind: 'artic', length: 22.7, width: 2.6, wheelbase: 6.2, frontOverhang: 0.8, rearOverhang: 1.0, track: 2.6, steer: 28.2, lockTime: 6, speed: 8, clearance: 0.3,
     trailer: { hitch: 0.0, wheelbase: 12.4, frontOverhang: 1.3, rearOverhang: 3.3, width: 2.6, track: 2.6, maxArticulation: 70 }, note: 'after the WB-20 shown in the reference drawing: tractor 6.20, trailer 12.40 kingpin to axle, 17.00 long' },
+  // (2026-11-24) a jurisdiction's published design vehicle: the STAA Design Vehicle of the Caltrans Highway Design Manual, Topic 404,
+  // Figure 404.5A (page 400-19, July 1, 2020; chapter 400 as updated 29 Sep 2023), feet × 0.3048: front overhang 4', tractor
+  // wheelbase 23', kingpin 0' ahead of the tractor's rear axle, trailer 48' long (3' ahead of the kingpin, 41' kingpin to the rear
+  // axle, 4' behind it), widths and tracks 8.5', steering lock angle 26.3°, lock-to-lock 6 s, articulating angle 70°. Not dimensioned
+  // in the figure: the tractor's frame behind its rear axle (0.6 m assumed, under the trailer). Index 404.4(1)(b) gives a 43' KPRA
+  // where the figure draws 41': the figure is used, since its parts add up to the 48' trailer.
+  { id: 'staa', name: 'STAA design vehicle (Caltrans HDM Fig. 404.5A)', kind: 'artic', length: 21.946, width: 2.591, wheelbase: 7.010, frontOverhang: 1.219, rearOverhang: 0.6, track: 2.591, steer: 26.3, lockTime: 6, speed: 8, clearance: 0.3,
+    trailer: { hitch: 0.0, wheelbase: 12.497, frontOverhang: 0.914, rearOverhang: 1.219, width: 2.591, track: 2.591, maxArticulation: 70 }, source: 'Caltrans Highway Design Manual, Figure 404.5A (STAA Design Vehicle)', note: 'a published design vehicle: Caltrans HDM Figure 404.5A, 72 ft overall; check the vehicle your jurisdiction requires' },
 ];
 export const CUSTOM_BASE = { id: 'custom', name: 'Custom vehicle', kind: 'rigid', length: 7.0, width: 2.4, wheelbase: 4.0, frontOverhang: 1.2, rearOverhang: 1.8, track: 2.0, steer: 36, lockTime: 5, speed: 8, clearance: 0.3 };
 export const PRESET_NOTE = 'Reference presets with typical dimensions for early design, not manufacturer specifications or a jurisdiction’s design vehicles.';
