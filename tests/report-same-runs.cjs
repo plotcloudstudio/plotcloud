@@ -9,7 +9,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     p.on('pageerror', (e) => errs.push(e.message));
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
     const ids = await p.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save();
-      const q = (await import('./js/hospital-example.js')).openHospital(), va = q.versions.at(-1), vb = S.saveVersion(q, 'QA changed design');
+      const q = (await import('./js/hospital-example.js')).openHospital(), va = q.versions.at(-1) || S.saveVersion(q, 'QA baseline'), vb = S.saveVersion(q, 'QA changed design');
       const field = (k) => ({ label: 'Sun hours', unit: 'h', step: 1, pts: [[0, 0, 1 + k], [1, 0, 2 + k], [0, 1, 3 + k]] });
       const ra = S.addRun(q, va.id, 'sunhours', {}, { avgSunHours: 4, field: field(0), kpis: [] }, 'workspace'), rb = S.addRun(q, vb.id, 'sunhours', {}, { avgSunHours: 5, field: { label: 'Sun hours', unit: 'h', step: 1, pts: [0, 0, 2, 1, 0, 3, 0, 1, 4] }, kpis: [] }, 'workspace'); S.save();
       return { id: q.id, a: va.id, b: vb.id, ra: ra.id, rb: rb.id }; });
@@ -18,7 +18,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const metrics = await dl('metrics'); assert(metrics.includes(ids.ra) && metrics.includes(ids.rb), 'Metrics CSV names both runs');
     // a newer run on design B, saved between the clicks
     const rb2 = await p.evaluate(async (ids) => { const S = await import('./js/store.js'), q = S.project(ids.id); const r = S.addRun(q, ids.b, 'sunhours', {}, { avgSunHours: 6, field: { label: 'Sun hours', unit: 'h', step: 1, pts: [[0, 0, 9]] }, kpis: [] }, 'workspace'); S.save(); return r.id; }, ids);
-    const fields = await dl('fields'); const runsInFields = [...new Set(fields.split(/\r?\n/).slice(1).map((l) => l.split(',')[2]))];
+    const fields = await dl('fields'), cells = (l) => [...l.matchAll(/("(?:[^"]|"")*"|[^,]*)(,|$)/g)].map((m) => m[1].replace(/^"|"$/g, '').replace(/""/g, '"')).slice(0, -1); const runsInFields = [...new Set(fields.replace(/^\ufeff/, '').split(/\r?\n/).slice(1).map((l) => cells(l)[2]))];
     assert.deepEqual(runsInFields.sort(), [ids.ra, ids.rb].sort(), 'Field CSV uses the same runs, not the newer one: ' + runsInFields);
     assert.equal(fields.split(/\r?\n/).length - 1, 6, 'one row per point: 3 + 3');
     const [d] = await Promise.all([p.waitForEvent('download', { timeout: 240000 }), p.click('[data-report-export=pdf]')]); const pdfF = out + '/same-runs.pdf'; await d.saveAs(pdfF);
@@ -29,7 +29,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.equal(await p.isVisible('#reportNewer'), false, 'note gone');
     console.log('PASS "Use the latest runs" switches to the newer run');
     // Tables: run CSV for both point formats
-    const rows = await p.evaluate(async (ids) => { const S = await import('./js/store.js'), T = await import('./js/pages/tables.js'), q = S.project(ids.id); return [ids.ra, ids.rb].map((rid) => { const r = q.runs.find((x) => x.id === rid), csv = T.runCSV(q, r), i = csv.split('\n').findIndex((l) => l.startsWith('x_m')); return { pts: csv.split('\n').slice(i + 1), stats: T.fieldStats(r.results.field) }; }); }, ids);
+    const rows = await p.evaluate(async (ids) => { const S = await import('./js/store.js'), T = await import('./js/pages/tables.js'), q = S.project(ids.id); const v = q.versions.at(-1).id; return [{ id: 'rN', versionId: v, simId: 'sunhours', created: '', results: { field: { label: 'Sun hours', unit: 'h', pts: [[0, 0, 1], [1, 0, 2], [0, 1, 3]] } } }, { id: 'rF', versionId: v, simId: 'sunhours', created: '', results: { field: { label: 'Sun hours', unit: 'h', pts: [0, 0, 2, 1, 0, 3, 0, 1, 4] } } }].map((r) => { const csv = T.runCSV(q, r), i = csv.split('\n').findIndex((l) => l.startsWith('x_m')); return { pts: csv.split('\n').slice(i + 1), stats: T.fieldStats(r.results.field) }; }); }, ids);
     assert.deepEqual(rows[0].pts, ['0,0,1', '1,0,2', '0,1,3'], 'nested points: one per row'); assert.deepEqual(rows[1].pts, ['0,0,2', '1,0,3', '0,1,4'], 'flat points: one per row');
     assert(rows[0].stats.n === 3 && rows[0].stats.mean === 2 && rows[1].stats.mean === 3, 'field statistics for both formats ' + JSON.stringify(rows.map((r) => r.stats)));
     console.log('PASS Tables run CSV and field statistics read both point formats');

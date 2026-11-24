@@ -158,12 +158,13 @@ function saveRaw() {
 // another tab saved (2026-11-23): this tab reads the store again, and Results, the comparison report and the Project page redraw, so
 // two tabs show the same saved results (the Workspace keeps its open model and picks the change up on its next save or reload)
 const afterRemote = () => { if (/^#\/(results|comparison-report|project)\//.test(location.hash)) window.dispatchEvent(new HashChangeEvent('hashchange')); };
-if (typeof window !== 'undefined') window.addEventListener('storage', (e) => { if (e.key !== KEY) return; try { reload(); afterRemote(); } catch (err) { } });
+if (typeof window !== 'undefined') window.addEventListener('storage', (e) => { if (e.key !== KEY || e.newValue == null) return; try { reload(); afterRemote(); } catch (err) { } });   // a removed copy means the store moved to IndexedDB (the channel below brings it), not that it is empty
 // a store too big for localStorage lives only in IndexedDB, which tells other tabs nothing (2026-11-24): every save also says so on a
 // BroadcastChannel, and a tab in that mode reads IndexedDB again (with the meshes) before the pages redraw
 const BC = typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('pc-store') : null;
-if (BC) BC.onmessage = async (e) => { if (e.data?.t !== 'saved') return; try { if (localStorage.getItem(KEY) || localStorage.getItem(MODE) !== 'idb') return;   // the storage event already covers the localStorage copy
-  const raw = await idbGet(KEY); if (!raw) return; DB = JSON.parse(raw); const D = load(); await resolveMeshes(D); afterRemote(); } catch (err) { } };
+let bcT = 0, bcChain = Promise.resolve();
+const bcRead = () => (bcChain = bcChain.then(async () => { try { if (localStorage.getItem(KEY)) return; const raw = await idbGet(KEY); if (!raw) return; DB = JSON.parse(raw); const D = load(); await resolveMeshes(D); afterRemote(); } catch (err) { } }));
+if (BC) BC.onmessage = (e) => { if (e.data?.t !== 'saved') return; clearTimeout(bcT); bcT = setTimeout(bcRead, 120); };   // one read at a time, after a burst of saves settles
 export function reload() { const keep = DB; DB = null; try { if (!localStorage.getItem(KEY) && localStorage.getItem(MODE) === 'idb') DB = keep; } catch (e) { } return load(); }
 export const persistent = () => !memoryOnly;
 export function reset() { DB = seed(); save(); }

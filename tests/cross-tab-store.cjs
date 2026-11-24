@@ -11,18 +11,19 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const id = await A.evaluate(async () => { const S = await import('./js/store.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' }; S.save(); return (await import('./js/hospital-example.js')).openHospital().id; });
     await B.goto(base + '/mvp/#/results/' + id); await B.waitForFunction(() => document.querySelector('#app h1')); await B.waitForTimeout(1500);
     await B.evaluate(() => { window.__redraws = 0; addEventListener('hashchange', () => window.__redraws++); });
-    const addRun = (rid) => A.evaluate(async ([id, rid]) => { const S = await import('./js/store.js'), q = S.project(id), v = q.versions.at(-1); (q.runs ||= []).push({ id: rid, simId: 'sunhours', versionId: v.id, source: 'workspace', created: new Date().toISOString(), results: { kpis: [['Mean', '5 h']] } }); S.save(); }, [id, rid]);
-    const hasRun = (rid) => B.evaluate(async ([id, rid]) => { const S = await import('./js/store.js'); return (S.project(id).runs || []).some((r) => r.id === rid); }, [id, rid]);
+    const addRun = (rid) => A.evaluate(async ([id, rid]) => { const S = await import('./js/store.js'), q = S.project(id), v = q.versions.at(-1) || S.saveVersion(q, 'QA baseline'); (q.runs ||= []).push({ id: rid, simId: 'sunhours', versionId: v.id, source: 'workspace', created: new Date().toISOString(), results: { kpis: [['Mean', '5 h']] } }); S.save(); }, [id, rid]);
+    const hasRun = (rid) => B.evaluate(async ([id, rid]) => { const S = await import('./js/store.js'); return (S.project(id)?.runs || []).some((r) => r.id === rid); }, [id, rid]);
+    const waitRun = async (rid) => { for (let i = 0; i < 40; i++) { if (await hasRun(rid)) return true; await B.waitForTimeout(250); } console.log('state', JSON.stringify(await B.evaluate(async ([id, rid]) => { const S = await import('./js/store.js'); const raw = await new Promise((res) => { const r = indexedDB.open('plotcloud', 1); r.onsuccess = () => { const t = r.result.transaction('kv').objectStore('kv').get('pc-mvp-v1'); t.onsuccess = () => res(t.result); }; }); return { idbHas: raw ? raw.includes(rid) : null, bRuns: (S.project(id)?.runs || []).map((r) => r.id).filter((x) => /QA/.test(x)), copy: !!localStorage.getItem('pc-mvp-v1'), mode: localStorage.getItem('pc-mvp-store') }; }, [id, rid]))); return false; };
     // 1 · small store: localStorage copy, the storage event
     await addRun('rQA1'); await B.waitForTimeout(1500);
     assert.equal(await hasRun('rQA1'), true, 'tab B has the run (storage event)'); assert(await B.evaluate(() => window.__redraws) >= 1, 'Results redrew');
     console.log('PASS small store: tab B has the new run and Results redrew (storage event)');
     // 2 · a store too big for localStorage: tab A cannot write the copy, so the store lives only in IndexedDB
-    await A.evaluate(() => { const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === 'pc-mvp-v1') { const e = new Error('full'); e.name = 'QuotaExceededError'; throw e; } return set.call(this, k, v); }; });
+    for (const t of [A, B]) await t.evaluate(() => { const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === 'pc-mvp-v1') { const e = new Error('full'); e.name = 'QuotaExceededError'; throw e; } return set.call(this, k, v); }; });   // the same quota in both tabs
     const r0 = await B.evaluate(() => window.__redraws); await addRun('rQA2'); await B.waitForTimeout(2500);
     const mode = await B.evaluate(() => [localStorage.getItem('pc-mvp-store'), !!localStorage.getItem('pc-mvp-v1')]); assert.deepEqual(mode, ['idb', false], 'the store is in IndexedDB only');
-    assert.equal(await hasRun('rQA2'), true, 'tab B has the run saved only to IndexedDB (BroadcastChannel)'); assert(await B.evaluate(() => window.__redraws) > r0, 'Results redrew again');
-    await addRun('rQA3'); await B.waitForTimeout(2500); assert.equal(await hasRun('rQA3'), true, 'and the next one');
+    assert.equal(await waitRun('rQA2'), true, 'tab B has the run saved only to IndexedDB (BroadcastChannel)'); assert(await B.evaluate(() => window.__redraws) > r0, 'Results redrew again');
+    await addRun('rQA3'); await B.waitForTimeout(2500); assert.equal(await waitRun('rQA3'), true, 'and the next one');
     console.log('PASS store in IndexedDB only: tab B has each new run and Results redrew (BroadcastChannel)');
     assert.deepEqual(errs, [], 'page errors: ' + errs.join(' | '));
   } finally { await b.close(); }
