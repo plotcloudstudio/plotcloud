@@ -128,7 +128,7 @@ body.sp-full{--pc-ui-shell-height:0px}
 
 /* the getting-started checklist below the top right card; the site banner above the bottom bar */
 body.sp-full .pc-start{top:62px!important;right:60px!important}
-body.sp-full .pc-start-min{top:62px!important;right:60px!important}
+body.sp-full .pc-start-min{top:20px!important;right:auto!important;left:612px!important}   /* (2026-11-24) in the top bar beside the workflow steps: on the right it covered the result panels */
 .w2.sp~.wb-site-banner,.w2.sp .wb-site-banner{bottom:68px}
 
 @media (max-width:760px){
