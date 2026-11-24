@@ -3,7 +3,7 @@
 //   with what the walker sees there (interior/wayfinding-signage.js walkCheck); Play, Pause, Restart, Previous and Next decision.
 // · The signage schedule (CSV) and the drawing (SVG, PNG, PDF, DXF): the floor plan with the routes and their direction, the
 //   decision points by priority, the signs numbered with their facing, a legend and the schedule; High priority only on request.
-import * as WS from './interior/wayfinding-signage.js?v=sims-20261121-1';
+import * as WS from './interior/wayfinding-signage.js?v=batch3-20261124-1';
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]), plen = (P) => P.reduce((s, p, i) => (i ? s + dist(P[i - 1], p) : 0), 0);
 const along = (P, s) => { let acc = 0; for (let i = 1; i < P.length; i++) { const L = dist(P[i - 1], P[i]); if (acc + L >= s) { const t = L ? (s - acc) / L : 0; return [P[i - 1][0] + (P[i][0] - P[i - 1][0]) * t, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * t]; } acc += L; } return P.at(-1).slice(); };
