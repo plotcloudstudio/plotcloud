@@ -166,8 +166,12 @@ async function pdf(items, title, ctx) {
       y3 = head('Legend', c3, y3); for (let k = 0; k < 90; k++) { d.setFillColor(...(st.length > 1 ? at(k / 89) : hex(st[0]))); d.rect(c3 + lw * k / 90, y3, lw / 90 + 0.05, lh, 'F'); }
       d.setDrawColor(107, 114, 128); d.rect(c3, y3, lw, lh); d.setFontSize(7.4); d.setTextColor(...ink); for (const t of [0, 0.5, 1]) d.text(num(L.lo + (L.hi - L.lo) * t, L.dec), c3 + lw * t, y3 + lh + 3.4, { align: t === 0 ? 'left' : t === 1 ? 'right' : 'center' }); d.text(d.splitTextToSize(L.unit, 28), c3 + lw + 2, y3 + lh - 0.4); y3 += lh + 8; }
     if (it.rows && it.rows.length) { y3 = head('Results', c3, y3); y3 = table(it.rows.slice(0, 12), c3, y3, colW, 0.52, 7.6, H - 60) + 3; }
-    y3 = head('Inputs and Boundary Conditions', c3, y3); y3 = table(inputsOf(it), c3, y3, colW, 0.4, 7.4, H - 50) + 3;
-    const lim = [...(it.notes || []).map(usage), D.limit].filter(Boolean);   // this result's own notes first (2026-11-24): a full column cuts the general limit text, not them if (lim.length) { y3 = head('Assumptions and Limitations', c3, y3); for (const t of lim) { if (y3 > H - 26) break; y3 = wrap(t, colW, 7.2, c3, y3, sub) + 1; } }
+    // inputs, then assumptions and limitations (2026-11-24): each goes in whichever column has more room left, so a long results
+    // table no longer pushes them off the page; a result's own notes come before the general limit text
+    const room = () => (y1 + 1 < y3 ? { c: c1, y: y1 + 1, k: 1 } : { c: c3, y: y3, k: 3 }), put = (k, y) => { if (k === 1) y1 = y; else y3 = y; };
+    { const r = room(); const y = table(inputsOf(it), r.c, head('Inputs and Boundary Conditions', r.c, r.y), colW, 0.4, 7.4, H - 30) + 3; put(r.k, y); }
+    const lim = [...(it.notes || []).map(usage), D.limit].filter(Boolean);
+    if (lim.length) { const r = room(); let y = head('Assumptions and Limitations', r.c, r.y); for (const t of lim) { if (y > H - 26) break; y = wrap(t, colW, 7.2, r.c, y, sub) + 1; } put(r.k, y); }
   }
   // assumptions, limitations and disclaimer
   d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Assumptions, Limitations and Disclaimer`, mg, 20);
