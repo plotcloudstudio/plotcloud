@@ -22,7 +22,7 @@ highlights:
 - Steering follows pure pursuit with a look-ahead equal to the wheelbase (1.5–12 m), limited to the maximum angle and to the rate set by the lock-to-lock time at the stated speed.
 - A trailer's heading follows its hitch: φ′ = [sin(θ − φ) + h (tan δ / L) cos(θ − φ)] / L_t per metre, so off-tracking is computed.
 - Against analytical steady turns, the engine is within 0.4–0.9 mm for a car and 0.5 mm for a semi-trailer's axle radius.
-- The presets are typical dimensions, not manufacturer data or AASHTO or TAC design vehicles; the WB-20-type preset should be checked against the Green Book before use.
+- The presets are typical dimensions, not manufacturer data or AASHTO or TAC design vehicles; the WB-20-type preset should be checked against the Green Book before use. One published design vehicle is included: the STAA Design Vehicle of the Caltrans Highway Design Manual, Figure 404.5A [6].
 ---
 # Abstract
 
@@ -72,7 +72,9 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 | Speed | 8 km/h | Engine choice | Typical manoeuvring speed |
 | Passenger car | L 2.9 m, width 1.85 m, δ 35° (R_min 4.14 m) | Typical dimensions | Plausible; AASHTO P vehicle is 5.8 m long [1] |
 | Box, medium and heavy rigid trucks, van, pickup, bus, fire truck, mixer | Typical dimensions | Engine choice; the mixer "after the reference drawing" | Flagged: not manufacturer or code design vehicles |
-| WB-20-type semi-trailer | Tractor L 6.2 m, kingpin to axle 12.4 m, length 22.7 m, δ 28.2° | "After the WB-20 in the reference drawing" | Flagged: the drawing is not named; check against AASHTO [1] |
+| WB-20-type semi-trailer | Tractor L 6.2 m, kingpin to axle 12.4 m, length 22.7 m, δ 28.2° | "After the WB-20 in the reference drawing" | Flagged: the drawing is not named; does not match the Caltrans STAA vehicle [6]; check against AASHTO [1] |
+| STAA design vehicle | Front overhang 4 ft, tractor wheelbase 23 ft, kingpin over the tractor's rear axle (0 ft), trailer 48 ft: 3 ft ahead of the kingpin, 41 ft kingpin to rear axle, 4 ft behind; width and track 8.5 ft; steering lock 26.3°; lock-to-lock 6 s; articulation 70°; 72 ft overall | Caltrans HDM Figure 404.5A [6] | Sourced (feet × 0.3048) |
+| STAA tractor frame behind its rear axle | 0.6 m | Engine choice | Assumption: not dimensioned in Figure 404.5A; it lies under the trailer |
 
 ## 4. Verification and validation status
 
@@ -87,7 +89,18 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 
 `tests/workspace-swept-path.cjs` passed its checks in the Workspace: a box truck along a drawn route (feasible, tightest radius 6.63 m against the vehicle's least 5.50 m, least clearance 0.77 m, swept area 371.4 m²), detection of a route through a building and a drive around it, a 3 m corner reported infeasible, two vehicles meeting, and JSON, DXF and SVG exports. In the end-to-end audit on 20 November 2026, with no route drawn, the study asked the user to draw one, as intended.
 
+`tests/staa-vehicle.test.mjs` checks the STAA preset against Figure 404.5A (24 November 2026):
+
+- every dimension in feet × 0.3048, the 48 ft trailer and the 72 ft overall length;
+- the outside front wheel at full lock comes to 55.75 ft against the figure's 56.16 ft "radius to outside wheel at beginning of curve", a difference of 0.7 %;
+- on a 30 m circle the trailer axle settles at 27.273 m, against √(R² − L_t²) = 27.273 m.
+
 ## 5. Discussion
+
+**The STAA design vehicle.** One preset reproduces a jurisdiction's published design vehicle: the STAA Design Vehicle of the Caltrans Highway Design Manual, Topic 404, Figure 404.5A [6], with all its dimensions taken from that figure. Two caveats apply:
+
+- Index 404.4(1)(b) of the same manual describes a 43 ft kingpin-to-rear-axle distance, but the figure draws 41 ft. The preset follows the figure, whose parts add up to the stated 48 ft semitrailer.
+- The Caltrans vehicle is not the AASHTO Green Book WB-20 (WB-65/67). The Green Book was not available to check, so the WB-20-type preset remains flagged.
 
 **Kinematics only.** At the low speeds of site access and loading, tyre slip is small and kinematic models are the basis of design-vehicle turning templates [1, 2]. At higher speeds, or for long trailers with steered axles, dynamic effects and steering systems not represented here matter.
 
@@ -106,3 +119,4 @@ The Vehicle swept path study uses standard kinematic models and a standard steer
 3. R.C. Coulter, Implementation of the pure pursuit path tracking algorithm, Technical Report CMU-RI-TR-92-01, Robotics Institute, Carnegie Mellon University, Pittsburgh, 1992.
 4. R. Rajamani, Vehicle Dynamics and Control, 2nd ed., Springer, New York, 2012. [doi:10.1007/978-1-4614-1433-9](https://doi.org/10.1007/978-1-4614-1433-9)
 5. SAE International, SAE J695, Turning Ability and Off Tracking — Motor Vehicles, SAE, Warrendale, PA.
+6. California Department of Transportation, Highway Design Manual, Chapter 400 Intersections at Grade, Topic 404 Design Vehicles: Index 404.4(1)(b) and Figure 404.5A "STAA Design Vehicle 56-Foot Radius" (page 400-19, July 1, 2020; chapter as updated 29 September 2023). [dot.ca.gov](https://dot.ca.gov/programs/design/manual-highway-design-manual-hdm)

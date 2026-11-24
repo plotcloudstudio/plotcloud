@@ -3,9 +3,9 @@
 // the study sheet (2D plan and 3D ground), the timeline, stall editing, the link between the two, and the exports (JSON, SVG, DXF).
 // Everything drawn is computed geometry. Both are screenings for early design, not certified swept-path or bylaw studies.
 import * as G from './geom2d.js';
-import * as V from './vehicles.js';
-import * as SP from './swept-path.js?v=plan-20261118-1';
-import * as RP from './route-plan.js?v=plan-20261118-1';
+import * as V from './vehicles.js?v=batch3-20261124-1';
+import * as SP from './swept-path.js?v=batch3-20261124-1';
+import * as RP from './route-plan.js?v=batch3-20261124-1';
 import * as PK from './parking.js';
 import * as CAD from './cad-export.js';
 

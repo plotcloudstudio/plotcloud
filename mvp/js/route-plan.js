@@ -7,7 +7,7 @@
 // them. Plan metres, x east, y north. Pure functions: the Node tests run the same code.
 // Limits, said where they apply: forward driving only (a route drawn with reversing is not re-planned); obstacles as given (a
 // missing obstacle is not avoided); the found path is a feasible one, not the only or a regulation one.
-import { rMin } from './vehicles.js';
+import { rMin } from './vehicles.js?v=batch3-20261124-1';
 
 const TAU = Math.PI * 2;
 const wrapA = (t) => ((t % TAU) + TAU) % TAU;
