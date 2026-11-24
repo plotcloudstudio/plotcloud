@@ -48,7 +48,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.screenshot({ path: (process.env.SHOT_DIR || require('os').tmpdir()) + '/evac-routes.png' });
     console.log('PASS everyone out:', ra.rows.slice(0, 9).map((x) => x.join(' ')).join(' · '), '· purple px', st.purple.join('/'));
     // 2 · the hospital: horizontal relocation, then down the stairs
-    await p.click('.sp-studycard [data-st-mode=down]'); card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Staff on duty[\s\S]*CSA Z8000/); await p.selectOption('.sp-studycard [data-eg=runs]', '10');
+    await p.click('.sp-studycard [data-st-mode=down]'); await p.waitForFunction(() => /Staff on duty[\s\S]*CSA Z8000/.test(document.querySelector('.sp-studycard')?.innerText || ''), null, { timeout: 10000 }).catch(() => { }); card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Staff on duty[\s\S]*CSA Z8000/); await p.selectOption('.sp-studycard [data-eg=runs]', '10');
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view, results: s.res?.results }; });
     assert.equal(r.err, ''); assert.equal(r.rows[0][0], 'Everyone out, median (P50)'); assert.match(r.rows[0][1], /^\d+(\.\d)? (s|min)$/); assert.equal(r.view, 'trails');
