@@ -63,11 +63,11 @@ document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e
 const PAGES = {
   founder:()=>import('./pages/founder.js'),
   'local-compute':()=>import('./pages/local-compute.js?v=sims-20261121-1'),
-  'comparison-report':()=>import('./pages/comparison-report.js?v=round2-20261124-1'),
+  'comparison-report':()=>import('./pages/comparison-report.js?v=muse3-20261124-2'),
   'start-study':()=>import('./pages/start-study.js'),
-  project:()=>import('./pages/project.js?v=round2-20261124-1'), tables:()=>import('./pages/tables.js?v=round2-20261124-1'),
+  project:()=>import('./pages/project.js?v=round2-20261124-1'), tables:()=>import('./pages/tables.js?v=muse3-20261124-2'),
   admin: () => import('./pages/admin.js'),
-  '': () => import('./pages/home-v2.js?v=guest-start-20261102-1'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js?v=round2-20261124-1'), simulations: () => import('./pages/simulations.js?v=round2-20261124-1'), legal:()=>import('./pages/legal.js'),
+  '': () => import('./pages/home-v2.js?v=guest-start-20261102-1'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js?v=muse3-20261124-2'), simulations: () => import('./pages/simulations.js?v=round2-20261124-1'), legal:()=>import('./pages/legal.js'),
   about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js?v=round2-20261124-1'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js?v=round2-20261124-1'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js?v=round2-20261124-1'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
@@ -100,11 +100,13 @@ export async function route() {
   $$('[data-nav]').forEach((a) => { if (a.dataset.nav === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
   document.querySelector('.pc-ui-context')?.remove();
-  if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
+  if (cleanup) { try { cleanup(); } catch (e) { console.error('Page clean-up failed:', e); } cleanup = null; }
   document.body.classList.toggle('pc-public',publicRoute);
   who();
   // (2026-11-23) a skeleton in place of a blank page while the page loads; the page's own content replaces it
-  const app = $('#app'); app.innerHTML = '<div class="wrap pc-skel" aria-busy="true" aria-label="Loading"><i style="width:28%"></i><i style="width:62%;height:34px"></i><i style="width:84%"></i><i style="width:76%"></i><i style="width:48%"></i></div>';
+  // (2026-11-24) a fresh #app for each route: a page still finishing its own loading after the person moved on writes into the old,
+  // detached element and can no longer draw over the new page (Results did that over the Workspace)
+  const app0 = $('#app'), app = app0.cloneNode(false); app0.replaceWith(app); app.innerHTML = '<div class="wrap pc-skel" aria-busy="true" aria-label="Loading"><i style="width:28%"></i><i style="width:62%;height:34px"></i><i style="width:84%"></i><i style="width:76%"></i><i style="width:48%"></i></div>';
   const study = key === 'simulations' ? rest[0]?.split('?')[0] : key === 'batch-run' ? params.get('sim') : null;
   const resource = key === 'resources' && rest[0] === 'tool' ? rest[1]?.split('?')[0] : null;
   const resourceTools = ['furniture','facade','detaillab','topo','stairs3d','doors3d','palette','axon','ergo','scale','code-bc','code-on','access-bc','access-on','leed'];

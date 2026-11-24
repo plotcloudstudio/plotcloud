@@ -7986,6 +7986,9 @@ if (window.__WSROLE) {
     pushUndo(b) { UNDO.push(b); if (UNDO.length > 120) UNDO.shift(); REDO.length = 0; histUI(); },
     flash(t) { flash(t); },
     undo() { undo(); }, redo() { redo(); }, hist: () => ({ u: UNDO.length, r: REDO.length }), histUI,
+    // the Workspace keeps the history while the person visits another page (2026-11-24); it is put back only onto the same model
+    histDump: () => ({ u: UNDO.slice(), r: REDO.slice(), snap: snapM() }),
+    histLoad(h) { if (!h || !Array.isArray(h.u) || !Array.isArray(h.r)) return false; UNDO.length = 0; UNDO.push(...h.u.slice(-120)); REDO.length = 0; REDO.push(...h.r); histUI(); return true; },
     layers(map) { for (const [id, on] of Object.entries(map)) { const n = LYR.get(id); if (n) n.visible = !!on; } setLayerVis('parts', LYR.get('parts').visible); lyChanged(); },
     setLocks(list) { WS.locks = new Set(list); if (SEL && WS.locks.has(LOCKK[SEL.k])) { SEL = null; changedSel(); } },
     snaps(o) { WSNAP.end = !!o.End; WSNAP.mid = !!o.Mid; WSNAP.near = !!o.Near; WSNAP.cen = !!o.Cen; },
