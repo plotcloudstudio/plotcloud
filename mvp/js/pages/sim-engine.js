@@ -30,7 +30,7 @@ const num = (s) => { const m = String(s ?? '').replace(/,(?=\d{3}\b)/g, '').repl
 const r1 = (v) => Math.round(v * 10) / 10;
 // the engine inputs Account fills in, with their names and units (other prefilled inputs come from the model)
 const ACCT = { lat: ['Latitude', '°'], lon: ['Longitude', '°'], tz: ['UTC offset', 'h'], north: ['North', '°'], dir: ['Wind from', '°'], wdir: ['Wind from', '°'],
-  speed: ['Wind speed', 'm/s'], wspd: ['Wind speed', 'm/s'], wp: ['Work plane', 'm'], occ0: ['Occupied from', ':00'], occ1: ['Occupied until', ':00'], eye: ['Eye height', 'm'],
+  speed: ['Wind speed', 'm/s'], wspd: ['Wind speed', 'm/s'], wp: ['Work plane', 'm'], tau: ['Glass light transmission', ''], blind: ['LM-83 blinds, light passed when closed (0 = none)', ''], occ0: ['Occupied from', ':00'], occ1: ['Occupied until', ':00'], eye: ['Eye height', 'm'],
   rain: ['Design storm', 'mm/h'], duration: ['Storm duration', 'min'], band: ['Band', ''], 'q-loc': ['Location', ''], '@day': ['Sun study date', ''] };
 const BANDS = ['125 Hz', '250 Hz', '500 Hz', '1 kHz', '2 kHz', '4 kHz'];
 const DAY = { equinox: '03-20', 'summer solstice': '06-21', 'winter solstice': '12-21' };
@@ -62,7 +62,7 @@ const CFG = {
   wind: { input: 'masses', hide: ['.sec:has(#h-model)'],
     prefill: ({ site }) => ({ dir: windFrom(site), dirR: windFrom(site), speed: Number.isFinite(site?.wind) ? site.wind : null }) },
   daylight: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT],
-    prefill: ({ site, A, t }) => ({ north: site?.north || 0, lat: site?.lat, lon: site?.lon, tz: t.tz, wp: A.plane, occ0: A.occStart, occ1: A.occEnd }) },
+    prefill: ({ site, A, t }) => ({ north: site?.north || 0, lat: site?.lat, lon: site?.lon, tz: t.tz, wp: A.plane, tau: 0.6, blind: 0.2, occ0: A.occStart, occ1: A.occEnd }) },
   vent: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT],
     prefill: ({ site, level }) => ({ wdir: windFrom(site), wspd: Number.isFinite(site?.wind) ? site.wind : null, north: site?.north || 0, floorZ: level?.z }) },
   spacesyntax: { input: 'studio', hide: ['.sec:has(#h-scene)', PLAN_EDIT] },
@@ -175,10 +175,10 @@ export async function render(app, sim, params = new URLSearchParams(),context={}
   // the shared conditions and the batch panel's changes, and is recorded as the page recorded it
   if (sim.id === 'daylight' && batch) {
     app.innerHTML = `<div class="wrap"><p role="status">Daylight · running…</p></div>`; tell({ stage: 'running' });
-    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=muse-20261123-1'), DAYM = await import('../interior/daylight.js?v=muse-20261123-1');
+    try { const OVd = (() => { try { return JSON.parse(params.get('ov') || '{}'); } catch (e) { return {}; } })(), DR = await import('../daylight-run.js?v=round2-20261124-1'), DAYM = await import('../interior/daylight.js?v=muse-20261123-1');
       const r = await studioScene(v, site, p.name, 'daylight', level?.id); if (!r.ok) throw Error(r.why || 'The model could not be read.'); const sc = JSON.parse(r.scene);
-      const { shared: sh, inputs } = await DR.daylightInputs(p, OVd), out = await DAYM.run(sc, { level: 'draft', ...inputs });
-      const rec = DR.daylightRecord(p, v, sh, out, { level: level?.id, origin: sc.origin, settings: { batchOverrides: OVd } }); tell({ ok: true, settings: rec.settings, results: rec.results });
+      const { shared: sh, inputs } = await DR.daylightInputs(p, OVd), nOv = (k, d) => (Number.isFinite(+OVd[k]) && OVd[k] !== '' && OVd[k] != null ? +OVd[k] : d), out = await DAYM.run(sc, { level: 'draft', tau: nOv('tau', 0.6), blind: nOv('blind', 0.2), ...inputs });   // the Workspace's defaults unless the batch panel changes them (2026-11-23)
+      const rec = DR.daylightRecord(p, v, sh, out, { level: level?.id, origin: sc.origin, settings: { batchOverrides: OVd, tau: nOv('tau', 0.6), blind: nOv('blind', 0.2) } }); tell({ ok: true, settings: rec.settings, results: rec.results });
     } catch (e) { tell({ ok: false, why: 'Daylight: ' + (e.message || e) }); }
     return; }
   // an engine with input 'room' studies one closed room, which goes in as its own wall loop (none does at the moment: Indoor acoustics takes the whole level)

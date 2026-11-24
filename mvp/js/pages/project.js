@@ -12,8 +12,8 @@ import { inspectStudy } from '../study-readiness.js';
 import { USE_TEMPLATES, GENERIC, templateFor, occupiedHours } from '../use-templates.js';
 import { recommend, adopt, updateGroup, cancelGroup, pendingTasks, feedbackRecommendation } from '../recommendations.js';
 import { comparability, fieldDiff, metricRows, describe, fmt } from '../compare-metrics.js';
-import { buildSpec, saveRevision, pptxFromSpec, evidenceJSON, reviewHTML, addFeedback, setFeedbackStatus, importReview } from '../report-spec.js';
-import { reportHTML, exportComparisonPDF, downloadFile } from '../comparison-report.js';
+import { buildSpec, saveRevision, pptxFromSpec, evidenceJSON, reviewHTML, addFeedback, setFeedbackStatus, importReview } from '../report-spec.js?v=round2-20261124-1';
+import { reportHTML, exportComparisonPDF, downloadFile } from '../comparison-report.js?v=round2-20261124-1';
 import { createBatch } from '../batch.js';
 import { geocode, enrich } from '../site.js';
 import { ensureProjectClimate } from '../project-climate.js';
@@ -121,6 +121,8 @@ function overview(app, p) {
     $('#pjProv', app).textContent = `${w.status === 'ok' ? 'Weather: ' + w.label + '. ' : 'No weather file yet. '}${st.derived} derived, ${st.overrides} set by you${st.unrecorded ? `, ${st.unrecorded} from before sources were recorded` : ''}. Defaults come from ${p.contract.config.template.id}@${p.contract.config.template.version}${p.contract.config.program ? ' and ' + p.contract.config.program.id + '@' + p.contract.config.program.version : ''}.`;
     const shown = adv() ? table : table.filter((r) => ['user-override', 'workbench-input', 'derived'].includes(r.valueOrigin) || ['site.lat', 'site.lon', 'site.north', 'weather.epw'].includes(r.path));
     $('#pjParamTable', app).innerHTML = `<thead><tr><th>Input</th><th>Value</th><th>Source</th><th></th></tr></thead><tbody>${shown.map((r) => `<tr data-path="${esc(r.path)}"><td>${esc(r.path)}</td><td>${esc(r.path === 'weather.epw' ? String(r.value).slice(0, 12) + '…' : r.value)} ${esc(r.unit)}</td><td>${esc(r.label || r.status)}<br><small>${esc(r.scope)}${r.ruleVersion ? ' · ' + esc(r.ruleVersion) : ''}</small></td><td>${r.path === 'weather.epw' ? '<a href="#/project-settings/' + esc(p.id) + '">Change</a>' : `<button class="btn sm" type="button" data-set="${esc(r.path)}">Change</button>`}${['user-override', 'unrecorded'].includes(r.valueOrigin) && r.scope === 'project-config' ? ` <button class="btn sm" type="button" data-restore="${esc(r.path)}">Restore default</button>` : ''}</td></tr>`).join('')}</tbody>`;
+    // the building type (2026-11-23): always shown, the same value as Project props (or Not set)
+    if (!shown.some((r) => r.path === 'project.buildingType')) $('#pjParamTable tbody', app)?.insertAdjacentHTML('afterbegin', `<tr data-path="project.buildingType"><td>project.buildingType</td><td>${esc(S.buildingTypeOf(p) || 'Not set')}</td><td>${S.conditionsOf(p).defaults?.buildingType ? 'Project props' : p.contract?.config?.program ? 'Use template' : 'Not set: Project props › Building type'}</td><td></td></tr>`);
     if (!adv()) $('#pjParamTable', app).insertAdjacentHTML('beforeend', `<caption class="note" style="caption-side:bottom;text-align:left">Simple shows inputs you set, derived inputs and location. Switch to Advanced for all ${table.length}.</caption>`);
     for (const b of $$('[data-set]', app)) b.onclick = () => { const path = b.dataset.set, cur = P.resolve(p, { path }), def = P.DEFS[path]; const raw = prompt(`${path} (${def.unit || 'text'})${def.values ? ' — one of ' + def.values.join(', ') : def.type === 'number' ? ` — ${def.min} to ${def.max}` : ''}`, cur.value ?? ''); if (raw === null) return;
       try { const r = S.setProjectParameter(p, { path }, { value: def.type === 'number' ? Number(raw) : raw.trim(), valueOrigin: 'user-override', acquisition: 'manual-entry' }); toast(`${path} = ${r.value} ${r.unit}`); draw(); } catch (e) { alert(e.message); } };

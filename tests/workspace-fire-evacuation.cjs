@@ -48,7 +48,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.screenshot({ path: (process.env.SHOT_DIR || require('os').tmpdir()) + '/evac-routes.png' });
     console.log('PASS everyone out:', ra.rows.slice(0, 9).map((x) => x.join(' ')).join(' · '), '· purple px', st.purple.join('/'));
     // 2 · the hospital: horizontal relocation, then down the stairs
-    await p.click('.sp-studycard [data-st-mode=down]'); card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Staff on duty[\s\S]*CSA Z8000/); await p.selectOption('.sp-studycard [data-eg=runs]', '10');
+    await p.click('.sp-studycard [data-st-mode=down]'); await p.waitForFunction(() => /Staff on duty[\s\S]*CSA Z8000/.test(document.querySelector('.sp-studycard')?.innerText || ''), null, { timeout: 10000 }).catch(() => { }); card = await p.locator('.sp-studycard').innerText(); assert.match(card, /Staff on duty[\s\S]*CSA Z8000/); await p.selectOption('.sp-studycard [data-eg=runs]', '10');
     await p.click('[data-st=run]'); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 300000 });
     const r = await p.evaluate(() => { const s = window.__wsStudy.state(); return { err: s.err, rows: s.res?.rows, view: s.res?.view, results: s.res?.results }; });
     assert.equal(r.err, ''); assert.equal(r.rows[0][0], 'Everyone out, median (P50)'); assert.match(r.rows[0][1], /^\d+(\.\d)? (s|min)$/); assert.equal(r.view, 'trails');
@@ -70,7 +70,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('[data-sp=dim]'); await p.waitForTimeout(1200); const frp = p.frames().find((f) => f.url().includes('ws=plan'));
     const s2 = await frp.evaluate(() => window.__ws.egressState()); assert(s2 && s2.n > 50, '2D plays the same run: ' + JSON.stringify(s2));
     // Save to results; the old page now opens the Workspace
-    await p.click('[data-st=save]'); await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 30000 });
+    await p.click('[data-st=save]'); await p.waitForTimeout(300); if (await p.evaluate(() => /Save as version v\d+\?/.test(document.querySelector('.sp-studyres')?.innerText || ''))) await p.click('[data-st=save]');   /* Save asks first when the model has unsaved changes (2026-11-23) */ await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 30000 });
     console.log('PASS 2D playback and Save to results');
     await p.goto(base + '/mvp/#/simulations/fire-evacuation'); await p.waitForFunction(() => location.hash.startsWith('#/workspace'), null, { timeout: 30000 });
     console.log('PASS the old Fire Evacuation page opens the Workspace');

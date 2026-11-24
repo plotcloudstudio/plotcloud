@@ -28,7 +28,7 @@ export function fabricSig(model) {
 }
 // the same building: the same levels and pieces, and walls on the same squares, give or take what the Workspace's tidying
 // moves (a joined wall can shift by a centimetre or two): at most 6 squares more (a wall of about 1.5 m) and 5 % fewer
-function sameFabric(want, got) {
+export function sameFabric(want, got) {
   if (!want || want.v !== 2 || want.other !== got.other) return false;
   const W = new Set(want.cells ? want.cells.split(' ') : []), G = new Set(got.cells ? got.cells.split(' ') : []);
   let more = 0, fewer = 0; for (const c of G) if (!W.has(c)) more++; for (const c of W) if (!G.has(c)) fewer++;

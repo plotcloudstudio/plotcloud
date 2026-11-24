@@ -12,7 +12,10 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(1500);
     const runSave = async () => { await p.evaluate(() => window.__wsStudy.open('sunhours')); await p.waitForTimeout(800); await p.evaluate(() => document.querySelector('.sp-studycard [data-st=run]').click());
       await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 900000 }); assert.equal(await p.evaluate(() => window.__wsStudy.state().err), '');
-      await p.waitForTimeout(1500); await p.click('.sp-studyres [data-st=save]'); await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 60000 });
+      await p.waitForTimeout(1500); await p.click('.sp-studyres [data-st=save]'); await p.waitForTimeout(300);
+      // with unsaved model changes Save first asks (2026-11-23): "Save as version vN?", then a second click saves
+      if (await p.evaluate(() => /Save as version v\d+\?/.test(document.querySelector('.sp-studyres')?.innerText || ''))) { console.log('PASS Save asks first: the model has unsaved changes'); await p.click('.sp-studyres [data-st=save]'); }
+      await p.waitForFunction(() => /Saved to results/.test(document.querySelector('.sp-studyres')?.innerText || ''), null, { timeout: 60000 });
       return p.evaluate(async (id) => { const S = await import('./js/store.js'), pr = S.project(id), r = pr.runs.at(-1); return { v: S.version(pr, r.versionId)?.n, n: r.results.field?.n, label: r.results.field?.label, thumb: (r.results.thumb || '').length, kpis: (r.results.kpis || []).length }; }, pid); };
     const s1 = await runSave(); assert(s1.n > 200 && s1.n <= 2700 && s1.thumb > 5000 && s1.kpis >= 3, 'first save keeps a map, a picture and the figures: ' + JSON.stringify(s1));
     // a tall mass beside the house: its shadow changes the sun hours

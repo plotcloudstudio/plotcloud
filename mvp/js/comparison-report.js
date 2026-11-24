@@ -1,6 +1,6 @@
 // Local report composition. Figures: paired saved sample fields (common extent/ramp), or clearly labelled saved previews.
 // Local specialist pass: coordinate/legend semantics, missing values, print breaks, full-data CSV and image safety.
-import {metricsCSV,fieldsCSV,pairedFieldData,fieldColor,numberText} from './comparison-report-data.js';
+import {metricsCSV,fieldsCSV,pairedFieldData,fieldColor,numberText} from './comparison-report-data.js?v=round2-20261124-1';
 import {evidenceText} from './comparison-evidence.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const signed=(v,d=2)=>v==null?'Not recorded':(v>0?'+':'')+numberText(v,d);

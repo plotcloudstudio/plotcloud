@@ -21,7 +21,7 @@ const base=process.env.TEST_BASE||'http://127.0.0.1:8790';
  for(const tau of ['0.6','0.5']){
   await p.locator('.sp-studycard [data-dl=dlTau]').fill(tau);await p.locator('.sp-studycard [data-dl=dlTau]').dispatchEvent('change');
   await p.click('[data-st=run]');await p.waitForFunction(()=>{const s=window.__wsStudy.state();return !s.busy&&(s.res||s.err);},null,{timeout:300000});assert.equal(await p.evaluate(()=>window.__wsStudy.state().err),'');
-  await p.click('[data-st=save]');await p.waitForFunction(()=>window.__wsStudy.state().saved||window.__wsStudy.state().err,null,{timeout:60000}); }
+  await p.click('[data-st=save]'); await p.waitForTimeout(300); if (await p.evaluate(() => /Save as version v\d+\?/.test(document.querySelector('.sp-studyres')?.innerText || ''))) await p.click('[data-st=save]');   /* Save asks first when the model has unsaved changes (2026-11-23) */await p.waitForFunction(()=>window.__wsStudy.state().saved||window.__wsStudy.state().err,null,{timeout:60000}); }
  const records=await p.evaluate(async id=>{const S=await import('./js/store.js');return S.project(id).runs.filter(r=>r.simId==='daylight');},id);
  assert.equal(records.length,2);assert.deepEqual(records.map(r=>r.settings.tau),[0.6,0.5]);assert(records.every(r=>r.settings.sharedConditions?.signature&&r.versionId),'each result keeps its version and shared conditions');
  assert.equal(records[0].versionId,records[1].versionId,'the second run on the same model is kept with the same version');

@@ -17,12 +17,13 @@ export async function daylightInputs(p, ov = {}) {
 // a run's record for p.runs
 export function daylightRecord(p, v, shared, out, extra = {}) {
   const sm = out.sm, pc = (x) => (x * 100).toFixed(1) + '%', site = shared.site || {};
-  const results = { kpis: [['sDA 300/50%', pc(sm.sda)], ['ASE 1000/250', pc(sm.ase)], ['Avg DF', sm.df.toFixed(2) + '%'], ['LEED option 2', pc(sm.o2)], ['Floor', sm.area.toFixed(0) + ' m²']], sda: +(sm.sda * 100).toFixed(1), ase: +(sm.ase * 100).toFixed(1), df: +sm.df.toFixed(2) };
+  // (2026-11-23) sDA with the LM-83 blinds of the run, and without them, both recorded, so two runs can be told apart
+  const bl = sm.blinds?.t ?? 0, results = { kpis: [['sDA 300/50%', pc(sm.sda) + (bl > 0 ? ` (blinds ${Math.round(bl * 100)}%)` : ' (no blinds)')], ...(bl > 0 ? [['sDA without blinds', pc(sm.sdaOpen ?? sm.sda)]] : []), ['ASE 1000/250', pc(sm.ase)], ['Avg DF', sm.df.toFixed(2) + '%'], ['LEED option 2', pc(sm.o2)], ['Floor', sm.area.toFixed(0) + ' m²']], sda: +(sm.sda * 100).toFixed(1), sdaNoBlinds: +((sm.sdaOpen ?? sm.sda) * 100).toFixed(1), blinds: bl, ase: +(sm.ase * 100).toFixed(1), df: +sm.df.toFixed(2) };
   // the daylight factor at each spot (plan metres), for comparing two versions point by point
   const o = extra.origin || [0, 0]; results.field = { name: 'Daylight factor', unit: '%', pts: out.RES.pts.map((q, k) => [+(q.x + o[0]).toFixed(2), +(q.y + o[1]).toFixed(2), +out.RES.ev[k].df.toFixed(3)]) };
-  const settings = { site: site.label, ...(extra.level ? { level: extra.level } : {}), ...(extra.settings || {}),
+  const settings = { site: site.label, ...(extra.level ? { level: extra.level } : {}), blind: bl, ...(extra.settings || {}),
     sharedConditions: { revision: shared.revision, signature: S.conditionsSignature({ sharedConditions: shared }, 'daylight'), site: S.clone(site), defaults: S.clone(shared.defaults || {}), studyOnlyOverrides: !!extra.studyOnly, effective: DAY.conditions() },
     inheritedFrom: 'Project shared conditions', grid: out.RES.spacing, weather: out.epw ? 'project EPW' : 'generic year',
-    provenance: { schema: 1, engine: 'daylight', engineRelease: 'daylight-module-20261101', versionId: v?.id, recordedAt: new Date().toISOString(), site: { label: site.label, lat: site.lat, lon: site.lon, north: site.north ?? 0, tz: site.tz }, note: 'Daylight module (the former study page engine); project shared conditions and any overrides are recorded separately.' } };
+    provenance: { schema: 1, engine: 'daylight', engineRelease: 'daylight-module-20261123', versionId: v?.id, recordedAt: new Date().toISOString(), site: { label: site.label, lat: site.lat, lon: site.lon, north: site.north ?? 0, tz: site.tz }, note: 'Daylight module (the former study page engine); project shared conditions and any overrides are recorded separately.' } };
   return { settings, results };
 }

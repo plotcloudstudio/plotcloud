@@ -15,18 +15,18 @@ import {editStructuralProperties,structuralSummary} from '../structural-properti
 // (ids "ps:<kind>:<id>") so layers, versions, exports and simulations keep working. Imported meshes and the site stay ordinary components.
 // The earlier Workspace is kept unchanged as an archive (pages/workspace.js, #/workspace-archive). Same project data (store.js), same import code (viewport.js).
 import * as S from '../store.js';
-import { canUse, isTryProject, fabricSig } from '../beta-access.js';
+import { canUse, isTryProject, fabricSig, sameFabric } from '../beta-access.js';
 import * as P from '../parameters.js';
 import { mountChecklist } from '../onboarding.js';
 import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=batch2-20261123-1';
+import { mountChrome } from '../workspace-chrome.js?v=round2-20261124-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
-import { LAYER_COLORS,SIMS } from '../data.js';
+import { LAYER_COLORS,SIMS,sampleModel } from '../data.js';
 import { $, $$, esc, when, toast, currentProject,currentVersion, setCurrent, setCurrentVersion,refreshProjectContext } from '../app.js';
 import { importModel, IMPORT_LIMITS } from '../viewport.js?v=sims-20261121-1';
 import { previewImport } from '../import-preview.js?v=simplify-20261119-1';
@@ -72,7 +72,7 @@ const FURN_BY_NAME = new Map(MODELS.map((m) => [m.en, m]));
 
 // Plan Studio objects ↔ Workspace layers. A Workspace layer's eye and lock act on these Plan Studio layers in every pane.
 const KLAYER = { ctx: 'Site', imp: 'Imported', mass: 'Masses', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
-const LMAP = { Walls: ['parts.walls'], Glazing: ['parts.openings'], Structure: ['parts.floors'], Furniture: ['soft', 'custom'], Rooms: ['roomNames', 'roomArea'], Lighting: ['lighting', 'lighting.fix', 'ceiling', 'ceiling.lights', 'ceiling.panels', 'ceiling.vents'], Site: ['ref.site'], Masses: ['mass'] };
+const LMAP = { Walls: ['parts.walls'], Glazing: ['parts.openings'], Structure: ['parts.floors'], Furniture: ['soft', 'custom'], Rooms: ['roomNames', 'roomArea', 'roomFill'], Lighting: ['lighting', 'lighting.fix', 'ceiling', 'ceiling.lights', 'ceiling.panels', 'ceiling.vents'], Site: ['ref.site'], Masses: ['mass'] };
 const KTYPE = { ctx: 'context', imp: 'imported', mass: 'mass', wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
 const KMAT = { ctx: 'Concrete', imp: 'Imported', mass: 'Concrete', wall: 'Plaster', fence: 'Timber', floor: 'Concrete', void: 'Concrete', stair: 'Concrete', furn: 'Timber', light: 'Imported', ceil: 'Gypsum', roof: 'Concrete' };
 const PS = /^ps:([a-z]+):(.*)$/;
@@ -137,6 +137,10 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       m.studio.imports = (m.studio.imports || []).concat(ims.map((c) => { const mesh = c.mesh || boxMesh(c.g.w, c.g.d, c.g.h); m.meshes[c.id] = mesh; return { id: c.id, name: c.name, layer: c.layer || 'Imported', type: c.type || 'imported', mat: c.mat || 'Imported', tris: Math.round(mesh.length / 9), g: { ...c.g } }; }));
       m.components = m.components.filter((c) => !own(c)); return true; };
     const lv = p.versions.at(-1), clean = lv && JSON.stringify(lv.model) === JSON.stringify(p.draft); if (toImp(p.draft) && clean) toImp(lv.model);
+    // (2026-11-23) a sample converted before its fingerprint was retaken: it is still an example while its building is one of the
+    // sample's two versions as the Workspace converts them (the same conversion run on the shipped sample, compared square by square)
+    if (p.sample && !p.copyOf && !p.trySig && !isTryProject(p)) { try { const got = fabricSig(p.draft);
+      for (const v of ['A', 'B']) { const t = { id: p.id, name: p.name, site: p.site, sharedConditions: p.sharedConditions, draft: S.clone(sampleModel(v)), versions: [] }; ensureStudio(t); toImp(t.draft); if (sameFabric(fabricSig(t.draft), got)) { p.trySig = got; S.save(); break; } } } catch (e) { console.warn(e); } }
     if (p.draft.meshes && p.draft.studio) { const keep = new Set((p.draft.studio.imports || []).map((o) => o.ref || o.id)); for (const k of Object.keys(p.draft.meshes)) if (!keep.has(k)) delete p.draft.meshes[k]; } }
   if (p.trySigFresh) { p.trySig = fabricSig(p.draft); delete p.trySigFresh; S.save(); }   // once: a later edit makes it your own project
   const M = () => p.draft, comp = (id) => M().components.find((c) => c.id === id);
@@ -177,7 +181,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=batch2-20261123-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=round2-20261124-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}

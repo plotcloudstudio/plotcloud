@@ -155,6 +155,9 @@ function saveRaw() {
   }
 }
 // read the store again (another page of this site, e.g. a batch run, may have written to it)
+// another tab saved (2026-11-23): this tab reads the store again, and Results, the comparison report and the Project page redraw, so
+// two tabs show the same saved results (the Workspace keeps its open model and picks the change up on its next save or reload)
+if (typeof window !== 'undefined') window.addEventListener('storage', (e) => { if (e.key !== KEY) return; try { reload(); if (/^#\/(results|comparison-report|project)\//.test(location.hash)) window.dispatchEvent(new HashChangeEvent('hashchange')); } catch (err) { } });
 export function reload() { const keep = DB; DB = null; try { if (!localStorage.getItem(KEY) && localStorage.getItem(MODE) === 'idb') DB = keep; } catch (e) { } return load(); }
 export const persistent = () => !memoryOnly;
 export function reset() { DB = seed(); save(); }

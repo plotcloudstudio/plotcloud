@@ -63,13 +63,13 @@ document.addEventListener('click', (e) => { const m = $('#whoMenu'); if (m && !e
 const PAGES = {
   founder:()=>import('./pages/founder.js'),
   'local-compute':()=>import('./pages/local-compute.js?v=sims-20261121-1'),
-  'comparison-report':()=>import('./pages/comparison-report.js'),
+  'comparison-report':()=>import('./pages/comparison-report.js?v=round2-20261124-1'),
   'start-study':()=>import('./pages/start-study.js'),
-  project:()=>import('./pages/project.js'), tables:()=>import('./pages/tables.js'),
+  project:()=>import('./pages/project.js?v=round2-20261124-1'), tables:()=>import('./pages/tables.js?v=round2-20261124-1'),
   admin: () => import('./pages/admin.js'),
-  '': () => import('./pages/home-v2.js?v=guest-start-20261102-1'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js'), simulations: () => import('./pages/simulations.js?v=muse-20261123-1'), legal:()=>import('./pages/legal.js'),
-  about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js'), 'project-settings':()=>import('./pages/project-settings.js'),
-  login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
+  '': () => import('./pages/home-v2.js?v=guest-start-20261102-1'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js?v=round2-20261124-1'), simulations: () => import('./pages/simulations.js?v=round2-20261124-1'), legal:()=>import('./pages/legal.js'),
+  about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js?v=round2-20261124-1'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js?v=round2-20261124-1'), 'project-settings':()=>import('./pages/project-settings.js'),
+  login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js?v=round2-20261124-1'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
 const TITLES = { founder:'Founder workspace', 'comparison-report':'Simulation comparison report', about:'About', blog:'Blog', project:'Project', tables:'Tables', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
@@ -103,7 +103,8 @@ export async function route() {
   if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
   document.body.classList.toggle('pc-public',publicRoute);
   who();
-  const app = $('#app'); app.innerHTML = '';
+  // (2026-11-23) a skeleton in place of a blank page while the page loads; the page's own content replaces it
+  const app = $('#app'); app.innerHTML = '<div class="wrap pc-skel" aria-busy="true" aria-label="Loading"><i style="width:28%"></i><i style="width:62%;height:34px"></i><i style="width:84%"></i><i style="width:76%"></i><i style="width:48%"></i></div>';
   const study = key === 'simulations' ? rest[0]?.split('?')[0] : key === 'batch-run' ? params.get('sim') : null;
   const resource = key === 'resources' && rest[0] === 'tool' ? rest[1]?.split('?')[0] : null;
   const resourceTools = ['furniture','facade','detaillab','topo','stairs3d','doors3d','palette','axon','ergo','scale','code-bc','code-on','access-bc','access-on','leed'];

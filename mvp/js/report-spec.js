@@ -4,7 +4,7 @@
 // records which chapters changed and which were reused, and earlier revisions are never overwritten.
 // Feedback is bound to a report revision (and chapter / metric / object / run). Offline review: the review page is a file the
 // client opens, fills in and returns as JSON; nothing is sent anywhere automatically. A hosted share link is not connected.
-import { buildComparisonReport } from './comparison-report-data.js';
+import { buildComparisonReport } from './comparison-report-data.js?v=round2-20261124-1';
 import { SIMS } from './data.js';
 import * as C from './project-contract.js';
 import * as P from './parameters.js';
