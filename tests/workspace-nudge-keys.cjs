@@ -44,6 +44,25 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.waitForTimeout(600); const off = await W(`return [st.layerOn('roomNames'), st.layerOn('roomArea'), st.layerOn('roomFill')];`);
     assert.deepEqual(off, [false, false, false], 'Rooms hidden: names, area and fill off ' + JSON.stringify(off));
     console.log('PASS hiding Rooms in Layers hides the names, the areas and the fill');
+    // undo history across a visit to another page (2026-11-24): two nudges, Results and back, Undo still takes them back one by one
+    const ready = () => p.waitForFunction(() => window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 400000 });
+    const fid2 = await W(`const f = st.M.furn.find((q) => q.lv === st.LV && !q.locked && !(st.M.hiddenIds || []).includes(q.id)); st.select({ k: 'furn', id: f.id }); return f.id;`); await p.waitForTimeout(300);
+    const pos2 = () => W(`const f = st.M.furn.find((q) => q.id === arg); return [f.x, f.y];`, fid2);
+    const q0 = await pos2(); await key('ArrowRight', true); await key('ArrowRight', true); const q2 = await pos2(); assert(Math.abs(q2[0] - q0[0] - 0.02) < 1e-6, 'two nudges ' + JSON.stringify([q0, q2]));
+    const h0 = await p.evaluate(() => __ws2.hub.hist()); await p.waitForTimeout(1500);   // the model saved
+    await p.evaluate((id) => { location.hash = '#/results/' + id; }, id); await p.waitForTimeout(2500);
+    await p.evaluate((id) => { location.hash = '#/workspace/' + id; }, id); await ready(); await p.waitForTimeout(2500);
+    const h1 = await p.evaluate(() => __ws2.hub.hist()); assert(h1.u >= 2 && h1.u === h0.u, 'history kept: ' + JSON.stringify([h0, h1]));
+    assert.deepEqual(await pos2(), q2, 'the model is as it was left');
+    await p.evaluate(() => __ws2.hub.undo()); await p.waitForTimeout(400); const q1 = await pos2(); assert(Math.abs(q1[0] - q0[0] - 0.01) < 1e-6, 'one Undo after coming back takes back one nudge ' + JSON.stringify([q0, q1]));
+    await p.evaluate(() => __ws2.hub.redo()); await p.waitForTimeout(400); assert.deepEqual(await pos2(), q2, 'Redo puts it back');
+    console.log(`PASS undo history kept across a visit to Results: ${h1.u} steps; Undo and Redo work after coming back`);
+    // the model changed elsewhere while away: the old history is not put back onto it
+    await p.waitForTimeout(1500); await p.evaluate((id) => { location.hash = '#/results/' + id; }, id); await p.waitForTimeout(2000);
+    await p.evaluate(async (id) => { const S = await import('./js/store.js'); const q = S.project(id); q.draft.studio.furn[0].x += 1; S.save(); }, id);
+    await p.evaluate((id) => { location.hash = '#/workspace/' + id; }, id); await ready(); await p.waitForTimeout(2500);
+    const h2 = await p.evaluate(() => __ws2.hub.hist()); assert.equal(h2.u, 0, 'no stale history on a changed model ' + JSON.stringify(h2));
+    console.log('PASS a model changed while away starts with an empty history (no stale steps)');
     assert.deepEqual(errs, [], 'page errors: ' + errs.join(' | '));
   } finally { await b.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });

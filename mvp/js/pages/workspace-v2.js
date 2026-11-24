@@ -71,6 +71,8 @@ const ON_WALL = new Set(['door', 'win', 'hole']);
 const FURN_BY_NAME = new Map(MODELS.map((m) => [m.en, m]));
 
 // Plan Studio objects ↔ Workspace layers. A Workspace layer's eye and lock act on these Plan Studio layers in every pane.
+// undo history of each project's Plan Studio, kept while the person visits another page in this tab (2026-11-24): at most three projects
+const HIST = new Map();
 const KLAYER = { ctx: 'Site', imp: 'Imported', mass: 'Masses', wall: 'Walls', fence: 'Walls', op: 'Glazing', floor: 'Structure', void: 'Structure', stair: 'Structure', furn: 'Furniture', room: 'Rooms', light: 'Lighting', ceil: 'Lighting', roof: 'Roof' };
 const LMAP = { Walls: ['parts.walls'], Glazing: ['parts.openings'], Structure: ['parts.floors'], Furniture: ['soft', 'custom'], Rooms: ['roomNames', 'roomArea', 'roomFill'], Lighting: ['lighting', 'lighting.fix', 'ceiling', 'ceiling.lights', 'ceiling.panels', 'ceiling.vents'], Site: ['ref.site'], Masses: ['mass'] };
 const KTYPE = { ctx: 'context', imp: 'imported', mass: 'mass', wall: 'wall', fence: 'wall', floor: 'slab', void: 'slab', stair: 'slab', furn: 'furniture', room: 'room', light: 'furniture', ceil: 'furniture', roof: 'roof' };
@@ -269,6 +271,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     ready(role, win) {
       if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true; try { win.__pcHidden = role !== 'props' && role !== shownRole(); } catch { }
       const back = I2.ws.load(SNAP); if (role === 'plan' && back !== SNAP) { rememberHydration(back);hub.change('plan', back, false); }   // Plan Studio tidies a model it opens: that is the one model from now on
+      if (role === 'plan') { const h = HIST.get(p.id); HIST.delete(p.id); if (h && I2.ws.histDump && h.snap === I2.ws.histDump().snap) I2.ws.histLoad(h); }   // undo history kept from the last visit (2026-11-24), only onto the same model
       if(p.caseStudy?.id?.startsWith('fallingwater-habs-')&&I2.ws.levels().list.some(l=>l.id==='L3'))I2.ws.level('L3');
       tell(I2); if (role === 'plan' || !OBJ.length) derive(false);
       paneUI(); if (role === 'plan') { levelUI(); if (converted) toast('This project now uses Plan Studio’s model in every view. Imported meshes and the site are kept as they were.'); }
@@ -964,6 +967,6 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   // read-only hook for the browser checks in tests
   window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, syncViews: () => syncHidden(), ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
-  return () => { clearTimeout(hiddenT); flushSave(); removeEventListener('pagehide', flushSave); document.removeEventListener('visibilitychange', flushSave); clearTimeout(dT); dead = true; for (const f of app.querySelectorAll('iframe')) { try { f.contentWindow?.S3?.release?.(); } catch { } }   /* the 3D view's GPU memory let go at once (2026-11-15): seconds faster to the next page */
+  return () => { try { if (INST.plan.ready && INST.plan.ws.histDump) { const h = INST.plan.ws.histDump(); if (h.u.length || h.r.length) { HIST.delete(p.id); HIST.set(p.id, h); while (HIST.size > 3) HIST.delete(HIST.keys().next().value); } } } catch { } clearTimeout(hiddenT); flushSave(); removeEventListener('pagehide', flushSave); document.removeEventListener('visibilitychange', flushSave); clearTimeout(dT); dead = true; for (const f of app.querySelectorAll('iframe')) { try { f.contentWindow?.S3?.release?.(); } catch { } }   /* the 3D view's GPU memory let go at once (2026-11-15): seconds faster to the next page */
     disposeSimPreview();document.removeEventListener('click',simOutside);disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };
 }

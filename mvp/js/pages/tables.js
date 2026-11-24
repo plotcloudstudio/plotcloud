@@ -8,9 +8,11 @@ import { downloadFile } from '../comparison-report.js?v=round2-20261124-1';
 import { $, $$, esc, currentProject, setCurrent } from '../app.js';
 
 const finite = Number.isFinite;
+// a field's points as [x, y, value] (2026-11-24): batch runs keep [x,y,v] triples, Workspace runs a flat x,y,v,… list
+export const fieldPoints = (f) => !Array.isArray(f?.pts) ? [] : Array.isArray(f.pts[0]) ? f.pts : Array.from({ length: Math.floor(f.pts.length / 3) }, (_, i) => f.pts.slice(i * 3, i * 3 + 3));
 export function fieldStats(field) {
   if (!field?.pts?.length) return null;
-  const v = []; let missing = 0; for (let i = 2; i < field.pts.length; i += 3) (finite(field.pts[i]) ? v.push(field.pts[i]) : missing++);
+  const v = []; let missing = 0; for (const q of fieldPoints(field)) (finite(q[2]) ? v.push(q[2]) : missing++);
   if (!v.length) return { n: 0, missing };
   v.sort((a, b) => a - b); const q = (f) => v[Math.min(v.length - 1, Math.floor(f * (v.length - 1)))];
   return { n: v.length, missing, mean: v.reduce((s, x) => s + x, 0) / v.length, min: v[0], p10: q(0.1), p50: q(0.5), p90: q(0.9), max: v.at(-1), unit: field.unit, label: field.label, step: field.step };
@@ -19,7 +21,7 @@ const csvCell = (x) => { const s = String(x ?? ''); return /[",\n]/.test(s) ? '"
 export function runCSV(p, r) {
   const v = S.version(p, r.versionId), rev = r.planRevisionId ? C.revision(p, r.planRevisionId) : null, lines = [['run_id', r.id], ['study', r.simId], ['version', 'v' + (v?.n ?? '?')], ['plan_revision', rev ? rev.id : 'not recorded'], ['created', r.created], ['recipe', JSON.stringify(r.recipe || 'not recorded')], ['inputs', JSON.stringify(r.inputs?.values || 'not recorded')], [], ['figure', 'value']];
   for (const [k, val] of r.results?.kpis || []) lines.push([k, val]);
-  const f = r.results?.field; if (f?.pts) { lines.push([], ['x_m', 'y_m', `${f.label} (${f.unit})`]); for (let i = 0; i < f.pts.length; i += 3) lines.push([f.pts[i], f.pts[i + 1], finite(f.pts[i + 2]) ? f.pts[i + 2] : '']); }
+  const f = r.results?.field; if (f?.pts) { lines.push([], ['x_m', 'y_m', `${f.label} (${f.unit})`]); for (const q of fieldPoints(f)) lines.push([q[0], q[1], finite(q[2]) ? q[2] : '']); }
   return lines.map((l) => l.map(csvCell).join(',')).join('\n');
 }
 export function render(app, _, params) {
