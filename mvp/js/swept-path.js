@@ -12,7 +12,7 @@
 // · Clearance: each body outline (tractor and trailer) against each obstacle outline, at every step: the least gap, where, and every
 //   stretch in collision (gap 0) or nearer than the threshold.
 import { dist, sub, unit, wrap, place, rasterUnion, gap, bbox, boxesMeet, overlap, plLength } from './geom2d.js';
-import { rMin } from './vehicles.js';
+import { rMin } from './vehicles.js?v=batch3-20261124-1';
 
 const DEG = Math.PI / 180;
 export const QUALITY = { draft: { ds: 0.10, cell: 0.05 }, standard: { ds: 0.05, cell: 0.05 }, refined: { ds: 0.025, cell: 0.02 } };
