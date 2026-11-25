@@ -43,7 +43,7 @@ import { helpHTML, reportLink, REPORT_IDS } from './workspace-help.js';
 import { workflowState } from './onboarding.js';
 import * as ACU from './interior/acoustics.js?v=acu-20261106-1';
 import { keep as PKEEP } from '../../emb/lib/plansim.js?v=sims-20261121-1';
-import { mountProps } from './project-props.js?v=round2-20261124-1';
+import { mountProps } from './project-props.js?v=pro1-20261125-1';
 
 const I = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const P = {
