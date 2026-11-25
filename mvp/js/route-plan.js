@@ -5,7 +5,7 @@
 // against the obstacles with the body (and the trailer of an articulated vehicle) covered by circles, using a distance map of
 // the obstacles; the estimate that guides it is the shortest way round the obstacles on a grid, so it heads round them, not into
 // them. Plan metres, x east, y north. Pure functions: the Node tests run the same code.
-// Limits, said where they apply: forward driving only (a route drawn with reversing is not re-planned); obstacles as given (a
+// Limits, said where they apply: rigid vehicles may reverse (o.reverse, 2026-11-25), articulated ones drive forward only; a route drawn with reversing is not re-planned; obstacles as given (a
 // missing obstacle is not avoided); the found path is a feasible one, not the only or a regulation one.
 import { rMin } from './vehicles.js?v=batch3-20261124-1';
 
@@ -13,8 +13,9 @@ const TAU = Math.PI * 2;
 const wrapA = (t) => ((t % TAU) + TAU) % TAU;
 
 // ---- the obstacles as a grid: occupied cells, then the distance (m) from each cell to the nearest occupied one ----
-function grid(obstacles, box, res) {
+function grid(obstacles, box, res, block = null) {
   const nx = Math.max(2, Math.ceil((box.x1 - box.x0) / res)), ny = Math.max(2, Math.ceil((box.y1 - box.y0) / res)), occ = new Uint8Array(nx * ny);
+  if (block) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) if (block(box.x0 + (i + 0.5) * res, box.y0 + (j + 0.5) * res)) occ[j * nx + i] = 1;   // (2026-11-25) off the paved area: blocked
   for (const o of obstacles) { const P = o.poly; if (!P || P.length < 3) continue; let y0 = Infinity, y1 = -Infinity; for (const p of P) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
     const j0 = Math.max(0, Math.floor((y0 - box.y0) / res)), j1 = Math.min(ny - 1, Math.ceil((y1 - box.y0) / res));
     for (let j = j0; j <= j1; j++) { const y = box.y0 + (j + 0.5) * res, xs = [];
@@ -33,6 +34,13 @@ function grid(obstacles, box, res) {
   return { nx, ny, res, box, occ, D, at };
 }
 
+// the body as its rectangle (2026-11-25, tight turns): points along its outline must keep the clearance, points along its axis (away from
+// the ends) must be half its width clear, so nothing lies inside it; [x along the heading, y to the left, distance needed less the clearance]
+function rectSamples(lenBack, lenFront, W) { const out = [], h = W / 2, L = lenBack + lenFront, nL = Math.max(2, Math.ceil(L / 0.35)), nW = Math.max(2, Math.ceil(W / 0.35));
+  for (let i = 0; i <= nL; i++) { const x = -lenBack + L * i / nL; out.push([x, h, 0], [x, -h, 0]); }
+  for (let j = 1; j < nW; j++) { const y = -h + W * j / nW; out.push([-lenBack, y, 0], [lenFront, y, 0]); }
+  const a = -lenBack + h, b = lenFront - h; if (b > a) { const n = Math.max(1, Math.ceil((b - a) / 0.5)); for (let i = 0; i <= n; i++) out.push([a + (b - a) * i / n, 0, h]); } else out.push([(lenFront - lenBack) / 2, 0, Math.min(h, L / 2)]);
+  return out; }
 // the body as circles along its axis: [offset from the reference point along the heading, radius]
 function circles(lenBack, lenFront, W) { const L = lenBack + lenFront, n = Math.max(2, Math.ceil(L / (W * 0.8))), seg = L / n, r = Math.hypot(seg / 2, W / 2), out = [];
   for (let i = 0; i < n; i++) out.push([-lenBack + seg * (i + 0.5), r]); return out; }
@@ -47,24 +55,25 @@ class Heap { constructor() { this.a = []; } push(x) { const a = this.a; a.push(x
  * @param route { pts: [[x, y], …], reverse? }
  * @param obstacles [{ id, poly }]
  * @param o { clearance (m), maxExpand, startHeading (rad), goalHeading (rad, the last point: the vehicle ends facing this way, ±goalTol),
- *            goalTol (rad, 0.2), roads: [{ pts, width }] (2026-11-25: off these corridors costs more, so the path keeps to the roads) }
- * @returns { ok, path: [{ p: [x, y], k }] every ~0.1 m, length, clearanceUsed, legs, onRoad (share), error?, closest? }
+ *            goalTol (rad, 0.2), roads: [{ pts, width }] (2026-11-25: off these corridors costs more, so the path keeps to the roads),
+ *            roadsOnly (the vehicle must stay within the road corridors), reverse (rigid vehicles may reverse: three-point turns, backing in) }
+ * @returns { ok, path: [{ p: [x, y], k, dir }] every ~0.1 m, length, reverseLength, cusps, clearanceUsed, legs, onRoad (share), error?, closest? }
  */
 export function planAround(v, route, obstacles, o = {}) {
   const P = (route.pts || []).map((p) => [+p[0], +p[1]]); if (P.length < 2) return { ok: false, error: 'Draw at least two points' };
   if ((route.reverse || []).some(Boolean)) return { ok: false, error: 'a route with reversing is driven as drawn' };
-  const W = v.width, Lw = v.wheelbase, art = v.kind === 'artic' && v.trailer, T = art ? v.trailer : null;
+  const W = v.width, Lw = v.wheelbase, art = v.kind === 'artic' && v.trailer, T = art ? v.trailer : null, canRev = !!o.reverse && !art;   // an articulated vehicle drives forward only here
   const R = rMin(v) * 1.1, kmax = 1 / R;   // a 10 % margin on the least radius, so the driven vehicle can follow what is planned
   // the area searched: the route and the obstacles near it, with room to go round
   const pad = Math.max(25, 2 * v.length + (T ? T.wheelbase + T.rearOverhang : 0));
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of P) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
   const box = { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad }, span = Math.max(box.x1 - box.x0, box.y1 - box.y0), res = Math.max(0.15, Math.min(0.5, span / 900));
   const near = obstacles.filter((ob) => { if (!ob.poly || ob.poly.length < 3) return false; let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const p of ob.poly) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); } return a < box.x1 + 5 && c > box.x0 - 5 && b < box.y1 + 5 && d > box.y0 - 5; });   // its extent meets the area (a long wall with its ends far away counts)
-  const roadAt = roadMask(o.roads, box, Math.max(res, 0.5)), offCost = o.roads && o.roads.length ? 0.6 : 0;
-  const G = grid(near, box, res), body = circles(v.rearOverhang, Lw + v.frontOverhang, W), tbody = art ? circles(T.wheelbase + T.rearOverhang, T.frontOverhang, T.width || W) : null;
+  const roadAt = roadMask(o.roads, box, o.roadsOnly ? res : Math.max(res, 0.5)),   /* kept within the roads: the edge at the grid's own resolution */ offCost = o.roads && o.roads.length && !o.roadsOnly ? 0.6 : 0;
+  const G = grid(near, box, res, o.roadsOnly && o.roads && o.roads.length ? (x, y) => !roadAt(x, y) : null), exact = !!(o.reverse || o.roadsOnly), shape = exact ? rectSamples : (b, f, w) => circles(b, f, w).map(([off, r]) => [off, 0, r]), body = shape(v.rearOverhang, Lw + v.frontOverhang, W), tbody = art ? shape(T.wheelbase + T.rearOverhang, T.frontOverhang, T.width || W) : null;   // tight manoeuvres: the exact outline; else circles (as before)
   const tryWith = (clear) => {
-    const free = (x, y, th, phi) => { const c = Math.cos(th), s = Math.sin(th); for (const [off, r] of body) { if (G.at(x + c * off, y + s * off) < r + clear) return false; }
-      if (art) { const hx = x + c * (T.hitch || 0), hy = y + s * (T.hitch || 0), cp = Math.cos(phi), sp = Math.sin(phi); for (const [off, r] of tbody) if (G.at(hx + cp * off, hy + sp * off) < r + clear) return false; }
+    const free = (x, y, th, phi) => { const c = Math.cos(th), s = Math.sin(th); for (const [lx, ly, r] of body) { if (G.at(x + c * lx - s * ly, y + s * lx + c * ly) < r + clear) return false; }
+      if (art) { const hx = x + c * (T.hitch || 0), hy = y + s * (T.hitch || 0), cp = Math.cos(phi), sp = Math.sin(phi); for (const [lx, ly, r] of tbody) if (G.at(hx + cp * lx - sp * ly, hy + sp * lx + cp * ly) < r + clear) return false; }
       return true; };
     // the shortest way round on a grid from the goal (8 neighbours, cells the body's half width can pass), for the estimate
     const cs = Math.max(0.5, res * 2), gx = Math.ceil((box.x1 - box.x0) / cs), gy = Math.ceil((box.y1 - box.y0) / cs), passable = new Uint8Array(gx * gy);
@@ -84,42 +93,45 @@ export function planAround(v, route, obstacles, o = {}) {
     const leg = (s0, goal, last) => {
       if (!free(s0.x, s0.y, s0.th, s0.phi)) return { error: 'the start of the route is inside or against an obstacle' };
       const H = holo(goal), hAt = (x, y) => { const i = Math.floor((x - box.x0) / cs), j = Math.floor((y - box.y0) / cs); const h = i < 0 || j < 0 || i >= gx || j >= gy ? Infinity : H[j * gx + i]; return Math.max(Math.hypot(goal[0] - x, goal[1] - y), Number.isFinite(h) ? h : 1e6); };
-      const key = (x, y, th) => (Math.floor((y - box.y0) / cs) * gx + Math.floor((x - box.x0) / cs)) * NH + (Math.floor(wrapA(th) / TAU * NH) % NH);
-      const nodes = [{ ...s0, g: 0, k: 0, par: -1, seg: null }], best = new Map([[key(s0.x, s0.y, s0.th), 0]]), hp = new Heap(); hp.push([hAt(s0.x, s0.y), 0]);
+      const key = (x, y, th, dir = 1) => ((Math.floor((y - box.y0) / cs) * gx + Math.floor((x - box.x0) / cs)) * NH + (Math.floor(wrapA(th) / TAU * NH) % NH)) * 2 + (dir < 0 ? 1 : 0);
+      const minLeg = 1.5, hTh = () => 0;   // the turning still to do toward the final heading
+      const REV = 2.0, SWITCH = Math.max(3 * step, v.wheelbase + v.frontOverhang + v.rearOverhang);   // reversing costs twice as much a metre, and each change of direction as much as driving the vehicle's own length
+      const nodes = [{ ...s0, g: 0, k: 0, dir: s0.dir || 0, par: -1, seg: null }], best = new Map([[key(s0.x, s0.y, s0.th), 0]]), hp = new Heap(); hp.push([hAt(s0.x, s0.y), 0]);
       const maxN = o.maxExpand || 120000, gH = last && o.goalHeading != null ? o.goalHeading : null, gTol = o.goalTol || 0.2; let found = -1, exp = 0, close = 0, closeD = Infinity;
       const headOk = (th) => gH == null || Math.abs(Math.atan2(Math.sin(th - gH), Math.cos(th - gH))) <= gTol;
       while (hp.size && exp < maxN) { const [, ni] = hp.pop(), n = nodes[ni]; if (n.closed) continue; n.closed = true; exp++;
         const dn = Math.hypot(goal[0] - n.x, goal[1] - n.y); if (dn < closeD) { closeD = dn; close = ni; }
         if (dn < tol && headOk(n.th)) { found = ni; break; }
-        for (const k of ks) { let x = n.x, y = n.y, th = n.th, phi = n.phi, ok = true; const pts = []; const ds = step / sub;
+        for (const dir of canRev ? [1, -1] : [1]) for (const k of ks) { if (n.dir && dir !== n.dir && (n.leg || 0) < minLeg) continue; /* (2026-11-25) a leg at least minLeg long before the next change of direction */ let x = n.x, y = n.y, th = n.th, phi = n.phi, ok = true; const pts = []; const ds = step / sub * dir;   // dir −1: backwards along the heading
           for (let q = 0; q < sub; q++) { if (art) phi += (Math.sin(th - phi) + (T.hitch || 0) * k * Math.cos(th - phi)) / T.wheelbase * ds;
             const thm = th + k * ds / 2; x += Math.cos(thm) * ds; y += Math.sin(thm) * ds; th += k * ds;
             if (art && Math.abs(Math.atan2(Math.sin(th - phi), Math.cos(th - phi))) > (T.maxArticulation || 70) * Math.PI / 180) { ok = false; break; }
-            if (!free(x, y, th, phi)) { ok = false; break; } pts.push([x, y, k]); }
+            if (!free(x, y, th, phi)) { ok = false; break; } pts.push([x, y, k, dir]); }
           if (!ok) continue;
-          const g = n.g + step * (1 + 0.15 * Math.abs(k) / kmax + (offCost && !roadAt(x, y) ? offCost : 0)) + (k !== n.k ? 0.25 * step * Math.abs(k - n.k) / kmax : 0), kk = key(x, y, th), prev = best.get(kk);
+          const g = n.g + step * (dir < 0 ? REV : 1) * (1 + 0.15 * Math.abs(k) / kmax + (offCost && !roadAt(x, y) ? offCost : 0)) + (k !== n.k ? 0.25 * step * Math.abs(k - n.k) / kmax : 0) + (n.dir && dir !== n.dir ? SWITCH : 0), kk = key(x, y, th, dir), prev = best.get(kk);
           if (prev !== undefined && nodes[prev].g <= g) continue;
-          nodes.push({ x, y, th, phi, g, k, par: ni, seg: pts }); best.set(kk, nodes.length - 1); hp.push([g + 1.05 * hAt(x, y), nodes.length - 1]); } }
-      if (found < 0) { const c = nodes[close]; return { error: gH != null && closeD < tol ? 'the vehicle reaches the end but cannot turn to stand there along the wall (not enough room to turn)' : exp >= maxN ? 'no way round was found within the search limit' : 'no way round: the obstacles leave no gap the vehicle can pass', closest: c ? [c.x, c.y] : null, gap: closeD }; }
+          nodes.push({ x, y, th, phi, g, k, dir, leg: dir === n.dir || !n.dir ? (n.leg || 0) + step : step, par: ni, seg: pts }); best.set(kk, nodes.length - 1); hp.push([g + 1.05 * hAt(x, y) + hTh(th), nodes.length - 1]); } }
+      if (found < 0) { const c = nodes[close]; return { error: gH != null && closeD < tol ? 'the vehicle reaches the end but cannot end facing the way asked: not enough room to turn' : exp >= maxN ? 'no way round was found within the search limit' : 'no way round: the obstacles leave no gap the vehicle can pass', closest: c ? [c.x, c.y] : null, gap: closeD }; }
       const chain = []; for (let i = found; i >= 0; i = nodes[i].par) chain.push(nodes[i]); chain.reverse();
       const pts = []; for (const c of chain) if (c.seg) pts.push(...c.seg);
       // to the point itself in a straight line when the last pose is near it and the line is clear
       const e = chain.at(-1), dg = Math.hypot(goal[0] - e.x, goal[1] - e.y), heading = Math.atan2(goal[1] - e.y, goal[0] - e.x);
-      if (dg > 0.05 && Math.abs(Math.atan2(Math.sin(heading - e.th), Math.cos(heading - e.th))) < 0.35 && headOk(heading)) { const m = Math.ceil(dg / 0.25); let okL = true; const extra = [];
-        for (let q = 1; q <= m; q++) { const x = e.x + (goal[0] - e.x) * q / m, y = e.y + (goal[1] - e.y) * q / m; if (!free(x, y, heading, e.phi)) { okL = false; break; } extra.push([x, y, 0]); }
-        if (okL) { pts.push(...extra); return { pts, end: { x: goal[0], y: goal[1], th: heading, phi: e.phi }, exp }; } }
-      void last; return { pts, end: { x: e.x, y: e.y, th: e.th, phi: e.phi }, exp }; };
+      if (dg > 0.05 && !exact && (e.dir || 1) > 0 && Math.abs(Math.atan2(Math.sin(heading - e.th), Math.cos(heading - e.th))) < (dg < 1.2 ? 0.9 : 0.35) && headOk(heading)) { /* the last metre or so straight to the point */ const m = Math.ceil(dg / 0.25); let okL = true; const extra = [];
+        for (let q = 1; q <= m; q++) { const x = e.x + (goal[0] - e.x) * q / m, y = e.y + (goal[1] - e.y) * q / m; if (!free(x, y, heading, e.phi)) { okL = false; break; } extra.push([x, y, 0, 1]); }
+        if (okL) { pts.push(...extra); return { pts, end: { x: goal[0], y: goal[1], th: heading, phi: e.phi, dir: 1 }, exp }; } }
+      void last; return { pts, end: { x: e.x, y: e.y, th: e.th, phi: e.phi, dir: e.dir }, exp }; };
     const moved = [], Q = P.map((p, i) => { const q = nearestFree(p); if (q && q !== p) moved.push({ i, from: p, to: q, d: Math.hypot(q[0] - p[0], q[1] - p[1]) }); return q; });
     const bad = Q.findIndex((q) => !q); if (bad >= 0) return { ok: false, error: `point ${bad + 1} of the route is ${bad === 0 ? 'where' : 'where'} the vehicle cannot stand, with no free place within 8 m` };
     const th0 = o.startHeading != null ? o.startHeading : Math.atan2(Q[1][1] - Q[0][1], Q[1][0] - Q[0][0]); let st = { x: Q[0][0], y: Q[0][1], th: th0, phi: th0 };
     if (!free(st.x, st.y, st.th, st.phi)) { for (let a = 1; a <= 36 && !free(st.x, st.y, st.th, st.phi); a++) st.th = th0 + (a % 2 ? 1 : -1) * Math.ceil(a / 2) * TAU / 72; st.phi = st.th; }   // facing a little off the line where the body fits
-    const all = [[Q[0][0], Q[0][1], 0]]; let exp = 0;
+    const all = [[Q[0][0], Q[0][1], 0, 1]], heading0 = st.th; let exp = 0;
     for (let i = 1; i < Q.length; i++) { const r = leg(st, Q[i], i === Q.length - 1); if (r.error) return { ok: false, error: r.error, leg: i, closest: r.closest, gap: r.gap }; all.push(...r.pts); st = r.end; exp += r.exp; }
     // every ~0.1 m along it, with the curvature
-    const path = [{ p: [all[0][0], all[0][1]], k: 0 }]; let len = 0;
-    for (let i = 1; i < all.length; i++) { const a = all[i - 1], b = all[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d < 1e-6) continue; len += d; path.push({ p: [b[0], b[1]], k: b[2] }); }
+    if (all.length > 1) all[0][3] = all[1][3] || 1;
+    const path = [{ p: [all[0][0], all[0][1]], k: 0, dir: all[0][3] || 1 }]; let len = 0, rlen = 0, cusps = 0;
+    for (let i = 1; i < all.length; i++) { const a = all[i - 1], b = all[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d < 1e-6) continue; len += d; const dir = b[3] || 1; if (dir < 0) rlen += d; if (dir !== path.at(-1).dir) cusps++; path.push({ p: [b[0], b[1]], k: b[2], dir }); }
     const onRoad = offCost ? path.filter((q) => roadAt(q.p[0], q.p[1])).length / path.length : null;
-    return { ok: true, path, length: len, clearanceUsed: clear, expanded: exp, moved, onRoad, endHeading: st.th };
+    return { ok: true, path, heading0, length: len, reverseLength: rlen, cusps, clearanceUsed: clear, expanded: exp, moved, onRoad, endHeading: st.th };
   };
   const clear = o.clearance ?? 0.3, first = tryWith(clear); if (first.ok) return first;
   const tight = clear > 0 ? tryWith(0) : first; if (tight.ok) return { ...tight, underClearance: true };

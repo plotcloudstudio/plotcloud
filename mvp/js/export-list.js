@@ -4,7 +4,8 @@
 // basis and limits), editable slides (PPTX), or every picture (ZIP). Every item records what it was computed from, and the list
 // marks an item whose model has changed since.
 //   item: { id, kind: 'view' | 'series' | 'section', study, title, sub, pictures: [{ label, blob }], cols,
-//           legend: { lo, hi, unit, dec, stops } | null, rows: [[label, value]], method, basis, notes: [..], modelKey, at (ISO) }
+//           legend: { lo, hi, unit, dec, stops } | null, rows: [[label, value]], method, basis, notes: [..], modelKey, at (ISO),
+//           tables?: [{ title, head, rows, widths?, note? }] (printed on the page after the item's own) }
 import { zip } from './zip-store.js';
 import { buildPptx } from './pptx.js';
 
@@ -141,7 +142,8 @@ async function pdf(items, title, ctx) {
   const cx = [mg, mg + 10, mg + 82, W - mg - 26, W - mg - 9], hdr = ['No.', 'Analysis', 'Headline result', 'Figures', 'Page'], maxY = H - 20, y0 = y, yTop = 24;
   d.setFontSize(9.5); const srows = items.map((it) => { const an = d.splitTextToSize(headOf(it), cx[2] - cx[1] - 4), hl = d.splitTextToSize(headline(it), cx[3] - cx[2] - 6); return { an, hl, h: Math.max(an.length, hl.length) * 4.2 + 2.4 }; });
   let S = 1; { let yy = y0 + 7; for (const r of srows) { if (yy + r.h - 3 > maxY) { S++; yy = yTop + 7; } yy += r.h; } if (yy + 3 > maxY) S++; }
-  const pageOf = (i) => S + 2 + i, lastPage = pageOf(items.length);
+  // an item with tables (2026-11-25, the vehicle access sheet) has a second page for them
+  const extraOf = (it) => (it && it.tables && it.tables.length ? 1 : 0), pageOf = (i) => S + 2 + i + items.slice(0, i).reduce((a, it) => a + extraOf(it), 0), lastPage = pageOf(items.length);
   const header = (yy) => { d.setFontSize(9); d.setTextColor(...sub); hdr.forEach((t, k) => d.text(t, cx[k], yy)); d.setDrawColor(...line); d.line(mg, yy + 2, W - mg, yy + 2); return yy + 7; };
   const more = () => { d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(12); d.text('Summary of Results (continued)', mg, 16); return header(yTop); };
   y = header(y);
@@ -172,6 +174,13 @@ async function pdf(items, title, ctx) {
     { const r = room(); const y = table(inputsOf(it), r.c, head('Inputs and Boundary Conditions', r.c, r.y), colW, 0.4, 7.4, H - 30) + 3; put(r.k, y); }
     const lim = [...(it.notes || []).map(usage), D.limit].filter(Boolean);
     if (lim.length && room().y < H - 34) { const r = room(); let y = head('Assumptions and Limitations', r.c, r.y);   /* no room left: the closing chapter carries them */ for (const t of lim) { if (y > H - 26) break; y = wrap(t, colW, 7.2, r.c, y, sub) + 1; } put(r.k, y); }
+    // tables on the next page (2026-11-25): [{ title, head: [..], rows: [[..]], widths?: [fractions], note? }], as many rows as fit
+    if (extraOf(it)) { d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(14); const ct = d.splitTextToSize(`${n} (continued). ${headOf(it)}`, W - 2 * mg).slice(0, 2); d.text(ct, mg, 19); let yy = 30 + (ct.length - 1) * 6; const TW = W - 2 * mg;
+      for (const T of it.tables) { if (yy > H - 40) break; yy = head(T.title, mg, yy); const nc = T.head.length, fr = T.widths || T.head.map((_, k) => (k === 0 ? 0.3 : 0.7 / (nc - 1))), xs = []; let acc = mg; for (const w of fr) { xs.push(acc); acc += w * TW; }
+        const row = (cells, bold) => { d.setFontSize(7.6); const ls = cells.map((c, k) => d.splitTextToSize(plain(String(c ?? '')), fr[k] * TW - 2)), h = Math.max(...ls.map((l) => l.length)) * 3.2 + 1.6; if (yy + h > H - 22) return false; ls.forEach((l, k) => { d.setTextColor(...(bold ? ink : k ? sub : ink)); d.text(l, xs[k], yy); }); yy += h; if (bold) { d.setDrawColor(...line); d.line(mg, yy - 1.4, W - mg, yy - 1.4); yy += 0.6; } return true; };
+        row(T.head, true); let shown = 0; for (const r of T.rows) { if (!row(r, false)) break; shown++; }
+        if (shown < T.rows.length) yy = wrap(`${T.rows.length - shown} more rows in the data files.`, TW, 7.2, mg, yy, sub) + 1;
+        if (T.note) yy = wrap(T.note, TW, 7.2, mg, yy + 1, sub) + 1; yy += 5; } }
   }
   // assumptions, limitations and disclaimer
   d.addPage('letter', 'portrait'); d.setFont('DejaVu'); band(); d.setTextColor(...ink); d.setFontSize(18); d.text(`${items.length + 1}. Assumptions, Limitations and Disclaimer`, mg, 20);
