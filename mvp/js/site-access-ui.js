@@ -6,6 +6,7 @@ import * as G from './geom2d.js';
 import * as V from './vehicles.js?v=batch3-20261124-1';
 import * as SP from './swept-path.js?v=batch3-20261124-1';
 import * as RP from './route-plan.js?v=batch3-20261124-1';
+import * as VM from './vehicle-mesh.js';
 import * as PK from './parking.js';
 import * as CAD from './cad-export.js';
 
@@ -163,11 +164,23 @@ function vehMarks(ctx, runs, obstacles, S, box, view, t) { const ST = ctx.ST, m 
   if (t != null) for (const r of runs) { const q = SP.poseAt(r, t); if (!q) continue; for (const B of SP.shapesAt(r.vehicle, q).bodies) m.polys.push({ pts: B, fill: r.col, fal: 0.55, col: '#111827', w: 0.08, tag: 'body' }); }
   return m; }
 function vehResult(ctx, runs, pair, obstacles, src, S) { const { ST, esc, fmt } = ctx, box = (() => { const P = runs.flatMap((r) => r.envelope.loops.flat()); const b = G.bbox(P.length ? P : [[0, 0]]), pad = 12; return { x0: b.x0 - pad, y0: b.y0 - pad, x1: b.x1 + pad, y1: b.y1 + pad }; })();
-  const paint = (r, fit, t) => show(ctx, box, vehMarks(ctx, runs, obstacles, S, box, r.view, t), fit);
+  const paint = (r, fit, t) => { show(ctx, box, vehMarks(ctx, runs, obstacles, S, box, r.view, t), fit); if (t == null && typeof putVeh === 'function') putVeh(T0); };   // the vehicles stand at the start until played
   const meet = !!(pair && pair.simultaneous.length), worst = meet || runs.some((r) => r.status === 'infeasible') ? 'infeasible' : runs.some((r) => r.status === 'unverified') ? 'unverified' : 'feasible', SN = { feasible: 'Feasible', infeasible: 'Infeasible', unverified: 'Not verified' };
-  const T0 = Math.min(...runs.map((r) => r.poses[0].t)), T1 = Math.max(...runs.map((r) => r.poses.at(-1).t)), NF = Math.max(2, Math.min(150, Math.ceil((T1 - T0) / 0.25)));
-  const timeline = { n: NF, ms: Math.min(12000, Math.max(3000, (T1 - T0) * 250)), label: (i) => { const t = T0 + (T1 - T0) * i / (NF - 1); return runs.map((r) => { const q = SP.poseAt(r, t); return q ? `Route ${r.routeNo + 1}: ${fmt(q.s, 1)} m, steering ${fmt(q.delta * 180 / Math.PI, 0)}°` : `Route ${r.routeNo + 1}: ${t < r.poses[0].t ? 'waiting' : 'arrived'}`; }).join(' · ') + ` · ${fmt(t, 1)} s`; },
-    show: (i) => paint(ST.res, false, T0 + (T1 - T0) * i / (NF - 1)), reset: () => { if (ST.res) ctx.paintRes(ST.res); } };
+  // the vehicles in motion (2026-11-25): a continuous timeline, played in real time (the speed of each route), the static sheet
+  // painted once and only the vehicles moving: in 2D their bodies, wheels and the wheel tracks driven so far; in 3D schematic models
+  const T0 = Math.min(...runs.map((r) => r.poses[0].t)), T1 = Math.max(...runs.map((r) => r.poses.at(-1).t)), NF = 1001, tAt = (i) => T0 + (T1 - T0) * i / (NF - 1);
+  const specs = runs.map((r) => VM.vehicleParts(r.vehicle, r.col));
+  const vehAt = (t) => runs.map((r, k) => { const q = SP.poseAt(r, Math.min(Math.max(t, r.poses[0].t), r.poses.at(-1).t)); if (!q) return null; const S2 = SP.shapesAt(r.vehicle, q), P = r.poses;
+    let n = 0; while (n < P.length && P[n].t <= t) n++; const step = Math.max(1, Math.round(n / 300)), trail = (T) => { const o = []; for (let j = 0; j < n; j += step) o.push(T[j]); if (n) o.push(T[n - 1]); return o; };
+    const hot = r.collisions.some((c) => q.s >= c.s0 - 0.05 && q.s <= c.s1 + 0.05), hw = (nm) => (/^T/.test(nm) ? q.phi : /^F/.test(nm) ? q.th + q.delta : q.th);
+    const trails = Object.entries(r.tracks).filter(([nm]) => /^(FL|FR|RL|RR|TL|TR)$/.test(nm)).map(([, T]) => trail(T));
+    return { d2: { col: r.col, hot, bodies: S2.bodies, wheels: Object.entries(S2.wheels).map(([nm, p]) => [p[0], p[1], hw(nm)]), trails, front: { p: [q.x + Math.cos(q.th) * (r.vehicle.wheelbase + r.vehicle.frontOverhang), q.y + Math.sin(q.th) * (r.vehicle.wheelbase + r.vehicle.frontOverhang)], h: q.th } },
+      d3: { key: 'veh' + r.routeNo + ':' + r.vehicle.id, parts: specs[k], x: q.x, y: q.y, th: q.th, phi: q.phi, delta: q.delta, s: q.s, hot, len: V.overallLength(r.vehicle) } }; }).filter(Boolean);
+  const follow = { on: false }, putVeh = (t) => ctx.views2().forEach((w2) => w2.vehicles?.(vehAt(t), { follow: follow.on }));
+  const timeline = { n: NF, cont: true, fps: (NF - 1) / Math.max(0.5, T1 - T0), hint: `▶ drives the route${runs.length > 1 ? 's' : ''} in real time (${fmt(T1 - T0, 0)} s)`,
+    label: (i) => { const t = tAt(i); return runs.map((r) => { const q = SP.poseAt(r, t); return q ? `Route ${r.routeNo + 1}: ${fmt(q.s, 1)} m, steering ${fmt(q.delta * 180 / Math.PI, 0)}°` : `Route ${r.routeNo + 1}: ${t < r.poses[0].t ? 'waiting' : 'arrived'}`; }).join(' · ') + ` · ${fmt(t, 1)} s of ${fmt(T1, 1)} s`; },
+    show: (i) => putVeh(tAt(i)), reset: () => { ctx.views2().forEach((w2) => w2.vehicles?.(null, { follow: false })); if (ST.res) ctx.paintRes(ST.res); },
+    follow: (on) => { follow.on = !!on; }, followOn: false };
   const mc = (r) => (r.minClear ? `${fmt(r.minClear.d, 2)} m to ${esc(r.minClear.name)} at ${fmt(r.minClear.s, 1)} m${r.minClear.d < r.clearance ? ` <span class="sp-bad">(under ${fmt(r.clearance, 2)} m)</span>` : ''}` : 'no obstacle within reach');
   const rows = [['Status', `<span class="${worst === 'infeasible' ? 'sp-bad' : ''}">${SN[worst]}</span>`]];
   for (const r of runs) { const pre = runs.length > 1 ? `Route ${r.routeNo + 1} · ` : '';
