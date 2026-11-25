@@ -45,6 +45,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     for (const q of [at(0.5), at(0.62)]) { assert(await p.evaluate((q) => __ws2.inst.plan.ws._pick(q), q)); await p.waitForTimeout(150); }
     await run(); R = await rows();
     assert.match(R['Found route'], /turning round on .* within its width/, R['Found route']); assert.match(R['Moves'] || '', /\d+ \(\d+ changes? of direction\)/, 'moves: ' + R['Moves']);
+    { const legs = +((/, (\d+) reversing/.exec(R['Route']) || [0, 0])[1]), moves = +/^(\d+)/.exec(R['Moves'])[1]; assert(legs >= 1 && legs <= Math.ceil(moves / 2), `the Route row counts reversing legs (${legs}), not points: ${R['Route']}`); }
     const inRoad = await p.evaluate((w) => { const r = window.__wsStudy.state().res.saRuns[0]; return r.status; }, drive.width);
     await p.screenshot({ path: out + '/vehicle-turnround.png' });
     console.log(`PASS turn round on ${drive.name} (${drive.width} m wide): ${R['Moves']}; ${R['Status']} (${inRoad})`);

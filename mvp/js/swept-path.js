@@ -155,7 +155,7 @@ export function simulate(v, route, o = {}) {
   return { ok: true, status, reasons, unverifiedWhy: status === 'unverified' ? (!obs.length ? 'no obstacles were given (no buildings, curbs or columns near the route)' : 'the obstacle data is incomplete') : '',
     vehicle: v, ref, poses, tracks, outlines, envelope: env, swept: env.area, cell: cellE, length: last ? last.s : 0, duration: last ? last.t - (o.delay || 0) : 0, speed: speed * 3.6,
     rMin: rMin(v), rReached, minClear: Number.isFinite(minC.d) ? minC : null, perObstacle: [...perObs.entries()].map(([id, x]) => ({ id, ...x })).sort((a, b) => a.d - b.d), collisions, tooNear, infeasible,
-    reversing: stretches(R.filter((x) => x.dir < 0).map((x) => ({ s: x.s, why: 'r' }))).length, reverseLength: poses.reduce((a, p, i) => a + (i && p.dir < 0 ? p.s - poses[i - 1].s : 0), 0), cusps: ref.cusps, moves: ref.cusps + 1, clearance: thr, ds, quality: o.quality || 'standard' };
+    reversing: R.reduce((n, x, i) => n + (x.dir < 0 && (i === 0 || R[i - 1].dir >= 0) ? 1 : 0), 0),   /* reversing legs: each start of a run of reversing points */ reverseLength: poses.reduce((a, p, i) => a + (i && p.dir < 0 ? p.s - poses[i - 1].s : 0), 0), cusps: ref.cusps, moves: ref.cusps + 1, clearance: thr, ds, quality: o.quality || 'standard' };
 }
 
 /** the pose at a time (s), interpolated between steps; null before the start or after the end */

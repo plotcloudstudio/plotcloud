@@ -160,8 +160,10 @@ async function pdf(items, title, ctx) {
     const iy = H - 20 - infoH, colW = (W - 2 * mg - 10) / 2, c1 = mg, c2 = mg + colW + 10, c3 = c2; d.setDrawColor(...line); d.line(mg, iy - 3, W - mg, iy - 3);
     // column 1: objective, method
     let y1 = iy + 3; if (it.objective) { y1 = head('Objective', c1, y1); y1 = wrap(usage(plain(it.objective)), colW, 7.8, c1, y1, sub) + 3; }
-    y1 = head('Method', c1, y1); y1 = wrap(methodText(it.method) || '—', colW, 7.8, c1, y1, sub) + 2;
-    if (D.refs.length) { y1 = head('References', c1, y1 + 1); for (const r of D.refs) y1 = wrap('• ' + r, colW, 7.4, c1, y1, sub) + 0.6; }
+    // (2026-11-25) a long method stops above the references and the footer, and says where the rest is
+    y1 = head('Method', c1, y1); { d.setFontSize(7.8); let ml = d.splitTextToSize(String(methodText(it.method) || '—'), colW); const room = Math.floor((H - 24 - (D.refs.length ? 8 + D.refs.length * 7 : 0) - y1) / (7.8 * 0.42));
+      if (ml.length > room && room > 2) { ml = ml.slice(0, room - 1); ml.push('… the full method is in the study’s method report on the Blog.'); } d.setTextColor(...sub); d.text(ml, c1, y1); y1 += ml.length * 7.8 * 0.42 + 2; }
+    if (D.refs.length && y1 < H - 26) { y1 = head('References', c1, y1 + 1); for (const r of D.refs) { if (y1 > H - 20) break; y1 = wrap('• ' + r, colW, 7.4, c1, y1, sub) + 0.6; } }
     // column 2: legend, results, inputs and boundary conditions, assumptions and limitations
     let y3 = iy + 3; if (it.legend) { const L = it.legend, lw = colW - 30, lh = 3.6, st = L.stops, hex = (c) => { const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})/i.exec(c); return m ? m.slice(1).map((v) => parseInt(v, 16)) : (/rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(c) || [0, 128, 128, 128]).slice(1).map(Number); };
       const at = (t) => { const s2 = t * (st.length - 1), k = Math.min(st.length - 2, Math.floor(s2)), u = s2 - k, a = hex(st[Math.max(0, k)]), b = hex(st[Math.min(st.length - 1, k + 1)]); return a.map((v, j) => Math.round(v + (b[j] - v) * u)); };
