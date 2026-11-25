@@ -22,7 +22,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=review-20261124-2';
+import { mountChrome } from '../workspace-chrome.js?v=pro1-20261125-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
@@ -183,7 +183,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=muse3-20261124-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=pro1-20261125-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -207,6 +207,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       <span class="w2-sep" aria-hidden="true"></span>
       <div><button type="button" id="dBtn" aria-haspopup="true" aria-expanded="false"></button><div class="w2-menu" id="dMenu" role="menu" hidden></div></div>
     </div>
+    <div class="w2-load" id="wsLoad" role="status" aria-live="polite"><b>Opening the model</b><ol><li data-ld="plan">2D plan</li><li data-ld="persp">3D view</li><li data-ld="props">Properties</li></ol><small>The model is still loading. It opens here in a moment.</small></div>
     <div class="w2-tr"><button class="btn accent sm" id="sendSim">Send to Simulation</button><button class="btn sm" id="editSite">Edit site</button><button class="btn sm" id="fit">Fit</button></div>
   </section>
   <aside class="w2-right" aria-label="Panels">
@@ -267,6 +268,11 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   const tellLooks = () => { for (const I2 of ready()) I2.ws.layerLooks?.(lookSpec()); };
   function tell(I2) { try { if (!I2.win.__pcInputMark) { I2.win.__pcInputMark = 1; for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown']) I2.win.addEventListener(ev, markInput, { capture: true, passive: true }); } } catch { } const w = I2.ws;w.projectLabel?.(p.name);w.layerLooks?.(lookSpec()); if (w.importMeshes) { w.importMeshes(M().meshes || {}); w.impOff(offLayers()); } w.layers(layerVis()); w.setLocks(lockList()); w.snaps(UI.snap); w.clearance(UI.clearance); w.gumball(UI.gumball); w.illustration?.(illOf()); w.display(UI.disp);
     const s = UI.sels.length === 1 ? psSel(UI.sels[0]) : null; w.select(s);w.selectMany?.(UI.sels.map(psSel).filter(Boolean)); }
+  // loading (2026-11-25): which views are ready, until the 2D plan and the 3D view both are; the time each took is kept for tests
+  const LOAD0 = performance.now(), LOADMS = {};
+  function loadUI(role) { if (role && LOADMS[role] == null) LOADMS[role] = Math.round(performance.now() - LOAD0); const box = app.querySelector('#wsLoad'); if (!box) return;
+    for (const li of box.querySelectorAll('[data-ld]')) li.dataset.done = INST[li.dataset.ld]?.ready ? 'true' : 'false';
+    if (INST.plan.ready && INST.persp.ready) box.hidden = true; }
   const hub = {
     ready(role, win) {
       if (dead || !INST[role]) return; const I2 = INST[role]; I2.win = win; I2.ws = win.__ws; I2.ready = true; try { win.__pcHidden = role !== 'props' && role !== shownRole(); } catch { }
@@ -275,6 +281,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       if(p.caseStudy?.id?.startsWith('fallingwater-habs-')&&I2.ws.levels().list.some(l=>l.id==='L3'))I2.ws.level('L3');
       tell(I2); if (role === 'plan' || !OBJ.length) derive(false);
       paneUI(); if (role === 'plan') { levelUI(); if (converted) toast('This project now uses Plan Studio’s model in every view. Imported meshes and the site are kept as they were.'); }
+      loadUI(role);
     },
     change(role, snap, live) {
       if (dead || (snap === SNAP && live)) return; SNAP = snap; delete HIDDEN_SNAP[role];   // its own model is newer than anything waiting for it   // the same model again, not live: a drag was let go, so it is kept now
@@ -503,7 +510,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
 
   // ---- right: Rhino-style panels. The gear chooses which ones show; Layers always does.
   const PANELS = [['properties','Project data',I('<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 9.5v10"/>')],['layers', 'Layers', I('<path d="M12 4l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/>')],
-    ['versions', 'Compare sketches', I('<circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7.5v9M18 10c0 4.5-6.5 3.5-10.6 7"/>')],
+    ['versions', 'Compare versions', I('<circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 7.5v9M18 10c0 4.5-6.5 3.5-10.6 7"/>')],
     ['explode', 'Explode', I('<path d="M4 7l8-3.5L20 7l-8 3.5z"/><path d="M4 17l8-3.5 8 3.5-8 3.5z"/><path d="M12 11.5v1.5" stroke-dasharray="1 1.5"/>')],
     ['walk', 'Walkthrough', I('<circle cx="13" cy="4.5" r="1.8"/><path d="M10.5 21l2-6 3 3v3M8.5 12.5l2.5-5 4 1.2 2 3.8M12.8 8.5l-1.3 5"/>')],
     ['elev', 'Interior elevation', I('<rect x="3" y="4" width="18" height="16"/><path d="M6.5 20v-9h4v9M13.5 9h4.5v5h-4.5z"/>')]];
@@ -692,7 +699,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
         const site=S.clone(old||SC.newSite(origin,{kind:'radius',r:150}));
         const terrain=await fetchUSGSTerrain(SC.frame(origin),site.boundary?.r||150);
         if(dead||M()!==draft||JSON.stringify(draft.studio.site||null)!==before)return;
-        if(site.features3d?.length&&!confirm('Replace this reconstructed terrain with USGS elevation? The case’s decorative waterfall and woodland geometry will be removed from this draft. Saved sketches stay unchanged.'))return;
+        if(site.features3d?.length&&!confirm('Replace this reconstructed terrain with USGS elevation? The case’s decorative waterfall and woodland geometry will be removed from this draft. Saved versions stay unchanged.'))return;
         site.terrain=terrain;delete site.features3d;SC.addSource(site,{provider:terrain.provider,attribution:'USGS National Map 3DEP',url:USGS_3DEP,at:new Date().toISOString()});
         draft.studio.site=site;loadAll();persist();panel();toast('USGS elevation loaded. Save a new version to keep this terrain with the model.');
       }catch(error){message.textContent=error.message||'USGS elevation is unavailable. Existing terrain was kept.';}finally{button.disabled=false;}
@@ -965,7 +972,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   state(); layers(); selPane(); rail(); panel(); tabsUI();
   setSel(UI.selProject === p.id ? UI.sels.filter((id) => comp(id)) : [], { params: false });
   // read-only hook for the browser checks in tests
-  window.__ws2 = { vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, syncViews: () => syncHidden(), ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
+  window.__ws2 = { loadMs: LOADMS, vp, UI, sel: () => primary(), sels: () => [...UI.sels], model: () => p.draft, inst: INST, objects: () => OBJ, hub, renderModel, syncViews: () => syncHidden(), ready: () => INST.plan.ready && INST.persp.ready && INST.props.ready && OBJ.length > 0 };
   (async () => { for (let i = 0; i < 60 && !LIGHTS; i++) { if (INST.plan.ready) LIGHTS = INST.plan.ws.lights(); else await new Promise((r) => setTimeout(r, 250)); } })();
   return () => { try { if (INST.plan.ready && INST.plan.ws.histDump) { const h = INST.plan.ws.histDump(); if (h.u.length || h.r.length) { HIST.delete(p.id); HIST.set(p.id, h); while (HIST.size > 3) HIST.delete(HIST.keys().next().value); } } } catch { } clearTimeout(hiddenT); flushSave(); removeEventListener('pagehide', flushSave); document.removeEventListener('visibilitychange', flushSave); clearTimeout(dT); dead = true; for (const f of app.querySelectorAll('iframe')) { try { f.contentWindow?.S3?.release?.(); } catch { } }   /* the 3D view's GPU memory let go at once (2026-11-15): seconds faster to the next page */
     disposeSimPreview();document.removeEventListener('click',simOutside);disposeChrome(); document.body.classList.remove('sp-full'); disposeStart(); document.querySelector('.w2-simmenu')?.remove(); handoff.dispose();disposeShell();document.removeEventListener('click', outside); removeEventListener('blur', away); clearInterval(paneT); clearInterval(toolT); removeEventListener('keydown', onKey); vp.dispose(); if (window.__wsHub === hub) delete window.__wsHub; delete window.__ws2; };

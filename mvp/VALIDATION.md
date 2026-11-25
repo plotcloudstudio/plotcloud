@@ -148,7 +148,9 @@ entered by the person), not traffic counts. The engine remains a screening tool;
 
 ## 6. Wind (not validated yet)
 
-Wind Flow is a lattice-Boltzmann solver on a coarse grid (BGK with a Smagorinsky eddy viscosity, D2Q9/D3Q15 on the GPU). It has not been
+Wind Flow is a 2D lattice-Boltzmann solver at pedestrian height on a grid of about 1.5 m (D2Q9, BGK, bounce-back walls, run on the
+CPU in the browser; `mvp/js/wind-lbm.js`). Natural ventilation uses its own 2D D2Q9 solver with a Smagorinsky eddy viscosity
+(`emb/vent.html`). Neither is 3D and neither runs on the GPU. Wind Flow has not been
 checked against wind-tunnel data. The next step is a cube in a boundary layer (surface pressure coefficients against the classic
 wind-tunnel measurements, e.g. Castro & Robins 1977) and the AIJ pedestrian-wind benchmark cases. Until then its speeds show where
 the wind speeds up and slows down, not values to report. The comfort map (§8) inherits this: read its Lawson classes as a screening

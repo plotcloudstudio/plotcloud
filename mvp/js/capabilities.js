@@ -21,7 +21,7 @@ export const STUDIES = {
   sunhours: { category: 'building', covers: ['B02'], also: ['I06'], method: 'SimuSite ray-cast direct sun hours (browser)', test: 'tests/sun-period.cjs' },
   radiation: { category: 'building', covers: ['B03'], method: 'SimuSite sky-patch incident radiation from EPW (browser, no reflections) — not HB-Radiance', test: 'tests/climate-studies.cjs' },
   utci: { category: 'building', covers: ['B09'], method: 'UTCI polynomial with SimuSite solar MRT estimate (browser)', test: 'tests/climate-studies.cjs' },
-  wind: { category: 'building', covers: ['B07', 'B08'], method: 'SimuSite GPU lattice flow screening (browser) — not OpenFOAM CFD', test: 'tests/climate-studies.cjs' },
+  wind: { category: 'building', covers: ['B07', 'B08'], method: 'SimuSite 2D lattice-Boltzmann flow screening at pedestrian height (D2Q9, BGK, in the browser) — not 3D CFD, not OpenFOAM', test: 'tests/climate-studies.cjs' },
   stormwater: { category: 'building', covers: [], extension: 'Site drainage screening', method: 'SimuSite runoff screening with a design storm (not EPW)', test: 'tests/free-simulations.cjs' },
   structure: { category: 'building', covers: [], extension: 'Structural screening', method: 'SimuSite frame solver on confirmed members, supports and loads', test: 'tests/structural-workflow.cjs' },
   watersound: { category: 'building', covers: [], extension: 'Sound of the site’s falls and streams', method: 'Point sources at each fall (sound power from the falling water’s power and an assumed acoustic efficiency) and riffles along streams; spherical spreading over the ground, screening by buildings and terrain; window and indoor estimates', test: 'tests/workspace-water.cjs' },

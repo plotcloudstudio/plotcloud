@@ -1,4 +1,4 @@
-// One panel at a time in the Workspace (2026-11-18): opening any panel closes the one open before. Compare sketches, then
+// One panel at a time in the Workspace (2026-11-18): opening any panel closes the one open before. Compare versions, then
 // Spaces: Compare closes; Assets, then the simulations menu: Assets closes; and so on through Statistics, Project data, Layers
 // (the panels card), Simulation quality, the Export list, Project props and the tool palette. After each step, exactly one is open.
 const { chromium } = require('playwright'), assert = require('node:assert/strict');
@@ -19,13 +19,13 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const step = async (name, act, want) => { await act(); await p.waitForTimeout(500); const o = await open(); assert.deepEqual(o, [want], `${name}: open ${JSON.stringify(o)}`); return o; };
     const rail = (k) => () => p.click(`.w2.sp [data-sp="${k}"]`);
     const steps = [
-      ['Compare sketches', () => p.click('#tabList [data-tab="versions"]'), 'compare'],
+      ['Compare versions', () => p.click('#tabList [data-tab="versions"]'), 'compare'],
       ['Spaces', rail('spaces'), 'pop:spaces'],
       ['Assets', rail('assets'), 'assets'],
       ['Simulations menu', () => p.click('#addSimBtn'), 'sim'],
       ['Statistics', rail('stats'), 'pop:stats'],
       ['Layers', () => p.click('#tabList [data-tab="layers"]'), 'card'],
-      ['Compare sketches again', () => p.click('#tabList [data-tab="versions"]'), 'compare'],
+      ['Compare versions again', () => p.click('#tabList [data-tab="versions"]'), 'compare'],
       ['Simulation quality', () => p.click('.sp-q'), 'pop:q'],
       ['Assets again', rail('assets'), 'assets'],
       ['Export list', () => p.click('.sp-xlb'), 'pop:xl'],
