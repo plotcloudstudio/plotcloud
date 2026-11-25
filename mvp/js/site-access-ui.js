@@ -5,7 +5,7 @@
 import * as G from './geom2d.js';
 import * as V from './vehicles.js?v=batch3-20261124-1';
 import * as SP from './swept-path.js?v=batch3-20261124-1';
-import * as RP from './route-plan.js?v=batch3-20261124-1';
+import * as RP from './route-plan.js?v=veh-20261125-1';
 import * as VM from './vehicle-mesh.js';
 import * as SR from './site-routes.js';
 import * as PK from './parking.js';
