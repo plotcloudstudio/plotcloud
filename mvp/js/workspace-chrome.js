@@ -135,8 +135,6 @@ export function mountChrome(app, api) {
   left.insertAdjacentHTML('beforeend', btn('spaces', 'Spaces', 'spaces', 'aria-pressed="false"'));
   const add = el('div', 'sp-rail sp-add'); add.append($('#addSimBtn'), $('#addSimInt'));
   add.insertAdjacentHTML('beforeend', `<span class="sp-hr"></span><button type="button" class="sp-b sp-xlb" data-sp="xl" title="Export list: the views, series and sections for the report" aria-label="Export list" aria-pressed="false">${I(P.xlist)}<i class="sp-badge" hidden></i></button>`);
-  // Render (2026-11-19): presentation images of a 3D view with the person's own OpenAI key, its own window (render-panel.js)
-  add.insertAdjacentHTML('beforeend', `<button type="button" class="sp-b sp-rnb" data-sp="render" title="Render: a presentation image of the 3D view (OpenAI, your own key)" aria-label="Render">${I('<rect x="3.5" y="6" width="17" height="13" rx="2"/><path d="M8.5 6l1.5-2h4l1.5 2"/><circle cx="12" cy="12.5" r="3.4"/><path d="M18.5 2.8l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z"/>')}</button>`);
   root.append(left, add);
 
   // ---- bottom: Edit site | the model tools | select, text, delete, more
@@ -219,15 +217,9 @@ export function mountChrome(app, api) {
   // ---- buttons
   const doc = () => { const a = activePane(); try { return a.ready ? a.win.document : null; } catch { return null; } };
   const openProject = (section) => { UI.pacc = section; saveUI(); if (UI.panel === 'project' && root.classList.contains('sp-pal-open')) palOpen(false); projBtn.click(); };
-  async function openRenderWin() { solo(null); const RP = await import('./render-panel.js?v=sims-20261121-1');
-    const ensure3D = async () => { if (UI.view !== 'persp') { await goView('persp'); for (let i = 0; i < 60 && !INST.persp.ready; i++) await new Promise((r) => setTimeout(r, 100)); await new Promise((r) => setTimeout(r, 250)); } };
-    window.__wsRender = RP.openRender({ p, S, studio, toast: (t) => import('./app.js').then((m) => m.toast?.(t)).catch(() => {}),
-      capture: async (w, h) => { await ensure3D(); const win = INST.persp.win, a = win?.S3?.api || win?.S3; if (!a?.captureView) throw Error('Open the 3D view before capturing.'); return a.captureView(w, h); },
-      level: () => { const lv = INST.persp.ready ? INST.persp.ws.state().lv : null; return (studio()?.levels || []).find((l) => l.id === lv) || null; } }); }
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-sp]'); if (!b) return; const k = b.dataset.sp;
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
-    else if (k === 'render') openRenderWin();
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
     else if (k === 'terrain') openProject('site');
@@ -1436,6 +1428,8 @@ export function mountChrome(app, api) {
     if (id === 'daylight' && ST.dlWhere === 'section') return daylightSection();
     if (id === 'daylight') {
       const sc = w.planScene('daylight'); if (!sc.walls.length) throw Error('No walls on this level: draw the rooms first, or pick another level in the Level menu.');
+      // (2026-11-24) daylight enters only through windows: a level without any reads 0 % everywhere, which looks like a result
+      if (!sc.walls.some((x) => Array.isArray(x.glass) ? x.glass.length : x.glass)) throw Error('No windows on this level: daylight enters only through windows. Add windows, or pick a level with windows in the Level menu.');
       try { await weather(); } catch (e) { }   // fetch the project weather if it is not stored yet
       const { shared, inputs } = await daylightInputs(p), occ = inputs.occ, wx = inputs.epw ? { station: inputs.epwName } : null;
       const out = await DAY.run(sc, { level: ST.dlLevel, tau: ST.dlTau, rf: ST.dlRf, rw: ST.dlRw, rc: ST.dlRc, head: ST.dlHead, blind: ST.dlBlind, ...inputs },
@@ -1985,6 +1979,8 @@ export function mountChrome(app, api) {
     return { label: plainOf(V.title || r.title || simName(ST.id)), unit: V.unit || r.unit || '', step: st, pts, n: pts.length / 3, src: 'workspace' }; }
   function compareKit(r) { const out = {}; try { const f = fieldOf(r); if (f) out.field = f; } catch (e) { console.warn(e); }
     try { const cv = UI.view === 'persp' && INST.persp.ready ? INST.persp.ws.snapAt?.(640, 400, 1) : null; if (cv) out.thumb = cv.toDataURL('image/jpeg', 0.8); } catch { }
+    // (2026-11-24) a result shown in the 2D plan (floor studies such as daylight are usually run there) keeps the plan as its picture
+    if (!out.thumb) try { const src = INST.plan.ready ? INST.plan.win.document.getElementById('cv') : null; if (src && src.width && src.height) { const k = Math.min(1, 640 / src.width), c = document.createElement('canvas'); c.width = Math.round(src.width * k); c.height = Math.round(src.height * k); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0, c.width, c.height); out.thumb = c.toDataURL('image/jpeg', 0.8); } } catch { }
     out.kpis = (r.rows || []).slice(0, 12).map(([k, v]) => [plainOf(k), plainOf(v)]).filter(([k, v]) => k && v); return out; }
   async function saveStudy() {
     if (!ST.res || ST.busy) return; ST.busy = true; drawStudy();
@@ -2506,7 +2502,12 @@ export function mountChrome(app, api) {
   const pins = () => { try { return new Set(JSON.parse(localStorage.getItem(PINK)) || []); } catch { return new Set(); } }, setPins = (x) => { try { localStorage.setItem(PINK, JSON.stringify([...x])); } catch { } };
   const shut = () => { try { return new Set(JSON.parse(localStorage.getItem(GRPK)) || []); } catch { return new Set(); } }, setShut = (x) => { try { localStorage.setItem(GRPK, JSON.stringify([...x])); } catch { } };
   const figs = (st) => { st = st || {}; const ms = st.masses || [], site = st.site || {}, z = site.terrain?.grid?.z || [];
-    return { gfa: ms.reduce((a, m) => a + area(m.points || []) * (m.storeys || 1), 0), fp: ms.reduce((a, m) => a + area(m.points || []), 0), masses: ms.length, storeys: ms.reduce((a, m) => Math.max(a, m.storeys || 1), 0), levels: (st.levels || []).length,
+    // (2026-11-24) a building drawn in Plan Studio has no masses: its floor slabs give the floor area (all levels) and the footprint
+    // (the lowest level with slabs), as in Statistics; the masses count only when nothing is drawn
+    const slabA = (f) => (f.points && f.points.length > 2 ? area(f.points) : (+f.w || 0) * (+f.d || 0)), byLv = new Map(); for (const f of st.floors || []) byLv.set(f.lv, (byLv.get(f.lv) || 0) + slabA(f));
+    const lvSl = (st.levels || []).slice().sort((a, b) => (a.z || 0) - (b.z || 0)).filter((l) => byLv.get(l.id) > 0), gfaB = [...byLv.values()].reduce((a, v) => a + v, 0), fpB = lvSl.length ? byLv.get(lvSl[0].id) : 0;
+    const gfaM = ms.reduce((a, m) => a + area(m.points || []) * (m.storeys || 1), 0), fpM = ms.reduce((a, m) => a + area(m.points || []), 0);
+    return { gfa: gfaB > 0 ? gfaB : gfaM, fp: gfaB > 0 ? fpB : fpM, masses: ms.length, storeys: ms.reduce((a, m) => Math.max(a, m.storeys || 1), 0), levels: (st.levels || []).length,
       ctx: (site.buildings || []).filter((b) => !b.excluded).length, relief: z.length ? Math.max(...z) - Math.min(...z) : null, roads: (site.roads || []).length,
       walls: (st.walls || []).length, ops: (st.ops || []).length, furn: (st.furn || []).length, lights: (st.lights || []).length, floors: (st.floors || []).length }; };
   function compareData() {
@@ -2515,7 +2516,7 @@ export function mountChrome(app, api) {
     if (!cols.length || dirty()) cols.unshift({ id: 'draft', title: 'Unsaved changes', sub: cur ? 'since v' + cur.n : 'not saved yet', current: true, draft: true, studio: studio(), thumb: THUMB.get('draft') });
     if (cols.some((c) => c.draft)) for (const c of cols) if (!c.draft) c.current = false;
     const N = (v, u = '', d = 0) => (v === null || v === undefined ? '—' : fmt(v, d) + u);
-    const G = [['Building', [['Gross floor area', (c) => figs(c.studio).gfa, ' m²'], ['Footprint', (c) => figs(c.studio).fp, ' m²'], ['Masses', (c) => figs(c.studio).masses], ['Tallest mass, storeys', (c) => figs(c.studio).storeys], ['Levels', (c) => figs(c.studio).levels]]],
+    const G = [['Building', [['Gross floor area (drawn floors, else masses)', (c) => figs(c.studio).gfa, ' m²'], ['Footprint (lowest drawn floor, else masses)', (c) => figs(c.studio).fp, ' m²'], ['Masses', (c) => figs(c.studio).masses], ['Tallest mass, storeys', (c) => figs(c.studio).storeys], ['Levels', (c) => figs(c.studio).levels]]],
       ['Site', [['Surrounding buildings', (c) => figs(c.studio).ctx], ['Terrain relief', (c) => figs(c.studio).relief, ' m', 1], ['Roads and paths', (c) => figs(c.studio).roads]]],
       ['Space', [['Rooms', (c) => (c.draft || c.current) && INST.plan.ready ? INST.plan.ws.objects().filter((o) => o.k === 'room').length : null], ['Room area', (c) => (c.draft || c.current) && INST.plan.ready ? INST.plan.ws.objects().filter((o) => o.k === 'room').reduce((a, r) => a + (r.area || 0), 0) : null, ' m²', 1]]],
       ['Element', [['Walls', (c) => figs(c.studio).walls], ['Doors and windows', (c) => figs(c.studio).ops], ['Floor slabs', (c) => figs(c.studio).floors], ['Furniture', (c) => figs(c.studio).furn], ['Lights', (c) => figs(c.studio).lights]]]];

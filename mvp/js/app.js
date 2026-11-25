@@ -65,14 +65,16 @@ const PAGES = {
   'local-compute':()=>import('./pages/local-compute.js?v=sims-20261121-1'),
   'comparison-report':()=>import('./pages/comparison-report.js?v=muse3-20261124-2'),
   'start-study':()=>import('./pages/start-study.js'),
-  project:()=>import('./pages/project.js?v=round2-20261124-1'), tables:()=>import('./pages/tables.js?v=muse3-20261124-2'),
+  project:()=>import('./pages/project.js?v=review-20261124-2'), tables:()=>import('./pages/tables.js?v=muse3-20261124-2'),
   admin: () => import('./pages/admin.js'),
-  '': () => import('./pages/home-v2.js?v=guest-start-20261102-1'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js?v=batch3-20261124-1'), simulations: () => import('./pages/simulations.js?v=round2-20261124-1'), legal:()=>import('./pages/legal.js'),
+  '': () => import('./pages/home-v2.js?v=review-20261124-2'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js?v=review-20261124-2'), simulations: () => import('./pages/simulations.js?v=round2-20261124-1'), legal:()=>import('./pages/legal.js'),
   about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js?v=round2-20261124-1'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js?v=round2-20261124-1'), 'project-settings':()=>import('./pages/project-settings.js'),
   login: () => import('./pages/login.js'), account: () => import('./pages/account.js'), home: () => import('./pages/projects-home.js?v=round2-20261124-1'), activity: () => import('./pages/dashboard.js'), 'new-project': () => import('./pages/project-map.js'), 'new-site': () => import('./pages/new-site.js'), 'batch-run': () => import('./pages/batch-run.js'),
 };
 const TITLES = { founder:'Founder workspace', 'comparison-report':'Simulation comparison report', about:'About', blog:'Blog', project:'Project', tables:'Tables', 'local-compute':'Local compute', admin:'Account access', '': 'Home', workspace: 'Workspace', simulations: 'Simulations', results: 'Results', resources: 'Resources', legal: 'Legal', pricing: 'Pricing', login: 'Log in', account: 'Account', home: 'Projects', activity: 'Activity', 'new-project': 'New project', 'new-site': 'New project from the map', 'batch-run': 'Batch run', 'project-settings':'Project shared conditions' };
 let cleanup = null, prevHash = '', routeGeneration=0;
+// Render removed (2026-11-24): forget the OpenAI key and model the Render panel kept in this browser; its saved pictures (IndexedDB plotcloud-renders) are left as they are
+try{for(const k of ['pc-openai-key','pc-render-model']){localStorage.removeItem(k);sessionStorage.removeItem(k);}}catch(e){}
 export async function route() {
   if (/(^#|&)(access_token|error_description)=/.test(location.hash)) { const r = C.captureRedirect(); if (r?.error) toast(r.error); }   // an emailed sign-in link opened in this tab
   const generation=++routeGeneration,isCurrent=()=>generation===routeGeneration;

@@ -23,7 +23,7 @@ export function workflowState(p) { const st = steps(p), d = (id) => st.find((x) 
     { id: 'site', n: 1, t: 'Site analysis', done: d('site') && d('weather'), href: `#/project-settings/${p.id}` },
     { id: 'plan', n: 2, t: 'Plan Studio', done: d('building'), href: `#/workspace/${p.id}` },
     { id: 'sim', n: 3, t: 'Simulation', done: p.runs.length > 0, href: `#/workspace/${p.id}?add=sim` },
-    { id: 'report', n: 4, t: 'Report', done: (p.exports || []).length > 0 || (p.reportRevisions || []).length > 0, href: `#/project/${p.id}` },
+    { id: 'report', n: 4, t: 'Reports', done: (p.exports || []).length > 0 || (p.reportRevisions || []).length > 0, href: `#/project/${p.id}` },
   ]; }
 export function mountChecklist(p, host = document.body) {
   if (!p.onboarding) return () => { };   // only projects started from the map (#/new-project) get the checklist

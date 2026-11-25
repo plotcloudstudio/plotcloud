@@ -1,6 +1,6 @@
 // A site that does simulation (2026-11-16):
 // · one header: the logo in the same place and size on every page (signed out and in), at desktop and phone widths
-// · Rendering and Boards removed: the workflow has four steps (Site analysis, Plan Studio, Simulation, Report) on the homepage;
+// · Rendering and Boards removed: the workflow has four steps (Site analysis, Plan Studio, Simulation, Reports) on the homepage;
 //   #/rendering and #/boards open the project report or the Dashboard
 // · Activity & storage removed; My Projects: tick several projects, move them to Deleted, restore or delete them for good
 const { chromium } = require('playwright'), assert = require('node:assert/strict'), os = require('node:os');
@@ -22,7 +22,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const p = await b.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true }); p.on('pageerror', (e) => errs.push(e.message));
     await p.goto(base + '/mvp/'); await p.waitForFunction(() => document.querySelector('#app h1'));
     // the workflow: four steps
-    await p.goto(base + '/mvp/#/'); await p.waitForSelector('.lp-flow li'); assert.deepEqual(await p.$$eval('.lp-flow li b', (x) => x.map((e) => e.textContent)), ['Site analysis', 'Plan Studio', 'Simulation', 'Report']);
+    await p.goto(base + '/mvp/#/'); await p.waitForSelector('.lp-flow li'); assert.deepEqual(await p.$$eval('.lp-flow li b', (x) => x.map((e) => e.textContent)), ['Site analysis', 'Plan Studio', 'Simulation', 'Reports']);
     assert.doesNotMatch(await p.evaluate(() => document.body.innerText), /Rendering|render service|Boards/);
     // projects for the Dashboard
     const ids = await p.evaluate(async () => { const S = await import('./js/store.js'), D = await import('./js/data.js'); S.reset(); S.account().user = { name: 'QA', email: 'qa@x.test' };
