@@ -16,7 +16,7 @@ import { rMin } from './vehicles.js?v=batch3-20261124-1';
 
 const DEG = Math.PI / 180;
 export const QUALITY = { draft: { ds: 0.10, cell: 0.05 }, standard: { ds: 0.05, cell: 0.05 }, refined: { ds: 0.025, cell: 0.02 } };
-export const TRACK_TOL = 0.30, CLEAR_DEFAULT = 0.30, AUTO_R = 1.25;   // AUTO_R: a corner drawn without a radius is driven at 1.25 × the least radius (less if the segments leave no room)
+export const TRACK_TOL = 0.30, CLEAR_DEFAULT = 0.30, AUTO_R = 1.25, REV_SPEED = 4;   // REV_SPEED (2026-11-25): reversing at walking pace, km/h   // AUTO_R: a corner drawn without a radius is driven at 1.25 × the least radius (less if the segments leave no room)
 
 // ---- the reference path: segments with their corners rounded ----
 /**
@@ -52,7 +52,8 @@ export function referencePath(route, v, step = 0.05) {
   return { path, corners, length: s, cusps };
 }
 
-function plannedRef(pl) { const path = []; let s = 0; for (const x of pl) { if (path.length) { const d = dist(path.at(-1).p, x.p); if (d < 1e-4) continue; s += d; } path.push({ p: x.p, s, dir: 1, k: x.k || 0 }); } return { path, corners: [], length: s, cusps: 0, planned: true }; }
+// (2026-11-25) a planned path may reverse: each point carries its direction, and the last point before a change is a cusp (a stop)
+function plannedRef(pl) { const path = []; let s = 0, cusps = 0; for (const x of pl) { const dir = x.dir < 0 ? -1 : 1; if (path.length) { const d = dist(path.at(-1).p, x.p); if (d < 1e-4) continue; if (dir !== path.at(-1).dir) { path.at(-1).cusp = true; cusps++; } s += d; } path.push({ p: x.p, s, dir, k: x.k || 0 }); } return { path, corners: [], length: s, cusps, planned: true }; }
 
 // ---- the vehicle's outlines and wheels at a pose ----
 /** pose { x, y, th, phi (trailer heading), delta } → { bodies: [polygon, …], wheels: { name: [x, y] }, hitch } */
@@ -83,21 +84,38 @@ export function simulate(v, route, o = {}) {
   const T = art ? v.trailer : null, maxArt = art ? (T.maxArticulation || 70) * DEG : 0;
   if (art && R.some((x) => x.dir < 0)) return { ok: false, error: 'Reversing an articulated vehicle is not simulated in this version: draw the route forward only' };
   // the start: on the route's first point, facing along it (backwards for a reversing start)
-  const d0 = unit(sub(R[Math.min(R.length - 1, 3)].p, R[0].p)), th0 = Math.atan2(d0[1], d0[0]) + (R[0].dir < 0 ? Math.PI : 0);
-  const q = { x: R[0].p[0], y: R[0].p[1], th: th0, phi: th0, delta: 0 }; let idx = 0, s = 0, t = o.delay || 0, still = true;   // still: at a standstill (the start, a cusp) the wheel may be turned freely
+  const d0 = unit(sub(R[Math.min(R.length - 1, 3)].p, R[0].p)), th0 = Number.isFinite(route.heading0) ? route.heading0 : Math.atan2(d0[1], d0[0]) + (R[0].dir < 0 ? Math.PI : 0);   // a planned path: the heading it was planned from
+  const q = { x: R[0].p[0], y: R[0].p[1], th: th0, phi: th0, delta: 0 }; let idx = 0, s = 0, u = 0, t = o.delay || 0, still = true;   // u: the distance driven with its sign (backwards counts down), for the wheels' roll   // still: at a standstill (the start, a cusp) the wheel may be turned freely
   const poses = [], bad = [], stretches = (arr) => { const out = [], last = {}; for (const x of arr.slice().sort((p, q2) => p.s - q2.s)) { const l = last[x.why]; if (l && x.s - l.s1 <= 2 * ds + 1e-9) l.s1 = x.s; else { last[x.why] = { s0: x.s, s1: x.s, why: x.why }; out.push(last[x.why]); } } return out.sort((p, q2) => p.s0 - q2.s0); };   // runs of the same reason
   const nearest = () => { let best = idx, bd = Infinity; for (let k = idx; k < Math.min(R.length, idx + 400); k++) { const d = dist(R[k].p, [q.x, q.y]); if (d < bd) { bd = d; best = k; } if (R[k].cusp && k > idx) break; } return [best, bd]; };
   let guard = 0; const maxSteps = Math.ceil((ref.length * 1.5 + 20) / ds);
-  while (guard++ < maxSteps) {
+  // (2026-11-25) a planned path that reverses (route-plan.js, rigid vehicles) is driven as planned: arcs of constant steering one after
+  // another, indexed by the distance driven, the steering set at the start of each arc and the vehicle stopping at each change of
+  // direction. Following it with pure pursuit instead turns its small heading errors at a cusp into large ones when reversing.
+  const replay = !!(ref.planned && ref.cusps);
+  if (replay) { let j = 0; const last = R.at(-1).s;
+    while (guard++ < maxSteps && s < last - ds / 2) { while (j + 1 < R.length - 1 && R[j + 1].s <= s + 1e-9) j++;
+      const nx = R[Math.min(R.length - 1, j + 1)], dir = nx.dir, a = R[j], u0 = nx.s > a.s ? (s - a.s) / (nx.s - a.s) : 0, at = [a.p[0] + (nx.p[0] - a.p[0]) * u0, a.p[1] + (nx.p[1] - a.p[1]) * u0], err = dist(at, [q.x, q.y]);
+      const want = Math.max(-dmax, Math.min(dmax, Math.atan(L * (nx.k || 0)))); q.delta = want;
+      poses.push({ x: q.x, y: q.y, th: q.th, phi: q.phi, delta: q.delta, s, u, t, sRef: s, err, dir, sat: false });
+      if (err > TRACK_TOL) bad.push({ s, why: 'track' });
+      const step = Math.min(ds, Math.max(1e-4, nx.s - s)), w = Math.tan(q.delta) / L;   // never past the next point: the arcs change there
+      q.th += w * step * dir; q.x += Math.cos(q.th - w * step * dir / 2) * step * dir; q.y += Math.sin(q.th - w * step * dir / 2) * step * dir; s += step; u += step * dir; t += step / (dir < 0 ? Math.min(speed, REV_SPEED / 3.6) : speed); }
+    poses.push({ x: q.x, y: q.y, th: q.th, phi: q.phi, delta: q.delta, s, u, t, sRef: s, err: dist(R.at(-1).p, [q.x, q.y]), dir: R.at(-1).dir, sat: false }); }
+  while (!replay && guard++ < maxSteps) {
     const [k, err] = nearest(); idx = k; const dir = R[idx].dir, cuspAhead = (() => { for (let j = idx; j < R.length; j++) { if (R[j].cusp) return j; if (R[j].s - R[idx].s > Ld) return -1; } return -1; })();
     // the target: the first route point Ld ahead (not past a cusp or the end)
     let tg = idx; while (tg + 1 < R.length && dist(R[tg].p, [q.x, q.y]) < Ld && !(R[tg].cusp && tg > idx)) tg++;
     const lead = dir > 0 ? q.th : q.th + Math.PI, toT = sub(R[tg].p, [q.x, q.y]), dT = Math.hypot(toT[0], toT[1]);
     const alpha = wrap(Math.atan2(toT[1], toT[0]) - lead), kappa = dT > 1e-6 ? 2 * Math.sin(alpha) / Math.max(dT, 1e-6) : 0;
-    let want = Math.atan(L * kappa) * dir; const sat = Math.abs(want) > dmax + 1e-9; want = Math.max(-dmax, Math.min(dmax, want));
-    const dd = still ? want - q.delta : Math.max(-rateMax * ds, Math.min(rateMax * ds, want - q.delta)); q.delta += dd; still = false;
-    poses.push({ x: q.x, y: q.y, th: q.th, phi: q.phi, delta: q.delta, s, t, sRef: R[idx].s, err, dir, sat });
-    if (err > TRACK_TOL) bad.push({ s: R[idx].s, why: 'track' });
+    let want = Math.atan(L * kappa) * dir;
+    // a planned path (2026-11-25) knows its own curvature: steer by it, and by half of pure pursuit's correction, so short legs between
+    // changes of direction are followed closely
+    if (ref.planned) { let j = idx; while (j + 1 < R.length && R[j].s - R[idx].s < Math.min(1.0, Ld / 2) && !(R[j].cusp && j > idx)) j++; const ff = Math.atan(L * (R[j].k || 0)); want = ff + 0.5 * (want - ff); }
+    const sat = Math.abs(want) > dmax + 1e-9; want = Math.max(-dmax, Math.min(dmax, want));
+    const vNow = dir < 0 ? Math.min(speed, REV_SPEED / 3.6) : speed, rate = rateMax * speed / vNow, dd = still ? want - q.delta : Math.max(-rate * ds, Math.min(rate * ds, want - q.delta)); q.delta += dd; const atStop = still; still = false;
+    poses.push({ x: q.x, y: q.y, th: q.th, phi: q.phi, delta: q.delta, s, u, t, sRef: R[idx].s, err, dir, sat });
+    if (err > TRACK_TOL && !atStop) bad.push({ s: R[idx].s, why: 'track' });   // not at a standstill (a cusp): the point nearest may jump to the next leg there
     if (art && Math.abs(wrap(q.th - q.phi)) > maxArt) bad.push({ s: R[idx].s, why: 'articulation' });
     // the end, or a cusp reached: stop there (and at a cusp turn the wheel at standstill)
     // passed a point of the route: beyond it along the route's direction there (within half a step), and near it
@@ -106,7 +124,7 @@ export function simulate(v, route, o = {}) {
     if (cuspAhead >= 0 && passed(cuspAhead)) { idx = cuspAhead + 1; still = true; continue; }
     const step = ds, w = Math.tan(q.delta) / L, sgn = dir;
     if (art) { const h = T.hitch || 0, Lt = T.wheelbase; q.phi += (Math.sin(q.th - q.phi) + h * w * Math.cos(q.th - q.phi)) / Lt * step * sgn; }
-    q.th += w * step * sgn; q.x += Math.cos(q.th - w * step * sgn / 2) * step * sgn; q.y += Math.sin(q.th - w * step * sgn / 2) * step * sgn; s += step; t += step / speed;
+    q.th += w * step * sgn; q.x += Math.cos(q.th - w * step * sgn / 2) * step * sgn; q.y += Math.sin(q.th - w * step * sgn / 2) * step * sgn; s += step; u += step * sgn; t += step / (sgn < 0 ? Math.min(speed, REV_SPEED / 3.6) : speed);
   }
   const last = poses.at(-1), reached = last && R.at(-1) && dist([last.x, last.y], R.at(-1).p) < Math.max(0.5, 3 * ds);
   if (!reached) bad.push({ s: last ? last.sRef : 0, why: 'end' });
@@ -137,12 +155,12 @@ export function simulate(v, route, o = {}) {
   return { ok: true, status, reasons, unverifiedWhy: status === 'unverified' ? (!obs.length ? 'no obstacles were given (no buildings, curbs or columns near the route)' : 'the obstacle data is incomplete') : '',
     vehicle: v, ref, poses, tracks, outlines, envelope: env, swept: env.area, cell: cellE, length: last ? last.s : 0, duration: last ? last.t - (o.delay || 0) : 0, speed: speed * 3.6,
     rMin: rMin(v), rReached, minClear: Number.isFinite(minC.d) ? minC : null, perObstacle: [...perObs.entries()].map(([id, x]) => ({ id, ...x })).sort((a, b) => a.d - b.d), collisions, tooNear, infeasible,
-    reversing: route.reverse ? stretches(R.filter((x) => x.dir < 0).map((x) => ({ s: x.s, why: 'r' }))).length : 0, cusps: ref.cusps, clearance: thr, ds, quality: o.quality || 'standard' };
+    reversing: stretches(R.filter((x) => x.dir < 0).map((x) => ({ s: x.s, why: 'r' }))).length, reverseLength: poses.reduce((a, p, i) => a + (i && p.dir < 0 ? p.s - poses[i - 1].s : 0), 0), cusps: ref.cusps, moves: ref.cusps + 1, clearance: thr, ds, quality: o.quality || 'standard' };
 }
 
 /** the pose at a time (s), interpolated between steps; null before the start or after the end */
 export function poseAt(run, t) { const P = run.poses; if (!P.length || t < P[0].t - 1e-9 || t > P.at(-1).t + 1e-9) return null; let lo = 0, hi = P.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m].t <= t) lo = m; else hi = m; }
-  const a = P[lo], b = P[hi], k = b.t > a.t ? (t - a.t) / (b.t - a.t) : 0, mix = (u, w) => u + (w - u) * k, ang = (u, w) => u + wrap(w - u) * k; return { x: mix(a.x, b.x), y: mix(a.y, b.y), th: ang(a.th, b.th), phi: ang(a.phi, b.phi), delta: mix(a.delta, b.delta), s: mix(a.s, b.s), t }; }
+  const a = P[lo], b = P[hi], k = b.t > a.t ? (t - a.t) / (b.t - a.t) : 0, mix = (u, w) => u + (w - u) * k, ang = (u, w) => u + wrap(w - u) * k; return { x: mix(a.x, b.x), y: mix(a.y, b.y), th: ang(a.th, b.th), phi: ang(a.phi, b.phi), delta: mix(a.delta, b.delta), s: mix(a.s, b.s), u: mix(a.u ?? a.s, b.u ?? b.s), dir: b.dir || 1, t }; }
 
 /**
  * two vehicles: do their bodies meet at the same moment (a real conflict), or do their envelopes only cross at different times?

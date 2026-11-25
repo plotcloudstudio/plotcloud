@@ -35,6 +35,11 @@ export function entranceTask(roads, door, v, o = {}) {
   const fwd = q.s >= lead || q.s >= total - q.s, s0 = fwd ? Math.max(0, q.s - lead) : Math.min(total, q.s + lead), A = pointAt(road.pts, s0), dir = fwd ? A.dir : mul(A.dir, -1);
   const start = laneAt(road, A.p, dir), stand = o.stand ?? (v.width / 2 + 1.0);
   // the stop: out from the door, along the wall, facing the way the road was being driven (the side of the wall's tangent nearest it)
+  if (o.back) { // (2026-11-25) backed up to the door, as at a loading dock: square to the wall, the rear `gap` m from it, facing out
+    const gap = o.gap ?? 0.5, endP = add(door.p, mul(n, v.rearOverhang + gap)), R = v.wheelbase / Math.tan(v.steer * Math.PI / 180) * 1.25;
+    // as a driver docks: forward past the door, parallel to the wall, then back in turning; the staging point is that stop
+    const along = t[0] * dir[0] + t[1] * dir[1] >= 0 ? t : mul(t, -1), via = add(add(door.p, mul(n, v.rearOverhang + gap + R + v.width)), mul(along, R + v.wheelbase));
+    return { start: { p: start, heading: Math.atan2(dir[1], dir[0]) }, via, end: { p: endP, heading: Math.atan2(n[1], n[0]), back: true }, road, approach: q.d }; }
   let along = t[0] * dir[0] + t[1] * dir[1] >= 0 ? t : mul(t, -1); if (o.flip) along = mul(along, -1); const mid = add(door.p, mul(n, stand));   // flip: stop facing the other way along the wall
   const endP = add(mid, mul(along, -(v.wheelbase + v.frontOverhang - v.rearOverhang) / 2));   // the rear axle, so the vehicle's middle stands at the door
   return { start: { p: start, heading: Math.atan2(dir[1], dir[0]) }, end: { p: endP, heading: Math.atan2(along[1], along[0]) }, road, approach: q.d };
@@ -70,3 +75,11 @@ export function turnTask(roads, j, from, to, v, o = {}) { const A = arms(roads, 
 export function throughTask(roads, pA, pB, o = {}) { const a = nearestRoad(roads, pA), b = nearestRoad(roads, pB); if (!a || !b) return { error: 'no road in the site data near those points' };
   const toward = unit(sub(b.q.at, a.q.at)), dA = a.q.dir[0] * toward[0] + a.q.dir[1] * toward[1] >= 0 ? a.q.dir : mul(a.q.dir, -1), away = unit(sub(b.q.at, a.q.at)), dB = b.q.dir[0] * away[0] + b.q.dir[1] * away[1] >= 0 ? b.q.dir : mul(b.q.dir, -1);
   void o; return { start: { p: laneAt(a.road, a.q.at, dA), heading: Math.atan2(dA[1], dA[0]) }, end: { p: laneAt(b.road, b.q.at, dB), heading: Math.atan2(dB[1], dB[0]) }, roads: [a.road, b.road] }; }
+
+/**
+ * Turn round (2026-11-25): a vehicle on a road at pA, facing toward pB, turns to face the other way in the other half of the road at
+ * the same place: a U-turn where there is room, a three-point (or more) turn where there is not. Kept within the roads.
+ */
+export function turnRoundTask(roads, pA, pB) { const a = nearestRoad(roads, pA); if (!a) return { error: 'no road in the site data near that point' };
+  const toward = unit(sub(pB, pA)), d = a.q.dir[0] * toward[0] + a.q.dir[1] * toward[1] >= 0 ? a.q.dir : mul(a.q.dir, -1), back = mul(d, -1);
+  return { start: { p: laneAt(a.road, a.q.at, d), heading: Math.atan2(d[1], d[0]) }, end: { p: laneAt(a.road, a.q.at, back), heading: Math.atan2(back[1], back[0]) }, road: a.road }; }

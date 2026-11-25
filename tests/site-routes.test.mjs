@@ -45,3 +45,21 @@ for (const v of V.PRESETS) { const P = VM.vehicleParts(v), f = VM.footprint(P, '
   const S = SP.shapesAt(v, { x: 0, y: 0, th: 0, phi: 0, delta: 0 }); const fl = P.wheels.find((w) => w.steer && w.y > 0); assert(Math.abs(fl.x - S.wheels.FL[0]) < 1e-9 && Math.abs(fl.y - S.wheels.FL[1]) < 1e-9, `${v.id}: front-left wheel at the axle`);
   assert(P.height > 1 && P.heightSrc, `${v.id}: a height and its source`); }
 console.log(`PASS 3D models of all ${V.PRESETS.length} presets: footprints match the swept-path bodies within 2 cm, wheels at the axles, heights with sources`);
+// 7 · reversing (2026-11-25): a box truck backed up to the door by way of a staging point: one change of direction, the last move
+// backwards, driven as planned (no tracking error), ending within 1 m and 17° of the stop; an articulated vehicle is not reversed
+{ const B = SR.entranceTask(roads, door, truck, { back: true }); assert(B.via && B.end.back, 'a staging point and a backed-up stop');
+  const pb = RP.planAround(truck, { pts: [B.start.p, B.via, B.end.p] }, [bld], { clearance: 0.3, startHeading: B.start.heading, goalHeading: B.end.heading, goalTol: 0.3, roads, reverse: true, maxExpand: 150000 });
+  assert(pb.ok, 'backed up: ' + pb.error); assert(pb.cusps >= 1 && pb.path.at(-1).dir === -1, 'the last move is backwards');
+  const rb = SP.simulate(truck, { pts: [B.start.p, B.end.p], planned: pb.path, heading0: pb.heading0 }, { obstacles: [bld], clearance: 0.3, complete: true });
+  const lp = rb.poses.at(-1), gap = Math.hypot(lp.x - B.end.p[0], lp.y - B.end.p[1]); assert(rb.status === 'feasible' && rb.collisions.length === 0, 'driven clear: ' + rb.reasons.join('; '));
+  assert(Math.max(...rb.poses.map((p) => p.err)) < 0.05 && gap < 1.0 && angDiff(lp.th, B.end.heading) <= 0.3 + 1e-9, `driven as planned, ends ${gap.toFixed(2)} m from the stop`);
+  assert(rb.moves === pb.cusps + 1 && rb.reverseLength > 1, 'moves and metres reversing counted');
+  const semi = V.byId('semi'), ps = RP.planAround(semi, { pts: [B.start.p, B.via, B.end.p] }, [bld], { startHeading: B.start.heading, goalHeading: B.end.heading, roads, reverse: true, maxExpand: 5000 }); assert(!ps.ok || !ps.path.some((q) => q.dir < 0), 'the semi-trailer is not reversed');
+  console.log(`PASS backed up to the door: ${rb.moves} moves, ${rb.reverseLength.toFixed(1)} m reversing, driven as planned, ends ${gap.toFixed(2)} m and ${deg(angDiff(lp.th, B.end.heading)).toFixed(0)}° from the stop; no collision`); }
+// 8 · turning round within a 12 m road: a box truck makes a three-point turn (two changes of direction), every move within the road
+{ const lane = [{ id: 'l', name: 'Lane', pts: [[-60, 100], [60, 100]], width: 12 }], T = SR.turnRoundTask(lane, [0, 100], [10, 100]);
+  const pt2 = RP.planAround(truck, { pts: [T.start.p, T.end.p] }, [], { startHeading: T.start.heading, goalHeading: T.end.heading, goalTol: 0.3, roads: lane, roadsOnly: true, reverse: true, clearance: 0.3, maxExpand: 150000 });
+  assert(pt2.ok && pt2.cusps >= 2, 'a three-point turn or more: ' + (pt2.error || pt2.cusps));
+  const rt = SP.simulate(truck, { pts: [T.start.p, T.end.p], planned: pt2.path, heading0: pt2.heading0 }, { obstacles: [], clearance: 0.3 }); assert(rt.infeasible.length === 0, 'driven as planned');
+  let worst = 0; for (const q of rt.poses) for (const B of SP.shapesAt(truck, q).bodies) for (const c of B) worst = Math.max(worst, Math.abs(c[1] - 100)); assert(worst <= 6 - 0.25, 'the body stays within the 12 m road, clearance kept: ' + worst.toFixed(2));
+  console.log(`PASS turning round in a 12 m road: ${rt.moves} moves (a three-point turn), ${rt.reverseLength.toFixed(1)} m reversing, the body within ${worst.toFixed(2)} m of the centreline (6 m to the edge)`); }

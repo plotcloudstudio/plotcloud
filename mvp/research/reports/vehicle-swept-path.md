@@ -9,8 +9,8 @@ type: Method and data report
 summary: How the Vehicle swept path study drives a design vehicle along a drawn route with a rate-limited pure-pursuit steering controller, computes the off-tracking of trailers, and checks clearance to buildings and other obstacles. The report gives the equations and their sources, reports exact checks against analytical turning geometry, and flags the vehicle presets as typical dimensions that must be checked against the design vehicle of the jurisdiction.
 image: img/home/vehicle-swept-path.jpg
 imageAlt: The swept envelope of a truck turning into a service yard, with wheel tracks and clearance warnings
-code: mvp/js/swept-path.js, mvp/js/vehicles.js, mvp/js/route-plan.js, mvp/js/site-routes.js, mvp/js/vehicle-mesh.js, mvp/js/site-access-ui.js, mvp/js/workspace-chrome.js
-tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs, tests/site-routes.test.mjs, tests/vehicle-path-auto.cjs
+code: mvp/js/swept-path.js, mvp/js/vehicles.js, mvp/js/route-plan.js, mvp/js/site-routes.js, mvp/js/vehicle-mesh.js, mvp/js/site-access-ui.js, mvp/js/workspace-chrome.js, mvp/js/export-list.js
+tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs, tests/site-routes.test.mjs, tests/vehicle-path-auto.cjs, tests/vehicle-reverse-sheet.cjs
 keywords:
 - Swept path analysis
 - Off-tracking
@@ -66,7 +66,29 @@ A route can be found instead of drawn. The site data give the roads as OpenStree
 
 Between the two ends a hybrid A* search [8] drives forward in short arcs no tighter than 1.1 × the vehicle's least radius, with the body (and trailer) covered by circles tested against a distance map of the buildings. Ground outside the road corridors (half the road width either side of the centreline) costs 1.6 times as much, so the path keeps to the roads where it can. The last arc must end within 0.3 rad of the stop's heading. The path found is then driven by the model of §2.2–2.3, so its swept envelope, clearances and infeasible stretches are computed as for a drawn route.
 
-### 2.6. Playback and the 3D vehicle
+### 2.6. Reversing, turning round and backing up to a door (added 25 November 2026)
+
+For rigid vehicles the planner may also drive backwards. Each arc can be driven forward or in reverse; reversing costs twice as much per metre, and each change of direction costs as much as driving the vehicle's own length. A leg must be at least 1.5 m long before the next change. In these manoeuvres the body is tested as its true rectangle: points along its outline keep the clearance, and points along its axis are half its width clear. The circles used for ordinary routes would overstate it by about a metre at the ends.
+
+- **Turn round.** The vehicle faces the other way in the other half of the same road, staying within the road's width. Ground outside the road corridor is blocked rather than merely costed. Where a U-turn does not fit, the search backs and fills: a three-point turn, or more moves where the road is narrower.
+- **Backed up to a door.** The vehicle drives forward past the door to a staging point parallel to the wall, then reverses in. The stop is square to the wall with the rear 0.5 m from it, as at a loading dock.
+
+A path that reverses is driven as planned: arc after arc, indexed by the distance driven, stopping at each change of direction, reversing at 4 km/h. It starts from the heading it was planned from. Following such a path with pure pursuit instead turned a few degrees of heading error at a cusp into nearly a metre of drift while reversing, so the planned path is what the swept envelope and clearances are computed on. Articulated vehicles are not reversed in this version.
+
+### 2.7. The vehicle access sheet (added 25 November 2026)
+
+The result can be added to the project report as a vehicle access sheet. Its first page carries:
+- a plan drawing, framed on the route from the same CAD layers as the DXF export;
+- the 3D view;
+- the results, method, inputs and limits.
+
+A second page carries four tables:
+- the route and its moves (changes of direction, metres reversing, least clearance);
+- every vehicle on the route, when Try every vehicle was run;
+- the conflicts;
+- the vehicle data.
+
+### 2.8. Playback and the 3D vehicle
 
 The result plays in real time at the stated speed (1×, 2× or 4×), on the display's own refresh: each frame interpolates the vehicle's pose at that moment (§2.2), draws its body, wheels and the wheel tracks driven so far over the 2D plan, and places a schematic 3D model at the same pose. The model is built from the same dimensions as the swept body: its footprint is the body rectangle of §2.4, the wheels stand at the axles and track, the front wheels turn by the steering angle and all wheels roll with the distance driven; a trailer turns by its own heading. Heights only shape the picture (Table 1). The model shows the movement and the scale; it is not a rendering of a make or model, and nothing is checked against its height.
 
@@ -96,6 +118,11 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 | Planner curvature limit | 1 / (1.1 × R_min) | Engine choice, hybrid A* [8] | Numerical margin |
 | Off-road cost | 1.6 × the cost on a road corridor | Engine choice | Numerical setting: prefers roads, does not forbid leaving them |
 | Final heading tolerance | 0.3 rad (17°) | Engine choice | Numerical setting |
+| Reversing cost | 2 × the cost of driving forward, per metre | Engine choice | Numerical setting: drive forward where it can |
+| Change of direction | Costs the vehicle's own length; legs at least 1.5 m | Engine choice | Numerical setting |
+| Reversing speed | 4 km/h | Engine choice: walking pace | Assumption |
+| Staging point to back up | Past the door by R + wheelbase, out from the wall by the rear overhang + 0.5 m + R + the width (R = 1.25 × R_min) | Engine choice | Geometric setting: room to reverse in turning |
+| Stop backed up to a door | Square to the wall, rear 0.5 m from it | Engine choice | Assumption; to be set by the project |
 
 ## 4. Verification and validation status
 
@@ -132,6 +159,21 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 - **Every vehicle:** "Try every vehicle" lists all 12 presets. 5 reach that door; the longest is the medium rigid truck.
 - **Other tasks:** a left turn at the junction and a drive through the site each find a route.
 
+The reversing checks (25 November 2026):
+
+- `tests/site-routes.test.mjs` passed its two new checks.
+  - **Backing up to a door:** a box truck backs up in 2 moves (16.0 m reversing). It is driven as planned, with no tracking error, and ends 0.93 m and 14° from the stop asked, with no collision. A semi-trailer is not reversed.
+  - **Turning round on a 12 m road:** the box truck makes a three-point turn (3 moves, 4.0 m reversing). Its body stays within 5.61 m of the centreline, against 6 m to the road edge.
+- **Narrower roads** (trials with the same code):
+  - the box truck needs 5 moves on a 10 m road;
+  - a van needs 7 moves on 9 m;
+  - a car needs 5 moves on 7 m;
+  - a box truck cannot turn round on 9 m while keeping 0.3 m clear of the edges.
+- `tests/vehicle-reverse-sheet.cjs` passed in the Workspace on the hospital example:
+  - the box truck backs up to the goods door (2 moves, feasible), and 10 of the 12 presets can; the two semi-trailers report that they are not reversed;
+  - a van turns round on the 9 m hospital drive in 7 moves;
+  - the vehicle access sheet goes into the report PDF: 5 pages, the sheet's plan drawing and its page of tables.
+
 ## 5. Discussion
 
 **The STAA design vehicle.** One preset reproduces a jurisdiction's published design vehicle: the STAA Design Vehicle of the Caltrans Highway Design Manual, Topic 404, Figure 404.5A [6], with all its dimensions taken from that figure. Two caveats apply:
@@ -145,14 +187,13 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 
 **Driver model.** Pure pursuit with a look-ahead of one wheelbase cuts corners slightly, as drivers do; the corner rounding at 1.25 R_min reflects a driver who does not turn at full lock. Swept paths from commercial tools use similar conventions, and results can differ by tens of centimetres depending on them.
 
-**Routes found from the site.** A found route is a plausible way in, not the only one and not a regulation one. The roads are centrelines with a width: kerbs, the paved edge, lanes, one-way streets and turn restrictions are not known, so a path may cut a corner a kerb would stop. Driveways and loading areas that are not mapped are only buildings' surroundings. The planner drives forward only, so three-point turns and reversing into a bay are not found. Where the search fails, it says how close it came; drawing the route remains possible for any case the site data cannot describe.
+**Routes found from the site.** A found route is a plausible way in, not the only one and not a regulation one. The roads are centrelines with a width: kerbs, the paved edge, lanes, one-way streets and turn restrictions are not known, so a path may cut a corner a kerb would stop. Driveways and loading areas that are not mapped are only buildings' surroundings. The planner reverses rigid vehicles only: an articulated vehicle cannot be backed into a bay here. Where the search fails, it says how close it came; drawing the route remains possible for any case the site data cannot describe.
 
 **What would deepen it.**
 - Kerb and paved-edge lines (from survey DXF), so the wheels must stay on the pavement while the body may overhang a low kerb, as commercial swept-path tools check.
-- Reversing and multi-point turns in the planner, including articulated vehicles.
+- Reversing articulated vehicles (rigid vehicles reverse since 25 November 2026), and a finish that lands exactly on the stop (the search stops within 1 m and 17° of it, and says by how much).
 - Overhead clearance against canopies and parking entrances, and grades from the terrain, now that each vehicle has a height.
 - Design vehicles checked dimension by dimension against AASHTO and TAC.
-- A vehicle-access sheet in the report: the plan envelope, the every-vehicle table and the conflicts.
 
 ## 6. Conclusion
 

@@ -11,14 +11,16 @@ export function bounds(layers) { let x0 = Infinity, y0 = Infinity, x1 = -Infinit
 
 /** an SVG drawing: 1 m = `scale` px, y up turned to y down, a scale bar and a legend of the layers; o: { title, note, scale } */
 export function svg(layers, o = {}) {
-  const B = bounds(layers), pad = 4, s = o.scale || 10, W = (B.x1 - B.x0 + 2 * pad) * s, legendH = 18 * (layers.length + 3), H = (B.y1 - B.y0 + 2 * pad) * s + legendH;
+  const B = o.box || bounds(layers), pad = 4,   /* o.box (2026-11-25): a frame of its own, the drawing clipped to it */ s = o.scale || 10, W = (B.x1 - B.x0 + 2 * pad) * s, legendH = 18 * (layers.length + 3), H = (B.y1 - B.y0 + 2 * pad) * s + legendH;
   const X = (x) => num((x - B.x0 + pad) * s), Y = (y) => num((B.y1 - y + pad) * s), esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${num(W)}" height="${num(H)}" viewBox="0 0 ${num(W)} ${num(H)}" font-family="Inter,Arial,sans-serif">`, `<rect width="100%" height="100%" fill="#ffffff"/>`];
   if (o.title) out.push(`<title>${esc(o.title)}</title>`);
+  if (o.box) out.push(`<clipPath id="frame"><rect x="0" y="0" width="${num(W)}" height="${num((B.y1 - B.y0 + 2 * pad) * s)}"/></clipPath><g clip-path="url(#frame)">`);
   for (const L of layers) { out.push(`<g id="${esc(layerName(L.name))}" stroke="${L.col || '#000'}" stroke-width="${num((L.w || 0.05) * s)}" fill="none"${L.dash ? ` stroke-dasharray="${L.dash.map((d) => num(d * s)).join(' ')}"` : ''}>`);
     for (const it of L.items || []) { if (!it.pts || it.pts.length < 2) continue; const d = it.pts.map((p, i) => `${i ? 'L' : 'M'}${X(p[0])} ${Y(p[1])}`).join(' ') + (it.closed ? ' Z' : ''); out.push(`<path d="${d}"${it.fill ? ` fill="${it.fill}" fill-opacity="${it.fop ?? 0.35}"` : ''}/>`); }
     for (const t of L.texts || []) out.push(`<text x="${X(t.p[0])}" y="${Y(t.p[1])}" font-size="${num((t.size || 0.8) * s)}" fill="${L.col || '#000'}" stroke="none" text-anchor="middle">${esc(t.text)}</text>`);
     out.push('</g>'); }
+  if (o.box) out.push('</g>');
   // the scale bar (10 m) and the legend
   const y0 = (B.y1 - B.y0 + 2 * pad) * s + 10, bar = 10 * s; out.push(`<g font-size="11" fill="#111"><rect x="10" y="${num(y0)}" width="${num(bar / 2)}" height="5" fill="#111"/><rect x="${num(10 + bar / 2)}" y="${num(y0)}" width="${num(bar / 2)}" height="5" fill="#fff" stroke="#111"/><text x="10" y="${num(y0 + 18)}">0</text><text x="${num(10 + bar)}" y="${num(y0 + 18)}" text-anchor="middle">10 m</text>`);
   layers.forEach((L, i) => { const yy = y0 + 36 + 18 * i; out.push(`<line x1="10" y1="${num(yy)}" x2="40" y2="${num(yy)}" stroke="${L.col || '#000'}" stroke-width="2"${L.dash ? ' stroke-dasharray="6 4"' : ''}/><text x="48" y="${num(yy + 4)}">${esc(L.label || L.name)}</text>`); });
