@@ -29,7 +29,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('button[aria-label="Add level above"], button[title="Add level above"]'); await p.waitForTimeout(2000); await room(); await fr.evaluate(() => window.__ws.tool({ tool: 'select' })); await p.waitForTimeout(1500);
     const L2 = await fr.evaluate(() => window.__st.LV); assert.notEqual(L2, L1.lv, 'on the new level');
     // 1 · Compare versions: floor area of the drawn building
-    await p.click('button[aria-label="Versions"], button[title="Versions"]'); await p.waitForTimeout(1500);
+    await p.click('[data-sp="saved"]'); await p.waitForTimeout(1500);
     const rows = await p.evaluate(() => [...document.querySelectorAll('.sp-sk-row')].filter((r) => /(Gross floor area|Footprint) \(/.test(r.querySelector('.sp-sk-lab')?.innerText.trim() || ''))
       .map((r) => r.querySelector('.sp-sk-lab').innerText.trim().replace(/\s+/g, ' ') + ' = ' + (r.children[1]?.innerText.trim() || '?')));
     await p.screenshot({ path: out + '/review-compare.png' });
