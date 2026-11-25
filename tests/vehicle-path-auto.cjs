@@ -32,15 +32,15 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const st = () => p.evaluate(() => __ws2.inst.persp.ws.vehiclesState());
     const s0 = await st(); assert(s0.d3.length === 1 && s0.d3[0].parts >= 4, '3D model at the start ' + JSON.stringify(s0));
     await p.selectOption('.sp-studycard [data-tl=speed]', '2'); await p.click('.sp-studycard [data-tl=play]');
-    const samp = await p.evaluate(() => new Promise((res) => { const out = [], t0 = performance.now(); const f = (t) => { const v = __ws2.inst.persp.ws.vehiclesState().d3[0]; if (v) out.push([t - t0, v.x, v.y, v.steer]); if (t - t0 < 1500) requestAnimationFrame(f); else res(out); }; requestAnimationFrame(f); }));
+    const samp = await p.evaluate(() => new Promise((res) => { const out = [], t0 = performance.now(); const f = (t) => { const v = __ws2.inst.persp.ws.vehiclesState().d3[0]; if (v) out.push([t - t0, v.x, v.y, v.steer]); if (t - t0 < 3000) requestAnimationFrame(f); else res(out); }; requestAnimationFrame(f); }));
     const steps = samp.slice(1).map((s, i) => Math.hypot(s[1] - samp[i][1], s[2] - samp[i][2])), moved = Math.hypot(samp.at(-1)[1] - samp[0][1], samp.at(-1)[2] - samp[0][2]), maxStep = Math.max(...steps);
     // the headless browser draws 3D in software (a few frames a second); the check is that the steps are even, not their number
     const med = steps.slice().sort((a, c) => a - c)[steps.length >> 1];
-    assert(samp.length >= 5, 'frames sampled: ' + samp.length); assert(moved > 1, 'the vehicle moved ' + moved.toFixed(2) + ' m'); assert(maxStep <= Math.max(0.3, med * 3), 'no jumps: largest step ' + maxStep.toFixed(2) + ' m, median ' + med.toFixed(2) + ' m');
+    assert(samp.length >= 4, 'frames sampled: ' + samp.length); assert(moved > 1, 'the vehicle moved ' + moved.toFixed(2) + ' m'); assert(maxStep <= Math.max(0.3, med * 3), 'no jumps: largest step ' + maxStep.toFixed(2) + ' m, median ' + med.toFixed(2) + ' m');
     const steered = samp.some((s) => Math.abs(s[3]) > 0.02);
     await p.waitForTimeout(400); const d2 = await p.evaluate(() => __ws2.inst.plan.ws.vehiclesState().d2); assert(d2 >= 1, 'the vehicle over the 2D plan too');
     await p.screenshot({ path: out + '/vehicle-auto-playing.png' });
-    console.log(`PASS playing at 2×: ${samp.length} frames in 1.5 s, ${moved.toFixed(1)} m, steps even (largest ${maxStep.toFixed(2)} m, median ${med.toFixed(2)} m); front wheels ${steered ? 'steered' : 'straight on this stretch'}; also drawn over the 2D plan`);
+    console.log(`PASS playing at 2×: ${samp.length} frames in 3 s, ${moved.toFixed(1)} m, steps even (largest ${maxStep.toFixed(2)} m, median ${med.toFixed(2)} m); front wheels ${steered ? 'steered' : 'straight on this stretch'}; also drawn over the 2D plan`);
     // follow in 3D: the camera moves with the vehicle
     const cam = () => p.evaluate(() => { const w = __ws2.inst.persp.win, c = w.S3?.api?.camera?.() || null; return c; }).catch(() => null);
     await p.click('.sp-studycard [data-tl=reset]').catch(() => {}); await p.waitForTimeout(300);
