@@ -46,8 +46,9 @@ class Heap { constructor() { this.a = []; } push(x) { const a = this.a; a.push(x
  * @param v a vehicle (vehicles.js)
  * @param route { pts: [[x, y], …], reverse? }
  * @param obstacles [{ id, poly }]
- * @param o { clearance (m), maxExpand }
- * @returns { ok, path: [{ p: [x, y], k }] every ~0.1 m, length, clearanceUsed, legs, error? }
+ * @param o { clearance (m), maxExpand, startHeading (rad), goalHeading (rad, the last point: the vehicle ends facing this way, ±goalTol),
+ *            goalTol (rad, 0.2), roads: [{ pts, width }] (2026-11-25: off these corridors costs more, so the path keeps to the roads) }
+ * @returns { ok, path: [{ p: [x, y], k }] every ~0.1 m, length, clearanceUsed, legs, onRoad (share), error?, closest? }
  */
 export function planAround(v, route, obstacles, o = {}) {
   const P = (route.pts || []).map((p) => [+p[0], +p[1]]); if (P.length < 2) return { ok: false, error: 'Draw at least two points' };
@@ -59,6 +60,7 @@ export function planAround(v, route, obstacles, o = {}) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of P) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
   const box = { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad }, span = Math.max(box.x1 - box.x0, box.y1 - box.y0), res = Math.max(0.15, Math.min(0.5, span / 900));
   const near = obstacles.filter((ob) => { if (!ob.poly || ob.poly.length < 3) return false; let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const p of ob.poly) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); } return a < box.x1 + 5 && c > box.x0 - 5 && b < box.y1 + 5 && d > box.y0 - 5; });   // its extent meets the area (a long wall with its ends far away counts)
+  const roadAt = roadMask(o.roads, box, Math.max(res, 0.5)), offCost = o.roads && o.roads.length ? 0.6 : 0;
   const G = grid(near, box, res), body = circles(v.rearOverhang, Lw + v.frontOverhang, W), tbody = art ? circles(T.wheelbase + T.rearOverhang, T.frontOverhang, T.width || W) : null;
   const tryWith = (clear) => {
     const free = (x, y, th, phi) => { const c = Math.cos(th), s = Math.sin(th); for (const [off, r] of body) { if (G.at(x + c * off, y + s * off) < r + clear) return false; }
@@ -84,42 +86,53 @@ export function planAround(v, route, obstacles, o = {}) {
       const H = holo(goal), hAt = (x, y) => { const i = Math.floor((x - box.x0) / cs), j = Math.floor((y - box.y0) / cs); const h = i < 0 || j < 0 || i >= gx || j >= gy ? Infinity : H[j * gx + i]; return Math.max(Math.hypot(goal[0] - x, goal[1] - y), Number.isFinite(h) ? h : 1e6); };
       const key = (x, y, th) => (Math.floor((y - box.y0) / cs) * gx + Math.floor((x - box.x0) / cs)) * NH + (Math.floor(wrapA(th) / TAU * NH) % NH);
       const nodes = [{ ...s0, g: 0, k: 0, par: -1, seg: null }], best = new Map([[key(s0.x, s0.y, s0.th), 0]]), hp = new Heap(); hp.push([hAt(s0.x, s0.y), 0]);
-      const maxN = o.maxExpand || 120000; let found = -1, exp = 0;
+      const maxN = o.maxExpand || 120000, gH = last && o.goalHeading != null ? o.goalHeading : null, gTol = o.goalTol || 0.2; let found = -1, exp = 0, close = 0, closeD = Infinity;
+      const headOk = (th) => gH == null || Math.abs(Math.atan2(Math.sin(th - gH), Math.cos(th - gH))) <= gTol;
       while (hp.size && exp < maxN) { const [, ni] = hp.pop(), n = nodes[ni]; if (n.closed) continue; n.closed = true; exp++;
-        if (Math.hypot(goal[0] - n.x, goal[1] - n.y) < tol) { found = ni; break; }
+        const dn = Math.hypot(goal[0] - n.x, goal[1] - n.y); if (dn < closeD) { closeD = dn; close = ni; }
+        if (dn < tol && headOk(n.th)) { found = ni; break; }
         for (const k of ks) { let x = n.x, y = n.y, th = n.th, phi = n.phi, ok = true; const pts = []; const ds = step / sub;
           for (let q = 0; q < sub; q++) { if (art) phi += (Math.sin(th - phi) + (T.hitch || 0) * k * Math.cos(th - phi)) / T.wheelbase * ds;
             const thm = th + k * ds / 2; x += Math.cos(thm) * ds; y += Math.sin(thm) * ds; th += k * ds;
             if (art && Math.abs(Math.atan2(Math.sin(th - phi), Math.cos(th - phi))) > (T.maxArticulation || 70) * Math.PI / 180) { ok = false; break; }
             if (!free(x, y, th, phi)) { ok = false; break; } pts.push([x, y, k]); }
           if (!ok) continue;
-          const g = n.g + step * (1 + 0.15 * Math.abs(k) / kmax) + (k !== n.k ? 0.25 * step * Math.abs(k - n.k) / kmax : 0), kk = key(x, y, th), prev = best.get(kk);
+          const g = n.g + step * (1 + 0.15 * Math.abs(k) / kmax + (offCost && !roadAt(x, y) ? offCost : 0)) + (k !== n.k ? 0.25 * step * Math.abs(k - n.k) / kmax : 0), kk = key(x, y, th), prev = best.get(kk);
           if (prev !== undefined && nodes[prev].g <= g) continue;
           nodes.push({ x, y, th, phi, g, k, par: ni, seg: pts }); best.set(kk, nodes.length - 1); hp.push([g + 1.05 * hAt(x, y), nodes.length - 1]); } }
-      if (found < 0) return { error: exp >= maxN ? 'no way round was found within the search limit' : 'no way round: the obstacles leave no gap the vehicle can pass' };
+      if (found < 0) { const c = nodes[close]; return { error: gH != null && closeD < tol ? 'the vehicle reaches the end but cannot turn to stand there along the wall (not enough room to turn)' : exp >= maxN ? 'no way round was found within the search limit' : 'no way round: the obstacles leave no gap the vehicle can pass', closest: c ? [c.x, c.y] : null, gap: closeD }; }
       const chain = []; for (let i = found; i >= 0; i = nodes[i].par) chain.push(nodes[i]); chain.reverse();
       const pts = []; for (const c of chain) if (c.seg) pts.push(...c.seg);
       // to the point itself in a straight line when the last pose is near it and the line is clear
       const e = chain.at(-1), dg = Math.hypot(goal[0] - e.x, goal[1] - e.y), heading = Math.atan2(goal[1] - e.y, goal[0] - e.x);
-      if (dg > 0.05 && Math.abs(Math.atan2(Math.sin(heading - e.th), Math.cos(heading - e.th))) < 0.35) { const m = Math.ceil(dg / 0.25); let okL = true; const extra = [];
+      if (dg > 0.05 && Math.abs(Math.atan2(Math.sin(heading - e.th), Math.cos(heading - e.th))) < 0.35 && headOk(heading)) { const m = Math.ceil(dg / 0.25); let okL = true; const extra = [];
         for (let q = 1; q <= m; q++) { const x = e.x + (goal[0] - e.x) * q / m, y = e.y + (goal[1] - e.y) * q / m; if (!free(x, y, heading, e.phi)) { okL = false; break; } extra.push([x, y, 0]); }
         if (okL) { pts.push(...extra); return { pts, end: { x: goal[0], y: goal[1], th: heading, phi: e.phi }, exp }; } }
       void last; return { pts, end: { x: e.x, y: e.y, th: e.th, phi: e.phi }, exp }; };
     const moved = [], Q = P.map((p, i) => { const q = nearestFree(p); if (q && q !== p) moved.push({ i, from: p, to: q, d: Math.hypot(q[0] - p[0], q[1] - p[1]) }); return q; });
     const bad = Q.findIndex((q) => !q); if (bad >= 0) return { ok: false, error: `point ${bad + 1} of the route is ${bad === 0 ? 'where' : 'where'} the vehicle cannot stand, with no free place within 8 m` };
-    const th0 = Math.atan2(Q[1][1] - Q[0][1], Q[1][0] - Q[0][0]); let st = { x: Q[0][0], y: Q[0][1], th: th0, phi: th0 };
+    const th0 = o.startHeading != null ? o.startHeading : Math.atan2(Q[1][1] - Q[0][1], Q[1][0] - Q[0][0]); let st = { x: Q[0][0], y: Q[0][1], th: th0, phi: th0 };
     if (!free(st.x, st.y, st.th, st.phi)) { for (let a = 1; a <= 36 && !free(st.x, st.y, st.th, st.phi); a++) st.th = th0 + (a % 2 ? 1 : -1) * Math.ceil(a / 2) * TAU / 72; st.phi = st.th; }   // facing a little off the line where the body fits
     const all = [[Q[0][0], Q[0][1], 0]]; let exp = 0;
-    for (let i = 1; i < Q.length; i++) { const r = leg(st, Q[i], i === Q.length - 1); if (r.error) return { ok: false, error: r.error, leg: i }; all.push(...r.pts); st = r.end; exp += r.exp; }
+    for (let i = 1; i < Q.length; i++) { const r = leg(st, Q[i], i === Q.length - 1); if (r.error) return { ok: false, error: r.error, leg: i, closest: r.closest, gap: r.gap }; all.push(...r.pts); st = r.end; exp += r.exp; }
     // every ~0.1 m along it, with the curvature
     const path = [{ p: [all[0][0], all[0][1]], k: 0 }]; let len = 0;
     for (let i = 1; i < all.length; i++) { const a = all[i - 1], b = all[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d < 1e-6) continue; len += d; path.push({ p: [b[0], b[1]], k: b[2] }); }
-    return { ok: true, path, length: len, clearanceUsed: clear, expanded: exp, moved };
+    const onRoad = offCost ? path.filter((q) => roadAt(q.p[0], q.p[1])).length / path.length : null;
+    return { ok: true, path, length: len, clearanceUsed: clear, expanded: exp, moved, onRoad, endHeading: st.th };
   };
   const clear = o.clearance ?? 0.3, first = tryWith(clear); if (first.ok) return first;
   const tight = clear > 0 ? tryWith(0) : first; if (tight.ok) return { ...tight, underClearance: true };
-  return { ok: false, error: first.error, leg: first.leg };
+  return { ok: false, error: first.error, leg: first.leg, closest: first.closest, gap: first.gap };
 }
+
+// the roads as corridors (2026-11-25): a cell is on a road when it lies within half the road's width of its centreline
+function roadMask(roads, box, res) { if (!roads || !roads.length) return () => true; const nx = Math.max(1, Math.ceil((box.x1 - box.x0) / res)), ny = Math.max(1, Math.ceil((box.y1 - box.y0) / res)), m = new Uint8Array(nx * ny);
+  for (const r of roads) { const P = r.pts || [], hw = Math.max(1.5, (+r.width || 6) / 2);
+    for (let s = 0; s + 1 < P.length; s++) { const a = P[s], b = P[s + 1], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1e-9;
+      const i0 = Math.max(0, Math.floor((Math.min(a[0], b[0]) - hw - box.x0) / res)), i1 = Math.min(nx - 1, Math.floor((Math.max(a[0], b[0]) + hw - box.x0) / res)), j0 = Math.max(0, Math.floor((Math.min(a[1], b[1]) - hw - box.y0) / res)), j1 = Math.min(ny - 1, Math.floor((Math.max(a[1], b[1]) + hw - box.y0) / res));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = box.x0 + (i + 0.5) * res, y = box.y0 + (j + 0.5) * res, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2)); if (Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy) <= hw) m[j * nx + i] = 1; } } }
+  return (x, y) => { const i = Math.floor((x - box.x0) / res), j = Math.floor((y - box.y0) / res); return i >= 0 && j >= 0 && i < nx && j < ny && m[j * nx + i] === 1; }; }
 
 // how much of the drawn route runs into an obstacle (with the body's half width and the clearance): the first such point, or null
 export function drawnBlocked(v, route, obstacles, clear = 0.3) {

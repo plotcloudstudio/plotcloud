@@ -23,7 +23,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // the study is in the menu, under Site access & parking
     await p.click('#addSimBtn'); await p.waitForTimeout(300); const inMenu = await p.evaluate(() => [...document.querySelectorAll('.w2-simmenu [data-group=access] [data-addsim]')].map((x) => x.textContent)); await p.keyboard.press('Escape');
     assert(inMenu.some((t) => /Vehicle swept path/.test(t)) && inMenu.some((t) => /Parking layout/.test(t)) && !inMenu.some((t) => /Coming soon/.test(t)), 'in the menu: ' + inMenu);
-    await p.evaluate(() => window.__wsStudy.open('vehicle-swept-path')); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(600);
+    await p.evaluate(() => window.__wsStudy.open('vehicle-swept-path')); await p.waitForSelector('.sp-studycard [data-va-task=draw]'); await p.click('.sp-studycard [data-va-task=draw]'); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(600);
     await p.selectOption('.sp-studycard [data-va=veh]', 'box'); await p.waitForTimeout(200);
     // 1. a route along the south side and up the east side, 6 m off the building
     await draw('[data-va=draw]', [[-50, -20], [37, -20], [37, 30]]); assert.match(await p.locator('.sp-studycard').innerText(), /3 points, 137\.0 m/);
@@ -50,7 +50,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await unfold(); await p.evaluate(() => { const d = document.querySelector('.sp-studycard [data-adv=va-segs]'); if (d) d.open = true; }); await p.fill('.sp-studycard [data-va-rad="1"]', ''); await p.dispatchEvent('.sp-studycard [data-va-rad="1"]', 'change'); await run();
     // 4. the timeline moves the vehicle
     const lab = await p.evaluate(() => { const s = document.querySelector('.sp-studycard [data-tl=seek]'); s.value = String(Math.round(+s.max / 2)); s.dispatchEvent(new Event('input', { bubbles: true })); return 1; }); void lab; await p.waitForTimeout(400);
-    const tl = await p.locator('.sp-studycard .sp-tll').innerText(); assert.match(tl, /Route 1: [\d.]+ m, steering -?\d+° · [\d.]+ s/); assert((await marks()).tags.includes('body')); console.log('PASS the timeline: ' + tl);
+    const tl = await p.locator('.sp-studycard .sp-tll').innerText(); assert.match(tl, /Route 1: [\d.]+ m, steering -?\d+° · [\d.]+ s/); assert((await p.evaluate(() => __ws2.inst.plan.ws.vehiclesState())).d2 >= 1, 'the vehicle drawn over the plan'); console.log('PASS the timeline: ' + tl);
     await p.click('.sp-studycard [data-tl=reset]').catch(() => {});
     // 5. a car on a second route crossing the first at the same time: they meet
     // (the truck's body is over x = −10 from about 15.1 to 19.3 s; the car, from y = −40 (clear of the site's car park) to −20 (clear of
