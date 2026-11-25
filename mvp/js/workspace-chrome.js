@@ -39,6 +39,7 @@ import { daylightInputs, daylightRecord } from './daylight-run.js?v=round2-20261
 import * as EGX from './interior/egress.js?v=sims-20261121-1';
 import * as ECODE from './interior/egresscode.js?v=code-20261110-1';
 import { maturityOf } from './capabilities.js';
+import { helpHTML, reportLink, REPORT_IDS } from './workspace-help.js';
 import { workflowState } from './onboarding.js';
 import * as ACU from './interior/acoustics.js?v=acu-20261106-1';
 import { keep as PKEEP } from '../../emb/lib/plansim.js?v=sims-20261121-1';
@@ -117,8 +118,9 @@ export function mountChrome(app, api) {
   const tr = el('div', 'sp-card sp-tr');
   // the Workbench's own command buttons move here (their state and handlers stay the Workbench's); shown as icons
   const edit = $('.wb-edit'), cmd = (k, d, title) => { const c = app.querySelector(`[data-command="${k}"]`); if (!c) return document.createComment(k); c.classList.add('sp-mask'); c.style.setProperty('--ic', svgURL(d)); if (title) c.title = title; return c; };
-  tr.innerHTML = `<button type="button" class="sp-b sp-saved" data-sp="saved" title="Versions" aria-label="Versions">${I(P.check)}</button><span class="sp-sep"></span><span class="sp-u"></span><span class="sp-sep"></span>${btn('export', 'Export model', 'download')}${btn('import', 'Import model', 'upload')}<span class="sp-c"></span>`;
-  tr.querySelector('.sp-u').replaceWith(cmd('undo', P.undo, 'Undo (Ctrl+Z)'), cmd('redo', P.redo, 'Redo (Ctrl+Y)'));
+  tr.innerHTML = `<button type="button" class="sp-b sp-saved" data-sp="saved" title="Compare versions" aria-label="Compare versions">${I(P.check)}</button><span class="sp-sep"></span><span class="sp-u"></span><span class="sp-sep"></span>${btn('export', 'Export model', 'download')}${btn('import', 'Import model', 'upload')}<span class="sp-c"></span>`;
+  tr.querySelector('.sp-u').replaceWith(cmd('undo', P.undo, 'Undo (Ctrl+Z)'), cmd('redo', P.redo, 'Redo (Ctrl+Y or Ctrl+Shift+Z)'));
+  tr.insertAdjacentHTML('beforeend', `<span class="sp-sep"></span><button type="button" class="sp-b sp-helpb" data-sp="help" title="Help: shortcuts, terms and method reports" aria-label="Help" aria-haspopup="dialog">?</button>`);
   tr.querySelector('.sp-c').replaceWith(cmd('center', '<circle cx="12" cy="12" r="2.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', 'Center the imported building at the origin'));
   // back to the Dashboard (2026-11-01): the last button on the right; the project is kept as it is (unsaved changes stay in the draft)
   // Results and Report links removed from the top right (2026-11-18, as asked): the report is step 4 of the workflow bar
@@ -180,7 +182,7 @@ export function mountChrome(app, api) {
   let lastTab = UI.tab;
   tabList.addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (!t) return;
     if (t.dataset.tab === 'properties' && !UI.sels.length) { e.stopImmediatePropagation(); openData(dat.hidden); return; }   // Project data
-    if (t.dataset.tab === 'versions') { const on = !cmp.hidden && t.getAttribute('aria-selected') === 'true'; if (on) { e.stopImmediatePropagation(); openSheet(false); return; } setTimeout(() => openSheet(true), 0); return; }   // Compare sketches
+    if (t.dataset.tab === 'versions') { const on = !cmp.hidden && t.getAttribute('aria-selected') === 'true'; if (on) { e.stopImmediatePropagation(); openSheet(false); return; } setTimeout(() => openSheet(true), 0); return; }   // Compare versions
     if (root.classList.contains('sp-card-open') && t.getAttribute('aria-selected') === 'true') { e.stopImmediatePropagation(); openCard(false); return; }
     if (!dat.hidden) openData(false);   // one panel at a time (2026-11-01): opening Layers and the like closes Project data
     openCard(true); }, true);
@@ -217,9 +219,15 @@ export function mountChrome(app, api) {
   // ---- buttons
   const doc = () => { const a = activePane(); try { return a.ready ? a.win.document : null; } catch { return null; } };
   const openProject = (section) => { UI.pacc = section; saveUI(); if (UI.panel === 'project' && root.classList.contains('sp-pal-open')) palOpen(false); projBtn.click(); };
+  // Help (2026-11-25): shortcuts, terms and the method report of every study (workspace-help.js), one card on the right
+  const helpCard = el('section', 'sp-card sp-help'); helpCard.hidden = true; helpCard.setAttribute('role', 'dialog'); helpCard.setAttribute('aria-label', 'Help'); root.append(helpCard);
+  function openHelp(on) { if (on && !helpCard.innerHTML) helpCard.innerHTML = helpHTML(REPORT_IDS.map((id) => [id, simName(id)]).sort((a, b) => a[1].localeCompare(b[1]))); helpCard.hidden = !on; if (on) helpCard.querySelector('[data-help-tab][aria-selected=true]')?.focus(); }
+  helpCard.addEventListener('click', (e) => { const t = e.target.closest('[data-help-tab]'); if (t) { helpCard.querySelectorAll('[data-help-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t))); helpCard.querySelectorAll('[data-help-sec]').forEach((x) => { x.hidden = x.dataset.helpSec !== t.dataset.helpTab; }); return; } if (e.target.closest('[data-help=close]')) openHelp(false); });
+  helpCard.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); openHelp(false); app.querySelector('.sp-helpb')?.focus(); } });
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-sp]'); if (!b) return; const k = b.dataset.sp;
     if (k === 'saved') { if (UI.tab !== 'versions') tabList.querySelector('[data-tab="versions"]')?.click(); else openCard(!root.classList.contains('sp-card-open')); }
+    else if (k === 'help') openHelp(true);
     else if (k === 'export') openProject('export');
     else if (k === 'import') openProject('import');
     else if (k === 'terrain') openProject('site');
@@ -813,7 +821,11 @@ export function mountChrome(app, api) {
         r.views.helps = { vals: pos, svals: sp, slo: r.slo !== undefined ? 0 : undefined, shi: r.shi, unit: 'K·h', ramp: 'heat', lo: 0, hi: r.hi, dec: 0, avg: statsOf(pos).avg, title: 'Shade benefit · where the shade helps' }; r.views.costs = { vals: neg, svals: sn, slo: r.slo !== undefined ? 0 : undefined, shi: r.shi, unit: 'K·h', ramp: 'risk', lo: 0, hi: r.hi, dec: 0, avg: statsOf(neg).avg, title: 'Shade benefit · where it costs warmth' }; } }
     return r; }
   const LBR = new Set(['sun', 'heat', 'sky', 'height']);
-  function applyView(r, key) { const v = r.views[key] ? key : (viewsOf(ST.id) || []).map(([k]) => k).find((k) => r.views[k]) || Object.keys(r.views)[0];   /* no view chosen yet: the card's first */ r.svals = null; r.slo = r.shi = undefined; Object.assign(r, r.views[v]); if (LBR.has(r.ramp) && !r.views[v].legendLabels) r.ramp = 'ladybug'; r.legendLabels = r.views[v].legendLabels || null; r.legendCols = r.views[v].legendCols || null; r.view = v; return r; }
+  // the legend range (2026-11-25): a colour map's lower and upper value can be set per study and view, as in Ladybug and ClimateStudio;
+  // a display choice only, so results stay current; kept with the project (p.display.legend) and used by the 2D, 3D and export pictures
+  const legRanges = () => ((p.display ||= {}).legend ||= {});
+  function legRange(V, id, v) { if (V._lo0 === undefined) { V._lo0 = V.lo; V._hi0 = V.hi; } const o = !V.legendLabels && legRanges()[id + ':' + v]; V.lo = o ? o.lo : V._lo0; V.hi = o ? o.hi : V._hi0; return !!o; }
+  function applyView(r, key) { const v = r.views[key] ? key : (viewsOf(ST.id) || []).map(([k]) => k).find((k) => r.views[k]) || Object.keys(r.views)[0];   /* no view chosen yet: the card's first */ r.svals = null; r.slo = r.shi = undefined; const own = legRange(r.views[v], ST.id, v); Object.assign(r, r.views[v]); r.legOwn = own; if (own) r.slo = r.shi = undefined; if (LBR.has(r.ramp) && !r.views[v].legendLabels) r.ramp = 'ladybug'; r.legendLabels = r.views[v].legendLabels || null; r.legendCols = r.views[v].legendCols || null; r.view = v; return r; }
   // the result in both views (2026-10-31): the 3D topographic block and the 2D plan, with the same grid and colours
   const views2 = () => [INST.persp, INST.plan].filter((I) => I.ready && I.ws).map((I) => I.ws);
   const clearAll = () => views2().forEach((w) => w.clearStudy?.());
@@ -910,7 +922,7 @@ export function mountChrome(app, api) {
   window.__wsHost = { open: openHost, close: closeHost, id: () => HOST.id };
   function openStudy(id) { api.syncViews?.(); if (id === 'movementdepth') { ST.view.spacesyntax = 'flowdepth'; id = 'spacesyntax'; }   /* P0 (2026-11-12): Movement & depth is a view of Space syntax */ if(plannedStudy(id)){openHost(id);return;} if (!IN_VIEW[id]) { closeStudy(); openPage(id); return; } closeHost(); if (ST.id !== id && ST.res) clearAll(); if (ST.id !== id) { tlStop(); if (DOME.el) DOME.el.hidden = true; if (SND.on) soundPanel(false); } if (ST.id !== id) Object.assign(ST, { id, res: null, key: '', sig: '', at: null, err: '', saved: '', exp: false, areaOpen: false, stopped: false }); if (ST.id === id && !ST.res && ST.saKeep && ST.saKeep[id]) Object.assign(ST, ST.saKeep[id]); openCard(false); closePops(); palOpen(false); studyCard.hidden = false; hookProbe(); showArea(); loadRose(); drawStudy(); if ((id === SA.VEH || id === SA.PARK)) { if (ST.res) paintRes(ST.res, true); else SA.preview(SAX, true); } ST.privOn = id === 'privacy'; if (id === 'privacy') privOverlay(); RES_LAST.set(p.id, id);
     if (!ST.res && !ST.busy) { const k = RES_KEEP.get(p.id + '|' + id); if (k && k.sig === sigOf(id) && (k.ms ?? 1e9) < 15000 && canUse(id, p)) setTimeout(() => { try { if (ST.id !== id || ST.res || ST.busy || !INST.persp.ready || studyModel(INST.persp.ws) !== k.key) return; runStudy(); } catch (e) { } }, 60); } }
-  function closeStudy() { ST.privOn = false; if (ST.sk) { ST.sk = null; views2().forEach((w2) => w2.pickPoint?.(null)); } tlStop(); if (DOME.el) DOME.el.hidden = true; if (SND.on) soundPanel(false); if (ST.seq) { clearTimeout(ST.seq); ST.seq = 0; } studyCard.hidden = true; resCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; stopPlay(); probeEl.hidden = true; clearAll(); }
+  function closeStudy() { ST.privOn = false; ST.legEdit = false; if (ST.sk) { ST.sk = null; views2().forEach((w2) => w2.pickPoint?.(null)); } tlStop(); if (DOME.el) DOME.el.hidden = true; if (SND.on) soundPanel(false); if (ST.seq) { clearTimeout(ST.seq); ST.seq = 0; } studyCard.hidden = true; resCard.hidden = true; legend.hidden = true; ST.id = null; ST.res = null; stopPlay(); probeEl.hidden = true; clearAll(); }
   // back in the Workspace (2026-11-23): the study that was open opens again once both views are ready (and recomputes if it can)
   { const want = RES_LAST.get(p.id); if (want) { let n = 0; const tm = setInterval(() => { if (++n > 300 || !app.isConnected) { clearInterval(tm); return; } if (INST.persp.ready && INST.plan.ready) { clearInterval(tm); if (!ST.id) openStudy(want); } }, 200); } }
   function openPage(id) { const sel = $('#workspaceStudy'); if (sel) { sel.value = id; sel.onchange?.(); } $('#sendSim')?.click(); }
@@ -2223,14 +2235,14 @@ export function mountChrome(app, api) {
       ${r ? `<details class="sp-set sp-adv" data-adv="__set" ${ST.unfold || ST.advOpen.__set ? 'open' : ''}><summary>Settings${changed ? ' <i class="sp-dot"></i><span class="sp-dotl">changed: Start again to update</span>' : ''}</summary>${SETTINGS}</details>
       <div class="sp-acts sp-acts1 sp-expacts"><span class="sp-flabel">Export</span><button type="button" class="btn sm" data-st="xlview" ${ST.busy || stale || changed ? 'disabled' : ''} title="Add this view and its results to the Export list (PDF, slides)">Add to Export list</button><button type="button" class="btn sm" data-st="expopen">CSV · PNG…</button></div>` : ''}`;
     resCard.hidden = !r; legend.hidden = !r;
-    if (r) { const MT = maturityOf(ST.id, r.onSection ? null : r.view); resCard.innerHTML = `<header><b>${esc(r.title)}</b>${MT.link ? `<a class="sp-mat" href="${MT.link}" target="_blank" rel="noopener" title="${esc(MT.note)}">${esc(MT.label)}</a>` : `<span class="sp-mat" title="${esc(MT.note)}">${esc(MT.label)}</span>`}</header><div class="sp-stbody">${ST.id === 'privacy' ? privCard() : ''}${r.rows.map(([k, v]) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`).join('')}
+    if (r) { const MT = maturityOf(ST.id, r.onSection ? null : r.view); resCard.innerHTML = `<header><b>${esc(r.title)}</b>${(MT.link || reportLink(ST.id)) ? `<a class="sp-mat" href="${MT.link || reportLink(ST.id)}" target="_blank" rel="noopener" title="${esc(MT.note)} · Open the method report">${esc(MT.label)}</a>` : `<span class="sp-mat" title="${esc(MT.note)}">${esc(MT.label)}</span>`}</header><div class="sp-stbody">${ST.id === 'privacy' ? privCard() : ''}${r.rows.map(([k, v]) => `<div class="sp-kv"><span>${k}</span><b>${v}</b></div>`).join('')}
         <h4>How this was found</h4><p class="sp-note">${r.method} ${r.foot || `${fmt(r.cells)} cells, ${fmt(r.prisms)} building parts and ${fmt(r.context)} surrounding buildings${r.terrain ? ', on the terrain' : ''}`}; ${fmt(r.ms)} ms in this browser. A design check for early design, not a compliance result.</p>
         ${ST.saved ? `<p class="sp-note">Saved to results with ${esc(ST.saved)}.</p>` : ST.saveAsk && dirty() ? `<p class="sp-note"><b>Save as version v${p.versions.length + 1}?</b> The model has unsaved changes: they are saved as a new version first, and this result is kept with it.</p><button type="button" class="btn sm primary" data-st="save">Save as v${p.versions.length + 1}</button> <button type="button" class="btn sm" data-st="savecancel">Cancel</button>` : `<button type="button" class="btn sm primary" data-st="save" ${stale || changed || ST.busy ? 'disabled' : ''} title="${dirty() ? `The model has unsaved changes: they are saved as version v${p.versions.length + 1} first, and the result is kept with that version` : 'Keep this result with the saved version'}">${dirty() ? `Save as v${p.versions.length + 1} and keep this result` : 'Save to results'}</button>${dirty() ? '<p class="sp-note">Unsaved model changes are saved as a new version first, so the result stays tied to the model it was computed on.</p>' : ''}`} <button type="button" class="btn sm" data-st="clear">Clear from view</button></div>`;
       const cols = (r.legendCols || INST.persp.ws?.rampColors?.(r.ramp)) || [];
       // after Ladybug's legend: ten coloured steps, the value at every step (a categorical map keeps its named classes)
       if (r.legendLabels) legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-ramp" style="background:linear-gradient(to top,${cols.join(',')})"></div><div class="sp-rampl">${r.legendLabels.map((x) => `<span>${esc(x)}</span>`).join('')}</div>${ST.id === 'privacy' && ST.privOv.on ? `<b class="sp-privlh">Windows · privacy risk</b>${privLegend(privCols()?.cnt)}` : ''}`;
       else { const n = 10, at = (t) => { const k = t * (cols.length - 1), i = Math.min(cols.length - 2, Math.floor(k)), u = k - i, A = parseInt((cols[i] || '#888888').slice(1), 16), B = parseInt((cols[i + 1] || '#888888').slice(1), 16), m = (b) => Math.round(((A >> b) & 255) * (1 - u) + ((B >> b) & 255) * u); return `rgb(${m(16)},${m(8)},${m(0)})`; };
-        legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-lbsteps">${Array.from({ length: n }, (_, i) => n - 1 - i).map((i) => `<i style="background:${at((i + 0.5) / n)}"></i>`).join('')}</div><div class="sp-lblabels">${Array.from({ length: n + 1 }, (_, i) => n - i).map((i) => `<span>${fmt(r.lo + (r.hi - r.lo) * i / n, r.dec)}</span>`).join('')}</div>`; } }
+        legend.innerHTML = `<b>${esc(r.title.split(' · ')[0])} · ${esc(r.unit)}</b><div class="sp-lbsteps">${Array.from({ length: n }, (_, i) => n - 1 - i).map((i) => `<i style="background:${at((i + 0.5) / n)}"></i>`).join('')}</div><div class="sp-lblabels">${Array.from({ length: n + 1 }, (_, i) => n - i).map((i) => `<span>${fmt(r.lo + (r.hi - r.lo) * i / n, r.dec)}</span>`).join('')}</div>${ST.busy ? '' : ST.legEdit ? `<form class="sp-lbrange" data-lb="form"><label>Lower <input type="number" step="any" data-lb="lo" value="${+(+r.lo).toFixed(4)}"></label><label>Upper <input type="number" step="any" data-lb="hi" value="${+(+r.hi).toFixed(4)}"></label><span><button type="submit" class="btn sm primary">Apply</button><button type="button" class="btn sm" data-lb="reset"${r.legOwn ? '' : ' disabled'}>Automatic</button><button type="button" class="sp-link" data-lb="close">Close</button></span><small class="sp-lbmsg" aria-live="polite"></small></form>` : `<button type="button" class="sp-link sp-lbedit" data-lb="edit" title="Set the lowest and highest value of the colours">${r.legOwn ? 'Range set by you · change' : 'Legend range…'}</button>`}`; } }
       delete legend.dataset.tl; TL.lg = null; if (r && TL.i >= 0) tlLegend();
       if (r && r.vslice && !ST.vsliceOff) { const v = r.vslice; legend.insertAdjacentHTML('beforeend', `<small class="sp-lbnote sp-lbslice">Upright slice · wind from ${esc(v.dn)}, m/s<span style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>${fmt(v.lo)}</span><i style="flex:1;height:8px;border-radius:2px;background:linear-gradient(to right,${v.stops.map((x) => x[1]).join(',')})"></i><span>${fmt(v.hi, 1)}</span></span></small>`); }
       if (r && r.frameA && r.views[r.view]?.frame && r.view !== 'sys' && (r.view === 'disp' || ST.stDeformed !== false)) { const a = r.stAuto || 1, man = ST.stScale && ST.stScale !== 'auto', v = man ? +ST.stScale : a;
@@ -2247,6 +2259,12 @@ export function mountChrome(app, api) {
     else if (d.stArea) { ST.area = +d.stArea; ST.areaOpen = false; if (!ST.res) showArea(); }
     else if (d.wdir) { ST.windDir = +d.wdir * 22.5; ST.windSpeed = null; }
     drawStudy(); });
+  // legend range: open, apply, back to automatic (a display choice: the result is not run again and stays current)
+  const legApply = (o) => { const r = ST.res; if (!r || !r.views) return; const k = ST.id + ':' + r.view; if (o) legRanges()[k] = o; else delete legRanges()[k]; S.save(); applyView(r, r.view); paintRes(r); drawStudy(); };
+  legend.addEventListener('click', (e) => { const b = e.target.closest('[data-lb]'); if (!b) return; const k = b.dataset.lb;
+    if (k === 'edit') { ST.legEdit = true; drawStudy(); setTimeout(() => legend.querySelector('[data-lb=lo]')?.focus(), 0); } else if (k === 'close') { ST.legEdit = false; drawStudy(); } else if (k === 'reset') { ST.legEdit = false; legApply(null); } });
+  legend.addEventListener('submit', (e) => { e.preventDefault(); const f = e.target, lo = parseFloat(f.querySelector('[data-lb=lo]').value), hi = parseFloat(f.querySelector('[data-lb=hi]').value), msg = f.querySelector('.sp-lbmsg');
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) { msg.textContent = 'The upper value must be above the lower one.'; return; } ST.legEdit = false; legApply({ lo, hi }); });
   // the other studies of this one's group (2026-11-17), one click away; they open through the same menu entry as from the rail
   const sibsHTML = (id) => { const g = SG.groupOf(id); if (!g || g.ids.length < 2) return ''; return `<nav class="sp-sibs" aria-label="${esc(g.label)}"><span>${esc(g.label)}</span>${g.ids.map((k) => `<button type="button" data-st-sib="${k}"${k === id ? ' aria-current="true"' : ''}>${esc(simName(k))}</button>`).join('')}</nav>`; };
   root.addEventListener('click', (e) => { const b = e.target.closest('.sp-studycard [data-st-sib]'); if (!b || ST.busy || b.dataset.stSib === ST.id) return; const m = document.querySelector(`.w2-simmenu [data-addsim="${b.dataset.stSib}"]`); if (m) m.click(); else openStudy(b.dataset.stSib); });
@@ -2432,10 +2450,10 @@ export function mountChrome(app, api) {
     else if (k === 'clear') { clearAll(); ST.res = null; showArea(); drawStudy(); } });
   let staleShown = false, autoKey = '', autoAt = 0, autoRan = '';
 
-  // ---- Compare sketches (2026-10-30): a sheet over the lower half of the view. Each saved version is a sketch (a column with its
+  // ---- Compare versions (2026-10-30): a sheet over the lower half of the view. Each saved version is a sketch (a column with its
   // picture and name; the one the model is on says Current); rows are grouped (Pinned, Building, Site, Space, Element, Results) and
-  // read from the versions and the saved study results. Add sketch saves the model as a version; Export to Excel writes a CSV.
-  const cmp = el('section', 'sp-card sp-sheet'); cmp.hidden = true; cmp.setAttribute('aria-label', 'Compare sketches'); root.append(cmp);
+  // read from the versions and the saved study results. Save as version saves the model as a version; Export CSV writes a CSV.
+  const cmp = el('section', 'sp-card sp-sheet'); cmp.hidden = true; cmp.setAttribute('aria-label', 'Compare versions'); root.append(cmp);
   const dat = el('section', 'sp-card sp-sheet sp-datasheet'); dat.hidden = true; dat.setAttribute('aria-label', 'Project data'); root.append(dat);
   // ---- a water body of the site (2026-11-06): what it is and how it moves, set by the person or read from the terrain
   const watCard = el('section', 'sp-card sp-watercard'); watCard.hidden = true; watCard.setAttribute('aria-label', 'Water body'); root.append(watCard);
@@ -2523,7 +2541,7 @@ export function mountChrome(app, api) {
     const notes = [], res = [];
     for (const sim of api.sims) { const runs = p.runs.filter((r) => r.simId === sim.id && r.results); if (!runs.length && !simLog()[sim.id]?.results) continue;
       const lg = simLog()[sim.id], now = lg && lg.results && lg.key === modelHash() ? { results: lg.results, settings: { label: lg.settings } } : null, last = (c) => (c.v ? runs.filter((r) => r.versionId === c.v.id).at(-1) : null) || (c.current && now) || null;
-      const basis = new Set(cols.map(last).filter(Boolean).map((r) => r.settings?.label || r.settings?.dayName || 'full study')); if (basis.size > 1) notes.push(`${sim.name}: the sketches use different settings (${[...basis].join('; ')}), so compare with care.`);
+      const basis = new Set(cols.map(last).filter(Boolean).map((r) => r.settings?.label || r.settings?.dayName || 'full study')); if (basis.size > 1) notes.push(`${sim.name}: the versions use different settings (${[...basis].join('; ')}), so compare with care.`);
       for (const [key, label, unit, dec] of sim.metrics || []) { const get = (c) => { const r = last(c); return r && Number.isFinite(+r.results[key]) ? +r.results[key] : null; }; if (cols.some((c) => get(c) !== null)) res.push([`${sim.name} · ${label}`, get, unit === '%' ? '%' : ' ' + unit, dec]); } }
     if (res.length) G.push(['Results', res]);
     const P = pins(), pinned = G.flatMap(([, rows]) => rows).filter(([l]) => P.has(l));
@@ -2532,16 +2550,16 @@ export function mountChrome(app, api) {
   async function drawCompare() {
     const { cols, groups, notes, N } = compareData(), closed = shut(), P = pins(); cmp.style.setProperty('--n', cols.length);
     const head = `<div class="sp-sk-row sp-sk-head"><div class="sp-sk-lab"></div>${cols.map((c) => `<button type="button" class="sp-sk-card${c.current ? ' cur' : ''}" data-sketch="${esc(c.id)}" title="${c.draft ? 'The model as it is now' : 'Open ' + esc(c.sub) + ' in the model'}"><span class="sp-sk-pic">${c.thumb ? `<img src="${c.thumb}" alt="">` : ''}</span><b>${esc(c.title)}</b><small>${c.current ? 'Current' : esc(c.sub)}</small></button>`).join('')}
-      <div class="sp-sk-add"><button type="button" class="btn sm primary" id="spAddSketch">Add sketch</button><small>Add sketch to compare metrics</small></div></div>`;
+      <div class="sp-sk-add"><button type="button" class="btn sm primary" id="spAddSketch">Save as version</button><small>Save the model as a version to compare it</small></div></div>`;
     const body = groups.map(([g, rows]) => `<div class="sp-sk-row sp-sk-grp"><button type="button" class="sp-sk-lab" data-grp="${g}" aria-expanded="${!closed.has(g)}">${g.toUpperCase()} <i>${closed.has(g) ? '›' : '⌄'}</i></button>${cols.map(() => '<div></div>').join('')}</div>`
       + (closed.has(g) ? '' : rows.length ? rows.map(([l, get, u, d]) => `<div class="sp-sk-row"><div class="sp-sk-lab"><button type="button" class="sp-pin${P.has(l) ? ' on' : ''}" data-pin="${esc(l)}" title="${P.has(l) ? 'Unpin' : 'Pin to the top'}" aria-label="${P.has(l) ? 'Unpin' : 'Pin'} ${esc(l)}">${P.has(l) ? '●' : '○'}</button>${esc(l)}</div>${cols.map((c) => `<div class="sp-sk-v${c.current ? ' cur' : ''}">${N(get(c), u || '', d || 0)}</div>`).join('')}</div>`).join('') : g === 'Pinned' ? `<div class="sp-sk-row"><div class="sp-sk-lab sp-sk-empty">Pin a row to keep it here</div></div>` : '')).join('');
     parkSave();   // a redraw must not take the Save version button with it
-    cmp.innerHTML = `${GRIP}<button type="button" class="sp-x" data-cmp="close" aria-label="Close Compare sketches">×</button>
+    cmp.innerHTML = `${GRIP}<button type="button" class="sp-x" data-cmp="close" aria-label="Close Compare versions">×</button>
       <div class="sp-sk-scroll">${head}${body}${notes.map((n) => `<p class="sp-note">${esc(n)}</p>`).join('')}</div>
-      <footer><span class="sp-sk-title">Compare sketches</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-cmp="csv" title="A CSV file that Excel opens">Export to Excel</button><button type="button" class="btn sm primary" data-cmp="report" title="Choose two sketches and make a comparison report"${cols.length < 2 ? ' disabled' : ''}>Generate report</button></span></footer>
+      <footer><span class="sp-sk-title">Compare versions</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-cmp="csv" title="A CSV file that Excel opens">Export CSV</button><button type="button" class="btn sm primary" data-cmp="report" title="Choose two versions and make a comparison report"${cols.length < 2 ? ' disabled' : ''}>Generate report</button></span></footer>
       <div class="sp-rpick" hidden></div>`;
     // Add sketch: the current model becomes the next sketch (version) of this project, named Sketch N; nothing else comes along
-    const sv = $('#saveV'), note = $('#note'); if (sv && note) { const add = cmp.querySelector('.sp-sk-add'); add.querySelector('#spAddSketch').replaceWith(sv); sv.textContent = 'Add sketch'; sv.classList.add('btn', 'sm', 'primary');
+    const sv = $('#saveV'), note = $('#note'); if (sv && note) { const add = cmp.querySelector('.sp-sk-add'); add.querySelector('#spAddSketch').replaceWith(sv); sv.textContent = 'Save as version'; sv.classList.add('btn', 'sm', 'primary');
       if (!sv.dataset.spSketch) { sv.dataset.spSketch = '1'; sv.addEventListener('click', () => { if (cmp.contains(sv) && !note.value.trim()) note.value = 'Sketch ' + (p.versions.length + 1); }, true); } }
     // pictures: the model as it is now, once per opening; a version keeps the picture taken when it was added here
     if (INST.persp.ready && INST.persp.ws.thumb) { const key = cols.find((c) => c.current)?.id; if (key && !THUMB.has(key)) { try { const u = await INST.persp.ws.thumb(); if (u) { THUMB.set(key, u); const im = cmp.querySelector(`[data-sketch="${CSS.escape(key)}"] .sp-sk-pic`); if (im) im.innerHTML = `<img src="${u}" alt="">`; } } catch { } } }
@@ -2560,7 +2578,7 @@ export function mountChrome(app, api) {
     else if (k === 'rx') cmp.querySelector('.sp-rpick').hidden = true;
     else if (k === 'csv') { const { cols, groups, N } = compareData(), q = (v) => `"${String(v).replace(/"/g, '""')}"`;
       const csv = [['', ...cols.map((c) => `${c.title} (${c.current ? 'current' : c.sub})`)], ...groups.filter(([g]) => g !== 'Pinned').flatMap(([g, rows]) => [[g], ...rows.map(([l, get, u, d]) => [l, ...cols.map((c) => { const v = get(c); return v === null || v === undefined ? '' : +(+v).toFixed(3); })])])].map((r) => r.map(q).join(',')).join('\n');
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' })); a.download = `${p.name.replace(/[^\w-]+/g, '-')}-compare-sketches.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' })); a.download = `${p.name.replace(/[^\w-]+/g, '-')}-compare-versions.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } });
   // Getting started › Compare two options, and the project overview's Compare plans, open this sheet (2026-11-01)
   const startCompare = (e) => { const a = e.target.closest('.pc-start [data-step="compare"] a'); if (!a) return; e.preventDefault(); e.stopPropagation(); openSheet(true); };
   document.addEventListener('click', startCompare, true);
@@ -2589,7 +2607,7 @@ export function mountChrome(app, api) {
   function syncTabs() { root.classList.toggle('sp-cmp-open', !cmp.hidden); root.classList.toggle('sp-data-open', !dat.hidden); root.classList.toggle('sp-sheet-open', !cmp.hidden || !dat.hidden); }
 
   // ---- the simulations run in this project (2026-11-01): the last run of each study, kept in this browser with the model it was
-  // run on (a fingerprint), so Project data and Compare sketches can say whether it still matches the model
+  // run on (a fingerprint), so Project data and Compare versions can say whether it still matches the model
   const LOGK = 'pc-ws-simlog:' + p.id;
   const hashOf = (s) => { s = String(s ?? ''); let h = 5381; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36) + '.' + s.length.toString(36); };
   const modelHash = () => { try { return INST.persp.ready ? hashOf(studyModel(INST.persp.ws)) : null; } catch { return null; } };
@@ -2605,7 +2623,7 @@ export function mountChrome(app, api) {
 
   // ---- Project data (2026-11-01): the Properties button with nothing selected opens a sheet listing the project's objects with
   // their figures (the design, spaces, the site) and every simulation run here, with its key results and whether it still
-  // matches the model. Rows open what they describe; Export to Excel writes the whole table.
+  // matches the model. Rows open what they describe; Export CSV writes the whole table.
   gripDrag(dat, () => openData(false));
   const DGK = 'pc-ws-datagroups', dshut = () => { try { return new Set(JSON.parse(localStorage.getItem(DGK)) || []); } catch { return new Set(); } }, setDshut = (x) => { try { localStorage.setItem(DGK, JSON.stringify([...x])); } catch { } };
   const ago = (t) => { const s = (Date.now() - new Date(t)) / 1000; return s < 60 ? 'just now' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : new Date(t).toLocaleDateString('en-CA', { day: 'numeric', month: 'short', year: 'numeric' }); };
@@ -2655,7 +2673,7 @@ export function mountChrome(app, api) {
         ${closed.has(g.k) ? '' : g.rows.length ? `<table class="sp-dt${g.k === 'Simulations' ? ' sp-dt-sim' : ''}"><thead><tr>${g.head.map((h, i) => `<th${i > 1 && g.k !== 'Simulations' ? ' class="n"' : ''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>
           ${g.rows.map((r) => `<tr class="${r.total ? 'tot' : ''}${r.stale ? ' stale' : ''}${r.sel || r.study ? ' go' : ''}"${r.sel ? ` data-dt-sel="${esc(r.sel)}" title="Select it in the model"` : r.study ? ` data-dt-study="${esc(r.study)}" title="Open this simulation"` : ''}>${r.cells.map((v, i) => `<td${i > 1 && g.k !== 'Simulations' ? ' class="n"' : ''}${g.k === 'Simulations' && i === 3 ? ` class="sp-dt-st${r.stale ? ' old' : ''}"` : ''}>${esc(cellText(v, g.dec[i] || 0))}</td>`).join('')}</tr>${r.note ? '' : ''}`).join('')}</tbody></table>` : `<p class="sp-dt-empty">${esc(g.empty)}</p>`}</section>`).join('')}
         <p class="sp-note">Figures come from the model as it is now (heights from storeys × storey height). Simulation results are the last run of each study in this view; “Model changed since” means the model was edited after that run, so run it again before relying on it. Design checks, not compliance results.</p></div>
-      <footer><span class="sp-sk-title">Project data</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-dat="csv" title="A CSV file that Excel opens">Export to Excel</button></span></footer>`;
+      <footer><span class="sp-sk-title">Project data</span><span class="sp-sk-acts"><button type="button" class="btn sm" data-dat="csv" title="A CSV file that Excel opens">Export CSV</button></span></footer>`;
   }
   function openData(on) { if (on) solo('data'); if (on && !cmp.hidden) openSheet(false); dat.hidden = !on; syncTabs(); if (on) { openCard(false); closePops(); palOpen(false); if (!assetsCard.hidden) openAssets(false); drawData(); } }
   dat.addEventListener('click', (e) => {
@@ -2669,21 +2687,21 @@ export function mountChrome(app, api) {
       download(`${p.name.replace(/[^\w-]+/g, '-')}-project-data.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\n'), 'text/csv'); } });
   function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 
-  // ---- a report on two sketches (2026-11-01): Generate report in Compare sketches; choose the two sketches, and a report opens in a
+  // ---- a report on two sketches (2026-11-01): Generate report in Compare versions; choose the two sketches, and a report opens in a
   // new tab with both pictures, every figure side by side with the difference, the simulation results each was saved with, notes
   // on settings that differ, and the main changes in words. Print it or save it as PDF from that tab.
   function reportPick() {
     const { cols } = compareData(), pk = cmp.querySelector('.sp-rpick'); if (cols.length < 2) return;
     const cur = cols.findIndex((c) => c.current), b = cur >= 0 ? cur : 0, a = cols.findIndex((c, i) => i !== b);
     const opt = (sel) => cols.map((c) => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.title)} (${esc(c.current ? 'current' : c.sub)})</option>`).join('');
-    pk.innerHTML = `<b>Comparison report</b><p class="sp-note">Choose two sketches. The report sets every figure side by side, with the change from A to B.</p>
+    pk.innerHTML = `<b>Comparison report</b><p class="sp-note">Choose two versions. The report sets every figure side by side, with the change from A to B.</p>
       <label>A · before<select data-rp="a">${opt(cols[a].id)}</select></label><label>B · after<select data-rp="b">${opt(cols[b].id)}</select></label>
       <div class="sp-rp-acts"><button type="button" class="btn sm" data-cmp="rx">Cancel</button><button type="button" class="btn sm primary" data-cmp="rgo">Create report</button></div><p class="sp-rp-msg" role="status"></p>`;
     pk.hidden = false; pk.querySelector('select').focus();
   }
   function makeReport() {
     const pk = cmp.querySelector('.sp-rpick'), ia = pk.querySelector('[data-rp="a"]').value, ib = pk.querySelector('[data-rp="b"]').value, msg = pk.querySelector('.sp-rp-msg');
-    if (ia === ib) { msg.textContent = 'Choose two different sketches.'; return; }
+    if (ia === ib) { msg.textContent = 'Choose two different versions.'; return; }
     const html = reportHTML2(ia, ib), w = window.open('', '_blank');
     if (w) { w.document.open(); w.document.write(html); w.document.close(); msg.textContent = 'The report opened in a new tab.'; }
     else { download(`${p.name.replace(/[^\w-]+/g, '-')}-comparison-report.html`, html, 'text/html'); msg.textContent = 'Pop-ups are blocked here, so the report was downloaded instead.'; }
@@ -2697,8 +2715,8 @@ export function mountChrome(app, api) {
         return `<tr><td>${esc(l)}</td><td class="n">${N(a, u, d)}</td><td class="n">${N(b, u, d)}</td><td class="n ${ok && df ? (df > 0 ? 'up' : 'dn') : ''}">${ok ? (df > 0 ? '+' : df < 0 ? '−' : '±') + N(Math.abs(df), u, d) : '—'}</td><td class="n">${ok && !df ? '0%' : pc === null ? '—' : (pc > 0 ? '+' : '−') + fmt(Math.abs(pc), 1) + '%'}</td></tr>`; }).join('');
       return `<h2>${esc(g)}</h2><table><thead><tr><th>Figure</th><th class="n">A · ${esc(A.title)}</th><th class="n">B · ${esc(B.title)}</th><th class="n">Change</th><th class="n">Change %</th></tr></thead><tbody>${body}</tbody></table>`; }).join('');
     const top = changes.filter((c) => c.pc !== null).sort((x, y) => Math.abs(y.pc) - Math.abs(x.pc)).slice(0, 6);
-    const words = top.length ? top.map((c) => `<li><b>${esc(c.l)}</b> ${c.b > c.a ? 'rises' : 'falls'} by ${fmt(Math.abs(c.pc), 1)}% (${N(c.a, c.u, c.d)} → ${N(c.b, c.u, c.d)}).</li>`).join('') : '<li>No figure differs between the two sketches.</li>';
-    const resNote = groups.some(([g]) => g === 'Results') ? '' : '<p class="note">Neither sketch has saved simulation results. Run a study and press Save to results (it is kept with the version) to compare results here.</p>';
+    const words = top.length ? top.map((c) => `<li><b>${esc(c.l)}</b> ${c.b > c.a ? 'rises' : 'falls'} by ${fmt(Math.abs(c.pc), 1)}% (${N(c.a, c.u, c.d)} → ${N(c.b, c.u, c.d)}).</li>`).join('') : '<li>No figure differs between the two versions.</li>';
+    const resNote = groups.some(([g]) => g === 'Results') ? '' : '<p class="note">Neither version has saved simulation results. Run a study and press Save to results (it is kept with the version) to compare results here.</p>';
     const pic = (c) => c.thumb ? `<img src="${c.thumb}" alt="${esc(c.title)}">` : '<div class="nopic">No picture</div>';
     const when = (c) => c.draft ? 'The model as it is now (unsaved)' : `${esc(c.sub)}${c.v?.created ? ' · saved ' + new Date(c.v.created).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }) : ''}${c.current ? ' · current' : ''}`;
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(p.name)} · comparison report</title><style>
@@ -2714,7 +2732,7 @@ export function mountChrome(app, api) {
       <div class="pair"><figure>${pic(A)}<figcaption><b><span class="tag">A</span>${esc(A.title)}</b><small>${when(A)}</small></figcaption></figure><figure>${pic(B)}<figcaption><b><span class="tag">B</span>${esc(B.title)}</b><small>${when(B)}</small></figcaption></figure></div>
       <h2>Main changes from A to B</h2><ul>${words}</ul>
       ${table}${resNote}${notes.length ? `<h2>Read with care</h2><ul>${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
-      <h2>About these figures</h2><p class="note">Floor areas and footprints come from each sketch's masses (gross floor area = footprint × storeys); rooms are counted for the sketch the model is on. Simulation results are those saved with each version${A.current || B.current ? ', or the last run on the model as it is now for the current sketch' : ''}; they are early-design checks computed in the browser, not compliance results or certified calculations. Compare results only where the settings match.</p></main></body></html>`;
+      <h2>About these figures</h2><p class="note">Floor areas and footprints come from each version's drawn floors (from its masses, footprint × storeys, when no floor is drawn); rooms are counted for the version the model is on. Simulation results are those saved with each version${A.current || B.current ? ', or the last run on the model as it is now for the current version' : ''}; they are early-design checks computed in the browser, not compliance results or certified calculations. Compare results only where the settings match.</p></main></body></html>`;
   }
 
   // ---- assets (left rail): the models imported into this project and your own furniture, each with its import

@@ -43,7 +43,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('#tabList [data-tab=versions]'); await p.locator('.sp-sheet:not(.sp-datasheet) .sp-sk-card').first().waitFor(); const cmp = await p.locator('.sp-sheet:not(.sp-datasheet)').innerText();
     assert.match(cmp, /Sun hours · Ground, mean[\s\S]*\d\.\d h/); assert.match(cmp, /Current/); assert.match(cmp, /BUILDING[\s\S]*SITE[\s\S]*SPACE[\s\S]*ELEMENT[\s\S]*RESULTS/); await p.locator('.sp-sheet:not(.sp-datasheet) #saveV').waitFor({ timeout: 10000 });   // Add sketch saves a version
     const dl = p.waitForEvent('download'); await p.click('[data-cmp=csv]'); const csv = fs.readFileSync(await (await dl).path(), 'utf8');
-    assert.match(csv, /"Sun hours · Ground, mean"/); console.log('PASS Compare sketches: sketch columns, grouped rows with the saved study result, Add sketch, Export to Excel (CSV)');
+    assert.match(csv, /"Sun hours · Ground, mean"/); console.log('PASS Compare versions: sketch columns, grouped rows with the saved study result, Add sketch, Export to Excel (CSV)');
     await p.click('[data-cmp=close]'); assert(await p.locator('.sp-sheet:not(.sp-datasheet)').isHidden());
 
     // a report on two sketches (2026-11-01): Generate report, choose A and B, the report opens with every figure and the change
@@ -52,7 +52,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('[data-cmp=report]'); await p.locator('.sp-rpick select[data-rp=a]').waitFor();
     const pop = p.waitForEvent('popup'); await p.click('[data-cmp=rgo]'); const rp = await pop; await rp.waitForLoadState();
     const rtxt = await rp.locator('main').innerText(); assert.match(rtxt, /comparison report[\s\S]*Main changes from A to B[\s\S]*BUILDING[\s\S]*Gross floor area[\s\S]*Change %/i); await rp.close();
-    console.log('PASS Compare sketches › Generate report: two sketches chosen, a report with both, every figure, the change and notes');
+    console.log('PASS Compare versions › Generate report: two sketches chosen, a report with both, every figure, the change and notes');
     // the sheet's grip: drag up to enlarge, down to close
     const sh = p.locator('.sp-sheet:not(.sp-datasheet)'), g = sh.locator('.sp-sk-grip'), gb = await g.boundingBox(), h0 = (await sh.boundingBox()).height;
     await p.mouse.move(gb.x + gb.width / 2, gb.y + 8); await p.mouse.down(); await p.mouse.move(gb.x + gb.width / 2, gb.y - 120, { steps: 6 }); await p.mouse.up();

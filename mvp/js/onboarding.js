@@ -12,7 +12,7 @@ export function steps(p) {
     { id: 'building', t: 'Draw or import a building', done: building, href: `#/workspace/${p.id}` },
     { id: 'version', t: 'Save a design version', done: p.versions.length >= 2 || (p.versions.length >= 1 && building), href: `#/workspace/${p.id}` },
     { id: 'study', t: 'Run a study', done: p.runs.length > 0, href: `#/workspace/${p.id}?add=sim` },   // opens Add simulation in the Workspace (2026-11-12)
-    { id: 'compare', t: 'Compare two options', done: ranOn.size >= 2, href: `#/workspace/${p.id}` },   // opens Compare sketches (workspace-chrome.js)
+    { id: 'compare', t: 'Compare two options', done: ranOn.size >= 2, href: `#/workspace/${p.id}` },   // opens Compare versions (workspace-chrome.js)
     { id: 'report', t: 'Export a report', done: (p.reportRevisions || []).length > 0 || (p.exports || []).length > 0, href: `#/project/${p.id}` },   // the project report, or a PDF, slides or ZIP from the Workspace Export list
   ];
 }

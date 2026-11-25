@@ -165,9 +165,9 @@ function overview(app, p) {
     for (const b of $$('[data-cancel]', app)) b.onclick = () => { batch?.dispose(); batch = null; cancelGroup(S, p, b.dataset.cancel); draw(); };
   }
   // ---- 10
-  function compare() {   // 2026-11-01: comparing lives in the Workspace (Compare sketches); the old comparison table is retired
+  function compare() {   // 2026-11-01: comparing lives in the Workspace (Compare versions); the old comparison table is retired
     const box = $('#pjCompareBody', app);
-    box.innerHTML = `<p class="note">Compare the project's sketches side by side, with every figure and the saved study results, in the Workspace. Generate report there makes a comparison report of two sketches.</p><a class="btn accent" href="#/workspace/${esc(p.id)}" id="pjOpenCompare">Open Compare sketches</a>`;
+    box.innerHTML = `<p class="note">Compare the project's saved versions side by side, with every figure and the saved study results, in the Workspace. Generate report there makes a comparison report of two versions.</p><a class="btn accent" href="#/workspace/${esc(p.id)}" id="pjOpenCompare">Open Compare versions</a>`;
     $('#pjOpenCompare', app).onclick = () => { try { sessionStorage.setItem('pc-ws-open-compare', '1'); } catch (e) { } };
   }
   // ---- 11

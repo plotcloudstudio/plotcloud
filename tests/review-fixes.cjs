@@ -1,7 +1,7 @@
 // Product review fixes (2026-11-24), a new empty project at 1440×900, a 9 × 6 m room drawn in Plan Studio with one window:
-// 1 · Compare sketches gives the drawn building's floor area and footprint (it read 0 m² when the building had no masses);
+// 1 · Compare versions gives the drawn building's floor area and footprint (it read 0 m² when the building had no masses);
 // 2 · Daylight on a level with no windows says so, instead of a silent 0 %;
-// 3 · a Daylight result saved from the 2D plan keeps a picture for Compare sketches;
+// 3 · a Daylight result saved from the 2D plan keeps a picture for Compare versions;
 // 4 · the minimised "Getting started" button no longer covers the result panel on the right.
 const { chromium } = require('playwright'), assert = require('node:assert/strict');
 (async () => {
@@ -28,16 +28,16 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // a level above with a room and no windows
     await p.click('button[aria-label="Add level above"], button[title="Add level above"]'); await p.waitForTimeout(2000); await room(); await fr.evaluate(() => window.__ws.tool({ tool: 'select' })); await p.waitForTimeout(1500);
     const L2 = await fr.evaluate(() => window.__st.LV); assert.notEqual(L2, L1.lv, 'on the new level');
-    // 1 · Compare sketches: floor area of the drawn building
+    // 1 · Compare versions: floor area of the drawn building
     await p.click('button[aria-label="Versions"], button[title="Versions"]'); await p.waitForTimeout(1500);
     const rows = await p.evaluate(() => [...document.querySelectorAll('.sp-sk-row')].filter((r) => /(Gross floor area|Footprint) \(/.test(r.querySelector('.sp-sk-lab')?.innerText.trim() || ''))
       .map((r) => r.querySelector('.sp-sk-lab').innerText.trim().replace(/\s+/g, ' ') + ' = ' + (r.children[1]?.innerText.trim() || '?')));
     await p.screenshot({ path: out + '/review-compare.png' });
     const num = (s) => +((s || '').match(/= ([\d,.]+)\s*m²/) || [0, '0'])[1].replace(/,/g, '');
     const gfa = rows.find((r) => /Gross floor area/.test(r)), fp = rows.find((r) => /Footprint/.test(r));
-    assert(gfa && fp, 'Compare sketches rows: ' + JSON.stringify(rows));
+    assert(gfa && fp, 'Compare versions rows: ' + JSON.stringify(rows));
     assert(num(gfa) > 90 && num(fp) > 45 && num(gfa) > num(fp), 'two drawn floors of about 54 m²: ' + JSON.stringify(rows));
-    console.log(`PASS Compare sketches reads the drawn floors: "${gfa}" · "${fp}"`);
+    console.log(`PASS Compare versions reads the drawn floors: "${gfa}" · "${fp}"`);
     await p.keyboard.press('Escape'); await p.evaluate(() => document.querySelector('.cmp-x, [aria-label="Close"]')?.click()); await p.waitForTimeout(600);
     // 2 · Daylight on the level with no windows
     const run = async () => { await p.evaluate(() => document.querySelector('.sp-studycard [data-st=run]')?.click()); await p.waitForFunction(() => { const s = window.__wsStudy.state(); return !s.busy && (s.res || s.err); }, null, { timeout: 600000 }); await p.waitForTimeout(1200); return p.evaluate(() => ({ err: window.__wsStudy.state().err, res: !!window.__wsStudy.state().res })); };
