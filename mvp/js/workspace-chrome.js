@@ -29,7 +29,7 @@ import * as WAY from './interior/wayfinding.js?v=sims-20261121-1';
 import * as WFS from './interior/wayfinding-signage.js?v=batch3-20261124-1';
 import * as WUI from './wayfinding-ui.js?v=batch3-20261124-1';
 import * as WK from './wayfinding-walk.js?v=batch3-20261124-1';
-import * as SA from './site-access-ui.js?v=veh-20261125-2';
+import * as SA from './site-access-ui.js?v=rev-20261125-1';
 import * as SSX from './interior/spacesyntax.js?v=sims-20261121-1';
 import * as ISO from './interior/isovist.js?v=sims-20261121-1';
 import * as VWS from './interior/views.js?v=sims-20261121-1';
@@ -382,7 +382,7 @@ export function mountChrome(app, api) {
       return; }
     runEl.hidden = true; if (RUN.title != null) { document.title = RUN.title; RUN.title = null; } }
   // ---- the export list (2026-11-09): views, series and sections kept for the report, under Add simulation; see export-list.js
-  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=round2-20261124-1'));
+  let XLM = null; const xlMod = () => (XLM ||= import('./export-list.js?v=rev-20261125-1'));
   const XL = { list: { title: '', items: [] }, busy: '' };
   xlMod().then((m) => m.loadList(p.id)).then((l) => { XL.list = l; xlBadge(); }).catch(() => { });
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
