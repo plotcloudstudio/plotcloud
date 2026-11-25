@@ -3,14 +3,14 @@ id: report-vehicle-swept-path
 sim: vehicle-swept-path
 published: 2026-11-21
 publishedText: 21 November 2026
-auditText: 25 November 2026
+auditText: 26 November 2026
 title: Vehicle swept paths from a kinematic bicycle model with pure-pursuit steering and computed trailer off-tracking
 type: Method and data report
 summary: How the Vehicle swept path study drives a design vehicle along a drawn route with a rate-limited pure-pursuit steering controller, computes the off-tracking of trailers, and checks clearance to buildings and other obstacles. The report gives the equations and their sources, reports exact checks against analytical turning geometry, and flags the vehicle presets as typical dimensions that must be checked against the design vehicle of the jurisdiction.
 image: img/home/vehicle-swept-path.jpg
 imageAlt: The swept envelope of a truck turning into a service yard, with wheel tracks and clearance warnings
-code: mvp/js/swept-path.js, mvp/js/vehicles.js, mvp/js/route-plan.js, mvp/js/site-routes.js, mvp/js/vehicle-mesh.js, mvp/js/site-access-ui.js, mvp/js/workspace-chrome.js, mvp/js/export-list.js
-tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs, tests/site-routes.test.mjs, tests/vehicle-path-auto.cjs, tests/vehicle-reverse-sheet.cjs
+code: mvp/js/swept-path.js, mvp/js/vehicles.js, mvp/js/route-plan.js, mvp/js/route-worker.js, mvp/js/route-plan-async.js, mvp/js/site-routes.js, mvp/js/vehicle-mesh.js, mvp/js/site-access-ui.js, mvp/js/workspace-chrome.js, mvp/js/export-list.js
+tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs, tests/site-routes.test.mjs, tests/vehicle-path-auto.cjs, tests/vehicle-reverse-sheet.cjs, tests/vehicle-worker-semi.cjs
 keywords:
 - Swept path analysis
 - Off-tracking
@@ -73,7 +73,23 @@ For rigid vehicles the planner may also drive backwards. Each arc can be driven 
 - **Turn round.** The vehicle faces the other way in the other half of the same road, staying within the road's width. Ground outside the road corridor is blocked rather than merely costed. Where a U-turn does not fit, the search backs and fills: a three-point turn, or more moves where the road is narrower.
 - **Backed up to a door.** The vehicle drives forward past the door to a staging point parallel to the wall, then reverses in. The stop is square to the wall with the rear 0.5 m from it, as at a loading dock.
 
-A path that reverses is driven as planned: arc after arc, indexed by the distance driven, stopping at each change of direction, reversing at 4 km/h. It starts from the heading it was planned from. Following such a path with pure pursuit instead turned a few degrees of heading error at a cusp into nearly a metre of drift while reversing, so the planned path is what the swept envelope and clearances are computed on. Articulated vehicles are not reversed in this version.
+A path that reverses is driven as planned: arc after arc, indexed by the distance driven, stopping at each change of direction, reversing at 4 km/h. It starts from the heading it was planned from. Following such a path with pure pursuit instead turned a few degrees of heading error at a cusp into nearly a metre of drift while reversing, so the planned path is what the swept envelope and clearances are computed on.
+
+### 2.6a. Backing up a semi-trailer (added 26 November 2026)
+
+Going backwards, a trailer is unstable: its angle to the tractor grows unless the driver keeps correcting [10]. A search that tries moves in reverse therefore finds very few that keep the trailer in check, and in trials it rarely reached a dock. The back-up is planned the other way round:
+
+1. **The pull-out.** The planner drives forward out of the door, starting square to the wall with the trailer in line, to a staging pose: on the road past the door in the lane (at 1, 1.5, 2 and 3 × (R + tractor wheelbase + trailer wheelbase) along it), or in the yard as for a rigid vehicle. While pulling out, the trailer is kept within 0.6 × its articulation limit (42° for the 70° presets). Then the pull-out runs straight for one trailer wheelbase so the trailer comes nearly into line.
+2. **The approach.** The planner drives forward from the road to a point in line with the end of that straight, facing the same way. Two opposite arcs (a lane change at half the vehicle's least curvature) bring it exactly onto the line, and it runs straight on to the stop.
+3. **The reverse.** At the stop the vehicle changes direction and drives the pull-out backwards. The trailer equation of section 2.3 is the same with the sign of the step changed, so driving the same tractor path backwards gives the same trailer angles in reverse order.
+
+Replayed, the tractor follows the planned arcs as for a rigid vehicle. Going backwards, the trailer's angle follows the angle planned, because a driver steers to keep the trailer on the line. Left to the equation alone, a difference of a fraction of a degree grows by about e^(d/L_t) over d metres reversing. The trailer's angle at the stop can differ from the one the reverse starts from by a few degrees (0.35° to 4.7° in the trials). That difference is taken out over the first 3 m. A route drawn by hand that reverses an articulated vehicle is still refused: pure pursuit cannot back a trailer.
+
+Where no back-up is found, the result says how much room there is square in front of the door, to the first obstacle, against the vehicle's length.
+
+### 2.6b. Planning in the background (added 26 November 2026)
+
+The route search runs in a Web Worker (route-worker.js), the same code as on the page and in the Node tests. The card shows how many positions have been tried. Stop in the run bar, or in Try every vehicle, ends the worker at once. Where a worker cannot start, the same search runs on the page instead. The drive along the found path, the envelope and the clearances are computed on the page, as before.
 
 ### 2.7. The vehicle access sheet (added 25 November 2026)
 
@@ -123,6 +139,11 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 | Reversing speed | 4 km/h | Engine choice: walking pace | Assumption |
 | Staging point to back up | Past the door by R + wheelbase, out from the wall by the rear overhang + 0.5 m + R + the width (R = 1.25 × R_min) | Engine choice | Geometric setting: room to reverse in turning |
 | Stop backed up to a door | Square to the wall, rear 0.5 m from it | Engine choice | Assumption; to be set by the project |
+| Articulation backing a semi-trailer | At most 0.6 × the articulation limit (42° of 70°) | Engine choice | Assumption: drivers keep the trailer straighter when backing; not from a standard |
+| Reversing cost, articulated vehicle | 3 × the cost of driving forward, per metre (rigid: 2 ×) | Engine choice | Numerical setting: reverse only where it must |
+| Semi-trailer staging poses | In the lane past the door at 1, 1.5, 2 and 3 × (R + tractor wheelbase + trailer wheelbase), then the yard staging point; the least driving kept | Engine choice | Geometric setting |
+| Straight before reversing | One trailer wheelbase; the lane change onto it at 0.5 × the least curvature | Engine choice | Numerical setting: the trailer nearly in line where the reverse starts |
+| Trailer angle difference at the stop | Taken out over the first 3 m reversing | Engine choice | Assumption: the driver's correction |
 
 ## 4. Verification and validation status
 
@@ -162,17 +183,29 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 The reversing checks (25 November 2026):
 
 - `tests/site-routes.test.mjs` passed its two new checks.
-  - **Backing up to a door:** a box truck backs up in 2 moves (16.0 m reversing). It is driven as planned, with no tracking error, and ends 0.93 m and 14° from the stop asked, with no collision. A semi-trailer is not reversed.
+  - **Backing up to a door:** a box truck backs up in 2 moves (16.0 m reversing). It is driven as planned, with no tracking error, and ends 0.93 m and 14° from the stop asked, with no collision. 
   - **Turning round on a 12 m road:** the box truck makes a three-point turn (3 moves, 4.0 m reversing). Its body stays within 5.61 m of the centreline, against 6 m to the road edge.
+- The semi-trailer checks (26 November 2026), in `tests/site-routes.test.mjs`:
+  - the WB-20-type semi-trailer backs up to the door of the test site: 2 moves, 89.4 m reversing, the trailer at most 41.2° against the 42° allowed, square to the door within 2°, tracking error under 0.1 m, no collision;
+  - a hand-drawn route that reverses it is refused with its reason.
+- **Semi-trailer trials** (a 40 × 20 m building with a door in its south wall, a 12 m street to the south, with the same code):
+  - with the street 46 m from the wall, the semi backs up in 1.6 s, the trailer at most 41.5°;
+  - with it 60 m away, in 6.3 s; 38 m away, in 16 s;
+  - between side walls 43 m apart, the same as without them;
+  - the STAA design vehicle found no back-up to that door within the search limit.
 - **Narrower roads** (trials with the same code):
   - the box truck needs 5 moves on a 10 m road;
   - a van needs 7 moves on 9 m;
   - a car needs 5 moves on 7 m;
   - a box truck cannot turn round on 9 m while keeping 0.3 m clear of the edges.
 - `tests/vehicle-reverse-sheet.cjs` passed in the Workspace on the hospital example:
-  - the box truck backs up to the goods door (2 moves, feasible), and 10 of the 12 presets can; the two semi-trailers report that they are not reversed;
+  - the box truck backs up to the goods door (2 moves, feasible), and 10 of the 12 presets can. The two semi-trailers find no back-up there: in front of the door there are 26.3 m to the houses to the north, for a vehicle 22.7 m long;
   - a van turns round on the 9 m hospital drive in 7 moves;
   - the vehicle access sheet goes into the report PDF: 5 pages, the sheet's plan drawing and its page of tables.
+- `tests/vehicle-worker-semi.cjs` passed in the Workspace on the hospital example:
+  - the semi-trailer's search ran in the worker, the card counting the positions tried (up to 60,000);
+  - a 50 ms timer on the page was at most 28 ms late during the search;
+  - Stop ended the search in 13 ms with no error, and Stop in Try every vehicle ended it after the vehicle under way.
 
 ## 5. Discussion
 
@@ -187,11 +220,11 @@ The reversing checks (25 November 2026):
 
 **Driver model.** Pure pursuit with a look-ahead of one wheelbase cuts corners slightly, as drivers do; the corner rounding at 1.25 R_min reflects a driver who does not turn at full lock. Swept paths from commercial tools use similar conventions, and results can differ by tens of centimetres depending on them.
 
-**Routes found from the site.** A found route is a plausible way in, not the only one and not a regulation one. The roads are centrelines with a width: kerbs, the paved edge, lanes, one-way streets and turn restrictions are not known, so a path may cut a corner a kerb would stop. Driveways and loading areas that are not mapped are only buildings' surroundings. The planner reverses rigid vehicles only: an articulated vehicle cannot be backed into a bay here. Where the search fails, it says how close it came; drawing the route remains possible for any case the site data cannot describe.
+**Routes found from the site.** A found route is a plausible way in, not the only one and not a regulation one. The roads are centrelines with a width: kerbs, the paved edge, lanes, one-way streets and turn restrictions are not known, so a path may cut a corner a kerb would stop. Driveways and loading areas that are not mapped are only buildings' surroundings. Backing a semi-trailer (since 26 November 2026) is a skilled manoeuvre. The path shown is one the vehicle can follow kinematically, with the trailer kept within 0.6 × its limit, and it assumes a driver who keeps the trailer on the line; the driver's view, mirrors and corrections are not modelled. Where the search fails, it says how close it came; drawing the route remains possible for any case the site data cannot describe.
 
 **What would deepen it.**
 - Kerb and paved-edge lines (from survey DXF), so the wheels must stay on the pavement while the body may overhang a low kerb, as commercial swept-path tools check.
-- Reversing articulated vehicles (rigid vehicles reverse since 25 November 2026), and a finish that lands exactly on the stop (the search stops within 1 m and 17° of it, and says by how much).
+- A finish that lands exactly on the stop for rigid vehicles (the search stops within 1 m and 17° of it, and says by how much), and semi-trailers backing up where the room in front of the door is close to the vehicle's length.
 - Overhead clearance against canopies and parking entrances, and grades from the terrain, now that each vehicle has a height.
 - Design vehicles checked dimension by dimension against AASHTO and TAC.
 
@@ -210,3 +243,4 @@ The Vehicle swept path study uses standard kinematic models and a standard steer
 7. AASHTO, Errata for A Policy on Geometric Design of Highways and Streets (2004 edition), June 2004: Exhibit 2-1 (Metric), Design Vehicle Dimensions, overall heights. [downloads.transportation.org](https://downloads.transportation.org/Errata-GDHS-4.pdf)
 8. D. Dolgov, S. Thrun, M. Montemerlo, J. Diebel, Path planning for autonomous vehicles in unknown semi-structured environments, The International Journal of Robotics Research 29 (5) (2010) 485–501. [doi:10.1177/0278364909359210](https://doi.org/10.1177/0278364909359210)
 9. OpenStreetMap contributors, map data available under the Open Database License (ODbL). [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)
+10. C. Altafini, A. Speranzon, B. Wahlberg, A feedback control scheme for reversing a truck and trailer vehicle, IEEE Transactions on Robotics and Automation 17 (6) (2001) 915–922. [doi:10.1109/70.976025](https://doi.org/10.1109/70.976025)

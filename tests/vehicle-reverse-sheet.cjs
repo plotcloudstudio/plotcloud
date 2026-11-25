@@ -1,6 +1,6 @@
 // Reversing, turning round and the vehicle access sheet (2026-11-25), hospital example at 1440×900:
 // a box truck backed up to the goods door (the planner reverses: the result counts the moves and the metres reversing, the playback
-// says when it reverses); Try every vehicle says why an articulated vehicle cannot back in; "Turn round" on the hospital drive, kept
+// says when it reverses); Try every vehicle backs up the semi-trailer too (or says how much room the door has); "Turn round" on the hospital drive, kept
 // within the road, backs and fills; the vehicle access sheet goes to the Export list and into the report PDF with its plan drawing and
 // its tables on a page of their own (route and moves, every vehicle, conflicts, vehicle data); no page errors.
 const { chromium } = require('playwright'), assert = require('node:assert/strict'), fs = require('fs'), { execFileSync } = require('child_process');
@@ -30,11 +30,11 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     assert.match(await p.locator('.sp-studycard .sp-tll').innerText(), /reversing/, 'the playback says it reverses');
     await p.screenshot({ path: out + '/vehicle-backin.png' });
     console.log(`PASS backed up to the door: ${R['Found route']}; ${R['Moves']}; ${R['Status']}; the playback says "reversing"`);
-    // every vehicle: the articulated ones are not reversed, and say so
+    // every vehicle: the semi-trailer is backed up too, or told how much room there is in front of the door
     await p.click('.sp-studycard [data-va=tryall]'); await p.waitForFunction(() => document.querySelector('.sp-studycard [data-va=tryallcsv]'), null, { timeout: 900000 });
     const all = await p.$$eval('.sp-studycard .sp-vehall tbody tr', (t) => t.map((r) => ({ name: r.cells[0].innerText, res: r.cells[2].innerText, why: r.cells[2].title })));
-    const semi = all.find((r) => /Semi-trailer/.test(r.name)); assert(semi && /No route/.test(semi.res) && /articulated/.test(semi.why), 'the semi-trailer: ' + JSON.stringify(semi));
-    console.log(`PASS every vehicle backed up: ${all.filter((r) => /Feasible/.test(r.res)).length} of ${all.length} make it; the semi-trailer: "${semi.why.slice(0, 80)}…"`);
+    const semi = all.find((r) => /Semi-trailer/.test(r.name)); assert(semi && !/not reversed/.test(semi.why) && (/Feasible|Infeasible|Not verified/.test(semi.res) || /in front of the door there are [\d.]+ m/.test(semi.why)), 'the semi-trailer is backed up, or told how much room there is: ' + JSON.stringify(semi));   // (2026-11-26) articulated vehicles reverse too
+    console.log(`PASS every vehicle backed up: ${all.filter((r) => /Feasible/.test(r.res)).length} of ${all.length} make it; the semi-trailer: ${semi.res} ${semi.why.slice(-90)}`);
     // 2 · the vehicle access sheet into the report
     const badge = () => p.evaluate(() => { const e = document.querySelector('.sp-xlb .sp-badge'); return e && !e.hidden ? +e.textContent : 0; });
     await p.click('.sp-studycard [data-va=sheet]'); await p.waitForFunction(() => +document.querySelector('.sp-xlb .sp-badge')?.textContent >= 1, null, { timeout: 120000 }); assert.equal(await badge(), 1);

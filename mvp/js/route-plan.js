@@ -62,7 +62,7 @@ class Heap { constructor() { this.a = []; } push(x) { const a = this.a; a.push(x
 export function planAround(v, route, obstacles, o = {}) {
   const P = (route.pts || []).map((p) => [+p[0], +p[1]]); if (P.length < 2) return { ok: false, error: 'Draw at least two points' };
   if ((route.reverse || []).some(Boolean)) return { ok: false, error: 'a route with reversing is driven as drawn' };
-  const W = v.width, Lw = v.wheelbase, art = v.kind === 'artic' && v.trailer, T = art ? v.trailer : null, canRev = !!o.reverse && !art;   // an articulated vehicle drives forward only here
+  const W = v.width, Lw = v.wheelbase, art = v.kind === 'artic' && v.trailer, T = art ? v.trailer : null, canRev = !!o.reverse;   // (2026-11-26) articulated vehicles reverse too, the trailer kept straighter (below)
   const R = rMin(v) * 1.1, kmax = 1 / R;   // a 10 % margin on the least radius, so the driven vehicle can follow what is planned
   // the area searched: the route and the obstacles near it, with room to go round
   const pad = Math.max(25, 2 * v.length + (T ? T.wheelbase + T.rearOverhang : 0));
@@ -70,7 +70,7 @@ export function planAround(v, route, obstacles, o = {}) {
   const box = { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad }, span = Math.max(box.x1 - box.x0, box.y1 - box.y0), res = Math.max(0.15, Math.min(0.5, span / 900));
   const near = obstacles.filter((ob) => { if (!ob.poly || ob.poly.length < 3) return false; let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const p of ob.poly) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); } return a < box.x1 + 5 && c > box.x0 - 5 && b < box.y1 + 5 && d > box.y0 - 5; });   // its extent meets the area (a long wall with its ends far away counts)
   const roadAt = roadMask(o.roads, box, o.roadsOnly ? res : Math.max(res, 0.5)),   /* kept within the roads: the edge at the grid's own resolution */ offCost = o.roads && o.roads.length && !o.roadsOnly ? 0.6 : 0;
-  const G = grid(near, box, res, o.roadsOnly && o.roads && o.roads.length ? (x, y) => !roadAt(x, y) : null), exact = !!(o.reverse || o.roadsOnly), shape = exact ? rectSamples : (b, f, w) => circles(b, f, w).map(([off, r]) => [off, 0, r]), body = shape(v.rearOverhang, Lw + v.frontOverhang, W), tbody = art ? shape(T.wheelbase + T.rearOverhang, T.frontOverhang, T.width || W) : null;   // tight manoeuvres: the exact outline; else circles (as before)
+  const G = grid(near, box, res, o.roadsOnly && o.roads && o.roads.length ? (x, y) => !roadAt(x, y) : null), exact = !!(o.reverse || o.roadsOnly || o.exact), shape = exact ? rectSamples : (b, f, w) => circles(b, f, w).map(([off, r]) => [off, 0, r]), body = shape(v.rearOverhang, Lw + v.frontOverhang, W), tbody = art ? shape(T.wheelbase + T.rearOverhang, T.frontOverhang, T.width || W) : null;   // tight manoeuvres: the exact outline; else circles (as before)
   const tryWith = (clear) => {
     const free = (x, y, th, phi) => { const c = Math.cos(th), s = Math.sin(th); for (const [lx, ly, r] of body) { if (G.at(x + c * lx - s * ly, y + s * lx + c * ly) < r + clear) return false; }
       if (art) { const hx = x + c * (T.hitch || 0), hy = y + s * (T.hitch || 0), cp = Math.cos(phi), sp = Math.sin(phi); for (const [lx, ly, r] of tbody) if (G.at(hx + cp * lx - sp * ly, hy + sp * lx + cp * ly) < r + clear) return false; }
@@ -93,22 +93,26 @@ export function planAround(v, route, obstacles, o = {}) {
     const leg = (s0, goal, last) => {
       if (!free(s0.x, s0.y, s0.th, s0.phi)) return { error: 'the start of the route is inside or against an obstacle' };
       const H = holo(goal), hAt = (x, y) => { const i = Math.floor((x - box.x0) / cs), j = Math.floor((y - box.y0) / cs); const h = i < 0 || j < 0 || i >= gx || j >= gy ? Infinity : H[j * gx + i]; return Math.max(Math.hypot(goal[0] - x, goal[1] - y), Number.isFinite(h) ? h : 1e6); };
-      const key = (x, y, th, dir = 1) => ((Math.floor((y - box.y0) / cs) * gx + Math.floor((x - box.x0) / cs)) * NH + (Math.floor(wrapA(th) / TAU * NH) % NH)) * 2 + (dir < 0 ? 1 : 0);
+      // the state's key: cell, heading and direction; for a semi-trailer that may reverse (2026-11-26) also the trailer's angle in 10° bins,
+      // so a pose reached with the trailer at another angle is not thrown away
+      const AB = canRev && art ? 15 : 1, abin = (th, phi) => (AB > 1 ? Math.max(0, Math.min(AB - 1, Math.floor((Math.atan2(Math.sin(th - phi), Math.cos(th - phi)) + 75 * Math.PI / 180) / (10 * Math.PI / 180)))) : 0);
+      const key = (x, y, th, dir = 1, phi = th) => (((Math.floor((y - box.y0) / cs) * gx + Math.floor((x - box.x0) / cs)) * NH + (Math.floor(wrapA(th) / TAU * NH) % NH)) * 2 + (dir < 0 ? 1 : 0)) * AB + abin(th, phi);
       const minLeg = 1.5, hTh = () => 0;   // the turning still to do toward the final heading
-      const REV = 2.0, SWITCH = Math.max(3 * step, v.wheelbase + v.frontOverhang + v.rearOverhang);   // reversing costs twice as much a metre, and each change of direction as much as driving the vehicle's own length
+      const REV = art ? 3.0 : 2.0, ARTREV = (T ? (T.maxArticulation || 70) : 70) * 0.6 * Math.PI / 180, SWITCH = Math.max(3 * step, v.wheelbase + v.frontOverhang + v.rearOverhang);   // reversing costs 2x a metre (a semi-trailer 3x, its articulation kept within 0.6 x the maximum); a change of direction costs the vehicle's own length
       const nodes = [{ ...s0, g: 0, k: 0, dir: s0.dir || 0, par: -1, seg: null }], best = new Map([[key(s0.x, s0.y, s0.th), 0]]), hp = new Heap(); hp.push([hAt(s0.x, s0.y), 0]);
       const maxN = o.maxExpand || 120000, gH = last && o.goalHeading != null ? o.goalHeading : null, gTol = o.goalTol || 0.2; let found = -1, exp = 0, close = 0, closeD = Infinity;
       const headOk = (th) => gH == null || Math.abs(Math.atan2(Math.sin(th - gH), Math.cos(th - gH))) <= gTol;
       while (hp.size && exp < maxN) { const [, ni] = hp.pop(), n = nodes[ni]; if (n.closed) continue; n.closed = true; exp++;
+        if (o.onProgress && exp % 2000 === 0) o.onProgress(exp, maxN);   /* (2026-11-26) for the worker's progress */
         const dn = Math.hypot(goal[0] - n.x, goal[1] - n.y); if (dn < closeD) { closeD = dn; close = ni; }
         if (dn < tol && headOk(n.th)) { found = ni; break; }
         for (const dir of canRev ? [1, -1] : [1]) for (const k of ks) { if (n.dir && dir !== n.dir && (n.leg || 0) < minLeg) continue; /* (2026-11-25) a leg at least minLeg long before the next change of direction */ let x = n.x, y = n.y, th = n.th, phi = n.phi, ok = true; const pts = []; const ds = step / sub * dir;   // dir −1: backwards along the heading
           for (let q = 0; q < sub; q++) { if (art) phi += (Math.sin(th - phi) + (T.hitch || 0) * k * Math.cos(th - phi)) / T.wheelbase * ds;
             const thm = th + k * ds / 2; x += Math.cos(thm) * ds; y += Math.sin(thm) * ds; th += k * ds;
-            if (art && Math.abs(Math.atan2(Math.sin(th - phi), Math.cos(th - phi))) > (T.maxArticulation || 70) * Math.PI / 180) { ok = false; break; }
-            if (!free(x, y, th, phi)) { ok = false; break; } pts.push([x, y, k, dir]); }
+            if (art && Math.abs(Math.atan2(Math.sin(th - phi), Math.cos(th - phi))) > (dir < 0 ? ARTREV : o.artMax ?? (T.maxArticulation || 70) * Math.PI / 180)) { ok = false; break; }
+            if (!free(x, y, th, phi)) { ok = false; break; } pts.push([x, y, k, dir, phi]); }
           if (!ok) continue;
-          const g = n.g + step * (dir < 0 ? REV : 1) * (1 + 0.15 * Math.abs(k) / kmax + (offCost && !roadAt(x, y) ? offCost : 0)) + (k !== n.k ? 0.25 * step * Math.abs(k - n.k) / kmax : 0) + (n.dir && dir !== n.dir ? SWITCH : 0), kk = key(x, y, th, dir), prev = best.get(kk);
+          const g = n.g + step * (dir < 0 ? REV : 1) * (1 + 0.15 * Math.abs(k) / kmax + (offCost && !roadAt(x, y) ? offCost : 0)) + (k !== n.k ? 0.25 * step * Math.abs(k - n.k) / kmax : 0) + (n.dir && dir !== n.dir ? SWITCH : 0), kk = key(x, y, th, dir, phi), prev = best.get(kk);
           if (prev !== undefined && nodes[prev].g <= g) continue;
           nodes.push({ x, y, th, phi, g, k, dir, leg: dir === n.dir || !n.dir ? (n.leg || 0) + step : step, par: ni, seg: pts }); best.set(kk, nodes.length - 1); hp.push([g + 1.05 * hAt(x, y) + hTh(th), nodes.length - 1]); } }
       if (found < 0) { const c = nodes[close]; return { error: gH != null && closeD < tol ? 'the vehicle reaches the end but cannot end facing the way asked: not enough room to turn' : exp >= maxN ? 'no way round was found within the search limit' : 'no way round: the obstacles leave no gap the vehicle can pass', closest: c ? [c.x, c.y] : null, gap: closeD }; }
@@ -117,21 +121,21 @@ export function planAround(v, route, obstacles, o = {}) {
       // to the point itself in a straight line when the last pose is near it and the line is clear
       const e = chain.at(-1), dg = Math.hypot(goal[0] - e.x, goal[1] - e.y), heading = Math.atan2(goal[1] - e.y, goal[0] - e.x);
       if (dg > 0.05 && !exact && (e.dir || 1) > 0 && Math.abs(Math.atan2(Math.sin(heading - e.th), Math.cos(heading - e.th))) < (dg < 1.2 ? 0.9 : 0.35) && headOk(heading)) { /* the last metre or so straight to the point */ const m = Math.ceil(dg / 0.25); let okL = true; const extra = [];
-        for (let q = 1; q <= m; q++) { const x = e.x + (goal[0] - e.x) * q / m, y = e.y + (goal[1] - e.y) * q / m; if (!free(x, y, heading, e.phi)) { okL = false; break; } extra.push([x, y, 0, 1]); }
+        for (let q = 1; q <= m; q++) { const x = e.x + (goal[0] - e.x) * q / m, y = e.y + (goal[1] - e.y) * q / m; if (!free(x, y, heading, e.phi)) { okL = false; break; } extra.push([x, y, 0, 1, e.phi]); }
         if (okL) { pts.push(...extra); return { pts, end: { x: goal[0], y: goal[1], th: heading, phi: e.phi, dir: 1 }, exp }; } }
       void last; return { pts, end: { x: e.x, y: e.y, th: e.th, phi: e.phi, dir: e.dir }, exp }; };
     const moved = [], Q = P.map((p, i) => { const q = nearestFree(p); if (q && q !== p) moved.push({ i, from: p, to: q, d: Math.hypot(q[0] - p[0], q[1] - p[1]) }); return q; });
     const bad = Q.findIndex((q) => !q); if (bad >= 0) return { ok: false, error: `point ${bad + 1} of the route is ${bad === 0 ? 'where' : 'where'} the vehicle cannot stand, with no free place within 8 m` };
     const th0 = o.startHeading != null ? o.startHeading : Math.atan2(Q[1][1] - Q[0][1], Q[1][0] - Q[0][0]); let st = { x: Q[0][0], y: Q[0][1], th: th0, phi: th0 };
     if (!free(st.x, st.y, st.th, st.phi)) { for (let a = 1; a <= 36 && !free(st.x, st.y, st.th, st.phi); a++) st.th = th0 + (a % 2 ? 1 : -1) * Math.ceil(a / 2) * TAU / 72; st.phi = st.th; }   // facing a little off the line where the body fits
-    const all = [[Q[0][0], Q[0][1], 0, 1]], heading0 = st.th; let exp = 0;
+    const all = [[Q[0][0], Q[0][1], 0, 1, st.phi]], heading0 = st.th; let exp = 0;
     for (let i = 1; i < Q.length; i++) { const r = leg(st, Q[i], i === Q.length - 1); if (r.error) return { ok: false, error: r.error, leg: i, closest: r.closest, gap: r.gap }; all.push(...r.pts); st = r.end; exp += r.exp; }
     // every ~0.1 m along it, with the curvature
     if (all.length > 1) all[0][3] = all[1][3] || 1;
-    const path = [{ p: [all[0][0], all[0][1]], k: 0, dir: all[0][3] || 1 }]; let len = 0, rlen = 0, cusps = 0;
-    for (let i = 1; i < all.length; i++) { const a = all[i - 1], b = all[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d < 1e-6) continue; len += d; const dir = b[3] || 1; if (dir < 0) rlen += d; if (dir !== path.at(-1).dir) cusps++; path.push({ p: [b[0], b[1]], k: b[2], dir }); }
+    const path = [{ p: [all[0][0], all[0][1]], k: 0, dir: all[0][3] || 1, phi: all[0][4] }]; let len = 0, rlen = 0, cusps = 0;
+    for (let i = 1; i < all.length; i++) { const a = all[i - 1], b = all[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d < 1e-6) continue; len += d; const dir = b[3] || 1; if (dir < 0) rlen += d; if (dir !== path.at(-1).dir) cusps++; path.push({ p: [b[0], b[1]], k: b[2], dir, phi: b[4] }); }
     const onRoad = offCost ? path.filter((q) => roadAt(q.p[0], q.p[1])).length / path.length : null;
-    return { ok: true, path, heading0, length: len, reverseLength: rlen, cusps, clearanceUsed: clear, expanded: exp, moved, onRoad, endHeading: st.th };
+    return { ok: true, path, heading0, length: len, reverseLength: rlen, cusps, clearanceUsed: clear, expanded: exp, moved, onRoad, endHeading: st.th, endPhi: st.phi, end: [st.x, st.y] };
   };
   const clear = o.clearance ?? 0.3, first = tryWith(clear); if (first.ok) return first;
   const tight = clear > 0 ? tryWith(0) : first; if (tight.ok) return { ...tight, underClearance: true };
@@ -153,3 +157,51 @@ export function drawnBlocked(v, route, obstacles, clear = 0.3) {
   for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], m = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.2));
     for (let q = 0; q <= m; q++) { const x = a[0] + (b[0] - a[0]) * q / m, y = a[1] + (b[1] - a[1]) * q / m; if (G.at(x, y) < v.width / 2 + clear) return { seg: i, p: [x, y] }; } }
   return null; }
+
+/**
+ * Backing a semi-trailer up to a door (2026-11-26). Searching for the reverse directly rarely succeeds: going backwards the trailer's
+ * angle grows, so very few of the moves tried keep it in check. Going forwards it settles, so the reverse is planned as a drive
+ * forward out of the door (the trailer square to the wall at the start), and then driven the other way. The trailer retraces the same
+ * angles when the same path is driven backwards: the trailer equation is the same with the sign of the step changed.
+ * The drive: forward from the road to a staging pose in line with the end of that pull-out, the stop, then the pull-out backwards.
+ * task { start: { p, heading }, via: [x, y], viaHeading, end: { p, heading } } → as planAround, plus trailerSeam (degrees: how far the
+ * trailer's angle at the stop differs from the one the reverse starts from; the driver takes that out in the first metres).
+ */
+export function planBackIn(v, task, obstacles, o = {}) {
+  const T = v.trailer || { wheelbase: 1e9, hitch: 0 }, kb = 0.5 / (rMin(v) * 1.1), S = v.trailer ? Math.max(6, T.wheelbase) : 6, D = Math.max(10, 2 * v.wheelbase), dsP = 0.1;
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a)), base = { ...o, reverse: false, roadsOnly: false };
+  // the pull-out keeps the trailer within the articulation allowed when reversing (0.6 x the maximum), as the reverse follows it; it is
+  // tried to each staging pose given (on the road past the door first, as a driver docks), the one with the least reversing kept
+  const artMax = (T.maxArticulation || 70) * 0.6 * Math.PI / 180, vias = task.vias || [{ p: task.via, heading: task.viaHeading }]; let po = null, err = null;
+  for (const st of vias) { const r = planAround(v, { pts: [task.end.p, st.p] }, obstacles, { ...base, artMax, exact: true, startHeading: task.end.heading, goalHeading: st.heading, goalTol: 0.15, maxExpand: o.maxExpand || 60000 }); if (o.onProgress) o.onProgress(0, 0);
+    if (r.ok && (!po || r.length < po.length)) po = r; else if (!r.ok && !err) err = r.error; if (po && po.length < 2.5 * Math.hypot(st.p[0] - task.end.p[0], st.p[1] - task.end.p[1])) break; }
+  if (!po) return { ok: false, error: 'no way to back up to the door was found: ' + err, closest: null, gap: NaN };
+  // the pull-out, then straight on: a straight stretch where the reverse begins, the trailer nearly in line
+  const fwd = po.path.map((q) => ({ ...q })), th = po.endHeading; let x = fwd.at(-1).p[0], y = fwd.at(-1).p[1], phi = fwd.at(-1).phi ?? th;
+  for (let d = dsP; d <= S + 1e-9; d += dsP) { x += Math.cos(th) * dsP; y += Math.sin(th) * dsP; phi += Math.sin(th - phi) / T.wheelbase * dsP; fwd.push({ p: [x, y], k: 0, dir: 1, phi }); }
+  const B = [x, y], ux = [Math.cos(th), Math.sin(th)], Pa = [B[0] - ux[0] * D, B[1] - ux[1] * D];
+  const ap = planAround(v, { pts: [task.start.p, Pa] }, obstacles, { ...base, startHeading: task.start.heading, goalHeading: th, goalTol: 0.12 });
+  if (!ap.ok) return { ok: false, error: 'no way from the road to the staging point: ' + ap.error, closest: ap.closest, gap: ap.gap };
+  // onto the line of the reverse: two opposite arcs (a lane change) from where the approach ends, then straight to the stop
+  const A = ap.path.at(-1), loc = (p) => [(p[0] - B[0]) * ux[0] + (p[1] - B[1]) * ux[1], -(p[0] - B[0]) * ux[1] + (p[1] - B[1]) * ux[0]];
+  const [ax, ay] = loc(A.p), eps = wrap(ap.endHeading - th);
+  const run = (k1, l1, k2, l2) => { let px = ax, py = ay, h = eps; const out = []; for (const [k, l] of [[k1, l1], [k2, l2]]) { const m = Math.max(1, Math.round(l / dsP)), st = l / m; for (let i = 0; i < m; i++) { const hm = h + k * st / 2; px += Math.cos(hm) * st; py += Math.sin(hm) * st; h += k * st; out.push([px, py, k]); } } return { out, px, py, h }; };
+  let best = null;
+  if (Math.abs(ay) > 0.02 || Math.abs(eps) > 0.005) for (const sg of [1, -1]) { let prev = null;
+    for (let l1 = 0; l1 <= Math.PI / kb; l1 += 0.1) { const l2 = l1 + eps / (sg * kb); if (l2 < 0) continue; const r = run(sg * kb, l1, -sg * kb, l2);
+      if (prev && Math.sign(prev.py) !== Math.sign(r.py)) { const f = prev.py / (prev.py - r.py), L1 = prev.l1 + (l1 - prev.l1) * f, R2 = run(sg * kb, L1, -sg * kb, L1 + eps / (sg * kb)); if (!best || L1 * 2 < best.len) best = { ...R2, len: 2 * L1 + eps / (sg * kb) }; break; }
+      prev = { py: r.py, l1 }; } }
+  if ((Math.abs(ay) > 0.02 || Math.abs(eps) > 0.005) && !best) return { ok: false, error: 'the approach cannot be brought in line with the reverse', closest: A.p, gap: Math.hypot(ax, ay) };
+  const world = (lx, ly) => [B[0] + lx * ux[0] - ly * ux[1], B[1] + lx * ux[1] + ly * ux[0]], path = ap.path.map((q) => ({ ...q }));
+  let ph = A.phi ?? ap.endHeading, hh = ap.endHeading, last = A.p;
+  const push = (p, k, dir) => { const d = Math.hypot(p[0] - last[0], p[1] - last[1]); if (d < 1e-6) return; const hn = Math.atan2(p[1] - last[1], p[0] - last[0]); if (dir > 0) { ph += (Math.sin(hh - ph) + (T.hitch || 0) * k * Math.cos(hh - ph)) / T.wheelbase * d; hh = hn; } path.push({ p, k, dir, phi: ph }); last = p; };
+  if (best) for (const [lx, ly, k] of best.out) push(world(lx, ly), k, 1);
+  const X = best ? best.px : ax; for (let lx = X + dsP; lx < -1e-9; lx += dsP) push(world(Math.min(0, lx), 0), 0, 1); if (X < 0) push(world(0, 0), 0, 1);   // straight on to the stop
+  const seam = Math.abs(wrap(ph - fwd.at(-1).phi)) * 180 / Math.PI;
+  // the reverse: back along the stop's line to the end of the straight, then the pull-out driven the other way (each point carries the
+  // curvature of the arc that reaches it, so the arcs shift by one)
+  const pre = []; if (X > 0) for (let lx = X - dsP; lx > 1e-9; lx -= dsP) pre.push({ p: world(lx, 0), k: 0, dir: -1, phi: fwd.at(-1).phi });
+  path.push(...pre); for (let j = fwd.length - 2; j >= 0; j--) path.push({ p: fwd[j].p, k: fwd[j + 1].k, dir: -1, phi: fwd[j].phi });
+  let len = 0, rlen = 0, cusps = 0; for (let i = 1; i < path.length; i++) { const d = Math.hypot(path[i].p[0] - path[i - 1].p[0], path[i].p[1] - path[i - 1].p[1]); len += d; if (path[i].dir < 0) rlen += d; if (path[i].dir !== path[i - 1].dir) cusps++; }
+  return { ok: true, path, heading0: ap.heading0, length: len, reverseLength: rlen, cusps, clearanceUsed: Math.max(po.clearanceUsed, ap.clearanceUsed), underClearance: !!(po.underClearance || ap.underClearance), expanded: (po.expanded || 0) + (ap.expanded || 0), moved: [], onRoad: ap.onRoad, endHeading: task.end.heading, trailerSeam: seam, method: 'pull-out reversed' };
+}
