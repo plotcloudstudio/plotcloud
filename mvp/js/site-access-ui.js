@@ -7,6 +7,7 @@ import * as V from './vehicles.js?v=batch3-20261124-1';
 import * as SP from './swept-path.js?v=batch3-20261124-1';
 import * as RP from './route-plan.js?v=batch3-20261124-1';
 import * as VM from './vehicle-mesh.js';
+import * as SR from './site-routes.js';
 import * as PK from './parking.js';
 import * as CAD from './cad-export.js';
 
@@ -23,12 +24,46 @@ const TPARAMS = [['wheelbase', 'Trailer wheelbase (kingpin to axle)', 'm'], ['fr
 export function init(ST, pid) {
   if (ST.va && ST.pk && ST._saPid === pid) return; ST._saPid = pid; let saved = null; try { saved = JSON.parse(localStorage.getItem('pc-site-access:' + pid) || 'null'); } catch { }
   const R0 = (veh, on) => ({ pts: [], rev: [], radii: [], veh, delay: 0, speed: '', on });
-  ST.va = { routes: [R0('box', true), R0('car', false)], cur: 0, prof: {}, clear: 0.3, obs: { proposed: true, context: true, parking: true, columns: false, drawn: true }, drawn: [], ...(saved && saved.va) };
+  ST.va = { routes: [R0('box', true), R0('car', false)], cur: 0, prof: {}, clear: 0.3, obs: { proposed: true, context: true, parking: true, columns: false, drawn: true }, drawn: [], task: 'entrance', ent: 0, thr: [], jn: { j: 0, from: 0, to: 1 }, ...(saved && saved.va) };
+  if (saved && saved.va && !saved.va.task) ST.va.task = saved.va.routes && saved.va.routes[0] && saved.va.routes[0].pts.length >= 2 ? 'draw' : 'entrance';   // (2026-11-25) a route drawn before stays the route
   ST.pk = { kind: 'surface', area: 'draw', poly: [], holes: [], ramps: [], ent: [], cats: PK.CATEGORIES.map((c) => ({ ...c })), angle: 90, aisle: '', oneWay: false, setback: 0, wall: 0.3, mode: 'A', seed: 1, opt: 'A', edits: {}, sel: null, locked: [], ...(saved && saved.pk) };
   ST.sk = null; }
 export function save(ST) { try { localStorage.setItem('pc-site-access:' + ST._saPid, JSON.stringify({ va: { ...ST.va }, pk: { ...ST.pk, sel: null } })); } catch { } }
-export const sig = (ST, id) => (id === VEH ? [ST.va.routes, ST.va.prof, ST.va.clear, ST.va.obs, ST.va.drawn, ST.va.obs.parking ? (ST.pkLast && ST.pkLast.sig) : 0] : [{ ...ST.pk, sel: null, edits: null, opt: null }]);
+export const sig = (ST, id) => (id === VEH ? [ST.va.routes, ST.va.prof, ST.va.clear, ST.va.obs, ST.va.drawn, ST.va.task, ST.va.ent, ST.va.thr, ST.va.jn, ST.va.obs.parking ? (ST.pkLast && ST.pkLast.sig) : 0] : [{ ...ST.pk, sel: null, edits: null, opt: null }]);
 const vehOf = (ST, i) => ST.va.prof[i] || JSON.parse(JSON.stringify(V.byId(ST.va.routes[i].veh) || V.CUSTOM_BASE));
+// ---- what the site offers for a route without drawing (2026-11-25): the doors to outside, the roads, their junctions ----
+export const TASKS = [['entrance', 'To an entrance'], ['through', 'Through the site'], ['junction', 'Turn at a junction'], ['draw', 'Draw it']];
+const doorsOf = (ctx) => { try { return ctx.ws().entrances?.() || []; } catch { return []; } };
+const roadsOf = (S) => S.roads.filter((r) => r.pts && r.pts.length >= 2);
+const compass = (d) => ['east', 'north-east', 'north', 'north-west', 'west', 'south-west', 'south', 'south-east'][((Math.round(Math.atan2(d[1], d[0]) / (Math.PI / 4)) % 8) + 8) % 8];
+function siteFound(ctx) { const S = sceneOf(ctx), roads = roadsOf(S), J = SR.junctions(roads), rd = (d) => { const q = SR.nearestRoad(roads, d.p); return q ? q.q.d : Infinity; }, doors = doorsOf(ctx).map((d) => ({ ...d, road: rd(d) })).sort((a, b) => a.road - b.road); return { S, roads, doors, J }; }   // doors nearest a road first
+const armName = (a) => `from the ${compass(a.dir)}${a.road.name ? ' (' + a.road.name + ')' : ''}`;
+/** the start and the end of route 1 from the task chosen: { start, end, what } or an error in words */
+function taskEnds(ctx, v) { const A = ctx.ST.va, { roads, doors, J } = siteFound(ctx);
+  if (!roads.length) return { error: 'There are no roads in this site’s data. Add the site from the map (Edit site), or draw the route (Draw it).' };
+  if (A.task === 'entrance') { if (!doors.length) return { error: 'No door to outside on the ground floor. Add a door in Plan Studio, or draw the route (Draw it).' };
+    const k = Math.min(+A.ent || 0, doors.length - 1), d = doors[k], T = SR.entranceTask(roads, d, v), T2 = SR.entranceTask(roads, d, v, { flip: true }); if (T.error) return T; return { ...T, alt: T2, what: `from ${T.road.name || 'the nearest road'} to door ${k + 1}${d.room ? ' (' + d.room + ')' : ''}` }; }
+  if (A.task === 'through') { if ((A.thr || []).length < 2) return { error: 'Pick two points on the roads: Pick on the plan, then click where the vehicle comes in and where it leaves.' };
+    const T = SR.throughTask(roads, A.thr[0], A.thr[1]); if (T.error) return T; return { ...T, what: `through the site, ${T.roads[0].name || 'a road'} to ${T.roads[1].name || 'a road'}` }; }
+  if (A.task === 'junction') { if (!J.length) return { error: 'No road junction in this site’s data. Pick another task, or draw the route.' }; const j = J[Math.min(+A.jn.j || 0, J.length - 1)], ar = SR.arms(roads, j);
+    const T = SR.turnTask(roads, j, Math.min(+A.jn.from || 0, ar.length - 1), Math.min(+A.jn.to || 0, ar.length - 1), v); if (T.error) return T; return { ...T, what: `a ${T.kind} at junction ${(+A.jn.j || 0) + 1}` }; }
+  return { error: 'draw' }; }
+function taskHTML(ctx) { const { ST, esc } = ctx, A = ST.va, { S, roads, doors, J } = siteFound(ctx), t = A.task || 'draw';
+  const found = `Found on the site: ${S.proposed.length ? 'the proposed building' : 'no proposed building'}, ${S.context.length} building${S.context.length === 1 ? '' : 's'} around it, ${roads.length} road${roads.length === 1 ? '' : 's'}, ${doors.length} door${doors.length === 1 ? '' : 's'} to outside, ${J.length} junction${J.length === 1 ? '' : 's'}. All are obstacles or routes as they apply; nothing to draw.`;
+  let body = '';
+  if (t === 'entrance') body = doors.length ? `<p class="sp-flabel">Door</p><select class="sp-sel" data-va="ent">${doors.map((d, k) => `<option value="${k}" ${k === (+A.ent || 0) ? 'selected' : ''}>Door ${k + 1}${d.room ? ' · ' + esc(d.room) : ''} · ${d.w.toFixed(1)} m wide, faces ${compass(d.n)}</option>`).join('')}</select><p class="sp-note">The vehicle comes along the nearest road and stops beside the door, parallel to the wall, 1 m clear of it (D on the plan).</p>` : '<p class="sp-note sp-warn">No door to outside on the ground floor: add one in Plan Studio, or use Draw it.</p>';
+  if (t === 'through') body = `<p class="sp-note">${(A.thr || []).length >= 2 ? 'Two points picked on the roads (A and B on the plan): the vehicle comes in at A and leaves at B.' : 'Click where the vehicle comes in and where it leaves, each near a road.'}</p><div class="sp-acts sp-acts1"><button type="button" class="btn sm ${(A.thr || []).length >= 2 ? '' : 'primary'}" data-va="pickthr">${(A.thr || []).length >= 2 ? 'Pick again' : 'Pick on the plan'}</button></div>`;
+  if (t === 'junction') { const j = J[Math.min(+A.jn.j || 0, Math.max(0, J.length - 1))], ar = j ? SR.arms(roads, j) : [];
+    body = J.length ? `<p class="sp-flabel">Junction</p><select class="sp-sel" data-va="jn">${J.map((x, k) => `<option value="${k}" ${k === (+A.jn.j || 0) ? 'selected' : ''}>Junction ${k + 1} · ${esc(x.roads.map((id) => (roads.find((r) => r.id === id) || {}).name || 'unnamed road').join(' × '))}</option>`).join('')}</select>
+      <div class="sp-kv"><span>Comes in</span><b><select class="sp-sel" data-va="jfrom">${ar.map((a, k) => `<option value="${k}" ${k === (+A.jn.from || 0) ? 'selected' : ''}>${esc(armName(a))}</option>`).join('')}</select></b></div>
+      <div class="sp-kv"><span>Leaves</span><b><select class="sp-sel" data-va="jto">${ar.map((a, k) => `<option value="${k}" ${k === (+A.jn.to || 0) ? 'selected' : ''}>${esc(armName(a).replace('from the', 'to the'))}</option>`).join('')}</select></b></div>` : '<p class="sp-note sp-warn">No road junction in this site’s data.</p>'; }
+  if (t === 'draw') body = '<p class="sp-note">Click the start, each turn and the end on the plan (below).</p>';
+  return `<p class="sp-flabel">What to check</p><div class="sp-tabs sp-tasks" role="tablist">${TASKS.map(([k, n]) => `<button type="button" role="tab" data-va-task="${k}" aria-selected="${t === k}">${n}</button>`).join('')}</div>${body}<p class="sp-note sp-found">${esc(found)}</p>`; }
+function taskMarks(ctx) { const ST = ctx.ST, A = ST.va, m = { dots: [], labels: [], lines: [] }; if (ST.id !== VEH || A.cur !== 0) return m; const t = A.task;
+  if (t === 'entrance') siteFound(ctx).doors.forEach((d, k) => { const on = k === (+A.ent || 0); m.dots.push({ p: d.p, col: on ? '#16a34a' : '#64748b', r: on ? 0.7 : 0.5, label: 'D' + (k + 1), al: 1, ring: true, tag: 'door' }); if (on) m.lines.push({ a: d.p, b: [d.p[0] + d.n[0] * 3, d.p[1] + d.n[1] * 3], col: '#16a34a', w: 0.1, head: true, al: 1 }); });
+  if (t === 'through') (A.thr || []).forEach((p, k) => m.dots.push({ p, col: '#2563eb', r: 0.7, label: k ? 'B' : 'A', al: 1, ring: true, tag: 'thr' }));
+  if (t === 'junction') { const { roads, J } = siteFound(ctx); J.forEach((j, k) => m.dots.push({ p: j.p, col: k === (+A.jn.j || 0) ? '#f97316' : '#64748b', r: k === (+A.jn.j || 0) ? 0.9 : 0.6, label: 'J' + (k + 1), al: 1, ring: true, tag: 'junction' })); void roads; }
+  return m; }
 
 // ---- the site, as plan geometry: buildings (proposed footprints at the ground, the site's own), roads, the boundary ----
 export function sceneOf(ctx) { let sc = null; try { sc = ctx.ws().planScene('noise'); } catch { }
@@ -52,10 +87,10 @@ function sketchMarks(ST) { const sk = ST.sk; if (!sk || !sk.pts.length) return {
 const merge = (...ms) => { const o = { polys: [], paths: [], dots: [], lines: [], labels: [] }; for (const m of ms) for (const k of Object.keys(o)) if (m && m[k]) o[k].push(...m[k]); return o; };
 /** the plan before a run (or while drawing): the site, what has been drawn, the sketch in progress */
 export function preview(ctx, fit) { const ST = ctx.ST, S = sceneOf(ctx), box = boxOf(ST, S), id = ST.id, drawn = { polys: [], paths: [], dots: [], labels: [] };
-  if (id === VEH) { ST.va.routes.forEach((r, i) => { if (r.pts.length >= 2 && (i === 0 || r.on)) { drawn.paths.push({ pts: r.pts, col: RCOL[i], w: 0.1, dash: [0.6, 0.4], al: 0.9, tag: 'route' }); drawn.dots.push({ p: r.pts[0], col: RCOL[i], r: 0.5, label: String(i + 1), al: 1, ring: true }); } });
+  if (id === VEH) { ST.va.routes.forEach((r, i) => { if (r.pts.length >= 2 && (i === 0 ? !ST.va.task || ST.va.task === 'draw' : r.on)) { drawn.paths.push({ pts: r.pts, col: RCOL[i], w: 0.1, dash: [0.6, 0.4], al: 0.9, tag: 'route' }); drawn.dots.push({ p: r.pts[0], col: RCOL[i], r: 0.5, label: String(i + 1), al: 1, ring: true }); } });
     ST.va.drawn.forEach((P) => drawn.polys.push({ pts: P, fill: '#fca5a5', fal: 0.5, col: '#b91c1c', w: 0.06, tag: 'drawn' })); }
   if (id === PARK) parkInputsMarks(ST, drawn);
-  show(ctx, box, merge(siteMarks(ST, S, box), drawn, sketchMarks(ST)), fit); }
+  show(ctx, box, merge(siteMarks(ST, S, box), drawn, id === VEH ? taskMarks(ctx) : null, sketchMarks(ST)), fit); }
 function parkInputsMarks(ST, m) { const P = ST.pk; if (P.poly.length >= 2) m.paths.push({ pts: P.poly, closed: P.poly.length >= 3, col: '#111827', w: 0.12, al: 1, tag: 'parea' });
   P.holes.forEach((h) => m.polys.push({ pts: h, fill: '#f3f4f6', fal: 0.9, hatch: '#9ca3af', col: '#6b7280', w: 0.05, tag: 'hole' }));
   if (P.kind === 'underground') P.ramps.forEach((h) => m.polys.push({ pts: h, fill: '#fde68a', fal: 0.8, hatch: '#b45309', col: '#b45309', w: 0.06, tag: 'ramp' }));
@@ -65,6 +100,7 @@ function parkInputsMarks(ST, m) { const P = ST.pk; if (P.poly.length >= 2) m.pat
 export function sketchStart(ctx, kind, target) { const ST = ctx.ST; ST.sk = { kind, pts: [], target }; arm(ctx); ctx.drawStudy(); preview(ctx); }
 function arm(ctx) { const ST = ctx.ST, panes = ctx.views2(); const f = (pt) => { panes.forEach((w) => w.pickPoint?.(null)); const sk = ST.sk; if (!sk) return; const q = snap(pt);
     if (sk.kind === 'entrance') { ST.pk.ent.push(q); ST.sk = null; save(ST); ctx.drawStudy(); preview(ctx); return; }
+    if (sk.kind === 'thr') { sk.pts.push(q); if (sk.pts.length >= 2) { ST.va.thr = sk.pts.slice(0, 2); ST.sk = null; save(ST); ctx.drawStudy(); preview(ctx); return; } arm(ctx); ctx.drawStudy(); preview(ctx); return; }
     if (sk.kind === 'pickstall') { ST.sk = null; const o = ST.pkLast, s = o && o.stalls.find((x) => x.valid && G.inPoly(q, x.footprint)); ST.pk.sel = s ? s.id : null; if (!s) ST.pkMsg = 'No stall there: click inside a stall of the layout.'; else ST.pkMsg = ''; ctx.drawStudy(); if (ST.res) ctx.paintRes(ST.res); return; }
     sk.pts.push(q); arm(ctx); ctx.drawStudy(); preview(ctx); };
   panes.forEach((w) => w.pickPoint?.(f)); }
@@ -75,8 +111,8 @@ export function sketchEnd(ctx, ok) { const ST = ctx.ST, sk = ST.sk; ST.sk = null
     else { const C = G.clean(P); if (!C) err = 'That outline has no area.'; else if (G.selfCrossing(C)) err = 'That outline crosses itself: draw it again without crossing.';
       else if (sk.kind === 'vobs') ST.va.drawn.push(C); else if (sk.kind === 'parea') ST.pk.poly = C; else if (sk.kind === 'phole') ST.pk.holes.push(C); else if (sk.kind === 'pramp') ST.pk.ramps.push(C); } }
   ST.saMsg = err; save(ST); ctx.drawStudy(); if (ST.res) ctx.paintRes(ST.res); else preview(ctx); }
-const sketchBar = (ST, esc) => { const sk = ST.sk; if (!sk) return ''; const what = { route: 'the route: the start first, then each turn, then the end', vobs: 'the obstacle’s outline', parea: 'the parking area’s outline', phole: 'the outline of an area to keep free', pramp: 'the ramp’s outline', entrance: 'the entrance, where cars come in (one click)', pickstall: 'the stall to edit' }[sk.kind];
-  return `<div class="sp-sfpick sp-sketch"><b>Click ${esc(what)} on the plan</b><p class="sp-note">${sk.pts.length} point${sk.pts.length === 1 ? '' : 's'} · snapped to 0.1 m</p><div class="sp-acts sp-acts1">${['entrance', 'pickstall'].includes(sk.kind) ? '' : `<button type="button" class="btn sm primary" data-sa="finish">Finish</button><button type="button" class="btn sm" data-sa="undo" ${sk.pts.length ? '' : 'disabled'}>Undo point</button>`}<button type="button" class="btn sm" data-sa="cancel">Cancel</button></div></div>`; };
+const sketchBar = (ST, esc) => { const sk = ST.sk; if (!sk) return ''; const what = { route: 'the route: the start first, then each turn, then the end', thr: 'where the vehicle comes in, then where it leaves (two clicks, each near a road)', vobs: 'the obstacle’s outline', parea: 'the parking area’s outline', phole: 'the outline of an area to keep free', pramp: 'the ramp’s outline', entrance: 'the entrance, where cars come in (one click)', pickstall: 'the stall to edit' }[sk.kind];
+  return `<div class="sp-sfpick sp-sketch"><b>Click ${esc(what)} on the plan</b><p class="sp-note">${sk.pts.length} point${sk.pts.length === 1 ? '' : 's'} · snapped to 0.1 m</p><div class="sp-acts sp-acts1">${['entrance', 'pickstall', 'thr'].includes(sk.kind) ? '' : `<button type="button" class="btn sm primary" data-sa="finish">Finish</button><button type="button" class="btn sm" data-sa="undo" ${sk.pts.length ? '' : 'disabled'}>Undo point</button>`}<button type="button" class="btn sm" data-sa="cancel">Cancel</button></div></div>`; };
 
 // ---- the cards' settings ----
 export function inputsHTML(ctx) { const { ST, esc } = ctx; return ST.id === VEH ? vehInputs(ctx) : parkInputs(ctx); void esc; }
@@ -84,7 +120,8 @@ const num = (attr, val, ph, step = 0.1) => `<input class="sp-in sp-num" type="nu
 const chk = (attr, on, label) => `<label class="sp-chk"><input type="checkbox" ${attr} ${on ? 'checked' : ''}> ${label}</label>`;
 function vehInputs(ctx) { const { ST, esc, fmt } = ctx, A = ST.va, i = A.cur, R = A.routes[i], v = vehOf(ST, i), errs = V.check(v), list = V.all();
   const len = R.pts.length >= 2 ? G.plLength(R.pts) : 0;
-  return `${sketchBar(ST, esc)}${ST.saMsg ? `<p class="sp-note sp-warn">${esc(ST.saMsg)}</p>` : ''}
+  const auto = i === 0 && A.task && A.task !== 'draw';
+  return `${sketchBar(ST, esc)}${ST.saMsg ? `<p class="sp-note sp-warn">${esc(ST.saMsg)}</p>` : ''}${i === 0 ? taskHTML(ctx) : ''}
     <div class="sp-tabs" role="tablist">${A.routes.map((r, k) => `<button type="button" role="tab" data-va-route="${k}" aria-selected="${k === i}">Route ${k + 1}${k && !r.on ? ' (off)' : ''}</button>`).join('')}</div>
     ${i === 1 ? chk('data-va="on2"', R.on, 'Check a second vehicle on its own route (at the same time, or later)') : ''}
     <p class="sp-flabel">Vehicle</p><select class="sp-sel" data-va="veh">${list.map((x) => `<option value="${esc(x.id)}" ${x.id === R.veh ? 'selected' : ''}>${esc(x.name)}${x.custom ? ' · mine' : ''}</option>`).join('')}<option value="custom" ${R.veh === 'custom' ? 'selected' : ''}>Custom vehicle…</option></select>
@@ -92,9 +129,10 @@ function vehInputs(ctx) { const { ST, esc, fmt } = ctx, A = ST.va, i = A.cur, R 
       <table class="sp-codesum sp-vehtab"><tbody>${PARAMS.map(([k, n, u]) => `<tr><td>${n}</td><td>${num(`data-va-p="${k}"`, v[k])}</td><td>${u}</td></tr>`).join('')}${v.kind === 'artic' ? TPARAMS.map(([k, n, u]) => `<tr><td>${n}</td><td>${num(`data-va-t="${k}"`, v.trailer[k])}</td><td>${u}</td></tr>`).join('') : ''}</tbody></table>
       <p class="sp-note">Turning radius at full lock ${fmt(V.rMin(v), 2)} m (rear axle), outer front corner ${fmt(V.rOuter(v), 2)} m. ${esc(V.PRESET_NOTE)}</p>
       ${errs.length ? `<p class="sp-note sp-warn">${esc(errs.join('; '))}</p>` : ''}<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="savecustom">Save as my vehicle</button>${A.prof[i] ? '<button type="button" class="btn sm" data-va="resetprof">Back to the preset</button>' : ''}</div></details>
-    <p class="sp-flabel">Route ${i + 1}</p><p class="sp-note">${R.pts.length >= 2 ? `${R.pts.length} points, ${fmt(len, 1)} m along the drawn line${R.rev.some(Boolean) ? `, ${R.rev.filter(Boolean).length} reversing segment${R.rev.filter(Boolean).length === 1 ? '' : 's'}` : ''}. The rear axle follows it; each corner is driven as an arc of 1.25 × its least radius (less where the segments leave no room), or the radius you set.` : 'Not drawn yet.'}</p>
+    <div class="sp-drawsec" ${auto ? 'hidden' : ''}><p class="sp-flabel">Route ${i + 1}</p><p class="sp-note">${R.pts.length >= 2 ? `${R.pts.length} points, ${fmt(len, 1)} m along the drawn line${R.rev.some(Boolean) ? `, ${R.rev.filter(Boolean).length} reversing segment${R.rev.filter(Boolean).length === 1 ? '' : 's'}` : ''}. The rear axle follows it; each corner is driven as an arc of 1.25 × its least radius (less where the segments leave no room), or the radius you set.` : 'Not drawn yet.'}</p>
     <div class="sp-acts sp-acts1"><button type="button" class="btn sm primary" data-va="draw">${R.pts.length ? 'Draw again' : 'Draw route'}</button>${R.pts.length ? '<button type="button" class="btn sm" data-va="clearroute">Clear</button>' : ''}</div>
     ${R.pts.length >= 2 ? `<details class="sp-adv" data-adv="va-segs" ${ST.advOpen['va-segs'] ? 'open' : ''}><summary>Segments and corners</summary><table class="sp-codesum"><tbody>${R.pts.slice(1).map((p, k) => `<tr><td>Segment ${k + 1}, ${fmt(G.dist(R.pts[k], p), 1)} m</td><td>${chk(`data-va-rev="${k}"`, R.rev[k], 'reversing')}</td></tr>${k + 2 < R.pts.length ? `<tr><td>Corner ${k + 1} radius</td><td>${num(`data-va-rad="${k + 1}"`, R.radii[k + 1], 'auto')} m</td></tr>` : ''}`).join('')}</tbody></table></details>` : ''}
+    </div>
     <div class="sp-kv"><span>Speed</span><b>${num('data-va="speed"', R.speed, v.speed, 1)} km/h</b></div>${i === 1 ? `<div class="sp-kv"><span>Starts after route 1 by</span><b>${num('data-va="delay"', R.delay, 0, 1)} s</b></div>` : ''}
     <p class="sp-flabel">Obstacles</p>${chk('data-va-obs="proposed"', A.obs.proposed, 'The proposed buildings')}${chk('data-va-obs="context"', A.obs.context, 'The site’s buildings')}${chk('data-va-obs="parking"', A.obs.parking, `Parked cars in the parking layout${ST.pkLast ? ` (option ${esc(ST.pkLast.label)}, ${ST.pkLast.total} stalls)` : ' (none generated yet)'}`)}${chk('data-va-obs="columns"', A.obs.columns, 'Columns of the structure grid')}${chk('data-va-obs="drawn"', A.obs.drawn, `Drawn obstacles (${A.drawn.length})`)}
     <div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="drawobs">Draw an obstacle</button>${A.drawn.length ? '<button type="button" class="btn sm" data-va="clearobs">Clear drawn</button>' : ''}</div>
@@ -129,23 +167,51 @@ function obstaclesFor(ctx) { const ST = ctx.ST, A = ST.va, S = sceneOf(ctx), out
 
 // ---- the runs ----
 export async function compute(ctx) { return ctx.ST.id === VEH ? computeVeh(ctx) : computePark(ctx); }
-async function computeVeh(ctx) { const ST = ctx.ST, A = ST.va, use = A.routes.map((r, i) => ({ r, i })).filter(({ r, i }) => (i === 0 || r.on) && r.pts.length >= 2);
-  if (!use.length) throw Error('Draw a route first: Draw route, click the start, each turn and the end on the plan, then Finish.');
-  const { obstacles, complete, src, S } = obstaclesFor(ctx), q = QK(ctx.qualOf().k), runs = [];
+// one vehicle on one route (2026-11-25, shared by the run and Try every vehicle): route 1 from the task chosen (the planner finds the
+// drive between the ends it gives, keeping to the roads), or the route drawn (driven as drawn, round obstacles where it hits one)
+async function driveOne(ctx, v, i, obstacles, so, roads) { const ST = ctx.ST, A = ST.va, r = A.routes[i], yieldUI = () => new Promise((res) => setTimeout(res, 0));
+  if (i === 0 && A.task && A.task !== 'draw') { const T = taskEnds(ctx, v); if (T.error) return { ok: false, error: T.error };
+    await yieldUI(); const plan = (E) => RP.planAround(v, { pts: [T.start.p, E.p] }, obstacles, { clearance: +A.clear || 0.3, startHeading: T.start.heading, goalHeading: E.heading, goalTol: 0.3, roads, maxExpand: 60000 });
+    let pl = plan(T.end); if (!pl.ok && T.alt && !T.alt.error) { await yieldUI(); const p2 = plan(T.alt.end); if (p2.ok) { pl = p2; T.end = T.alt.end; } }   // stopping facing the other way along the wall
+    if (!pl.ok) return { ok: false, error: `no drivable route ${T.what} for the ${v.name.toLowerCase()}: ${pl.error}${pl.closest && Number.isFinite(pl.gap) ? `; it gets to within ${pl.gap.toFixed(1)} m of the end` : ''}`, closest: pl.closest, task: T };
+    const out = SP.simulate(v, { pts: [T.start.p, T.end.p], planned: pl.path }, so); if (!out.ok) return out;
+    out.auto = { what: T.what, length: pl.length, onRoad: pl.onRoad, under: !!pl.underClearance, end: T.end, start: T.start }; out.drawnPts = null; return out; }
+  if (r.pts.length < 2) return { ok: false, error: 'Draw a route first: Draw route, click the start, each turn and the end on the plan, then Finish.' };
+  let out = SP.simulate(v, { pts: r.pts, radii: r.radii, reverse: r.rev }, so);
+  // the drawn route runs into an obstacle: a way round it, driven instead (2026-11-18); none found: the drawn route as driven, and why
+  if (out.ok && out.collisions.length && A.avoid !== false) { const hitBy = [...new Set(out.collisions.map((c) => c.name))];
+    if (r.rev.some(Boolean)) out.planFail = 'a route with reversing is driven as drawn'; else { await yieldUI(); const pl = RP.planAround(v, { pts: r.pts }, obstacles, { clearance: +A.clear || 0.3 });
+      if (pl.ok) { const o2 = SP.simulate(v, { pts: r.pts, planned: pl.path }, so); if (o2.ok) { o2.planned = { length: pl.length, drawn: SP.plLength ? SP.plLength(r.pts) : 0, hitBy, under: !!pl.underClearance, moved: pl.moved || [] }; out = o2; } } else out.planFail = pl.error; }
+    out.hitBy = hitBy; }
+  out.drawnPts = r.pts; return out; }
+async function computeVeh(ctx) { const ST = ctx.ST, A = ST.va, use = A.routes.map((r, i) => ({ r, i })).filter(({ r, i }) => i === 0 || (r.on && r.pts.length >= 2));
+  const { obstacles, complete, src, S } = obstaclesFor(ctx), q = QK(ctx.qualOf().k), runs = [], roads = roadsOf(S); ST.vaAll = null;
   for (const { r, i } of use) { const v = vehOf(ST, i), e = V.check(v); if (e.length) throw Error(`Route ${i + 1} (${v.name}): ${e.join('; ')}.`);
-    await new Promise((res) => setTimeout(res, 0)); const so = { quality: q, obstacles, clearance: +A.clear || 0.3, speed: +r.speed || v.speed, delay: i ? +r.delay || 0 : 0, complete }; let out = SP.simulate(v, { pts: r.pts, radii: r.radii, reverse: r.rev }, so);
-    // the drawn route runs into an obstacle: a way round it, driven instead (2026-11-18); none found: the drawn route as driven, and why
-    if (out.ok && out.collisions.length && A.avoid !== false) { const hitBy = [...new Set(out.collisions.map((c) => c.name))];
-      if (r.rev.some(Boolean)) out.planFail = 'a route with reversing is driven as drawn'; else { await new Promise((res) => setTimeout(res, 0)); const pl = RP.planAround(v, { pts: r.pts }, obstacles, { clearance: +A.clear || 0.3 });
-        if (pl.ok) { const o2 = SP.simulate(v, { pts: r.pts, planned: pl.path }, so); if (o2.ok) { o2.planned = { length: pl.length, drawn: SP.plLength ? SP.plLength(r.pts) : 0, hitBy, under: !!pl.underClearance, moved: pl.moved || [] }; out = o2; } } else out.planFail = pl.error; }
-      out.hitBy = hitBy; }
-    out.drawnPts = r.pts;
+    await new Promise((res) => setTimeout(res, 0)); const so = { quality: q, obstacles, clearance: +A.clear || 0.3, speed: +r.speed || v.speed, delay: i ? +r.delay || 0 : 0, complete };
+    const out = await driveOne(ctx, v, i, obstacles, so, roads);
     if (!out.ok) throw Error(`Route ${i + 1}: ${out.error}.`); out.routeNo = i; out.col = RCOL[i]; runs.push(out); }
   const pair = runs.length === 2 ? SP.pairConflict(runs[0], runs[1]) : null;
   ST.vehLast = { pk: ST.pkLast && ST.pkLast.sig, runs: runs.map((x) => ({ route: x.routeNo + 1, vehicle: x.vehicle.name, stalls: [...new Set([...x.collisions, ...x.tooNear].filter((c) => /^stall:/.test(c.id)).map((c) => c.id.slice(6)))] })) };
   return vehResult(ctx, runs, pair, obstacles, src, S); }
+// Try every vehicle (2026-11-25): route 1 with each preset in turn; which can make it, and how close each comes
+async function tryAll(ctx) { const ST = ctx.ST, A = ST.va; if (ST.busy || ST.vaAll?.busy) return; const { obstacles, complete, S } = obstaclesFor(ctx), roads = roadsOf(S), list = V.PRESETS, rows = [];
+  ST.vaAll = { busy: true, rows, n: list.length }; ctx.drawStudy();
+  for (const p of list) { const v = JSON.parse(JSON.stringify(p)), so = { quality: 'draft', obstacles, clearance: +A.clear || 0.3, speed: v.speed, delay: 0, complete };
+    let out; try { out = await driveOne(ctx, v, 0, obstacles, so, roads); } catch (e) { out = { ok: false, error: e.message }; }
+    const row = { id: v.id, name: v.name, len: +V.overallLength(v).toFixed(2) };
+    if (!out.ok) Object.assign(row, { result: 'No route', why: out.error });
+    else Object.assign(row, { result: out.status === 'feasible' ? 'Feasible' : out.status === 'infeasible' ? 'Infeasible' : 'Not verified', clear: out.minClear ? +out.minClear.d.toFixed(2) : null, turn: Number.isFinite(out.rReached) ? +out.rReached.toFixed(2) : null, swept: +out.swept.toFixed(1), why: out.reasons[0] || '' });
+    rows.push(row); ctx.drawStudy(); }
+  ST.vaAll = { busy: false, rows, n: list.length, at: new Date().toISOString() }; ctx.drawStudy(); }
+const tryAllHTML = (ctx) => { const { ST, esc, fmt } = ctx, T = ST.vaAll;
+  const head = `<p class="sp-flabel">Every vehicle on this route</p>`;
+  if (!T) return `${head}<p class="sp-note">Which vehicles can make it: each preset driven on route 1 the same way (draft quality).</p><div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="tryall">Try every vehicle</button></div>`;
+  const ok = T.rows.filter((r) => r.result === 'Feasible'), big = ok.slice().sort((a, b) => b.len - a.len)[0];
+  return `${head}${T.busy ? `<p class="sp-note">Driving ${T.rows.length + 1} of ${T.n}…</p>` : `<p class="sp-note">${ok.length} of ${T.n} make it${big ? `; the longest: ${esc(big.name)} (${fmt(big.len, 1)} m)` : ''}.</p>`}
+    <table class="sp-codesum sp-vehall"><thead><tr><th>Vehicle</th><th>Length</th><th>Result</th><th>Least clearance</th></tr></thead><tbody>${T.rows.map((r) => `<tr data-vehall="${esc(r.id)}"><td>${esc(r.name)}</td><td>${fmt(r.len, 1)} m</td><td class="${r.result === 'Feasible' ? '' : 'sp-bad'}" title="${esc(r.why || '')}">${esc(r.result)}</td><td>${r.clear != null ? fmt(r.clear, 2) + ' m' : '–'}</td></tr>`).join('')}</tbody></table>
+    ${T.busy ? '' : '<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="tryallcsv">Download CSV</button><button type="button" class="btn sm" data-va="tryall">Run again</button></div>'}`; };
 
-function vehMarks(ctx, runs, obstacles, S, box, view, t) { const ST = ctx.ST, m = merge(siteMarks(ST, S, box, { ctxFill: '#e5e7eb', propFill: '#f3f4f6' }));
+function vehMarks(ctx, runs, obstacles, S, box, view, t) { const ST = ctx.ST, m = merge(siteMarks(ST, S, box, { ctxFill: '#e5e7eb', propFill: '#f3f4f6' }), runs.some((r) => r.auto) ? taskMarks(ctx) : null);
   const hit = new Map(); for (const r of runs) for (const o of r.perObstacle) { const c = hit.get(o.id); if (!c || o.d < c.d) hit.set(o.id, o); }
   for (const o of obstacles) { if (o.kind === 'building' && !hit.has(o.id) && view !== 'clear') continue; const h = hit.get(o.id), d = h ? h.d : Infinity, thr = +ST.va.clear || 0.3;
     const col = d <= 0 ? '#dc2626' : d < thr ? '#f59e0b' : view === 'clear' ? '#16a34a' : '#6b7280'; m.polys.push({ pts: o.poly, fill: d <= 0 ? '#fecaca' : o.kind === 'stall' ? '#e2e8f0' : o.kind === 'column' ? '#374151' : null, fal: d <= 0 ? 0.45 : 0.8, col, w: d < thr ? 0.16 : 0.05, tag: 'obstacle' });   // a hit obstacle: light red with a red edge
@@ -184,6 +250,7 @@ function vehResult(ctx, runs, pair, obstacles, src, S) { const { ST, esc, fmt } 
   const mc = (r) => (r.minClear ? `${fmt(r.minClear.d, 2)} m to ${esc(r.minClear.name)} at ${fmt(r.minClear.s, 1)} m${r.minClear.d < r.clearance ? ` <span class="sp-bad">(under ${fmt(r.clearance, 2)} m)</span>` : ''}` : 'no obstacle within reach');
   const rows = [['Status', `<span class="${worst === 'infeasible' ? 'sp-bad' : ''}">${SN[worst]}</span>`]];
   for (const r of runs) { const pre = runs.length > 1 ? `Route ${r.routeNo + 1} · ` : '';
+    if (r.auto) rows.push([`${pre}Found route`, `${esc(r.auto.what)}: ${fmt(r.auto.length, 1)} m${r.auto.onRoad != null ? `, ${fmt(r.auto.onRoad * 100, 0)} % of it on the roads` : ''}${r.auto.under ? ' <span class="sp-bad">(only with less than the clearance asked)</span>' : ''}`]);
     rows.push([`${pre}Vehicle`, `${esc(r.vehicle.name)}, ${fmt(V.overallLength(r.vehicle), 2)} × ${fmt(r.vehicle.width, 2)} m, R min ${fmt(r.rMin, 2)} m`], [`${pre}Route`, `${fmt(r.length, 1)} m driven in ${fmt(r.duration, 0)} s at ${fmt(r.speed, 0)} km/h${r.reversing ? `, ${r.reversing} reversing` : ''}`],
       ...(r.planned ? [[`${pre}Way round`, `the drawn route ran into ${esc(r.planned.hitBy.join(', '))}; driven round ${r.planned.hitBy.length === 1 ? 'it' : 'them'} instead, ${fmt(r.planned.length, 1)} m (the drawn line ${fmt(r.planned.drawn, 1)} m)${r.planned.moved.length ? `; ${r.planned.moved.map((x) => `${x.i === 0 ? 'the start' : x.i === r.drawnPts.length - 1 ? 'the end' : 'point ' + (x.i + 1)} moved ${fmt(x.d, 1)} m, where the vehicle fits`).join(', ')}` : ''}${r.planned.under ? ' <span class="sp-bad">(only with less than the clearance)</span>' : ''}`]] : r.planFail ? [[`${pre}Way round`, `<span class="sp-bad">none found</span>: ${esc(r.planFail)}; the drawn route is shown as driven`]] : []),
       [`${pre}Tightest turn`, Number.isFinite(r.rReached) ? `${fmt(r.rReached, 2)} m (rear axle; the vehicle's least is ${fmt(r.rMin, 2)} m)` : 'straight'], [`${pre}Least clearance`, mc(r)], [`${pre}Collisions`, r.collisions.length ? `<span class="sp-bad">${r.collisions.length}</span>: ${esc(r.collisions.map((c) => `${c.name} (${fmt(c.s0, 1)}–${fmt(c.s1, 1)} m)`).join(', '))}` : 'none'],
@@ -193,6 +260,7 @@ function vehResult(ctx, runs, pair, obstacles, src, S) { const { ST, esc, fmt } 
   const vdata = (v) => `<table class="sp-codesum sp-vehdata"><thead><tr><th colspan="2">${esc(v.name)}${v.note ? ` <small>(${esc(v.note)})</small>` : ''}</th></tr></thead><tbody>${[['Overall length', fmt(V.overallLength(v), 2) + ' m'], ['Width', fmt(v.width, 2) + ' m'], ['Track', fmt(v.track, 2) + ' m'], ['Wheelbase', fmt(v.wheelbase, 2) + ' m'], ['Overhangs (front / rear)', `${fmt(v.frontOverhang, 2)} / ${fmt(v.rearOverhang, 2)} m`], ['Steering angle', fmt(v.steer, 1) + '°'], ['Lock to lock time', fmt(v.lockTime, 1) + ' s'], ['Turning radius (rear axle)', fmt(V.rMin(v), 2) + ' m'], ...(v.kind === 'artic' ? [['Trailer (kingpin to axle)', fmt(v.trailer.wheelbase, 2) + ' m'], ['Articulation angle', fmt(v.trailer.maxArticulation, 0) + '°']] : [])].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</tbody></table>`;
   const sections = () => `${reasons.length ? `<p class="sp-flabel">Why ${worst === 'infeasible' ? 'it fails' : 'to check'}</p><ul class="sp-sflist">${reasons.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${unv.length ? `<p class="sp-note sp-warn">Not verified: ${esc(unv[0])}. Add the site's buildings or draw the obstacles that matter.</p>` : ''}
     <p class="sp-flabel">Conflicts</p>${runs.some((r) => r.collisions.length || r.tooNear.length) ? `<ul class="sp-sflist">${runs.flatMap((r) => [...r.collisions.map((c) => ['collision', c, r]), ...r.tooNear.map((c) => ['under the clearance', c, r])]).map(([k, c, r], j) => `<li><button type="button" class="sp-link" data-va-zoom="${j}">${esc(c.name)}</button>: ${k}, route ${r.routeNo + 1} at ${fmt(c.s0, 1)}–${fmt(c.s1, 1)} m</li>`).join('')}</ul>` : '<p class="sp-note">None against the obstacles checked.</p>'}
+    ${tryAllHTML(ctx)}
     <p class="sp-flabel">Vehicle data</p>${runs.map((r) => vdata(r.vehicle)).join('')}
     <p class="sp-note">Obstacles checked: ${esc(src.join(', ') || 'none')}. Clearance kept: ${fmt(+ST.va.clear || 0.3, 2)} m.</p>
     <p class="sp-note">The geometry, to use in CAD: <button type="button" class="sp-link" data-sa-exp="dxf">DXF</button> · <button type="button" class="sp-link" data-sa-exp="svg">SVG</button> · <button type="button" class="sp-link" data-sa-exp="json">JSON</button></p>`;
@@ -207,8 +275,8 @@ function vehResult(ctx, runs, pair, obstacles, src, S) { const { ST, esc, fmt } 
     views: { path: { vals: new Float32Array([0]), unit: 'm', lo: 0, hi: 1, dec: 2, avg: 0, title: `Vehicle swept path · ${runs.map((x) => x.vehicle.name).join(' and ')}`, legendLabels: ['Swept envelope (dashed)', 'Wheel tracks', 'Vehicle outlines', 'Cannot follow the route', 'Under the clearance'], legendCols: [RCOL[0], '#111827', '#64748b', '#f97316', '#f59e0b'] },
       clear: { vals: new Float32Array([0]), unit: 'm', lo: 0, hi: 1, dec: 2, avg: 0, title: 'Vehicle swept path · clearance to each obstacle', legendLabels: ['Collision', `Under ${fmt(+ST.va.clear || 0.3, 2)} m`, 'Clear'], legendCols: ['#dc2626', '#f59e0b', '#16a34a'] } },
     paint: (rr, fit) => paint(rr, fit), saZoom: (j) => { const z = zoomList[j]; if (!z) return; const at = z.r.poses.find((p) => p.s >= z.c.s0) || z.r.poses[0], b = { x0: at.x - 12, y0: at.y - 12, x1: at.x + 12, y1: at.y + 12 }; show(ctx, b, vehMarks(ctx, runs, obstacles, S, b, ST.res.view), true); },   // the sheet framed on the conflict; the next paint shows the whole again
-    foot: `${runs.length} vehicle${runs.length > 1 ? 's' : ''} on drawn routes, ${obstacles.length} obstacles`, rows, saLayers: layers,
-    method: `A kinematic screening at low speed. The rear axle's centre follows the drawn route (corners rounded to arcs of 1.25 × the vehicle's least radius, or the radius set); the steering is pure pursuit, limited to the vehicle's maximum angle and to the rate its lock-to-lock time allows at the stated speed, on a ${runs[0].ds} m step. An articulated vehicle's trailer follows its hitch (θt′ = (sin(θ − θt) + h·tanδ/L·cos(θ − θt)) / Lt), so the off-tracking is computed. The envelope is the union of the vehicle's outlines on ${runs[0].cell} m cells; the clearance is the least gap between each outline and each obstacle at every step. Where the vehicle cannot keep within 0.30 m of the route, a corner is tighter than it can turn, or the trailer folds past its limit, the route is reported infeasible, never forced. No tyre slip or dynamics; the body is a plan outline (no mirrors or overhang heights); kerbs only as drawn. Vehicle presets are typical dimensions for early design, not manufacturer specifications. Not a certified (AutoTURN) or fire-access code study.`,
+    foot: `${runs.length} vehicle${runs.length > 1 ? 's' : ''} on ${runs.some((x) => x.auto) ? 'a route found from the site' : 'drawn routes'}, ${obstacles.length} obstacles`, rows, saLayers: layers,
+    method: `${runs.some((x) => x.auto) ? `The route was found from the site, not drawn: it starts in the right-hand half of the nearest road (OpenStreetMap centreline and width) and ends at the stop the task sets; a hybrid A* search drives between them, turning no tighter than 1.1 × the vehicle's least radius, keeping clear of the buildings and preferring the road corridors. ` : ''}A kinematic screening at low speed. The rear axle's centre follows the ${runs.some((x) => x.auto) ? 'found' : 'drawn'} route (corners rounded to arcs of 1.25 × the vehicle's least radius, or the radius set); the steering is pure pursuit, limited to the vehicle's maximum angle and to the rate its lock-to-lock time allows at the stated speed, on a ${runs[0].ds} m step. An articulated vehicle's trailer follows its hitch (θt′ = (sin(θ − θt) + h·tanδ/L·cos(θ − θt)) / Lt), so the off-tracking is computed. The envelope is the union of the vehicle's outlines on ${runs[0].cell} m cells; the clearance is the least gap between each outline and each obstacle at every step. Where the vehicle cannot keep within 0.30 m of the route, a corner is tighter than it can turn, or the trailer folds past its limit, the route is reported infeasible, never forced. No tyre slip or dynamics; the body is a plan outline (no mirrors or overhang heights); kerbs only as drawn. Vehicle presets are typical dimensions for early design, not manufacturer specifications. Not a certified (AutoTURN) or fire-access code study.`,
     results: { status: worst, collisions: runs.reduce((s, x) => s + x.collisions.length, 0), minClear: runs[0].minClear ? +runs[0].minClear.d.toFixed(3) : null, swept: +runs[0].swept.toFixed(1), length: +runs[0].length.toFixed(1) },
     settings: { vehicles: runs.map((x) => x.vehicle.name), clearance: +ST.va.clear || 0.3, quality: runs[0].quality, label: `Swept path, ${runs.map((x) => x.vehicle.name).join(' + ')} (Workspace)` } };
   return r; }
@@ -284,11 +352,15 @@ function parkResult(ctx, R, obstacles, src, S, region) { const { ST, esc, fmt } 
 export function refreshPark(ctx) { const ST = ctx.ST; if (!ST.res || !ST.res.saRowsOf) return; const o = chosen(ST); ST.pkLast = o; ST.res.rows = ST.res.saRowsOf(); ST.res.results = { stalls: o.total, byCat: o.byCat, use: +o.use.toFixed(3), option: o.label }; ST.res.settings.label = `Parking layout, option ${o.label} (Workspace)`; ctx.paintRes(ST.res); ctx.drawStudy(); }
 
 // ---- the card's buttons and fields ----
-export function onClick(e, ctx) { const ST = ctx.ST; if (ST.id !== VEH && ST.id !== PARK) return false; const b = e.target.closest('[data-sa], [data-va], [data-va-route], [data-va-zoom], [data-pk], [data-pk-kind], [data-pk-area], [data-pk-mode], [data-pk-opt], [data-sa-exp]'); if (!b || b.tagName === 'INPUT' || b.tagName === 'SELECT' || ST.busy) return false; const d = b.dataset;
+export function onClick(e, ctx) { const ST = ctx.ST; if (ST.id !== VEH && ST.id !== PARK) return false; const b = e.target.closest('[data-sa], [data-va], [data-va-task], [data-va-route], [data-va-zoom], [data-pk], [data-pk-kind], [data-pk-area], [data-pk-mode], [data-pk-opt], [data-sa-exp]'); if (!b || b.tagName === 'INPUT' || b.tagName === 'SELECT' || ST.busy) return false; const d = b.dataset;
   if (d.sa === 'finish') { sketchEnd(ctx, true); return true; } if (d.sa === 'cancel') { sketchEnd(ctx, false); return true; } if (d.sa === 'undo') { if (ST.sk) { ST.sk.pts.pop(); ctx.drawStudy(); preview(ctx); } return true; }
   if (d.saExp) { exportAs(ctx, d.saExp); return true; }
   if (d.vaRoute != null) { ST.va.cur = +d.vaRoute; ctx.drawStudy(); return true; }
   if (d.vaZoom != null) { ST.res && ST.res.saZoom && ST.res.saZoom(+d.vaZoom); return true; }
+  if (d.vaTask) { ST.va.task = d.vaTask; ST.va.cur = 0; save(ST); ctx.drawStudy(); preview(ctx); return true; }
+  if (d.va === 'pickthr') { sketchStart(ctx, 'thr'); return true; }
+  if (d.va === 'tryall') { tryAll(ctx); return true; }
+  if (d.va === 'tryallcsv') { const T = ST.vaAll; if (T && T.rows) dl('swept-path-every-vehicle-' + new Date().toISOString().slice(0, 10) + '.csv', '\ufeff' + [['Vehicle', 'Overall length (m)', 'Result', 'Least clearance (m)', 'Tightest turn (m)', 'Swept area (m²)', 'Why'], ...T.rows.map((r) => [r.name, r.len, r.result, r.clear ?? '', r.turn ?? '', r.swept ?? '', r.why || ''])].map((l) => l.map((c) => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\r\n'), 'text/csv'); return true; }
   if (d.va === 'draw') { sketchStart(ctx, 'route', ST.va.cur); return true; }
   if (d.va === 'clearroute') { const r = ST.va.routes[ST.va.cur]; r.pts = []; r.rev = []; r.radii = []; save(ST); ctx.drawStudy(); preview(ctx); return true; }
   if (d.va === 'drawobs') { sketchStart(ctx, 'vobs'); return true; } if (d.va === 'clearobs') { ST.va.drawn = []; save(ST); ctx.drawStudy(); preview(ctx); return true; }
@@ -306,7 +378,8 @@ export function onClick(e, ctx) { const ST = ctx.ST; if (ST.id !== VEH && ST.id 
   if (d.pk === 'checkveh') { ST.va.obs.parking = true; save(ST); ctx.openStudy(VEH); return true; }
   return false; }
 export function onChange(e, ctx) { const ST = ctx.ST; if (ST.id !== VEH && ST.id !== PARK) return false; const t = e.target, d = t.dataset, A = ST.va, P = ST.pk, i = A.cur, val = t.type === 'checkbox' ? t.checked : t.value;
-  if (d.va === 'veh') { if (t.value === 'custom') { A.routes[i].veh = 'custom'; A.prof[i] = { ...JSON.parse(JSON.stringify(V.CUSTOM_BASE)) }; } else { A.routes[i].veh = t.value; delete A.prof[i]; } }
+  if (d.va === 'ent') A.ent = +t.value; else if (d.va === 'jn') A.jn = { j: +t.value, from: 0, to: 1 }; else if (d.va === 'jfrom') A.jn = { ...A.jn, from: +t.value }; else if (d.va === 'jto') A.jn = { ...A.jn, to: +t.value };
+  else if (d.va === 'veh') { if (t.value === 'custom') { A.routes[i].veh = 'custom'; A.prof[i] = { ...JSON.parse(JSON.stringify(V.CUSTOM_BASE)) }; } else { A.routes[i].veh = t.value; delete A.prof[i]; } }
   else if (d.vaP) { const v = A.prof[i] || vehOf(ST, i); v[d.vaP] = +t.value; if (d.vaP === 'length') { /* the length is shown; the overhangs and wheelbase drive the outline */ } A.prof[i] = v; }
   else if (d.vaT) { const v = A.prof[i] || vehOf(ST, i); v.trailer[d.vaT] = +t.value; A.prof[i] = v; }
   else if (d.va === 'on2') A.routes[1].on = !!val; else if (d.va === 'speed') A.routes[i].speed = t.value; else if (d.va === 'delay') A.routes[i].delay = t.value; else if (d.va === 'clear') A.clear = +t.value || 0.3; else if (d.va === 'avoid') A.avoid = !!val;

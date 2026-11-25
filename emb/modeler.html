@@ -6884,7 +6884,7 @@ window.S3 = (() => {
       if (!VH3.fol) VH3.fol = { t: ctl.target.clone(), p: cam.position.clone() }; VH3.fol.t.lerp(tgt, 0.18); VH3.fol.p.lerp(want, 0.08); ctl.target.copy(VH3.fol.t); cam.position.copy(VH3.fol.p); cam.lookAt(ctl.target); ctl.update(); }
     else VH3.fol = null;
     render(); };
-  api.vehiclesState = () => [...VH3.map.entries()].map(([k, g0]) => { const t = g0.userData.units.tractor, fw = g0.userData.wheels.find((W) => W.w.steer); return { key: k, x: t.position.x, y: -t.position.z, z: t.position.y, th: t.rotation.y, steer: fw ? fw.piv.rotation.y : 0, parts: g0.children.reduce((n, u) => n + u.children.length, 0), follow: VH3.follow }; });
+  api.vehiclesState = () => [...VH3.map.entries()].map(([k, g0]) => { const t = g0.userData.units.tractor, fw = g0.userData.wheels.find((W) => W.w.steer); return { key: k, x: t.position.x, y: -t.position.z, z: t.position.y, th: t.rotation.y, steer: fw ? fw.piv.rotation.y : 0, parts: g0.children.reduce((n, u) => n + u.children.length, 0), follow: VH3.follow, cam: cam ? [cam.position.x, cam.position.y, cam.position.z] : null }; });
   // ---- whole-building evacuation (2026-11-06): the design ghosted so every floor shows, a result sheet on each storey, people with
   // their own height (figures; a bed is a red box) in their own colours
   const EGR = { on: false, sheets: [], scene: null, list: [], yOff: {} };
@@ -8170,6 +8170,10 @@ if (window.__WSROLE) {
       return { lv, level: L.name, z: L.z || 0, segs, rooms, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } }; },
     walkShow(o) { walkShow(o); },
     vehicles(list, opt) { const L = list && list.length ? list : null; vehicles2(L ? L.map((q) => q.d2) : null); if (window.S3 && S3.vehicles) S3.vehicles(L ? L.map((q) => ({ ...q.d3, z: (WK.o && Number.isFinite(WK.o.ground) ? WK.o.ground : 0) + (WK.o && WK.o.z || 0) })) : null, opt || {}); },
+    // the building's doors to outside on its lowest storey (2026-11-25), for the vehicle swept path's "To an entrance": where each is,
+    // its outward normal, its width and the room behind it; from the same exterior test as the airflow (STC.build)
+    entrances() { let S2; try { S2 = STC.build(M); } catch { return []; } const doors = S2.ops.filter((op) => op.ext && op.outN && (op.o.kind === 'door' || op.o.object_type === 'door')); if (!doors.length) return [];
+      const z0 = Math.min(...doors.map((op) => op.lv.z)); return doors.filter((op) => op.lv.z <= z0 + 0.5).map((op) => ({ id: op.o.id, p: [op.p[0], op.p[1]], n: [op.outN[0], op.outN[1]], w: op.o.w, lv: op.lv.id, room: (S2.rooms.find((r) => r.gi === op.inR) || {}).name || '' })); },
     vehiclesState() { return { d2: VEH2.list ? VEH2.list.length : 0, d3: window.S3 && S3.vehiclesState ? S3.vehiclesState() : [] }; },
     winRisk(o) { winRiskShow(o); }, winRiskState: () => (WRISK ? { cols: { ...WRISK.cols }, opacity: WRISK.opacity, sel: WRISK.sel || null, lv: LV } : null),
     _winRiskPx(id) { if (CAM === '3d') return null; const op = M.ops.find((q) => q.id === id), w = op && wallById(op.wall); if (!w || w.lv !== LV) return null; draw(); const q = W2S(STC.opPoint(w, op)), d = g.getImageData(Math.round(q[0]), Math.round(q[1]), 1, 1).data; return '#' + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join(''); },   // test hook: the plan's colour at the middle of a window

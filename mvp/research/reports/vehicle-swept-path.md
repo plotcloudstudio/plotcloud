@@ -3,14 +3,14 @@ id: report-vehicle-swept-path
 sim: vehicle-swept-path
 published: 2026-11-21
 publishedText: 21 November 2026
-auditText: 21 November 2026
+auditText: 25 November 2026
 title: Vehicle swept paths from a kinematic bicycle model with pure-pursuit steering and computed trailer off-tracking
 type: Method and data report
 summary: How the Vehicle swept path study drives a design vehicle along a drawn route with a rate-limited pure-pursuit steering controller, computes the off-tracking of trailers, and checks clearance to buildings and other obstacles. The report gives the equations and their sources, reports exact checks against analytical turning geometry, and flags the vehicle presets as typical dimensions that must be checked against the design vehicle of the jurisdiction.
 image: img/home/vehicle-swept-path.jpg
 imageAlt: The swept envelope of a truck turning into a service yard, with wheel tracks and clearance warnings
-code: mvp/js/swept-path.js, mvp/js/vehicles.js, mvp/js/route-plan.js, mvp/js/workspace-chrome.js
-tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs
+code: mvp/js/swept-path.js, mvp/js/vehicles.js, mvp/js/route-plan.js, mvp/js/site-routes.js, mvp/js/vehicle-mesh.js, mvp/js/site-access-ui.js, mvp/js/workspace-chrome.js
+tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs, tests/site-routes.test.mjs, tests/vehicle-path-auto.cjs
 keywords:
 - Swept path analysis
 - Off-tracking
@@ -56,6 +56,20 @@ which is the standard kinematic trailer equation [5]. In a steady turn with the 
 
 At each step the body outlines of the tractor and trailer and the four wheel positions are recorded. The swept envelope is rasterised on a fine grid (0.02–0.05 m), and every body outline is tested against every obstacle outline (buildings, walls and drawn obstacles) for the least gap. Stretches in collision or nearer than the clearance threshold (0.30 m by default) are reported. An option drives around obstacles with a planned path.
 
+### 2.5. Routes found from the site (added 25 November 2026)
+
+A route can be found instead of drawn. The site data give the roads as OpenStreetMap centrelines with a width [9] and the building model gives its doors to outside on the lowest storey (an opening is exterior when a room lies on one side of its wall only). Three tasks set the two ends:
+
+- **To an entrance.** The start lies on the road nearest the chosen door, a lead distance before the point nearest it, in the middle of the right-hand half of the road (traffic keeps to the right). The end is a stop beside the door, 1 m clear of the wall, parallel to it, with the middle of the vehicle at the door. If the vehicle cannot stand there facing one way along the wall, the other way is tried.
+- **Through the site.** Two clicks, each near a road, give the start and the end in the right-hand half of the nearest road.
+- **A turn at a junction.** Junctions are where two road centrelines cross, or where one ends within 1 m of another. The vehicle starts a lead distance out on the incoming arm and ends the same distance out on the leaving arm.
+
+Between the two ends a hybrid A* search [8] drives forward in short arcs no tighter than 1.1 × the vehicle's least radius, with the body (and trailer) covered by circles tested against a distance map of the buildings. Ground outside the road corridors (half the road width either side of the centreline) costs 1.6 times as much, so the path keeps to the roads where it can. The last arc must end within 0.3 rad of the stop's heading. The path found is then driven by the model of §2.2–2.3, so its swept envelope, clearances and infeasible stretches are computed as for a drawn route.
+
+### 2.6. Playback and the 3D vehicle
+
+The result plays in real time at the stated speed (1×, 2× or 4×), on the display's own refresh: each frame interpolates the vehicle's pose at that moment (§2.2), draws its body, wheels and the wheel tracks driven so far over the 2D plan, and places a schematic 3D model at the same pose. The model is built from the same dimensions as the swept body: its footprint is the body rectangle of §2.4, the wheels stand at the axles and track, the front wheels turn by the steering angle and all wheels roll with the distance driven; a trailer turns by its own heading. Heights only shape the picture (Table 1). The model shows the movement and the scale; it is not a rendering of a make or model, and nothing is checked against its height.
+
 ## 3. Parameters and their sources
 
 Table 1. Settings and vehicle data of the Vehicle swept path study.
@@ -75,6 +89,13 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 | WB-20-type semi-trailer | Tractor L 6.2 m, kingpin to axle 12.4 m, length 22.7 m, δ 28.2° | "After the WB-20 in the reference drawing" | Flagged: the drawing is not named; does not match the Caltrans STAA vehicle [6]; check against AASHTO [1] |
 | STAA design vehicle | Front overhang 4 ft, tractor wheelbase 23 ft, kingpin over the tractor's rear axle (0 ft), trailer 48 ft: 3 ft ahead of the kingpin, 41 ft kingpin to rear axle, 4 ft behind; width and track 8.5 ft; steering lock 26.3°; lock-to-lock 6 s; articulation 70°; 72 ft overall | Caltrans HDM Figure 404.5A [6] | Sourced (feet × 0.3048) |
 | STAA tractor frame behind its rear axle | 0.6 m | Engine choice | Assumption: not dimensioned in Figure 404.5A; it lies under the trailer |
+| Display heights of the 3D models | Car 1.3 m (AASHTO P); trucks, mixer and fire truck 3.4–4.1 m (AASHTO SU range); bus 3.2 m (AASHTO CITY-BUS); semi-trailers 4.1 m (AASHTO WB-19 and WB-20) | AASHTO Exhibit 2-1 (Metric) [7] | Sourced; SUV 1.8 m, pickup 1.9 m and van 2.6 m have no AASHTO class and are flagged as assumed; picture only |
+| Start lane | Middle of the right-hand half of the road: width / 4 from the centreline (at least 1.2 m) | Engine choice | Assumption: right-hand traffic; no lane data |
+| Lead distance before the door or junction | max(25 m, 3 × the vehicle's length) to a door; max(20 m, 2 × its length) at a junction | Engine choice | Numerical setting: room to line up |
+| Stop beside a door | 1.0 m from the wall to the vehicle's side, parallel to the wall | Engine choice | Assumption; to be set by the project |
+| Planner curvature limit | 1 / (1.1 × R_min) | Engine choice, hybrid A* [8] | Numerical margin |
+| Off-road cost | 1.6 × the cost on a road corridor | Engine choice | Numerical setting: prefers roads, does not forbid leaving them |
+| Final heading tolerance | 0.3 rad (17°) | Engine choice | Numerical setting |
 
 ## 4. Verification and validation status
 
@@ -95,6 +116,22 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 - the outside front wheel at full lock comes to 55.75 ft against the figure's 56.16 ft "radius to outside wheel at beginning of curve", a difference of 0.7 %;
 - on a 30 m circle the trailer axle settles at 27.273 m, against √(R² − L_t²) = 27.273 m.
 
+`tests/site-routes.test.mjs` checks the routes found from the site on a made-up site (25 November 2026). All six checks passed:
+
+- A junction is found at the crossing of two streets, with four arms.
+- To an entrance, a box truck starts in the right-hand half of the street and ends with its middle at the door, 1 m clear of the wall. It ends 9.5° off the wall's direction (within the 17° allowed), with no collision.
+- A right turn at the junction keeps 94 % of the path on the road corridors; a drive along the street keeps 100 %.
+- A wall across the street gives "no way round" and the point the search reached.
+- For all 12 presets, the 3D model's footprint matches the swept body within 2 cm, and the front-left wheel stands at the axle.
+
+`tests/vehicle-path-auto.cjs` checks the same in the Workspace on the hospital example. All six checks passed:
+
+- **What was found:** 7 surrounding buildings, 2 roads, 4 doors to outside and 1 junction.
+- **To an entrance:** the box truck drives from the service lane to the Shipping and receiving door, 18.0 m, 96 % on the road, feasible, with nothing drawn.
+- **Playback:** the vehicle moves in even steps, and its front wheels steer. The view follows it when asked.
+- **Every vehicle:** "Try every vehicle" lists all 12 presets. 5 reach that door; the longest is the medium rigid truck.
+- **Other tasks:** a left turn at the junction and a drive through the site each find a route.
+
 ## 5. Discussion
 
 **The STAA design vehicle.** One preset reproduces a jurisdiction's published design vehicle: the STAA Design Vehicle of the Caltrans Highway Design Manual, Topic 404, Figure 404.5A [6], with all its dimensions taken from that figure. Two caveats apply:
@@ -108,6 +145,15 @@ Table 1. Settings and vehicle data of the Vehicle swept path study.
 
 **Driver model.** Pure pursuit with a look-ahead of one wheelbase cuts corners slightly, as drivers do; the corner rounding at 1.25 R_min reflects a driver who does not turn at full lock. Swept paths from commercial tools use similar conventions, and results can differ by tens of centimetres depending on them.
 
+**Routes found from the site.** A found route is a plausible way in, not the only one and not a regulation one. The roads are centrelines with a width: kerbs, the paved edge, lanes, one-way streets and turn restrictions are not known, so a path may cut a corner a kerb would stop. Driveways and loading areas that are not mapped are only buildings' surroundings. The planner drives forward only, so three-point turns and reversing into a bay are not found. Where the search fails, it says how close it came; drawing the route remains possible for any case the site data cannot describe.
+
+**What would deepen it.**
+- Kerb and paved-edge lines (from survey DXF), so the wheels must stay on the pavement while the body may overhang a low kerb, as commercial swept-path tools check.
+- Reversing and multi-point turns in the planner, including articulated vehicles.
+- Overhead clearance against canopies and parking entrances, and grades from the terrain, now that each vehicle has a height.
+- Design vehicles checked dimension by dimension against AASHTO and TAC.
+- A vehicle-access sheet in the report: the plan envelope, the every-vehicle table and the conflicts.
+
 ## 6. Conclusion
 
 The Vehicle swept path study uses standard kinematic models and a standard steering controller, and reproduces analytical turning geometry to within a millimetre. Its vehicle presets are typical dimensions and must be replaced by the project's design vehicle for any submission. It is well suited to testing site access and loading layouts in early design.
@@ -120,3 +166,6 @@ The Vehicle swept path study uses standard kinematic models and a standard steer
 4. R. Rajamani, Vehicle Dynamics and Control, 2nd ed., Springer, New York, 2012. [doi:10.1007/978-1-4614-1433-9](https://doi.org/10.1007/978-1-4614-1433-9)
 5. SAE International, SAE J695, Turning Ability and Off Tracking — Motor Vehicles, SAE, Warrendale, PA.
 6. California Department of Transportation, Highway Design Manual, Chapter 400 Intersections at Grade, Topic 404 Design Vehicles: Index 404.4(1)(b) and Figure 404.5A "STAA Design Vehicle 56-Foot Radius" (page 400-19, July 1, 2020; chapter as updated 29 September 2023). [dot.ca.gov](https://dot.ca.gov/programs/design/manual-highway-design-manual-hdm)
+7. AASHTO, Errata for A Policy on Geometric Design of Highways and Streets (2004 edition), June 2004: Exhibit 2-1 (Metric), Design Vehicle Dimensions, overall heights. [downloads.transportation.org](https://downloads.transportation.org/Errata-GDHS-4.pdf)
+8. D. Dolgov, S. Thrun, M. Montemerlo, J. Diebel, Path planning for autonomous vehicles in unknown semi-structured environments, The International Journal of Robotics Research 29 (5) (2010) 485–501. [doi:10.1177/0278364909359210](https://doi.org/10.1177/0278364909359210)
+9. OpenStreetMap contributors, map data available under the Open Database License (ODbL). [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)

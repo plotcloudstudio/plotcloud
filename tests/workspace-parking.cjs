@@ -43,7 +43,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const dx = await p.evaluate(async () => { const C = await import('./js/cad-export.js'); return C.readDxf(C.dxf(window.__wsStudy.state().res.saLayers())); }); assert(dx.STALLS_STANDARD && dx.STALLS_STANDARD.polylines > 40 && dx.AISLES.polylines >= 1 && dx.PARKING_AREA && dx.STALLS_ACCESSIBLE && dx.ACCESS_AISLES, JSON.stringify(dx));
     console.log(`PASS the DXF: ${Object.entries(dx).map(([k, v]) => `${k} ${v.polylines}`).join(', ')}`);
     // 5. check with a vehicle: the swept path opens with the stalls as obstacles; a truck along the aisle; back in parking, the result is listed
-    await p.click('.sp-studycard [data-pk=checkveh]'); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(400);
+    await p.click('.sp-studycard [data-pk=checkveh]'); await p.waitForSelector('.sp-studycard [data-va-task=draw]'); await p.click('.sp-studycard [data-va-task=draw]'); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(400);
     assert.match(await p.locator('.sp-studycard').innerText(), /Parked cars in the parking layout \(option A, \d+ stalls\)/);
     const aisle = await p.evaluate(() => { const a = window.__wsStudy.state().pkLast.aisles.find((x) => x.kind === 'aisle'), P = a.poly, c = P.reduce((s, q) => [s[0] + q[0] / 4, s[1] + q[1] / 4], [0, 0]); return { c, u: [P[1][0] - P[0][0], P[1][1] - P[0][1]] }; });
     const L2 = Math.hypot(...aisle.u), u = [aisle.u[0] / L2, aisle.u[1] / L2], a0 = [aisle.c[0] - u[0] * (L2 / 2 - 4), aisle.c[1] - u[1] * (L2 / 2 - 4)], a1 = [aisle.c[0] + u[0] * (L2 / 2 - 4), aisle.c[1] + u[1] * (L2 / 2 - 4)];
