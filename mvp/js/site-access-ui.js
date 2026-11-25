@@ -37,9 +37,11 @@ const doorsOf = (ctx) => { try { return ctx.ws().entrances?.() || []; } catch { 
 const roadsOf = (S) => S.roads.filter((r) => r.pts && r.pts.length >= 2);
 const compass = (d) => ['east', 'north-east', 'north', 'north-west', 'west', 'south-west', 'south', 'south-east'][((Math.round(Math.atan2(d[1], d[0]) / (Math.PI / 4)) % 8) + 8) % 8];
 function siteFound(ctx) { const S = sceneOf(ctx), roads = roadsOf(S), J = SR.junctions(roads), rd = (d) => { const q = SR.nearestRoad(roads, d.p); return q ? q.q.d : Infinity; }, doors = doorsOf(ctx).map((d) => ({ ...d, road: rd(d) })).sort((a, b) => a.road - b.road); return { S, roads, doors, J }; }   // doors nearest a road first
+// the task in use: one chosen by hand, else To an entrance where the site has roads, else Draw it (2026-11-25)
+const taskOf = (ctx, roads) => { const A = ctx.ST.va; if (A.taskSet || !A.task || A.task === 'draw') return A.task || 'draw'; return (roads || roadsOf(sceneOf(ctx))).length ? A.task : 'draw'; };
 const armName = (a) => `from the ${compass(a.dir)}${a.road.name ? ' (' + a.road.name + ')' : ''}`;
 /** the start and the end of route 1 from the task chosen: { start, end, what } or an error in words */
-function taskEnds(ctx, v) { const A = ctx.ST.va, { roads, doors, J } = siteFound(ctx);
+function taskEnds(ctx, v) { const A = ctx.ST.va, { roads, doors, J } = siteFound(ctx); if (taskOf(ctx, roads) === 'draw') return { error: 'draw' };
   if (!roads.length) return { error: 'There are no roads in this site’s data. Add the site from the map (Edit site), or draw the route (Draw it).' };
   if (A.task === 'entrance') { if (!doors.length) return { error: 'No door to outside on the ground floor. Add a door in Plan Studio, or draw the route (Draw it).' };
     const k = Math.min(+A.ent || 0, doors.length - 1), d = doors[k], T = SR.entranceTask(roads, d, v), T2 = SR.entranceTask(roads, d, v, { flip: true }); if (T.error) return T; return { ...T, alt: T2, what: `from ${T.road.name || 'the nearest road'} to door ${k + 1}${d.room ? ' (' + d.room + ')' : ''}` }; }
@@ -48,7 +50,7 @@ function taskEnds(ctx, v) { const A = ctx.ST.va, { roads, doors, J } = siteFound
   if (A.task === 'junction') { if (!J.length) return { error: 'No road junction in this site’s data. Pick another task, or draw the route.' }; const j = J[Math.min(+A.jn.j || 0, J.length - 1)], ar = SR.arms(roads, j);
     const T = SR.turnTask(roads, j, Math.min(+A.jn.from || 0, ar.length - 1), Math.min(+A.jn.to || 0, ar.length - 1), v); if (T.error) return T; return { ...T, what: `a ${T.kind} at junction ${(+A.jn.j || 0) + 1}` }; }
   return { error: 'draw' }; }
-function taskHTML(ctx) { const { ST, esc } = ctx, A = ST.va, { S, roads, doors, J } = siteFound(ctx), t = A.task || 'draw';
+function taskHTML(ctx) { const { ST, esc } = ctx, A = ST.va, { S, roads, doors, J } = siteFound(ctx), t = taskOf(ctx, roads);
   const found = `Found on the site: ${S.proposed.length ? 'the proposed building' : 'no proposed building'}, ${S.context.length} building${S.context.length === 1 ? '' : 's'} around it, ${roads.length} road${roads.length === 1 ? '' : 's'}, ${doors.length} door${doors.length === 1 ? '' : 's'} to outside, ${J.length} junction${J.length === 1 ? '' : 's'}. All are obstacles or routes as they apply; nothing to draw.`;
   let body = '';
   if (t === 'entrance') body = doors.length ? `<p class="sp-flabel">Door</p><select class="sp-sel" data-va="ent">${doors.map((d, k) => `<option value="${k}" ${k === (+A.ent || 0) ? 'selected' : ''}>Door ${k + 1}${d.room ? ' · ' + esc(d.room) : ''} · ${d.w.toFixed(1)} m wide, faces ${compass(d.n)}</option>`).join('')}</select><p class="sp-note">The vehicle comes along the nearest road and stops beside the door, parallel to the wall, 1 m clear of it (D on the plan).</p>` : '<p class="sp-note sp-warn">No door to outside on the ground floor: add one in Plan Studio, or use Draw it.</p>';
@@ -59,7 +61,7 @@ function taskHTML(ctx) { const { ST, esc } = ctx, A = ST.va, { S, roads, doors, 
       <div class="sp-kv"><span>Leaves</span><b><select class="sp-sel" data-va="jto">${ar.map((a, k) => `<option value="${k}" ${k === (+A.jn.to || 0) ? 'selected' : ''}>${esc(armName(a).replace('from the', 'to the'))}</option>`).join('')}</select></b></div>` : '<p class="sp-note sp-warn">No road junction in this site’s data.</p>'; }
   if (t === 'draw') body = '<p class="sp-note">Click the start, each turn and the end on the plan (below).</p>';
   return `<p class="sp-flabel">What to check</p><div class="sp-tabs sp-tasks" role="tablist">${TASKS.map(([k, n]) => `<button type="button" role="tab" data-va-task="${k}" aria-selected="${t === k}">${n}</button>`).join('')}</div>${body}<p class="sp-note sp-found">${esc(found)}</p>`; }
-function taskMarks(ctx) { const ST = ctx.ST, A = ST.va, m = { dots: [], labels: [], lines: [] }; if (ST.id !== VEH || A.cur !== 0) return m; const t = A.task;
+function taskMarks(ctx) { const ST = ctx.ST, A = ST.va, m = { dots: [], labels: [], lines: [] }; if (ST.id !== VEH || A.cur !== 0) return m; const t = taskOf(ctx);
   if (t === 'entrance') siteFound(ctx).doors.forEach((d, k) => { const on = k === (+A.ent || 0); m.dots.push({ p: d.p, col: on ? '#16a34a' : '#64748b', r: on ? 0.7 : 0.5, label: 'D' + (k + 1), al: 1, ring: true, tag: 'door' }); if (on) m.lines.push({ a: d.p, b: [d.p[0] + d.n[0] * 3, d.p[1] + d.n[1] * 3], col: '#16a34a', w: 0.1, head: true, al: 1 }); });
   if (t === 'through') (A.thr || []).forEach((p, k) => m.dots.push({ p, col: '#2563eb', r: 0.7, label: k ? 'B' : 'A', al: 1, ring: true, tag: 'thr' }));
   if (t === 'junction') { const { roads, J } = siteFound(ctx); J.forEach((j, k) => m.dots.push({ p: j.p, col: k === (+A.jn.j || 0) ? '#f97316' : '#64748b', r: k === (+A.jn.j || 0) ? 0.9 : 0.6, label: 'J' + (k + 1), al: 1, ring: true, tag: 'junction' })); void roads; }
@@ -87,7 +89,7 @@ function sketchMarks(ST) { const sk = ST.sk; if (!sk || !sk.pts.length) return {
 const merge = (...ms) => { const o = { polys: [], paths: [], dots: [], lines: [], labels: [] }; for (const m of ms) for (const k of Object.keys(o)) if (m && m[k]) o[k].push(...m[k]); return o; };
 /** the plan before a run (or while drawing): the site, what has been drawn, the sketch in progress */
 export function preview(ctx, fit) { const ST = ctx.ST, S = sceneOf(ctx), box = boxOf(ST, S), id = ST.id, drawn = { polys: [], paths: [], dots: [], labels: [] };
-  if (id === VEH) { ST.va.routes.forEach((r, i) => { if (r.pts.length >= 2 && (i === 0 ? !ST.va.task || ST.va.task === 'draw' : r.on)) { drawn.paths.push({ pts: r.pts, col: RCOL[i], w: 0.1, dash: [0.6, 0.4], al: 0.9, tag: 'route' }); drawn.dots.push({ p: r.pts[0], col: RCOL[i], r: 0.5, label: String(i + 1), al: 1, ring: true }); } });
+  if (id === VEH) { ST.va.routes.forEach((r, i) => { if (r.pts.length >= 2 && (i === 0 ? taskOf(ctx) === 'draw' : r.on)) { drawn.paths.push({ pts: r.pts, col: RCOL[i], w: 0.1, dash: [0.6, 0.4], al: 0.9, tag: 'route' }); drawn.dots.push({ p: r.pts[0], col: RCOL[i], r: 0.5, label: String(i + 1), al: 1, ring: true }); } });
     ST.va.drawn.forEach((P) => drawn.polys.push({ pts: P, fill: '#fca5a5', fal: 0.5, col: '#b91c1c', w: 0.06, tag: 'drawn' })); }
   if (id === PARK) parkInputsMarks(ST, drawn);
   show(ctx, box, merge(siteMarks(ST, S, box), drawn, id === VEH ? taskMarks(ctx) : null, sketchMarks(ST)), fit); }
@@ -120,7 +122,7 @@ const num = (attr, val, ph, step = 0.1) => `<input class="sp-in sp-num" type="nu
 const chk = (attr, on, label) => `<label class="sp-chk"><input type="checkbox" ${attr} ${on ? 'checked' : ''}> ${label}</label>`;
 function vehInputs(ctx) { const { ST, esc, fmt } = ctx, A = ST.va, i = A.cur, R = A.routes[i], v = vehOf(ST, i), errs = V.check(v), list = V.all();
   const len = R.pts.length >= 2 ? G.plLength(R.pts) : 0;
-  const auto = i === 0 && A.task && A.task !== 'draw';
+  const auto = i === 0 && taskOf(ctx) !== 'draw';
   return `${sketchBar(ST, esc)}${ST.saMsg ? `<p class="sp-note sp-warn">${esc(ST.saMsg)}</p>` : ''}${i === 0 ? taskHTML(ctx) : ''}
     <div class="sp-tabs" role="tablist">${A.routes.map((r, k) => `<button type="button" role="tab" data-va-route="${k}" aria-selected="${k === i}">Route ${k + 1}${k && !r.on ? ' (off)' : ''}</button>`).join('')}</div>
     ${i === 1 ? chk('data-va="on2"', R.on, 'Check a second vehicle on its own route (at the same time, or later)') : ''}
@@ -170,7 +172,7 @@ export async function compute(ctx) { return ctx.ST.id === VEH ? computeVeh(ctx) 
 // one vehicle on one route (2026-11-25, shared by the run and Try every vehicle): route 1 from the task chosen (the planner finds the
 // drive between the ends it gives, keeping to the roads), or the route drawn (driven as drawn, round obstacles where it hits one)
 async function driveOne(ctx, v, i, obstacles, so, roads) { const ST = ctx.ST, A = ST.va, r = A.routes[i], yieldUI = () => new Promise((res) => setTimeout(res, 0));
-  if (i === 0 && A.task && A.task !== 'draw') { const T = taskEnds(ctx, v); if (T.error) return { ok: false, error: T.error };
+  if (i === 0 && taskOf(ctx, roads) !== 'draw') { const T = taskEnds(ctx, v); if (T.error) return { ok: false, error: T.error };
     await yieldUI(); const plan = (E) => RP.planAround(v, { pts: [T.start.p, E.p] }, obstacles, { clearance: +A.clear || 0.3, startHeading: T.start.heading, goalHeading: E.heading, goalTol: 0.3, roads, maxExpand: 60000 });
     let pl = plan(T.end); if (!pl.ok && T.alt && !T.alt.error) { await yieldUI(); const p2 = plan(T.alt.end); if (p2.ok) { pl = p2; T.end = T.alt.end; } }   // stopping facing the other way along the wall
     if (!pl.ok) return { ok: false, error: `no drivable route ${T.what} for the ${v.name.toLowerCase()}: ${pl.error}${pl.closest && Number.isFinite(pl.gap) ? `; it gets to within ${pl.gap.toFixed(1)} m of the end` : ''}`, closest: pl.closest, task: T };
@@ -357,7 +359,7 @@ export function onClick(e, ctx) { const ST = ctx.ST; if (ST.id !== VEH && ST.id 
   if (d.saExp) { exportAs(ctx, d.saExp); return true; }
   if (d.vaRoute != null) { ST.va.cur = +d.vaRoute; ctx.drawStudy(); return true; }
   if (d.vaZoom != null) { ST.res && ST.res.saZoom && ST.res.saZoom(+d.vaZoom); return true; }
-  if (d.vaTask) { ST.va.task = d.vaTask; ST.va.cur = 0; save(ST); ctx.drawStudy(); preview(ctx); return true; }
+  if (d.vaTask) { ST.va.task = d.vaTask; ST.va.taskSet = true; ST.va.cur = 0; save(ST); ctx.drawStudy(); preview(ctx); return true; }
   if (d.va === 'pickthr') { sketchStart(ctx, 'thr'); return true; }
   if (d.va === 'tryall') { tryAll(ctx); return true; }
   if (d.va === 'tryallcsv') { const T = ST.vaAll; if (T && T.rows) dl('swept-path-every-vehicle-' + new Date().toISOString().slice(0, 10) + '.csv', '\ufeff' + [['Vehicle', 'Overall length (m)', 'Result', 'Least clearance (m)', 'Tightest turn (m)', 'Swept area (m²)', 'Why'], ...T.rows.map((r) => [r.name, r.len, r.result, r.clear ?? '', r.turn ?? '', r.swept ?? '', r.why || ''])].map((l) => l.map((c) => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\r\n'), 'text/csv'); return true; }
