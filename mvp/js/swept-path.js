@@ -53,7 +53,7 @@ export function referencePath(route, v, step = 0.05) {
 }
 
 // (2026-11-25) a planned path may reverse: each point carries its direction, and the last point before a change is a cusp (a stop)
-function plannedRef(pl) { const path = []; let s = 0, cusps = 0; for (const x of pl) { const dir = x.dir < 0 ? -1 : 1; if (path.length) { const d = dist(path.at(-1).p, x.p); if (d < 1e-4) continue; if (dir !== path.at(-1).dir) { path.at(-1).cusp = true; cusps++; } s += d; } path.push({ p: x.p, s, dir, k: x.k || 0 }); } return { path, corners: [], length: s, cusps, planned: true }; }
+function plannedRef(pl) { const path = []; let s = 0, cusps = 0; for (const x of pl) { const dir = x.dir < 0 ? -1 : 1; if (path.length) { const d = dist(path.at(-1).p, x.p); if (d < 1e-4) continue; if (dir !== path.at(-1).dir) { path.at(-1).cusp = true; cusps++; } s += d; } path.push({ p: x.p, s, dir, k: x.k || 0, phi: x.phi }); } return { path, corners: [], length: s, cusps, planned: true }; }
 
 // ---- the vehicle's outlines and wheels at a pose ----
 /** pose { x, y, th, phi (trailer heading), delta } → { bodies: [polygon, …], wheels: { name: [x, y] }, hitch } */
@@ -82,7 +82,7 @@ export function simulate(v, route, o = {}) {
   const ref = route.planned ? plannedRef(route.planned) : referencePath(route, v, Math.min(0.05, ds)); if (!ref.path.length) return { ok: false, error: ref.error || 'No route' };
   const R = ref.path, L = v.wheelbase, dmax = v.steer * DEG, rateMax = (2 * dmax / (v.lockTime || 4)) / speed, Ld = Math.max(1.5, Math.min(12, L)), art = v.kind === 'artic' && v.trailer;
   const T = art ? v.trailer : null, maxArt = art ? (T.maxArticulation || 70) * DEG : 0;
-  if (art && R.some((x) => x.dir < 0)) return { ok: false, error: 'Reversing an articulated vehicle is not simulated in this version: draw the route forward only' };
+  if (art && !route.planned && R.some((x) => x.dir < 0)) return { ok: false, error: 'A drawn route cannot reverse an articulated vehicle: pick a task (it plans the reversing) or draw the route forward only' };   // (2026-11-26) a planned path is replayed, trailer included
   // the start: on the route's first point, facing along it (backwards for a reversing start)
   const d0 = unit(sub(R[Math.min(R.length - 1, 3)].p, R[0].p)), th0 = Number.isFinite(route.heading0) ? route.heading0 : Math.atan2(d0[1], d0[0]) + (R[0].dir < 0 ? Math.PI : 0);   // a planned path: the heading it was planned from
   const q = { x: R[0].p[0], y: R[0].p[1], th: th0, phi: th0, delta: 0 }; let idx = 0, s = 0, u = 0, t = o.delay || 0, still = true;   // u: the distance driven with its sign (backwards counts down), for the wheels' roll   // still: at a standstill (the start, a cusp) the wheel may be turned freely
@@ -92,14 +92,19 @@ export function simulate(v, route, o = {}) {
   // (2026-11-25) a planned path that reverses (route-plan.js, rigid vehicles) is driven as planned: arcs of constant steering one after
   // another, indexed by the distance driven, the steering set at the start of each arc and the vehicle stopping at each change of
   // direction. Following it with pure pursuit instead turns its small heading errors at a cusp into large ones when reversing.
-  const replay = !!(ref.planned && ref.cusps);
+  const replay = !!(ref.planned && ref.cusps); let revAt = null, seam = 0;
   if (replay) { let j = 0; const last = R.at(-1).s;
     while (guard++ < maxSteps && s < last - ds / 2) { while (j + 1 < R.length - 1 && R[j + 1].s <= s + 1e-9) j++;
       const nx = R[Math.min(R.length - 1, j + 1)], dir = nx.dir, a = R[j], u0 = nx.s > a.s ? (s - a.s) / (nx.s - a.s) : 0, at = [a.p[0] + (nx.p[0] - a.p[0]) * u0, a.p[1] + (nx.p[1] - a.p[1]) * u0], err = dist(at, [q.x, q.y]);
       const want = Math.max(-dmax, Math.min(dmax, Math.atan(L * (nx.k || 0)))); q.delta = want;
       poses.push({ x: q.x, y: q.y, th: q.th, phi: q.phi, delta: q.delta, s, u, t, sRef: s, err, dir, sat: false });
       if (err > TRACK_TOL) bad.push({ s, why: 'track' });
+      if (art && Math.abs(wrap(q.th - q.phi)) > maxArt) bad.push({ s, why: 'articulation' });
       const step = Math.min(ds, Math.max(1e-4, nx.s - s)), w = Math.tan(q.delta) / L;   // never past the next point: the arcs change there
+      if (art) { const h = T.hitch || 0; q.phi += (Math.sin(q.th - q.phi) + h * w * Math.cos(q.th - q.phi)) / T.wheelbase * step * dir;   // the trailer, as the planner integrates it
+        // backing a trailer is unstable: left alone its angle drifts from the plan's and grows. A driver steers to keep it on the line
+        // planned, so where the plan gives the trailer's angle the reverse follows it, a difference at the stop taken out over 3 m
+        if (dir < 0 && Number.isFinite(nx.phi) && Number.isFinite(a.phi)) { const pp = a.phi + wrap(nx.phi - a.phi) * u0; if (revAt == null) { revAt = s; seam = wrap(q.phi - pp); } q.phi = pp + seam * Math.max(0, 1 - (s - revAt) / 3); } else if (dir > 0) revAt = null; }
       q.th += w * step * dir; q.x += Math.cos(q.th - w * step * dir / 2) * step * dir; q.y += Math.sin(q.th - w * step * dir / 2) * step * dir; s += step; u += step * dir; t += step / (dir < 0 ? Math.min(speed, REV_SPEED / 3.6) : speed); }
     poses.push({ x: q.x, y: q.y, th: q.th, phi: q.phi, delta: q.delta, s, u, t, sRef: s, err: dist(R.at(-1).p, [q.x, q.y]), dir: R.at(-1).dir, sat: false }); }
   while (!replay && guard++ < maxSteps) {

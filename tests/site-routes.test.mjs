@@ -54,7 +54,6 @@ console.log(`PASS 3D models of all ${V.PRESETS.length} presets: footprints match
   const lp = rb.poses.at(-1), gap = Math.hypot(lp.x - B.end.p[0], lp.y - B.end.p[1]); assert(rb.status === 'feasible' && rb.collisions.length === 0, 'driven clear: ' + rb.reasons.join('; '));
   assert(Math.max(...rb.poses.map((p) => p.err)) < 0.05 && gap < 1.0 && angDiff(lp.th, B.end.heading) <= 0.3 + 1e-9, `driven as planned, ends ${gap.toFixed(2)} m from the stop`);
   assert(rb.moves === pb.cusps + 1 && rb.reverseLength > 1, 'moves and metres reversing counted');
-  const semi = V.byId('semi'), ps = RP.planAround(semi, { pts: [B.start.p, B.via, B.end.p] }, [bld], { startHeading: B.start.heading, goalHeading: B.end.heading, roads, reverse: true, maxExpand: 5000 }); assert(!ps.ok || !ps.path.some((q) => q.dir < 0), 'the semi-trailer is not reversed');
   console.log(`PASS backed up to the door: ${rb.moves} moves, ${rb.reverseLength.toFixed(1)} m reversing, driven as planned, ends ${gap.toFixed(2)} m and ${deg(angDiff(lp.th, B.end.heading)).toFixed(0)}° from the stop; no collision`); }
 // 8 · turning round within a 12 m road: a box truck makes a three-point turn (two changes of direction), every move within the road
 { const lane = [{ id: 'l', name: 'Lane', pts: [[-60, 100], [60, 100]], width: 12 }], T = SR.turnRoundTask(lane, [0, 100], [10, 100]);
@@ -63,3 +62,16 @@ console.log(`PASS 3D models of all ${V.PRESETS.length} presets: footprints match
   const rt = SP.simulate(truck, { pts: [T.start.p, T.end.p], planned: pt2.path, heading0: pt2.heading0 }, { obstacles: [], clearance: 0.3 }); assert(rt.infeasible.length === 0, 'driven as planned');
   let worst = 0; for (const q of rt.poses) for (const B of SP.shapesAt(truck, q).bodies) for (const c of B) worst = Math.max(worst, Math.abs(c[1] - 100)); assert(worst <= 6 - 0.25, 'the body stays within the 12 m road, clearance kept: ' + worst.toFixed(2));
   console.log(`PASS turning round in a 12 m road: ${rt.moves} moves (a three-point turn), ${rt.reverseLength.toFixed(1)} m reversing, the body within ${worst.toFixed(2)} m of the centreline (6 m to the edge)`); }
+// 9 · a semi-trailer backed up to the door (2026-11-26): planned as a pull-out from the door driven the other way; the last move is
+// backwards, the trailer within 0.6 x its articulation limit when reversing, the replay on the plan (tracking < 0.1 m, the trailer's
+// angle at the door within 2° of square), no collision; a drawn route that reverses an articulated vehicle is still refused
+{ const semi = V.byId('semi'), B = SR.entranceTask(roads, door, semi, { back: true }); assert(B.vias && B.vias.length >= 2, 'staging poses on the road and in the yard');
+  const t0 = Date.now(), ps = RP.planBackIn(semi, B, [bld], { clearance: 0.3, roads }); assert(ps.ok, 'semi backed up: ' + ps.error);
+  assert(ps.cusps >= 1 && ps.path.at(-1).dir === -1 && ps.reverseLength > 10, 'the last move is backwards, ' + ps.reverseLength.toFixed(1) + ' m');
+  const rs = SP.simulate(semi, { pts: [B.start.p, B.end.p], planned: ps.path, heading0: ps.heading0 }, { obstacles: [bld], clearance: 0.3, complete: true });
+  assert(rs.status === 'feasible' && rs.collisions.length === 0, 'driven clear: ' + rs.reasons.join('; '));
+  const lim = 0.6 * semi.trailer.maxArticulation, art = Math.max(...rs.poses.filter((q) => q.dir < 0).map((q) => deg(angDiff(q.th, q.phi)))), lp = rs.poses.at(-1);
+  assert(art <= lim + 0.5, `articulation reversing ${art.toFixed(1)}° within ${lim}°`); assert(Math.max(...rs.poses.map((q) => q.err)) < 0.1, 'on the plan');
+  assert(Math.hypot(lp.x - B.end.p[0], lp.y - B.end.p[1]) < 0.5 && deg(angDiff(lp.phi, B.end.heading)) < 2 && deg(angDiff(lp.th, B.end.heading)) < 2, 'square to the door: ' + JSON.stringify(lp).slice(0, 120));
+  const dr = SP.simulate(semi, { pts: [[0, -60], [0, -30]], reverse: [true, true] }, { obstacles: [] }); assert(!dr.ok && /drawn route cannot reverse an articulated/.test(dr.error), 'a drawn reverse refused: ' + dr.error);
+  console.log(`PASS a semi-trailer backed up to the door: ${rs.moves} moves, ${rs.reverseLength.toFixed(1)} m reversing, trailer at most ${art.toFixed(1)}° (limit ${lim}°), square to the door, no collision (${Date.now() - t0} ms); a drawn reverse still refused`); }

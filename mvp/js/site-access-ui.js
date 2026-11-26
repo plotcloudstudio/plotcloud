@@ -4,10 +4,11 @@
 // Everything drawn is computed geometry. Both are screenings for early design, not certified swept-path or bylaw studies.
 import * as G from './geom2d.js';
 import * as V from './vehicles.js?v=batch3-20261124-1';
-import * as SP from './swept-path.js?v=rev-20261125-2';
-import * as RP from './route-plan.js?v=rev-20261125-1';
+import * as SP from './swept-path.js?v=semi-20261126-1';
+import * as RP from './route-plan.js?v=semi-20261126-1';
+import { planAsync } from './route-plan-async.js?v=semi-20261126-1';
 import * as VM from './vehicle-mesh.js';
-import * as SR from './site-routes.js';
+import * as SR from './site-routes.js?v=semi-20261126-1';
 import * as PK from './parking.js';
 import * as CAD from './cad-export.js';
 
@@ -15,6 +16,9 @@ export const VEH = 'vehicle-swept-path', PARK = 'parking-layout';
 export const VEH_VIEWS = [['path', 'Swept path'], ['clear', 'Clearance']];
 export const PARK_VIEWS = [['layout', 'Layout'], ['types', 'Stall types']];
 const RCOL = ['#d8402a', '#2563eb'], CATCOL = { standard: '#bfdbfe', compact: '#a7f3d0', large: '#fde68a', accessible: '#2563eb', ev: '#86efac', van: '#1e40af' };
+// the route search under way (2026-11-26): Stop (the run bar, or Stop in Try every vehicle) ends its worker
+const RUN = { ctl: null };
+export function stop() { RUN.ctl?.abort(); }
 const QK = (q) => (q === 'refined' ? 'refined' : q === 'standard' ? 'standard' : 'draft');
 const snap = (p) => [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10];
 const PARAMS = [['length', 'Length', 'm'], ['width', 'Width', 'm'], ['wheelbase', 'Wheelbase', 'm'], ['frontOverhang', 'Front overhang', 'm'], ['rearOverhang', 'Rear overhang', 'm'], ['track', 'Track', 'm'], ['steer', 'Steering angle', '°'], ['lockTime', 'Lock to lock time', 's'], ['speed', 'Speed', 'km/h']];
@@ -63,7 +67,7 @@ function taskHTML(ctx) { const { ST, esc } = ctx, A = ST.va, { S, roads, doors, 
       <div class="sp-kv"><span>Leaves</span><b><select class="sp-sel" data-va="jto">${ar.map((a, k) => `<option value="${k}" ${k === (+A.jn.to || 0) ? 'selected' : ''}>${esc(armName(a).replace('from the', 'to the'))}</option>`).join('')}</select></b></div>` : '<p class="sp-note sp-warn">No road junction in this site’s data.</p>'; }
   if (t === 'turnround') body = `<p class="sp-note">${(A.tr || []).length >= 2 ? 'Picked (T and the arrow on the plan): the vehicle turns to face the other way, staying within the road’s width; where a U-turn does not fit it backs and fills (a three-point turn or more).' : 'Click where the vehicle stands on a road, then a point ahead of it: it turns round there, within the road.'}</p><div class="sp-acts sp-acts1"><button type="button" class="btn sm ${(A.tr || []).length >= 2 ? '' : 'primary'}" data-va="picktr">${(A.tr || []).length >= 2 ? 'Pick again' : 'Pick on the plan'}</button></div>`;
   if (t === 'draw') body = '<p class="sp-note">Click the start, each turn and the end on the plan (below).</p>';
-  if (t !== 'draw') body += `${chk('data-va="rev"', A.rev !== false, 'Allow reversing (backing and filling, three-point turns)')}${t === 'turnround' || (t === 'entrance' && A.stop === 'back') ? '<p class="sp-note">Rigid vehicles only: an articulated vehicle is not reversed in this version.</p>' : ''}`;
+  if (t !== 'draw') body += `${chk('data-va="rev"', A.rev !== false, 'Allow reversing (backing and filling, three-point turns)')}${t === 'turnround' || (t === 'entrance' && A.stop === 'back') ? '<p class="sp-note">A semi-trailer backs up with its trailer kept within 0.6 × its articulation limit; backing one is a skilled manoeuvre.</p>' : ''}`;
   return `<p class="sp-flabel">What to check</p><div class="sp-tabs sp-tasks" role="tablist">${TASKS.map(([k, n]) => `<button type="button" role="tab" data-va-task="${k}" aria-selected="${t === k}">${n}</button>`).join('')}</div>${body}<p class="sp-note sp-found">${esc(found)}</p>`; }
 function taskMarks(ctx) { const ST = ctx.ST, A = ST.va, m = { dots: [], labels: [], lines: [] }; if (ST.id !== VEH || A.cur !== 0) return m; const t = taskOf(ctx);
   if (t === 'entrance') siteFound(ctx).doors.forEach((d, k) => { const on = k === (+A.ent || 0); m.dots.push({ p: d.p, col: on ? '#16a34a' : '#64748b', r: on ? 0.7 : 0.5, label: 'D' + (k + 1), al: 1, ring: true, tag: 'door' }); if (on) m.lines.push({ a: d.p, b: [d.p[0] + d.n[0] * 3, d.p[1] + d.n[1] * 3], col: '#16a34a', w: 0.1, head: true, al: 1 }); });
@@ -179,25 +183,29 @@ export async function compute(ctx) { return ctx.ST.id === VEH ? computeVeh(ctx) 
 // drive between the ends it gives, keeping to the roads), or the route drawn (driven as drawn, round obstacles where it hits one)
 async function driveOne(ctx, v, i, obstacles, so, roads) { const ST = ctx.ST, A = ST.va, r = A.routes[i], yieldUI = () => new Promise((res) => setTimeout(res, 0));
   if (i === 0 && taskOf(ctx, roads) !== 'draw') { const T = taskEnds(ctx, v); if (T.error) return { ok: false, error: T.error };
-    const art = v.kind === 'artic', rev = A.rev !== false && !art;
-    if (T.reverse && art) return { ok: false, error: `${T.what} needs reversing, and an articulated vehicle (${v.name.toLowerCase()}) is not reversed in this version` };
+    const art = v.kind === 'artic', rev = A.rev !== false;
     if (T.reverse && !rev) return { ok: false, error: `${T.what} needs reversing: tick Allow reversing` };
-    await yieldUI(); const plan = (E) => RP.planAround(v, { pts: [T.start.p, E.p] }, obstacles, { clearance: +A.clear || 0.3, startHeading: T.start.heading, goalHeading: E.heading, goalTol: 0.3, roads, roadsOnly: !!T.roadsOnly, reverse: rev, maxExpand: T.reverse ? 150000 : 60000 });
-    let pl = plan(T.end); if (!pl.ok && T.alt && !T.alt.error) { await yieldUI(); const p2 = plan(T.alt.end); if (p2.ok) { pl = p2; T.end = T.alt.end; } }   // stopping facing the other way along the wall
-    if (!pl.ok) return { ok: false, error: `no drivable route ${T.what} for the ${v.name.toLowerCase()}: ${pl.error}${pl.closest && Number.isFinite(pl.gap) ? `; it gets to within ${pl.gap.toFixed(1)} m of the end` : ''}`, closest: pl.closest, task: T };
+    // (2026-11-26) planned in the background (route-worker.js): the page keeps answering, the card shows how far the search has got and
+    // Stop ends it; a semi-trailer backing up to a door is planned as a pull-out from the door driven the other way (route-plan.js)
+    const sig = (RUN.ctl ||= new AbortController()).signal, said = (n) => { ST.progress = `finding the route for the ${v.name.toLowerCase()}: ${Math.round(n).toLocaleString('en')} positions tried`; const e = document.querySelector('.sp-studycard .sp-stage.run .sp-note'); if (e) e.textContent = ST.progress; const e2 = document.querySelector('.sp-studycard .sp-vaprog'); if (e2) e2.textContent = `${Math.round(n).toLocaleString('en')} positions tried`; };
+    const plan = (E) => art && E.back ? planAsync('planBackIn', [v, { start: T.start, via: T.via, vias: T.vias, viaHeading: T.viaHeading, end: E }, obstacles, { clearance: +A.clear || 0.3, roads, maxExpand: 60000 }], { onProgress: said, signal: sig })
+      : planAsync('planAround', [v, { pts: [T.start.p, E.p] }, obstacles, { clearance: +A.clear || 0.3, startHeading: T.start.heading, goalHeading: E.heading, goalTol: 0.3, roads, roadsOnly: !!T.roadsOnly, reverse: rev, maxExpand: T.reverse ? 150000 : 60000 }], { onProgress: said, signal: sig });
+    await yieldUI(); let pl = await plan(T.end); if (!pl.ok && T.alt && !T.alt.error) { const p2 = await plan(T.alt.end); if (p2.ok) { pl = p2; T.end = T.alt.end; } }   // stopping facing the other way along the wall
+    if (!pl.ok) { const room = T.end.back && T.door ? SR.roomInFront(T.door, [Math.cos(T.end.heading), Math.sin(T.end.heading)], obstacles) : null, vl = V.overallLength(v);   // (2026-11-26) backing up: how much room there is in front of the door
+      return { ok: false, error: `no drivable route ${T.what} for the ${v.name.toLowerCase()}: ${pl.error}${pl.closest && Number.isFinite(pl.gap) ? `; it gets to within ${pl.gap.toFixed(1)} m of the end` : ''}${room && Number.isFinite(room.d) ? `; in front of the door there are ${room.d.toFixed(1)} m to ${room.name}, for a vehicle ${vl.toFixed(1)} m long` : ''}`, closest: pl.closest, task: T }; }
     const out = SP.simulate(v, { pts: [T.start.p, T.end.p], planned: pl.path, heading0: pl.heading0 }, so); if (!out.ok) return out;
     const lp = out.poses.at(-1), endGap = Math.hypot(lp.x - T.end.p[0], lp.y - T.end.p[1]), endTurn = Math.abs(Math.atan2(Math.sin(lp.th - T.end.heading), Math.cos(lp.th - T.end.heading))) * 180 / Math.PI;   // how near the stop asked it ends
-    out.auto = { what: T.what, length: pl.length, onRoad: pl.onRoad, under: !!pl.underClearance, end: T.end, start: T.start, cusps: pl.cusps || 0, reverseLength: pl.reverseLength || 0, endGap, endTurn }; out.drawnPts = null; return out; }
+    out.auto = { what: T.what, length: pl.length, onRoad: pl.onRoad, under: !!pl.underClearance, end: T.end, start: T.start, cusps: pl.cusps || 0, reverseLength: pl.reverseLength || 0, endGap, endTurn, trailerSeam: pl.trailerSeam, pullOut: pl.method === 'pull-out reversed', artRev: art && (pl.reverseLength || 0) > 0 }; out.drawnPts = null; return out; }
   if (r.pts.length < 2) return { ok: false, error: 'Draw a route first: Draw route, click the start, each turn and the end on the plan, then Finish.' };
   let out = SP.simulate(v, { pts: r.pts, radii: r.radii, reverse: r.rev }, so);
   // the drawn route runs into an obstacle: a way round it, driven instead (2026-11-18); none found: the drawn route as driven, and why
   if (out.ok && out.collisions.length && A.avoid !== false) { const hitBy = [...new Set(out.collisions.map((c) => c.name))];
-    if (r.rev.some(Boolean)) out.planFail = 'a route with reversing is driven as drawn'; else { await yieldUI(); const pl = RP.planAround(v, { pts: r.pts }, obstacles, { clearance: +A.clear || 0.3 });
+    if (r.rev.some(Boolean)) out.planFail = 'a route with reversing is driven as drawn'; else { await yieldUI(); const pl = await planAsync('planAround', [v, { pts: r.pts }, obstacles, { clearance: +A.clear || 0.3 }], { signal: (RUN.ctl ||= new AbortController()).signal });
       if (pl.ok) { const o2 = SP.simulate(v, { pts: r.pts, planned: pl.path }, so); if (o2.ok) { o2.planned = { length: pl.length, drawn: SP.plLength ? SP.plLength(r.pts) : 0, hitBy, under: !!pl.underClearance, moved: pl.moved || [] }; out = o2; } } else out.planFail = pl.error; }
     out.hitBy = hitBy; }
   out.drawnPts = r.pts; return out; }
 async function computeVeh(ctx) { const ST = ctx.ST, A = ST.va, use = A.routes.map((r, i) => ({ r, i })).filter(({ r, i }) => i === 0 || (r.on && r.pts.length >= 2));
-  const { obstacles, complete, src, S } = obstaclesFor(ctx), q = QK(ctx.qualOf().k), runs = [], roads = roadsOf(S); ST.vaAll = null;
+  const { obstacles, complete, src, S } = obstaclesFor(ctx), q = QK(ctx.qualOf().k), runs = [], roads = roadsOf(S); ST.vaAll = null; RUN.ctl = new AbortController();
   for (const { r, i } of use) { const v = vehOf(ST, i), e = V.check(v); if (e.length) throw Error(`Route ${i + 1} (${v.name}): ${e.join('; ')}.`);
     await new Promise((res) => setTimeout(res, 0)); const so = { quality: q, obstacles, clearance: +A.clear || 0.3, speed: +r.speed || v.speed, delay: i ? +r.delay || 0 : 0, complete };
     const out = await driveOne(ctx, v, i, obstacles, so, roads);
@@ -207,14 +215,15 @@ async function computeVeh(ctx) { const ST = ctx.ST, A = ST.va, use = A.routes.ma
   return vehResult(ctx, runs, pair, obstacles, src, S); }
 // Try every vehicle (2026-11-25): route 1 with each preset in turn; which can make it, and how close each comes
 async function tryAll(ctx) { const ST = ctx.ST, A = ST.va; if (ST.busy || ST.vaAll?.busy) return; const { obstacles, complete, S } = obstaclesFor(ctx), roads = roadsOf(S), list = V.PRESETS, rows = [];
-  ST.vaAll = { busy: true, rows, n: list.length }; ctx.drawStudy();
+  ST.vaAll = { busy: true, rows, n: list.length }; RUN.ctl = new AbortController(); ctx.drawStudy();
   for (const p of list) { const v = JSON.parse(JSON.stringify(p)), so = { quality: 'draft', obstacles, clearance: +A.clear || 0.3, speed: v.speed, delay: 0, complete };
     let out; try { out = await driveOne(ctx, v, 0, obstacles, so, roads); } catch (e) { out = { ok: false, error: e.message }; }
+    if (RUN.ctl.signal.aborted) { ST.vaAll.stopped = true; break; }
     const row = { id: v.id, name: v.name, len: +V.overallLength(v).toFixed(2) };
     if (!out.ok) Object.assign(row, { result: 'No route', why: out.error });
     else Object.assign(row, { result: out.status === 'feasible' ? 'Feasible' : out.status === 'infeasible' ? 'Infeasible' : 'Not verified', clear: out.minClear ? +out.minClear.d.toFixed(2) : null, turn: Number.isFinite(out.rReached) ? +out.rReached.toFixed(2) : null, swept: +out.swept.toFixed(1), why: out.reasons[0] || '' });
     rows.push(row); ctx.drawStudy(); }
-  ST.vaAll = { busy: false, rows, n: list.length, at: new Date().toISOString() }; ctx.drawStudy(); }
+  ST.vaAll = { busy: false, rows, n: list.length, at: new Date().toISOString(), stopped: !!ST.vaAll.stopped }; ctx.drawStudy(); }
 // the vehicle access sheet (2026-11-25): what the project report carries for this study, beside the 3D view that Add takes:
 // the plan drawing (from the same CAD layers as the DXF), the route and its moves, every vehicle's result, the conflicts, the vehicles
 async function accessSheet(ctx, runs, pair, src, layers) { const ST = ctx.ST, f2 = (x, d = 2) => (Number.isFinite(x) ? (+x).toFixed(d) : '–');
@@ -237,7 +246,7 @@ const tryAllHTML = (ctx) => { const { ST, esc, fmt } = ctx, T = ST.vaAll;
   const head = `<p class="sp-flabel">Every vehicle on this route</p>`;
   if (!T) return `${head}<p class="sp-note">Which vehicles can make it: each preset driven on route 1 the same way (draft quality).</p><div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="tryall">Try every vehicle</button></div>`;
   const ok = T.rows.filter((r) => r.result === 'Feasible'), big = ok.slice().sort((a, b) => b.len - a.len)[0];
-  return `${head}${T.busy ? `<p class="sp-note">Driving ${T.rows.length + 1} of ${T.n}…</p>` : `<p class="sp-note">${ok.length} of ${T.n} make it${big ? `; the longest: ${esc(big.name)} (${fmt(big.len, 1)} m)` : ''}.</p>`}
+  return `${head}${T.busy ? `<p class="sp-note">Driving ${T.rows.length + 1} of ${T.n}… <span class="sp-vaprog"></span></p><div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="tryallstop">Stop</button></div>` : `<p class="sp-note">${T.stopped ? `Stopped after ${T.rows.length} of ${T.n}: ` : ''}${ok.length} of ${T.stopped ? T.rows.length : T.n} make it${big ? `; the longest: ${esc(big.name)} (${fmt(big.len, 1)} m)` : ''}.</p>`}
     <table class="sp-codesum sp-vehall"><thead><tr><th>Vehicle</th><th>Length</th><th>Result</th><th>Least clearance</th></tr></thead><tbody>${T.rows.map((r) => `<tr data-vehall="${esc(r.id)}"><td>${esc(r.name)}</td><td>${fmt(r.len, 1)} m</td><td class="${r.result === 'Feasible' ? '' : 'sp-bad'}" title="${esc(r.why || '')}">${esc(r.result)}</td><td>${r.clear != null ? fmt(r.clear, 2) + ' m' : '–'}</td></tr>`).join('')}</tbody></table>
     ${T.busy ? '' : '<div class="sp-acts sp-acts1"><button type="button" class="btn sm" data-va="tryallcsv">Download CSV</button><button type="button" class="btn sm" data-va="tryall">Run again</button></div>'}`; };
 
@@ -309,7 +318,7 @@ function vehResult(ctx, runs, pair, obstacles, src, S) { const { ST, esc, fmt } 
     xlExtra: () => accessSheet(ctx, runs, pair, src, layers),
     paint: (rr, fit) => paint(rr, fit), saZoom: (j) => { const z = zoomList[j]; if (!z) return; const at = z.r.poses.find((p) => p.s >= z.c.s0) || z.r.poses[0], b = { x0: at.x - 12, y0: at.y - 12, x1: at.x + 12, y1: at.y + 12 }; show(ctx, b, vehMarks(ctx, runs, obstacles, S, b, ST.res.view), true); },   // the sheet framed on the conflict; the next paint shows the whole again
     foot: `${runs.length} vehicle${runs.length > 1 ? 's' : ''} on ${runs.some((x) => x.auto) ? 'a route found from the site' : 'drawn routes'}, ${obstacles.length} obstacles`, rows, saLayers: layers,
-    method: `${runs.some((x) => x.cusps && x.ref && x.ref.planned) ? `A route that reverses is driven as planned: its arcs one after another, the vehicle stopping at each change of direction and reversing at ${SP.REV_SPEED} km/h; only rigid vehicles are reversed. ` : ''}${runs.some((x) => x.auto) ? `The route was found from the site, not drawn: it starts in the right-hand half of the nearest road (OpenStreetMap centreline and width) and ends at the stop the task sets; a hybrid A* search drives between them, turning no tighter than 1.1 × the vehicle's least radius, keeping clear of the buildings and preferring the road corridors. ` : ''}A kinematic screening at low speed. The rear axle's centre follows the ${runs.some((x) => x.auto) ? 'found' : 'drawn'} route (corners rounded to arcs of 1.25 × the vehicle's least radius, or the radius set); the steering is pure pursuit, limited to the vehicle's maximum angle and to the rate its lock-to-lock time allows at the stated speed, on a ${runs[0].ds} m step. An articulated vehicle's trailer follows its hitch (θt′ = (sin(θ − θt) + h·tanδ/L·cos(θ − θt)) / Lt), so the off-tracking is computed. The envelope is the union of the vehicle's outlines on ${runs[0].cell} m cells; the clearance is the least gap between each outline and each obstacle at every step. Where the vehicle cannot keep within 0.30 m of the route, a corner is tighter than it can turn, or the trailer folds past its limit, the route is reported infeasible, never forced. No tyre slip or dynamics; the body is a plan outline (no mirrors or overhang heights); kerbs only as drawn. Vehicle presets are typical dimensions for early design, not manufacturer specifications. Not a certified (AutoTURN) or fire-access code study.`,
+    method: `${runs.some((x) => x.cusps && x.ref && x.ref.planned) ? `A route that reverses is driven as planned: its arcs one after another, the vehicle stopping at each change of direction and reversing at ${SP.REV_SPEED} km/h. ${runs.some((x) => x.auto && x.auto.artRev) ? `A semi-trailer backing up is planned as a drive forward out of the door with the trailer kept within 0.6 × its articulation limit, then driven the other way; going backwards the trailer follows the angles planned, as a driver steers to keep it on the line (left alone, a reversing trailer’s angle grows). ` : ''}` : ''}${runs.some((x) => x.auto) ? `The route was found from the site, not drawn: it starts in the right-hand half of the nearest road (OpenStreetMap centreline and width) and ends at the stop the task sets; a hybrid A* search drives between them, turning no tighter than 1.1 × the vehicle's least radius, keeping clear of the buildings and preferring the road corridors. ` : ''}A kinematic screening at low speed. The rear axle's centre follows the ${runs.some((x) => x.auto) ? 'found' : 'drawn'} route (corners rounded to arcs of 1.25 × the vehicle's least radius, or the radius set); the steering is pure pursuit, limited to the vehicle's maximum angle and to the rate its lock-to-lock time allows at the stated speed, on a ${runs[0].ds} m step. An articulated vehicle's trailer follows its hitch (θt′ = (sin(θ − θt) + h·tanδ/L·cos(θ − θt)) / Lt), so the off-tracking is computed. The envelope is the union of the vehicle's outlines on ${runs[0].cell} m cells; the clearance is the least gap between each outline and each obstacle at every step. Where the vehicle cannot keep within 0.30 m of the route, a corner is tighter than it can turn, or the trailer folds past its limit, the route is reported infeasible, never forced. No tyre slip or dynamics; the body is a plan outline (no mirrors or overhang heights); kerbs only as drawn. Vehicle presets are typical dimensions for early design, not manufacturer specifications. Not a certified (AutoTURN) or fire-access code study.`,
     results: { status: worst, collisions: runs.reduce((s, x) => s + x.collisions.length, 0), minClear: runs[0].minClear ? +runs[0].minClear.d.toFixed(3) : null, swept: +runs[0].swept.toFixed(1), length: +runs[0].length.toFixed(1) },
     settings: { vehicles: runs.map((x) => x.vehicle.name), clearance: +ST.va.clear || 0.3, quality: runs[0].quality, label: `Swept path, ${runs.map((x) => x.vehicle.name).join(' + ')} (Workspace)` } };
   return r; }
@@ -394,6 +403,7 @@ export function onClick(e, ctx) { const ST = ctx.ST; if (ST.id !== VEH && ST.id 
   if (d.va === 'pickthr') { sketchStart(ctx, 'thr'); return true; }
   if (d.va === 'picktr') { sketchStart(ctx, 'tr'); return true; }
   if (d.va === 'tryall') { tryAll(ctx); return true; }
+  if (d.va === 'tryallstop') { stop(); return true; }
   if (d.va === 'sheet') { b.disabled = true; Promise.resolve(ctx.xlAddView && ctx.xlAddView()).then((ok) => { b.textContent = ok ? 'Added to the report ✓ (Export list)' : 'Could not add'; ctx.toastXL && ctx.toastXL(ok ? 'Vehicle access sheet added to the Export list' : 'Could not add'); }); return true; }
   if (d.va === 'tryallcsv') { const T = ST.vaAll; if (T && T.rows) dl('swept-path-every-vehicle-' + new Date().toISOString().slice(0, 10) + '.csv', '\ufeff' + [['Vehicle', 'Overall length (m)', 'Result', 'Least clearance (m)', 'Tightest turn (m)', 'Swept area (m²)', 'Why'], ...T.rows.map((r) => [r.name, r.len, r.result, r.clear ?? '', r.turn ?? '', r.swept ?? '', r.why || ''])].map((l) => l.map((c) => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\r\n'), 'text/csv'); return true; }
   if (d.va === 'draw') { sketchStart(ctx, 'route', ST.va.cur); return true; }

@@ -36,10 +36,16 @@ export function entranceTask(roads, door, v, o = {}) {
   const start = laneAt(road, A.p, dir), stand = o.stand ?? (v.width / 2 + 1.0);
   // the stop: out from the door, along the wall, facing the way the road was being driven (the side of the wall's tangent nearest it)
   if (o.back) { // (2026-11-25) backed up to the door, as at a loading dock: square to the wall, the rear `gap` m from it, facing out
-    const gap = o.gap ?? 0.5, endP = add(door.p, mul(n, v.rearOverhang + gap)), R = v.wheelbase / Math.tan(v.steer * Math.PI / 180) * 1.25;
+    // what reaches back from the rear axle: the body's rear overhang, or for a semi-trailer (2026-11-26) the trailer, straight behind it
+    const T = v.kind === 'artic' && v.trailer ? v.trailer : null, back = T ? T.wheelbase + T.rearOverhang - (T.hitch || 0) : v.rearOverhang;
+    const gap = o.gap ?? 0.5, endP = add(door.p, mul(n, back + gap)), R = v.wheelbase / Math.tan(v.steer * Math.PI / 180) * 1.25;
     // as a driver docks: forward past the door, parallel to the wall, then back in turning; the staging point is that stop
-    const along = t[0] * dir[0] + t[1] * dir[1] >= 0 ? t : mul(t, -1), via = add(add(door.p, mul(n, v.rearOverhang + gap + R + v.width)), mul(along, R + v.wheelbase));
-    return { start: { p: start, heading: Math.atan2(dir[1], dir[0]) }, via, end: { p: endP, heading: Math.atan2(n[1], n[0]), back: true }, road, approach: q.d }; }
+    const along = t[0] * dir[0] + t[1] * dir[1] >= 0 ? t : mul(t, -1), via = add(add(door.p, mul(n, back + gap + R + v.width)), mul(along, R + v.wheelbase + (T ? T.wheelbase : 0)));
+    // (2026-11-26) where to stop before backing: on the road past the door, in the lane, at a few distances (as a driver docks
+    // from the road), then the staging point in the yard; the planner keeps the one that needs least reversing
+    const Lr = R + v.wheelbase + (T ? T.wheelbase : 0), vias = []; for (const f of [1, 1.5, 2, 3]) { const s1 = fwd ? Math.min(total, q.s + f * Lr) : Math.max(0, q.s - f * Lr), P = pointAt(road.pts, s1), d = fwd ? P.dir : mul(P.dir, -1), V = { p: laneAt(road, P.p, d), heading: Math.atan2(d[1], d[0]) }; if (!vias.some((x) => len(sub(x.p, V.p)) < 1)) vias.push(V); }   // along the road as it runs there; past its end, its end
+    vias.push({ p: via, heading: Math.atan2(along[1], along[0]) });
+    return { start: { p: start, heading: Math.atan2(dir[1], dir[0]) }, via, vias, viaHeading: Math.atan2(along[1], along[0]), end: { p: endP, heading: Math.atan2(n[1], n[0]), back: true }, door: door.p, road, approach: q.d }; }
   let along = t[0] * dir[0] + t[1] * dir[1] >= 0 ? t : mul(t, -1); if (o.flip) along = mul(along, -1); const mid = add(door.p, mul(n, stand));   // flip: stop facing the other way along the wall
   const endP = add(mid, mul(along, -(v.wheelbase + v.frontOverhang - v.rearOverhang) / 2));   // the rear axle, so the vehicle's middle stands at the door
   return { start: { p: start, heading: Math.atan2(dir[1], dir[0]) }, end: { p: endP, heading: Math.atan2(along[1], along[0]) }, road, approach: q.d };
@@ -83,3 +89,8 @@ export function throughTask(roads, pA, pB, o = {}) { const a = nearestRoad(roads
 export function turnRoundTask(roads, pA, pB) { const a = nearestRoad(roads, pA); if (!a) return { error: 'no road in the site data near that point' };
   const toward = unit(sub(pB, pA)), d = a.q.dir[0] * toward[0] + a.q.dir[1] * toward[1] >= 0 ? a.q.dir : mul(a.q.dir, -1), back = mul(d, -1);
   return { start: { p: laneAt(a.road, a.q.at, d), heading: Math.atan2(d[1], d[0]) }, end: { p: laneAt(a.road, a.q.at, back), heading: Math.atan2(back[1], back[0]) }, road: a.road }; }
+
+/** (2026-11-26) the room square in front of a door: how far out from the wall along its normal before an obstacle → { d, name } (max 200 m) */
+export function roomInFront(door, n, obstacles) { const inside = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
+  const u = unit(n); for (let d = 0.5; d <= 200; d += 0.25) { const x = door[0] + u[0] * d, y = door[1] + u[1] * d, hit = obstacles.find((o) => o.poly && o.poly.length >= 3 && inside(o.poly, x, y)); if (hit) return { d: d - 0.25, name: hit.name || 'an obstacle' }; }
+  return { d: Infinity, name: '' }; }
