@@ -78,8 +78,12 @@ export function parseDXF(text, o = {}) {
   if (!segs.length) return { ok: false, error: 'No lines were found in the drawing (model space). Check that the plan is in model space and not only in a layout.', counts, skipped };
   // the units, and metres
   let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity; for (const s of segs) for (const p of [s.a, s.b]) { bx0 = Math.min(bx0, p[0]); by0 = Math.min(by0, p[1]); bx1 = Math.max(bx1, p[0]); by1 = Math.max(by1, p[1]); }
-  const ext = Math.max(bx1 - bx0, by1 - by0), U = UNITS[insunits], guess = ext > 2000 ? 4 : ext > 300 ? 5 : 6;
-  const code = U ? insunits : guess, scale = o.scale || UNITS[code][1], units = { code, name: o.scale ? 'as set' : UNITS[code][0], scale, guessed: !U && !o.scale };
+  // the units: as the file says, unless that makes the drawing an implausible size for a building or site plan (2–2,000 m across;
+  // files often say millimetres when drawn in inches), then the unit giving the most usual size (about 30 m), flagged to check
+  const ext = Math.max(bx1 - bx0, by1 - by0), U = UNITS[insunits], ok = (c) => { const m = ext * UNITS[c][1]; return m >= 2 && m <= 2000; };
+  const pick = () => +Object.keys(UNITS).filter((c) => ok(+c)).sort((a, b) => Math.abs(Math.log(ext * UNITS[a][1] / 30)) - Math.abs(Math.log(ext * UNITS[b][1] / 30)))[0] || 6;
+  const suspect = !!U && !ok(insunits) && !o.scale, code = U && !suspect ? insunits : pick(), scale = o.scale || UNITS[code][1];
+  const units = { code, name: o.scale ? (Object.values(UNITS).find((x) => Math.abs(x[1] - o.scale) < 1e-12) || ['as set'])[0] : UNITS[code][0], scale, guessed: (!U || suspect) && !o.scale, declared: U ? U[0] : null, suspect };
   const S = (p) => [p[0] * scale, p[1] * scale];
   for (const s of segs) { s.a = S(s.a); s.b = S(s.b); } for (const x of texts) { x.p = S(x.p); x.h *= scale; }
   return { ok: true, units, layers, segs, texts, bounds: { x0: bx0 * scale, y0: by0 * scale, x1: bx1 * scale, y1: by1 * scale }, counts, skipped };
@@ -136,5 +140,5 @@ function distSeg(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * 
 function lineX(a, u, b, v) { const den = u[0] * v[1] - u[1] * v[0]; if (Math.abs(den) < 1e-9) return null; const t = ((b[0] - a[0]) * v[1] - (b[1] - a[1]) * v[0]) / den; return [a[0] + u[0] * t, a[1] + u[1] * t]; }
 
 /** which layers look like walls: by name (WALL, MUR, A-WALL, 墙, …) or, failing that, the layer whose lines give the most wall length */
-export function wallLayers(res) { const names = Object.keys(res.layers).filter((n) => /wall|mur|wand|muro|a-wall|墙|壁/i.test(n) && res.layers[n].n > 0); if (names.length) return names;
+export function wallLayers(res) { const names = Object.keys(res.layers).filter((n) => /wall|mur|wand|muro|墙|壁/i.test(n) && !/stem|found|footing|retain|(^|[$_ -])s-|struct|curtain|hatch|patt|fill/i.test(n) && res.layers[n].n > 0); if (names.length) return names;   // architectural walls; not foundation, structure, curtain wall or hatching layers
   let best = null, bl = 0; for (const n of Object.keys(res.layers)) { const w = wallsFromLines(res.segs.filter((s) => s.layer === n)), l = w.reduce((a, x) => a + Math.hypot(x.b[0] - x.a[0], x.b[1] - x.a[1]), 0); if (l > bl) { bl = l; best = n; } } return best ? [best] : []; }
