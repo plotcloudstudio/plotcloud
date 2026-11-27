@@ -2560,6 +2560,9 @@ function draw() {
   }
   g.globalAlpha = 1;
   if (below && $('#ghost').checked) { g.strokeStyle='rgba(70,75,85,.45)';g.setLineDash([6*d,4*d]); g.lineWidth = Math.max(1, 0.2 * V.s); g.lineCap = 'square'; g.beginPath(); for (const w of lvWalls(below.id)) { const a = W2S(w.a), b = W2S(w.b); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); g.lineCap='butt';g.setLineDash([]); }
+  // the CAD plan imported for this level (2026-11-27): thin blue lines under everything drawn, to trace and snap to
+  { const U = M.underlays && M.underlays[LV]; if (U && U.pts && U.pts.length && layerOn('ref.dxf')) { g.strokeStyle = 'rgba(30,110,200,.6)'; g.lineWidth = 1 * d; g.setLineDash([]); g.beginPath(); const P = U.pts;
+    for (let i = 0; i + 3 < P.length; i += 4) { const a = W2S([P[i], P[i + 1]]), b = W2S([P[i + 2], P[i + 3]]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); } }
   // furniture
   if (VIS.Furniture) { fade('Furniture'); for (const f of M.furn) if (f.lv === LV && furnOk(f)) drawFurn(f, wbSelected('furn',f.id)); if (CLR.on) for (const f of M.furn) if (f.lv === LV && furnOk(f) && !isHidden(f.id)) drawClearance(f); g.globalAlpha = 1; }
   // walls, then windows and doors in their gaps
@@ -3685,7 +3688,7 @@ registerLayer('gaps', '2D distance lines'); for (const [s, l] of [['top', 'Top']
 registerLayer('notes', 'Text labels');
 registerLayer('chain', 'Dimension chains'); registerLayer('chain.walls', 'Wall lengths', 'chain'); registerLayer('chain.sel', 'Selected wall', 'chain');
 registerLayer('legend', 'Legend');
-registerLayer('ref', 'Level reference'); registerLayer('ref.below', 'Level below (underlay)', 'ref'); registerLayer('ref.site', 'Site context', 'ref'); registerLayer('ref.site.bld', 'Buildings', 'ref.site'); registerLayer('ref.site.roads', 'Roads & paths', 'ref.site'); registerLayer('ref.site.green', 'Water & green', 'ref.site'); registerLayer('ref.site.trees', 'Trees', 'ref.site'); registerLayer('ref.site.ground', 'Ground (terrain)', 'ref.site');
+registerLayer('ref', 'Level reference'); registerLayer('ref.below', 'Level below (underlay)', 'ref'); registerLayer('ref.dxf', 'CAD plan (DXF underlay)', 'ref'); registerLayer('ref.site', 'Site context', 'ref'); registerLayer('ref.site.bld', 'Buildings', 'ref.site'); registerLayer('ref.site.roads', 'Roads & paths', 'ref.site'); registerLayer('ref.site.green', 'Water & green', 'ref.site'); registerLayer('ref.site.trees', 'Trees', 'ref.site'); registerLayer('ref.site.ground', 'Ground (terrain)', 'ref.site');
 registerLayer('mass', 'Masses');
 const VIEW_MASKS = {
   plan: ['mass', 'parts', 'soft', 'custom', 'dims', 'gaps', 'roomNames', 'roomArea', 'roomFill', 'notes', 'chain', 'legend', 'ref'],
@@ -5227,7 +5230,7 @@ function floorContains(f,p){return PCStudioGeometry.pointInPolygon(p,floorPoints
 function floorPath(f){g.beginPath();for(const ring of [floorPoints(f),...(f.holes||[])]){ring.forEach((p,i)=>{const q=W2S(p);i?g.lineTo(...q):g.moveTo(...q);});g.closePath();}}
 function newSlabThickness(){return M.drawing?.slabThicknessByLevel?.[LV]||lvObj()?.slab||.22;}
 function siteOpacity(){return OP.site??1;}
-function snapWalls(){const below=lvBelow();return lvWalls().concat(below&&$('#ghost').checked?lvWalls(below.id):[]);}
+function snapWalls(){const below=lvBelow(),out=lvWalls().concat(below&&$('#ghost').checked?lvWalls(below.id):[]);const U=M.underlays&&M.underlays[LV];if(U&&U.pts&&layerOn('ref.dxf')){if(!U._snap||U._snap.n!==U.pts.length){const P=U.pts,a=[];for(let i=0;i+3<P.length;i+=4)a.push({a:[P[i],P[i+1]],b:[P[i+2],P[i+3]],t:0,lv:'__dxf',id:'dxf'+i});Object.defineProperty(U,'_snap',{value:{n:P.length,a},enumerable:false,configurable:true,writable:true});}return out.concat(U._snap.a);}return out;}   /* (2026-11-27) and the lines of the CAD plan underlay, as snap targets only */
 function drawFences(){for(const f of M.fences||[]){if(f.lv!==LV||isHidden(f.id))continue;g.save();g.strokeStyle=wbSelected('fence',f.id)?C.accent:HOV?.k==='fence'&&HOV.id===f.id?C.ink:'#58606a';g.lineWidth=2*VP.d;g.beginPath();f.points.forEach((p,i)=>{const q=W2S(p);i?g.lineTo(...q):g.moveTo(...q);});g.stroke();for(const p of fencePostPoints(f)){const q=W2S(p);g.fillStyle=g.strokeStyle;g.fillRect(q[0]-3*VP.d,q[1]-3*VP.d,6*VP.d,6*VP.d);}g.restore();}}
 function fencePostPoints(f){const pts=[];for(let i=1;i<f.points.length;i++){const a=f.points[i-1],b=f.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(len/(f.spacing||1.5)));for(let j=0;j<n;j++)pts.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]);}pts.push(f.points[f.points.length-1]);return pts;}
 let FENCE_FAMILY = null;
@@ -8002,6 +8005,15 @@ if (window.__WSROLE) {
 
   // ---- what the Workspace calls
   Object.assign(WS, {
+    // CAD plan import (2026-11-27, mvp/js/dxf-import-ui.js): the underlay of a level (lines in plan metres, flat [x1,y1,x2,y2,…]) and
+    // walls found from it; each is one step to undo
+    underlay(o){const lv=(o&&o.lv)||LV;if(o===undefined){const U=M.underlays&&M.underlays[lv];return U?{lv,name:U.name,units:U.units,layers:U.layers,segs:U.pts.length/4}:null;}
+      const b=snapM();M.underlays=M.underlays||{};if(!o||!o.pts){delete M.underlays[lv];}else M.underlays[lv]={name:String(o.name||'plan.dxf'),units:o.units||'',layers:(o.layers||[]).slice(0,200),pts:Array.from(o.pts,(v)=>Math.round(v*1000)/1000)};
+      if(o&&o.pts){setLayerVis('ref.dxf',true);if(LYR.get('ref')&&!LYR.get('ref').visible)setLayerVis('ref',true);}commit(b);return WS.underlay();},
+    addWalls(list,o={}){const lv=o.lv||LV,b=snapM();let n=0;for(const w of list||[]){if(!w||!w.a||!w.b)continue;const a=[+w.a[0],+w.a[1]],bb=[+w.b[0],+w.b[1]];if(Math.hypot(bb[0]-a[0],bb[1]-a[1])<0.05)continue;
+        if(M.walls.some((x)=>x.lv===lv&&((near(x.a,a,0.02)&&near(x.b,bb,0.02))||(near(x.a,bb,0.02)&&near(x.b,a,0.02)))))continue;
+        M.walls.push({id:STC.uid('w'),lv,a,b:bb,t:Math.max(0.05,Math.min(1,+w.t||0.2)),object_type:'wall',layer:'Wall',...(w.source?{source:String(w.source)}:{})});n++;}
+      if(n){tidy();commit(b);}return n;},
     projectLabel(name){WS.projectName=String(name||'Untitled project');$('#mName').textContent=WS.projectName;$('#mName').title=WS.projectName;if(document.activeElement!==$('#mNameIn'))$('#mNameIn').value=WS.projectName;},
     async centerToOrigin(){
       if(GZD||gesture||WALKING||XPL.on)throw Error('Finish the current edit and exit Walkthrough or Explode before centering.');

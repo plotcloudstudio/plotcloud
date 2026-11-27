@@ -252,8 +252,9 @@ export function mountChrome(app, api) {
   document.body.append(dropEl);
   const DROP = { t: 0, wins: new WeakSet() }, hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
   const dropShow = (on, msg) => { clearTimeout(DROP.t); dropEl.hidden = !on; dropEl.classList.toggle('bad', !!msg); const t = dropEl.querySelector('.sp-drop-t'), s2 = dropEl.querySelector('.sp-drop-s'); t.textContent = msg ? msg[0] : 'Release to drop your model into the site'; s2.textContent = msg ? msg[1] : `It opens in a preview first: units, up axis and size to check before it joins ${p.name}.`; if (msg) DROP.t = setTimeout(() => dropShow(false), 3200); };
-  async function dropFile(files) { const f = [...files].find((x) => DROPX.test(x.name)) || files[0]; if (!f) return dropShow(false);
-    if (!DROPX.test(f.name)) return dropShow(true, [`${f.name} is not a model SimuSite reads`, 'Drop an OBJ, STL, GLB, glTF or Rhino 3DM file. A plan drawing goes in through Draw › Import plan.']);
+  async function dropFile(files) { const f = [...files].find((x) => DROPX.test(x.name) || /\.dxf$/i.test(x.name)) || files[0]; if (!f) return dropShow(false);
+    if (/\.dxf$/i.test(f.name) && window.__wsImportDxf) { dropShow(false); return window.__wsImportDxf(f); }   // (2026-11-27) a CAD plan: the DXF import, onto the plan's current level
+    if (!DROPX.test(f.name)) return dropShow(true, [`${f.name} is not a model SimuSite reads`, /\.dwg$/i.test(f.name) ? 'A DWG has to be saved as DXF first (AutoCAD, BricsCAD, Revit and Rhino can), then dropped here or opened with Draw room › Import plan.' : 'Drop an OBJ, STL, GLB, glTF or Rhino 3DM model, or a DXF floor plan (it goes under the current level).']);
     dropShow(false); openProject('import'); let inp = null; for (let i = 0; i < 40 && !(inp = app.querySelector('#file')); i++) await new Promise((r) => setTimeout(r, 50)); if (!inp) return dropShow(true, ['The import could not open', 'Open Project › Import and choose the file there.']);
     const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); }
   const onOver = (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopImmediatePropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; if (dropEl.hidden || dropEl.classList.contains('bad')) dropShow(true); };
