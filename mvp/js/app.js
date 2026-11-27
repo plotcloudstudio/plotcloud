@@ -65,7 +65,7 @@ const PAGES = {
   'local-compute':()=>import('./pages/local-compute.js?v=sims-20261121-1'),
   'comparison-report':()=>import('./pages/comparison-report.js?v=muse3-20261124-2'),
   'start-study':()=>import('./pages/start-study.js'),
-  project:()=>import('./pages/project.js?v=pro1-20261125-1'), tables:()=>import('./pages/tables.js?v=muse3-20261124-2'),
+  project:()=>import('./pages/project.js?v=base-20261127-1'), tables:()=>import('./pages/tables.js?v=muse3-20261124-2'),
   admin: () => import('./pages/admin.js'),
   '': () => import('./pages/home-v2.js?v=review-20261124-2'), 'home-classic': () => import('./pages/home.js'), workspace: () => import('./pages/workspace-v2.js?v=base-20261127-1'), simulations: () => import('./pages/simulations.js?v=base-20261127-1'), legal:()=>import('./pages/legal.js'),
   about: () => import('./pages/marketing-info.js').then(m=>({render:m.renderAbout})), blog: () => import('./pages/marketing-info.js').then(m=>({render:m.renderBlog})), results: () => import('./pages/results.js?v=base-20261127-1'), resources: () => import('./pages/resources.js'), pricing: () => import('./pages/pricing.js?v=round2-20261124-1'), 'project-settings':()=>import('./pages/project-settings.js'),
