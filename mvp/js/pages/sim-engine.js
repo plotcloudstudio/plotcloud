@@ -4,7 +4,7 @@ import {installStudyWorkflow} from '../simulation-workflow.js?v=import-feedback-
 import {inspectStudy} from '../study-readiness.js';
 import {climateFile,ensureProjectClimate,cancelProjectClimate} from '../project-climate.js';
 import {canUse, renderGate} from '../beta-access.js';
-import {mountStudyImport} from '../study-import.js?v=sims-20261121-1';
+import {mountStudyImport} from '../study-import.js?v=base-20261127-1';
 // One simulation page for every SimuSite engine: the engine file the classic site runs (emb/<file>.html), in the page shell.
 // One implementation: nothing here computes or draws a result. This page only
 //   hands the engine the version's model in the engine's own input format (the scene Plan Studio's Send to Simulation
@@ -128,7 +128,7 @@ const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'r
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
   if(sim.family==='environment')return(await import('./environment-study.js?v=muse-20261123-1')).render(app,sim,params,context);
-  if(sim.id==='structure')return(await import('./structure-study.js?v=muse-20261123-1')).render(app,sim,params,context);
+  if(sim.id==='structure')return(await import('./structure-study.js?v=base-20261127-1')).render(app,sim,params,context);
   // studies that run in the Workspace now (2026-11-01; their study pages are retired): an old link opens the project's Workspace
   // with the study's card; a batch run says where it runs
   if (IN_WORKSPACE.includes(sim.id) && !(['daylight', 'vent', 'acoustics'].includes(sim.id) && params.get('batch')) && !(sim.id === 'vent' && params.get('detail'))) {   // a Daylight batch runs here, without a page (below); Ventilation and Acoustics batches and the detailed ventilation page (air speed inside one level) still use their pages

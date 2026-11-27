@@ -150,7 +150,7 @@ export async function importModel(file, { unit = 'auto', up = 'auto', onProgress
     const U = rh.UnitSystem, us = doc.settings().modelUnitSystem, k = us === U.Millimeters ? 0.001 : us === U.Centimeters ? 0.01 : us === U.Inches ? 0.0254 : us === U.Feet ? 0.3048 : us === U.Kilometers ? 1000 : 1;
     detectedScale=k;sourceUnit=Object.entries({Millimetres:U.Millimeters,Centimetres:U.Centimeters,Metres:U.Meters,Inches:U.Inches,Feet:U.Feet,Kilometres:U.Kilometers}).find(([,value])=>value===us)?.[0]||'Unknown (not declared)';fileUp = 'z';try{const result=rhinoGeometry(doc,rh,THREE);obj=result.object;audit={...result.audit,unitScale:k,axis:'z-up'};}finally{doc.delete();}if(!obj.children.length)throw Error('No placed surface meshes in this .3dm file. Unplaced block definitions are not scene geometry.');
   }
-  else throw Error('The prototype reads .obj, .stl, .glb and .3dm. SketchUp and IFC files open in the full tools.');
+  else throw Error('SimuSite reads .obj, .stl, .glb, .gltf and Rhino .3dm files. SketchUp and IFC files are not read: export OBJ or glTF from them.');
   if (signal?.aborted) throw abortErr();
   unit=requestedUnit==='auto'?(detectedScale??1):Number(requestedUnit);if(!Number.isFinite(unit)||unit<=0)throw Error('Choose a valid source unit scale.');
   const sourceBox=new THREE.Box3().setFromObject(obj);

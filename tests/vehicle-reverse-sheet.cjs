@@ -55,6 +55,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const pages = +/Pages:\s+(\d+)/.exec(execFileSync('pdfinfo', [f]).toString())[1], text = execFileSync('pdftotext', ['-layout', f, '-']).toString().replace(/\s+/g, ' ');
     for (const t of ['Vehicle access', 'Figure 1.1 Plan drawing', 'Figure 1.2', '(continued)', 'Route and moves', 'Every vehicle on this route', 'Conflicts', 'Vehicle data', 'backed up']) assert(text.includes(t), 'the report has: ' + t);
     assert.equal(pages, 5, 'cover, summary, the sheet, its tables, the closing page: ' + pages);
+    assert(!/rigid vehicles only/.test(text), 'the sheet no longer says reversing is for rigid vehicles only');   // (2026-11-27)
+    assert(/SimuSite, web-based building performance screening \(build \S+\)/.test(text) && /Simulation quality/.test(text), 'the cover names the build and the quality');
     execFileSync('pdftoppm', ['-r', '45', '-png', '-f', '3', '-l', '4', f, out + '/vehicle-sheet']);
     console.log(`PASS the report: ${pages} pages, the vehicle access sheet with its plan drawing and a page of tables (route and moves, every vehicle, conflicts, vehicle data)`);
     assert.deepEqual(errs, [], 'page errors: ' + errs.join(' | '));

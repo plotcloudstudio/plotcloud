@@ -8,7 +8,7 @@ import { buildComparisonReport } from './comparison-report-data.js?v=round2-2026
 import { SIMS } from './data.js';
 import * as C from './project-contract.js';
 import * as P from './parameters.js';
-import { comparability, judge, describe } from './compare-metrics.js';
+import { comparability, judge, describe } from './compare-metrics.js?v=base-20261127-1';
 import { STUDIES } from './capabilities.js';
 import { hashOf } from './contract-hash.js';
 import { buildPptx } from './pptx.js';

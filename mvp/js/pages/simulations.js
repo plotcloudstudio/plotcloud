@@ -19,8 +19,8 @@ export async function render(app, [simId], params, context={}) {
   const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
   if(sim?.family==='environment')return(await import('./environment-study.js?v=muse-20261123-1')).render(app,sim,params,context);
-  if (sim?.id==='structure') return (await import('./structure-study.js?v=muse-20261123-1')).render(app,sim,params,context);
-  if (sim) return (await import('./sim-engine.js?v=round2-20261124-1')).render(app, sim, params,context);   // every simulation runs its SimuSite engine
+  if (sim?.id==='structure') return (await import('./structure-study.js?v=base-20261127-1')).render(app,sim,params,context);
+  if (sim) return (await import('./sim-engine.js?v=base-20261127-1')).render(app, sim, params,context);   // every simulation runs its SimuSite engine
   return catalog(app, params, access);
 }
 
