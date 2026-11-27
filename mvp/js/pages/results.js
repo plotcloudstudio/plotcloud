@@ -145,11 +145,13 @@ export async function render(app, [pid], params) {
     if ($('#va', app)) for (const [id, cur] of [['#va', A], ['#vb', B]]) $(id, app).innerHTML = p.versions.map((v) => `<option value="${v.id}" ${v === cur ? 'selected' : ''}>v${v.n} — ${esc(v.note)}</option>`).join('');
   }
   $('#cardV', app).onchange = (e) => { cardV = S.version(p, e.target.value); cardsUI(); };
+  // (2026-11-27) how a result was made: the engine build, the quality, the level shown when it was saved (older results: not recorded)
+  const madeWith = (r) => { const st = r.settings || {}, b = r.recipe?.version && r.recipe.version !== 'unrecorded' ? r.recipe.version : null, bits = [b ? 'build ' + b : 'build not recorded', st.qualityName ? st.qualityName + ' quality' : null, st.levelName ? 'level ' + st.levelName : null].filter(Boolean); return `<p class="note" data-made-with>${esc(bits.join(' · '))}</p>`; };
   function cardsUI() {
     const v = cardV; if (!v) { $('#cards', app).innerHTML = '<p class="note">No saved version yet.</p>'; return; }
     const runs = SIMS.map((s) => [s, S.lastRun(p, v.id, s.id)]).filter(([, r]) => r);
     $('#cards', app).innerHTML = runs.map(([s, r]) => `<article class="rcard" data-card="${s.id}">${r.results.thumb ? `<img src="${r.results.thumb}" alt="${esc(s.name)} on v${v.n}">` : '<div class="ph">No picture kept</div>'}
-      <div class="rc-b"><h3>${esc(s.name)}</h3>${assumptionsHTML(p,r)}${S.runConditionsStatus(p,r)?`<p class="notice warn" data-conditions-stale>${esc(S.runConditionsStatus(p,r))}</p>`:''}<p class="note">${when(r.created)} · ${r.source === 'batch' ? 'batch run' : r.source==='plan-studio-case'?'precomputed in Plan Studio':'saved from its page'}</p>
+      <div class="rc-b"><h3>${esc(s.name)}</h3>${assumptionsHTML(p,r)}${S.runConditionsStatus(p,r)?`<p class="notice warn" data-conditions-stale>${esc(S.runConditionsStatus(p,r))}</p>`:''}<p class="note">${when(r.created)} · ${r.source === 'batch' ? 'batch run' : r.source==='plan-studio-case'?'precomputed in Plan Studio':r.source==='workspace'?'saved from the Workspace':'saved from its page'}</p>${madeWith(r)}
       <dl>${(r.results.kpis || []).slice(0, 3).map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
       <a class="btn sm primary" href="#/simulations/${s.id}?project=${p.id}&version=${v.id}">Enter</a></div></article>`).join('') || `<p class="note">Nothing run on v${v.n} yet. Tick studies above and Run selected.</p>`;
   }

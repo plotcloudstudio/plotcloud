@@ -8,6 +8,9 @@
 // Nothing here is a new tool: each control is the Workspace's or Plan Studio's own, moved, so its behaviour, keyboard and tests stay.
 // The sun is the one addition: Plan Studio's 3D key light set from the site, the date and solar time, with shadows (display only).
 import * as S from './store.js';
+import { comparability } from './compare-metrics.js';
+// the release this page was built from (its own ?v= token), recorded on every saved result as the engine build (2026-11-27)
+const BUILD = (() => { try { return new URL(import.meta.url).searchParams.get('v') || 'dev'; } catch { return 'dev'; } })();
 import * as SL from './structure-layout.js?v=struct-20261117-1';
 import * as SF from './structure-frame.js?v=sims-20261121-1';
 import * as SFU from './structure-frame-ui.js?v=batch2-20261123-1';
@@ -388,7 +391,7 @@ export function mountChrome(app, api) {
   function xlBadge() { const b = app.querySelector('.sp-xlb .sp-badge'), n = XL.list.items.length; if (!b) return; b.hidden = !n; b.textContent = String(n); }
   async function xlSave() { const m = await xlMod(); await m.saveList(p.id, XL.list); xlBadge(); if (!pops.xl.hidden) drawXL(); }
   async function drawXL() { const m = await xlMod(); if (!pops.xl.querySelector('.xl-lst')) pops.xl.innerHTML = '<div class="xl-gen"></div><div class="xl-lst"></div>'; drawGen(pops.xl.querySelector('.xl-gen')); m.renderList(pops.xl.querySelector('.xl-lst'), XL.list, { project: p.name, modelKey: modelHash(), busy: XL.busy, onChange: (redraw = true) => { xlSave(); if (redraw) drawXL(); }, onExport: xlExport }); }
-  const xlCtx = () => { const st = S.siteOf(p) || {}, last = (p.versions || []).at(-1); return { project: p.name, site: st.label && st.label !== p.name ? st.label : '', coords: Number.isFinite(st.lat) ? `${Math.abs(st.lat).toFixed(4)}° ${st.lat >= 0 ? 'N' : 'S'}, ${Math.abs(st.lon).toFixed(4)}° ${st.lon >= 0 ? 'E' : 'W'}` : '', version: last ? `v${last.n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: S.conditionsOf(p).revision, author: S.account()?.user?.name || '', weather: ROSE.v?.station || '' }; };
+  const xlCtx = () => { const st = S.siteOf(p) || {}, last = (p.versions || []).at(-1); return { build: BUILD, quality: qualOf().name, project: p.name, site: st.label && st.label !== p.name ? st.label : '', coords: Number.isFinite(st.lat) ? `${Math.abs(st.lat).toFixed(4)}° ${st.lat >= 0 ? 'N' : 'S'}, ${Math.abs(st.lon).toFixed(4)}° ${st.lon >= 0 ? 'E' : 'W'}` : '', version: last ? `v${last.n}${dirty() ? ' + unsaved changes' : ''}` : 'unsaved draft', revision: S.conditionsOf(p).revision, author: S.account()?.user?.name || '', weather: ROSE.v?.station || '' }; };
   async function xlExport(kind) { if (XL.busy) return; XL.busy = kind === 'pdf' ? 'Laying out the report…' : kind === 'pptx' ? 'Building the slides…' : 'Packing the pictures…'; drawXL();
     try { const m = await xlMod(), { name, blob } = await m.exportList(kind, XL.list, xlCtx()), a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = name; a.addEventListener('click', (ev) => ev.stopPropagation()); document.body.append(a); a.click(); a.remove();   /* a download is not a click outside the list */ setTimeout(() => URL.revokeObjectURL(u), 4000); XL.busy = ''; p.exports = [...(p.exports || []), { at: new Date().toISOString(), kind, n: XL.list.items.length }].slice(-50); S.save(); }
     catch (e) { XL.busy = 'The export could not finish: ' + (e.message || e); } drawXL(); setTimeout(() => { if (XL.busy.startsWith('The export')) { XL.busy = ''; } }, 6000); }
@@ -2000,7 +2003,8 @@ export function mountChrome(app, api) {
       const v = baseline(), r = ST.res; if (!v) throw Error('Save a version first.');
       // the project's shared conditions this result used (2026-11-01), so Results can say when they change afterwards
       const shc = S.clone(S.conditionsOf(p)), sharedConditions = r.settings?.sharedConditions || { revision: shc.revision, signature: S.conditionsSignature(p, ST.id), site: S.clone(shc.site || {}), defaults: S.clone(shc.defaults || {}), studyOnlyOverrides: false, effective: { lat: shc.site?.lat, lon: shc.site?.lon, north: shc.site?.north ?? 0, tz: shc.site?.tz } };
-      S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, inheritedFrom: 'Project shared conditions', method: 'workspace-ground', cell: r.cell }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString(), ...compareKit(r) }, 'workspace');
+      const lvId = curLv(), lvName = (() => { try { return (INST.persp.ws.levels?.().list || []).find((l) => l.id === lvId)?.name || null; } catch { return null; } })();   // (2026-11-27) how it was made: build, quality, the level shown
+      S.addRun(p, v.id, ST.id, { ...r.settings, sharedConditions, inheritedFrom: 'Project shared conditions', method: 'workspace-ground', cell: r.cell, engineVersion: r.settings?.engineVersion || BUILD, quality: (ST.runQ || qualOf()).k, qualityName: (ST.runQ || qualOf()).name, levelId: lvId || null, levelName: lvName }, { ...r.results, cells: r.cells, computedAt: ST.at.toISOString(), ...compareKit(r) }, 'workspace');
       ST.saved = 'v' + v.n; ST.key = studyModel(INST.persp.ws); logRun(ST.id, r, 'v' + v.n); }
     catch (e) { ST.err = e.message; }
     ST.busy = false; drawStudy(); if (!cmp.hidden) drawCompare();
@@ -2533,12 +2537,13 @@ export function mountChrome(app, api) {
     return { gfa: gfaB > 0 ? gfaB : gfaM, fp: gfaB > 0 ? fpB : fpM, masses: ms.length, storeys: ms.reduce((a, m) => Math.max(a, m.storeys || 1), 0), levels: (st.levels || []).length,
       ctx: (site.buildings || []).filter((b) => !b.excluded).length, relief: z.length ? Math.max(...z) - Math.min(...z) : null, roads: (site.roads || []).length,
       walls: (st.walls || []).length, ops: (st.ops || []).length, furn: (st.furn || []).length, lights: (st.lights || []).length, floors: (st.floors || []).length }; };
+  const CMPN = { 'weather.epw': 'weather file', build: 'engine build', method: 'method', study: 'study', inputs: 'inputs', 'settings.quality': 'quality', 'field.step': 'grid', 'settings.grid': 'grid', 'settings.level': 'level', 'settings.step': 'sun step' };
   function compareData() {
     const cur = baseline(), vs = p.versions.slice().reverse().slice(0, 8);
     const cols = vs.map((v) => ({ id: v.id, title: v.note || 'v' + v.n, sub: 'v' + v.n, current: v === cur, studio: v.model?.studio, v, thumb: v.thumb || THUMB.get(v.id) }));
     if (!cols.length || dirty()) cols.unshift({ id: 'draft', title: 'Unsaved changes', sub: cur ? 'since v' + cur.n : 'not saved yet', current: true, draft: true, studio: studio(), thumb: THUMB.get('draft') });
     if (cols.some((c) => c.draft)) for (const c of cols) if (!c.draft) c.current = false;
-    const N = (v, u = '', d = 0) => (v === null || v === undefined ? '—' : fmt(v, d) + u);
+    const N = (v, u = '', d = 0) => (v === null || v === undefined ? '—' : typeof v === 'string' ? v : fmt(v, d) + u);
     const G = [['Building', [['Gross floor area (drawn floors, else masses)', (c) => figs(c.studio).gfa, ' m²'], ['Footprint (lowest drawn floor, else masses)', (c) => figs(c.studio).fp, ' m²'], ['Masses', (c) => figs(c.studio).masses], ['Tallest mass, storeys', (c) => figs(c.studio).storeys], ['Levels', (c) => figs(c.studio).levels]]],
       ['Site', [['Surrounding buildings', (c) => figs(c.studio).ctx], ['Terrain relief', (c) => figs(c.studio).relief, ' m', 1], ['Roads and paths', (c) => figs(c.studio).roads]]],
       ['Space', [['Rooms', (c) => (c.draft || c.current) && INST.plan.ready ? INST.plan.ws.objects().filter((o) => o.k === 'room').length : null], ['Room area', (c) => (c.draft || c.current) && INST.plan.ready ? INST.plan.ws.objects().filter((o) => o.k === 'room').reduce((a, r) => a + (r.area || 0), 0) : null, ' m²', 1]]],
@@ -2547,7 +2552,15 @@ export function mountChrome(app, api) {
     for (const sim of api.sims) { const runs = p.runs.filter((r) => r.simId === sim.id && r.results); if (!runs.length && !simLog()[sim.id]?.results) continue;
       const lg = simLog()[sim.id], now = lg && lg.results && lg.key === modelHash() ? { results: lg.results, settings: { label: lg.settings } } : null, last = (c) => (c.v ? runs.filter((r) => r.versionId === c.v.id).at(-1) : null) || (c.current && now) || null;
       const basis = new Set(cols.map(last).filter(Boolean).map((r) => r.settings?.label || r.settings?.dayName || 'full study')); if (basis.size > 1) notes.push(`${sim.name}: the versions use different settings (${[...basis].join('; ')}), so compare with care.`);
-      for (const [key, label, unit, dec] of sim.metrics || []) { const get = (c) => { const r = last(c); return r && Number.isFinite(+r.results[key]) ? +r.results[key] : null; }; if (cols.some((c) => get(c) !== null)) res.push([`${sim.name} · ${label}`, get, unit === '%' ? '%' : ' ' + unit, dec]); } }
+      // (2026-11-27) the same conditions? each saved result against the first saved one from the left (compare-metrics.js comparability:
+      // method and build, weather file, recorded inputs, grid and quality); a result not comparable has its values greyed
+      const base = cols.map((c) => ({ c, r: last(c) })).find((x) => x.r && x.r.id), verdict = new Map();
+      if (base) for (const c of cols) { const r = last(c); if (!r) continue; if (!r.id) { verdict.set(c.id, { kind: 'unsaved', text: 'not saved: conditions not recorded' }); continue; }
+        if (r === base.r) { verdict.set(c.id, { kind: 'baseline', text: 'baseline' }); continue; } const k = comparability(base.r, r), what = k.diffs.filter((d) => d.kind !== 'note' || d.key === 'build').map((d) => CMPN[d.key] || d.key.replace(/^settings\./, '')), uniq = [...new Set(what)].slice(0, 4).join(', ');
+        verdict.set(c.id, { kind: k.kind, text: { design: 'same conditions' + (uniq ? ` (${uniq} noted)` : ''), scenario: `scenario: ${uniq} differ${uniq.includes(',') ? '' : 's'}`, unverified: `unverified: ${uniq || 'conditions'} not recorded`, 'not-comparable': `not comparable: ${uniq}` }[k.kind] }); }
+      if (base && verdict.size > 1) { res.push([`${sim.name} · Conditions vs ${base.c.title}`, (c) => verdict.get(c.id)?.text ?? null, '', 0, null, (c) => verdict.get(c.id)?.kind]); const nc = [...verdict.values()].filter((x) => x.kind === 'not-comparable').length; if (nc) notes.push(`${sim.name}: ${nc} result${nc > 1 ? 's are' : ' is'} not comparable with ${base.c.title} (another study or method); ${nc > 1 ? 'their' : 'its'} values are greyed.`); }
+      const grey = (c) => (verdict.get(c.id)?.kind === 'not-comparable' ? ' nc' : '');
+      for (const [key, label, unit, dec] of sim.metrics || []) { const get = (c) => { const r = last(c); return r && Number.isFinite(+r.results[key]) ? +r.results[key] : null; }; if (cols.some((c) => get(c) !== null)) res.push([`${sim.name} · ${label}`, get, unit === '%' ? '%' : ' ' + unit, dec, grey]); } }
     if (res.length) G.push(['Results', res]);
     const P = pins(), pinned = G.flatMap(([, rows]) => rows).filter(([l]) => P.has(l));
     return { cols, groups: [['Pinned', pinned], ...G], notes, N };
@@ -2557,7 +2570,7 @@ export function mountChrome(app, api) {
     const head = `<div class="sp-sk-row sp-sk-head"><div class="sp-sk-lab"></div>${cols.map((c) => `<button type="button" class="sp-sk-card${c.current ? ' cur' : ''}" data-sketch="${esc(c.id)}" title="${c.draft ? 'The model as it is now' : 'Open ' + esc(c.sub) + ' in the model'}"><span class="sp-sk-pic">${c.thumb ? `<img src="${c.thumb}" alt="">` : ''}</span><b>${esc(c.title)}</b><small>${c.current ? 'Current' : esc(c.sub)}</small></button>`).join('')}
       <div class="sp-sk-add"><button type="button" class="btn sm primary" id="spAddSketch">Save as version</button><small>Save the model as a version to compare it</small></div></div>`;
     const body = groups.map(([g, rows]) => `<div class="sp-sk-row sp-sk-grp"><button type="button" class="sp-sk-lab" data-grp="${g}" aria-expanded="${!closed.has(g)}">${g.toUpperCase()} <i>${closed.has(g) ? '›' : '⌄'}</i></button>${cols.map(() => '<div></div>').join('')}</div>`
-      + (closed.has(g) ? '' : rows.length ? rows.map(([l, get, u, d]) => `<div class="sp-sk-row"><div class="sp-sk-lab"><button type="button" class="sp-pin${P.has(l) ? ' on' : ''}" data-pin="${esc(l)}" title="${P.has(l) ? 'Unpin' : 'Pin to the top'}" aria-label="${P.has(l) ? 'Unpin' : 'Pin'} ${esc(l)}">${P.has(l) ? '●' : '○'}</button>${esc(l)}</div>${cols.map((c) => `<div class="sp-sk-v${c.current ? ' cur' : ''}">${N(get(c), u || '', d || 0)}</div>`).join('')}</div>`).join('') : g === 'Pinned' ? `<div class="sp-sk-row"><div class="sp-sk-lab sp-sk-empty">Pin a row to keep it here</div></div>` : '')).join('');
+      + (closed.has(g) ? '' : rows.length ? rows.map(([l, get, u, d, grey, kindOf]) => `<div class="sp-sk-row${kindOf ? ' sp-sk-basis' : ''}"><div class="sp-sk-lab"><button type="button" class="sp-pin${P.has(l) ? ' on' : ''}" data-pin="${esc(l)}" title="${P.has(l) ? 'Unpin' : 'Pin to the top'}" aria-label="${P.has(l) ? 'Unpin' : 'Pin'} ${esc(l)}">${P.has(l) ? '●' : '○'}</button>${esc(l)}</div>${cols.map((c) => `<div class="sp-sk-v${c.current ? ' cur' : ''}${grey ? grey(c) : ''}"${kindOf && kindOf(c) ? ` data-cmp-basis="${kindOf(c)}"` : ''}>${esc(N(get(c), u || '', d || 0))}</div>`).join('')}</div>`).join('') : g === 'Pinned' ? `<div class="sp-sk-row"><div class="sp-sk-lab sp-sk-empty">Pin a row to keep it here</div></div>` : '')).join('');
     parkSave();   // a redraw must not take the Save version button with it
     cmp.innerHTML = `${GRIP}<button type="button" class="sp-x" data-cmp="close" aria-label="Close Compare versions">×</button>
       <div class="sp-sk-scroll">${head}${body}${notes.map((n) => `<p class="sp-note">${esc(n)}</p>`).join('')}</div>
@@ -2582,7 +2595,7 @@ export function mountChrome(app, api) {
     else if (k === 'rgo') makeReport();
     else if (k === 'rx') cmp.querySelector('.sp-rpick').hidden = true;
     else if (k === 'csv') { const { cols, groups, N } = compareData(), q = (v) => `"${String(v).replace(/"/g, '""')}"`;
-      const csv = [['', ...cols.map((c) => `${c.title} (${c.current ? 'current' : c.sub})`)], ...groups.filter(([g]) => g !== 'Pinned').flatMap(([g, rows]) => [[g], ...rows.map(([l, get, u, d]) => [l, ...cols.map((c) => { const v = get(c); return v === null || v === undefined ? '' : +(+v).toFixed(3); })])])].map((r) => r.map(q).join(',')).join('\n');
+      const csv = [['', ...cols.map((c) => `${c.title} (${c.current ? 'current' : c.sub})`)], ...groups.filter(([g]) => g !== 'Pinned').flatMap(([g, rows]) => [[g], ...rows.map(([l, get]) => [l, ...cols.map((c) => { const v = get(c); return v === null || v === undefined ? '' : typeof v === 'string' ? v : +(+v).toFixed(3); })])])].map((r) => r.map(q).join(',')).join('\n');
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' })); a.download = `${p.name.replace(/[^\w-]+/g, '-')}-compare-versions.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } });
   // Getting started › Compare two options, and the project overview's Compare plans, open this sheet (2026-11-01)
   const startCompare = (e) => { const a = e.target.closest('.pc-start [data-step="compare"] a'); if (!a) return; e.preventDefault(); e.stopPropagation(); openSheet(true); };

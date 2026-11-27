@@ -64,6 +64,11 @@ test('10 comparability: design, scenario (weather/grid), not comparable (method)
   assert.equal(comparability(run(), run({ settings: { grid: 1 } })).kind, 'scenario');
   assert.equal(comparability(run(), run({ recipe: { engine: 'local-reference', version: 'x' } })).kind, 'not-comparable');
   assert.equal(comparability(run(), run({ inputs: undefined })).kind, 'unverified');
+  // (2026-11-27) builds: two recorded builds of the same engine are noted, not blocking; a build not recorded leaves it unverified; quality is a grid setting
+  const rb = (v, o = {}) => run({ recipe: { engine: 'browser', version: v }, ...o });
+  { const k = comparability(rb('a'), rb('b')); assert.equal(k.kind, 'design'); assert(k.diffs.some((d) => d.key === 'build' && d.kind === 'note')); }
+  assert.equal(comparability(rb('unrecorded'), rb('b')).kind, 'unverified');
+  assert.equal(comparability(rb('a', { settings: { grid: 0.5, quality: 'draft' } }), rb('a', { settings: { grid: 0.5, quality: 'refined' } })).kind, 'scenario');
   const fa = { unit: '%', pts: [0, 0, 1, 1, 0, 2, 2, 0, 3] }, fb = { unit: '%', pts: [0, 0, 2, 1, 0, 2, 5, 5, 9] };
   const fd = fieldDiff(fa, fb); assert.equal(fd.matched, 2); assert.equal(fd.onlyA, 1); assert.equal(fd.onlyB, 1); assert.equal(fd.unit, 'pp'); assert.equal(fd.mean, 0.5);
   assert.equal(fieldDiff(fa, { unit: '%', pts: [9, 9, 1] }).status, 'not-comparable');

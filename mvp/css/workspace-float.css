@@ -216,6 +216,9 @@ body.sp-full .pc-start-min{top:20px!important;right:auto!important;left:612px!im
 .w2.sp .sp-sk-add #saveV{background:#2f5bd3!important;border-color:#2f5bd3!important;color:#fff!important;padding:5px 14px;font-weight:600}
 .w2.sp .sp-sk-v{padding:6px 12px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid #f3f4f6;margin:0 4px}
 .w2.sp .sp-sk-v.cur{background:#f5f8ff}
+.w2.sp .sp-sk-v.nc{color:#9ca3af;text-decoration:line-through}
+.w2.sp .sp-sk-basis .sp-sk-v{font-size:11px;text-align:left;color:#4b5563;font-variant-numeric:normal}
+.w2.sp .sp-sk-v[data-cmp-basis=scenario],.w2.sp .sp-sk-v[data-cmp-basis=unverified]{color:#92400e}.w2.sp .sp-sk-v[data-cmp-basis=not-comparable]{color:#b91c1c}
 .w2.sp .sp-pin{border:0;background:none;padding:0;color:#c0c4cc;cursor:pointer;font-size:9px;line-height:1}
 .w2.sp .sp-pin.on{color:#2f5bd3}
 .w2.sp .sp-sheet footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px}

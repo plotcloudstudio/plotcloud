@@ -38,7 +38,7 @@ export function render(app) {
               <a role="menuitem" href="#/new-site"><b>From the map</b><small>Find the place; its buildings, roads and ground come in</small></a>
               <button role="menuitem" data-new="blank"><b>Blank</b><small>An empty model on your default site</small></button>
               <button role="menuitem" data-new="sample"><b>From the sample</b><small>A copy of the courtyard studio with two versions</small></button>
-              <button role="menuitem" data-new="import"><b>Import a model</b><small>.obj, .stl or .glb, read in your browser</small></button>
+              <button role="menuitem" data-new="import"><b>Import a model</b><small>.obj, .stl, .glb, .gltf or Rhino .3dm, read in your browser</small></button>
             </div></div></div>
         <div class="db-grid" id="plist"></div>
         <button class="btn sm ghost" id="arch" hidden></button>

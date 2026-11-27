@@ -19,14 +19,18 @@ export function judge(d, target) {
   const verdict = gb < ga ? 'better' : gb > ga ? 'worse' : meets(d.b) ? 'meets-both' : 'unchanged';
   return { verdict, aMeets: meets(d.a), bMeets: meets(d.b), text: { better: 'Closer to target', worse: 'Further from target', 'meets-both': 'Meets target in A and B', unchanged: 'No change against target' }[verdict], source: target.source || 'not recorded' };
 }
-const SPATIAL = ['grid', 'gridSize', 'resolution', 'step', 'level', 'room', 'plane', 'sensorHeight'];
+const SPATIAL = ['grid', 'gridSize', 'resolution', 'step', 'level', 'room', 'plane', 'sensorHeight', 'quality'];
 // Is this a design comparison (same conditions), a scenario comparison (conditions changed) or not comparable?
 export function comparability(A, B) {
   const diffs = [], add = (key, a, b, kind) => diffs.push({ key, a, b, kind });
   if (!A || !B) return { kind: 'not-comparable', diffs: [{ key: 'run', kind: 'blocking', a: !!A, b: !!B }], text: 'A run is missing.' };
   if (A.simId !== B.simId) add('study', A.simId, B.simId, 'blocking');
   const ra = A.recipe || {}, rb = B.recipe || {};
-  if ((ra.engine || 'unrecorded') !== (rb.engine || 'unrecorded') || (ra.version || 'unrecorded') !== (rb.version || 'unrecorded')) add('method', `${ra.engine}/${ra.version}`, `${rb.engine}/${rb.version}`, 'blocking');
+  // (2026-11-27) a different engine is a different method; the same engine in two recorded builds is noted; a build not recorded
+  // on one side leaves the comparison unverified rather than blocking it
+  const va = ra.version || 'unrecorded', vb = rb.version || 'unrecorded';
+  if ((ra.engine || 'unrecorded') !== (rb.engine || 'unrecorded')) add('method', `${ra.engine}/${va}`, `${rb.engine}/${vb}`, 'blocking');
+  else if (va !== vb) add('build', va, vb, va === 'unrecorded' || vb === 'unrecorded' ? 'unrecorded' : 'note');
   const ia = A.inputs?.values, ib = B.inputs?.values;
   if (!ia || !ib) add('inputs', !!ia, !!ib, 'unrecorded');
   else for (const k of new Set([...Object.keys(ia), ...Object.keys(ib)])) if (JSON.stringify(ia[k]) !== JSON.stringify(ib[k])) add(k, ia[k], ib[k], k === 'weather.epw' ? 'weather' : 'condition');
