@@ -1,5 +1,5 @@
 import * as S from './store.js';
-import {importModel} from './viewport.js?v=sims-20261121-1';
+import {importModel} from './viewport.js?v=base-20261127-1';
 import {reviewImport} from './import-review.js?v=import-feedback-20261027-1';
 import {toStudio} from './studio-convert.js';
 import {setCurrent,setCurrentVersion} from './app.js';

@@ -3,7 +3,7 @@ import{mountStudyShell}from'../study-ui/shell.js?v=unified-modes-20261030-1';
 import * as S from '../store.js';
 import {$,esc,currentProject,currentVersion,setCurrent,setCurrentVersion,toast,route} from '../app.js';
 import {studioSolarScene} from '../studio-bridge.js?v=sims-20261121-1';
-import {mountStudyImport} from '../study-import.js?v=sims-20261121-1';
+import {mountStudyImport} from '../study-import.js?v=base-20261127-1';
 import {toStudio} from '../studio-convert.js';
 import {defaultInput,inheritStudyInput,meshDescriptor,geometrySignature,allObjects,settingFor,effective,assemble,panelGeometry,ROLES,MATERIALS,sectionOptions,solver,suggestAssignments,inputSignature,nodeKey} from '../structural-model.js?v=structural-study-20261028-1';
 import {structuralViewport} from '../structural-viewport.js?v=unified-modes-20261030-2';
