@@ -21,7 +21,7 @@ const assert = require('node:assert/strict'), path = require('node:path');
 
   // 2. angled rows: one aisle (one way), a band exactly two stall depths and the aisle deep
   for (const [ang, A] of [[60, 4.8], [45, 4.0]]) { const f = P.stallFit(2.5, 5.0, ang), H = 2 * f.depth + A, R2 = { outer: rectP(0, 0, 60, H) };
-    const r2 = P.generate({ region: R2, entrances: [[0, H / 2]], categories: [cat('standard', 2.5, 5.0)], angle: ang, aisle: A, oneWay: true, fixed: { angle: 0, offset: 0 }, step: 0.05 });
+    const r2 = P.generate({ region: R2, entrances: [[0, H / 2]], categories: [cat('standard', 2.5, 5.0)], angle: ang, aisle: A, oneWay: true, fixed: { angle: 0, offset: 0 }, step: 0.05, deadEnds: 'allow' });
     assert(r2.ok, r2.error); const ok = check(r2.best, R2), hand = 2 * (Math.floor((60 - f.ext) / f.pitch + 1e-9) + 1); assert.equal(r2.best.total, hand, `${ang}°: ${r2.best.total} vs ${hand}`);
     const xs = ok.filter((s) => s.rowAt[0] === ok[0].rowAt[0] && s.row === undefined).map((s) => G.centroid(s.footprint)[0]).sort((a, b) => a - b); void xs;
     console.log(`PASS 2 ${ang}° stalls: pitch ${f.pitch.toFixed(3)} m, depth ${f.depth.toFixed(3)} m, ${hand} by hand = ${r2.best.total}`); }
