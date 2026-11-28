@@ -9,7 +9,7 @@ import * as RP from './route-plan.js?v=semi-20261126-1';
 import { planAsync } from './route-plan-async.js?v=semi-20261126-1';
 import * as VM from './vehicle-mesh.js';
 import * as SR from './site-routes.js?v=semi-20261126-1';
-import * as PK from './parking.js';
+import * as PK from './parking.js?v=draw-20261128-1';
 import * as CAD from './cad-export.js';
 
 export const VEH = 'vehicle-swept-path', PARK = 'parking-layout';
