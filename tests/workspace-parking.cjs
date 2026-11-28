@@ -25,6 +25,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('.sp-studycard [data-pk=drawarea]'); for (const q of [[-28, -40], [28, -40], [28, -17], [-28, -17]]) { assert(await pick(q)); await p.waitForTimeout(100); } await p.click('.sp-studycard [data-sa=finish]'); await p.waitForTimeout(300);
     assert.match(await p.locator('.sp-studycard').innerText(), /Drawn: 1,288 m²/);
     await p.click('.sp-studycard [data-pk=addent]'); assert(await pick([-28, -28])); await p.waitForTimeout(300); assert.match(await p.locator('.sp-studycard').innerText(), /1 set \(green E on the plan\)/);
+    // (2026-11-28) the hand count below is in the European sizes, with no islands and the accessible count as set
+    await p.selectOption('.sp-studycard [data-pk=std]', 'eu'); await p.waitForTimeout(200); await p.uncheck('.sp-studycard [data-pk=islends]'); await p.uncheck('.sp-studycard [data-pk=ada]'); await p.waitForTimeout(200);
     await run(); let R = await rows(); const m1 = await marks(); assert(m1.tags.includes('stall') && m1.tags.includes('aisle'), [...new Set(m1.tags)].join());
     const n1 = +R['Stalls'].match(/^(\d+)/)[1]; assert(n1 >= 42 && n1 <= 44, R['Stalls']);   // by hand: one module (5 + 6 + 5 m) in the 23 m depth, two rows of about 22 along 56 m, two of them wider accessible stalls assert.equal(R['Invalid stalls'], 'none'); assert.match(R['Not reached'], /every aisle reached/); assert.match(R['· Accessible'], /^2 /);
     await p.screenshot({ path: `${shots}/parking-1.png` });
