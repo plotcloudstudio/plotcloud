@@ -17,7 +17,7 @@ import * as S from '../store.js';
 import {applyProjectClimate} from '../project-climate.js';
 import { $, esc, toast, currentProject, setCurrent, currentVersion, setCurrentVersion, simBack, LIVE, route } from '../app.js';
 import { sunScene, tzInfo } from '../sunscene.js';
-import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=dxf-20261127-1';
+import { studioScene, studioDXF,studioSolarScene,studioOBJ } from '../studio-bridge.js?v=draw-20261128-1';
 import { windFrom } from '../studio-convert.js';
 import { obj } from '../export3d.js';
 import { levelsOf } from '../viewport2.js';
@@ -127,8 +127,8 @@ export const IN_WORKSPACE = ['vehicle-swept-path', 'parking-layout', 'watersound
 const SUN = ['sunhours', 'radiation', 'utci'], WEATHER = ['vent', 'daylight', 'radiation', 'utci', 'wind'];
 
 export async function render(app, sim, params = new URLSearchParams(),context={}) {
-  if(sim.family==='environment')return(await import('./environment-study.js?v=dxf-20261127-1')).render(app,sim,params,context);
-  if(sim.id==='structure')return(await import('./structure-study.js?v=dxf-20261127-1')).render(app,sim,params,context);
+  if(sim.family==='environment')return(await import('./environment-study.js?v=draw-20261128-1')).render(app,sim,params,context);
+  if(sim.id==='structure')return(await import('./structure-study.js?v=draw-20261128-1')).render(app,sim,params,context);
   // studies that run in the Workspace now (2026-11-01; their study pages are retired): an old link opens the project's Workspace
   // with the study's card; a batch run says where it runs
   if (IN_WORKSPACE.includes(sim.id) && !(['daylight', 'vent', 'acoustics'].includes(sim.id) && params.get('batch')) && !(sim.id === 'vent' && params.get('detail'))) {   // a Daylight batch runs here, without a page (below); Ventilation and Acoustics batches and the detailed ventilation page (air speed inside one level) still use their pages

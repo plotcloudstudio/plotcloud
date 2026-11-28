@@ -18,7 +18,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
       // open it in the Workspace: still free (loading must not change the building)
       await p.goto(base + '/mvp/#/workspace/' + id); await p.waitForFunction(() => window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 400000 }); await p.waitForTimeout(3000);
       assert.equal((await can(id)).wind, true, `${name}: still free after opening in the Workspace`);
-      const tags0 = await p.$$eval('.w2-simmenu [data-addsim]', (bs) => bs.filter((x) => /Monthly access/.test(x.textContent)).length); assert.equal(tags0, 0, `${name}: no study locked in the menu`);
+      const tags0 = await p.$$eval('.w2-simmenu [data-addsim]', (bs) => bs.filter((x) => x.dataset.locked || /Monthly access/.test(x.textContent)).length); assert.equal(tags0, 0, `${name}: no study locked in the menu`);
       // draw a wall into it, as the plan pane does
       await p.evaluate(() => { const fr = [...document.querySelectorAll('iframe')].find((f) => /ws=plan/.test(f.src)).contentWindow; const M = JSON.parse(fr.__ws.model()); const lv = M.levels[0].id; M.walls.push({ id: 'wQA', lv, a: [-40, -40], b: [-30, -40], t: 0.2, h: 3, object_type: 'wall', layer: 'Wall' }); const s = JSON.stringify(M); fr.__ws.apply(s, false); window.__ws2.hub.change('plan', s, false); });
       await p.waitForTimeout(1500);

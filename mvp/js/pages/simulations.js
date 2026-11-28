@@ -13,14 +13,14 @@ export async function render(app, [simId], params, context={}) {
   const planned=plannedStudy(simId);if(planned)return renderPlannedStudy(app,planned);
   if(params.get('test-code')){const code=params.get('test-code');params.delete('test-code');history.replaceState(null,'','#/simulations'+(simId?'/'+encodeURIComponent(simId):'')+(params.toString()?'?'+params.toString():''));try{await activateTestingCode(code);}catch(error){app.innerHTML='<div class="wrap"><h1>Testing access could not be activated.</h1><p role="alert"></p><a href="#/simulations">Browse studies</a></div>';app.querySelector('[role=alert]').textContent=error.message;return;}}
   if(simId==='noise'){app.innerHTML='<div class="wrap"><h1>Study removed</h1><p>Outdoor Noise is no longer available.</p><a class="btn" href="#/simulations">All studies</a></div>';return;}
-  if(simId==='snow'&&params.get('mode')!=='drift')return(await import('./snow-study.js?v=dxf-20261127-1')).render(app,SIMS.find(s=>s.id==='snow'),params,context);
+  if(simId==='snow'&&params.get('mode')!=='drift')return(await import('./snow-study.js?v=draw-20261128-1')).render(app,SIMS.find(s=>s.id==='snow'),params,context);
   // a study that runs in the Workspace view (2026-10-31) opens there, on the current project, with its study card
   if(['sunhours','radiation','skyview','shadebenefit','solarenvelope','utci','wind','stormwater','snow'].includes(simId)&&params.get('autorun')!=='workspace'&&currentProject()){try{sessionStorage.setItem('pc-ws-open-study',simId);}catch(e){}location.hash='#/workspace';return;}
   const access = await checkAccess();
   const sim = SIMS.find((s) => s.id === simId);
-  if(sim?.family==='environment')return(await import('./environment-study.js?v=dxf-20261127-1')).render(app,sim,params,context);
-  if (sim?.id==='structure') return (await import('./structure-study.js?v=dxf-20261127-1')).render(app,sim,params,context);
-  if (sim) return (await import('./sim-engine.js?v=dxf-20261127-1')).render(app, sim, params,context);   // every simulation runs its SimuSite engine
+  if(sim?.family==='environment')return(await import('./environment-study.js?v=draw-20261128-1')).render(app,sim,params,context);
+  if (sim?.id==='structure') return (await import('./structure-study.js?v=draw-20261128-1')).render(app,sim,params,context);
+  if (sim) return (await import('./sim-engine.js?v=draw-20261128-1')).render(app, sim, params,context);   // every simulation runs its SimuSite engine
   return catalog(app, params, access);
 }
 
@@ -53,7 +53,7 @@ function catalog(app, params, access) {
   const card = (s) => `<article class="card sim" data-scope="${s.scope}" data-category="${categoryOf(s.id)}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true">${thumbnail(s)}</a>
       <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
-      <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id, p) ? 'Enter' : 'Monthly access'}</a>${LIVE}${ready(s)}</div></article>`;
+      <div class="acts">${canUse(s.id, p) ? `<a class="btn sm primary" href="${q(s)}">Enter</a>` : '<span class="btn sm" aria-disabled="true" style="opacity:.45;cursor:not-allowed">Enter</span>'}${LIVE}${ready(s)}</div></article>`;
   const draw = () => { $('#grid', app).innerHTML = CATEGORIES.filter((c) => g === 'All' || c.label === g).map((c) => `<h2 class="sim-cat" data-category-heading="${c.id}" style="grid-column:1/-1;margin:28px 0 4px">${esc(c.label)}</h2>${SIMS.filter((s) => categoryOf(s.id) === c.id).map(card).join('')}`).join('');
     $$('#filters button', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === g))); };
   $$('#filters button', app).forEach((b) => b.onclick = () => { g = b.dataset.g; try { localStorage.setItem('pc-mvp-simgroup', g); } catch (e) { } draw(); }); draw();

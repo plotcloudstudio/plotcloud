@@ -25,6 +25,8 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     await p.click('.sp-studycard [data-pk=drawarea]'); for (const q of [[-28, -40], [28, -40], [28, -17], [-28, -17]]) { assert(await pick(q)); await p.waitForTimeout(100); } await p.click('.sp-studycard [data-sa=finish]'); await p.waitForTimeout(300);
     assert.match(await p.locator('.sp-studycard').innerText(), /Drawn: 1,288 m²/);
     await p.click('.sp-studycard [data-pk=addent]'); assert(await pick([-28, -28])); await p.waitForTimeout(300); assert.match(await p.locator('.sp-studycard').innerText(), /1 set \(green E on the plan\)/);
+    // (2026-11-28) the hand count below is in the European sizes, with no islands, no turnaround and the accessible count as set
+    await p.selectOption('.sp-studycard [data-pk=std]', 'eu'); await p.waitForTimeout(200); await p.uncheck('.sp-studycard [data-pk=islends]'); await p.uncheck('.sp-studycard [data-pk=ada]'); await p.uncheck('.sp-studycard [data-pk=dead]'); await p.waitForTimeout(200);   // one aisle from an entrance at one end: a turnaround at the far end would take 4 stalls (tests/parking-network.test.mjs)
     await run(); let R = await rows(); const m1 = await marks(); assert(m1.tags.includes('stall') && m1.tags.includes('aisle'), [...new Set(m1.tags)].join());
     const n1 = +R['Stalls'].match(/^(\d+)/)[1]; assert(n1 >= 42 && n1 <= 44, R['Stalls']);   // by hand: one module (5 + 6 + 5 m) in the 23 m depth, two rows of about 22 along 56 m, two of them wider accessible stalls assert.equal(R['Invalid stalls'], 'none'); assert.match(R['Not reached'], /every aisle reached/); assert.match(R['· Accessible'], /^2 /);
     await p.screenshot({ path: `${shots}/parking-1.png` });
@@ -43,7 +45,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     const dx = await p.evaluate(async () => { const C = await import('./js/cad-export.js'); return C.readDxf(C.dxf(window.__wsStudy.state().res.saLayers())); }); assert(dx.STALLS_STANDARD && dx.STALLS_STANDARD.polylines > 40 && dx.AISLES.polylines >= 1 && dx.PARKING_AREA && dx.STALLS_ACCESSIBLE && dx.ACCESS_AISLES, JSON.stringify(dx));
     console.log(`PASS the DXF: ${Object.entries(dx).map(([k, v]) => `${k} ${v.polylines}`).join(', ')}`);
     // 5. check with a vehicle: the swept path opens with the stalls as obstacles; a truck along the aisle; back in parking, the result is listed
-    await p.click('.sp-studycard [data-pk=checkveh]'); await p.waitForSelector('.sp-studycard [data-va-task=draw]'); await p.click('.sp-studycard [data-va-task=draw]'); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(400);
+    await p.click('.sp-studycard [data-pk=checkveh]'); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(400);
     assert.match(await p.locator('.sp-studycard').innerText(), /Parked cars in the parking layout \(option A, \d+ stalls\)/);
     const aisle = await p.evaluate(() => { const a = window.__wsStudy.state().pkLast.aisles.find((x) => x.kind === 'aisle'), P = a.poly, c = P.reduce((s, q) => [s[0] + q[0] / 4, s[1] + q[1] / 4], [0, 0]); return { c, u: [P[1][0] - P[0][0], P[1][1] - P[0][1]] }; });
     const L2 = Math.hypot(...aisle.u), u = [aisle.u[0] / L2, aisle.u[1] / L2], a0 = [aisle.c[0] - u[0] * (L2 / 2 - 4), aisle.c[1] - u[1] * (L2 / 2 - 4)], a1 = [aisle.c[0] + u[0] * (L2 / 2 - 4), aisle.c[1] + u[1] * (L2 / 2 - 4)];

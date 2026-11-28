@@ -3,14 +3,14 @@ id: report-parking-layout
 sim: parking-layout
 published: 2026-11-21
 publishedText: 21 November 2026
-auditText: 21 November 2026
+auditText: 28 November 2026
 title: Generating parking layouts: stall and aisle modules, a seeded search over row directions and exact stall assignment
 type: Method and data report
 summary: How the Parking layout study fills a drawn area with double-loaded rows of stalls, chooses among row directions and offsets with a seeded search, assigns stall types exactly per row, and checks every stall. The report gives the stall and aisle dimensions and their relation to published practice and the ADA Standards, reports the hand-checked tests, and flags the dimensions as editable assumptions rather than a bylaw.
 image: img/home/parking-layout.jpg
 imageAlt: A parking area filled with rows of stalls and aisles, with accessible stalls near the entrance
-code: mvp/js/parking.js, mvp/js/workspace-chrome.js
-tests: tests/parking.cjs, tests/workspace-parking.cjs, tests/parking-ada.test.mjs
+code: mvp/js/parking.js, mvp/js/site-access-ui.js, mvp/js/cad-export.js, mvp/js/workspace-chrome.js
+tests: tests/parking.cjs, tests/workspace-parking.cjs, tests/parking-ada.test.mjs, tests/parking-network.test.mjs, tests/parking-defaults.cjs
 keywords:
 - Parking design
 - Layout generation
@@ -48,21 +48,44 @@ For each candidate, the aisle strips are cut to the free floor (inside the area 
 
 Along each row, the free runs are found. Stall types are assigned per run exactly for the run lengths in one of three modes: (A) the maximum count; (B) the user's first type (for example large) first, then the rest; (C) a mix closest to target shares, by dynamic programming across runs over the counts of the tracked types. Accessible stalls with their access aisles are placed first, in the runs nearest an entrance. At the end every stall is checked again for being inside the area, clear of obstacles, aisles and other stalls, and on a reached aisle; a stall that fails is marked invalid and not counted. The best distinct candidates are shown as options A, B and C.
 
+### 2.4. A working lot: circulation, islands, accessible spaces and numbers (added 28 November 2026)
+
+The layout is now checked as a lot that drivers use, as parking design tools such as Transoft ParkCAD and TestFit treat it [5, 6]:
+
+- **Dead ends.** An aisle that runs on past its last junction (a cross aisle, a connector or an entrance), with stalls along it, is a dead end. By default it ends in a turnaround: one aisle width at its end, across both stall rows. No stall is placed on the turnaround. Dead ends can be allowed instead, and are then counted and reported. Among layouts with the same number of stalls, fewer dead ends rank first.
+- **One-way aisles.**
+  - Neighbouring aisle lines run in opposite directions.
+  - The cross aisles at both ends of their overlap carry the traffic from one to the next, so each pair forms a loop. A pair joined at one end only is reported.
+  - Angled stalls lean the way the traffic in their aisle goes, so a driver enters them forwards.
+  - The arrows on the plan follow these directions. Before, they alternated by drawing order and could point against the stalls.
+- **Islands.** By default there is an island 1.8 m long at each end of each row. Optionally, a landscape island is placed every 10, 15 or 20 standard stalls. No stall sits on an island.
+- **Accessible spaces.**
+  - **Count:** by default it is raised to the 2010 ADA Standards' Table 208.2 for the lot found, with one in six van accessible (208.2.4) [3]. The count is estimated from the rows' capacity before the stalls are placed, so it can be one above the table for the final total.
+  - **Shared aisles:** two accessible spaces of a type share one access aisle (502.3.4) [3].
+  - **Placement:** they go at the end of the row nearest the building's doors (else the vehicle entrances).
+  - The accessible route, slopes and signage are not checked.
+- **Numbers and schedule.** Each row (each side of each aisle line, in order across the lot) gets a letter, and its stalls are numbered along it (A1, A2, …). The stall schedule (CSV) lists every stall counted with its type, size, row and position.
+
 ## 3. Parameters and their sources
 
 Table 1. Dimensions of the Parking layout study (all editable).
 
 | Parameter | Value | Reference practice | Audit status |
 |---|---|---|---|
-| Standard stall | 2.5 × 5.0 m | European guidance commonly uses about 2.5 × 5.0 m [4]; US guidance often 2.6–2.75 × 5.5 m [1] | Assumption, consistent with European practice |
+| Standard stall (European preset) | 2.5 × 5.0 m | European guidance commonly uses about 2.5 × 5.0 m [4]; US guidance often 2.6–2.75 × 5.5 m [1] | Assumption, consistent with European practice |
 | Compact stall | 2.3 × 4.6 m | Compact stalls in US practice about 2.3–2.4 × 4.6–4.9 m [1] | Assumption |
 | Large / SUV | 2.7 × 5.5 m | US standard stall sizes [1] | Assumption |
-| Aisle at 90°, two-way | 6.0 m | European guidance about 6.0–6.5 m [4]; US about 7.0–7.3 m [1] | Assumption, at the narrow end |
-| One-way aisle at 60° / 45° | 4.8 m / 4.0 m | Of the order given in design manuals [1, 4] | Assumption |
+| Aisle at 90°, two-way (European preset) | 6.0 m | European guidance about 6.0–6.5 m [4]; US about 7.0–7.3 m [1] | Assumption, at the narrow end |
+| One-way aisle at 60° / 45° (European preset) | 4.8 m / 4.0 m | Of the order given in design manuals [1, 4] | Assumption |
 | Accessible stall and aisle | 2.5 m + 1.525 m | ADA 2010: 2,440 mm stall + 1,525 mm aisle [3] | Meets ADA dimensions (aisle corrected from 1.5 m on 21 November 2026) |
 | Van-accessible stall and aisle | 2.5 m + 2.5 m | ADA 2010: 2,440 mm stall + 2,440 mm aisle (or 3,350 + 1,525) [3] | Meets ADA dimensions |
-| Accessible count | 2 by default; ADA Table 208.2 and 208.2.4 count checked on each option | ADA Table 208.2 scales with total [3] | User-set; a note shows any shortfall against Table 208.2 |
+| Accessible count | Raised to ADA Table 208.2 and 208.2.4 for the lot found (since 28 November 2026; can be turned off, then 2 by default and a note shows any shortfall) | ADA Table 208.2 scales with total [3] | User-set; a note shows any shortfall against Table 208.2 |
 | Search | Seeded, several offsets per direction | Engine choice | "The best found, not a proven optimum" |
+| North American preset (default since 28 November 2026) | Space 2.6 × 5.6 m; parallel 2.6 × 6.7 m; drive aisle 6.0 m for spaces at 70–90°, 5.5 m at 50–70°, 4.0 m under 50° | City of Toronto Zoning By-law 569-2013, Chapter 200: 200.5.1.10(2)(A) and (C), 200.5.1(3) [7] | From the by-law as consolidated on 31 July 2024; the 4.0 and 5.5 m widths read here as one-way |
+| Two-way aisle beside angled spaces (North American preset) | 6.0 m | The by-law gives one width per angle [7] | Engine assumption |
+| Access aisle (North American preset) | 1.525 m | Toronto 1.5 m (200.15.1(3)) [7]; ADA 60 in (502.3.1) [3] | The larger, so both are met |
+| Turnaround at a dead end | One aisle width long, across both stall rows | Engine choice | Assumption: room for a three-point turn by a car |
+| Islands | 1.8 m long at row ends; optionally every 10/15/20 stalls | Engine choice | Assumption; to be set by the project's landscape requirements |
 
 ## 4. Verification and validation status
 
@@ -94,3 +117,6 @@ The Parking layout study's geometry and stall assignment are verified exactly ag
 2. A.P. Chrest, M.S. Smith, S. Bhuyan, M. Iqbal, D.R. Monahan, Parking Structures: Planning, Design, Construction, Maintenance and Repair, 3rd ed., Springer, Boston, 2001.
 3. U.S. Department of Justice, 2010 ADA Standards for Accessible Design, sections 208 and 502, Washington, DC, 2010.
 4. FGSV, Empfehlungen für Anlagen des ruhenden Verkehrs (EAR 05), Forschungsgesellschaft für Straßen- und Verkehrswesen, Cologne, 2005 (amended 2012).
+5. Transoft Solutions, ParkCAD: parking lot design software, product page. [transoftsolutions.com](https://www.transoftsolutions.com/parking-lot-design/parkcad/)
+6. TestFit, Parking Solver, product page. [testfit.io](https://www.testfit.io/product/parking-solver)
+7. City of Toronto, Zoning By-law 569-2013, Chapter 200 Parking Space Regulations (consolidation of 31 July 2024). [toronto.ca](https://www.toronto.ca/zoning/bylaw_amendments/ZBL_NewProvision_Chapter200.htm)

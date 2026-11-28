@@ -15,3 +15,7 @@
 .planned-study h3{font-size:12px;margin-bottom:8px}.planned-study ul{padding-left:18px;margin-top:0}
 .sp-host .planned-study{padding:24px}
 @media(max-width:760px){.planned-study-layout{grid-template-columns:1fr;gap:20px}.planned-study nav{margin-bottom:20px}}
+
+/* (2026-11-28) a study not in the free plan: greyed, not selectable */
+.w2-simmenu button[data-locked]{opacity:.42;cursor:not-allowed}
+.w2-simmenu button[data-locked]:hover{background:none}
