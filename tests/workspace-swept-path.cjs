@@ -23,7 +23,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // the study is in the menu, under Site access & parking
     await p.click('#addSimBtn'); await p.waitForTimeout(300); const inMenu = await p.evaluate(() => [...document.querySelectorAll('.w2-simmenu [data-group=access] [data-addsim]')].map((x) => x.textContent)); await p.keyboard.press('Escape');
     assert(inMenu.some((t) => /Vehicle swept path/.test(t)) && inMenu.some((t) => /Parking layout/.test(t)) && !inMenu.some((t) => /Coming soon/.test(t)), 'in the menu: ' + inMenu);
-    await p.evaluate(() => window.__wsStudy.open('vehicle-swept-path')); await p.waitForSelector('.sp-studycard [data-va-task=draw]'); await p.click('.sp-studycard [data-va-task=draw]'); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(600);
+    await p.evaluate(() => window.__wsStudy.open('vehicle-swept-path')); await p.waitForSelector('.sp-studycard [data-va=draw]'); await p.waitForTimeout(600);
     await p.selectOption('.sp-studycard [data-va=veh]', 'box'); await p.waitForTimeout(200);
     // 1. a route along the south side and up the east side, 6 m off the building
     await draw('[data-va=draw]', [[-50, -20], [37, -20], [37, 30]]); assert.match(await p.locator('.sp-studycard').innerText(), /3 points, 137\.0 m/);
