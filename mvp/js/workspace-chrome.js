@@ -252,8 +252,9 @@ export function mountChrome(app, api) {
   document.body.append(dropEl);
   const DROP = { t: 0, wins: new WeakSet() }, hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
   const dropShow = (on, msg) => { clearTimeout(DROP.t); dropEl.hidden = !on; dropEl.classList.toggle('bad', !!msg); const t = dropEl.querySelector('.sp-drop-t'), s2 = dropEl.querySelector('.sp-drop-s'); t.textContent = msg ? msg[0] : 'Release to drop your model into the site'; s2.textContent = msg ? msg[1] : `It opens in a preview first: units, up axis and size to check before it joins ${p.name}.`; if (msg) DROP.t = setTimeout(() => dropShow(false), 3200); };
-  async function dropFile(files) { const f = [...files].find((x) => DROPX.test(x.name)) || files[0]; if (!f) return dropShow(false);
-    if (!DROPX.test(f.name)) return dropShow(true, [`${f.name} is not a model SimuSite reads`, 'Drop an OBJ, STL, GLB, glTF or Rhino 3DM file. A plan drawing goes in through Draw › Import plan.']);
+  async function dropFile(files) { const f = [...files].find((x) => DROPX.test(x.name) || /\.dxf$/i.test(x.name)) || files[0]; if (!f) return dropShow(false);
+    if (/\.dxf$/i.test(f.name) && window.__wsImportDxf) { dropShow(false); return window.__wsImportDxf(f); }   // (2026-11-27) a CAD plan: the DXF import, onto the plan's current level
+    if (!DROPX.test(f.name)) return dropShow(true, [`${f.name} is not a model SimuSite reads`, /\.dwg$/i.test(f.name) ? 'A DWG has to be saved as DXF first (AutoCAD, BricsCAD, Revit and Rhino can), then dropped here or opened with Draw room › Import plan.' : 'Drop an OBJ, STL, GLB, glTF or Rhino 3DM model, or a DXF floor plan (it goes under the current level).']);
     dropShow(false); openProject('import'); let inp = null; for (let i = 0; i < 40 && !(inp = app.querySelector('#file')); i++) await new Promise((r) => setTimeout(r, 50)); if (!inp) return dropShow(true, ['The import could not open', 'Open Project › Import and choose the file there.']);
     const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); }
   const onOver = (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopImmediatePropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; if (dropEl.hidden || dropEl.classList.contains('bad')) dropShow(true); };
@@ -917,7 +918,7 @@ export function mountChrome(app, api) {
     closeHost(); closeStudy(); openCard(false); closePops(); palOpen(false); openSheet(false);
     const token = ++HOST.token, el = el2('section', 'sp-host'); el.setAttribute('aria-label', simName(id)); HOST.el = el; HOST.id = id; root.append(el); root.classList.add('sp-hosting');
     el.addEventListener('click', (e) => { const a = e.target.closest('a[href]'); if (!a) return; const h = a.getAttribute('href') || ''; if (/^#\/workspace(\/|$)/.test(h) || (a.closest('.shbar') && /Back/.test(a.textContent))) { e.preventDefault(); closeHost(); } }, true);
-    try { const mod = await import('./pages/simulations.js?v=base-20261127-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
+    try { const mod = await import('./pages/simulations.js?v=dxf-20261127-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
     catch (e) { el.innerHTML = `<div class="sp-hosterr"><p>${esc(simName(id))} could not open here: ${esc(e.message || e)}.</p><a class="btn sm" href="#/simulations/${esc(id)}">Open it on its own page</a></div>`; }
   }
   function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }

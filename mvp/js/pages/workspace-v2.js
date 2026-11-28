@@ -22,7 +22,7 @@ import { ensureProjectClimate } from '../project-climate.js';
 import { weatherDownloadAvailable } from '../automatic-climate.js?v=epw-connected-20261027-3';
 import { studyInputs } from '../parameters.js';
 import * as LM from '../layer-materials.js?v=mat-20261031-2';
-import { mountChrome } from '../workspace-chrome.js?v=base-20261127-1';
+import { mountChrome } from '../workspace-chrome.js?v=dxf-20261127-1';
 import { CATEGORIES, categoryOf } from '../capabilities.js';
 import { GROUPS as STUDY_GROUPS, matches as matchesStudy } from '../study-groups.js?v=groups-20261118-1';
 import {mountWorkbenchShell} from '../workbench-shell.js?v=float-20261030-2';
@@ -51,7 +51,8 @@ const TOOLS = {
     ['Landscape', ['Planting', 'Paving']], ['Water', ['Water', 'Water rectangle', 'Water circle', 'Water ellipse', 'Water freehand']]] },   // water shapes (2026-11-18)
   draw: { label: 'Draw room', icon: I('<rect x="4" y="4" width="16" height="16"/><path d="M4 12h7v8"/>'), sections: [
     ['Draw rooms', ['Straight wall', 'Rectangle room', 'Arc wall', 'Floor']],
-    ['Add structure', ['Straight stair', 'L-shaped stair', 'U-shaped stair', 'Spiral stair', 'Accessible ramp', 'Floor opening']]] },
+    ['Add structure', ['Straight stair', 'L-shaped stair', 'U-shaped stair', 'Spiral stair', 'Accessible ramp', 'Floor opening']],
+    ['Import plan', ['\u0000dxf']]] },   // a CAD plan (DXF) as an underlay, its walls found (2026-11-27, dxf-import-ui.js)
   door: { label: 'Door', icon: I('<path d="M5 20h14"/><path d="M7 20V5h7v15"/><path d="M14 5a9 9 0 0 1 6 8.5"/><circle cx="12" cy="13" r=".6" fill="currentColor"/>'), sections: [
     ['Doors', ['Exterior door', 'Interior door', 'Exit door', 'Accessible door']]] },
   window: { label: 'Window', icon: I('<rect x="4" y="5" width="16" height="14"/><path d="M12 5v14M4 12h16"/>'), sections: [
@@ -183,7 +184,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
   }
   function boxPick(ids, { add, remove, toggle }) { if (remove) setSel(UI.sels.filter((x) => !ids.includes(x))); else if (toggle) setSel([...UI.sels.filter((x) => !ids.includes(x)), ...ids.filter((x) => !isSel(x))]); else if (add) setSel([...new Set([...UI.sels, ...ids])]); else setSel(ids); }
 
-  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=veh-20261125-1`;
+  const fsrc = (role) => `../emb/modeler.html?ws=${role}&v=dxf-20261127-1`;
   app.innerHTML = `<div class="w2 w3">
   <nav class="w2-rail" aria-label="Tools">
     ${Object.entries(TOOLS).map(([k, t]) => `<button type="button" data-panel="${k}" title="${t.label}" aria-label="${t.label}">${t.icon}</button>`).join('')}
@@ -588,7 +589,8 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
     if (UI.panel === 'project') return projectPanel(host);
     const t0 = siteMode() && UI.panel === 'mass' ? CONTEXT_TOOL : TOOLS[UI.panel], mine = UI.panel === 'furniture' ? myFurn() : null;
     const t = mine ? { ...t0, sections: [['My furniture', ['\u0000import', ...mine.map((x) => '\u0000' + x.id)]], ...t0.sections] } : t0;   // your own pieces first (2026-10-25)
-    const tile = (n) => { if (n === '\u0000import') return `<button type="button" class="w2-card w3-impf" data-tool="Import furniture" data-impfurn="1" aria-pressed="false" title="Import a piece of furniture (.obj, .glb, .stl, .3dm): it joins My furniture and can be placed like the others"><span class="im"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 28v-6a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v6"/><path d="M10 30a3 3 0 0 1 6 0v4h16v-4a3 3 0 0 1 6 0v8H10z"/><path d="M24 4v10M19 9l5 5 5-5"/></svg></span><span>Import furniture</span></button>`;
+    const tile = (n) => { if (n === '\u0000dxf') return `<button type="button" class="w2-card w3-impf" data-tool="Import CAD plan" data-impdxf="1" aria-pressed="false" title="Import a floor plan from CAD (.dxf): it goes under this level as lines to trace and snap to, and its double wall lines can become walls"><span class="im"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="32" height="32" stroke-dasharray="3 3"/><path d="M8 24h14v16M24 8v10h16"/><path d="M30 30l6 6M36 30v6h-6"/></svg></span><span>Import CAD plan<small>.dxf from AutoCAD, Revit, Rhino…</small></span></button>`;
+      if (n === '\u0000import') return `<button type="button" class="w2-card w3-impf" data-tool="Import furniture" data-impfurn="1" aria-pressed="false" title="Import a piece of furniture (.obj, .glb, .stl, .3dm): it joins My furniture and can be placed like the others"><span class="im"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 28v-6a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v6"/><path d="M10 30a3 3 0 0 1 6 0v4h16v-4a3 3 0 0 1 6 0v8H10z"/><path d="M24 4v10M19 9l5 5 5-5"/></svg></span><span>Import furniture</span></button>`;
       if (n[0] === '\u0000') { const x = mine.find((q) => '\u0000' + q.id === n); return `<button type="button" class="w2-card" data-tool="${esc(x.name)}" data-myfurn="${x.id}" aria-pressed="false" title="${esc(x.name)} · ${x.w} × ${x.d} × ${x.h} m: click it, then click in the current view to place it (R turns it)"><span class="im"><img src="${x.thumb || ''}" alt="" loading="lazy"></span><span>${esc(x.name)}<i class="w3-mfx" data-myfx="${x.id}" role="button" tabindex="0" title="Remove ${esc(x.name)} from My furniture" aria-label="Remove ${esc(x.name)} from My furniture">×</i></span></button>`; } if (t.cards) { const m = FURN_BY_NAME.get(n); return `<button type="button" class="w2-card" data-tool="${esc(n)}" data-furn="${m.id}" aria-pressed="false" title="${esc(n)}: click it, then click in the current view to place it"><span class="im"><img src="img/furniture/${m.id}.png?v=entourage-20261102-1" alt="" loading="lazy"></span><span>${esc(n)}</span></button>`; }
       const ic = TOOL_ICONS[n], k = TMAP[n]?.key; return `<button type="button" class="w2-tile" data-tool="${esc(n)}" aria-pressed="false" title="${esc(n)}${k ? ` (${k})` : ''}"><span class="im">${ic?.img ? `<img src="${ic.img}" alt="">` : ic?.svg || ''}</span><span>${esc(n)}${k ? ` <em>(${k})</em>` : ''}</span></button>`; };
     const many = t.sections.length > 1, oi = Math.min(UI.acc[UI.panel] ?? (mine&&!mine.length?1:0), t.sections.length - 1);
@@ -616,6 +618,7 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       b.addEventListener('pointermove',move); b.addEventListener('pointerup',end); b.addEventListener('pointercancel',cancel);
     }));
     if (mine) host.insertAdjacentHTML('beforeend', '<input type="file" id="furnFile" accept=".obj,.glb,.gltf,.stl,.3dm" hidden>');
+    if (host.querySelector('[data-impdxf]')) { host.insertAdjacentHTML('beforeend', '<input type="file" id="dxfFile" accept=".dxf" hidden>'); $('#dxfFile', host).onchange = (e) => { const f = e.target.files[0]; if (f) importDxf(f); e.target.value = ''; }; }
     const ff = $('#furnFile', host); if (ff) ff.onchange = (e) => { const f = e.target.files[0]; if (f) importFurn(f); e.target.value = ''; };
     $$('[data-acc]', host).forEach((b) => b.onclick = () => { UI.acc[UI.panel] = +b.dataset.acc; saveUI(); panel(); });
     toolUI(); const box = $('.w3-fit', host); if (box) fit(box, $$('[data-tool]', box), 'tools:' + UI.panel + ':' + oi);
@@ -637,11 +640,17 @@ export function render(app, [pid]) { pid = pid?.split('?')[0];   // #/workspace/
       myFurn().unshift(x); S.save(); UI.acc.furniture = 0; saveUI(); panel();
       const m2 = $('#toolMsg', app); if (m2) m2.textContent = `${x.name}: ${w} × ${d} × ${h} m (read as ${unit}), ${x.tris.toLocaleString('en')} triangles. Click it, then click in the current view to place it.`; }
     catch (e) { if (msg) msg.textContent = e.message || 'This file could not be read.'; } }
+  // a CAD plan (2026-11-27): read and shown in a dialog first; then the underlay and the walls go onto the plan's current level
+  async function importDxf(f) { const pl = INST.plan; if (!pl || !pl.ready) { const m0 = $('#toolMsg', app); if (m0) m0.textContent = 'The 2D plan is still starting. Try again in a moment.'; return; }
+    const say = (t) => { const m = $('#toolMsg', app); if (m) m.textContent = t; try { toast(t); } catch (e) { } };
+    try { const { openDxfImport } = await import('../dxf-import-ui.js?v=dxf-20261127-1'); await openDxfImport(f, pl.ws, say); } catch (e) { say('The DXF could not be read: ' + (e.message || e)); } }
+  window.__wsImportDxf = importDxf;   // the drop on the Workspace hands a .dxf here
   function startTool(b) {
     const pane = activePane(), w = pane.ready ? pane.ws : null, msg = $('#toolMsg', app), n = b.dataset.tool; if (!w) { if (msg) msg.textContent = 'The view is still starting. Try again in a moment.'; return; }
     const st = w.state(), on = b.getAttribute('aria-pressed') === 'true';
     if (on) { w.tool({ tool: 'select' }); toolUI(); return; }   // a second click puts the tool down
     if (b.dataset.impfurn) { $('#furnFile', app).click(); return; }
+    if (b.dataset.impdxf) { $('#dxfFile', app).click(); return; }
     if (b.dataset.myfurn) { const x = myFurn().find((q) => q.id === b.dataset.myfurn); if (!x) return;
       M().meshes = M().meshes || {}; if (!M().meshes[x.id]) { M().meshes[x.id] = x.mesh; for (const I2 of ready()) if (I2.ws.importMeshes) I2.ws.importMeshes(M().meshes); }   // the project keeps the mesh once; every piece placed shares it
       w.placeImport({ ref: x.id, name: x.name, w: x.w, d: x.d, h: x.h, tris: x.tris, layer: 'Furniture' }); pane.el.focus(); try { pane.win.document.getElementById('cv').focus({ preventScroll: true }); } catch (e) { }
