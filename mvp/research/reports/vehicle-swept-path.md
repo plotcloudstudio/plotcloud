@@ -3,14 +3,14 @@ id: report-vehicle-swept-path
 sim: vehicle-swept-path
 published: 2026-11-21
 publishedText: 21 November 2026
-auditText: 26 November 2026
+auditText: 28 November 2026
 title: Vehicle swept paths from a kinematic bicycle model with pure-pursuit steering and computed trailer off-tracking
 type: Method and data report
 summary: How the Vehicle swept path study drives a design vehicle along a drawn route with a rate-limited pure-pursuit steering controller, computes the off-tracking of trailers, and checks clearance to buildings and other obstacles. The report gives the equations and their sources, reports exact checks against analytical turning geometry, and flags the vehicle presets as typical dimensions that must be checked against the design vehicle of the jurisdiction.
 image: img/home/vehicle-swept-path.jpg
 imageAlt: The swept envelope of a truck turning into a service yard, with wheel tracks and clearance warnings
 code: mvp/js/swept-path.js, mvp/js/vehicles.js, mvp/js/route-plan.js, mvp/js/route-worker.js, mvp/js/route-plan-async.js, mvp/js/site-routes.js, mvp/js/vehicle-mesh.js, mvp/js/site-access-ui.js, mvp/js/workspace-chrome.js, mvp/js/export-list.js
-tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs, tests/site-routes.test.mjs, tests/vehicle-path-auto.cjs, tests/vehicle-reverse-sheet.cjs, tests/vehicle-worker-semi.cjs
+tests: tests/swept-path.cjs, tests/workspace-swept-path.cjs, tests/site-routes.test.mjs, tests/vehicle-draw.cjs
 keywords:
 - Swept path analysis
 - Off-tracking
@@ -74,6 +74,15 @@ For rigid vehicles the planner may also drive backwards. Each arc can be driven 
 - **Backed up to a door.** The vehicle drives forward past the door to a staging point parallel to the wall, then reverses in. The stop is square to the wall with the rear 0.5 m from it, as at a loading dock.
 
 A path that reverses is driven as planned: arc after arc, indexed by the distance driven, stopping at each change of direction, reversing at 4 km/h. It starts from the heading it was planned from. Following such a path with pure pursuit instead turned a few degrees of heading error at a cusp into nearly a metre of drift while reversing, so the planned path is what the swept envelope and clearances are computed on.
+
+### 2.5a. Drawing the route (28 November 2026)
+
+The route is drawn on the plan: the start, each turn and the stop. The vehicle drives that route.
+
+- The tasks that found a route from the roads and a door (sections 2.5, 2.6 and 2.6a) are no longer offered in the Workspace. Their method is kept here because the planner still takes a drawn route round an obstacle it runs into.
+- While the route is drawn, the drive so far is simulated at draft quality after each click. Its swept envelope is shown, and a corner too tight for the vehicle is marked red before the route is finished.
+- A point of a finished route can be moved, and the route is driven again.
+- In 3D the vehicle stands on the site's ground under it: the terrain at its position where the site has terrain, otherwise the ground at 0. Before 28 November 2026 its height came from the walkthrough's floor, so it could appear above the ground.
 
 ### 2.6a. Backing up a semi-trailer (added 26 November 2026)
 

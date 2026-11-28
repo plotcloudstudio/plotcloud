@@ -40,9 +40,9 @@ const aisleEU = (angle, oneWay) => (angle >= 89 ? 6.0 : angle >= 59 ? (oneWay ? 
  * angle). Europe: the earlier defaults (ULI and FGSV EAR practice, as the method report cites).
  */
 export const STANDARDS = {
-  na: { id: 'na', name: 'North America (Toronto Zoning By-law 569-2013)', stall: { w: 2.6, l: 5.6 }, parallel: { w: 2.6, l: 6.7 }, access: 1.5, vanAccess: 2.5,
+  na: { id: 'na', name: 'North America (Toronto Zoning By-law 569-2013)', stall: { w: 2.6, l: 5.6 }, parallel: { w: 2.6, l: 6.7 }, access: 1.525, vanAccess: 2.5,   /* the access aisle: 1.525 m, ADA 502.3.1 (60 in), which also meets Toronto's 1.5 m */
     aisle: (angle, oneWay) => (angle >= 70 ? 6.0 : oneWay ? (angle >= 50 ? 5.5 : 4.0) : 6.0),
-    src: 'City of Toronto Zoning By-law 569-2013, Chapter 200: space 2.6 × 5.6 m (200.5.1.10(2)(A)); aisle 6.0 m at 70–90°, 5.5 m at 50–70°, 4.0 m under 50° (200.5.1(3)); accessible aisle 1.5 m (200.15.1(3))' },
+    src: 'City of Toronto Zoning By-law 569-2013, Chapter 200: space 2.6 × 5.6 m (200.5.1.10(2)(A)); aisle 6.0 m at 70–90°, 5.5 m at 50–70°, 4.0 m under 50° (200.5.1(3)); accessible aisle 1.5 m (200.15.1(3)), here 1.525 m to meet ADA 502.3.1 as well' },
   eu: { id: 'eu', name: 'Europe (earlier defaults)', stall: { w: 2.5, l: 5.0 }, parallel: { w: 2.0, l: 6.0 }, access: 1.525, vanAccess: 2.5, aisle: aisleEU, src: 'ULI Dimensions of Parking and FGSV EAR practice, as cited in the method report' },
 };
 /** the stall types for a preset: standard and accessible from it; compact, large and EV sizes are engine assumptions */

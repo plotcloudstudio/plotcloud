@@ -8004,6 +8004,7 @@ if (window.__WSROLE) {
     return best; };
 
   // ---- what the Workspace calls
+  function vehGround(q) { try { const site = M.site; if (!q || !site || !site.terrain || !Number.isFinite(q.x) || !Number.isFinite(q.y)) return 0; const p = siteOfM(M, [q.x, q.y]), g = SITEC.groundAt(site.terrain, p[0], p[1]); return Number.isFinite(g) ? g : 0; } catch { return 0; } }
   Object.assign(WS, {
     // CAD plan import (2026-11-27, mvp/js/dxf-import-ui.js): the underlay of a level (lines in plan metres, flat [x1,y1,x2,y2,…]) and
     // walls found from it; each is one step to undo
@@ -8188,7 +8189,7 @@ if (window.__WSROLE) {
       if (!xs.length) return { lv, level: L.name, z: L.z || 0, segs, rooms, box: null };
       return { lv, level: L.name, z: L.z || 0, segs, rooms, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } }; },
     walkShow(o) { walkShow(o); },
-    vehicles(list, opt) { const L = list && list.length ? list : null; vehicles2(L ? L.map((q) => q.d2) : null); if (window.S3 && S3.vehicles) S3.vehicles(L ? L.map((q) => ({ ...q.d3, z: (WK.o && Number.isFinite(WK.o.ground) ? WK.o.ground : 0) + (WK.o && WK.o.z || 0) })) : null, opt || {}); },
+    vehicles(list, opt) { const L = list && list.length ? list : null; vehicles2(L ? L.map((q) => q.d2) : null); if (window.S3 && S3.vehicles) S3.vehicles(L ? L.map((q) => ({ ...q.d3, z: vehGround(q.d3) })) : null, opt || {}); },   // (2026-11-28) on the ground under it (the terrain), not at the walkthrough's floor
     // the building's doors to outside on its lowest storey (2026-11-25), for the vehicle swept path's "To an entrance": where each is,
     // its outward normal, its width and the room behind it; from the same exterior test as the airflow (STC.build)
     entrances() { let S2; try { S2 = STC.build(M); } catch { return []; } const doors = S2.ops.filter((op) => op.ext && op.outN && (op.o.kind === 'door' || op.o.object_type === 'door')); if (!doors.length) return [];
@@ -8337,6 +8338,8 @@ if (window.__WSROLE) {
     // the walls and levels the structure is laid out from (2026-11-17)
     structInput() { const hid = new Set(M.hiddenIds || []); return { levels: M.levels.map((l) => ({ id: l.id, z: l.z, h: l.h, name: l.name })), walls: M.walls.filter((w) => !hid.has(w.id)).map((w) => ({ id: w.id, lv: w.lv, a: w.a.slice(), b: w.b.slice(), t: w.t, h: w.h, mat: w.mat || '', layer: w.layer || '', sourceLayer: w.sourceLayer || '', bulge: w.bulge || 0 })), masses: massList(M).length }; },
     structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = [...o.cols.map((c) => c.x), ...(o.grid || []).flatMap((L) => [L.a[0], L.b[0]])], ys = [...o.cols.map((c) => c.y), ...(o.grid || []).flatMap((L) => [L.a[1], L.b[1]])]; FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
+    // the ground under a vehicle: the site's terrain at its position (as the sun path finds it), else the site's ground at 0
+    _vehGround(x, y) { return vehGround({ x, y }); },
     sunPathShown() { return !!SPATH2 || !!(window.S3 && S3.on && S3.sunPathShown && S3.sunPathShown()); },   // (2026-11-28) for the tests
     sunPath(o) {
       if (!o) { SPATH2 = null; if (window.S3 && S3.sunPath) S3.sunPath(null); if (CAM !== '3d') draw(); return; }

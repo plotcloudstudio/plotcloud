@@ -16,10 +16,10 @@ const overlap = (A, B) => !P.disjoint(A, B);
 
 // 1 · presets
 { const c = P.categoriesFor('na'), st = c.find((x) => x.id === 'standard'), ac = c.find((x) => x.id === 'accessible');
-  assert.deepEqual([st.w, st.l], [2.6, 5.6]); assert.equal(ac.accessAisle, 1.5);
+  assert.deepEqual([st.w, st.l], [2.6, 5.6]); assert.equal(ac.accessAisle, 1.525);
   assert.deepEqual([90, 75, 60, 45, 30].map((a) => P.aisleFor(a, true, 'na')), [6.0, 6.0, 5.5, 4.0, 4.0]); assert.equal(P.aisleFor(60, false, 'na'), 6.0);
   assert.match(P.STANDARDS.na.src, /569-2013/);
-  console.log('PASS the North American preset: 2.6 × 5.6 m stalls, aisles 6.0 / 5.5 / 4.0 m by angle (one-way), accessible aisle 1.5 m (Toronto 569-2013, Ch. 200)'); }
+  console.log('PASS the North American preset: 2.6 × 5.6 m stalls, aisles 6.0 / 5.5 / 4.0 m by angle (one-way), accessible aisle 1.525 m (Toronto 569-2013 Ch. 200; ADA 502.3.1)'); }
 
 // 2 · the network: a 75 × 48 m lot, entrance on the west edge
 const lot = { outer: rect(0, 0, 75, 48) }, ent = [[0, 24]];
