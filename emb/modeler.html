@@ -8014,6 +8014,13 @@ if (window.__WSROLE) {
         if(M.walls.some((x)=>x.lv===lv&&((near(x.a,a,0.02)&&near(x.b,bb,0.02))||(near(x.a,bb,0.02)&&near(x.b,a,0.02)))))continue;
         M.walls.push({id:STC.uid('w'),lv,a,b:bb,t:Math.max(0.05,Math.min(1,+w.t||0.2)),object_type:'wall',layer:'Wall',...(w.source?{source:String(w.source)}:{})});n++;}
       if(n){tidy();commit(b);}return n;},
+    // the 2D plan for a report picture (2026-11-28): its framing ({ cx, cy, span } in metres, as camSet takes it), and a picture of
+    // it drawn again at `scale` times the screen's pixels (lines and text scale with it), on white; null in 3D
+    cam2d(){if(CAM==='3d'||!VP.w)return null;return{view:'plan',cx:(VP.w/2-V.ox)/V.s,cy:(V.oy-VP.h/2)/V.s,span:VP.w/V.s};},
+    snap2d(scale=2){if(CAM==='3d'||!VP.w)return null;const k=Math.max(1,Math.min(4,+scale||2)),keep={w:cv.width,h:cv.height,VP:{...VP},s:V.s,ox:V.ox,oy:V.oy};
+      try{cv.width=Math.round(keep.w*k);cv.height=Math.round(keep.h*k);VP={w:cv.width,h:cv.height,d:keep.VP.d*k};V.s=keep.s*k;V.ox=keep.ox*k;V.oy=keep.oy*k;draw();
+        const out=document.createElement('canvas');out.width=cv.width;out.height=cv.height;const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,out.width,out.height);o.drawImage(cv,0,0);return out;}
+      finally{cv.width=keep.w;cv.height=keep.h;VP=keep.VP;V.s=keep.s;V.ox=keep.ox;V.oy=keep.oy;draw();}},
     projectLabel(name){WS.projectName=String(name||'Untitled project');$('#mName').textContent=WS.projectName;$('#mName').title=WS.projectName;if(document.activeElement!==$('#mNameIn'))$('#mNameIn').value=WS.projectName;},
     async centerToOrigin(){
       if(GZD||gesture||WALKING||XPL.on)throw Error('Finish the current edit and exit Walkthrough or Explode before centering.');
@@ -8330,6 +8337,7 @@ if (window.__WSROLE) {
     // the walls and levels the structure is laid out from (2026-11-17)
     structInput() { const hid = new Set(M.hiddenIds || []); return { levels: M.levels.map((l) => ({ id: l.id, z: l.z, h: l.h, name: l.name })), walls: M.walls.filter((w) => !hid.has(w.id)).map((w) => ({ id: w.id, lv: w.lv, a: w.a.slice(), b: w.b.slice(), t: w.t, h: w.h, mat: w.mat || '', layer: w.layer || '', sourceLayer: w.sourceLayer || '', bulge: w.bulge || 0 })), masses: massList(M).length }; },
     structShow(o) { STR2 = o; if (window.S3 && S3.on && S3.structure) S3.structure(o); if (CAM !== '3d') { if (o.fit && o.cols.length) { const xs = [...o.cols.map((c) => c.x), ...(o.grid || []).flatMap((L) => [L.a[0], L.b[0]])], ys = [...o.cols.map((c) => c.y), ...(o.grid || []).flatMap((L) => [L.a[1], L.b[1]])]; FIT_BOX = { x0: Math.min(...xs) - 25, x1: Math.max(...xs) + 25, y0: Math.min(...ys) - 25, y1: Math.max(...ys) + 25 }; fitView(); FIT_BOX = null; } draw(); } },
+    sunPathShown() { return !!SPATH2 || !!(window.S3 && S3.on && S3.sunPathShown && S3.sunPathShown()); },   // (2026-11-28) for the tests
     sunPath(o) {
       if (!o) { SPATH2 = null; if (window.S3 && S3.sunPath) S3.sunPath(null); if (CAM !== '3d') draw(); return; }
       let b; try { b = studyBox(studyPrisms()); } catch (e) { return; } const cx = b.X0 + b.nx * b.cell / 2, cy = b.Y0 + b.ny * b.cell / 2, R = 0.42 * Math.min(b.nx, b.ny) * b.cell, nb = (M.north || 0) * Math.PI / 180, site = M.site;
