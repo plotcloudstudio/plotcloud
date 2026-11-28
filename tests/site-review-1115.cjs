@@ -35,7 +35,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
       // the gate on your own project
       const own = await p.evaluate(async () => { const S = await import('./js/store.js'), D = await import('./js/data.js'); const q = S.createProject('QA own project', D.sampleModel('A')); S.save(); return q.id; });
       await p.goto(base + '/mvp/#/workspace/' + own); await p.waitForFunction(() => window.__wsStudy?.open && window.__ws2?.inst.persp.ready, null, { timeout: 240000 }); await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(1000);
-      const tags = await p.$$eval('.w2-simmenu [data-addsim]', (bs) => Object.fromEntries(bs.map((x) => [x.dataset.addsim, /Monthly access/.test(x.textContent)])));
+      const tags = await p.$$eval('.w2-simmenu [data-addsim]', (bs) => Object.fromEntries(bs.map((x) => [x.dataset.addsim, x.dataset.locked === 'true' && !/Monthly access/.test(x.textContent)])));   // (2026-11-28) locked: greyed, no label
       assert.equal(tags.sunhours, false); assert.equal(tags.daylight, false); assert.equal(tags.wind, true); assert.equal(tags['fire-evacuation'], true);
       await p.evaluate(() => window.__wsStudy.open('wind')); await p.waitForTimeout(800); await p.evaluate(() => document.querySelector('.sp-studycard [data-st=run]').click()); await p.waitForTimeout(800);
       const g = await p.evaluate(() => ({ err: window.__wsStudy.state().err, res: !!window.__wsStudy.state().res, link: document.querySelector('.sp-studycard a[href="#/pricing"]')?.textContent }));
@@ -49,7 +49,7 @@ const { chromium } = require('playwright'), assert = require('node:assert/strict
     // an example project: every study open, and Report & boards draws after the Workspace
     await p.goto(base + '/mvp/#/home'); await p.waitForSelector('[data-hospital]'); await p.click('.ph-thumb[data-hospital]');
     await p.waitForFunction(() => location.hash.startsWith('#/workspace') && window.__ws2?.inst.persp.ready && window.__ws2?.inst.plan.ready, null, { timeout: 400000 }); await p.evaluate(() => document.querySelector('.pc-start .x')?.click()); await p.waitForTimeout(1500);
-    const tagsEx = await p.$$eval('.w2-simmenu [data-addsim]', (bs) => bs.filter((x) => /Monthly access/.test(x.textContent)).length); assert.equal(tagsEx, 0, 'no study locked on an example');
+    const tagsEx = await p.$$eval('.w2-simmenu [data-addsim]', (bs) => bs.filter((x) => x.dataset.locked || /Monthly access/.test(x.textContent)).length); assert.equal(tagsEx, 0, 'no study locked on an example');
     const t0 = Date.now(); await p.click('.sp-flow [data-flow=report]'); await p.waitForSelector('[aria-label="Project workflow"]', { timeout: 60000 }); const dt = Date.now() - t0;
     console.log('PASS the example opens every study; Report & boards drew', dt, 'ms after leaving the Workspace');
     assert.deepEqual(errs, []);

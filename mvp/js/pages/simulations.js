@@ -53,7 +53,7 @@ function catalog(app, params, access) {
   const card = (s) => `<article class="card sim" data-scope="${s.scope}" data-category="${categoryOf(s.id)}" data-sim="${s.id}">
       <a class="thumb" href="${q(s)}" tabindex="-1" aria-hidden="true">${thumbnail(s)}</a>
       <h3>${esc(s.name)}</h3><p class="muted">${esc(s.blurb)}</p><p class="inputs">Needs · ${s.inputs.map(esc).join(' · ')}</p>
-      <div class="acts"><a class="btn sm primary" href="${q(s)}">${canUse(s.id, p) ? 'Enter' : 'Monthly access'}</a>${LIVE}${ready(s)}</div></article>`;
+      <div class="acts">${canUse(s.id, p) ? `<a class="btn sm primary" href="${q(s)}">Enter</a>` : '<span class="btn sm" aria-disabled="true" style="opacity:.45;cursor:not-allowed">Enter</span>'}${LIVE}${ready(s)}</div></article>`;
   const draw = () => { $('#grid', app).innerHTML = CATEGORIES.filter((c) => g === 'All' || c.label === g).map((c) => `<h2 class="sim-cat" data-category-heading="${c.id}" style="grid-column:1/-1;margin:28px 0 4px">${esc(c.label)}</h2>${SIMS.filter((s) => categoryOf(s.id) === c.id).map(card).join('')}`).join('');
     $$('#filters button', app).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === g))); };
   $$('#filters button', app).forEach((b) => b.onclick = () => { g = b.dataset.g; try { localStorage.setItem('pc-mvp-simgroup', g); } catch (e) { } draw(); }); draw();
