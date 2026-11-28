@@ -1,7 +1,7 @@
 import{mountStudyShell}from'../study-ui/shell.js?v=light-only-20261028-1';
 import * as S from '../store.js';
 import {esc,currentProject,currentVersion,setCurrent,setCurrentVersion}from'../app.js';
-import {studioSolarScene}from'../studio-bridge.js?v=dxf-20261127-1';
+import {studioSolarScene}from'../studio-bridge.js?v=draw-20261128-1';
 import {sourceMeshes,environmentViewport}from'../environment/scene.js?v=study-unified-20261028-1';
 import {RELEASE,SCHEMA,MAX_FILE,sha256,sensorsFor,validateLocalResult,localCSV}from'../local-compute.js?v=local-compute-20261028-2';
 const download=(name,body,type='application/json')=>{const u=URL.createObjectURL(new Blob([body],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};

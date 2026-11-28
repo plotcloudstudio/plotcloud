@@ -4,5 +4,5 @@ export async function render(app, rest, params) {
   const sim = SIMS.find((s) => s.id === params.get('sim'));
   if(sim?.id==='fire-evacuation'){window.parent.postMessage({pcBatch:params.get('batch'),ok:false,why:'Fire Evacuation runs in the Workspace on the whole building: open the project and choose it from Add simulation › Interior.'},location.origin);return;}
   if (!sim) { try { window.parent.postMessage({ pcBatch: params.get('batch'), ok: false, why: 'Unknown simulation.' }, location.origin); } catch (e) { } return; }
-  return (await import('./sim-engine.js?v=dxf-20261127-1')).render(app, sim, params);
+  return (await import('./sim-engine.js?v=draw-20261128-1')).render(app, sim, params);
 }

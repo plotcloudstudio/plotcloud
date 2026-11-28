@@ -3,7 +3,7 @@ import{mountStudyShell}from'../study-ui/shell.js?v=unified-modes-20261030-1';
 import * as S from '../store.js';
 import{$,esc,currentProject,currentVersion,setCurrent,setCurrentVersion,toast,route}from'../app.js';
 import{climateFile,saveClimate,ensureProjectClimate}from'../project-climate.js';
-import{studioSolarScene}from'../studio-bridge.js?v=dxf-20261127-1';
+import{studioSolarScene}from'../studio-bridge.js?v=draw-20261128-1';
 import{tzInfo}from'../sunscene.js';
 import{RELEASE,defaults,validateInput,readWeather,fingerprint,effectiveInput}from'../environment/analysis.js?v=muse-20261123-1';
 import{sourceMeshes,environmentViewport}from'../environment/scene.js?v=unified-modes-20261030-2';

@@ -32,7 +32,7 @@ import * as WAY from './interior/wayfinding.js?v=sims-20261121-1';
 import * as WFS from './interior/wayfinding-signage.js?v=batch3-20261124-1';
 import * as WUI from './wayfinding-ui.js?v=batch3-20261124-1';
 import * as WK from './wayfinding-walk.js?v=batch3-20261124-1';
-import * as SA from './site-access-ui.js?v=base-20261127-1';
+import * as SA from './site-access-ui.js?v=draw-20261128-1';
 import * as SSX from './interior/spacesyntax.js?v=sims-20261121-1';
 import * as ISO from './interior/isovist.js?v=sims-20261121-1';
 import * as VWS from './interior/views.js?v=sims-20261121-1';
@@ -935,7 +935,7 @@ export function mountChrome(app, api) {
     closeHost(); closeStudy(); openCard(false); closePops(); palOpen(false); openSheet(false);
     const token = ++HOST.token, el = el2('section', 'sp-host'); el.setAttribute('aria-label', simName(id)); HOST.el = el; HOST.id = id; root.append(el); root.classList.add('sp-hosting');
     el.addEventListener('click', (e) => { const a = e.target.closest('a[href]'); if (!a) return; const h = a.getAttribute('href') || ''; if (/^#\/workspace(\/|$)/.test(h) || (a.closest('.shbar') && /Back/.test(a.textContent))) { e.preventDefault(); closeHost(); } }, true);
-    try { const mod = await import('./pages/simulations.js?v=dxf-20261127-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
+    try { const mod = await import('./pages/simulations.js?v=draw-20261128-1'); const r = await mod.render(el, [id], new URLSearchParams('autorun=workspace'), { isCurrent: () => HOST.token === token && !!HOST.el }); if (HOST.token === token) HOST.cleanup = typeof r === 'function' ? r : null; else if (typeof r === 'function') r(); }
     catch (e) { el.innerHTML = `<div class="sp-hosterr"><p>${esc(simName(id))} could not open here: ${esc(e.message || e)}.</p><a class="btn sm" href="#/simulations/${esc(id)}">Open it on its own page</a></div>`; }
   }
   function closeHost() { if (!HOST.el) return; try { HOST.cleanup?.(); } catch { } HOST.cleanup = null; HOST.el.remove(); HOST.el = null; HOST.id = null; HOST.token++; root.classList.remove('sp-hosting'); }
